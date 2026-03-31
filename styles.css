@@ -1,0 +1,17 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Mpi AI Suite — styles.css
+   Entry point only. All rules live in styles/*.css partials.
+
+   Load order matters:
+   01_base  → tokens, reset, utilities, animations
+   02_shell → app shell, titlebar, sidebar, landing page + project cards
+   03_forms → modals, forms, buttons, wizard, model cards, provisioning
+   04_comfy → ComfyUI preview monitor, generator flow, prompt box, media library
+   05_tools → prompt builder, masking panel, detailer tool
+═══════════════════════════════════════════════════════════════════════════════ */
+
+@import url('styles/01_base.css');
+@import url('styles/02_shell.css');
+@import url('styles/03_forms.css');
+@import url('styles/04_comfy.css');
+@import url('styles/05_tools.css');

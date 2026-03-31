@@ -1,0 +1,66 @@
+<template id="tpl-descriptor">
+  <div class="tool-panel" id="tool-descriptor">
+    <div class="tool-header">
+      <div class="tool-header-text">
+        <h2 class="tool-title">Descriptor</h2>
+        <p class="tool-desc">Drop images and describe your vision. AI will craft a detailed prompt for you.</p>
+      </div>
+    </div>
+    <div class="tool-body gen-flow-container">
+      <div id="desc-loading" class="loading-state hide">
+        <div class="spinner"></div>
+        <p id="desc-loadingText">Describingâ€¦</p>
+      </div>
+
+      <div class="result-section hide" id="desc-result">
+        <div id="desc-result-loading" class="result-overlay hide">
+          <div class="spinner-sm"></div>
+          <span>Re-generating...</span>
+        </div>
+        <div class="form-group full-width">
+          <div class="prompt-box-wrapper"
+            style="position: relative; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 12px;">
+            <textarea id="desc-output" class="result-edit-area" rows="6" readonly
+              style="border: none; padding: 1rem; width: 100%; box-shadow: none;"></textarea>
+            <button id="desc-copyBtn" class="btn secondary small icon-only" title="Copy Prompt"
+              style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--text-2);">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="desc-actions" class="step-actions" style="justify-content: flex-end;">
+          <button id="desc-toGeneratorBtn" class="btn primary action-glow">Go to Generator</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- Floating Fixed Prompt Box -->
+  <div id="descPromptGroup" class="gen-prompt-fixed">
+    <div id="desc-thumbs" class="thumbnail-strip"></div>
+    <div id="desc-prompt-wrapper" style="width: 100%;"></div>
+
+    <div class="prompt-box-actions-bar">
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button id="desc-addAssetBtn" class="btn secondary small icon-only" title="Add Media"
+          style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05);">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+          </svg>
+        </button>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button id="desc-describeBtn" class="btn primary small icon-only action-glow" title="Generate (Ctrl+Enter)"
+          style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path
+              d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59a.996.996 0 0 0 0-1.41l-6.58-6.6a.996.996 0 1 0-1.41 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

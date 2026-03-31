@@ -1,0 +1,142 @@
+<template id="tpl-detailer">
+    <div class="tool-panel" id="tool-detailer">
+      <div class="tool-header" id="detailer-header">
+        <div class="tool-header-text">
+          <h2 class="tool-title">Detailer</h2>
+          <p class="tool-desc">Enhance and refine specific areas of your image using masks.</p>
+        </div>
+      </div>
+
+      <div class="tool-body detailer-layout">
+        <div class="detailer-source-pane">
+          <div class="detailer-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="section-label" style="margin-bottom: 0;">Source Image</div>
+              
+              <!-- Transfer Button (Arrow) moved next to label -->
+              <button id="detailer-transferBtn" class="detailer-transfer-btn hide" title="Transfer Result to Source">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                </svg>
+              </button>
+            </div>
+            
+            <div id="detailer-sourcePreview" class="detailer-source-preview">
+              <div id="detailer-emptyState" class="detailer-empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p>Drag & Drop<br>or Use <b>+</b> Icon</p>
+              </div>
+              <img id="detailer-sourceImg" src="" alt="Source">
+              <canvas id="detailer-maskOverlay"></canvas>
+            </div>
+          </div>
+
+          <div class="detailer-card" id="detailer-maskingControlCard">
+            <div class="section-label" style="margin-bottom: 0.5rem; font-size: 0.65rem;">Masking Control</div>
+            <div class="form-group">
+              <select id="detailer-maskMode" class="template-select small" style="width:100%;">
+                <option value="face_yolov8n">Faces</option>
+                <option value="hand_yolov8n">Hands</option>
+                <option value="person_yolov8n-seg">Persons</option>
+                <option value="manual" selected>Manual</option>
+              </select>
+            </div>
+
+            <!-- Auto Masking Extensions (Stage 13) -->
+            <div id="detailer-autoMaskControls" class="detailer-auto-mask-ext hide"
+              style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05);">
+              <div style="margin-bottom: 0.75rem; display: flex;">
+                <div class="mpi-toggle-group full-width">
+                  <label class="mpi-toggle-btn" style="flex: 1; text-align: center;">
+                    <input type="radio" name="detMode" id="detailer-detBox" value="box" checked>
+                    <span style="width: 100%; display: block;">Box</span>
+                  </label>
+                  <label class="mpi-toggle-btn" style="flex: 1; text-align: center;">
+                    <input type="radio" name="detMode" id="detailer-detSegment" value="segment">
+                    <span style="width: 100%; display: block;">Segment</span>
+                  </label>
+                </div>
+              </div>
+              <button id="detailer-detectBtn" class="btn secondary small outline full-width"
+                style="font-weight: 700; letter-spacing: 0.05em;">DETECT</button>
+            </div>
+
+            <div id="detailer-detectedResults" class="detailer-detected-results hide" style="margin-top: 0.75rem;">
+              <div class="section-label" style="font-size: 0.6rem; margin-bottom: 0.5rem; opacity: 0.6;">Detected
+                Objects</div>
+              <div id="detailer-detectedThumbnails" class="detected-thumbnails-grid">
+                <!-- Images injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Processed Results / Comparison -->
+        <div class="detailer-canvas-pane">
+          <div id="detailer-canvasContainer" class="detailer-canvas-container">
+            <!-- Result Canvas / Comparison Tool -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Fixed Prompt Box (Detailer Version) -->
+    <div id="detailerPromptGroup" class="gen-prompt-fixed">
+      <div id="detailer-prompt-wrapper" style="width: 100%;"></div>
+
+      <div class="comfy-progress-wrapper hide" id="detailer-progressWrapper"
+        style="margin: 0.25rem 0.5rem; height: 3px; border-radius: 4px;">
+        <div class="comfy-progress-fill" id="detailer-progressBar"></div>
+      </div>
+
+      <div class="prompt-box-actions-bar">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <button id="detailer-addAssetBtn" class="btn secondary small icon-only" title="Add Media"
+            style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05);">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+          </button>
+
+          <div id="detailer-prompt-toggle-container"></div>
+
+          <div style="width: 0.25rem;"></div>
+
+          <div class="mpi-control-group">
+            <label>Power</label>
+            <input type="range" id="detailer-denoise" min="0.1" max="1.0" step="0.01" value="0.6" style="width:80px;">
+            <span id="detailer-denoiseValue"
+              style="font-size:0.75rem; color:var(--primary); width:30px; font-weight:700;">0.60</span>
+          </div>
+
+          <button id="detailer-newSeedBtn" class="btn secondary small icon-only" title="Generate New Seed"
+            style="border-radius: var(--radius-sm); width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05);">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round">
+              <path d="M9 3c0 4.5 6 4.5 6 9s-6 4.5-6 9" />
+              <path d="M15 3c0 4.5-6 4.5-6 9s6 4.5 6 9" />
+              <path d="M10 6h4" />
+              <path d="M10 18h4" />
+              <path d="M11 12h2" />
+            </svg>
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+
+          <button id="detailer-enhanceBtn" class="btn primary small icon-only action-glow" title="Detail (Ctrl+Enter)"
+            style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <path
+                d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59a.996.996 0 0 0 0-1.41l-6.58-6.6a.996.996 0 1 0-1.41 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>

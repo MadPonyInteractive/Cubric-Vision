@@ -1,0 +1,38 @@
+﻿<template id="tpl-compare">
+    <div class="tool-panel" id="tool-compare">
+      <div class="tool-header">
+        <div class="tool-header-text">
+          <h2 class="tool-title">Compare</h2>
+          <p class="tool-desc">Compare two images side-by side using a swipe handle.</p>
+        </div>
+      </div>
+      <div class="tool-body compare-layout">
+        <div class="compare-input-slot" id="compare-leftInput" data-side="left" title="Left Side Image">
+          <div class="compare-input-empty">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            <p>Left</p>
+          </div>
+          <img id="compare-leftThumb" class="hide">
+        </div>
+
+        <div class="compare-canvas-pane">
+          <div class="compare-canvas-container" id="compare-canvasContainer">
+            <!-- InteractiveCanvas injected here -->
+          </div>
+        </div>
+
+        <div class="compare-input-slot" id="compare-rightInput" data-side="right" title="Right Side Image">
+          <div class="compare-input-empty">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            <p>Right</p>
+          </div>
+          <img id="compare-rightThumb" class="hide">
+        </div>
+      </div>
+
+    </div>
+  </template>

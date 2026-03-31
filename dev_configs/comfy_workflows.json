@@ -1,0 +1,202 @@
+{
+  "workflows": [
+    {
+      "id": "sdxl_generation_uncensored",
+      "name": "SDXL (Uncensored)",
+      "file": "sdxl_t2i_nsfw.json",
+      "model_type": "sdxl",
+      "type": "image_generation",
+      "installed": true,
+      "description": "A NSFW SDXL-based workflow using the Lustify V7 for fast generations and the official SDXL Refiner for higher quality images.",
+      "dependencies": [
+        {
+          "id": "lustify-7",
+          "name": "Lustify V7 (SDXL)",
+          "type": "checkpoint",
+          "filename": "checkpoints/SDXL/lustify_7.safetensors",
+          "url": "https://huggingface.co/Kutches/XL/resolve/main/lustifySDXLNSFW_ggwpV7.safetensors",
+          "size": "6.94GB",
+          "vram": "8GB"
+        },
+        {
+          "id": "sdxl-refiner-1.0",
+          "name": "SDXL Refiner 1.0",
+          "type": "checkpoint",
+          "filename": "checkpoints/SDXL/sd_xl_refiner_1.0_0.9vae.safetensors",
+          "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0_0.9vae.safetensors",
+          "size": "6.08GB",
+          "vram": "8GB"
+        },
+        {
+          "id": "spo_sdxl_10ep_4k-data_lora_webui",
+          "name": "spo_sdxl_10ep_4k-data_lora_webui",
+          "type": "lora",
+          "filename": "loras/SDXL/spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+          "url": "https://huggingface.co/LyliaEngine/spo_sdxl_10ep_4k-data_lora_webui/resolve/main/spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+          "size": "364MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "sdxl_lightning_4step_lora",
+          "name": "sdxl_lightning_4step_lora",
+          "type": "lora",
+          "filename": "loras/SDXL/sdxl_lightning_4step_lora.safetensors",
+          "url": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step_lora.safetensors",
+          "size": "385MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "ComfyUI-MpiNodes",
+          "name": "ComfyUI-MpiNodes",
+          "type": "custom_nodes",
+          "install_requirements": false,
+          "filename": "ComfyUI-MpiNodes",
+          "url": "https://github.com/MadPonyInteractive/ComfyUi-MpiNodes",
+          "size": "1.76MB",
+          "vram": "N/A"
+        }
+      ]
+    },
+    {
+      "id": "sdxl_detailer",
+      "name": "SDXL Detailer",
+      "file": "sdxl_detailer.json",
+      "model_type": "sdxl",
+      "type": "detailer",
+      "installed": true,
+      "description": "A fast SDXL detailer workflow.",
+      "dependencies": [
+        {
+          "id": "lustify-7",
+          "name": "Lustify V7 (SDXL)",
+          "type": "checkpoint",
+          "filename": "checkpoints/SDXL/lustify_7.safetensors",
+          "url": "https://huggingface.co/Kutches/XL/resolve/main/lustifySDXLNSFW_ggwpV7.safetensors",
+          "size": "6.94GB",
+          "vram": "8GB"
+        },
+        {
+          "id": "ComfyUI-MpiNodes",
+          "name": "ComfyUI-MpiNodes",
+          "type": "custom_nodes",
+          "install_requirements": false,
+          "filename": "ComfyUI-MpiNodes",
+          "url": "https://github.com/MadPonyInteractive/ComfyUi-MpiNodes",
+          "size": "1.76MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "ComfyUI-Impact-Pack",
+          "name": "ComfyUI-Impact-Pack",
+          "type": "custom_nodes",
+          "install_requirements": true,
+          "filename": "comfyui-impact-pack",
+          "url": "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
+          "size": "5MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "ComfyUI-Impact-Subpack",
+          "name": "ComfyUI-Impact-Subpack",
+          "type": "custom_nodes",
+          "install_requirements": true,
+          "filename": "ComfyUI-Impact-Subpack",
+          "url": "https://github.com/ltdrdata/ComfyUI-Impact-Subpack",
+          "size": "172KB",
+          "vram": "N/A"
+        },
+        {
+          "id": "face_yolov8n",
+          "name": "face_yolov8n.pt",
+          "type": "ultralytics",
+          "install_requirements": false,
+          "filename": "ultralytics/bbox/face_yolov8n.pt",
+          "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt",
+          "size": "5.9MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "hand_yolov8n",
+          "name": "hand_yolov8n.pt",
+          "type": "ultralytics",
+          "install_requirements": false,
+          "filename": "ultralytics/bbox/hand_yolov8n.pt",
+          "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt",
+          "size": "5.9MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "person_yolov8n-seg",
+          "name": "person_yolov8n-seg.pt",
+          "type": "ultralytics",
+          "install_requirements": false,
+          "filename": "ultralytics/bbox/person_yolov8n-seg.pt",
+          "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt",
+          "size": "6.9MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "sam_vit_b_01ec64",
+          "name": "sam_vit_b_01ec64",
+          "type": "sams",
+          "install_requirements": false,
+          "filename": "sams/sam_vit_b_01ec64.pth",
+          "url": "https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/sams/sam_vit_b_01ec64.pth",
+          "size": "367MB",
+          "vram": "N/A"
+        }
+      ]
+    },
+    {
+      "id": "sdxl_upscaler",
+      "name": "SDXL Upscaler",
+      "file": "sdxl_upscaler.json",
+      "model_type": "sdxl",
+      "type": "upscaler",
+      "installed": true,
+      "description": "A fast SDXL upscaler workflow.",
+      "dependencies": [
+        {
+          "id": "lustify-7",
+          "name": "Lustify V7 (SDXL)",
+          "type": "checkpoint",
+          "filename": "checkpoints/SDXL/lustify_7.safetensors",
+          "url": "https://huggingface.co/Kutches/XL/resolve/main/lustifySDXLNSFW_ggwpV7.safetensors",
+          "size": "6.94GB",
+          "vram": "8GB"
+        },
+        {
+          "id": "ComfyUI-MpiNodes",
+          "name": "ComfyUI-MpiNodes",
+          "type": "custom_nodes",
+          "install_requirements": false,
+          "filename": "ComfyUI-MpiNodes",
+          "url": "https://github.com/MadPonyInteractive/ComfyUi-MpiNodes",
+          "size": "1.76MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "4x_NMKD-Siax_200k",
+          "name": "4x_NMKD-Siax_200k",
+          "type": "upscale_model",
+          "filename": "upscale_models/4x_NMKD-Siax_200k.pth",
+          "url": "https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth",
+          "size": "67MB",
+          "vram": "N/A"
+        },
+        {
+          "id": "ComfyUI_UltimateSDUpscale",
+          "name": "ComfyUI_UltimateSDUpscale",
+          "type": "custom_nodes",
+          "install_requirements": false,
+          "filename": "comfyui_ultimatesdupscale",
+          "url": "https://github.com/ssitu/ComfyUI_UltimateSDUpscale",
+          "size": "940KB",
+          "vram": "N/A"
+        }
+      ]
+    }
+  ],
+  "local_models_path": "engine/ComfyUI_windows_portable/ComfyUI/models",
+  "local_custom_nodes_path": "engine/ComfyUI_windows_portable/ComfyUI/custom_nodes"
+}

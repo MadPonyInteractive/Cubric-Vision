@@ -1,0 +1,48 @@
+/* ── MpiPopup — Floating Glass Container ─────────────────────────────────── */
+.mpi-popup {
+    position: absolute;
+    bottom: 120%;
+    /* Standard positioning above the trigger */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--surface-glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all var(--bounce);
+    width: max-content;
+}
+
+.mpi-popup.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.mpi-popup--glass {
+    background: var(--surface-glass);
+}
+
+.mpi-popup__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Arrow / caret */
+.mpi-popup::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--border);
+}

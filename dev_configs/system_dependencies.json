@@ -1,0 +1,14 @@
+{
+  "engine": {
+    "name": "ComfyUI Portable",
+    "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.18.0/ComfyUI_windows_portable_nvidia_cu126.7z",
+    "filename": "ComfyUI_windows_portable.7z",
+    "extractDir": "engine"
+  },
+  "llamaServer": {
+    "name": "Llama.cpp Backend Server (CUDA 12.4)",
+    "url": "https://github.com/ggerganov/llama.cpp/releases/download/b8464/llama-b8464-bin-win-cuda-12.4-x64.zip",
+    "filename": "llama_server_engine.zip",
+    "extractDir": "llama_engine"
+  }
+}

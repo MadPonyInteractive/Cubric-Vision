@@ -1,0 +1,124 @@
+/* BEM Block naming — mpi-prompt-box */
+.mpi-prompt-box {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background: var(--surface-glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    transition: all var(--transition);
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.mpi-prompt-box:hover {
+    border-color: var(--neon-border);
+    box-shadow: 0 0 20px var(--neon-glow-sm);
+}
+
+.mpi-prompt-box__prompts {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+/* Expansion lock button - top center, sitting on border */
+.mpi-prompt-box__lock-container {
+    position: absolute;
+    top: -12px;
+    /* Pull it halfway over the border */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.mpi-prompt-box__lock-btn {
+    transition: all 0.2s ease;
+}
+
+/* Textarea styling overrides */
+.mpi-prompt-box .mpi-input__field--textarea {
+    resize: none;
+    min-height: 3.5rem; /* ~2 lines */
+    max-height: 14rem; /* ~8 lines */
+    padding-right: 3rem; /* Room for copy button */
+    overflow-y: auto;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.mpi-prompt-box .mpi-input__field--textarea::placeholder {
+    color: var(--text-3) !important;
+    opacity: 0.6;
+}
+
+.mpi-prompt-box .mpi-input__field--textarea--locked {
+    height: 3.5rem !important; /* Fixed at ~2 lines */
+    max-height: 3.5rem !important;
+}
+
+/* Copy button position */
+.mpi-prompt-box__copy-wrapper {
+    position: absolute;
+    right: 0.25rem;
+    bottom: 0.25rem;
+    z-index: 5;
+}
+
+/* Negative label/header (kept for CSS naming consistency if used) */
+.mpi-prompt-box__label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: -0.5rem;
+    margin-left: 0.25rem;
+}
+
+/* Bottom section & Separator */
+.mpi-prompt-box__separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-soft) 20%, var(--border-soft) 80%, transparent);
+    margin: 1rem 0;
+    width: 100%;
+}
+
+.mpi-prompt-box__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 2.5rem;
+}
+
+.mpi-prompt-box__area {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.mpi-prompt-box__area--left {
+    justify-content: flex-start;
+}
+
+.mpi-prompt-box__area--center {
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.mpi-prompt-box__area--right {
+    justify-content: flex-end;
+}

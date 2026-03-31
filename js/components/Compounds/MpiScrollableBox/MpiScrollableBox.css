@@ -1,0 +1,37 @@
+/* ── MpiScrollableBox — Compound ─────────────────────────────────────── */
+.mpi-scrollable-box {
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+    min-width: 160px;
+    overscroll-behavior: contain;
+    /* Prevents page scroll when reaching the end */
+}
+
+/* Custom scrollbar to match the workstation theme */
+.mpi-scrollable-box::-webkit-scrollbar {
+    width: 4px;
+}
+
+.mpi-scrollable-box::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+}
+
+.mpi-scrollable-box::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+}
+
+.mpi-scrollable-box__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Ensure buttons in the list are full width and look like items */
+.mpi-scrollable-box .mpi-btn {
+    border: none;
+    border-radius: var(--radius-sm);
+}

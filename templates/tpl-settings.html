@@ -1,0 +1,62 @@
+<template id="tpl-settings">
+  <div class="tool-panel" id="tool-settings">
+    <div class="tool-header">
+      <div class="tool-header-text">
+        <h2 class="tool-title">Settings</h2>
+        <p class="tool-desc">Configure Mpi AI Suite preferences and manage local models.</p>
+      </div>
+    </div>
+    <div class="tool-body">
+      <div class="settings-section">
+        <h3 class="settings-section-title">App Behavior</h3>
+        <div class="form-group">
+          <label class="checkbox-pill">
+            <input type="checkbox" id="settingsAutoStartComfy">
+            <span>Auto-start ComfyUI on Launch</span>
+          </label>
+          <span class="field-hint">If enabled, the generation engine will start as soon as the app opens.</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section-title">Interface</h3>
+        <div class="settings-row">
+          <label>Light Mode</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settingsToggleTheme">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section-title">External Connections</h3>
+        <div class="form-group">
+          <label>Llama API URL</label>
+          <input type="text" id="settingsOllamaUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+        </div>
+        <div class="form-group">
+          <label>ComfyUI API URL</label>
+          <input type="text" id="settingsComfyUrl" value="http://localhost:8188" placeholder="http://localhost:8188">
+        </div>
+        <div class="form-group">
+          <label>ComfyUI Models Path</label>
+          <div class="folder-picker-row">
+            <input type="text" id="settingsComfyRootPath" placeholder="Default (internal engine)">
+            <button class="btn secondary small" id="settingsBrowseComfyBtn">Browse</button>
+          </div>
+          <span class="field-hint">Optional: path to an external ComfyUI models folder. (Will replace default engine
+            path)</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section-title">Local LLM Manager</h3>
+        <p class="field-hint" style="margin-bottom: 1rem;">Download and manage local LLM models.</p>
+        <div id="settingsModelList" class="model-manager-list">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

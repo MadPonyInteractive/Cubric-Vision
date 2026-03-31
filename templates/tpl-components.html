@@ -1,0 +1,597 @@
+<template id="tpl-components">
+    <div id="tool-components" class="tool-panel components-page">
+
+        <header class="tool-header">
+            <div class="tool-header-info">
+                <h2 class="tool-title">Component Gallery</h2>
+                <p class="tool-subtitle">All primitives and compounds — every variant, both themes.</p>
+            </div>
+            <div class="tool-header-actions">
+                <div class="header-action-group">
+                    <label class="comp-switch-label">Light</label>
+                    <label class="comp-toggle">
+                        <input type="checkbox" id="comp-themeToggle">
+                        <span class="comp-toggle-track"></span>
+                    </label>
+                </div>
+                <div class="header-action-group">
+                    <label class="comp-switch-label">Debug</label>
+                    <label class="comp-toggle">
+                        <input type="checkbox" id="comp-debugToggle">
+                        <span class="comp-toggle-track"></span>
+                    </label>
+                </div>
+                <div class="comp-search-box">
+                    <input type="text" id="comp-search" placeholder="Search…">
+                </div>
+            </div>
+        </header>
+
+        <div class="components-container">
+
+            <!-- ══════════════════════════════════════
+             PRIMITIVES
+        ══════════════════════════════════════ -->
+            <section class="comp-section" id="section-Primitives">
+                <h3 class="comp-section-title">Primitives</h3>
+                <div class="comp-grid" id="grid-Primitives">
+
+
+                    <!-- MpiButton -->
+                    <div class="comp-card" data-name="mpibutton" data-label="primary">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">primary</span></div>
+                        <div class="comp-card-preview" id="preview-btn-primary"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="secondary">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">secondary</span></div>
+                        <div class="comp-card-preview" id="preview-btn-secondary"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="danger">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">danger</span></div>
+                        <div class="comp-card-preview" id="preview-btn-danger"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="ghost">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">ghost</span></div>
+                        <div class="comp-card-preview" id="preview-btn-ghost"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="outline">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">outline</span></div>
+                        <div class="comp-card-preview" id="preview-btn-outline"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="sm">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">size: sm</span></div>
+                        <div class="comp-card-preview" id="preview-btn-sm"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="lg">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">size: lg</span></div>
+                        <div class="comp-card-preview" id="preview-btn-lg"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="loading">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">loading</span></div>
+                        <div class="comp-card-preview" id="preview-btn-loading"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpibutton" data-label="disabled">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
+                                class="comp-card-badge">disabled</span></div>
+                        <div class="comp-card-preview" id="preview-btn-disabled"></div>
+                    </div>
+
+                    <!-- MpiProgressBar -->
+                    <div class="comp-card" data-name="mpiprogressbar" data-label="standard">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiProgressBar</span><span
+                                class="comp-card-badge">standard progress</span></div>
+                        <div class="comp-card-preview" id="preview-progress-standard"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpiprogressbar" data-label="static success">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiProgressBar</span><span
+                                class="comp-card-badge">static: success</span></div>
+                        <div class="comp-card-preview" id="preview-progress-success"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpiprogressbar" data-label="static danger">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiProgressBar</span><span
+                                class="comp-card-badge">static: danger</span></div>
+                        <div class="comp-card-preview" id="preview-progress-danger"></div>
+                    </div>
+
+                    <!-- MpiSpinner -->
+                    <div class="comp-card" data-name="mpispinner" data-label="toggle">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiSpinner</span><span
+                                class="comp-card-badge">with toggle</span></div>
+                        <div class="comp-card-preview" id="preview-spinner-toggle"
+                            style="flex-direction: column; gap: 1rem;">
+                        </div>
+                    </div>
+
+                    <!-- MpiInput -->
+                    <div class="comp-card" data-name="mpiinput" data-label="text">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiInput</span><span
+                                class="comp-card-badge">text</span></div>
+                        <div class="comp-card-preview" id="preview-input-text"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiinput" data-label="email">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiInput</span><span
+                                class="comp-card-badge">email</span></div>
+                        <div class="comp-card-preview" id="preview-input-email"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiinput" data-label="password">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiInput</span><span
+                                class="comp-card-badge">password</span></div>
+                        <div class="comp-card-preview" id="preview-input-password"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiinput" data-label="number">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiInput</span><span
+                                class="comp-card-badge">number</span></div>
+                        <div class="comp-card-preview" id="preview-input-number"></div>
+                    </div>
+
+                    <!-- MpiBadge -->
+                    <div class="comp-card" data-name="mpibadge" data-label="variants">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiBadge</span><span
+                                class="comp-card-badge">variants</span></div>
+                        <div class="comp-card-preview" id="preview-badge-variants"></div>
+                    </div>
+
+                    <!-- MpiToast -->
+                    <div class="comp-card" data-name="mpitoast" data-label="dynamic">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiToast</span><span
+                                class="comp-card-badge">dynamic</span></div>
+                        <div class="comp-card-preview" id="preview-toast-demo">
+                            <div id="preview-toast-trigger"></div>
+                        </div>
+                    </div>
+
+                    <!-- MpiPopup -->
+                    <div class="comp-card" data-name="mpipopup" data-label="default">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPopup</span><span
+                                class="comp-card-badge">default</span></div>
+                        <div class="comp-card-preview" id="preview-popup-default"
+                            style="min-height: 200px; position: relative;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ══════════════════════════════════════
+             COMPOUNDS
+        ══════════════════════════════════════ -->
+            <section class="comp-section" id="section-Compounds">
+                <h3 class="comp-section-title">Compounds</h3>
+                <div class="comp-grid" id="grid-Compounds">
+
+                    <!-- MpiIconButton -->
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="primary">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">primary</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-primary"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="label">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">with label</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-label"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="toggleable">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">toggleable</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-toggle"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="toggleable icon">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">toggleableIcon</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-swap"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="danger">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">danger</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-danger"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="loading">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">loading</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-loading"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="disabled">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">disabled</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-disabled"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="sm">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">size: sm</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-sm"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="lg">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">size: lg</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-lg"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="label lg">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">lg + label</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-label-lg"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpiiconbutton" data-label="label sm">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiIconButton</span><span
+                                class="comp-card-badge">label: sm</span></div>
+                        <div class="comp-card-preview" id="preview-ibtn-label-sm"></div>
+                    </div>
+
+                    <!-- MpiPopupButton -->
+                    <div class="comp-card is-overflow-visible" data-name="mpipopupbutton" data-label="top (default)">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPopupButton</span><span
+                                class="comp-card-badge">top (default)</span></div>
+                        <div class="comp-card-preview" id="preview-popupbtn-default" style="min-height: 150px;"></div>
+                    </div>
+
+                    <div class="comp-card is-overflow-visible" data-name="mpipopupbutton" data-label="bottom">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPopupButton</span><span
+                                class="comp-card-badge">bottom</span></div>
+                        <div class="comp-card-preview" id="preview-popupbtn-bottom" style="min-height: 150px;"></div>
+                    </div>
+
+                    <!-- MpiScrollableBox -->
+                    <div class="comp-card" data-name="mpiscrollablebox" data-label="standard">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiScrollableBox</span><span
+                                class="comp-card-badge">scrollable list</span></div>
+                        <div class="comp-card-preview" id="preview-scrollable-box"
+                            style="padding: 0.5rem; justify-content: flex-start; align-items: flex-start;"></div>
+                    </div>
+
+                    <!-- MpiSlider -->
+                    <div class="comp-card" data-name="mpislider" data-label="prefix/suffix">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiSlider</span><span
+                                class="comp-card-badge">prefix/suffix + wheel</span></div>
+                        <div class="comp-card-preview" id="preview-slider-smart"></div>
+                    </div>
+
+                    <!-- MpiSlider -->
+                    <div class="comp-card" data-name="mpislider" data-label="prefix/suffix">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiSlider</span><span
+                                class="comp-card-badge">Variant: Success</span></div>
+                        <div class="comp-card-preview" id="preview-slider-smart-2"></div>
+                    </div>
+
+                    <!-- MpiDragList -->
+                    <div class="comp-card" data-name="mpidraglist" data-label="standard" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiDragList</span><span
+                                class="comp-card-badge">reorderable list</span></div>
+                        <div class="comp-card-preview" id="preview-drag-list"
+                            style="padding: 1rem; align-items: stretch; justify-content: stretch;"></div>
+                    </div>
+
+                    <!-- MpiMediaDropzone -->
+                    <div class="comp-card" data-name="mpimediadropzone" data-label="image variant">
+                        <div class="comp-card-header">
+                            <span class="comp-card-name">MpiMediaDropzone</span>
+                            <span class="comp-card-badge">image variant</span>
+                            <div id="preview-dropzone-image-badge"></div>
+                        </div>
+                        <div class="comp-card-preview" id="preview-dropzone-image"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpimediadropzone" data-label="video variant">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiMediaDropzone</span><span
+                                class="comp-card-badge">video variant</span></div>
+                        <div class="comp-card-preview" id="preview-dropzone-video"></div>
+                    </div>
+                    <div class="comp-card" data-name="mpimediadropzone" data-label="audio variant">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiMediaDropzone</span><span
+                                class="comp-card-badge">audio variant</span></div>
+                        <div class="comp-card-preview" id="preview-dropzone-audio"></div>
+                    </div>
+
+
+                </div>
+            </section>
+
+
+            <!-- ══════════════════════════════════════
+             BLOCKS
+        ══════════════════════════════════════ -->
+            <section class="comp-section" id="section-Blocks">
+                <h3 class="comp-section-title">Blocks</h3>
+                <div class="comp-grid" id="grid-Blocks">
+                    <!-- MpiRatioSelector -->
+                    <div class="comp-card is-overflow-visible" data-name="mpiratioselector" data-label="default">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
+                                class="comp-card-badge">flux: portrait</span></div>
+                        <div class="comp-card-preview" id="preview-ratio-flux" style="min-height: 180px;"></div>
+                    </div>
+                    <div class="comp-card is-overflow-visible" data-name="mpiratioselector" data-label="video">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
+                                class="comp-card-badge">video</span></div>
+                        <div class="comp-card-preview" id="preview-ratio-video" style="min-height: 180px;"></div>
+                    </div>
+
+                    <!-- MpiDropdown -->
+                    <div class="comp-card is-overflow-visible" data-name="mpidropdown" data-label="top (default)">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiDropdown</span><span
+                                class="comp-card-badge">top (default)</span></div>
+                        <div class="comp-card-preview" id="preview-dropdown-top" style="min-height: 180px;"></div>
+                    </div>
+
+                    <div class="comp-card is-overflow-visible" data-name="mpidropdown" data-label="bottom">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiDropdown</span><span
+                                class="comp-card-badge">bottom</span></div>
+                        <div class="comp-card-preview" id="preview-dropdown-bottom" style="min-height: 180px;"></div>
+                    </div>
+
+                    <!-- MpiPromptBox -->
+                    <div class="comp-card" data-name="mpipromptbox" data-label="standard" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                class="comp-card-badge">standard</span></div>
+                        <div class="comp-card-preview" id="preview-promptbox-standard"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpipromptbox" data-label="expanded" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                class="comp-card-badge">expanded layout</span></div>
+                        <div class="comp-card-preview" id="preview-promptbox-expanded"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpipromptbox" data-label="negative" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                class="comp-card-badge">negative prompt enabled</span></div>
+                        <div class="comp-card-preview" id="preview-promptbox-negative"></div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ══════════════════════════════════════
+        PRIMITIVE ICONS
+        ══════════════════════════════════════ -->
+            <section class="comp-section" id="section-MpiIcon">
+                <h3 class="comp-section-title">Primitive Icons</h3>
+                <div class="comp-grid" id="grid-MpiIcon">
+                </div>
+            </section>
+
+
+        </div>
+    </div>
+
+    <style>
+        /* ── Page layout ──────────────────────────────────────────────────────── */
+        .components-page {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .components-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem 20px 5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        /* ── Section title — matches .tool-header style ───────────────────────── */
+        .comp-section-title {
+            font-family: var(--font-display);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-3);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-soft);
+            position: sticky;
+            top: -1.25rem;
+            background: var(--bg);
+            z-index: 10;
+        }
+
+        /* ── Component grid ───────────────────────────────────────────────────── */
+        .comp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        /* ── Component card — matches .tool-body card style ───────────────────── */
+        .comp-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all var(--transition);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .comp-card:hover {
+            border-color: var(--primary-dim);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            transform: translateY(-1px);
+        }
+
+        /* Card header — mirrors .tool-header bottom border */
+        .comp-card-header {
+            padding: 0.5rem 0.85rem;
+            border-bottom: 1px solid var(--border-soft);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .comp-card-name {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-2);
+        }
+
+        .comp-card-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 6px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-soft);
+            color: var(--text-3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Card preview — clean surface, no checkerboard */
+        .comp-card-preview {
+            padding: 1.5rem;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            background: var(--surface-2);
+        }
+
+        /* Debug outline mode */
+        body.comp-debug .comp-card-preview>* {
+            outline: 1px dashed var(--neon-electric) !important;
+            outline-offset: 2px;
+        }
+
+        /* ── Popups / Clipping Fixes ──────────────────────────────────────────── */
+        .comp-card.is-overflow-visible,
+        .comp-card.is-overflow-visible .comp-card-preview {
+            overflow: visible !important;
+            z-index: 100 !important;
+            /* Ensure it floats above the grid */
+        }
+
+        .comp-card.is-overflow-visible:hover,
+        .comp-card.is-overflow-visible:focus-within {
+            z-index: 200 !important;
+            /* Bring to very top when interacted with to avoid sibling clipping */
+        }
+
+        .comp-section#section-Blocks {
+            overflow: visible !important;
+        }
+
+        .comp-grid#grid-Blocks {
+            overflow: visible !important;
+        }
+
+        /* ── Header controls ──────────────────────────────────────────────────── */
+        .header-action-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 12px;
+            padding-right: 12px;
+            border-right: 1px solid var(--border-soft);
+        }
+
+        .header-action-group:last-of-type {
+            border-right: none;
+        }
+
+        .comp-switch-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-3);
+            white-space: nowrap;
+        }
+
+        /* Toggle — matches the app's icon-toggle-label pattern */
+        .comp-toggle {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .comp-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .comp-toggle-track {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--surface-3);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            transition: all var(--transition);
+        }
+
+        .comp-toggle-track::before {
+            position: absolute;
+            content: "";
+            height: 10px;
+            width: 10px;
+            left: 3px;
+            bottom: 3px;
+            background: var(--text-3);
+            border-radius: 50%;
+            transition: all var(--transition);
+        }
+
+        .comp-toggle input:checked+.comp-toggle-track {
+            background: var(--neon-electric);
+            border-color: var(--neon-electric);
+        }
+
+        .comp-toggle input:checked+.comp-toggle-track::before {
+            transform: translateX(16px);
+            background: #fff;
+        }
+
+        /* Search — matches the app's input style from 03_forms.css */
+        .comp-search-box input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.45rem 1rem;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.85rem;
+            width: 200px;
+            outline: none;
+            transition: all var(--transition);
+        }
+
+        .comp-search-box input:focus {
+            border-color: var(--neon-electric);
+            box-shadow: 0 0 10px var(--neon-glow-sm);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        /* Placeholder card */
+        .comp-placeholder {
+            grid-column: 1 / -1;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-3);
+            font-style: italic;
+            font-size: 0.85rem;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+        }
+    </style>
+</template>

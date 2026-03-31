@@ -1,0 +1,110 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiToast — Scoped BEM Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.mpi-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 10px var(--primary-glow-sm);
+    color: var(--text);
+    z-index: 9999;
+    max-width: 400px;
+    min-width: 280px;
+    pointer-events: auto;
+    overflow: hidden;
+    user-select: none;
+    
+    /* Animation state */
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    transition: opacity 0.3s var(--bounce), transform 0.3s var(--bounce);
+}
+
+.mpi-toast--open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.mpi-toast--closing {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+    pointer-events: none;
+}
+
+/* Variant Modifiers */
+.mpi-toast--info {    border-left: 4px solid var(--info);    }
+.mpi-toast--success { border-left: 4px solid var(--success); }
+.mpi-toast--warning { border-left: 4px solid var(--warning); }
+.mpi-toast--danger {  border-left: 4px solid var(--danger);  }
+
+.mpi-toast__content {
+    flex: 1;
+}
+
+.mpi-toast__msg {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.mpi-toast__close {
+    background: none;
+    border: none;
+    color: var(--text-2);
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    transition: var(--transition);
+}
+
+.mpi-toast__close:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+/* Progress bar at the bottom */
+.mpi-toast__progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: var(--primary);
+    border-radius: 0 50px 50px 0;
+}
+
+.mpi-toast--info .mpi-toast__progress {    background: var(--info);    }
+.mpi-toast--success .mpi-toast__progress { background: var(--success); }
+.mpi-toast--warning .mpi-toast__progress { background: var(--warning); }
+.mpi-toast--danger .mpi-toast__progress {  background: var(--danger);  }
+
+/* Simple Icon Placeholder */
+.mpi-toast__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--surface-2);
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.mpi-toast--info .mpi-toast__icon::before { content: 'i'; color: var(--info); }
+.mpi-toast--success .mpi-toast__icon::before { content: '✓'; color: var(--success); }
+.mpi-toast--warning .mpi-toast__icon::before { content: '!'; color: var(--warning); }
+.mpi-toast--danger .mpi-toast__icon::before { content: '✕'; color: var(--danger); }

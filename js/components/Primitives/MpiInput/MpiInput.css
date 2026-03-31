@@ -1,0 +1,79 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiInput — Primitive Input Component
+   BEM block: .mpi-input
+═══════════════════════════════════════════════════════════════════════════ */
+
+.mpi-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.mpi-input__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-left: 2px;
+}
+
+.mpi-input__wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mpi-input__field {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all var(--bounce);
+}
+
+.mpi-input__field:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--neon-electric);
+    box-shadow: 0 0 10px var(--neon-glow-sm);
+}
+
+.mpi-input__field::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── States ───────────────────────────────────────────────────────────────── */
+
+.mpi-input--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mpi-input--disabled .mpi-input__field {
+    cursor: not-allowed;
+}
+
+.mpi-input--error .mpi-input__field {
+    border-color: var(--danger);
+}
+
+.mpi-input--error .mpi-input__field:focus {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.mpi-input__error-msg {
+    font-size: 0.75rem;
+    color: var(--danger);
+    margin-left: 2px;
+}
+
+/* ── Specific Types ────────────────────────────────────────────────────────── */
+input[type="number"].mpi-input__field::-webkit-inner-spin-button,
+input[type="number"].mpi-input__field::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

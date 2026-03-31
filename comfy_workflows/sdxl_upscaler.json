@@ -1,0 +1,511 @@
+{
+  "28": {
+    "inputs": {
+      "ckpt_name": "SDXL\\lustify_7.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Loading SDXL..."
+    }
+  },
+  "29": {
+    "inputs": {
+      "text": "Liora, redhead, green-eyes, winged eyeliner, parted lips, looking at you",
+      "clip": [
+        "1601",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "30": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1601",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "417": {
+    "inputs": {
+      "upscale_model": [
+        "418",
+        0
+      ],
+      "image": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "418": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "1550": {
+    "inputs": {
+      "image": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "1551": {
+    "inputs": {
+      "math_expression": "a * b",
+      "a": [
+        "1550",
+        0
+      ],
+      "b": [
+        "1552",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1552": {
+    "inputs": {
+      "float": 2
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Upscale_Factor"
+    }
+  },
+  "1553": {
+    "inputs": {
+      "math_expression": "a * b",
+      "a": [
+        "1550",
+        1
+      ],
+      "b": [
+        "1552",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1554": {
+    "inputs": {
+      "round": true,
+      "input": [
+        "1553",
+        0
+      ]
+    },
+    "class_type": "MpiConvert",
+    "_meta": {
+      "title": "Mpi Convert"
+    }
+  },
+  "1555": {
+    "inputs": {
+      "round": true,
+      "input": [
+        "1551",
+        0
+      ]
+    },
+    "class_type": "MpiConvert",
+    "_meta": {
+      "title": "Mpi Convert"
+    }
+  },
+  "1556": {
+    "inputs": {
+      "images": [
+        "1609",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1557": {
+    "inputs": {
+      "image": "01a1c26a09c3f848520262379f405498.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1583": {
+    "inputs": {
+      "horizontal_split": [
+        "1604",
+        0
+      ],
+      "vertical_split": [
+        "1605",
+        0
+      ],
+      "upscale_factor": [
+        "1552",
+        0
+      ],
+      "auto": [
+        "1613",
+        0
+      ],
+      "image": [
+        "1590",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1587": {
+    "inputs": {
+      "width": [
+        "1588",
+        0
+      ],
+      "height": [
+        "1588",
+        1
+      ],
+      "multiple_of": 64,
+      "round": false
+    },
+    "class_type": "MpiRoundToMultipleRes",
+    "_meta": {
+      "title": "Mpi Round To Multiple Res"
+    }
+  },
+  "1588": {
+    "inputs": {
+      "image": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "1590": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "1587",
+        0
+      ],
+      "resize_type.height": [
+        "1587",
+        1
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "area",
+      "input": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1591": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "1555",
+        1
+      ],
+      "resize_type.height": [
+        "1554",
+        1
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "area",
+      "input": [
+        "417",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "float": 0.4
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Denoise"
+    }
+  },
+  "1595": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "28",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1597": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1595",
+        0
+      ],
+      "clip": [
+        "1595",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1598": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1597",
+        0
+      ],
+      "clip": [
+        "1597",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1598",
+        0
+      ],
+      "clip": [
+        "1598",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1600": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1599",
+        0
+      ],
+      "clip": [
+        "1599",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1601": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1600",
+        0
+      ],
+      "clip": [
+        "1600",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Seed"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "1605": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "1609": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "1615",
+        0
+      ],
+      "false": [
+        "1591",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Creative"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Auto_Grid"
+    }
+  },
+  "1615": {
+    "inputs": {
+      "upscale_by": [
+        "1552",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "steps": 20,
+      "cfg": 2.5,
+      "sampler_name": "dpmpp_3m_sde",
+      "scheduler": "exponential",
+      "denoise": [
+        "1594",
+        0
+      ],
+      "mode_type": "Linear",
+      "tile_width": [
+        "1583",
+        0
+      ],
+      "tile_height": [
+        "1583",
+        1
+      ],
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 1,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": true,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "1590",
+        0
+      ],
+      "model": [
+        "1601",
+        0
+      ],
+      "positive": [
+        "29",
+        0
+      ],
+      "negative": [
+        "30",
+        0
+      ],
+      "vae": [
+        "28",
+        2
+      ],
+      "upscale_model": [
+        "418",
+        0
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Ultimate SD Upscale"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiSpinner — Primitive Spinner Component
+   BEM block: .mpi-spinner
+   Uses standard CSS animation for rotate.
+═══════════════════════════════════════════════════════════════════════════ */
+
+.mpi-spinner {
+    display: inline-block;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: mpi-spinner-rotate 0.8s linear infinite;
+    vertical-align: middle;
+}
+
+/* ── Sizes ────────────────────────────────────────────────────────────────── */
+.mpi-spinner--sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.mpi-spinner--md {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+}
+
+.mpi-spinner--lg {
+    width: 32px;
+    height: 32px;
+    border-width: 4px;
+}
+
+/* ── Variants ─────────────────────────────────────────────────────────────── */
+.mpi-spinner--primary {
+    border-top-color: var(--neon-electric);
+}
+
+.mpi-spinner--secondary {
+    border-top-color: var(--text-2);
+}
+
+.mpi-spinner--light {
+    border-top-color: #fff;
+}
+
+.mpi-spinner--dark {
+    border-top-color: #000;
+}
+
+@keyframes mpi-spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}

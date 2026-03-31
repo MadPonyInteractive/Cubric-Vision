@@ -1,0 +1,419 @@
+{
+  "792": {
+    "inputs": {
+      "text": "realistic photo of a hamster with shades and wearing a cop suit and driving a cop car in a busy street during a sunny day.",
+      "clip": [
+        "1870",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "797": {
+    "inputs": {
+      "text": "bad hands, pixelated, drawing, CGI, ai, stable diffusion, action figure, 2d, cartoon, sketch, render, 3d, anime, painting, drawing, digital art, fan art, 2d art, wax, doll-like, perfect skin, 2.5d, smooth skin, jewelry, hyperrealistic, ultrarealistic, ugly, extra fingers, extra limbs, femboy, trans, child, toddler, watermark",
+      "clip": [
+        "1870",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "823": {
+    "inputs": {
+      "model_name": "Chroma1-HD-Flash.safetensors",
+      "weight_dtype": "default",
+      "clip_name1_opt": "t5xxl_fp16.safetensors",
+      "clip_name2_opt": ".none",
+      "clip_name3_opt": ".none",
+      "clip_name4_opt": ".none",
+      "clip_type": "chroma",
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "ClownModelLoader",
+    "_meta": {
+      "title": "ClownModelLoader"
+    }
+  },
+  "1072": {
+    "inputs": {
+      "resize_to_input": "false",
+      "width": [
+        "2611",
+        0
+      ],
+      "height": [
+        "2612",
+        0
+      ],
+      "mask_channel": "red",
+      "invert_mask": false,
+      "latent_type": "16_channels",
+      "image_1": [
+        "1152",
+        0
+      ],
+      "vae": [
+        "823",
+        2
+      ]
+    },
+    "class_type": "VAEEncodeAdvanced",
+    "_meta": {
+      "title": "VAEEncodeAdvanced"
+    }
+  },
+  "1073": {
+    "inputs": {
+      "image": "hf_20260311_083710_f9a13b1d-c28f-4979-a9c2-0b9336026a2a.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load_Image_1"
+    }
+  },
+  "1145": {
+    "inputs": {
+      "width": [
+        "2611",
+        0
+      ],
+      "height": [
+        "2612",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad_edge",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "1073",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "1152": {
+    "inputs": {
+      "axis": "x",
+      "image": [
+        "1153",
+        0
+      ]
+    },
+    "class_type": "ImageFlip+",
+    "_meta": {
+      "title": "🔧 Image Flip"
+    }
+  },
+  "1153": {
+    "inputs": {
+      "width": [
+        "1145",
+        1
+      ],
+      "height": [
+        "1145",
+        2
+      ],
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "1154",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "1154": {
+    "inputs": {
+      "rotation": "none",
+      "image": [
+        "1145",
+        0
+      ]
+    },
+    "class_type": "ImageRotate",
+    "_meta": {
+      "title": "Image Rotate"
+    }
+  },
+  "1155": {
+    "inputs": {
+      "expression": "((a*0.01)*-1)+1",
+      "a": [
+        "2610",
+        0
+      ]
+    },
+    "class_type": "MathExpression|pysssss",
+    "_meta": {
+      "title": "Math Expression 🐍"
+    }
+  },
+  "1646": {
+    "inputs": {
+      "samples": [
+        "2248",
+        0
+      ],
+      "vae": [
+        "823",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1647": {
+    "inputs": {
+      "images": [
+        "1646",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1739": {
+    "inputs": {
+      "width": [
+        "2611",
+        0
+      ],
+      "height": [
+        "2612",
+        0
+      ],
+      "batch_size": [
+        "2613",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "1870": {
+    "inputs": {
+      "min_padding": 1,
+      "min_length": 0,
+      "clip": [
+        "823",
+        1
+      ]
+    },
+    "class_type": "T5TokenizerOptions",
+    "_meta": {
+      "title": "T5TokenizerOptions"
+    }
+  },
+  "2248": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "exponential/res_2s",
+      "scheduler": "bong_tangent",
+      "steps": 8,
+      "steps_to_run": -1,
+      "denoise": [
+        "1155",
+        1
+      ],
+      "cfg": 1,
+      "seed": 832641882020184,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "2251",
+        0
+      ],
+      "positive": [
+        "792",
+        0
+      ],
+      "negative": [
+        "797",
+        0
+      ],
+      "latent_image": [
+        "2367",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "2249": {
+    "inputs": {
+      "style_dtype": "float64",
+      "enable": true,
+      "model": [
+        "2385",
+        0
+      ]
+    },
+    "class_type": "ReChromaPatcher",
+    "_meta": {
+      "title": "ReChromaPatcher"
+    }
+  },
+  "2250": {
+    "inputs": {
+      "shift": 1,
+      "model": [
+        "2249",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "Flow Shift"
+    }
+  },
+  "2251": {
+    "inputs": {
+      "model": [
+        "2250",
+        0
+      ]
+    },
+    "class_type": "Mahiro",
+    "_meta": {
+      "title": "patch"
+    }
+  },
+  "2367": {
+    "inputs": {
+      "boolean": [
+        "2608",
+        0
+      ],
+      "true": [
+        "1072",
+        0
+      ],
+      "false": [
+        "1739",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "2381": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "823",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "2385": {
+    "inputs": {
+      "enable_fp16_accumulation": true,
+      "model": [
+        "2381",
+        0
+      ]
+    },
+    "class_type": "ModelPatchTorchSettings",
+    "_meta": {
+      "title": "Model Patch Torch Settings"
+    }
+  },
+  "2608": {
+    "inputs": {
+      "operator": ">",
+      "a": [
+        "2610",
+        0
+      ],
+      "b": [
+        "2609",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "2609": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Mpi Int"
+    }
+  },
+  "2610": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Image_Influence"
+    }
+  },
+  "2611": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "2612": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "2613": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Batch_Size"
+    }
+  }
+}

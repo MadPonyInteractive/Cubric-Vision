@@ -1,0 +1,103 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiDragList.css — Premium Draggable Reorderable List
+   ═══════════════════════════════════════════════════════════════ */
+
+.mpi-draglist {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: var(--bg-recessed);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-soft);
+    position: relative;
+    scrollbar-width: thin;
+}
+
+.mpi-draglist__container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+}
+
+.mpi-draglist__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: calc(var(--radius-sm) - 2px);
+    cursor: grab;
+    user-select: none;
+    transition: background var(--transition), border var(--transition), opacity 0.2s, transform 0.2s;
+    outline: none;
+}
+
+.mpi-draglist__item:hover {
+    background: var(--surface-3);
+    border-color: var(--primary-glow);
+}
+
+.mpi-draglist__item:active {
+    cursor: grabbing;
+}
+
+/* Modifier: Visual state during dragging */
+.mpi-draglist__item--dragging {
+    opacity: 0.4;
+    border: 1px dashed var(--primary);
+    background: var(--surface-glass) !important;
+    transform: scale(0.98);
+}
+
+/* Handle icon container */
+.mpi-draglist__handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    opacity: 0.4;
+    transition: opacity var(--transition), transform 0.2s;
+    color: var(--text-muted);
+}
+
+.mpi-draglist__item:hover .mpi-draglist__handle {
+    opacity: 1;
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+/* Item label text */
+.mpi-draglist__label {
+    flex-grow: 1;
+    font-size: 0.92rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+/* Empty state */
+.mpi-draglist__empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-style: italic;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .mpi-draglist__item {
+        padding: 8px 10px;
+    }
+}
