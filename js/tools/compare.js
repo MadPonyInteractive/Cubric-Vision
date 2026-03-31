@@ -36,36 +36,42 @@ export async function initCompare() {
 }
 
 function mountComponents() {
-    const leftSlot = qs('#compare-leftInput-slot');
-    const rightSlot = qs('#compare-rightInput-slot');
+    mountLeftDropzone();
+    mountRightDropzone();
+}
 
-    if (leftSlot) {
-        leftDropzone = MpiMediaDropzone.mount(leftSlot, {
-            title: 'Left Side',
-            text: 'Drop Image',
-            value: formatUrl(leftImage),
-            mediaType: ['image'],
-            width: '160px'
-        });
+function mountLeftDropzone() {
+    const slot = qs('#compare-leftInput-slot');
+    if (!slot) return;
 
-        leftDropzone.on('click', () => openSideAssetBrowser('left'));
-        leftDropzone.on('drop', (data) => handleFileUpload(data.file, 'left'));
-        leftDropzone.on('remove', () => setImage('left', null));
-    }
+    leftDropzone = MpiMediaDropzone.mount(slot, {
+        title: 'Left Side',
+        text: 'Drop Image',
+        value: formatUrl(leftImage),
+        mediaType: ['image'],
+        width: '160px'
+    });
 
-    if (rightSlot) {
-        rightDropzone = MpiMediaDropzone.mount(rightSlot, {
-            title: 'Right Side',
-            text: 'Drop Image',
-            value: formatUrl(rightImage),
-            mediaType: ['image'],
-            width: '160px'
-        });
+    leftDropzone.on('click', () => openSideAssetBrowser('left'));
+    leftDropzone.on('drop', (data) => handleFileUpload(data.file, 'left'));
+    leftDropzone.on('remove', () => setImage('left', null));
+}
 
-        rightDropzone.on('click', () => openSideAssetBrowser('right'));
-        rightDropzone.on('drop', (data) => handleFileUpload(data.file, 'right'));
-        rightDropzone.on('remove', () => setImage('right', null));
-    }
+function mountRightDropzone() {
+    const slot = qs('#compare-rightInput-slot');
+    if (!slot) return;
+
+    rightDropzone = MpiMediaDropzone.mount(slot, {
+        title: 'Right Side',
+        text: 'Drop Image',
+        value: formatUrl(rightImage),
+        mediaType: ['image'],
+        width: '160px'
+    });
+
+    rightDropzone.on('click', () => openSideAssetBrowser('right'));
+    rightDropzone.on('drop', (data) => handleFileUpload(data.file, 'right'));
+    rightDropzone.on('remove', () => setImage('right', null));
 }
 
 /**
@@ -127,10 +133,10 @@ async function handleFileUpload(file, side) {
 function setImage(side, path) {
     if (side === 'left') {
         leftImage = path;
-        if (leftDropzone) leftDropzone.update({ value: formatUrl(path) });
+        mountLeftDropzone();
     } else {
         rightImage = path;
-        if (rightDropzone) rightDropzone.update({ value: formatUrl(path) });
+        mountRightDropzone();
     }
 
     saveToolState('compare', { leftImage, rightImage });
