@@ -11,6 +11,7 @@
 import { state } from './state.js';
 import { resizeImageIfNeeded } from './imageProcessor.js';
 import { ComfyUIController } from './comfyController.js';
+import { Events } from './events.js';
 
 // ─── URL Normalization ─────────────────────────────────────────────────────────
 
@@ -161,6 +162,7 @@ export async function saveResultToLibrary(resultUrl, prefix = 'result') {
     if (!data.success) throw new Error(data.error || 'Upload failed');
 
     document.dispatchEvent(new CustomEvent('media:updated'));
+    Events.emit('media:updated', { projectId: state.currentProject?.id });
     return { success: true, filename: data.filename || data.filePath };
 }
 
@@ -287,6 +289,7 @@ export function setRunningTool(toolId, type) {
     document.dispatchEvent(new CustomEvent('tool:running-changed', {
         detail: { toolId, type, running: true }
     }));
+    Events.emit('tool:running', { tool: toolId, type });
 }
 
 /**
@@ -304,6 +307,7 @@ export function clearRunningTool(type) {
     document.dispatchEvent(new CustomEvent('tool:running-changed', {
         detail: { toolId, type, running: false }
     }));
+    Events.emit('tool:idle', { tool: null, type });
 }
 
 /**

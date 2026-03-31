@@ -1,6 +1,8 @@
+import { Events } from './events.js';
+
 // Holds all mutable application state, shared globally 
 // across modules via a single exported object.
-export const state = {
+const _state = {
     // ── Existing prompt-builder state ──────────────────────────────────────────
     g_currentGuide: null,
     g_promptEN: "",
@@ -79,6 +81,21 @@ export const state = {
     runningComfyTool: null,  // e.g. 'generator' | 'detailer' | 'upscaler'
     runningLlmTool: null,    // e.g. 'llm' | 'translator' | 'descriptor' | 'jsonFormatter'
 };
+
+/**
+ * Singleton state object wrapped in a Proxy to automatically emit 'state:changed'
+ * events when any property is mutated.
+ */
+export const state = new Proxy(_state, {
+    set(target, key, value) {
+        target[key] = value;
+        Events.emit('state:changed', { key, value });
+        return true;
+    },
+    get(target, key) {
+        return target[key];
+    }
+});
 
 /**
  * Helper to get or initialize per-tool Comfy settings
