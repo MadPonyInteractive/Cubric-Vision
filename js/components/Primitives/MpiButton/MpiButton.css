@@ -1,0 +1,202 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiButton — Primitive Button Component
+   BEM block: .mpi-btn
+   Mirrors the app's canonical .btn (03_forms.css) using the same design tokens.
+   Differences: BEM modifier classes instead of chained classes, icon slot.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+.mpi-btn {
+    font-family: var(--font-display);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--bounce);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    position: relative;
+    user-select: none;
+}
+
+/* ── Sizes ────────────────────────────────────────────────────────────────── */
+.mpi-btn--sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+}
+
+.mpi-btn--md {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.mpi-btn--lg {
+    padding: 0.8rem 1.50rem;
+    font-size: 1rem;
+}
+
+/* ── Variants ─────────────────────────────────────────────────────────────── */
+
+/* primary — neon electric fill, matches .btn.primary */
+.mpi-btn--primary {
+    background: var(--neon-electric);
+    color: #fff;
+    box-shadow: 0 0 10px var(--neon-glow-sm);
+}
+
+.mpi-btn--primary:hover:not(:disabled),
+.mpi-btn--primary.is-pressed:not(:disabled) {
+    background: var(--neon-accent);
+    color: #000;
+    box-shadow: 0 0 25px var(--neon-glow);
+    transform: translateY(-1px);
+}
+
+/* secondary — glass surface, matches .btn.secondary */
+.mpi-btn--secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.mpi-btn--secondary:hover:not(:disabled),
+.mpi-btn--secondary.is-pressed:not(:disabled) {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* danger — matches .btn.danger */
+.mpi-btn--danger {
+    background: var(--danger);
+    color: #fff;
+}
+
+.mpi-btn--danger:hover:not(:disabled),
+.mpi-btn--danger.is-pressed:not(:disabled) {
+    background: #f87171;
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+}
+
+/* outline — transparent + border, matches .btn.outline */
+.mpi-btn--outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.mpi-btn--outline:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ghost — text-only, no bg or border */
+.mpi-btn--ghost {
+    background: transparent;
+    color: var(--text-2);
+}
+
+.mpi-btn--ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+
+/* ── States ───────────────────────────────────────────────────────────────── */
+
+/* Disabled */
+.mpi-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+    transform: none !important;
+}
+
+/* No focus ring — matches app's .btn:focus */
+.mpi-btn:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Loading — matches .btn.loading + .btn.loading::after */
+.mpi-btn--loading {
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.mpi-btn--loading::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: mpi-btn-spin 0.6s linear infinite;
+}
+
+.mpi-btn--primary.mpi-btn--loading::after {
+    border-color: rgba(0, 0, 0, 0.2);
+    border-top-color: #000;
+}
+
+.mpi-btn--secondary.mpi-btn--loading::after {
+    border-color: rgba(255, 255, 255, 0.15);
+    border-top-color: #fff;
+}
+
+@keyframes mpi-btn-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Loader ───────────────────────────────────────────────────────────────── */
+
+/* ── Light Mode Overrides ─────────────────────────────────────────────────── */
+body.light-mode .mpi-btn--primary {
+    background: var(--neon-electric);
+    color: #fff;
+    box-shadow: 0 2px 12px var(--neon-glow-sm);
+}
+
+body.light-mode .mpi-btn--primary:hover:not(:disabled),
+body.light-mode .mpi-btn--primary.is-pressed:not(:disabled) {
+    background: var(--neon-accent);
+    color: var(--bg);
+    box-shadow: 0 4px 20px var(--neon-glow);
+}
+
+body.light-mode .mpi-btn--secondary {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+body.light-mode .mpi-btn--secondary:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: var(--primary);
+}
+
+body.light-mode .mpi-btn--ghost {
+    color: var(--text-2);
+}
+
+body.light-mode .mpi-btn--ghost:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text);
+}
+
+body.light-mode .mpi-btn--outline {
+    border-color: var(--border);
+    color: var(--text);
+}
+
+body.light-mode .mpi-btn--outline:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.05);
+    border-color: var(--primary);
+}

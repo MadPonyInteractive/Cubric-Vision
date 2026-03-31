@@ -1,0 +1,10 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiSlider — Compound Slider Layout
+   Wraps .mpi-progress primitive.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Re-use base progress bar styles, no override needed yet. */
+.mpi-slider-compound {
+    display: block;
+    width: 100%;
+}

@@ -1,0 +1,581 @@
+{
+  "1455": {
+    "inputs": {
+      "width": [
+        "1520",
+        0
+      ],
+      "height": [
+        "1521",
+        0
+      ],
+      "batch_size": [
+        "1523",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "1462": {
+    "inputs": {
+      "ckpt_name": "SDXL\\lustify_7.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
+  "1463": {
+    "inputs": {
+      "images": [
+        "1512",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1466": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "1534",
+        0
+      ],
+      "steps": [
+        "1525",
+        0
+      ],
+      "cfg": 2.5,
+      "sampler_name": "dpmpp_3m_sde",
+      "scheduler": "exponential",
+      "start_at_step": 0,
+      "end_at_step": [
+        "1488",
+        0
+      ],
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1532",
+        0
+      ],
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ],
+      "latent_image": [
+        "1455",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "1472": {
+    "inputs": {
+      "value": "masterpiece, best quality, 1 woman, solo, Sofia, black-pink gradient hair, braids,  hazel-eyes. checking her phone, nude  white Pen,Coffee cup, intent stare, indoors, in a bedroom, white LED light makes her outline pop slightly against the wall, Reflection selfie. realistic, amateur photo, Lomochrome color film, film grain, underexposed, shot on Polaroid SX-70"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "1473": {
+    "inputs": {
+      "value": "blurry, (lowres:1.2), (worst quality:1.4), (low quality:1.4), (bad anatomy:1.4), bad hands, multiple views, jpeg artifacts, signature, watermark, text, logo, artist name, femboy, trans, child, toddler, teenager"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "1474": {
+    "inputs": {
+      "ckpt_name": "SDXL\\sd_xl_refiner_1.0_0.9vae.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint_Refiner"
+    }
+  },
+  "1475": {
+    "inputs": {
+      "text": [
+        "1473",
+        0
+      ],
+      "clip": [
+        "1474",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1476": {
+    "inputs": {
+      "text": [
+        "1473",
+        0
+      ],
+      "clip": [
+        "1462",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1477": {
+    "inputs": {
+      "text": [
+        "1472",
+        0
+      ],
+      "clip": [
+        "1474",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1478": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 517697915373540,
+      "steps": [
+        "1525",
+        0
+      ],
+      "cfg": 3,
+      "sampler_name": "dpmpp_3m_sde",
+      "scheduler": "exponential",
+      "start_at_step": [
+        "1524",
+        0
+      ],
+      "end_at_step": 10000,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1474",
+        0
+      ],
+      "positive": [
+        "1477",
+        0
+      ],
+      "negative": [
+        "1475",
+        0
+      ],
+      "latent_image": [
+        "1466",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "Refiner"
+    }
+  },
+  "1479": {
+    "inputs": {
+      "samples": [
+        "1478",
+        0
+      ],
+      "vae": [
+        "1474",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1481": {
+    "inputs": {
+      "text": [
+        "1472",
+        0
+      ],
+      "clip": [
+        "1462",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1486": {
+    "inputs": {
+      "boolean": [
+        "1489",
+        0
+      ],
+      "true": [
+        "1479",
+        0
+      ],
+      "false": [
+        "1487",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "mpi if else"
+    }
+  },
+  "1487": {
+    "inputs": {
+      "samples": [
+        "1466",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1488": {
+    "inputs": {
+      "boolean": [
+        "1489",
+        0
+      ],
+      "true": [
+        "1524",
+        0
+      ],
+      "false": [
+        "1522",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "refiner_steps"
+    }
+  },
+  "1489": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiBoolean",
+    "_meta": {
+      "title": "Use_Refiner"
+    }
+  },
+  "1506": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model_a": [
+        "1462",
+        0
+      ],
+      "model_b": [
+        "1462",
+        0
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1507": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model_a": [
+        "1506",
+        0
+      ],
+      "model_b": [
+        "1506",
+        1
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1508": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model_a": [
+        "1507",
+        0
+      ],
+      "model_b": [
+        "1507",
+        1
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1509": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model_a": [
+        "1508",
+        0
+      ],
+      "model_b": [
+        "1508",
+        1
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1510": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model_a": [
+        "1509",
+        0
+      ],
+      "model_b": [
+        "1509",
+        1
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1511": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 0.8,
+      "strength_clip": 0.6,
+      "model_a": [
+        "1510",
+        0
+      ],
+      "model_b": [
+        "1510",
+        1
+      ]
+    },
+    "class_type": "MpiDoubleLora",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1512": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "1517",
+        0
+      ],
+      "false": [
+        "1486",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Turbo"
+    }
+  },
+  "1517": {
+    "inputs": {
+      "samples": [
+        "1533",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1518": {
+    "inputs": {
+      "lora_name": "SDXL\\spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+      "strength_model": 0.5,
+      "model": [
+        "1511",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1519": {
+    "inputs": {
+      "lora_name": "SDXL\\sdxl_lightning_4step_lora.safetensors",
+      "strength_model": 1,
+      "model": [
+        "1518",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1520": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "1521": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "1522": {
+    "inputs": {
+      "int": 100000
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "No Refiner Steps"
+    }
+  },
+  "1523": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Batch_Size"
+    }
+  },
+  "1524": {
+    "inputs": {
+      "int": 25
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Refiner Steps"
+    }
+  },
+  "1525": {
+    "inputs": {
+      "int": 30
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Steps"
+    }
+  },
+  "1532": {
+    "inputs": {
+      "lora_name": "SDXL\\spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+      "strength_model": 0.5,
+      "model": [
+        "1511",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1533": {
+    "inputs": {
+      "seed": [
+        "1534",
+        0
+      ],
+      "steps": 8,
+      "cfg": 1.5,
+      "sampler_name": "heun",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "1519",
+        0
+      ],
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ],
+      "latent_image": [
+        "1455",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "1534": {
+    "inputs": {
+      "int": 30
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Seed"
+    }
+  }
+}

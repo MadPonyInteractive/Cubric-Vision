@@ -1,0 +1,42 @@
+/* ── MpiRatioSelector — Block Picker ────────────────────────────────────── */
+.mpi-ratio-sel {
+    position: relative;
+    display: inline-block;
+}
+
+.mpi-ratio-sel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding: 0 0.25rem;
+}
+
+.mpi-ratio-sel__grid {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mpi-ratio-sel__item {
+    display: flex;
+    justify-content: center;
+}
+
+
+
+/* Ensure icons are stroke based if specified in the registry */
+.mpi-ratio-sel .mpi-icon--stroke {
+    stroke: currentColor;
+    stroke-width: 2.5;
+}
+
+/* Label above icon (MpiIconButton modifier) override if needed */
+.mpi-ratio-sel .mpi-ibtn--label-top {
+    min-height: 80px;
+    padding-top: 0.75rem;
+}
+
+.mpi-ratio-sel .mpi-ibtn__label {
+    font-size: 0.8rem;
+    font-weight: 800;
+}

@@ -1,0 +1,36 @@
+/* ── MpiPopupButton — Compound ────────────────────────────────────── */
+.mpi-popup-btn {
+    position: relative;
+    display: inline-block;
+}
+
+/* Modifier when open — trigger color change or indicator */
+.mpi-popup-btn.is-open .mpi-popup-btn__trigger .mpi-btn {
+    border-color: var(--neon-electric);
+    box-shadow: 0 0 8px var(--neon-glow-sm);
+}
+
+/* 🔄 Position: TOP (Default) — override or refine Primitive defaults */
+.mpi-popup-btn--top .mpi-popup {
+    bottom: calc(100% + 12px);
+    top: auto;
+}
+
+/* 🔄 Position: BOTTOM */
+.mpi-popup-btn--bottom .mpi-popup {
+    top: calc(100% + 12px);
+    bottom: auto;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+.mpi-popup-btn--bottom .mpi-popup.is-active {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Flip the arrow for bottom-positioned popup */
+.mpi-popup-btn--bottom .mpi-popup::after {
+    top: auto;
+    bottom: 100%;
+    border-top: none;
+    border-bottom: 8px solid var(--border);
+}

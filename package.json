@@ -1,0 +1,23 @@
+{
+  "name": "prompt-builder-server",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "7zip-bin": "^5.2.0",
+    "axios": "^1.13.6",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "electron-context-menu": "^4.1.2",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "node-7z": "^3.0.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.3"
+  }
+}

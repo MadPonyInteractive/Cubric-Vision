@@ -1,0 +1,100 @@
+<template id="tpl-cropExtract">
+  <div class="tool-panel" id="tool-cropExtract">
+    <div class="tool-header">
+      <div>
+        <h2 class="tool-title">Crop & Extract</h2>
+        <p class="tool-desc">Trim video and extract high-quality cropped frames.</p>
+      </div>
+    </div>
+
+    <div class="tool-body ce-centered-layout">
+      <!-- Main Workspace (Centered & Sized) -->
+      <div class="video-workspace-optimized">
+        <div class="video-container-lite" id="ce-video-container">
+          <div class="video-placeholder" id="ce-drop-zone">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+              <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            <p>Drag & Drop Video or Click here</p>
+          </div>
+          <video id="ce-main-video" class="hide" playsinline></video>
+          <div id="ce-crop-overlay" class="crop-overlay hide">
+            <div class="crop-box" id="ce-crop-box">
+              <div class="crop-handle tl" data-handle="tl"></div>
+              <div class="crop-handle tr" data-handle="tr"></div>
+              <div class="crop-handle bl" data-handle="bl"></div>
+              <div class="crop-handle br" data-handle="br"></div>
+              <div class="crop-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Standardized Toolbar (Bottom Center) -->
+      <div class="ce-action-bar-fixed" id="ce-action-bar">
+        <div class="ce-toolbar-inner">
+
+          <!-- Left Actions -->
+          <div class="ce-toolbar-group left">
+            <button id="ce-addAssetBtn" class="btn secondary small icon-only" title="Add Media"
+              style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05);">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+            </button>
+
+            <div class="ratio-dropdown-container">
+              <button id="ce-ratioToggleBtn" class="btn secondary small outline ratio-compact-btn"
+                title="Select Aspect Ratio">
+                <span id="ce-currentRatioIcon" style="display: flex; align-items: center; justify-content: center;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                  </svg>
+                </span>
+                <span id="ce-currentRatioText">1:1</span>
+              </button>
+
+              <div id="ce-ratioMenu" class="ratio-menu mini-ratio-menu hide">
+                <div class="ratio-menu-header">RATIO</div>
+                <div id="ce-ratioGrid" class="ratio-grid-items">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Timeline -->
+          <div class="ce-toolbar-group center">
+            <div class="ce-timeline-outer">
+              <div class="ce-filmstrip" id="ce-filmstrip"></div>
+              <div class="ce-seeker-strip" id="ce-timeline-track">
+                <div class="ce-trim-range" id="ce-trim-range">
+                  <div class="ce-trim-handle handle-in" id="ce-handle-in"></div>
+                  <div class="ce-trim-handle handle-out" id="ce-handle-out"></div>
+                </div>
+                <div class="ce-playhead" id="ce-playhead"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Transport -->
+          <div class="ce-toolbar-group right">
+            <div class="ce-volume-control" id="ce-volume-control">
+              <!-- Container for MuteIcon (Button injected by JS) -->
+              <div id="ce-volume-icon"></div>
+              <!-- Container for Slider (Pop-up injected by JS) -->
+              <div class="ce-volume-popup" id="ce-volume-popup"></div>
+            </div>
+            <button class="ce-play-btn" id="ce-play-pause" title="Play/Pause">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <div class="ce-time-display" id="ce-time-total">00:00 / 00:00</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,35 @@
+﻿<template id="tpl-mediaLibrary">
+    <div class="tool-panel" id="tool-mediaLibrary">
+      <div class="tool-header media-lib-header">
+        <div>
+          <h2 class="tool-title">Media Library</h2>
+          <p class="tool-desc">Manage, preview, and reuse all media generated or uploaded for this project.</p>
+        </div>
+        <div class="media-lib-actions">
+          <button id="media-deleteSelectedBtn" class="btn danger hide">Delete Selected</button>
+          <button id="media-compareSelectedBtn" class="btn primary hide">Compare Selected</button>
+          <button id="media-downloadSelectedBtn" class="btn secondary hide">Download Selected</button>
+        </div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="media-tabs" id="media-tabs">
+        <button class="nav-item active" data-filter="all">All</button>
+        <button class="nav-item" data-filter="image">Images</button>
+        <button class="nav-item" data-filter="video">Videos</button>
+        <button class="nav-item" data-filter="audio">Audio</button>
+        <button class="nav-item" data-filter="favorites">Favorites</button>
+      </div>
+
+      <div class="tool-body">
+        <!-- Grid -->
+        <div class="media-grid" id="media-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="media-emptyState" class="media-empty-state hide">
+          <p>No media files found in this project.</p>
+        </div>
+      </div>
+    </div>
+  </template>

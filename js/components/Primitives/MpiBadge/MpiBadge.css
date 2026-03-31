@@ -1,0 +1,62 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiBadge — Primitive Badge Component
+   BEM block: .mpi-badge
+═══════════════════════════════════════════════════════════════════════════ */
+
+.mpi-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+}
+
+.mpi-badge--pill {
+    border-radius: 100px;
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+}
+
+/* ── Variants ─────────────────────────────────────────────────────────────── */
+
+.mpi-badge--primary {
+    background: var(--neon-electric);
+    color: #000;
+}
+
+.mpi-badge--secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mpi-badge--success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.mpi-badge--warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.mpi-badge--danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mpi-badge--info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
