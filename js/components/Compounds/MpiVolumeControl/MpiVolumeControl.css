@@ -1,0 +1,48 @@
+/* MpiVolumeControl wrapper */
+.mpi-volume-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Positioning of slider popup */
+.mpi-volume-control__popup.mpi-popup {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 40px;
+    height: 140px;
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+}
+
+.mpi-volume-control__popup.mpi-popup.is-active {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+.mpi-volume-control__popup-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 12px 0;
+}
+
+/* Style for the slider container inside popup */
+.mpi-volume-control__slider-wrapper {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Force vertical slider using CSS rotation */
+.mpi-volume-control__slider-wrapper .mpi-progress {
+    transform: rotate(-90deg);
+    width: 100px; /* slider length */
+    height: 30px;
+}

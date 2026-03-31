@@ -28,6 +28,8 @@ import { MpiScrollableBox } from '../components/Compounds/MpiScrollableBox/MpiSc
 import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
 import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
+import { MpiMuteIcon } from '../components/Compounds/MpiMuteIcon/MpiMuteIcon.js';
+import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
@@ -209,6 +211,16 @@ function mountAll() {
             variant: 'success',
             wheel: true
         });
+    });
+
+    // ── MpiMuteIcon ──────────────────────────────────────────────────────────
+    mount('preview-muteicon-default', () => MpiMuteIcon.mount(slot('preview-muteicon-default'), { volume: 0.7 }));
+    mount('preview-muteicon-muted', () => MpiMuteIcon.mount(slot('preview-muteicon-muted'), { muted: true }));
+
+    // ── MpiVolumeControl ─────────────────────────────────────────────────────
+    mount('preview-vol-control', () => {
+        const vc = MpiVolumeControl.mount(slot('preview-vol-control'), { volume: 0.5 });
+        vc.on('change', ({ volume, muted }) => console.log('[gallery] volume control change:', { volume, muted }));
     });
 
     // ── MpiDragList (Compound) ─────────────────────────────────────────────────

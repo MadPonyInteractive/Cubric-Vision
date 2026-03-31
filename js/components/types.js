@@ -228,3 +228,17 @@
  * 'templates:updated'  { projectId: string }          — template saved or deleted
  * 'templates:loaded'   { projectId: string, name: string } — template applied
  */
+
+/**
+ * @typedef {Object} MpiMuteIconProps (Compound — js/components/Compounds/MpiMuteIcon)
+ * @property {boolean} [muted=false] - Muted state
+ * @property {number} [volume=1.0] - Volume level 0–1 (used to pick icon: off/low/high)
+ * @property {'sm'|'md'|'lg'} [size='md'] - Button size
+ */
+
+/**
+ * @typedef {Object} MpiVolumeControlProps (Compound — js/components/Compounds/MpiVolumeControl)
+ * @property {number} [volume=1.0] - Initial volume 0–1
+ * @property {boolean} [muted=false] - Initial muted state
+ * Emits: 'change' { volume: number, muted: boolean }
+ */
