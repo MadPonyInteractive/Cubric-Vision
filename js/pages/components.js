@@ -30,6 +30,7 @@ import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js'
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
 import { MpiMuteIcon } from '../components/Compounds/MpiMuteIcon/MpiMuteIcon.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
+import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
@@ -315,6 +316,20 @@ function mountAll() {
         };
 
         setupDz(baseProps);
+    });
+
+    // ── MpiVideoPlayer (Compound) ─────────────────────────────────────────────
+    mount('preview-videoplayer-default', () => {
+        const vp = MpiVideoPlayer.mount(slot('preview-videoplayer-default'), {
+            src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            poster: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.png',
+            muted: true,
+            autoplay: false,
+            volume: 0.75
+        });
+        
+        vp.on('play', () => console.log('[gallery] video play'));
+        vp.on('pause', () => console.log('[gallery] video pause'));
     });
 
 

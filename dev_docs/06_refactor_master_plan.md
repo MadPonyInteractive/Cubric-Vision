@@ -291,16 +291,16 @@ import { generateSeed }     from '../utils/seed.js';
 ## ✅ Master Checklist
 
 ### Group 0 — Foundation
-- [ ] 0.1 Git initialized, `.gitignore` in place, initial commit
-- [ ] 0.2 `package.json` semver `0.8.0`, `CHANGELOG.md` created
-- [ ] 0.3 `js/utils/` with 5 utility files
-- [ ] 0.4 `js/events.js` Event Bus created and wired to `state.js`
-- [ ] 0.5 `state.js` upgraded, project templates backend routes added
+- [x] 0.1 Git initialized, `.gitignore` in place, initial commit
+- [x] 0.2 `package.json` semver `0.8.0`, `CHANGELOG.md` created
+- [x] 0.3 `js/utils/` with 5 utility files
+- [x] 0.4 `js/events.js` Event Bus created and wired to `state.js`
+- [x] 0.5 `state.js` upgraded, project templates backend routes added
 
 ### Group 1 — Legacy Deletion
-- [ ] 1.1 6 legacy components deleted
-- [ ] 1.2 `MpiMuteIcon` + `MpiVolumeControl` factory Compounds built
-- [ ] 1.3 `MpiVideoPlayer` factory Compound built
+- [x] 1.1 6 legacy components deleted
+- [x] 1.2 `MpiMuteIcon` + `MpiVolumeControl` factory Compounds built
+- [x] 1.3 `MpiVideoPlayer` factory Compound built
 
 ### Group 2 — Tool Rebuild
 - [ ] 2.1 translator.js rebuilt

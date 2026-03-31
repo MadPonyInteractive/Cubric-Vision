@@ -242,3 +242,21 @@
  * @property {boolean} [muted=false] - Initial muted state
  * Emits: 'change' { volume: number, muted: boolean }
  */
+
+/**
+ * @typedef {Object} MpiVideoPlayerProps (Compound — js/components/Compounds/MpiVideoPlayer)
+ * @property {string} [src] - Video source URL
+ * @property {string} [poster] - Poster image URL
+ * @property {boolean} [autoplay=false] - Auto-play on mount
+ * @property {boolean} [loop=false] - Loop playback
+ * @property {boolean} [muted=false] - Start muted
+ * @property {number} [volume=1.0] - Initial volume (0–1)
+ * @property {boolean} [controls=true] - Show custom UI controls overlay
+ * 
+ * Emits:
+ * 'play' { time: number }
+ * 'pause' { time: number }
+ * 'ended' { time: number }
+ * 'timeupdate' { time: number, duration: number }
+ * 'change' { volume: number, muted: boolean }
+ */

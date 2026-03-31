@@ -1,0 +1,156 @@
+/**
+ * MpiVideoPlayer.css — Aesthetic Glass-morphic Video Player.
+ */
+
+.mpi-video-player {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #050505;
+    border-radius: 12px;
+    overflow: hidden;
+    user-select: none;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.mpi-video-player__video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+/* Glass-morphic Controls Overlay */
+.mpi-video-player__controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0) 100%);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+
+.mpi-video-player:hover .mpi-video-player__controls,
+.mpi-video-player[data-playing="false"] .mpi-video-player__controls {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Top Progress Row */
+.mpi-video-player__progress {
+    margin-bottom: 6px;
+    position: relative;
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress {
+    height: 18px; /* Slightly taller for easier scrubbing */
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress__track {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress__fill {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%) !important; /* Emerald gradient */
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Bottom Controls Row */
+.mpi-video-player__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mpi-video-player__left,
+.mpi-video-player__right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Time Display */
+.mpi-video-player__time {
+    font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.02em;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.mpi-video-player__current {
+    color: #fff;
+    min-width: 60px;
+}
+
+.mpi-video-player__duration {
+    min-width: 60px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.mpi-video-player__separator {
+    opacity: 0.3;
+}
+
+/* Big Center Play Button Overlay */
+.mpi-video-player__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.mpi-video-player__big-play {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.mpi-video-player[data-playing="false"] .mpi-video-player__big-play {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.mpi-video-player:hover[data-playing="false"] .mpi-video-player__big-play {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Hide controls if mouse inactive (optional future feat) */
+
+/* Accessibility & State */
+.mpi-video-player:focus-within {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* Adjust volume control for video context */
+.mpi-video-player__volume-wrapper .mpi-volume-control__popup {
+    bottom: calc(100% + 15px) !important;
+}
