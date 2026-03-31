@@ -1,14 +1,35 @@
-next.md
+# Dependencies
+node_modules/
 
-# Directories
-Backup/
-data/
+# Electron build output
+dist/
+out/
+
+# Engine binaries and embedded Python (huge, gitignored)
 engine/
 llama_engine/
-node_modules/
+
+# User data
 projects/
+data/
+
+# Temporary files
 tmp/
-dev_docs/
-.vscode/
-.agent/
-.agents/
+*.tmp
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/settings.json
+*.code-workspace
+
+# Secrets / local config (if any added later)
+.env
+.env.local
+
+# Backup folder (manual snapshot, not version controlled)
+Backup/
