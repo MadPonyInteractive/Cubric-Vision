@@ -121,12 +121,9 @@ export function initAutoExpand(textarea) {
     window.addEventListener('resize', adjustHeight);
 }
 
-/**
- * Centrally managed seed generation logic (Stage 12.5)
- */
-export function generateSeed() {
-    return Math.floor(Math.random() * 100000000000000);
-}
+// @deprecated — import generateSeed from js/utils/seed.js
+export { generateSeed } from './utils/seed.js';
+
 
 /**
  * Universal Mouse Wheel Value Control (Stage 12.6)
