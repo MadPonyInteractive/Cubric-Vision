@@ -1,0 +1,14 @@
+next.md
+
+# Directories
+Backup/
+data/
+engine/
+llama_engine/
+node_modules/
+projects/
+tmp/
+dev_docs/
+.vscode/
+.agent/
+.agents/
