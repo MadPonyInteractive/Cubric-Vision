@@ -223,3 +223,8 @@
  * @property {function(): void} destroy - Removes component from DOM and cleans listeners
  * @property {function(string, function): void} on - Subscribes to internal events
  */
+/**
+ * @typedef {Object} MpiTemplateEventMap — Template lifecycle events
+ * 'templates:updated'  { projectId: string }          — template saved or deleted
+ * 'templates:loaded'   { projectId: string, name: string } — template applied
+ */

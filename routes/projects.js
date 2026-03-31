@@ -470,4 +470,85 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
     }
 });
 
+// ─── Project Templates ────────────────────────────────────────────────────────
+
+/**
+ * Helper to find a project's folder on disk by its internal UUID.
+ */
+async function findProjectFolder(id) {
+    if (!id) return null;
+    const roots = [DEFAULT_PROJECTS_ROOT];
+    for (const root of roots) {
+        if (!(await fs.pathExists(root))) continue;
+        const entries = await fs.readdir(root);
+        for (const entry of entries) {
+            const entryPath = path.join(root, entry);
+            const jsonPath = path.join(entryPath, 'project.json');
+            if (await fs.pathExists(jsonPath)) {
+                try {
+                    const p = await fs.readJson(jsonPath);
+                    if (p.id === id) return entryPath;
+                } catch (e) { /* skip */ }
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * GET /project-templates/:id
+ * Returns all templates for a project.
+ */
+router.get('/project-templates/:id', async (req, res) => {
+    try {
+        const folderPath = await findProjectFolder(req.params.id);
+        if (!folderPath) return res.status(404).json({ error: 'Project not found' });
+        const projectPath = path.join(folderPath, 'project.json');
+        const project = await fs.readJson(projectPath);
+        res.json({ templates: project.templates || {} });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * POST /project-templates/:id
+ * Body: { name: string, toolStates: Object }
+ * Saves or overwrites a named template.
+ */
+router.post('/project-templates/:id', async (req, res) => {
+    try {
+        const { name, toolStates } = req.body;
+        if (!name) return res.status(400).json({ error: 'name required' });
+        const folderPath = await findProjectFolder(req.params.id);
+        if (!folderPath) return res.status(404).json({ error: 'Project not found' });
+        const projectPath = path.join(folderPath, 'project.json');
+        const project = await fs.readJson(projectPath);
+        if (!project.templates) project.templates = {};
+        project.templates[name] = { created: new Date().toISOString(), toolStates };
+        await fs.writeJson(projectPath, project, { spaces: 2 });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * DELETE /project-templates/:id/:name
+ * Deletes a named template.
+ */
+router.delete('/project-templates/:id/:name', async (req, res) => {
+    try {
+        const folderPath = await findProjectFolder(req.params.id);
+        if (!folderPath) return res.status(404).json({ error: 'Project not found' });
+        const projectPath = path.join(folderPath, 'project.json');
+        const project = await fs.readJson(projectPath);
+        if (project.templates) delete project.templates[req.params.name];
+        await fs.writeJson(projectPath, project, { spaces: 2 });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;
