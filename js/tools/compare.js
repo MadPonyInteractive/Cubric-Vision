@@ -1,18 +1,29 @@
 import { state } from '../state.js';
+import { Events } from '../events.js';
+import { qs } from '../utils/dom.js';
 import { InteractiveCanvas } from '../components/interactiveCanvas.js';
+import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
 import { saveToolState, loadToolState } from '../toolState.js';
 import { resizeImageIfNeeded } from '../imageProcessor.js';
+
+/**
+ * js/tools/compare.js
+ * Tool for side-by-side image comparison using InteractiveCanvas.
+ */
 
 let compareCanvas = null;
 let leftImage = null;
 let rightImage = null;
+
+let leftDropzone = null;
+let rightDropzone = null;
 
 export async function initCompare() {
     const saved = loadToolState('compare');
     leftImage = saved?.leftImage || null;
     rightImage = saved?.rightImage || null;
 
-    const container = document.getElementById('compare-canvasContainer');
+    const container = qs('#compare-canvasContainer');
     if (container) {
         if (compareCanvas) {
             compareCanvas.destroy();
@@ -20,52 +31,71 @@ export async function initCompare() {
         compareCanvas = new InteractiveCanvas(container);
     }
 
-    setupEventListeners();
+    mountComponents();
     renderCompare();
 }
 
-function setupEventListeners() {
-    const leftSlot = document.getElementById('compare-leftInput');
-    const rightSlot = document.getElementById('compare-rightInput');
+function mountComponents() {
+    const leftSlot = qs('#compare-leftInput-slot');
+    const rightSlot = qs('#compare-rightInput-slot');
 
-    if (!leftSlot || !rightSlot) return;
-
-    [leftSlot, rightSlot].forEach(slot => {
-        const side = slot.dataset.side;
-        
-        // Remove old listeners to avoid stacking
-        const newSlot = slot.cloneNode(true);
-        slot.parentNode.replaceChild(newSlot, slot);
-
-        newSlot.addEventListener('click', async () => {
-            const { openAssetBrowser } = await import('../components/assetBrowserModal.js');
-            openAssetBrowser((asset) => {
-                let url = asset.url;
-                if (url.includes('?path=')) {
-                    url = decodeURIComponent(url.split('path=')[1]);
-                }
-                setImage(side, url);
-            });
+    if (leftSlot) {
+        leftDropzone = MpiMediaDropzone.mount(leftSlot, {
+            title: 'Left Side',
+            text: 'Drop Image',
+            value: formatUrl(leftImage),
+            mediaType: ['image'],
+            width: '160px'
         });
 
-        newSlot.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            newSlot.classList.add('drag-over');
+        leftDropzone.on('click', () => openSideAssetBrowser('left'));
+        leftDropzone.on('drop', (data) => handleFileUpload(data.file, 'left'));
+        leftDropzone.on('remove', () => setImage('left', null));
+    }
+
+    if (rightSlot) {
+        rightDropzone = MpiMediaDropzone.mount(rightSlot, {
+            title: 'Right Side',
+            text: 'Drop Image',
+            value: formatUrl(rightImage),
+            mediaType: ['image'],
+            width: '160px'
         });
 
-        newSlot.addEventListener('dragleave', () => newSlot.classList.remove('drag-over'));
+        rightDropzone.on('click', () => openSideAssetBrowser('right'));
+        rightDropzone.on('drop', (data) => handleFileUpload(data.file, 'right'));
+        rightDropzone.on('remove', () => setImage('right', null));
+    }
+}
 
-        newSlot.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            newSlot.classList.remove('drag-over');
-            const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
-            if (file) {
-                await handleFileUpload(file, side);
-            }
-        });
+/**
+ * Formats a project path into a usable URL.
+ */
+function formatUrl(path) {
+    if (!path) return null;
+    if (path.startsWith('data:') || path.startsWith('http') || path.startsWith('/project-file')) {
+        return path;
+    }
+    return `/project-file?path=${encodeURIComponent(path)}`;
+}
+
+/**
+ * Opens asset browser specifically for one side.
+ */
+async function openSideAssetBrowser(side) {
+    const { openAssetBrowser } = await import('../components/assetBrowserModal.js');
+    openAssetBrowser((asset) => {
+        let url = asset.url;
+        if (url.includes('?path=')) {
+            url = decodeURIComponent(url.split('path=')[1]);
+        }
+        setImage(side, url);
     });
 }
 
+/**
+ * Handles file upload for specific side.
+ */
 async function handleFileUpload(file, side) {
     if (!state.currentProject) {
         window.MpiAlert("Please open a project first.");
@@ -84,54 +114,37 @@ async function handleFileUpload(file, side) {
         const data = await res.json();
         if (data.success && data.filePath) {
             setImage(side, data.filePath);
+            Events.emit('media:updated', { projectId: state.currentProject.id });
         }
     } catch (e) {
         console.error('[Compare] Upload failed:', e);
     }
 }
 
+/**
+ * Updates the internal state, component UI, and persists.
+ */
 function setImage(side, path) {
-    if (side === 'left') leftImage = path;
-    else rightImage = path;
+    if (side === 'left') {
+        leftImage = path;
+        if (leftDropzone) leftDropzone.update({ value: formatUrl(path) });
+    } else {
+        rightImage = path;
+        if (rightDropzone) rightDropzone.update({ value: formatUrl(path) });
+    }
 
     saveToolState('compare', { leftImage, rightImage });
     renderCompare();
 }
 
+/**
+ * Renders the comparison on the InteractiveCanvas.
+ */
 async function renderCompare() {
     if (!compareCanvas) return;
 
-    const leftSlot = document.getElementById('compare-leftInput');
-    const rightSlot = document.getElementById('compare-rightInput');
-    const leftThumb = document.getElementById('compare-leftThumb');
-    const rightThumb = document.getElementById('compare-rightThumb');
-    const leftEmpty = leftSlot?.querySelector('.compare-input-empty');
-    const rightEmpty = rightSlot?.querySelector('.compare-input-empty');
-
-    const updateSlot = (path, thumb, empty) => {
-        if (path) {
-            let url = path;
-            if (!url.startsWith('data:') && !url.startsWith('http') && !url.startsWith('/project-file')) {
-                url = `/project-file?path=${encodeURIComponent(path)}`;
-            }
-            if (thumb) {
-                thumb.src = url;
-                thumb.classList.remove('hide');
-            }
-            if (empty) empty.classList.add('hide');
-            return url;
-        } else {
-            if (thumb) {
-                thumb.src = '';
-                thumb.classList.add('hide');
-            }
-            if (empty) empty.classList.remove('hide');
-            return null;
-        }
-    };
-
-    const leftUrl = updateSlot(leftImage, leftThumb, leftEmpty);
-    const rightUrl = updateSlot(rightImage, rightThumb, rightEmpty);
+    const leftUrl = formatUrl(leftImage);
+    const rightUrl = formatUrl(rightImage);
 
     if (leftUrl) {
         await compareCanvas.loadImage(leftUrl);
@@ -139,8 +152,7 @@ async function renderCompare() {
             await compareCanvas.loadComparisonImage(rightUrl);
         }
     } else if (rightUrl) {
-        // If only right is set, treat it as the main image for now? 
-        // Or just show right. Usually compare needs two.
+        // If only right is set, treat it as the main image
         await compareCanvas.loadImage(rightUrl);
     } else {
         // Clear canvas if no images

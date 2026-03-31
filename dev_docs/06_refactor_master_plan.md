@@ -305,7 +305,7 @@ import { generateSeed }     from '../utils/seed.js';
 ### Group 2 — Tool Rebuild
 - [x] 2.1 translator.js rebuilt
 - [x] 2.2 jsonFormatter.js rebuilt
-- [ ] 2.3 compare.js rebuilt
+- [x] 2.3 compare.js rebuilt
 - [ ] 2.4 cropExtract.js rebuilt
 - [ ] 2.5 descriptor.js rebuilt
 - [ ] 2.6 upscaler.js rebuilt
