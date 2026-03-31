@@ -9,25 +9,18 @@
     <div class="tool-body gen-flow-container">
       <div id="json-loading" class="loading-state hide">
         <div class="spinner"></div>
-        <p>Formattingâ€¦</p>
+        <p>Formatting…</p>
       </div>
       <div class="result-section hide" id="json-result">
         <div class="form-group full-width">
-          <div class="prompt-box-wrapper"
-            style="position: relative; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 12px;">
+          <div class="prompt-box-wrapper result-viewer" style="position: relative; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 12px;">
             <textarea id="json-output" class="result-edit-area json-output" rows="12" readonly
               style="border: none; padding: 1rem; width: 100%; box-shadow: none; font-family: monospace;"></textarea>
-            <button id="json-copyBtn" class="btn secondary small icon-only" title="Copy JSON"
-              style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--text-2);">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                <path
-                  d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-              </svg>
-            </button>
+            <div id="json-copy-slot" style="position: absolute; top: 8px; right: 8px;"></div>
           </div>
         </div>
         <div id="json-actions" class="step-actions" style="justify-content: flex-end;">
-          <button id="json-toGeneratorBtn" class="btn primary action-glow">Go to Generator</button>
+          <div id="json-toGenerator-slot"></div>
         </div>
       </div>
     </div>
@@ -36,19 +29,5 @@
   <!-- Floating Fixed Prompt Box -->
   <div id="jsonPromptGroup" class="gen-prompt-fixed">
     <div id="json-prompt-wrapper" style="width: 100%;"></div>
-    <div class="prompt-box-actions-bar">
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <!-- Media buttons removed per USER request -->
-      </div>
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <button id="json-formatBtn" class="btn primary small icon-only action-glow" title="Format (Ctrl+Enter)"
-          style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path
-              d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59a.996.996 0 0 0 0-1.41l-6.58-6.6a.996.996 0 1 0-1.41 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z" />
-          </svg>
-        </button>
-      </div>
-    </div>
   </div>
 </template>

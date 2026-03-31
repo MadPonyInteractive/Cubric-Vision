@@ -1,6 +1,7 @@
 /**
  * jsonFormatter.js — JSON Formatter tool.
  * User pastes a prompt; tool formats it as a structured JSON object using gemma3:12b.
+ * Rebuilt using Mpi Component Factory (Phase 2.2).
  */
 
 import { state } from '../state.js';
@@ -11,51 +12,41 @@ import { saveToolState, loadToolState } from '../toolState.js';
 import { llamaGenerate } from '../llmService.js';
 import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
 
+// Factory components
+import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiIconButton }  from '../components/Compounds/MpiIconButton/MpiIconButton.js';
+import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
+import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
+
+// Utils
+import { Events } from '../events.js';
+import { qs, on } from '../utils/dom.js';
+
 let _abortCtrl = null;
 
-// DOM refs
-import { PromptBox } from '../components/PromptBox.js';
+// Component instances
 let promptBox;
+let formatBtn;
+let copyBtn;
+let toGeneratorBtn;
 
-let formatBtn, cancelBtn, outputBox, copyBtn, toGeneratorBtn,
-    loadingEl, actionsEl, resultSection;
+// DOM refs
+let outputBox, loadingEl, actionsEl, resultSection;
 
 export function initJsonFormatter() {
     _abortCtrl = null;
 
-    promptBox = new PromptBox({
-        toolId: 'jsonFormatter',
-        container: document.getElementById('json-prompt-wrapper'),
-        enableDragDrop: false
+    // 1. Initialize Action Button (to be passed to PromptBox)
+    formatBtn = MpiIconButton.mount(document.createElement('div'), {
+        icon: 'generate',
+        iconActive: 'stop',
+        info: 'Format (Ctrl+Enter)',
+        variant: 'primary',
+        size: 'md',
+        toggleable: true
     });
 
-    formatBtn = document.getElementById('json-formatBtn');
-    cancelBtn = document.getElementById('json-cancelBtn');
-    outputBox = document.getElementById('json-output');
-    copyBtn = document.getElementById('json-copyBtn');
-    toGeneratorBtn = document.getElementById('json-toGeneratorBtn');
-    loadingEl = document.getElementById('json-loading');
-    actionsEl = document.getElementById('json-actions');
-    resultSection = document.getElementById('json-result');
-    const copyInputBtn = document.getElementById('json-copyInputBtn');
-
-    if (!promptBox) return;
-
-    // Restore saved state
-    const saved = loadToolState('jsonFormatter');
-    if (saved) {
-        if (saved.input && !promptBox.positivePrompt) {
-            promptBox.inputEl.value = saved.input;
-            promptBox.positivePrompt = saved.input;
-        }
-        if (saved.output) {
-            outputBox.value = saved.output;
-            if (resultSection) resultSection.classList.remove('hide');
-            if (actionsEl) actionsEl.classList.remove('hide');
-        }
-    }
-
-    formatBtn.addEventListener('click', () => {
+    formatBtn.on('click', () => {
         if (_abortCtrl) {
             _abortCtrl.abort();
             _abortCtrl = null;
@@ -64,22 +55,71 @@ export function initJsonFormatter() {
         }
     });
 
-    copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(outputBox.value);
-        const originalIcon = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-        setTimeout(() => copyBtn.innerHTML = originalIcon, 2000);
+    // 2. Mount MpiPromptBox
+    promptBox = MpiPromptBox.mount(qs('#json-prompt-wrapper'), {
+        id: 'json-prompt',
+        placeholder: 'Paste text to format into JSON...',
+        rightA: [formatBtn]
     });
 
-    toGeneratorBtn.addEventListener('click', () => {
+    // 3. Mount Result Section Components
+    copyBtn = MpiIconButton.mount(qs('#json-copy-slot'), {
+        icon: 'copy',
+        info: 'Copy JSON',
+        variant: 'secondary',
+        size: 'sm'
+    });
+
+    toGeneratorBtn = MpiButton.mount(qs('#json-toGenerator-slot'), {
+        text: 'Go to Generator',
+        variant: 'primary',
+        extraClasses: 'action-glow'
+    });
+
+    // 4. Get remaining DOM refs
+    outputBox     = qs('#json-output');
+    loadingEl     = qs('#json-loading');
+    actionsEl     = qs('#json-actions');
+    resultSection = qs('#json-result');
+
+    // 5. Restore saved state
+    const saved = loadToolState('jsonFormatter');
+    if (saved) {
+        const textarea = qs('textarea', promptBox.el);
+        if (saved.input && textarea) {
+            textarea.value = saved.input;
+        }
+        if (saved.output && outputBox) {
+            outputBox.value = saved.output;
+            resultSection?.classList.remove('hide');
+            actionsEl?.classList.remove('hide');
+        }
+    }
+
+    // 6. Action Handlers
+    copyBtn.on('click', () => {
+        if (!outputBox.value) return;
+        navigator.clipboard.writeText(outputBox.value);
+        MpiToast.mount(document.body, {
+            message: 'JSON copied to clipboard!',
+            variant: 'success',
+            duration: 2000
+        });
+    });
+
+    toGeneratorBtn.on('click', () => {
         state.generatorPrompt = outputBox.value;
         navigate(PAGE_TOOL, { name: 'generator' });
     });
 }
 
 export async function _runFormat() {
-    const text = promptBox.positivePrompt.trim();
-    if (!text) { alert('Please enter a prompt to format.'); return; }
+    const textarea = qs('textarea', promptBox.el);
+    const text = textarea?.value.trim();
+    if (!text) { 
+        MpiToast.mount(document.body, { message: 'Please enter a prompt to format.', variant: 'warning' });
+        return; 
+    }
 
     onLlmRunStart();
     _setLoading(true);
@@ -110,42 +150,46 @@ Do not wrap in markdown. Return plain JSON. The output must be in English.`;
             signal: _abortCtrl.signal
         });
         const result = cleanLLMResponse(data.response);
+        
         // Try to pretty-print if valid JSON
         try {
             outputBox.value = JSON.stringify(JSON.parse(result), null, 2);
         } catch {
             outputBox.value = result;
         }
-        outputBox.classList.remove('hide');
-        if (resultSection) resultSection.classList.remove('hide');
-        if (actionsEl) actionsEl.classList.remove('hide');
-        saveToolState('jsonFormatter', { output: outputBox.value });
+
+        resultSection?.classList.remove('hide');
+        actionsEl?.classList.remove('hide');
+        
+        // Save both input and output
+        saveToolState('jsonFormatter', { input: text, output: outputBox.value });
+        
+        Events.emit('media:updated', { projectId: state.currentProject?.id });
     } catch (e) {
         if (e.name === 'AbortError') return;
         console.error(e);
         outputBox.value = `Error: ${e.message}`;
-        outputBox.classList.remove('hide');
+        resultSection?.classList.remove('hide');
     } finally {
         _setLoading(false);
     }
-}
-
-function _cancel() {
-    if (_abortCtrl) { _abortCtrl.abort(); _abortCtrl = null; }
-    _setLoading(false);
 }
 
 function _setLoading(on) {
     state.jsonFormatterRunning = on;
     if (on) setRunningTool('jsonFormatter', 'llm');
     else clearRunningTool('llm');
-    setLlmButtonState(formatBtn, on, 'Format (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+
+    // Use toolUtils to sync the button state
+    setLlmButtonState(formatBtn.el, on, 'Format (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+    
     if (on) {
-        loadingEl.classList.remove('hide');
+        loadingEl?.classList.remove('hide');
     } else {
-        loadingEl.classList.add('hide');
+        loadingEl?.classList.add('hide');
     }
 }
+
 export function cancelJsonFormatter() {
     if (_abortCtrl) {
         _abortCtrl.abort();

@@ -303,8 +303,8 @@ import { generateSeed }     from '../utils/seed.js';
 - [x] 1.3 `MpiVideoPlayer` factory Compound built
 
 ### Group 2 — Tool Rebuild
-- [ ] 2.1 translator.js rebuilt
-- [ ] 2.2 jsonFormatter.js rebuilt
+- [x] 2.1 translator.js rebuilt
+- [x] 2.2 jsonFormatter.js rebuilt
 - [ ] 2.3 compare.js rebuilt
 - [ ] 2.4 cropExtract.js rebuilt
 - [ ] 2.5 descriptor.js rebuilt
