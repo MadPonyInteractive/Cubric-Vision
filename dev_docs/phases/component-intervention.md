@@ -42,7 +42,7 @@ for agents: FIRST READ -> `/dev_docs/05_components.md`
 [x] Convert MpiDropdown to a Compound
 
 ### Stage 7
-[] Remove MpiDragList MpiIcon dependency by using "js/utils/icons.js"
-[] Convert MpiDragList to a Primitive
-[] Update MpiDragList consumers to point to its new location
+[x] Remove MpiDragList MpiIcon dependency by using "js/utils/icons.js"
+[x] Convert MpiDragList to a Primitive
+[x] Update MpiDragList consumers to point to its new location
 

@@ -1,8 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
+import { renderIcon } from '../../../utils/icons.js';
 
 /**
- * MpiDragList — Compound Component
+ * MpiDragList — Primitive Component
  * 
  * A scrollable box containing items that can be dragged to reorder.
  *
@@ -13,7 +13,7 @@ import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
  */
 export const MpiDragList = ComponentFactory.create({
     name: 'MpiDragList',
-    css: ['js/components/Compounds/MpiDragList/MpiDragList.css'],
+    css: ['js/components/Primitives/MpiDragList/MpiDragList.css'],
 
     template: (props) => {
         const items = props.items || [];
@@ -25,12 +25,8 @@ export const MpiDragList = ComponentFactory.create({
             listHtml = `<div class="mpi-draglist__empty">${placeholder}</div>`;
         } else {
             listHtml = items.map((item, index) => {
-                // Use MpiIcon as a drag handle
-                const handleHtml = MpiIcon.template({
-                    name: 'menu',
-                    size: 'sm',
-                    color: 'muted'
-                });
+                // Use renderIcon as a drag handle
+                const handleHtml = renderIcon('menu', 'sm', { color: 'muted' });
 
                 return `
                     <div class="mpi-draglist__item" draggable="true" data-index="${index}">
@@ -52,9 +48,9 @@ export const MpiDragList = ComponentFactory.create({
         let draggedEl = null;
 
         const container = el.querySelector('.mpi-draglist__container');
-        const items = el.querySelectorAll('.mpi-draglist__item');
+        const itemsEls = el.querySelectorAll('.mpi-draglist__item');
 
-        items.forEach(item => {
+        itemsEls.forEach(item => {
             item.addEventListener('dragstart', (e) => {
                 draggedEl = item;
                 item.classList.add('mpi-draglist__item--dragging');

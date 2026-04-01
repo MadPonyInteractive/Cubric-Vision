@@ -45,7 +45,7 @@
  */
 
 /**
- * @typedef {Object} MpiDragListProps (Compound — js/components/Compounds/MpiDragList)
+ * @typedef {Object} MpiDragListProps (Primitive — js/components/Primitives/MpiDragList)
  * @property {MpiDragListItem[]} items - Array of items to be displayed and reordered
  * @property {string|number} [maxHeight='250px'] - Max list height before scrolling
  * @property {string} [placeholder='Empty list'] - Text shown when there are no items

@@ -20,10 +20,10 @@ import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
+import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
-import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { MpiDropdown } from '../components/Compounds/MpiDropdown/MpiDropdown.js';
@@ -269,7 +269,7 @@ function mountAll() {
         vc.on('change', ({ volume, muted }) => console.log('[gallery] volume control change:', { volume, muted }));
     });
 
-    // ── MpiDragList (Compound) ─────────────────────────────────────────────────
+    // ── MpiDragList (Primitive) ─────────────────────────────────────────────────
     mount('preview-drag-list', () => {
         const items = [
             { label: 'Item 1: Primary Task', id: 1 },
