@@ -11,7 +11,7 @@
  * - `modelType` should be sourced from `dev_configs/comfy_workflows.json`.
  */
 
-import { FLUX_RATIOS, SDXL_RATIOS, VIDEO_RATIOS } from './components/Blocks/MpiRatioSelector/ratios.js';
+import { FLUX_RATIOS, SDXL_RATIOS, VIDEO_RATIOS } from './components/Compounds/MpiRatioSelector/ratios.js';
 import { ICONS } from './components/Primitives/MpiIcon/MpiIcon.js';
 
 export { FLUX_RATIOS, SDXL_RATIOS, VIDEO_RATIOS };

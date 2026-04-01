@@ -25,11 +25,11 @@ import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiS
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
+import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiDropdown } from '../components/Compounds/MpiDropdown/MpiDropdown.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
-import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
@@ -503,7 +503,7 @@ function mountAll() {
         sel.on('change', (data) => console.log('[gallery] video ratio change:', data));
     });
 
-    // ── MpiDropdown (Block) ────────────────────────────────────────────────────
+    // ── MpiDropdown (Compound) ────────────────────────────────────────────────────
     mount('preview-dropdown-top', () => {
         const dd = MpiDropdown.mount(slot('preview-dropdown-top'), {
             label: 'Choose Option',
@@ -531,7 +531,7 @@ function mountAll() {
         });
     });
 
-    // ── MpiPromptBox (Block) ────────────────────────────────────────────────
+    // ── MpiPromptBox (Compound) ────────────────────────────────────────────────
     mount('preview-promptbox-standard', () => {
         const pb = MpiPromptBox.mount(slot('preview-promptbox-standard'), {
             value: 'A futuristic city at sunset, neon lights, cinematic lighting'

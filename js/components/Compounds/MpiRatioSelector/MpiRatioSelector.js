@@ -11,7 +11,7 @@ import { getModelRatios } from '../../../ratioUtils.js';
  */
 export const MpiRatioSelector = ComponentFactory.create({
     name: 'MpiRatioSelector',
-    css: ['js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'],
+    css: ['js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css'],
 
     template: (props) => {
         const orientation = props.orientation || props.initialOrientation || 'portrait';

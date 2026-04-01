@@ -10,7 +10,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
  */
 export const MpiDropdown = ComponentFactory.create({
     name: 'MpiDropdown',
-    css: ['js/components/Blocks/MpiDropdown/MpiDropdown.css'],
+    css: ['js/components/Compounds/MpiDropdown/MpiDropdown.css'],
 
     template: (props) => {
         const label = props.label || 'Select...';

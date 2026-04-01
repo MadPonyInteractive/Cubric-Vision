@@ -11,7 +11,7 @@
 'use strict';
 
 /**
- * @typedef {Object} MpiDropdownProps (Block — js/components/Blocks/MpiDropdown)
+ * @typedef {Object} MpiDropdownProps (Compound — js/components/Compounds/MpiDropdown)
  * @param {string[]} titles - Options to display in the list
  * @param {string} [label='Select...'] - Initial trigger text
  * @param {string|number} [maxHeight='250px'] - Max list height before scrolling

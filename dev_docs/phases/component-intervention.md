@@ -38,8 +38,8 @@ for agents: FIRST READ -> `/dev_docs/05_components.md`
 [x] Update MpiMediaDropzone consumers to point to its new location
 
 ### Stage 6 
-[] Convert MpiRatioSelector to a Compound
-[] Convert MpiDropdown to a Compound
+[x] Convert MpiRatioSelector to a Compound
+[x] Convert MpiDropdown to a Compound
 
 ### Stage 7
 [] Remove MpiDragList MpiIcon dependency by using "js/utils/icons.js"

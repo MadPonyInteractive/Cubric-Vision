@@ -15,7 +15,7 @@ import { navigate, PAGE_LANDING, PAGE_TOOL } from './router.js';
 import { getRequiredModelsForTool } from './modelManager.js';
 import { refreshComfyWorkflowRegistry, listComfyFiles, getDefaultWorkflowId } from './comfyModelManager.js';
 import { TOOL_REGISTRY } from './toolRegistry.js';
-import { MpiDropdown } from './components/Blocks/MpiDropdown/MpiDropdown.js';
+import { MpiDropdown } from './components/Compounds/MpiDropdown/MpiDropdown.js';
 import { ensureTemplate } from './templateLoader.js';
 
 // Shell's toolContainer — injected by initProvisioning() to avoid circular imports

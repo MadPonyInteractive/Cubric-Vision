@@ -112,11 +112,11 @@ export async function initShell() {
     'js/components/Compounds/MpiDragList/MpiDragList.css',
     'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
     'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',
+    'js/components/Compounds/MpiDropdown/MpiDropdown.css',
+    'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
 
     // Blocks
-    'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
-    'js/components/Blocks/MpiDropdown/MpiDropdown.css',
-    'js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'
+    'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css'
   ]);
 
   // Inject provisioning dependencies (avoids circular imports)

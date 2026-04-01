@@ -3,7 +3,7 @@ import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiM
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../components/Primitives/MpiIcon/MpiIcon.js';
-import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { Events } from '../events.js';
 
 
