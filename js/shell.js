@@ -107,14 +107,13 @@ export async function initShell() {
     'js/components/Primitives/MpiToast/MpiToast.css',
 
     // Compounds
-    'js/components/Compounds/MpiIconButton/MpiIconButton.css',
     'js/components/Compounds/MpiSlider/MpiSlider.css',
     'js/components/Compounds/MpiPopupButton/MpiPopupButton.css',
     'js/components/Compounds/MpiScrollableBox/MpiScrollableBox.css',
     'js/components/Compounds/MpiMediaDropzone/MpiMediaDropzone.css',
     'js/components/Compounds/MpiDragList/MpiDragList.css',
-    'js/components/Compounds/MpiMuteIcon/MpiMuteIcon.css',
-    'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
+    'js/components/Compounds/MpiMuteIcon/MpiMuteIcon.css',// to delete
+    'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css', //move to Blocks
     'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
 
     // Blocks
@@ -145,7 +144,7 @@ export async function initShell() {
   bindTooltipEvents();
   bindMaintenanceEvents();
   bindWindowControls();
-  
+
   // Hide Components gallery link if not in Dev Mode
   if (sidebarComponentsBtn && !APP_CONFIG.dev_mode) {
     sidebarComponentsBtn.classList.add('hide');
@@ -171,7 +170,7 @@ export async function initShell() {
 
   // Dev Mode: restore last page on refresh; otherwise always start at landing
   if (APP_CONFIG.test_styles) {
-    const savedPage   = sessionStorage.getItem('mpi_dev_page');
+    const savedPage = sessionStorage.getItem('mpi_dev_page');
     const savedParams = JSON.parse(sessionStorage.getItem('mpi_dev_params') || '{}');
     navigate(savedPage || PAGE_LANDING, savedParams);
   } else {
@@ -191,40 +190,40 @@ export async function initShell() {
   // Disable native context menu everywhere and implement Global Media Intercept
   document.addEventListener('contextmenu', async (e) => {
     e.preventDefault();
-    
+
     const target = e.target;
     let mediaUrl = null;
     let mediaType = 'image';
 
     if (target.tagName.toLowerCase() === 'img' && target.src) {
-        mediaUrl = target.src;
+      mediaUrl = target.src;
     } else if (target.tagName.toLowerCase() === 'canvas' && target.dataset.mediaUrl) {
-        const base = target.dataset.mediaUrl;
-        const comp = target.dataset.comparisonUrl;
-        const rawSlider = target.dataset.sliderPos;
-        let sliderPos = rawSlider !== undefined ? parseFloat(rawSlider) : 0.5;
-        
-        if (base && !comp) {
-            mediaUrl = base;
-        } else if (base && comp) {
-             const rect = target.getBoundingClientRect();
-             // The sliderPos is in 0-1 scale visually
-             const relativeX = (e.clientX - rect.left) / rect.width;
-             // Left of slider -> base image, Right of slider -> comparison image
-             mediaUrl = relativeX < sliderPos ? base : comp;
-        }
+      const base = target.dataset.mediaUrl;
+      const comp = target.dataset.comparisonUrl;
+      const rawSlider = target.dataset.sliderPos;
+      let sliderPos = rawSlider !== undefined ? parseFloat(rawSlider) : 0.5;
+
+      if (base && !comp) {
+        mediaUrl = base;
+      } else if (base && comp) {
+        const rect = target.getBoundingClientRect();
+        // The sliderPos is in 0-1 scale visually
+        const relativeX = (e.clientX - rect.left) / rect.width;
+        // Left of slider -> base image, Right of slider -> comparison image
+        mediaUrl = relativeX < sliderPos ? base : comp;
+      }
     }
 
     // Attempt to drill up if not found directly
     if (!mediaUrl) {
-        let parentImg = target.closest('img');
-        if (parentImg && parentImg.src) mediaUrl = parentImg.src;
+      let parentImg = target.closest('img');
+      if (parentImg && parentImg.src) mediaUrl = parentImg.src;
     }
 
     if (!mediaUrl || mediaUrl.startsWith('chrome-extension://') || mediaUrl === 'about:blank') return;
     if (mediaUrl.includes('placeholder')) return;
 
-    let context = 'library'; 
+    let context = 'library';
     if (target.closest('#history-panel') || target.closest('.history-list')) context = 'history';
     else if (target.closest('#tool-detailer') || target.closest('#tool-upscaler')) context = 'input';
 
@@ -831,7 +830,7 @@ function bindInfoBarEvents() {
       currentTarget = target;
       observer.disconnect();
       observer.observe(target, { attributes: true, attributeFilter: ['data-info'] });
-      
+
       const info = target.getAttribute('data-info');
       if (info && infoText.textContent !== info) {
         infoText.classList.add('updating');
@@ -848,7 +847,7 @@ function bindInfoBarEvents() {
     if (target && target === currentTarget && (!e.relatedTarget || !target.contains(e.relatedTarget))) {
       currentTarget = null;
       observer.disconnect();
-      
+
       infoText.classList.add('updating');
       setTimeout(() => {
         infoText.textContent = 'Ready';
@@ -900,7 +899,7 @@ async function triggerMemoryRelease(isDeep = false) {
 
   const isCollapsed = sidebar.classList.contains('collapsed');
   const statusPrefix = isDeep ? (isCollapsed ? 'D...' : 'Deep Cleaning...') : (isCollapsed ? '...' : 'Releasing VRAM...');
-  
+
   unloadStatusPopup.textContent = statusPrefix;
   unloadStatusPopup.classList.remove('hide');
   globalUnloadBtn.disabled = true;
@@ -923,7 +922,7 @@ async function triggerMemoryRelease(isDeep = false) {
       await fetch('http://127.0.0.1:8188/extra/unload_models', { method: 'POST' }).catch(() => null);
     }
 
-    unloadStatusPopup.textContent = isDeep 
+    unloadStatusPopup.textContent = isDeep
       ? (isCollapsed ? 'DC ✓' : 'Deep Clean Complete ✓')
       : (isCollapsed ? '✓' : 'VRAM Released ✓');
 

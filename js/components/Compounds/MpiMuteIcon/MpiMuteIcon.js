@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiIconButton } from '../MpiIconButton/MpiIconButton.js';
-import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { renderIcon } from '/js/utils/icons.js';
 
 /**
  * MpiMuteIcon — Compound component for mute/volume toggle.
@@ -24,7 +24,7 @@ export const MpiMuteIcon = ComponentFactory.create({
         const size = props.size || 'md';
         const icon = muted ? 'volumeOff' : (volume > 0.5 ? 'volumeHigh' : 'volumeLow');
 
-        return MpiIconButton.template({
+        return MpiButton.template({
             icon,
             size,
             info: muted ? 'Unmute' : 'Mute',
@@ -37,15 +37,15 @@ export const MpiMuteIcon = ComponentFactory.create({
         let volume = props.volume ?? 1.0;
         const size = props.size || 'md';
 
-        // Functional inheritence: use MpiIconButton's setup to handle clicks/toggles
-        MpiIconButton.setup(el, { ...props, toggleable: false }, emit);
+        // Delegate press/click setup to MpiButton
+        MpiButton.setup(el, { ...props, toggleable: false }, emit);
 
         /** Force re-render of inner icon based on current state */
         function _updateIcon() {
             const iconName = muted ? 'volumeOff' : (volume > 0.5 ? 'volumeHigh' : 'volumeLow');
             const iconContainer = el.querySelector('.mpi-ibtn__icon');
             if (iconContainer) {
-                iconContainer.innerHTML = MpiIcon.template({ name: iconName, size });
+                iconContainer.innerHTML = renderIcon(iconName, size);
             }
             
             el.dataset.muted = muted ? '1' : '0';
@@ -54,7 +54,7 @@ export const MpiMuteIcon = ComponentFactory.create({
         }
 
         el.addEventListener('click', (e) => {
-            // MpiIconButton setup also emits its own events, but we override state here
+            // Override click: manage volume state and emit 'change'
             muted = !muted; 
             _updateIcon();
             emit('change', { muted, volume });

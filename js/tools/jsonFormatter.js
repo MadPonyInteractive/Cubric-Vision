@@ -14,7 +14,6 @@ import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } fr
 
 // Factory components
 import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiIconButton }  from '../components/Compounds/MpiIconButton/MpiIconButton.js';
 import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
 
@@ -37,7 +36,7 @@ export function initJsonFormatter() {
     _abortCtrl = null;
 
     // 1. Initialize Action Button (to be passed to PromptBox)
-    formatBtn = MpiIconButton.mount(document.createElement('div'), {
+    formatBtn = MpiButton.mount(document.createElement('div'), {
         icon: 'generate',
         iconActive: 'stop',
         info: 'Format (Ctrl+Enter)',
@@ -63,7 +62,7 @@ export function initJsonFormatter() {
     });
 
     // 3. Mount Result Section Components
-    copyBtn = MpiIconButton.mount(qs('#json-copy-slot'), {
+    copyBtn = MpiButton.mount(qs('#json-copy-slot'), {
         icon: 'copy',
         info: 'Copy JSON',
         variant: 'secondary',

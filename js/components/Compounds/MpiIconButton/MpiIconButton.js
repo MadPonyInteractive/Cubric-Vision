@@ -1,6 +1,12 @@
-import { ComponentFactory } from '../../factory.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
+/**
+ * @deprecated MpiIconButton has been merged into MpiButton.
+ * Use MpiButton with `icon` prop instead. This shim will be removed.
+ *
+ * Import MpiButton from:
+ * js/components/Primitives/MpiButton/MpiButton.js
+ */
+export { MpiButton as MpiIconButton } from '../../Primitives/MpiButton/MpiButton.js';
+
 
 /**
  * MpiIconButton — Compound Icon Button

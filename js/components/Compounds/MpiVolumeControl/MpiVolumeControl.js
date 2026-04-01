@@ -1,7 +1,10 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiMuteIcon }  from '../MpiMuteIcon/MpiMuteIcon.js';
-import { MpiSlider }    from '../MpiSlider/MpiSlider.js';
-import { MpiPopup }     from '../../Primitives/MpiPopup/MpiPopup.js';
+
+// import { MpiIconButton } from '../MpiIconButton/MpiIconButton.js';
+import { MpiMuteIcon } from '../MpiMuteIcon/MpiMuteIcon.js';
+
+import { MpiSlider } from '../MpiSlider/MpiSlider.js';
+import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 
 /**
  * MpiVolumeControl — Compound: MpiMuteIcon + MpiSlider popup.
@@ -17,12 +20,12 @@ import { MpiPopup }     from '../../Primitives/MpiPopup/MpiPopup.js';
 export const MpiVolumeControl = ComponentFactory.create({
     name: 'MpiVolumeControl',
     css: ['js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css'],
-    
+
     template: () => `<div class="mpi-volume-control"></div>`,
-    
+
     setup: (el, props, emit) => {
         let volume = props.volume ?? 1.0;
-        let muted  = props.muted  ?? false;
+        let muted = props.muted ?? false;
         let _prevVolume = volume > 0 ? volume : 1.0;
 
         // Container structure
@@ -30,16 +33,16 @@ export const MpiVolumeControl = ComponentFactory.create({
         iconContainer.className = 'mpi-volume-control__icon';
         const popupContainer = document.createElement('div');
         popupContainer.className = 'mpi-volume-control__popup';
-        
+
         el.appendChild(iconContainer);
         el.appendChild(popupContainer);
 
         // Mount Mute Icon
         const muteIcon = MpiMuteIcon.mount(iconContainer, { volume, muted });
-        
+
         // Mount Popup
         const popup = MpiPopup.mount(popupContainer, { variant: 'glass' });
-        
+
         // Create Slot for Slider inside Popup
         const sliderSlot = document.createElement('div');
         sliderSlot.className = 'mpi-volume-control__slider-wrapper';
@@ -47,9 +50,9 @@ export const MpiVolumeControl = ComponentFactory.create({
 
         // Mount Slider (0-100 for granularity, then map to 0-1)
         const slider = MpiSlider.mount(sliderSlot, {
-            min: 0, 
-            max: 100, 
-            step: 1, 
+            min: 0,
+            max: 100,
+            step: 1,
             value: muted ? 0 : Math.round(volume * 100),
             wheel: true,
             info: 'Volume: {value}%',
@@ -62,7 +65,7 @@ export const MpiVolumeControl = ComponentFactory.create({
             clearTimeout(hoverTimer);
             popup.el.classList.add('is-active');
         });
-        
+
         el.addEventListener('mouseleave', () => {
             hoverTimer = setTimeout(() => {
                 popup.el.classList.remove('is-active');
@@ -81,7 +84,7 @@ export const MpiVolumeControl = ComponentFactory.create({
             }
             // Trigger slider visual update (ProgressBar setup listens for 'input')
             slider.el.querySelector('input').dispatchEvent(new Event('input'));
-            
+
             emit('change', { volume: muted ? 0 : volume, muted });
         });
 
@@ -94,11 +97,11 @@ export const MpiVolumeControl = ComponentFactory.create({
             } else {
                 muted = true;
             }
-            
+
             // Sync Icon
             muteIcon.el._setVolume?.(volume);
             muteIcon.el._setMuted?.(muted);
-            
+
             emit('change', { volume, muted });
         });
 

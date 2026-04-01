@@ -1,7 +1,6 @@
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
-import { MpiIconButton } from '../components/Compounds/MpiIconButton/MpiIconButton.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../components/Primitives/MpiIcon/MpiIcon.js';
 import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
@@ -125,7 +124,7 @@ function mountComponents(slots) {
     toolState.video = toolState.videoPlayer.el.querySelector('video');
 
     // 3. Toolbar Components
-    toolState.addAssetBtn = MpiIconButton.mount(slots.addAsset, {
+    toolState.addAssetBtn = MpiButton.mount(slots.addAsset, {
         icon: 'plus',
         variant: 'secondary',
         size: 'sm',
@@ -141,7 +140,7 @@ function mountComponents(slots) {
 
 
 
-    toolState.playPauseBtn = MpiIconButton.mount(slots.playPause, {
+    toolState.playPauseBtn = MpiButton.mount(slots.playPause, {
         icon: 'play',
         iconActive: 'pause',
         size: 'md',

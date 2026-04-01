@@ -8,7 +8,6 @@ import { onLlmRunStart, setLlmButtonState, setRunningTool, clearRunningTool } fr
 
 // Factory components
 import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiIconButton }  from '../components/Compounds/MpiIconButton/MpiIconButton.js';
 import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
 
@@ -33,7 +32,7 @@ export function initTranslator() {
     _abortCtrl = null;
 
     // 1. Initialize Action Buttons (will be passed to PromptBox)
-    translateBtn = MpiIconButton.mount(document.createElement('div'), {
+    translateBtn = MpiButton.mount(document.createElement('div'), {
         icon: 'translate',
         iconActive: 'stop',
         info: 'Translate (Ctrl+Enter)',
@@ -60,7 +59,7 @@ export function initTranslator() {
     // init.js manages global shortcuts, so we don't add them here.
 
     // 3. Mount Result Section Buttons
-    copyBtn = MpiIconButton.mount(qs('#trans-copy-slot'), {
+    copyBtn = MpiButton.mount(qs('#trans-copy-slot'), {
         icon: 'copy',
         info: 'Copy Translation',
         variant: 'secondary',

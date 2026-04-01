@@ -18,7 +18,6 @@ import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgr
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 
-import { MpiIconButton } from '../components/Compounds/MpiIconButton/MpiIconButton.js';
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiSlider } from '../components/Compounds/MpiSlider/MpiSlider.js';
 import { MpiPopupButton } from '../components/Compounds/MpiPopupButton/MpiPopupButton.js';
@@ -131,27 +130,27 @@ function mountAll() {
     mount('preview-btn-loading', () => MpiButton.mount(slot('preview-btn-loading'), { variant: 'primary', text: 'Loading', loading: true }));
     mount('preview-btn-disabled', () => MpiButton.mount(slot('preview-btn-disabled'), { variant: 'primary', text: 'Disabled', disabled: true }));
 
-    // ── MpiIconButton — Compound ──────────────────────────────────────────────
-    mount('preview-ibtn-primary', () => MpiIconButton.mount(slot('preview-ibtn-primary'), { icon: 'generate', info: 'Primary — hover + press invert' }));
-    mount('preview-ibtn-label', () => MpiIconButton.mount(slot('preview-ibtn-label'), { icon: 'edit', label: 'Edit', info: 'With label' }));
+    // ── MpiButton — Icon mode (replaces MpiIconButton) ───────────────────────
+    mount('preview-ibtn-primary', () => MpiButton.mount(slot('preview-ibtn-primary'), { icon: 'generate', info: 'Primary — hover + press invert' }));
+    mount('preview-ibtn-label', () => MpiButton.mount(slot('preview-ibtn-label'), { icon: 'edit', label: 'Edit', info: 'With label' }));
     mount('preview-ibtn-toggle', () => {
-        const i = MpiIconButton.mount(slot('preview-ibtn-toggle'), { icon: 'play', toggleable: true, info: 'Toggleable — click to commit' });
+        const i = MpiButton.mount(slot('preview-ibtn-toggle'), { icon: 'play', toggleable: true, info: 'Toggleable — click to commit' });
         i.on('toggle', ({ active }) => console.log('[gallery] toggle:', active));
     });
-    mount('preview-ibtn-swap', () => MpiIconButton.mount(slot('preview-ibtn-swap'), { icon: 'play', iconActive: 'pause', toggleable: true, info: 'Toggle + icon swap (play/pause)' }));
-    mount('preview-ibtn-danger', () => MpiIconButton.mount(slot('preview-ibtn-danger'), { icon: 'trash', variant: 'danger', info: 'Danger' }));
-    mount('preview-ibtn-loading', () => MpiIconButton.mount(slot('preview-ibtn-loading'), { icon: 'refresh', variant: 'loading', info: 'Loading' }));
-    mount('preview-ibtn-disabled', () => MpiIconButton.mount(slot('preview-ibtn-disabled'), { icon: 'close', variant: 'disabled', info: 'Disabled' }));
+    mount('preview-ibtn-swap', () => MpiButton.mount(slot('preview-ibtn-swap'), { icon: 'play', iconActive: 'pause', toggleable: true, info: 'Toggle + icon swap (play/pause)' }));
+    mount('preview-ibtn-danger', () => MpiButton.mount(slot('preview-ibtn-danger'), { icon: 'trash', variant: 'danger', info: 'Danger' }));
+    mount('preview-ibtn-loading', () => MpiButton.mount(slot('preview-ibtn-loading'), { icon: 'refresh', variant: 'loading', info: 'Loading' }));
+    mount('preview-ibtn-disabled', () => MpiButton.mount(slot('preview-ibtn-disabled'), { icon: 'close', variant: 'disabled', info: 'Disabled' }));
     // Sizes
-    mount('preview-ibtn-sm', () => MpiIconButton.mount(slot('preview-ibtn-sm'), { icon: 'info', size: 'sm', info: 'Small (sm)' }));
-    mount('preview-ibtn-lg', () => MpiIconButton.mount(slot('preview-ibtn-lg'), { icon: 'plus', size: 'lg', info: 'Large (lg)' }));
-    mount('preview-ibtn-label-lg', () => MpiIconButton.mount(slot('preview-ibtn-label-lg'), { icon: 'download', label: 'Save File', size: 'lg', info: 'Large with label' }));
-    mount('preview-ibtn-label-sm', () => MpiIconButton.mount(slot('preview-ibtn-label-sm'), { icon: 'sparkle', label: 'Boost', size: 'sm', info: 'Small with label' }));
+    mount('preview-ibtn-sm', () => MpiButton.mount(slot('preview-ibtn-sm'), { icon: 'info', size: 'sm', info: 'Small (sm)' }));
+    mount('preview-ibtn-lg', () => MpiButton.mount(slot('preview-ibtn-lg'), { icon: 'plus', size: 'lg', info: 'Large (lg)' }));
+    mount('preview-ibtn-label-lg', () => MpiButton.mount(slot('preview-ibtn-label-lg'), { icon: 'download', label: 'Save File', size: 'lg', info: 'Large with label' }));
+    mount('preview-ibtn-label-sm', () => MpiButton.mount(slot('preview-ibtn-label-sm'), { icon: 'sparkle', label: 'Boost', size: 'sm', info: 'Small with label' }));
 
 
     // ── MpiPopupButton (Compound) ─────────────────────────────────────────────
     mount('preview-popupbtn-default', () => {
-        const btnHtml = MpiIconButton.template({ icon: 'settings', label: 'Options', toggleable: true });
+        const btnHtml = MpiButton.template({ icon: 'settings', label: 'Options', toggleable: true });
         const popupContent = `
             <div style="padding: 1rem; width: 140px; text-align: center;">
                 <div style="color:var(--text); font-weight: 600; font-family: var(--font-display); margin-bottom: 0.5rem;">Popup Menu</div>
@@ -165,7 +164,7 @@ function mountAll() {
     });
 
     mount('preview-popupbtn-bottom', () => {
-        const btnHtml = MpiIconButton.template({ icon: 'menu', label: 'Actions', toggleable: true });
+        const btnHtml = MpiButton.template({ icon: 'menu', label: 'Actions', toggleable: true });
         const popupContent = `
             <div style="padding: 1rem; width: 140px;">
                 <div style="color:var(--text); font-weight: 600; margin-bottom: 0.5rem;">Bottom Popup</div>
@@ -369,7 +368,7 @@ function mountAll() {
         slotEl.appendChild(spinnerSlot);
 
         const spinner = MpiSpinner.mount(spinnerSlot, { size: 'lg', variant: 'primary' });
-        const toggle = MpiIconButton.mount(toggleSlot, {
+        const toggle = MpiButton.mount(toggleSlot, {
             icon: 'refresh',
             label: 'Toggle Spinner',
             toggleable: true,
@@ -404,7 +403,7 @@ function mountAll() {
 
     // ── MpiToast ──────────────────────────────────────────────────────────────
     mount('preview-toast-trigger', () => {
-        const btn = MpiIconButton.mount(slot('preview-toast-trigger'), {
+        const btn = MpiButton.mount(slot('preview-toast-trigger'), {
             icon: 'bell',
             label: 'Spawn Toast',
             variant: 'primary',
@@ -499,8 +498,8 @@ function mountAll() {
         // Create some sub-components for the slots
         const badgeL1 = MpiBadge.mount(document.createElement('div'), { label: '4:3', variant: 'secondary' });
         const badgeL2 = MpiBadge.mount(document.createElement('div'), { label: 'Flux.1', variant: 'secondary' });
-        const iconR1 = MpiIconButton.mount(document.createElement('div'), { icon: 'settings', size: 'sm', variant: 'ghost' });
-        const iconR2 = MpiIconButton.mount(document.createElement('div'), { icon: 'bolt', size: 'sm', variant: 'ghost' });
+        const iconR1 = MpiButton.mount(document.createElement('div'), { icon: 'settings', size: 'sm', variant: 'ghost' });
+        const iconR2 = MpiButton.mount(document.createElement('div'), { icon: 'bolt', size: 'sm', variant: 'ghost' });
 
         MpiPromptBox.mount(slot('preview-promptbox-expanded'), {
             value: 'A girl reading a book in a library, soft sunlight through windows',

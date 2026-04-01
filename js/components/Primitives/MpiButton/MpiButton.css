@@ -200,3 +200,103 @@ body.light-mode .mpi-btn--outline:hover:not(:disabled) {
     background: rgba(124, 58, 237, 0.05);
     border-color: var(--primary);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Icon Button Mode — .mpi-ibtn
+   Activated when MpiButton renders with an `icon` prop.
+   Inherits ALL base styles above; only adds icon layout, swap, and active accent.
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Icon containers ──────────────────────────────────────────────────────── */
+.mpi-ibtn__icon,
+.mpi-ibtn__icon-swap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    line-height: 0;
+}
+
+/* Icon size — inherits button size class */
+.mpi-btn--sm.mpi-ibtn .mpi-icon { width: 16px; height: 16px; }
+.mpi-btn--md.mpi-ibtn .mpi-icon { width: 20px; height: 20px; }
+.mpi-btn--lg.mpi-ibtn .mpi-icon { width: 24px; height: 24px; }
+
+/* ── Icon swap (toggleable icon) ──────────────────────────────────────────── */
+.mpi-ibtn.has-icon-swap .mpi-ibtn__icon-swap          { display: none; }
+.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon     { display: none; }
+.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon-swap { display: flex; }
+
+/* ── Label & Layout ────────────────────────────────────────────────────────── */
+.mpi-ibtn__label {
+    pointer-events: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-2);
+    transition: color var(--bounce);
+}
+
+.mpi-ibtn:hover .mpi-ibtn__label,
+.mpi-ibtn.is-active .mpi-ibtn__label {
+    color: var(--text);
+}
+
+/* Position modifiers */
+.mpi-ibtn--label-right  { flex-direction: row; }
+.mpi-ibtn--label-left   { flex-direction: row-reverse; }
+.mpi-ibtn--label-bottom { flex-direction: column; }
+.mpi-ibtn--label-top    { flex-direction: column-reverse; gap: 0.1rem; }
+
+/* No gap for icon-only buttons */
+.mpi-btn--icon-only.mpi-ibtn { gap: 0; }
+
+/* ── Spinner ──────────────────────────────────────────────────────────────── */
+.mpi-ibtn__spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: mpi-ibtn-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes mpi-ibtn-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Press / Active (compound selector — only for icon buttons) ───────────── */
+/* .mpi-btn.mpi-ibtn ensures this never bleeds onto plain MpiButton--secondary. */
+.mpi-btn.mpi-ibtn:active:not(:disabled),
+.mpi-btn.mpi-ibtn.is-pressed:not(:disabled) {
+    background: var(--neon-electric) !important;
+    border-color: var(--neon-electric) !important;
+    color: #fff !important;
+    box-shadow: 0 0 12px var(--neon-glow-sm);
+    transform: scale(0.96);
+}
+
+/* Committed active state (toggleable) */
+.mpi-btn.mpi-ibtn.is-active {
+    background: var(--neon-electric);
+    border-color: var(--neon-electric);
+    color: #fff;
+    box-shadow: 0 0 10px var(--neon-glow-sm);
+}
+
+.mpi-btn.mpi-ibtn.is-active:hover:not(:disabled) {
+    background: var(--neon-accent);
+    border-color: var(--neon-accent);
+    color: #000;
+}
+
+/* ── Light Mode ───────────────────────────────────────────────────────────── */
+body.light-mode .mpi-ibtn:not(.is-active) {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: var(--border);
+}
+
+body.light-mode .mpi-btn.mpi-ibtn:hover:not(:disabled):not(.is-active) {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.18);
+}

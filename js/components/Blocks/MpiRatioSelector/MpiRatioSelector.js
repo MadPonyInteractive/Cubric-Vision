@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiIconButton } from '../../Compounds/MpiIconButton/MpiIconButton.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopupButton } from '../../Compounds/MpiPopupButton/MpiPopupButton.js';
 import { getModelRatios } from '../../../ratioUtils.js';
@@ -43,7 +43,7 @@ export const MpiRatioSelector = ComponentFactory.create({
             const iconName = r.icon.replace('rect_', 'ratio_');
 
             return `<div class="mpi-ratio-sel__item" data-label="${r.label}">
-                ${MpiIconButton.template({
+                ${MpiButton.template({
                 icon: iconName,
                 label: r.label,
                 labelPosition: 'top',
@@ -62,7 +62,7 @@ export const MpiRatioSelector = ComponentFactory.create({
             <div class="mpi-ratio-sel__header">
                 ${MpiBadge.template({ label: 'RATIO', variant: 'secondary' })}
                 <div class="mpi-ratio-sel__orient-btn" style="${orientContainerStyle}">
-                    ${MpiIconButton.template({
+                    ${MpiButton.template({
                         icon: orientIcon,
                         size: 'sm',
                         info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation`,
@@ -79,7 +79,7 @@ export const MpiRatioSelector = ComponentFactory.create({
         `;
 
         // main trigger button
-        const triggerBtnHtml = MpiIconButton.template({
+        const triggerBtnHtml = MpiButton.template({
             icon: triggerIcon,
             label: value,
             size: 'md',
@@ -119,7 +119,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                 const isSelected = r.label === value;
                 const iconName = r.icon.replace('rect_', 'ratio_');
                 return `<div class="mpi-ratio-sel__item" data-label="${r.label}">
-                    ${MpiIconButton.template({
+                    ${MpiButton.template({
                     icon: iconName, label: r.label, labelPosition: 'top',
                     active: isSelected, toggleable: true, stroke: true
                 })}
@@ -131,7 +131,7 @@ export const MpiRatioSelector = ComponentFactory.create({
             if (modelType !== 'video') {
                 if (orientContainer) {
                     orientContainer.style.display = 'block';
-                    orientContainer.innerHTML = MpiIconButton.template({
+                    orientContainer.innerHTML = MpiButton.template({
                         icon: orientIcon, size: 'sm', stroke: true
                     });
                 }
@@ -143,7 +143,7 @@ export const MpiRatioSelector = ComponentFactory.create({
             const currentRatio = ratios.find(r => r.label === value) || ratios[0];
             const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
             const isPopupOpen = popupBtnEl ? popupBtnEl.classList.contains('is-open') : !!props.showPopup;
-            trigger.innerHTML = MpiIconButton.template({
+            trigger.innerHTML = MpiButton.template({
                 icon: triggerIconName, label: value, stroke: true, active: isPopupOpen, toggleable: true
             });
         };

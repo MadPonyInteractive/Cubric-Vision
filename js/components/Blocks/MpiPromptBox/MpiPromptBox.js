@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
-import { MpiIconButton } from '../../Compounds/MpiIconButton/MpiIconButton.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 /**
  * MpiPromptBox — Advanced Prompt Input Block
@@ -80,7 +80,7 @@ export const MpiPromptBox = ComponentFactory.create({
         setTimeout(updateHeight, 0);
 
         // 2. Expansion Lock Toggle (Center Top)
-        MpiIconButton.mount(el.querySelector('#expand-lock-slot'), {
+        MpiButton.mount(el.querySelector('#expand-lock-slot'), {
             icon: 'chevronDown',
             iconActive: 'chevronUp',
             info: 'Toggle Expanding Height',
@@ -94,7 +94,7 @@ export const MpiPromptBox = ComponentFactory.create({
         });
 
         // 3. Copy Button (Bottom Right)
-        MpiIconButton.mount(el.querySelector('#copy-btn-slot'), {
+        MpiButton.mount(el.querySelector('#copy-btn-slot'), {
             icon: 'copy',
             variant: 'primary',
             size: 'sm',
@@ -121,7 +121,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // 5. Mode Switch (Center Area) - Initialized in Positive mode (check)
         if (props.includeNegative) {
-            MpiIconButton.mount(el.querySelector('#bottom-center-slot'), {
+            MpiButton.mount(el.querySelector('#bottom-center-slot'), {
                 icon: 'check',
                 iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',

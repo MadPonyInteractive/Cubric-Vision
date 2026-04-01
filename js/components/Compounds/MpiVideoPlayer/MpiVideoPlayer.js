@@ -1,8 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiIconButton }   from '../MpiIconButton/MpiIconButton.js';
-import { MpiSlider }       from '../MpiSlider/MpiSlider.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiSlider } from '../MpiSlider/MpiSlider.js';
 import { MpiVolumeControl } from '../MpiVolumeControl/MpiVolumeControl.js';
-import { formatTime }      from '../../../utils/string.js';
+import { formatTime } from '../../../utils/string.js';
 
 /**
  * MpiVideoPlayer — Compound: Video + Custom Controls Overlay.
@@ -82,19 +82,19 @@ export const MpiVideoPlayer = ComponentFactory.create({
     setup: (el, props, emit) => {
         const video = el.querySelector('.mpi-video-player__video');
         const hasControls = props.controls !== false;
-        
+
         let isSeeking = false;
 
         // --- Sub-components (only if controls are enabled) ---
         if (hasControls) {
             const playPauseWrapper = el.querySelector('.mpi-video-player__play-pause-wrapper');
-            const sliderWrapper    = el.querySelector('.mpi-video-player__slider-wrapper');
-            const volumeWrapper    = el.querySelector('.mpi-video-player__volume-wrapper');
-            const currentTimeEl    = el.querySelector('.mpi-video-player__current');
-            const durationEl       = el.querySelector('.mpi-video-player__duration');
+            const sliderWrapper = el.querySelector('.mpi-video-player__slider-wrapper');
+            const volumeWrapper = el.querySelector('.mpi-video-player__volume-wrapper');
+            const currentTimeEl = el.querySelector('.mpi-video-player__current');
+            const durationEl = el.querySelector('.mpi-video-player__duration');
 
             // 1. Play/Pause Button
-            const playBtn = MpiIconButton.mount(playPauseWrapper, {
+            const playBtn = MpiButton.mount(playPauseWrapper, {
                 icon: 'play',
                 iconActive: 'pause',
                 active: !video.paused,
@@ -129,13 +129,13 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
             const updateTime = () => {
                 if (isSeeking) return;
-                
+
                 const cur = video.currentTime || 0;
                 const dur = video.duration || 0;
-                
+
                 currentTimeEl.textContent = formatTime(cur);
                 durationEl.textContent = formatTime(dur);
-                
+
                 if (dur > 0) {
                     const pct = (cur / dur) * 1000;
                     const input = progressSlider.el.querySelector('input');
@@ -143,7 +143,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                     // Trigger primitive's visual update
                     input.dispatchEvent(new Event('input'));
                 }
-                
+
                 emit('timeupdate', { time: cur, duration: dur });
             };
 
@@ -202,7 +202,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
             video.src = url;
             video.load();
         };
-        
+
         el._play = () => video.play();
         el._pause = () => video.pause();
     }

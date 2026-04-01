@@ -1,7 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiPopupButton } from '../../Compounds/MpiPopupButton/MpiPopupButton.js';
 import { MpiScrollableBox } from '../../Compounds/MpiScrollableBox/MpiScrollableBox.js';
-import { MpiIconButton } from '../../Compounds/MpiIconButton/MpiIconButton.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 /**
  * MpiDropdown — Block Component
@@ -26,7 +26,7 @@ export const MpiDropdown = ComponentFactory.create({
         const position = props.position || 'top';
 
         // 1. Build the trigger HTML — use MpiIconButton for icon support
-        const triggerHtml = MpiIconButton.template({
+        const triggerHtml = MpiButton.template({
             label,
             variant: 'primary', // maps to secondary/glass in MpiIconButton
             icon: props.icon || (position === 'top' ? 'chevronUp' : 'chevronDown'),
