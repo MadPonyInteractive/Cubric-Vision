@@ -1,75 +1,48 @@
-/**
- * translator.js — Translator tool.
- * User pastes a prompt; tool translates it to Chinese using gemma3:12b.
- * First-visit modal explains why Chinese prompts can be better.
- */
-
 import { state } from '../state.js';
 import { getFirstAvailableModel } from '../modelManager.js';
 import { cleanLLMResponse } from '../uiHelpers.js';
 import { navigate, PAGE_TOOL } from '../router.js';
 import { saveToolState, loadToolState } from '../toolState.js';
 import { llamaGenerate } from '../llmService.js';
-import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
+import { onLlmRunStart, setLlmButtonState, setRunningTool, clearRunningTool } from '../toolUtils.js';
+
+// Factory components
+import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiIconButton }  from '../components/Compounds/MpiIconButton/MpiIconButton.js';
+import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
+import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
+
+// Utils
+import { Events } from '../events.js';
+import { qs, on } from '../utils/dom.js';
 
 const FIRST_VISIT_KEY = 'mpi_translator_visited';
 
 let _abortCtrl = null;
 
-// DOM refs
-import { PromptBox } from '../components/PromptBox.js';
+// Component instances
 let promptBox;
+let translateBtn;
+let copyBtn;
+let toGeneratorBtn;
 
-let translateBtn, cancelBtn, outputBox, copyBtn, toGeneratorBtn,
-    loadingEl, actionsEl, firstVisitModal, dismissModalBtn, resultSection;
+// DOM refs
+let outputBox, loadingEl, firstVisitModal, dismissModalBtn, resultSection, actionsEl;
 
 export function initTranslator() {
     _abortCtrl = null;
 
-    promptBox = new PromptBox({
-        toolId: 'translator',
-        container: document.getElementById('trans-prompt-wrapper'),
-        enableDragDrop: false
+    // 1. Initialize Action Buttons (will be passed to PromptBox)
+    translateBtn = MpiIconButton.mount(document.createElement('div'), {
+        icon: 'translate',
+        iconActive: 'stop',
+        info: 'Translate (Ctrl+Enter)',
+        variant: 'primary',
+        size: 'md',
+        toggleable: true
     });
 
-    translateBtn   = document.getElementById('trans-translateBtn');
-    cancelBtn      = document.getElementById('trans-cancelBtn');
-    outputBox      = document.getElementById('trans-output');
-    copyBtn        = document.getElementById('trans-copyBtn');
-    toGeneratorBtn = document.getElementById('trans-toGeneratorBtn');
-    loadingEl      = document.getElementById('trans-loading');
-    actionsEl      = document.getElementById('trans-actions');
-    firstVisitModal = document.getElementById('trans-firstVisitModal');
-    dismissModalBtn = document.getElementById('trans-dismissModal');
-    resultSection   = document.getElementById('trans-result');
-    const copyInputBtn = document.getElementById('trans-copyInputBtn');
-
-    if (!promptBox) return;
-
-    // Restore saved state
-    const saved = loadToolState('translator');
-    if (saved) {
-        if (saved.input && !promptBox.positivePrompt) {
-            promptBox.inputEl.value = saved.input;
-            promptBox.positivePrompt = saved.input;
-        }
-        if (saved.output) {
-            outputBox.value = saved.output;
-            if (resultSection) resultSection.classList.remove('hide');
-            if (actionsEl) actionsEl.classList.remove('hide');
-        }
-    }
-
-    // First-visit modal
-    if (!localStorage.getItem(FIRST_VISIT_KEY)) {
-        firstVisitModal.classList.remove('hide');
-    }
-    dismissModalBtn?.addEventListener('click', () => {
-        localStorage.setItem(FIRST_VISIT_KEY, '1');
-        firstVisitModal.classList.add('hide');
-    });
-
-    translateBtn.addEventListener('click', () => {
+    translateBtn.on('click', () => {
         if (_abortCtrl) {
             _abortCtrl.abort();
             _abortCtrl = null;
@@ -78,22 +51,86 @@ export function initTranslator() {
         }
     });
 
-    copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(outputBox.value);
-        const originalIcon = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-        setTimeout(() => copyBtn.innerHTML = originalIcon, 2000);
+    // 2. Mount PromptBox
+    promptBox = MpiPromptBox.mount(qs('#trans-prompt-wrapper'), {
+        rightA: [translateBtn]
     });
 
-    toGeneratorBtn.addEventListener('click', () => {
+    // Handle PromptBox events if needed (like Ctrl+Enter via init.js which usually targets the textarea)
+    // init.js manages global shortcuts, so we don't add them here.
+
+    // 3. Mount Result Section Buttons
+    copyBtn = MpiIconButton.mount(qs('#trans-copy-slot'), {
+        icon: 'copy',
+        info: 'Copy Translation',
+        variant: 'secondary',
+        size: 'sm'
+    });
+
+    toGeneratorBtn = MpiButton.mount(qs('#trans-toGenerator-slot'), {
+        text: 'Go to Generator',
+        variant: 'primary',
+        extraClasses: 'action-glow'
+    });
+
+    // 4. Get remaining DOM refs
+    outputBox       = qs('#trans-output');
+    loadingEl       = qs('#trans-loading');
+    actionsEl       = qs('#trans-actions');
+    firstVisitModal = qs('#trans-firstVisitModal');
+    dismissModalBtn = qs('#trans-dismissModal');
+    resultSection   = qs('#trans-result');
+
+    // 5. Restore saved state
+    const saved = loadToolState('translator');
+    if (saved) {
+        const textarea = qs('textarea', promptBox.el);
+        if (saved.input && textarea) {
+            textarea.value = saved.input;
+        }
+        if (saved.output && outputBox) {
+            outputBox.value = saved.output;
+            resultSection?.classList.remove('hide');
+            actionsEl?.classList.remove('hide');
+        }
+    }
+
+    // 6. First-visit modal Logic
+    if (!localStorage.getItem(FIRST_VISIT_KEY)) {
+        firstVisitModal?.classList.remove('hide');
+    }
+    
+    if (dismissModalBtn) {
+        on(dismissModalBtn, 'click', () => {
+            localStorage.setItem(FIRST_VISIT_KEY, '1');
+            firstVisitModal.classList.add('hide');
+        });
+    }
+
+    // 7. Result Handlers
+    copyBtn.on('click', () => {
+        if (!outputBox.value) return;
+        navigator.clipboard.writeText(outputBox.value);
+        MpiToast.mount(document.body, {
+            message: 'Translation copied to clipboard!',
+            variant: 'success',
+            duration: 2000
+        });
+    });
+
+    toGeneratorBtn.on('click', () => {
         state.generatorPrompt = outputBox.value;
         navigate(PAGE_TOOL, { name: 'generator' });
     });
 }
 
 export async function _runTranslate() {
-    const text = promptBox.positivePrompt.trim();
-    if (!text) { alert('Please enter a prompt to translate.'); return; }
+    const textarea = qs('textarea', promptBox.el);
+    const text = textarea?.value.trim();
+    if (!text) { 
+        MpiToast.mount(document.body, { message: 'Please enter a prompt to translate.', variant: 'warning' });
+        return; 
+    }
 
     onLlmRunStart();
     _setLoading(true);
@@ -109,39 +146,42 @@ export async function _runTranslate() {
             signal: _abortCtrl.signal
         });
         outputBox.value = cleanLLMResponse(data.response);
-        outputBox.classList.remove('hide');
-        if (resultSection) resultSection.classList.remove('hide');
-        if (actionsEl) actionsEl.classList.remove('hide');
-        saveToolState('translator', { output: outputBox.value });
+        resultSection?.classList.remove('hide');
+        actionsEl?.classList.remove('hide');
+        
+        // Save both input and output
+        saveToolState('translator', { input: text, output: outputBox.value });
+        
+        Events.emit('media:updated', { projectId: state.currentProject?.id }); // If we wanted to track any "generation"
     } catch (e) {
         if (e.name === 'AbortError') return;
         console.error(e);
         outputBox.value = `Error: ${e.message}`;
-        outputBox.classList.remove('hide');
+        resultSection?.classList.remove('hide');
     } finally {
         _setLoading(false);
     }
-}
-
-function _cancel() {
-    if (_abortCtrl) { _abortCtrl.abort(); _abortCtrl = null; }
-    _setLoading(false);
 }
 
 function _setLoading(on) {
     state.translatorRunning = on;
     if (on) setRunningTool('translator', 'llm');
     else clearRunningTool('llm');
-    setLlmButtonState(translateBtn, on, 'Translate (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+
+    // Use toolUtils to sync the button state (handles icon swap and danger class)
+    setLlmButtonState(translateBtn.el, on, 'Translate (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+    
     if (on) {
-        loadingEl.classList.remove('hide');
+        loadingEl?.classList.remove('hide');
     } else {
-        loadingEl.classList.add('hide');
+        loadingEl?.classList.add('hide');
     }
 }
+
 export function cancelTranslator() {
     if (_abortCtrl) {
         _abortCtrl.abort();
         _abortCtrl = null;
     }
 }
+

@@ -94,6 +94,35 @@ const sidebarTooltip = document.getElementById('sidebar-tooltip');
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initShell() {
+  // 1. Preload Component Styles to avoid FOUC
+  preloadComponentStyles([
+    // Primitives
+    'js/components/Primitives/MpiButton/MpiButton.css',
+    'js/components/Primitives/MpiIcon/MpiIcon.css',
+    'js/components/Primitives/MpiBadge/MpiBadge.css',
+    'js/components/Primitives/MpiSpinner/MpiSpinner.css',
+    'js/components/Primitives/MpiProgressBar/MpiProgressBar.css',
+    'js/components/Primitives/MpiInput/MpiInput.css',
+    'js/components/Primitives/MpiPopup/MpiPopup.css',
+    'js/components/Primitives/MpiToast/MpiToast.css',
+
+    // Compounds
+    'js/components/Compounds/MpiIconButton/MpiIconButton.css',
+    'js/components/Compounds/MpiSlider/MpiSlider.css',
+    'js/components/Compounds/MpiPopupButton/MpiPopupButton.css',
+    'js/components/Compounds/MpiScrollableBox/MpiScrollableBox.css',
+    'js/components/Compounds/MpiMediaDropzone/MpiMediaDropzone.css',
+    'js/components/Compounds/MpiDragList/MpiDragList.css',
+    'js/components/Compounds/MpiMuteIcon/MpiMuteIcon.css',
+    'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
+    'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
+
+    // Blocks
+    'js/components/Blocks/MpiDropdown/MpiDropdown.css',
+    'js/components/Blocks/MpiPromptBox/MpiPromptBox.css',
+    'js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'
+  ]);
+
   // Inject provisioning dependencies (avoids circular imports)
   initProvisioning(toolContainer, loadToolInternal);
 
@@ -1105,4 +1134,23 @@ async function updateMemoryStats() {
   } catch (err) {
     console.warn('[shell] Failed to fetch memory stats:', err);
   }
+}
+
+/**
+ * preloadComponentStyles — Injects <link> tags for all shared components
+ * used across the application to prevent FOUC (Flash of Unstyled Content).
+ * 
+ * @param {string[]} paths - Array of relative paths to component .css files
+ */
+function preloadComponentStyles(paths) {
+  const head = document.head;
+  paths.forEach(path => {
+    // Avoid duplicate injection
+    if (head.querySelector(`link[href="${path}"]`)) return;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = path;
+    head.appendChild(link);
+  });
 }

@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { els } from './elements.js';
-import { Slider } from './components/Slider.js';
+import { MpiSlider } from './components/Compounds/MpiSlider/MpiSlider.js';
 
 /* Legacy Prompt Enhancer functions removed - replaced by Prompt Builder (Stage 11) */
 
@@ -162,14 +162,13 @@ export function addShotRow(container, initialData = null, options = null) {
 
     const sliderContainer = row.querySelector('.shot-duration-unit');
     if (sliderContainer) {
-        new Slider(sliderContainer, {
-            title: 'DURATION',
+        MpiSlider.mount(sliderContainer, {
+            prefix: 'DURATION: ',
+            suffix: 's',
             min: 1,
             max: 15,
             step: 1,
             value: durVal,
-            showValue: true,
-            unit: 's',
             name: 'shot-duration'
         });
     }

@@ -65,6 +65,20 @@ export const MyComponent = ComponentFactory.create({
 ### 3. JSDoc Types
 Add all component properties to `js/components/types.js`. This allows other agents to understand your component's API via a single, low-token file.
 
+### 4. Update CSS Preloader
+To prevent **FOUC** (Flash of Unstyled Content) during app startup, you **MUST** add your component's CSS path to the `preloadComponentStyles()` function in `js/shell.js`.
+
+```javascript
+// js/shell.js
+function preloadComponentStyles() {
+    const paths = [
+        // ... existing paths
+        'js/components/[Tier]/MyComponent/MyComponent.css', // <-- ADD YOURS HERE
+    ];
+    // ...
+}
+```
+
 ---
 
 ## 🔗 Communication Protocol

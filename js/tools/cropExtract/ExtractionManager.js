@@ -1,8 +1,6 @@
-/**
- * ExtractionManager.js — Handling server-side clip extraction
- */
 import { toolState } from './State.js';
 import { state } from '../../state.js';
+import { Events } from '../../events.js';
 
 export class ExtractionManager {
     /**
@@ -12,7 +10,7 @@ export class ExtractionManager {
      */
     static async extractClip(saveToLibrary = true) {
         const { video, trimIn, trimOut, cropBox } = toolState;
-        if (!video.src || !state.currentProject) return null;
+        if (!video || !video.src || !state.currentProject) return null;
 
         const payload = {
             projectId: state.currentProject.id,
@@ -30,21 +28,27 @@ export class ExtractionManager {
         };
 
         try {
+            Events.emit('tool:running', { tool: 'cropExtract', type: 'extraction' });
+            
             const res = await fetch(`/project-media/${state.currentProject.id}/extract`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
+            
             if (data.success) {
                 if (saveToLibrary) {
-                    document.dispatchEvent(new CustomEvent('media:updated'));
+                    Events.emit('media:updated', { projectId: state.currentProject.id });
                 }
                 return data.filePath;
             }
         } catch (err) {
             console.error("Extraction failed:", err);
+        } finally {
+            Events.emit('tool:idle', { tool: 'cropExtract' });
         }
         return null;
     }
 }
+

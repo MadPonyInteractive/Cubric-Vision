@@ -245,6 +245,25 @@ Reload the app and navigate to the **Component Gallery** (grid icon in the sideb
 
 ---
 
+## Step 6 — Update CSS Preloader (CRITICAL)
+
+To prevent Flash of Unstyled Content (FOUC) when a tool is opened for the first time after app startup:
+
+1. Open `js/shell.js`.
+2. Locate the `preloadComponentStyles()` function (inside `initShell`).
+3. Add your component's CSS path to the `paths` array.
+
+```javascript
+const paths = [
+    // ...
+    'js/components/[Tier]/MyComponent/MyComponent.css',
+];
+```
+
+---
+
+---
+
 ## ❌ Common Mistakes — Do NOT do these
 
 | Mistake | Correct approach |
@@ -257,4 +276,5 @@ Reload the app and navigate to the **Component Gallery** (grid icon in the sideb
 | Hardcoding a variant list that mirrors a JS registry | Export the registry (`export const MY_REGISTRY`) and use `Object.keys()` |
 | Duplicating or overwriting a typedef in `types.js` | One typedef per component — check for existing ones before writing |
 | Skipping `types.js` | Every new component MUST have a typedef |
+| **Forgetting to update `js/shell.js` preloader** | Always add your CSS path to `preloadComponentStyles()` |
 

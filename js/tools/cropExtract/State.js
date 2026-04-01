@@ -1,10 +1,14 @@
-/**
- * State.js — Local state for Crop & Extract tool
- */
 export const toolState = {
-    // DOM Elements
-    video: null,
+    // Component Instances
+    videoPlayer: null,
     dropZone: null,
+    volumeControl: null,
+    playPauseBtn: null,
+    addAssetBtn: null,
+    ratioSelector: null,
+
+    // DOM Elements (Keep some for direct manipulation)
+    video: null, // extracted from videoPlayer
     cropOverlay: null,
     cropBox: null,
     playhead: null,
@@ -19,6 +23,7 @@ export const toolState = {
     isDraggingHandleOut: false,
     isDraggingBox: false,
     isResizingBox: false,
+
 
     lastSeekTime: 0,
     trimIn: 0,   // 0.0 to 1.0

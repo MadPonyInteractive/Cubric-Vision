@@ -7,6 +7,8 @@ import { findClosestRatio, VIDEO_RATIOS, RATIO_ICONS } from '../../ratioUtils.js
 import { UIManager } from './UIManager.js';
 import { state } from '../../state.js';
 import { loadToolState, saveToolState } from '../../toolState.js';
+import { qs } from '../../utils/dom.js';
+
 
 export class VideoManager {
     /**
@@ -18,19 +20,24 @@ export class VideoManager {
     static async loadVideo(url, isRestoring = false, callbacks = {}) {
         if (!url) return;
         const loadableUrl = getLoadableUrl(url);
-        const video = toolState.video;
-
-        video.src = loadableUrl;
-        video.classList.remove('hide');
-        toolState.dropZone.classList.add('hide');
+        
+        // Hide dropzone, show video player component
+        qs('#ce-dropzone-slot')?.classList.add('hide');
+        qs('#ce-videoplayer-slot')?.classList.remove('hide');
         toolState.cropOverlay.classList.remove('hide');
+
+        if (toolState.videoPlayer) {
+            toolState.videoPlayer.el._setSrc(loadableUrl);
+        }
+
+        const video = toolState.video;
+        if (!video) return;
 
         video.onloadedmetadata = () => {
             if (!isRestoring) {
                 toolState.trimIn = 0;
                 toolState.trimOut = 1.0;
 
-                // Smart Ratio Detection
                 const matchedRatio = findClosestRatio(video.videoWidth, video.videoHeight, VIDEO_RATIOS);
                 if (matchedRatio) {
                     toolState.selectedRatio = matchedRatio.ratio;
@@ -39,8 +46,6 @@ export class VideoManager {
 
                 state.cropExtractVideoUrl = loadableUrl;
                 state.cropExtractTime = 0;
-            } else {
-                localStorage.setItem('cropExtract_restored', 'true');
             }
             
             if (callbacks.onLoaded) callbacks.onLoaded(isRestoring);
@@ -49,7 +54,6 @@ export class VideoManager {
 
         video.ontimeupdate = () => {
             if (!toolState.isDraggingSeeker && !toolState.isDraggingHandleIn && !toolState.isDraggingHandleOut) {
-                // Hard clamp playback within trim range
                 if (video.currentTime < toolState.trimIn * video.duration) video.currentTime = toolState.trimIn * video.duration;
                 if (video.currentTime > toolState.trimOut * video.duration) {
                     video.pause();
@@ -61,6 +65,7 @@ export class VideoManager {
             if (callbacks.onTimelineUpdate) callbacks.onTimelineUpdate();
         };
     }
+
 
     /**
      * Generates a visual filmstrip preview.

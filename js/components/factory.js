@@ -43,7 +43,6 @@ export const ComponentFactory = {
 
             /**
              * Renders the component's HTML string without mounting it.
-             * Useful for embedding a Primitive inside a Compound template.
              * @param {Object} props
              * @param {string} [children]
              * @returns {string} HTML string
@@ -51,12 +50,13 @@ export const ComponentFactory = {
             template: (props = {}, children = '') => def.template(props, children),
 
             /**
-             * Access the setup function for manual invocation (e.g. inheritance in Compounds).
+             * Access the setup function for manual invocation.
              */
             setup: def.setup || (() => {}),
 
             /**
              * Mounts the component into a container.
+             * CSS is guaranteed to be loaded before the element is inserted into the DOM.
              * @param {HTMLElement} container - Target DOM element
              * @param {Object} props - Initial properties
              * @param {string} [children] - Inner HTML string

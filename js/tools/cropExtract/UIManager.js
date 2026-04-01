@@ -3,14 +3,15 @@
  */
 import { toolState } from './State.js';
 import { VIDEO_RATIOS, RATIO_ICONS } from '../../ratioUtils.js';
+import { MpiIcon } from '../../components/Primitives/MpiIcon/MpiIcon.js';
+
+
 
 export class UIManager {
     /**
      * Binds all DOM elements to the toolState.
      */
     static bindUI() {
-        toolState.video = document.getElementById('ce-main-video');
-        toolState.dropZone = document.getElementById('ce-drop-zone');
         toolState.cropOverlay = document.getElementById('ce-crop-overlay');
         toolState.cropBox = document.getElementById('ce-crop-box');
         toolState.playhead = document.getElementById('ce-playhead');
@@ -23,54 +24,45 @@ export class UIManager {
             handleIn: document.getElementById('ce-handle-in'),
             handleOut: document.getElementById('ce-handle-out'),
             ratioGrid: document.getElementById('ce-ratioGrid'),
-            ratioToggleBtn: document.getElementById('ce-ratioToggleBtn'),
             ratioMenu: document.getElementById('ce-ratioMenu'),
-            addAssetBtn: document.getElementById('ce-addAssetBtn'),
-            playPauseBtn: document.getElementById('ce-play-pause'),
-            volume: {
-                control: document.getElementById('ce-volume-control'),
-                popup:   document.getElementById('ce-volume-popup'),
-                slider:  document.getElementById('ce-volume-slider'),
-                icon:    document.getElementById('ce-volume-icon'),
+            // Mount Slots
+            slots: {
+                dropzone: document.getElementById('ce-dropzone-slot'),
+                videoplayer: document.getElementById('ce-videoplayer-slot'),
+                addAsset: document.getElementById('ce-add-asset-slot'),
+                ratioToggle: document.getElementById('ce-ratio-toggle-slot'),
+                volume: document.getElementById('ce-volume-slot'),
+                playPause: document.getElementById('ce-play-pause-slot')
             }
         };
     }
 
-    /**
-     * Initializes the Ratio Grid with buttons and click handlers.
-     * @param {Function} onRatioSelected 
-     */
-    static initRatioGrid(onRatioSelected) {
-        const ratioGrid = document.getElementById('ce-ratioGrid');
-        const ratioMenu = document.getElementById('ce-ratioMenu');
-        if (!ratioGrid) return;
 
-        ratioGrid.innerHTML = '';
-        VIDEO_RATIOS.forEach(r => {
-            const btn = document.createElement('div');
-            btn.className = 'ratio-item-compact';
-            btn.title = r.label;
-            btn.innerHTML = `
-                <span class="ratio-item-label">${r.label}</span>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">${RATIO_ICONS[r.icon]}</svg>
-            `;
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                onRatioSelected(r);
-                ratioMenu.classList.add('hide');
-            };
-            ratioGrid.appendChild(btn);
-        });
-    }
 
     /**
      * Updates the text and icon of the current ratio display.
      * @param {Object} r - The ratio object.
      */
     static updateRatioUI(r) {
-        const textSpan = document.getElementById('ce-currentRatioText');
-        const iconSvg = document.getElementById('ce-currentRatioIcon');
-        if (textSpan) textSpan.textContent = r.label;
-        if (iconSvg) iconSvg.innerHTML = RATIO_ICONS[r.icon];
+        if (!toolState.ratioSelector) return;
+        
+        // Update the component's state
+        toolState.ratioSelector.props.value = r.label;
+        
+        // Hack: Since the factory doesn't expose a full reactive update yet, 
+        // we manually find the label element inside the component's trigger.
+        const labelEl = toolState.ratioSelector.el.querySelector('.mpi-popup-btn__label');
+        if (labelEl) labelEl.textContent = r.label;
+
+        // Also update the icon
+        const iconContainer = toolState.ratioSelector.el.querySelector('.mpi-popup-btn__trigger .mpi-icon');
+        if (iconContainer) {
+            const iconName = r.icon ? r.icon.replace('rect_', 'ratio_') : 'ratio_1_1';
+            iconContainer.outerHTML = MpiIcon.template({ name: iconName, size: 'md', stroke: true });
+        }
     }
+
+
+
+
 }

@@ -115,8 +115,10 @@ MpiAiSuite/
 | Phase | File | What | Touches |
 |---|---|---|---|
 | **3.1** | `phases/3.1-css-primitives.md` | Extract Primitive CSS from `03_forms.css` | 8 component css + `03_forms.css` |
-| **3.2** | `phases/3.2-css-compounds.md` | Extract Compound CSS from `03_forms.css` + `05_tools.css` | 6 component css + 2 partials |
-| **3.3** | `phases/3.3-css-audit.md` | Audit remaining global CSS for dead rules | `03`–`05` partials |
+| **3.2** | `phases/3.2-css-compounds.md` | Extract Compound CSS from `03_forms.css` + `05_tools.css` + **implement CSS preloader in `shell.js`** | 6 component css + 2 partials + `shell.js` |
+| **3.3** | `phases/3.3-css-audit.md` | Audit remaining global CSS for dead rules + verify preloader | `03`–`05` partials |
+
+> **CSS Preloader — Why & What:** Component CSS is loaded dynamically via `ensureStylesheet()` on first mount. On a cold app start, components render before their CSS downloads, causing FOUC (Flash of Unstyled Content). Confirmed during Phase 2.4 verification: visiting the Component Gallery first "fixes" it by warming the CSS cache. The fix is `preloadComponentStyles()` in `shell.js` — a lightweight startup function that injects `<link>` tags for all known component CSS paths before any tool loads. Implemented at the end of **Phase 3.2** (when all co-located paths are finalized). See `phases/3.2-css-compounds.md` for the implementation.
 
 ### Group 4 — Docs & Finalization (after all groups)
 
@@ -306,7 +308,7 @@ import { generateSeed }     from '../utils/seed.js';
 - [x] 2.1 translator.js rebuilt
 - [x] 2.2 jsonFormatter.js rebuilt
 - [x] 2.3 compare.js rebuilt
-- [ ] 2.4 cropExtract.js rebuilt
+- [x] 2.4 cropExtract.js rebuilt
 - [ ] 2.5 descriptor.js rebuilt
 - [ ] 2.6 upscaler.js rebuilt
 - [ ] 2.7 llm.js rebuilt
@@ -315,8 +317,8 @@ import { generateSeed }     from '../utils/seed.js';
 - [ ] 2.10 generator.js rebuilt
 
 ### Group 3 — CSS Co-location
-- [ ] 3.1 Primitive CSS extracted and co-located
-- [ ] 3.2 Compound CSS extracted and co-located
+- [x] 3.1 Primitive CSS extracted and co-located
+- [x] 3.2 Compound CSS extracted and co-located
 - [ ] 3.3 Global CSS audit complete
 
 ### Group 4 — Docs

@@ -1,7 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
    Mpi AI Suite — 05_tools.css
-   Prompt builder · Masking · Detailer · Tool-specific styles
-═══════════════════════════════════════════════════════════════ */
+   Tool-specific layouts (Prompt Builder, Detailer, Masking).
+   ───────────────────────────────────────────────────────────────
+   Status: Verified (R8 Phase 3.3)
+   Scope: Global TOOL-LAYOUT styles
+   Rule: NO COMPONENT STYLES HERE (Use co-location instead)
+   ═══════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
    PROMPT BUILDER (Stage 11)
@@ -246,115 +250,6 @@ body.light-mode .pb-tool-menu {
   color: var(--primary) !important;
 }
 
-/* Advanced Settings Custom UI */
-.custom-dropdown {
-    position: relative;
-    width: 100%;
-}
-
-.custom-dropdown-toggle {
-    width: 100%;
-    padding: 0.4rem 0.8rem;
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    color: var(--text);
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.8rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.2s ease;
-    user-select: none;
-    height: 34px;
-}
-
-.custom-dropdown-toggle span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding-right: 10px;
-    flex: 1;
-}
-
-.custom-dropdown-toggle:hover {
-    border-color: var(--accent-1);
-    background: var(--surface-4);
-}
-
-.custom-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    margin-top: 4px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 0.5rem;
-}
-
-.custom-dropdown-folder {
-    padding: 0.5rem 0.6rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    border-radius: var(--radius-sm);
-    user-select: none;
-}
-
-.custom-dropdown-folder:hover {
-    background: var(--surface-3);
-    color: var(--text);
-}
-
-.custom-dropdown-folder svg {
-    transition: transform 0.2s ease;
-}
-
-.custom-dropdown-folder.collapsed svg {
-    transform: rotate(-90deg);
-}
-
-.custom-dropdown-files {
-    padding-left: 1.2rem;
-    margin-bottom: 0.25rem;
-}
-
-.custom-dropdown-files.hide {
-    display: none;
-}
-
-.custom-dropdown-item {
-    padding: 0.4rem 0.6rem;
-    cursor: pointer;
-    font-size: 0.8rem;
-    border-radius: var(--radius-sm);
-    transition: all 0.1s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    user-select: none;
-}
-
-.custom-dropdown-item:hover {
-    background: var(--accent-1);
-    color: white;
-}
-
-.custom-dropdown-item.active {
-    background: var(--accent-1-hover);
-    color: white;
-}
 
 .lora-row {
     display: flex;

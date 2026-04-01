@@ -15,7 +15,7 @@ import { navigate, PAGE_LANDING, PAGE_TOOL } from './router.js';
 import { getRequiredModelsForTool } from './modelManager.js';
 import { refreshComfyWorkflowRegistry, listComfyFiles, getDefaultWorkflowId } from './comfyModelManager.js';
 import { TOOL_REGISTRY } from './toolRegistry.js';
-import { renderCustomDropdown } from './components/customDropdown.js';
+import { MpiDropdown } from './components/Blocks/MpiDropdown/MpiDropdown.js';
 import { ensureTemplate } from './templateLoader.js';
 
 // Shell's toolContainer — injected by initProvisioning() to avoid circular imports
@@ -436,12 +436,11 @@ export async function showAdvancedSettingsScreen(toolName) {
             <div style="flex:1; min-width: 0;" id="modelDropdownContainer"></div>
         `;
         container.appendChild(modelRow);
-        renderCustomDropdown(
-            modelRow.querySelector('#modelDropdownContainer'),
-            models,
-            toolSettings.model,
-            (val) => { toolSettings.model = val; }
-        );
+        MpiDropdown.mount(modelRow.querySelector('#modelDropdownContainer'), {
+            titles: models,
+            label: toolSettings.model || 'Select Model...',
+            position: 'bottom'
+        }).on('select', (data) => { toolSettings.model = data.value; });
 
         // ── Upscale Model (upscaler tool only) ──
         if (workflow?.type === 'upscaler' || toolName === 'upscaler') {
@@ -453,13 +452,11 @@ export async function showAdvancedSettingsScreen(toolName) {
                 <div style="flex:1; min-width: 0;" id="upscaleDropdownContainer"></div>
             `;
             container.appendChild(upscaleRow);
-            renderCustomDropdown(
-                upscaleRow.querySelector('#upscaleDropdownContainer'),
-                upscalers,
-                toolSettings.upscaleModel,
-                (val) => { toolSettings.upscaleModel = val; },
-                true
-            );
+            MpiDropdown.mount(upscaleRow.querySelector('#upscaleDropdownContainer'), {
+                titles: upscalers,
+                label: toolSettings.upscaleModel || 'Select Upscaler...',
+                position: 'bottom'
+            }).on('select', (data) => { toolSettings.upscaleModel = data.value; });
         }
 
         // ── LoRA Stack (6 slots) ──
@@ -494,13 +491,11 @@ export async function showAdvancedSettingsScreen(toolName) {
             mInput.addEventListener('input', (e) => { toolSettings.loras[i].modelStrength = parseFloat(e.target.value); });
             cInput.addEventListener('input', (e) => { toolSettings.loras[i].clipStrength = parseFloat(e.target.value); });
 
-            renderCustomDropdown(
-                loraRow.querySelector('#loraDropdownContainer'),
-                loras,
-                currentLora.name,
-                (val) => { toolSettings.loras[i].name = (val === 'None' ? null : val); },
-                true
-            );
+            MpiDropdown.mount(loraRow.querySelector('#loraDropdownContainer'), {
+                titles: loras,
+                label: currentLora.name || 'None',
+                position: 'bottom'
+            }).on('select', (data) => { toolSettings.loras[i].name = (data.value === 'None' ? null : data.value); });
         }
 
         state.activeSubPage = { toolName, isManual: true };

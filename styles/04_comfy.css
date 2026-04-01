@@ -1,7 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
    Mpi AI Suite — 04_comfy.css
-   ComfyUI preview · Generator flow · Prompt box · Media library
-═══════════════════════════════════════════════════════════════ */
+   ComfyUI integration, generator flows, and media library styles.
+   ───────────────────────────────────────────────────────────────
+   Status: Verified (R8 Phase 3.3)
+   Scope: Global COMFY/GEN styles
+   Rule: NO COMPONENT STYLES HERE (Use co-location instead)
+   ═══════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    COMFYUI PREVIEW MONITOR
@@ -79,40 +83,6 @@
   gap: 0.6rem;
 }
 
-/* Radio pills */
-.radio-pill {
-  cursor: pointer;
-  position: relative;
-}
-
-.radio-pill input {
-  position: absolute;
-  opacity: 0;
-}
-
-.radio-pill span {
-  display: inline-block;
-  padding: 0.45rem 1.1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  transition: all var(--transition);
-  color: var(--text-2);
-}
-
-.radio-pill input:checked+span {
-  background: var(--neon-electric);
-  color: #fff;
-  border-color: var(--neon-electric);
-  box-shadow: 0 0 15px var(--neon-glow);
-}
-
-.radio-pill:hover span {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.05);
-}
 
 /* Seed row */
 .comfy-seed-group {
@@ -791,40 +761,6 @@ body.prompt-compact .gen-prompt-fixed .prompt-box-actions-bar {
 /* ═══════════════════════════════════════════════════════════════════════════════
    PROMPT ENHANCER — PERSISTENT ACTION BAR
 ═══════════════════════════════════════════════════════════════════════════════ */
-.pe-persistent-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(154, 130, 187, 0.07);
-  border: 1px solid rgba(154, 130, 187, 0.2);
-  border-radius: var(--radius);
-  padding: 0.6rem 1rem;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-}
-
-.pe-persistent-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--primary);
-  opacity: 0.8;
-  white-space: nowrap;
-}
-
-.pe-persistent-btns {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.pe-persistent-btns .btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  pointer-events: none;
-  filter: grayscale(0.5);
-}
 
 /* Preview image container — fixes overflow beyond its box */
 .gen-preview-constrained {

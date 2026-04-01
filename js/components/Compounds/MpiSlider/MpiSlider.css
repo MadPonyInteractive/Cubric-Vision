@@ -1,10 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════
    MpiSlider — Compound Slider Layout
-   Wraps .mpi-progress primitive.
+   Mapped to .mpi-slider BEM namespace.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Re-use base progress bar styles, no override needed yet. */
 .mpi-slider-compound {
-    display: block;
-    width: 100%;
+  display: block;
+  width: 100%;
 }

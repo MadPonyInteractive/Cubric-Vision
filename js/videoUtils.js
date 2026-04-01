@@ -1,9 +1,32 @@
 /**
  * videoUtils.js — Shared Video Processing Utilities
  */
-import { CaptureEngine } from './tools/cropExtract/CaptureEngine.js';
 import { MediaContextMenu } from './components/mediaContextMenu.js';
 import { getLoadableUrl } from './toolUtils.js';
+
+/**
+ * Captures a specific region of a video frame into a Data URL.
+ * (Inlined to avoid circular dependency with cropExtract sub-modules)
+ *
+ * @param {HTMLVideoElement} video
+ * @param {Object} cropRect - { x, y, width, height } in 0–1 range
+ * @returns {Promise<string>} Data URL
+ */
+async function captureFrame(video, cropRect = { x: 0, y: 0, width: 1, height: 1 }) {
+    if (!video || video.readyState < 2) throw new Error('Video is not ready for capture.');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const vW = video.videoWidth;
+    const vH = video.videoHeight;
+    const sx = cropRect.x * vW;
+    const sy = cropRect.y * vH;
+    const sw = cropRect.width * vW;
+    const sh = cropRect.height * vH;
+    canvas.width = sw;
+    canvas.height = sh;
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+    return canvas.toDataURL('image/png', 1.0);
+}
 
 /**
  * Returns crop-box bounds as percentages of the videoContainer dimensions.
@@ -63,7 +86,7 @@ export async function handleSnapshot(e, video, cropRect, callbacks = {}, options
     const finalRect = cropRect || { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
 
     try {
-        const frameUrl = await CaptureEngine.captureFrame(video, finalRect);
+        const frameUrl = await captureFrame(video, finalRect);
         
         MediaContextMenu.show(
             e.clientX, e.clientY,

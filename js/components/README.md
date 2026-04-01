@@ -69,6 +69,9 @@ btn.update({ text: 'Saved!' }); // Re-renders
 btn.destroy();                  // Removes from DOM
 ```
 
+### 4. Update CSS Preloader (MANDATORY)
+To prevent **FOUC** (Flash of Unstyled Content) on cold start, add your component's CSS path to `preloadComponentStyles()` in `js/shell.js`.
+
 ---
 
 ## 🎨 Styling Rules (BEM Standards)
