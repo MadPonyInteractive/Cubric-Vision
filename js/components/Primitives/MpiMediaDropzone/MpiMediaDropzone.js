@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
+import { renderIcon } from '../../../utils/icons.js';
 
 /**
  * MpiMediaDropzone — Drag-and-Drop Media Upload Zone
@@ -15,7 +15,7 @@ import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
  */
 export const MpiMediaDropzone = ComponentFactory.create({
     name: 'MpiMediaDropzone',
-    css: ['js/components/Compounds/MpiMediaDropzone/MpiMediaDropzone.css'],
+    css: ['js/components/Primitives/MpiMediaDropzone/MpiMediaDropzone.css'],
 
     template: (props) => {
         const iconName = props.icon || 'media';
@@ -30,7 +30,7 @@ export const MpiMediaDropzone = ComponentFactory.create({
             } else if (type === 'audio') {
                 mediaPreview = `
                     <div class="mpi-media-dropzone__preview mpi-media-dropzone__preview--audio">
-                        ${MpiIcon.template({ name: 'audio', size: 'lg' })}
+                        ${renderIcon('audio', 'lg')}
                         <audio src="${value}" controls></audio>
                     </div>`;
             } else {
@@ -48,13 +48,13 @@ export const MpiMediaDropzone = ComponentFactory.create({
             <div class="mpi-media-dropzone__content mpi-media-dropzone__content--has-value">
                 ${mediaPreview}
                 <button class="mpi-media-dropzone__remove" title="Remove Media">
-                    ${MpiIcon.template({ name: 'close', size: 'xs' })}
+                    ${renderIcon('close', 'xs')}
                 </button>
             </div>
         ` : `
             <div class="mpi-media-dropzone__content mpi-media-dropzone__content--empty">
                 <div class="mpi-media-dropzone__icon">
-                    ${MpiIcon.template({ name: iconName, size: 'xl' })}
+                    ${renderIcon(iconName, 'xl')}
                 </div>
                 <div class="mpi-media-dropzone__text">${props.text || 'Drop here'}</div>
             </div>

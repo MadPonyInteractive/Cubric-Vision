@@ -106,9 +106,9 @@ export async function initShell() {
     'js/components/Primitives/MpiPopup/MpiPopup.css',
     'js/components/Primitives/MpiToast/MpiToast.css',
     'js/components/Primitives/MpiScrollableBox/MpiScrollableBox.css',
+    'js/components/Primitives/MpiMediaDropzone/MpiMediaDropzone.css',
 
     // Compounds
-    'js/components/Compounds/MpiMediaDropzone/MpiMediaDropzone.css',
     'js/components/Compounds/MpiDragList/MpiDragList.css',
     'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
     'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',

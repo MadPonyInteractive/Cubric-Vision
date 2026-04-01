@@ -59,7 +59,7 @@
  */
 
 /**
- * @typedef {Object} MpiMediaDropzoneProps (Compound — js/components/Compounds/MpiMediaDropzone)
+ * @typedef {Object} MpiMediaDropzoneProps (Primitive — js/components/Primitives/MpiMediaDropzone)
  * @property {string}   [icon='media']  - Key from MpiIcon registry
  * @property {string}   title           - Primary title text
  * @property {string}   text            - Description text

@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { Events } from '../events.js';
 import { qs } from '../utils/dom.js';
 import { InteractiveCanvas } from '../components/interactiveCanvas.js';
-import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
+import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { saveToolState, loadToolState } from '../toolState.js';
 import { resizeImageIfNeeded } from '../imageProcessor.js';
 

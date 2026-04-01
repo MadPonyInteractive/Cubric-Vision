@@ -1,4 +1,5 @@
 ## Tasks for refactoring components that did not followed the correct design pattern
+Note: executed between 3.3 and 2.5
 
 for agents: FIRST READ -> `/dev_docs/05_components.md`
 
@@ -32,9 +33,9 @@ for agents: FIRST READ -> `/dev_docs/05_components.md`
 [x] Remove old MpiScrollableBox
 
 ### Stage 5
-[] Remove MpiMediaDropzone MpiIcon dependency by using "js/utils/icons.js"
-[] Convert MpiMediaDropzone to a Primitive 
-[] Update MpiMediaDropzone consumers to point to its new location
+[x] Remove MpiMediaDropzone MpiIcon dependency by using "js/utils/icons.js"
+[x] Convert MpiMediaDropzone to a Primitive 
+[x] Update MpiMediaDropzone consumers to point to its new location
 
 ### Stage 6 
 [] Convert MpiRatioSelector to a Compound

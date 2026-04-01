@@ -17,16 +17,19 @@ import { MpiSpinner } from '../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
-
-import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
-import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
-import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
+
+// Compounds
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
+
+// Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
@@ -286,8 +289,7 @@ function mountAll() {
         });
     });
 
-    // ── MpiMediaDropzone (Compound) ───────────────────────────────────────────
-    // ── MpiMediaDropzone (Compound) ───────────────────────────────────────────
+    // ── MpiMediaDropzone (Primitive) ──────────────────────────────────────────
     mount('preview-dropzone-image', () => {
         const baseProps = {
             title: 'Source Image',
