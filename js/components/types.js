@@ -70,12 +70,6 @@
  * @property {'image'|'video'|'audio'} [type='image'] - Media type for display rendering
  */
 
-/**
- * @typedef {Object} MpiPopupButtonProps (Compound — js/components/Compounds/MpiPopupButton)
- * @param {string} triggerHtml - HTML for the trigger button
- * @param {boolean} [showPopup=false] - Initial state
- * @param {'top'|'bottom'} [position='top'] - Where the popup appears
- */
 
 /**
  * @typedef {Object} MpiPromptBoxProps (Compound — js/components/Compounds/MpiPromptBox)
@@ -155,8 +149,9 @@
 /**
  * @typedef {Object} MpiPopupProps (Primitive — js/components/Primitives/MpiPopup)
  * @property {boolean} [active=false] - Whether the popup is visible
- * @property {string} [id] - Unique ID for the popup
  * @property {string} [variant='glass'] - Visual variant
+ * @property {'top'|'bottom'|'left'|'right'} [position='top'] - Position relative to trigger
+ * @property {Array<{id: string, label: string, iconHtml?: string}>} [items] - Optional menu items
  */
 
 /**

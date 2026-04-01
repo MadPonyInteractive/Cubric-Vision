@@ -1,26 +1,17 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
-import { MpiPopupButton } from '../../Compounds/MpiPopupButton/MpiPopupButton.js';
+import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { getModelRatios } from '../../../ratioUtils.js';
 
 /**
  * MpiRatioSelector — Block-level Aspect Ratio Picker
  * 
- * Hierarchy Note: Classified as a Block because it imports a Compound (MpiIconButton).
  * Composes a trigger button + popup with ratio presets.
- * 
- * Props:
- * @param {string} [modelType='flux'] - Model presets to use
- * @param {'portrait'|'landscape'} [initialOrientation='portrait']
- * @param {string} [value] - Current selected ratio label (e.g. "1:1")
  */
 export const MpiRatioSelector = ComponentFactory.create({
     name: 'MpiRatioSelector',
-    css: [
-        'js/components/Compounds/MpiPopupButton/MpiPopupButton.css',
-        'js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'
-    ],
+    css: ['js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'],
 
     template: (props) => {
         const orientation = props.orientation || props.initialOrientation || 'portrait';
@@ -89,23 +80,54 @@ export const MpiRatioSelector = ComponentFactory.create({
             info: 'Select aspect ratio'
         });
 
+        const popupHtml = MpiPopup.template({ 
+            active: isActive,
+            position: 'top' 
+        }, popupInnerHtml);
+
         return `<div class="mpi-ratio-sel">
-            ${MpiPopupButton.template({
-                triggerHtml: triggerBtnHtml,
-                showPopup: isActive
-            }, popupInnerHtml)}
+            <div class="mpi-ratio-sel__trigger">
+                ${triggerBtnHtml}
+            </div>
+            ${popupHtml}
         </div>`;
     },
 
     setup: (el, props, emit) => {
-        const popupBtnEl = el.querySelector('.mpi-popup-btn');
-        const trigger = el.querySelector('.mpi-popup-btn__trigger');
+        const trigger = el.querySelector('.mpi-ratio-sel__trigger');
         const popupEl = el.querySelector('.mpi-popup');
         const grid = el.querySelector('.mpi-ratio-sel__grid');
         const orientContainer = el.querySelector('.mpi-ratio-sel__orient-btn');
+        let leaveTimer = null;
 
-        // Delegate nested component setup
-        if (popupBtnEl) MpiPopupButton.setup(popupBtnEl, props, emit);
+        // Toggle popup
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            props.showPopup = !props.showPopup;
+            popupEl.classList.toggle('is-active', props.showPopup);
+            
+            const btn = trigger.querySelector('.mpi-btn');
+            if (btn) btn.classList.toggle('is-active', props.showPopup);
+            
+            emit('popup_toggle', { active: props.showPopup });
+        });
+
+        // Hover behavior (keep open while hovering)
+        el.addEventListener('mouseleave', () => {
+            leaveTimer = setTimeout(() => {
+                if (props.showPopup) {
+                    props.showPopup = false;
+                    popupEl.classList.remove('is-active');
+                    const btn = trigger.querySelector('.mpi-btn');
+                    if (btn) btn.classList.remove('is-active');
+                    emit('popup_toggle', { active: false });
+                }
+            }, 300);
+        });
+
+        el.addEventListener('mouseenter', () => {
+            if (leaveTimer) clearTimeout(leaveTimer);
+        });
 
         // Helper to regenerate the grid content manually (avoids factory update loop)
         const updateUI = () => {
@@ -142,13 +164,10 @@ export const MpiRatioSelector = ComponentFactory.create({
             // 3. Update Main Trigger Button
             const currentRatio = ratios.find(r => r.label === value) || ratios[0];
             const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
-            const isPopupOpen = popupBtnEl ? popupBtnEl.classList.contains('is-open') : !!props.showPopup;
             trigger.innerHTML = MpiButton.template({
-                icon: triggerIconName, label: value, stroke: true, active: isPopupOpen, toggleable: true
+                icon: triggerIconName, label: value, stroke: true, active: props.showPopup, toggleable: true
             });
         };
-
-        // Interaction, Toggle, and Bridging logic is fully managed by MpiPopupButton.
 
         // Orientation change handler
         el.addEventListener('click', (e) => {
@@ -178,8 +197,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                 });
 
                 props.showPopup = false;
-                if (popupBtnEl) popupBtnEl.classList.remove('is-open');
-                if (popupEl) popupEl.classList.remove('is-active');
+                popupEl.classList.remove('is-active');
                 updateUI();
             }
         });

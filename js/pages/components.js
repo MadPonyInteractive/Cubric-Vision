@@ -19,7 +19,6 @@ import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
-import { MpiPopupButton } from '../components/Compounds/MpiPopupButton/MpiPopupButton.js';
 import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Compounds/MpiScrollableBox/MpiScrollableBox.js';
@@ -146,33 +145,64 @@ function mountAll() {
     mount('preview-ibtn-label-sm', () => MpiButton.mount(slot('preview-ibtn-label-sm'), { icon: 'sparkle', label: 'Boost', size: 'sm', info: 'Small with label' }));
 
 
-    // ── MpiPopupButton (Compound) ─────────────────────────────────────────────
+    // ── MpiPopup — Enhanced (Primitive) ──────────────────────────────────────
     mount('preview-popupbtn-default', () => {
-        const btnHtml = MpiButton.template({ icon: 'settings', label: 'Options', toggleable: true });
-        const popupContent = `
-            <div style="padding: 1rem; width: 140px; text-align: center;">
-                <div style="color:var(--text); font-weight: 600; font-family: var(--font-display); margin-bottom: 0.5rem;">Popup Menu</div>
-                <div style="font-size: 0.8rem; color:var(--text-3); margin-bottom: 0.5rem;">Fully isolated logic</div>
-                ${MpiButton.template({ text: "Click Me", size: "sm" })}
-            </div>`;
-        MpiPopupButton.mount(slot('preview-popupbtn-default'), {
-            triggerHtml: btnHtml,
-            position: 'top'
-        }, popupContent);
+        const triggerSlot = slot('preview-popupbtn-default');
+        triggerSlot.style.position = 'relative';
+        triggerSlot.style.display = 'inline-block';
+
+        const btn = MpiButton.mount(triggerSlot, { 
+            icon: 'settings', 
+            label: 'Toggle Popup', 
+            toggleable: true 
+        });
+
+        const popup = MpiPopup.mount(triggerSlot, {
+            position: 'top',
+            items: [
+                { id: 'edit', label: 'Edit', iconHtml: MpiIcon.template({ name: 'edit', size: 'sm' }) },
+                { id: 'copy', label: 'Copy', iconHtml: MpiIcon.template({ name: 'copy', size: 'sm' }) },
+                { id: 'delete', label: 'Delete', iconHtml: MpiIcon.template({ name: 'trash', size: 'sm' }) }
+            ]
+        });
+
+        btn.on('click', () => {
+            const active = !popup.props.active;
+            popup.update({ active });
+            btn.update({ active });
+        });
+
+        popup.on('select', ({ id }) => {
+            console.log('[gallery] MpiPopup select:', id);
+            popup.update({ active: false });
+            btn.update({ active: false });
+        });
     });
 
     mount('preview-popupbtn-bottom', () => {
-        const btnHtml = MpiButton.template({ icon: 'menu', label: 'Actions', toggleable: true });
-        const popupContent = `
-            <div style="padding: 1rem; width: 140px;">
-                <div style="color:var(--text); font-weight: 600; margin-bottom: 0.5rem;">Bottom Popup</div>
-                ${MpiButton.template({ text: "Action A", size: "sm", variant: "ghost" })}
-                ${MpiButton.template({ text: "Action B", size: "sm", variant: "ghost" })}
-            </div>`;
-        MpiPopupButton.mount(slot('preview-popupbtn-bottom'), {
-            triggerHtml: btnHtml,
-            position: 'bottom'
-        }, popupContent);
+        const triggerSlot = slot('preview-popupbtn-bottom');
+        triggerSlot.style.position = 'relative';
+        triggerSlot.style.display = 'inline-block';
+
+        const btn = MpiButton.mount(triggerSlot, { 
+            icon: 'menu', 
+            label: 'Bottom Menu', 
+            toggleable: true 
+        });
+
+        const popup = MpiPopup.mount(triggerSlot, {
+            position: 'bottom',
+            items: [
+                { id: 'a', label: 'Action A' },
+                { id: 'b', label: 'Action B' }
+            ]
+        });
+
+        btn.on('click', () => {
+            const active = !popup.props.active;
+            popup.update({ active });
+            btn.update({ active });
+        });
     });
 
     // ── MpiScrollableBox (Compound) ───────────────────────────────────────────

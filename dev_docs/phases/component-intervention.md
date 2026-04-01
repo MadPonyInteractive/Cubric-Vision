@@ -17,13 +17,13 @@ for agents: FIRST READ -> `/dev_docs/05_components.md`
 [x] review js/shell.js making sure preloadComponentStyles() contains all styles correctly
 
 ### Stage 3.2
-[] Add funtionality to MpiPopup, give it props and the ability to be more flexible:
+[x] Add funtionality to MpiPopup, give it props and the ability to be more flexible:
     - popup on the left/top/right/bottom
     - have a list to place other elements inside it
     - resize to contents
     - enter/leave/click events
-[] Make consumers create their own button+popup logic using the new MpiPopup and a MpiButton to remove their MpiPopupButton dependency
-[] Remove MpiPopupButton 
+[x] Make consumers create their own button+popup logic using the new MpiPopup and a MpiButton to remove their MpiPopupButton dependency
+[x] Remove MpiPopupButton 
 
 
 ### Stage 4

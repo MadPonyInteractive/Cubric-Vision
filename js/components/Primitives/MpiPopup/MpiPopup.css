@@ -1,15 +1,11 @@
 /* ── MpiPopup — Floating Glass Container ─────────────────────────────────── */
 .mpi-popup {
     position: absolute;
-    bottom: 120%;
-    /* Standard positioning above the trigger */
-    left: 50%;
-    transform: translateX(-50%) translateY(10px);
     background: var(--surface-glass);
     backdrop-filter: blur(24px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem;
+    padding: 1rem;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4),
         inset 0 1px 1px rgba(255, 255, 255, 0.05);
     z-index: 9999;
@@ -17,32 +13,123 @@
     pointer-events: none;
     transition: all var(--bounce);
     width: max-content;
+    min-width: 120px;
 }
 
 .mpi-popup.is-active {
     opacity: 1;
     pointer-events: auto;
+}
+
+/* ── Position Variants ─────────────────────────────────────────────────── */
+
+/* Top (Default) */
+.mpi-popup--top {
+    bottom: 100%;
+    left: 50%;
+    margin-bottom: 12px;
+    transform: translateX(-50%) translateY(10px);
+}
+.mpi-popup--top.is-active {
     transform: translateX(-50%) translateY(0);
+}
+
+/* Bottom */
+.mpi-popup--bottom {
+    top: 100%;
+    left: 50%;
+    margin-top: 12px;
+    transform: translateX(-50%) translateY(-10px);
+}
+.mpi-popup--bottom.is-active {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Left */
+.mpi-popup--left {
+    right: 100%;
+    top: 50%;
+    margin-right: 12px;
+    transform: translateY(-50%) translateX(10px);
+}
+.mpi-popup--left.is-active {
+    transform: translateY(-50%) translateX(0);
+}
+
+/* Right */
+.mpi-popup--right {
+    left: 100%;
+    top: 50%;
+    margin-left: 12px;
+    transform: translateY(-50%) translateX(-10px);
+}
+.mpi-popup--right.is-active {
+    transform: translateY(-50%) translateX(0);
+}
+
+/* ── Content ───────────────────────────────────────────────────────────── */
+
+.mpi-popup__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mpi-popup__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: calc(var(--radius) / 1.5);
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.mpi-popup__item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-bright);
 }
 
 .mpi-popup--glass {
     background: var(--surface-glass);
 }
 
-.mpi-popup__content {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-/* Arrow / caret */
+/* ── Arrow / Caret ─────────────────────────────────────────────────────── */
 .mpi-popup::after {
     content: "";
     position: absolute;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+}
+
+.mpi-popup--top::after {
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid var(--border);
+    border-top-color: var(--border);
+}
+
+.mpi-popup--bottom::after {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-bottom-color: var(--border);
+}
+
+.mpi-popup--left::after {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left-color: var(--border);
+}
+
+.mpi-popup--right::after {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-right-color: var(--border);
 }

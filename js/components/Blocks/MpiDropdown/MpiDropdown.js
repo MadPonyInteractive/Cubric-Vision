@@ -1,20 +1,12 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiPopupButton } from '../../Compounds/MpiPopupButton/MpiPopupButton.js';
+import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../../Compounds/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 /**
  * MpiDropdown — Block Component
  * 
- * A custom dropdown leveraging MpiPopupButton as a carrier and MpiScrollableBox 
- * as the content.
- *
- * Props:
- * @param {string[]}  titles - Options to display in the list
- * @param {string}    [label='Select...'] - Initial trigger text
- * @param {string}    [maxHeight='250px'] - Max list height before scrolling
- * @param {'top'|'bottom'} [position='top'] - Where the dropdown appears (default above trigger)
- * @param {string}    [icon] - Custom icon name (defaults based on position)
+ * A custom dropdown leveraging MpiButton as trigger and MpiPopup as container.
  */
 export const MpiDropdown = ComponentFactory.create({
     name: 'MpiDropdown',
@@ -24,50 +16,51 @@ export const MpiDropdown = ComponentFactory.create({
         const label = props.label || 'Select...';
         const maxHeight = props.maxHeight || '250px';
         const position = props.position || 'top';
+        const isActive = props.showPopup || false;
 
-        // 1. Build the trigger HTML — use MpiIconButton for icon support
-        const triggerHtml = MpiButton.template({
+        const triggerBtnHtml = MpiButton.template({
             label,
-            variant: 'primary', // maps to secondary/glass in MpiIconButton
+            variant: 'primary',
             icon: props.icon || (position === 'top' ? 'chevronUp' : 'chevronDown'),
             labelPosition: 'left',
-            toggleable: true
+            toggleable: true,
+            active: isActive
         });
 
-        // 2. Build the list HTML
         const listHtml = MpiScrollableBox.template({
             titles: props.titles || [],
             maxHeight
         });
 
-        // 3. Compose everything inside MpiPopupButton
-        const popupHtml = MpiPopupButton.template({
-            triggerHtml,
+        const popupHtml = MpiPopup.template({
+            active: isActive,
             position
         }, listHtml);
 
         return `<div class="mpi-dropdown mpi-dropdown--${position}">
+            <div class="mpi-dropdown__trigger">
+                ${triggerBtnHtml}
+            </div>
             ${popupHtml}
         </div>`;
     },
 
     setup: (el, props, emit) => {
-        // Since MpiDropdown is a Block composing other components via their templates,
-        // we must manually invoke their setup logic for the DOM nodes they produced.
-
-        // Shared props for MpiPopupButton so we can control it from here
-        const popupProps = {
-            triggerHtml: '',
-            position: props.position || 'top',
-            showPopup: false
-        };
-
-        // 1. Setup MpiPopupButton logic (handles trigger clicks, open/close state, etc.)
-        const popupBtnEl = el.querySelector('.mpi-popup-btn');
-        if (popupBtnEl) MpiPopupButton.setup(popupBtnEl, popupProps, emit);
-
-        // 2. Setup MpiScrollableBox logic inside the popup
+        const trigger = el.querySelector('.mpi-dropdown__trigger');
+        const popupEl = el.querySelector('.mpi-popup');
         const listEl = el.querySelector('.mpi-scrollable-box');
+
+        // Toggle popup
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            props.showPopup = !props.showPopup;
+            popupEl.classList.toggle('is-active', props.showPopup);
+            
+            const btn = trigger.querySelector('.mpi-btn');
+            if (btn) btn.classList.toggle('is-active', props.showPopup);
+        });
+
+        // Setup MpiScrollableBox logic
         if (listEl) {
             MpiScrollableBox.setup(listEl, {
                 titles: props.titles || [],
@@ -75,23 +68,30 @@ export const MpiDropdown = ComponentFactory.create({
             }, (event, data) => {
                 if (event === 'click') {
                     const value = data.value;
-                    const triggerBtnText = el.querySelector('.mpi-ibtn__label');
-
-                    if (triggerBtnText) triggerBtnText.textContent = value;
+                    const labelEl = el.querySelector('.mpi-ibtn__label');
+                    if (labelEl) labelEl.textContent = value;
+                    
                     emit('select', { value });
 
-                    // Auto-close on selection:
-                    popupProps.showPopup = false;
-                    if (popupBtnEl) popupBtnEl.classList.remove('is-open');
-
-                    const popupEl = el.querySelector('.mpi-popup');
-                    if (popupEl) popupEl.classList.remove('is-active');
-
-                    // Reset trigger state
-                    const triggerBtn = el.querySelector('.mpi-popup-btn__trigger .mpi-btn');
-                    if (triggerBtn) triggerBtn.classList.remove('is-active');
+                    // Auto-close
+                    props.showPopup = false;
+                    popupEl.classList.remove('is-active');
+                    const btn = trigger.querySelector('.mpi-btn');
+                    if (btn) btn.classList.remove('is-active');
                 }
             });
         }
+
+        // Close on outside click
+        const onOutsideClick = (e) => {
+            if (!el.contains(e.target) && props.showPopup) {
+                props.showPopup = false;
+                popupEl.classList.remove('is-active');
+                const btn = trigger.querySelector('.mpi-btn');
+                if (btn) btn.classList.remove('is-active');
+            }
+        };
+        document.addEventListener('click', onOutsideClick);
+        el._onOutsideClick = onOutsideClick; // store for teardown if needed
     }
 });
