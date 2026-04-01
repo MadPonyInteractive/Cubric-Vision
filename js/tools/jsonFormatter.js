@@ -13,9 +13,9 @@ import { llamaGenerate } from '../llmService.js';
 import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
 
 // Factory components
-import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
-import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
+import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
+import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 
 // Utils
 import { Events } from '../events.js';
@@ -76,9 +76,9 @@ export function initJsonFormatter() {
     });
 
     // 4. Get remaining DOM refs
-    outputBox     = qs('#json-output');
-    loadingEl     = qs('#json-loading');
-    actionsEl     = qs('#json-actions');
+    outputBox = qs('#json-output');
+    loadingEl = qs('#json-loading');
+    actionsEl = qs('#json-actions');
     resultSection = qs('#json-result');
 
     // 5. Restore saved state
@@ -115,9 +115,9 @@ export function initJsonFormatter() {
 export async function _runFormat() {
     const textarea = qs('textarea', promptBox.el);
     const text = textarea?.value.trim();
-    if (!text) { 
+    if (!text) {
         MpiToast.mount(document.body, { message: 'Please enter a prompt to format.', variant: 'warning' });
-        return; 
+        return;
     }
 
     onLlmRunStart();
@@ -149,7 +149,7 @@ Do not wrap in markdown. Return plain JSON. The output must be in English.`;
             signal: _abortCtrl.signal
         });
         const result = cleanLLMResponse(data.response);
-        
+
         // Try to pretty-print if valid JSON
         try {
             outputBox.value = JSON.stringify(JSON.parse(result), null, 2);
@@ -159,10 +159,10 @@ Do not wrap in markdown. Return plain JSON. The output must be in English.`;
 
         resultSection?.classList.remove('hide');
         actionsEl?.classList.remove('hide');
-        
+
         // Save both input and output
         saveToolState('jsonFormatter', { input: text, output: outputBox.value });
-        
+
         Events.emit('media:updated', { projectId: state.currentProject?.id });
     } catch (e) {
         if (e.name === 'AbortError') return;
@@ -181,7 +181,7 @@ function _setLoading(on) {
 
     // Use toolUtils to sync the button state
     setLlmButtonState(formatBtn.el, on, 'Format (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
-    
+
     if (on) {
         loadingEl?.classList.remove('hide');
     } else {

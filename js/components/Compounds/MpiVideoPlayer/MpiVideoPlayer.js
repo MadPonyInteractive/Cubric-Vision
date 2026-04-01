@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiSlider } from '../MpiSlider/MpiSlider.js';
+import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiVolumeControl } from '../MpiVolumeControl/MpiVolumeControl.js';
 import { formatTime } from '../../../utils/string.js';
 
@@ -103,12 +103,11 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
 
             // 2. Progress Slider
-            const progressSlider = MpiSlider.mount(sliderWrapper, {
+            const progressSlider = MpiProgressBar.mount(sliderWrapper, {
                 min: 0,
                 max: 1000, // High granularity
                 step: 1,
                 value: 0,
-                wheel: false,
                 info: 'Seek: {value}', // Will update template dynamically if needed, but we mostly use it for seeking
                 variant: 'primary'
             });

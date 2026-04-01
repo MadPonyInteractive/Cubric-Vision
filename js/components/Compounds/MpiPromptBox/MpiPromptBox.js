@@ -14,7 +14,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
  */
 export const MpiPromptBox = ComponentFactory.create({
     name: 'MpiPromptBox',
-    css: ['js/components/Blocks/MpiPromptBox/MpiPromptBox.css'],
+    css: ['js/components/Compounds/MpiPromptBox/MpiPromptBox.css'],
 
     template: (props) => {
         const hasBottom = props.LeftA || props.rightA || props.includeNegative;

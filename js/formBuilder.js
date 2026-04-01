@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { els } from './elements.js';
-import { MpiSlider } from './components/Compounds/MpiSlider/MpiSlider.js';
+import { MpiProgressBar } from './components/Primitives/MpiProgressBar/MpiProgressBar.js';
 
 /* Legacy Prompt Enhancer functions removed - replaced by Prompt Builder (Stage 11) */
 
@@ -162,13 +162,15 @@ export function addShotRow(container, initialData = null, options = null) {
 
     const sliderContainer = row.querySelector('.shot-duration-unit');
     if (sliderContainer) {
-        MpiSlider.mount(sliderContainer, {
+        MpiProgressBar.mount(sliderContainer, {
             prefix: 'DURATION: ',
             suffix: 's',
             min: 1,
             max: 15,
             step: 1,
             value: durVal,
+            interactive: true,
+            wheel: true,
             name: 'shot-duration'
         });
     }

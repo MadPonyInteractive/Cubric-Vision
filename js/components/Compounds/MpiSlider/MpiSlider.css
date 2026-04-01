@@ -1,9 +1,0 @@
-/* ═══════════════════════════════════════════════════════════════
-   MpiSlider — Compound Slider Layout
-   Mapped to .mpi-slider BEM namespace.
-   ═══════════════════════════════════════════════════════════════ */
-
-.mpi-slider-compound {
-  display: block;
-  width: 100%;
-}

@@ -7,9 +7,9 @@ import { llamaGenerate } from '../llmService.js';
 import { onLlmRunStart, setLlmButtonState, setRunningTool, clearRunningTool } from '../toolUtils.js';
 
 // Factory components
-import { MpiButton }      from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiPromptBox }   from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
-import { MpiToast }       from '../components/Primitives/MpiToast/MpiToast.js';
+import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
+import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 
 // Utils
 import { Events } from '../events.js';
@@ -73,12 +73,12 @@ export function initTranslator() {
     });
 
     // 4. Get remaining DOM refs
-    outputBox       = qs('#trans-output');
-    loadingEl       = qs('#trans-loading');
-    actionsEl       = qs('#trans-actions');
+    outputBox = qs('#trans-output');
+    loadingEl = qs('#trans-loading');
+    actionsEl = qs('#trans-actions');
     firstVisitModal = qs('#trans-firstVisitModal');
     dismissModalBtn = qs('#trans-dismissModal');
-    resultSection   = qs('#trans-result');
+    resultSection = qs('#trans-result');
 
     // 5. Restore saved state
     const saved = loadToolState('translator');
@@ -98,7 +98,7 @@ export function initTranslator() {
     if (!localStorage.getItem(FIRST_VISIT_KEY)) {
         firstVisitModal?.classList.remove('hide');
     }
-    
+
     if (dismissModalBtn) {
         on(dismissModalBtn, 'click', () => {
             localStorage.setItem(FIRST_VISIT_KEY, '1');
@@ -126,9 +126,9 @@ export function initTranslator() {
 export async function _runTranslate() {
     const textarea = qs('textarea', promptBox.el);
     const text = textarea?.value.trim();
-    if (!text) { 
+    if (!text) {
         MpiToast.mount(document.body, { message: 'Please enter a prompt to translate.', variant: 'warning' });
-        return; 
+        return;
     }
 
     onLlmRunStart();
@@ -147,10 +147,10 @@ export async function _runTranslate() {
         outputBox.value = cleanLLMResponse(data.response);
         resultSection?.classList.remove('hide');
         actionsEl?.classList.remove('hide');
-        
+
         // Save both input and output
         saveToolState('translator', { input: text, output: outputBox.value });
-        
+
         Events.emit('media:updated', { projectId: state.currentProject?.id }); // If we wanted to track any "generation"
     } catch (e) {
         if (e.name === 'AbortError') return;
@@ -169,7 +169,7 @@ function _setLoading(on) {
 
     // Use toolUtils to sync the button state (handles icon swap and danger class)
     setLlmButtonState(translateBtn.el, on, 'Translate (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
-    
+
     if (on) {
         loadingEl?.classList.remove('hide');
     } else {

@@ -7,4 +7,5 @@ for refactoring components that did not followed the correct design patter
 [x] Update consumers
 
 ### Stage 2
-[] 
+[x] Move MpiPromptBox from Blocks to Compounds
+[x] Merge MpiSlider into MpiProgressBar

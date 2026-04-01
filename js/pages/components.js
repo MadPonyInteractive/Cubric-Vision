@@ -19,15 +19,13 @@ import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
-import { MpiSlider } from '../components/Compounds/MpiSlider/MpiSlider.js';
 import { MpiPopupButton } from '../components/Compounds/MpiPopupButton/MpiPopupButton.js';
 import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Compounds/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
-import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
+import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
-import { MpiMuteIcon } from '../components/Compounds/MpiMuteIcon/MpiMuteIcon.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 
@@ -191,31 +189,29 @@ function mountAll() {
         });
     });
 
-    // ── MpiSlider (Compound) ─────────────────────────────────────────────────
+    // ── MpiProgressBar — Slider mode ───────────────────────────────────────────
     mount('preview-slider-smart', () => {
-        MpiSlider.mount(slot('preview-slider-smart'), {
+        MpiProgressBar.mount(slot('preview-slider-smart'), {
             value: 65,
             prefix: 'Volume: ',
             suffix: '%',
+            interactive: true,
             wheel: true
         });
     });
 
     mount('preview-slider-smart-2', () => {
-        MpiSlider.mount(slot('preview-slider-smart-2'), {
+        MpiProgressBar.mount(slot('preview-slider-smart-2'), {
             value: 0.50,
             step: 0.01,
             min: 0.00,
             max: 1.00,
             prefix: 'Denoise: ',
             variant: 'success',
+            interactive: true,
             wheel: true
         });
     });
-
-    // ── MpiMuteIcon ──────────────────────────────────────────────────────────
-    mount('preview-muteicon-default', () => MpiMuteIcon.mount(slot('preview-muteicon-default'), { volume: 0.7 }));
-    mount('preview-muteicon-muted', () => MpiMuteIcon.mount(slot('preview-muteicon-muted'), { muted: true }));
 
     // ── MpiVolumeControl ─────────────────────────────────────────────────────
     mount('preview-vol-control', () => {
@@ -255,7 +251,7 @@ function mountAll() {
 
         const setupDz = (p) => {
             const dz = MpiMediaDropzone.mount(slot('preview-dropzone-image'), p);
-            
+
             dz.on('drop', ({ url, file }) => {
                 setupDz({ ...baseProps, value: url, type: 'image' });
 
@@ -326,7 +322,7 @@ function mountAll() {
             autoplay: false,
             volume: 0.75
         });
-        
+
         vp.on('play', () => console.log('[gallery] video play'));
         vp.on('pause', () => console.log('[gallery] video pause'));
     });
