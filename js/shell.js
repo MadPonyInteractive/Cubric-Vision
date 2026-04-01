@@ -107,17 +107,15 @@ export async function initShell() {
     'js/components/Primitives/MpiToast/MpiToast.css',
 
     // Compounds
-
     'js/components/Compounds/MpiPopupButton/MpiPopupButton.css',
     'js/components/Compounds/MpiScrollableBox/MpiScrollableBox.css',
     'js/components/Compounds/MpiMediaDropzone/MpiMediaDropzone.css',
     'js/components/Compounds/MpiDragList/MpiDragList.css',
-    'js/components/Compounds/MpiMuteIcon/MpiMuteIcon.css',// to delete
-    'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css', //move to Blocks
-    'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
+    'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
     'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',
 
     // Blocks
+    'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
     'js/components/Blocks/MpiDropdown/MpiDropdown.css',
     'js/components/Blocks/MpiRatioSelector/MpiRatioSelector.css'
   ]);

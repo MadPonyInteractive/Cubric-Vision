@@ -1,4 +1,4 @@
-import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';

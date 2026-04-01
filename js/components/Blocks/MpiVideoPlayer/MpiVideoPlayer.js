@@ -1,11 +1,11 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { MpiVolumeControl } from '../MpiVolumeControl/MpiVolumeControl.js';
+import { MpiVolumeControl } from '../../Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { formatTime } from '../../../utils/string.js';
 
 /**
- * MpiVideoPlayer — Compound: Video + Custom Controls Overlay.
+ * MpiVideoPlayer — Block: Video + Custom Controls Overlay.
  * 
  * Orchestrates a video element with a stylish glass-morphic control set.
  * 
@@ -27,7 +27,7 @@ import { formatTime } from '../../../utils/string.js';
  */
 export const MpiVideoPlayer = ComponentFactory.create({
     name: 'MpiVideoPlayer',
-    css: ['js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css'],
+    css: ['js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css'],
 
     template: (props) => {
         const src = props.src || '';

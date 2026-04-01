@@ -27,7 +27,7 @@ import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
-import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
@@ -313,7 +313,7 @@ function mountAll() {
         setupDz(baseProps);
     });
 
-    // ── MpiVideoPlayer (Compound) ─────────────────────────────────────────────
+    // ── MpiVideoPlayer (Block) ────────────────────────────────────────────────
     mount('preview-videoplayer-default', () => {
         const vp = MpiVideoPlayer.mount(slot('preview-videoplayer-default'), {
             src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
