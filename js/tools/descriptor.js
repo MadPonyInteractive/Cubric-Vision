@@ -3,6 +3,8 @@
  * User drops images onto a textarea, can reference them with @1, @2 etc.
  * Uses qwen3-vl:4b to describe/blend the images with the base prompt.
  * Output: a prompt text box + copy + open Generator button.
+ *
+ * Rebuilt for R8 using factory components.
  */
 
 import { state } from '../state.js';
@@ -12,82 +14,126 @@ import { cleanLLMResponse } from '../uiHelpers.js';
 import { navigate, PAGE_TOOL } from '../router.js';
 import { saveToolState, loadToolState } from '../toolState.js';
 import { llamaGenerate } from '../llmService.js';
-import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
+import { onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
+
+// Factory & Utils
+import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
+import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiIcon, ICONS } from '../components/Primitives/MpiIcon/MpiIcon.js';
+import { Events } from '../events.js';
+import { qs, qsa, on } from '../utils/dom.js';
+import { debounce } from '../utils/async.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 let _abortCtrl = null;
+let promptBoxInstance;
+let addAssetBtn, describeBtn, copyBtn, toGeneratorBtn;
 
-// ── DOM refs (fresh after each mount) ──────────────────────────────────────────
-import { PromptBox } from '../components/PromptBox.js';
-let promptBox;
-
-let thumbStrip,
-    describeBtn, cancelBtn, outputBox, copyBtn, toGeneratorBtn,
-    loadingEl, loadingText, resultSection, resultLoadingEl;
+// DOM refs
+let thumbStrip, outputBox, loadingEl, loadingText, resultSection, resultLoadingEl;
 
 // ── Public init (called from shell.js after template mount) ───────────────────
 export function initDescriptor() {
     _abortCtrl = null;
 
-    promptBox = new PromptBox({
-        toolId: 'descriptor',
-        container: document.getElementById('desc-prompt-wrapper'),
-        onImageDrop: async (item) => {
-            if (typeof item === 'string') {
-                await _addImageFromUrl(item);
-            } else {
-                await _addImage(item);
-            }
-            _renderThumbs();
+    // 1. Mount Prompt Box
+    const promptWrapper = qs('#desc-prompt-wrapper');
+    if (!promptWrapper) return;
+
+    promptBoxInstance = MpiPromptBox.mount(promptWrapper, {
+        value: '',
+        includeNegative: false
+    });
+
+    // Handle drops on the prompt box area
+    on(promptWrapper, 'dragover', (e) => e.preventDefault());
+    on(promptWrapper, 'drop', async (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            await _addImage(file);
+        } else {
+            const url = e.dataTransfer.getData('text/plain');
+            if (url) await _addImageFromUrl(url);
         }
     });
 
-    thumbStrip = document.getElementById('desc-thumbs');
-    const addAssetBtn = document.getElementById('desc-addAssetBtn');
-    describeBtn = document.getElementById('desc-describeBtn');
-    cancelBtn = document.getElementById('desc-cancelBtn');
-    outputBox = document.getElementById('desc-output');
-    copyBtn = document.getElementById('desc-copyBtn');
-    toGeneratorBtn = document.getElementById('desc-toGeneratorBtn');
-    loadingEl = document.getElementById('desc-loading');
-    loadingText = document.getElementById('desc-loadingText');
-    resultSection = document.getElementById('desc-result');
-    resultLoadingEl = document.getElementById('desc-result-loading');
-    const copyInputBtn = document.getElementById('desc-copyInputBtn');
+    // 2. Mount Action Buttons
+    addAssetBtn = MpiButton.mount(qs('#desc-add-asset-slot'), {
+        icon: 'plus',
+        variant: 'secondary',
+        size: 'md',
+        info: 'Add Media from Library',
+        extraClasses: 'round-btn'
+    });
 
-    if (!promptBox) return;
+    describeBtn = MpiButton.mount(qs('#desc-describe-btn-slot'), {
+        icon: 'generate',
+        variant: 'primary',
+        size: 'md',
+        info: 'Describe & Generate (Ctrl+Enter)',
+        extraClasses: 'round-btn action-glow'
+    });
 
+    copyBtn = MpiButton.mount(qs('#desc-copy-btn-slot'), {
+        icon: 'copy',
+        variant: 'ghost',
+        size: 'sm',
+        info: 'Copy Prompt'
+    });
+
+    toGeneratorBtn = MpiButton.mount(qs('#desc-actions-slot'), {
+        text: 'Go to Generator',
+        variant: 'primary',
+        size: 'md',
+        extraClasses: 'action-glow'
+    });
+
+    // 3. Cache static DOM refs
+    thumbStrip = qs('#desc-thumbs');
+    outputBox = qs('#desc-output');
+    loadingEl = qs('#desc-loading');
+    loadingText = qs('#desc-loadingText');
+    resultSection = qs('#desc-result');
+    resultLoadingEl = qs('#desc-result-loading');
+
+    // 4. Load saved state
     const saved = loadToolState('descriptor');
     if (saved) {
-        if (saved.promptText && !promptBox.positivePrompt) {
-            promptBox.inputEl.value = saved.promptText;
-            promptBox.positivePrompt = saved.promptText;
+        if (saved.promptText) {
+            promptBoxInstance.update({ value: saved.promptText });
         }
         if (saved.images && state.descriptorImages.length === 0) {
             state.descriptorImages = saved.images;
         }
         if (saved.output) {
             outputBox.value = saved.output;
-            console.log('[descriptor] Restoring result section visibility');
             if (resultSection) {
                 resultSection.classList.remove('hide');
-                // Ensure output is visible by focusing container or just ensuring it's not hidden by mistake
                 resultSection.style.display = 'block';
             }
         }
     }
+
     _renderThumbs();
     _updateButtonState();
 
-    addAssetBtn?.addEventListener('click', async () => {
+    // 5. Global Navigation / Tool running cleanup
+    Events.on('nav:tool', (data) => {
+        if (data.toolName !== 'descriptor') {
+            cancelDescriptor();
+        }
+    });
+
+    // 6. Bind Listeners
+    addAssetBtn.on('click', async () => {
         const { openAssetBrowser } = await import('../components/assetBrowserModal.js');
         openAssetBrowser(async (asset) => {
             await _addImageFromUrl(asset.url);
-            _renderThumbs();
         });
     });
 
-    describeBtn.addEventListener('click', () => {
+    describeBtn.on('click', () => {
         if (_abortCtrl) {
             _abortCtrl.abort();
             _abortCtrl = null;
@@ -95,18 +141,25 @@ export function initDescriptor() {
             _runDescribe();
         }
     });
-    _updateButtonState();
 
-    copyBtn.addEventListener('click', () => {
+    copyBtn.on('click', () => {
         navigator.clipboard.writeText(outputBox.value);
-        const originalIcon = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-        setTimeout(() => copyBtn.innerHTML = originalIcon, 2000);
+        copyBtn.update({ icon: 'check' });
+        setTimeout(() => copyBtn.update({ icon: 'copy' }), 2000);
     });
 
-    toGeneratorBtn.addEventListener('click', () => {
+    toGeneratorBtn.on('click', () => {
         state.generatorPrompt = outputBox.value;
         navigate(PAGE_TOOL, { name: 'generator' });
+    });
+
+    // Handle Ctrl+Enter
+    on(document, 'keydown', (e) => {
+        if (state.currentTool !== 'descriptor') return;
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            _runDescribe();
+        }
     });
 }
 
@@ -188,7 +241,9 @@ No titles, descriptions of what you done or anything like than. Do NOT use secti
 }
 
 function _saveState() {
+    const promptText = promptBoxInstance?.el.querySelector('textarea')?.value || '';
     saveToolState('descriptor', {
+        promptText,
         images: state.descriptorImages.map(img => ({
             ...img,
             controller: null, // Don't persist abort controller
@@ -203,21 +258,12 @@ function _saveState() {
  */
 function _updateButtonState() {
     if (!describeBtn) return;
-
     const analyzingCount = state.descriptorImages.filter(img => img.isAnalyzing).length;
+    
     if (analyzingCount > 0) {
-        describeBtn.disabled = true;
-        // Assume original innerHTML is the SVG icon if it's an icon-only button
-        if (!describeBtn._originalHTML) describeBtn._originalHTML = describeBtn.innerHTML;
-        describeBtn.innerHTML = `<span class="spinner-sm"></span>`;
+        describeBtn.update({ variant: 'loading', icon: 'spinner' }); // variant loading handles spinner
     } else {
-        describeBtn.disabled = false;
-        if (describeBtn._originalHTML) {
-            describeBtn.innerHTML = describeBtn._originalHTML;
-        } else {
-            // fallback if it wasn't tracked
-            describeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59a.996.996 0 0 0 0-1.41l-6.58-6.6a.996.996 0 1 0-1.41 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z"/></svg>`;
-        }
+        describeBtn.update({ variant: 'primary', icon: 'generate' });
     }
 }
 
@@ -229,23 +275,28 @@ function _renderThumbs() {
         card.innerHTML = `
             <img src="${img.objectUrl}" alt="${img.name}">
             <span class="thumb-badge">@${i + 1}</span>
-            <span class="thumb-remove" data-idx="${i}">✕</span>`;
-        card.querySelector('.thumb-remove').addEventListener('click', () => {
-            const index = i;
-            const removed = state.descriptorImages.splice(index, 1)[0];
-            if (removed && removed.controller) {
-                removed.controller.abort();
-            }
+            <div class="thumb-remove-slot"></div>`;
+        
+        MpiButton.mount(card.querySelector('.thumb-remove-slot'), {
+            icon: 'close',
+            variant: 'danger',
+            size: 'sm',
+            extraClasses: 'thumb-remove'
+        }).on('click', () => {
+            const removed = state.descriptorImages.splice(i, 1)[0];
+            if (removed && removed.controller) removed.controller.abort();
             _renderThumbs();
             _updateButtonState();
             _saveState();
         });
+        
         thumbStrip.appendChild(card);
     });
 }
 
 export async function _runDescribe() {
-    const userPrompt = promptBox.positivePrompt.trim();
+    const promptText = promptBoxInstance?.el.querySelector('textarea')?.value || '';
+    const userPrompt = promptText.trim();
     const count = state.descriptorImages.length;
     const hasP = !!userPrompt;
 
@@ -270,24 +321,20 @@ export async function _runDescribe() {
         }
 
         let finalSystemText = "";
-        let useImages = [];
 
         if (count === 0) {
-            // Case 1: Text-only enhancement
             finalSystemText = `You are an expert in prompt engineering. 
 Enhance this concept into a highly descriptive image generation prompt.
 User Concept: "${userPrompt}"
 
 Output a SINGLE block of continuous prose following this flow: [Subject] + [Action] + [Location/context] + [Composition] + [Style].`;
         } else if (count === 1 && !hasP) {
-            // Case 2: 1 Image, No Prompt -> Return pre-analyzed description directly
             outputBox.value = state.descriptorImages[0].description || "Description not ready. Please wait.";
             outputBox.classList.remove('hide');
             if (resultSection) resultSection.classList.remove('hide');
             _setLoading(false);
             return;
         } else if (count === 1 && hasP) {
-            // Case 3: 1 Image + Prompt -> 2nd Stage Refinement
             finalSystemText = `I am going to provide you with a image generation prompt and instructions to change elements on it.
 please follow my instructions and change the prompt only where is needed to match my instructions.
 Example: the prompt has a person dressed in a suit and the environment is a city, 
@@ -303,7 +350,6 @@ No titles, descriptions of what you done or anything like than, only the prompt.
 
 Output a SINGLE block of continuous prose. No headers, no titles.`;
         } else if (count > 1 && !hasP) {
-            // Case 4: Multiple Images, No Prompt -> Blend descriptions
             const combinedDescriptions = state.descriptorImages
                 .map((img, i) => `Prompt @${i + 1}: ${img.description || "(No description available)"}`)
                 .join('\n\n');
@@ -329,7 +375,6 @@ No titles, descriptions of what you done or anything like than, only the prompt.
 
 Output a SINGLE block of continuous prose. No headers, no titles.`;
         } else {
-            // Case 5: Multiple Images + Prompt -> Multi-refinement
             const prompts = state.descriptorImages
                 .map((img, i) => `Prompt @${i + 1}: ${img.description || "(No description available)"}`)
                 .join('\n');
@@ -375,7 +420,7 @@ absolutely no mentions of the images provided, only the prompt like it was creat
         outputBox.value = cleanLLMResponse(data.response);
         outputBox.classList.remove('hide');
         if (resultSection) resultSection.classList.remove('hide');
-        saveToolState('descriptor', { output: outputBox.value });
+        _saveState();
     } catch (e) {
         if (e.name === 'AbortError') return;
         console.error("Refinement call failed:", e);
@@ -386,27 +431,28 @@ absolutely no mentions of the images provided, only the prompt like it was creat
     }
 }
 
-function _cancel() {
-    if (_abortCtrl) { _abortCtrl.abort(); _abortCtrl = null; }
-    _setLoading(false);
-}
-
 function _setLoading(on) {
     state.descriptorRunning = on;
-    if (on) setRunningTool('descriptor', 'llm');
-    else clearRunningTool('llm');
+    if (on) {
+        setRunningTool('descriptor', 'llm');
+        Events.emit('tool:running', { tool: 'descriptor', type: 'llm' });
+    } else {
+        clearRunningTool('llm');
+        Events.emit('tool:idle', { tool: 'descriptor', type: 'llm' });
+    }
+
     if (on) {
         if (resultSection && !resultSection.classList.contains('hide')) {
             resultLoadingEl?.classList.remove('hide');
         } else {
             loadingEl.classList.remove('hide');
-            setLlmButtonState(describeBtn, true, 'Describe & Generate (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+            describeBtn.update({ variant: 'loading', text: 'Stop' });
         }
         loadingText.textContent = 'Describing…';
     } else {
         loadingEl.classList.add('hide');
         resultLoadingEl?.classList.add('hide');
-        setLlmButtonState(describeBtn, false, 'Describe & Generate (Ctrl+Enter)', 'Stop (Ctrl+Enter)');
+        describeBtn.update({ variant: 'primary', icon: 'generate', text: '' });
     }
 }
 
@@ -416,4 +462,5 @@ export function cancelDescriptor() {
         _abortCtrl = null;
     }
 }
+
 

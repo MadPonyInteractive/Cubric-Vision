@@ -6,6 +6,21 @@
 
 ---
 
+## 👁️ CRTITCAL Verification Steps Warning
+This is a electron.js app with the goal of running as a desktop app when complete, not a website. 
+The server is already running at: http://127.0.0.1:3000/
+There are no pages, so do not try to access like ex: http://127.0.0.1:3000/detailer
+To test, open browser, press project "test2" to open it and use the sidebar to navigate pages.
+
+---
+
+## Note
+User interviened after parallel stage 3.3 was completed and before advancing to stage 2.5 to refactor components. 
+Task list of completed refactor if needed: `dev_docs/phases/component-intervention.md`
+Some components may differ or seem off for the stage you are working in so keep this note ion mind.
+
+---
+
 ## 🎯 Mandate
 
 **Aggressive rebuild. App is pre-release. No users to protect.**
@@ -38,7 +53,7 @@ We are now executing on that: delete legacy, rebuild tools on the factory, harde
 5. **After each phase:** verify the app opens and navigates without console errors. Document what you did.
 6. **Components:** always import from the correct tier path. Never import a deleted file.
 7. **If blocked:** document the blocker clearly in the phase file and stop.
-
+8. **Gallery:** If you are to create or modify components, make sure to update `js/pages/components.js` and `templates/tpl-components.html` as this is the components dev gallery for testing and styling components globally.
 ---
 
 ## 📦 Architecture After R8
@@ -219,8 +234,7 @@ Backend: new routes in `routes/projects.js`:
 
 ### Git Strategy
 ```
-main       ← stable snapshots only
-dev        ← active development (default working branch)
+master        ← active development (default working branch)
 r8/phase-X ← one branch per R8 phase, merge to dev on completion
 ```
 - Commit message format: `[R8-X.Y] Description` (e.g., `[R8-0.3] Add js/utils/ layer`)
@@ -309,12 +323,13 @@ import { generateSeed }     from '../utils/seed.js';
 - [x] 2.2 jsonFormatter.js rebuilt
 - [x] 2.3 compare.js rebuilt
 - [x] 2.4 cropExtract.js rebuilt
-- [ ] 2.5 descriptor.js rebuilt
+- [x] 2.5 descriptor.js rebuilt
 - [ ] 2.6 upscaler.js rebuilt
 - [ ] 2.7 llm.js rebuilt
 - [ ] 2.8 detailer.js rebuilt
 - [ ] 2.9 promptBuilder.js rebuilt
 - [ ] 2.10 generator.js rebuilt
+- [ ] 2.11 [things missed] session with dev 
 
 ### Group 3 — CSS Co-location
 - [x] 3.1 Primitive CSS extracted and co-located
