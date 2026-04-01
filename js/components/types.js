@@ -80,11 +80,6 @@
  * @property {any|any[]} [rightA] - Components for the right container (ordered right-to-left)
  */
 
-/**
- * @typedef {Object} MpiScrollableBoxProps (Compound — js/components/Compounds/MpiScrollableBox)
- * @param {string[]} titles - Options to display in the list
- * @param {string|number} [maxHeight] - Optional max height for the scrollable area
- */
 
 /**
  * @typedef {Object} MpiVolumeControlProps (Compound — js/components/Compounds/MpiVolumeControl)
@@ -167,6 +162,17 @@
  * @property {boolean} [wheel=false] - Enable mouse wheel support
  * @property {'primary'|'secondary'|'success'|'danger'} [variant='primary'] - Color variant
 */
+
+/**
+ * @typedef {Object} MpiScrollableBoxProps (Primitive — js/components/Primitives/MpiScrollableBox)
+ * @property {string[]} titles - Options to display in the list
+ * @property {string|number} [maxHeight] - Optional max height for the scrollable area
+ * @property {'single'|'multiple'} [selectionMode='single'] - Selection behavior
+ * @property {string[]} [selected=[]] - Initially selected items
+ *
+ * Emits:
+ * 'select' { value: string, selection: string[] }
+ */
 
 /**
  * @typedef {Object} MpiSpinnerProps

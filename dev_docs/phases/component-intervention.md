@@ -27,9 +27,9 @@ for agents: FIRST READ -> `/dev_docs/05_components.md`
 
 
 ### Stage 4
-[] Convert MpiScrollableBox to a Primitive and remove MpiButton dependency
-[] Update MpiScrollableBox consumers to point to its new location
-[] Remove MpiScrollableBox
+[x] Convert MpiScrollableBox to a Primitive and remove MpiButton dependency
+[x] Update MpiScrollableBox consumers to point to its new location
+[x] Remove old MpiScrollableBox
 
 ### Stage 5
 [] Remove MpiMediaDropzone MpiIcon dependency by using "js/utils/icons.js"

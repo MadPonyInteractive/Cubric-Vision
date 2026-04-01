@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
-import { MpiScrollableBox } from '../../Compounds/MpiScrollableBox/MpiScrollableBox.js';
+import { MpiScrollableBox } from '../../Primitives/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 /**
@@ -64,16 +64,17 @@ export const MpiDropdown = ComponentFactory.create({
         if (listEl) {
             MpiScrollableBox.setup(listEl, {
                 titles: props.titles || [],
-                maxHeight: props.maxHeight
+                maxHeight: props.maxHeight,
+                selected: [props.label]
             }, (event, data) => {
-                if (event === 'click') {
+                if (event === 'select') {
                     const value = data.value;
                     const labelEl = el.querySelector('.mpi-ibtn__label');
                     if (labelEl) labelEl.textContent = value;
                     
                     emit('select', { value });
 
-                    // Auto-close
+                    // Auto-close (Dropdown is usually single-select and closes on choice)
                     props.showPopup = false;
                     popupEl.classList.remove('is-active');
                     const btn = trigger.querySelector('.mpi-btn');

@@ -21,7 +21,7 @@ import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 import { MpiMediaDropzone } from '../components/Compounds/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiRatioSelector } from '../components/Blocks/MpiRatioSelector/MpiRatioSelector.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
-import { MpiScrollableBox } from '../components/Compounds/MpiScrollableBox/MpiScrollableBox.js';
+import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiDropdown } from '../components/Blocks/MpiDropdown/MpiDropdown.js';
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDragList } from '../components/Compounds/MpiDragList/MpiDragList.js';
@@ -179,6 +179,36 @@ function mountAll() {
         });
     });
 
+    // ── MpiScrollableBox (Primitive) ──────────────────────────────────────────
+    mount('preview-scrollable-box', () => {
+        const titles = ['Single A', 'Single B', 'Single C', 'Single D', 'Single E', 'Single F'];
+        const box = MpiScrollableBox.mount(slot('preview-scrollable-box'), {
+            titles,
+            maxHeight: '120px',
+            selectionMode: 'single'
+        });
+        box.on('select', ({ value }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `ScrollableBox (Single): ${value}`;
+            console.log('[gallery] scrollable box select:', value);
+        });
+    });
+
+    mount('preview-scrollable-box-multiple', () => {
+        const titles = ['Multi 1', 'Multi 2', 'Multi 3', 'Multi 4', 'Multi 5', 'Multi 6'];
+        const box = MpiScrollableBox.mount(slot('preview-scrollable-box-multiple'), {
+            titles,
+            maxHeight: '120px',
+            selectionMode: 'multiple',
+            selected: ['Multi 1', 'Multi 3']
+        });
+        box.on('select', ({ value, selection }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `ScrollableBox (Multi): ${selection.join(', ')}`;
+            console.log('[gallery] scrollable box select:', value, selection);
+        });
+    });
+
     mount('preview-popupbtn-bottom', () => {
         const triggerSlot = slot('preview-popupbtn-bottom');
         triggerSlot.style.position = 'relative';
@@ -205,19 +235,6 @@ function mountAll() {
         });
     });
 
-    // ── MpiScrollableBox (Compound) ───────────────────────────────────────────
-    mount('preview-scrollable-box', () => {
-        const titles = ['Selection A', 'Selection B', 'Selection C', 'Selection D', 'Selection E', 'Selection F'];
-        const box = MpiScrollableBox.mount(slot('preview-scrollable-box'), {
-            titles,
-            maxHeight: '120px'
-        });
-        box.on('click', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
-            if (infoBar) infoBar.textContent = `Selected from Box: ${value}`;
-            console.log('[gallery] scrollable box click:', value);
-        });
-    });
 
     // ── MpiProgressBar — Slider mode ───────────────────────────────────────────
     mount('preview-slider-smart', () => {
