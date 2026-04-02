@@ -9,7 +9,7 @@ import { loadGuide, buildDynamicForm, getFormAnswers } from '../formBuilder.js';
 import { saveTemplate, loadTemplates, loadTemplateSelection, deletePreset } from '../templateManager.js';
 import { navigate, PAGE_TOOL } from '../router.js';
 
-import { PromptBox } from '../components/PromptBox.js';
+import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 
 // Internal State for the Prompt Builder
 let promptBox;
@@ -45,12 +45,20 @@ export async function initPromptBuilder() {
         }
     }
 
-    promptBox = new PromptBox({
-        toolId: 'promptBuilder',
-        container: document.getElementById('pb-prompt-wrapper'),
-        readonly: true
-    });
+    const container = document.getElementById('pb-prompt-wrapper');
+    if (container) {
+        promptBox = MpiPromptBox.mount(container, {
+            toolId: 'promptBuilder'
+        });
+        
+        // Expose inputEl manually for legacy logic compatibility
+        promptBox.inputEl = promptBox.el.querySelector('textarea');
+        if (promptBox.inputEl) {
+            promptBox.inputEl.readOnly = true;
+        }
+    }
 }
+
 
 function setupPBEventListeners() {
     // Tool selection dropdown - Using Event Delegation on the container
