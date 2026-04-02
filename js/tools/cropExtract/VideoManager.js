@@ -3,7 +3,7 @@
  */
 import { toolState } from './State.js';
 import { getLoadableUrl } from '../../toolUtils.js';
-import { findClosestRatio, VIDEO_RATIOS, RATIO_ICONS } from '../../ratioUtils.js';
+import { findClosestRatio, VIDEO_RATIOS, RATIO_ICONS } from '../../utils/ratios.js';
 import { UIManager } from './UIManager.js';
 import { state } from '../../state.js';
 import { loadToolState, saveToolState } from '../../toolState.js';
@@ -20,7 +20,7 @@ export class VideoManager {
     static async loadVideo(url, isRestoring = false, callbacks = {}) {
         if (!url) return;
         const loadableUrl = getLoadableUrl(url);
-        
+
         // Hide dropzone, show video player component
         qs('#ce-dropzone-slot')?.classList.add('hide');
         qs('#ce-videoplayer-slot')?.classList.remove('hide');
@@ -47,7 +47,7 @@ export class VideoManager {
                 state.cropExtractVideoUrl = loadableUrl;
                 state.cropExtractTime = 0;
             }
-            
+
             if (callbacks.onLoaded) callbacks.onLoaded(isRestoring);
             this.generateFilmstrip();
         };

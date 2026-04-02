@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
-import { getModelRatios } from '../../../ratioUtils.js';
+import { getModelRatios } from '../../../utils/ratios.js';
 
 /**
  * MpiRatioSelector — Block-level Aspect Ratio Picker
@@ -54,11 +54,11 @@ export const MpiRatioSelector = ComponentFactory.create({
                 ${MpiBadge.template({ label: 'RATIO', variant: 'secondary' })}
                 <div class="mpi-ratio-sel__orient-btn" style="${orientContainerStyle}">
                     ${MpiButton.template({
-                        icon: orientIcon,
-                        size: 'sm',
-                        info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation`,
-                        stroke: true
-                    })}
+            icon: orientIcon,
+            size: 'sm',
+            info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation`,
+            stroke: true
+        })}
                 </div>
             </div>`;
 
@@ -80,9 +80,9 @@ export const MpiRatioSelector = ComponentFactory.create({
             info: 'Select aspect ratio'
         });
 
-        const popupHtml = MpiPopup.template({ 
+        const popupHtml = MpiPopup.template({
             active: isActive,
-            position: 'top' 
+            position: 'top'
         }, popupInnerHtml);
 
         return `<div class="mpi-ratio-sel">
@@ -105,10 +105,10 @@ export const MpiRatioSelector = ComponentFactory.create({
             e.stopPropagation();
             props.showPopup = !props.showPopup;
             popupEl.classList.toggle('is-active', props.showPopup);
-            
+
             const btn = trigger.querySelector('.mpi-btn');
             if (btn) btn.classList.toggle('is-active', props.showPopup);
-            
+
             emit('popup_toggle', { active: props.showPopup });
         });
 

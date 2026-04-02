@@ -2,6 +2,7 @@
  * Icon registry — fill="currentColor" Material-style paths, 24x24 grid.
  * Sourced from the app's existing inline SVGs (sidebar, modals, toolbars).
  * Source of thruth for all app icons
+ * Follow naming convention in renderIcon() when adding to ICONS.
  */
 export const ICONS = {
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -83,9 +84,30 @@ export const ICONS = {
     'refresh_stroke': '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
 };
 
+/**
+ * Renders an SVG icon from the ICONS registry.
+ * 
+ * Automated Stroke Detection:
+ * Icons are rendered as strokes (fill="none") instead of solid fills if:
+ * 1. The `opts.stroke` property is explicitly set to true.
+ * 2. The icon name ends with `_stroke`.
+ * 3. The icon name starts with `ratio_` (aspect ratio rectangles).
+ * 4. The icon is one of the predefined stroke-based names: ['seed', 'gallery'].
+ *
+ * @param {string} name - Key from the ICONS registry (e.g., 'play', 'refresh_stroke').
+ * @param {'xs'|'sm'|'md'|'lg'|'xl'} [size='md'] - Standard UI size class.
+ * @param {Object} [opts={}] - Optional rendering modifiers.
+ * @param {boolean} [opts.stroke] - Force stroke rendering (overrides auto-detection).
+ * @param {'muted'|'accent'|'primary'|'danger'|'success'} [opts.color] - Color theme modifier.
+ * @returns {string} The final SVG string ready for innerHTML injection.
+ */
 export function renderIcon(name, size = 'md', opts = {}) {
     const inner = ICONS[name] || ICONS['info'];
-    const isStroke = opts.stroke === true;
+    const isStroke = opts.stroke === true ||
+        name.endsWith('_stroke') ||
+        name.startsWith('ratio_') ||
+        ['seed', 'gallery'].includes(name);
+
     const colorClass = opts.color ? ` mpi-icon--${opts.color}` : '';
     const svgAttrs = isStroke
         ? `fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`

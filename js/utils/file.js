@@ -9,18 +9,18 @@ const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'avi', 'mkv']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a']);
 
 /**
- * Returns the lowercase file extension (without dot).
- * @param {string} filename
- * @returns {string}
+ * Returns the lowercase file extension (without the dot).
+ * @param {string} filename - The name of the file to extract the extension from.
+ * @returns {string} The lowercase extension, or an empty string if none found.
  */
 export const getExtension = (filename) =>
     (filename || '').split('.').pop().toLowerCase();
 
 /**
  * Formats bytes as a human-readable string (e.g. "1.4 MB").
- * @param {number} bytes
- * @param {number} [decimals=1]
- * @returns {string}
+ * @param {number} bytes - The number of bytes to format.
+ * @param {number} [decimals=1] - Number of decimal places to include.
+ * @returns {string} The formatted byte string (e.g., "0 B", "1.5 KB").
  */
 export function formatBytes(bytes, decimals = 1) {
     if (!bytes) return '0 B';
@@ -30,11 +30,24 @@ export function formatBytes(bytes, decimals = 1) {
     return `${(bytes / Math.pow(k, i)).toFixed(decimals)} ${sizes[i]}`;
 }
 
-/** @param {string} filename @returns {boolean} */
+/**
+ * Checks if the given filename has a supported image extension.
+ * @param {string} filename - The name of the file to check.
+ * @returns {boolean} True if it is an image file, false otherwise.
+ */
 export const isImageFile = (filename) => IMAGE_EXTS.has(getExtension(filename));
 
-/** @param {string} filename @returns {boolean} */
+/**
+ * Checks if the given filename has a supported video extension.
+ * @param {string} filename - The name of the file to check.
+ * @returns {boolean} True if it is a video file, false otherwise.
+ */
 export const isVideoFile = (filename) => VIDEO_EXTS.has(getExtension(filename));
 
-/** @param {string} filename @returns {boolean} */
+/**
+ * Checks if the given filename has a supported audio extension.
+ * @param {string} filename - The name of the file to check.
+ * @returns {boolean} True if it is an audio file, false otherwise.
+ */
 export const isAudioFile = (filename) => AUDIO_EXTS.has(getExtension(filename));
+

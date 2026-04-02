@@ -11,7 +11,8 @@ import { toggleTheme } from '../themeManager.js';
 
 // Primitives
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiIcon, ICONS } from '../components/Primitives/MpiIcon/MpiIcon.js';
+import { MpiIcon } from '../components/Primitives/MpiIcon/MpiIcon.js';
+import { ICONS } from '../utils/icons.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { MpiSpinner } from '../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
@@ -86,9 +87,8 @@ function buildIconSection() {
 
     // Pass 2 — mount icons into the now-visible slots
     Object.keys(ICONS).forEach(key => {
-        const isStroke = key.startsWith('ratio_') || key === 'seed';
         mount(`preview-icon-${key}`, () =>
-            MpiIcon.mount(slot(`preview-icon-${key}`), { name: key, size: 'lg', stroke: isStroke })
+            MpiIcon.mount(slot(`preview-icon-${key}`), { name: key, size: 'lg' })
         );
     });
     SIZES.forEach(s =>

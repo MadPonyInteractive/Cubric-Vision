@@ -7,7 +7,7 @@
  */
 
 import { state } from './state.js';
-import { removeImage } from './imageProcessor.js';
+import { removeImage } from './handlers/imageHandlers.js';
 import { initShell } from './shell.js';
 import { initMediaDetailModal } from './components/mediaDetailModal.js';
 import { showAlert, showConfirm, showPrompt } from './dialogs.js';

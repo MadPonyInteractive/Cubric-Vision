@@ -11,7 +11,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { loadToolState, saveToolState } from '../toolState.js';
 import { uploadMediaToProject, getLoadableUrl } from '../toolUtils.js';
-import { VIDEO_RATIOS } from '../ratioUtils.js';
+import { VIDEO_RATIOS } from '../utils/ratios.js';
 import { handleSnapshot } from '../videoUtils.js';
 import { formatTime } from '../utils/string.js';
 import { qs, on } from '../utils/dom.js';
@@ -38,12 +38,12 @@ export function initCropExtract() {
     // 2. Restore State
     const savedState = loadToolState('cropExtract');
     const savedUrl = state.cropExtractVideoUrl || savedState?.videoUrl;
-    
+
     if (savedUrl) {
         VideoManager.loadVideo(savedUrl, true, { onLoaded: onVideoLoaded, onTimelineUpdate: updateTimelineUI });
         if (state.cropExtractTime) toolState.video.currentTime = state.cropExtractTime;
         else if (savedState?.currentTime) toolState.video.currentTime = savedState.currentTime;
-        
+
         if (savedState?.trimIn !== undefined) toolState.trimIn = savedState.trimIn;
         if (savedState?.trimOut !== undefined) toolState.trimOut = savedState.trimOut;
     }
@@ -188,9 +188,9 @@ async function handleFileUpload(file) {
     if (file.type.startsWith('video/')) {
         const res = await uploadMediaToProject(file, 'crop');
         if (res?.filePath) {
-            VideoManager.loadVideo(getLoadableUrl(res.filePath), false, { 
-                onLoaded: onVideoLoaded, 
-                onTimelineUpdate: updateTimelineUI 
+            VideoManager.loadVideo(getLoadableUrl(res.filePath), false, {
+                onLoaded: onVideoLoaded,
+                onTimelineUpdate: updateTimelineUI
             });
             Events.emit('media:updated', { projectId: state.currentProject?.id });
         }
@@ -206,7 +206,7 @@ function onVideoLoaded(isRestoring) {
         } else {
             const saved = loadToolState('cropExtract');
             const currentRatio = state.cropExtractRatio || saved?.selectedRatio;
-            
+
             if (currentRatio) {
                 const r = VIDEO_RATIOS.find(v => Math.abs(v.ratio - currentRatio) < 0.01);
                 if (r) {
@@ -231,12 +231,12 @@ function onVideoLoaded(isRestoring) {
 function updateTimelineUI() {
     const video = toolState.video;
     if (!video || !video.duration) return;
-    
+
     const playPct = (video.currentTime / video.duration) * 100;
     toolState.playhead.style.left = `${playPct}%`;
     toolState.trimRange.style.left = `${toolState.trimIn * 100}%`;
     toolState.trimRange.style.width = `${(toolState.trimOut - toolState.trimIn) * 100}%`;
-    
+
     const displayTotal = qs('#ce-time-total');
     if (displayTotal) {
         displayTotal.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;

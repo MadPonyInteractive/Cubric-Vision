@@ -1,9 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
 import { ICONS, renderIcon } from '/js/utils/icons.js';
-
-// Re-export for consumers that import { MpiIcon, ICONS } from this module
-export { ICONS };
-
 /**
  * MpiIcon — Atomic SVG Icon Primitive
  *

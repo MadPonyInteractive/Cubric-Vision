@@ -13,11 +13,11 @@
 import { state, getToolComfySettings } from '../state.js';
 import { ComfyUIController } from '../comfyController.js';
 import { saveToolState, loadToolState } from '../toolState.js';
-import { resizeImageIfNeeded } from '../imageProcessor.js';
+import { resizeImageIfNeeded } from '../utils/images.js';
 import { refreshComfyWorkflowRegistry, getWorkflowStatus } from '../comfyModelManager.js';
 import { showProvisioningScreen } from '../shell.js';
 import { generateSeed } from '../uiHelpers.js';
-import { getModelRatios, RATIO_ICONS } from '../ratioUtils.js';
+import { getModelRatios, RATIO_ICONS } from '../utils/ratios.js';
 import { MediaContextMenu } from '../components/mediaContextMenu.js';
 import { setRunButtonState, onComfyRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
 

@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { getFirstAvailableModel, getModelById } from '../modelManager.js';
 import { cleanLLMResponse } from '../uiHelpers.js';
 import { llamaGenerate } from '../llmService.js';
-import { resizeImageIfNeeded } from '../imageProcessor.js';
+import { resizeImageIfNeeded } from '../utils/images.js';
 import { saveToolState, loadToolState } from '../toolState.js';
 import { showAlert, showConfirm, showPrompt } from '../dialogs.js';
 import { setLlmButtonState, onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js';
@@ -27,17 +27,17 @@ export function initLlm() {
         container: document.getElementById('llm-prompt-wrapper'),
         onImageDrop: async (item) => {
             if (typeof item === 'string') {
-                 try {
-                     const res = await fetch(item);
-                     const blob = await res.blob();
-                     const filename = item.split('/').pop() || 'dropped_image.png';
-                     const file = new File([blob], filename, { type: blob.type });
-                     await addImage(file);
-                 } catch (e) {
-                     console.error('Dropped URL image load failed:', e);
-                 }
+                try {
+                    const res = await fetch(item);
+                    const blob = await res.blob();
+                    const filename = item.split('/').pop() || 'dropped_image.png';
+                    const file = new File([blob], filename, { type: blob.type });
+                    await addImage(file);
+                } catch (e) {
+                    console.error('Dropped URL image load failed:', e);
+                }
             } else {
-                 await addImage(item);
+                await addImage(item);
             }
         }
     });
@@ -56,7 +56,7 @@ export function initLlm() {
     const templateSectionTitle = document.getElementById('llm-templateSectionTitle');
     const cancelTemplateBtn = document.getElementById('llm-cancelTemplateBtn');
     const saveTemplateBtn = document.getElementById('llm-saveTemplateBtn');
-    
+
     const newTemplateName = document.getElementById('llm-newTemplateName');
     const newTemplatePrefix = document.getElementById('llm-newTemplatePrefix');
     const newTemplateSuffix = document.getElementById('llm-newTemplateSuffix');
@@ -84,7 +84,7 @@ export function initLlm() {
     function loadHistoryList() {
         const chats = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         historyList.innerHTML = '';
-        
+
         // Sort by date descending
         chats.sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -138,7 +138,7 @@ export function initLlm() {
         currentChatId = chatId;
         const chats = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         const chat = chats.find(c => c.id === chatId);
-        
+
         chatContainer.innerHTML = '';
         if (chat) {
             currentChatHistory = chat.messages || [];
@@ -164,7 +164,7 @@ export function initLlm() {
         const chats = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         chats.push(newChat);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(chats));
-        
+
         currentChatId = id;
         currentChatHistory = [];
         chatContainer.innerHTML = '';
@@ -176,7 +176,7 @@ export function initLlm() {
         let chats = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         chats = chats.filter(c => c.id !== chatId);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(chats));
-        
+
         if (currentChatId === chatId) {
             if (chats.length > 0) {
                 switchChat(chats[0].id);
@@ -205,7 +205,7 @@ export function initLlm() {
         if (chat) {
             chat.messages = currentChatHistory;
             chat.updatedAt = Date.now();
-            
+
             // Auto-generate title if it's still "New Chat" and we have messages
             if (chat.title === 'New Chat' && currentChatHistory.length > 0) {
                 const firstUserMsg = currentChatHistory.find(m => m.visualRole === 'user');
@@ -214,7 +214,7 @@ export function initLlm() {
                     chat.title = text + (text.length >= 30 ? '...' : '');
                 }
             }
-            
+
             localStorage.setItem(HISTORY_KEY, JSON.stringify(chats));
             loadHistoryList();
         }
@@ -261,7 +261,7 @@ export function initLlm() {
         deleteTemplateBtn.disabled = !templateSelector.value;
         editTemplateBtn.disabled = !templateSelector.value;
     }
-    
+
     loadTemplates();
 
     templateSelector.addEventListener('change', () => {
@@ -269,7 +269,7 @@ export function initLlm() {
         const hasVal = !!presetName;
         deleteTemplateBtn.disabled = !hasVal;
         editTemplateBtn.disabled = !hasVal;
-        
+
         // Requirement: New chat on preset load with preset name as title
         if (hasVal) {
             createNewChat(presetName);
@@ -510,7 +510,7 @@ export function initLlm() {
         setLoading(true);
 
         const imagesToPass = state.llmImages.length > 0 ? state.llmImages.map(img => img.base64) : undefined;
-        const currentImages = [...state.llmImages]; 
+        const currentImages = [...state.llmImages];
 
         appendMessage('user', userText, currentImages);
         promptBox.inputEl.value = '';
@@ -529,21 +529,21 @@ export function initLlm() {
 
             const reply = cleanLLMResponse(data.response) || "(Empty response)";
             appendMessage('assistant', reply);
-            
-            currentChatHistory.push({ 
-                role: 'User', 
-                content: finalPromptToLLM, 
-                visualRole: 'user', 
+
+            currentChatHistory.push({
+                role: 'User',
+                content: finalPromptToLLM,
+                visualRole: 'user',
                 visualContent: userText,
                 images: currentImages.map(img => ({ name: img.name, objectUrl: img.objectUrl }))
             });
-            currentChatHistory.push({ 
-                role: 'Assistant', 
-                content: reply, 
-                visualRole: 'assistant', 
-                visualContent: reply 
+            currentChatHistory.push({
+                role: 'Assistant',
+                content: reply,
+                visualRole: 'assistant',
+                visualContent: reply
             });
-            
+
             updateCurrentChat();
 
         } catch (e) {

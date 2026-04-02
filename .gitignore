@@ -31,5 +31,3 @@ desktop.ini
 .env
 .env.local
 
-# Backup folder (manual snapshot, not version controlled)
-Backup/

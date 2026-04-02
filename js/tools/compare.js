@@ -4,7 +4,7 @@ import { qs } from '../utils/dom.js';
 import { InteractiveCanvas } from '../components/interactiveCanvas.js';
 import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { saveToolState, loadToolState } from '../toolState.js';
-import { resizeImageIfNeeded } from '../imageProcessor.js';
+import { resizeImageIfNeeded } from '../utils/images.js';
 
 /**
  * js/tools/compare.js

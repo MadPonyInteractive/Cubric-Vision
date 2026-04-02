@@ -8,7 +8,7 @@
  */
 
 import { state } from '../state.js';
-import { resizeImageIfNeeded } from '../imageProcessor.js';
+import { resizeImageIfNeeded } from '../utils/images.js';
 import { getFirstAvailableModel } from '../modelManager.js';
 import { cleanLLMResponse } from '../uiHelpers.js';
 import { navigate, PAGE_TOOL } from '../router.js';
@@ -19,7 +19,8 @@ import { onLlmRunStart, setRunningTool, clearRunningTool } from '../toolUtils.js
 // Factory & Utils
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiIcon, ICONS } from '../components/Primitives/MpiIcon/MpiIcon.js';
+import { MpiIcon } from '../components/Primitives/MpiIcon/MpiIcon.js';
+import { ICONS } from '../utils/icons.js';
 import { Events } from '../events.js';
 import { qs, qsa, on } from '../utils/dom.js';
 import { debounce } from '../utils/async.js';
@@ -259,7 +260,7 @@ function _saveState() {
 function _updateButtonState() {
     if (!describeBtn) return;
     const analyzingCount = state.descriptorImages.filter(img => img.isAnalyzing).length;
-    
+
     if (analyzingCount > 0) {
         describeBtn.update({ variant: 'loading', icon: 'spinner' }); // variant loading handles spinner
     } else {
@@ -276,7 +277,7 @@ function _renderThumbs() {
             <img src="${img.objectUrl}" alt="${img.name}">
             <span class="thumb-badge">@${i + 1}</span>
             <div class="thumb-remove-slot"></div>`;
-        
+
         MpiButton.mount(card.querySelector('.thumb-remove-slot'), {
             icon: 'close',
             variant: 'danger',
@@ -289,7 +290,7 @@ function _renderThumbs() {
             _updateButtonState();
             _saveState();
         });
-        
+
         thumbStrip.appendChild(card);
     });
 }

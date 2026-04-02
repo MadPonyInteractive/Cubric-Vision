@@ -2,7 +2,7 @@
  * UIManager.js — DOM & Ratio UI Management
  */
 import { toolState } from './State.js';
-import { VIDEO_RATIOS, RATIO_ICONS } from '../../ratioUtils.js';
+import { VIDEO_RATIOS, RATIO_ICONS } from '../../utils/ratios.js';
 import { MpiIcon } from '../../components/Primitives/MpiIcon/MpiIcon.js';
 
 
@@ -45,10 +45,10 @@ export class UIManager {
      */
     static updateRatioUI(r) {
         if (!toolState.ratioSelector) return;
-        
+
         // Update the component's state
         toolState.ratioSelector.props.value = r.label;
-        
+
         // Hack: Since the factory doesn't expose a full reactive update yet, 
         // we manually find the label element inside the component's trigger.
         const labelEl = toolState.ratioSelector.el.querySelector('.mpi-popup-btn__label');
