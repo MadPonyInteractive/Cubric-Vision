@@ -1,9 +1,12 @@
 import { ComponentFactory } from '../../factory.js';
+import { qs, qsa, on } from '../../../utils/dom.js';
 
 /**
  * MpiDropdown — Select / Dropdown Primitive
  *
  * A custom dropdown with controlled open direction. Zero dependencies.
+ * The option list is portalled to document.body on mount so it is immune to
+ * ancestor overflow:hidden and CSS transform stacking-context issues.
  *
  * Props:
  * @param {Array<string|{label:string,value:string}>} [options=[]] - Option list
@@ -58,17 +61,68 @@ export const MpiDropdown = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         const root    = el;
-        const trigger = el.querySelector('.mpi-dropdown__trigger');
-        const list    = el.querySelector('.mpi-dropdown__list');
-        const labelEl = el.querySelector('.mpi-dropdown__label');
+        const trigger = qs('.mpi-dropdown__trigger', el);
+        const list    = qs('.mpi-dropdown__list', el);
+        const labelEl = qs('.mpi-dropdown__label', el);
 
         if (props.disabled) return;
+
+        // Portal: move list to document.body so no ancestor transform or
+        // overflow:hidden can affect it. The list is always hidden until opened.
+        list.dataset.direction = props.direction || 'down';
+        document.body.appendChild(list);
+
+        /** Aligns the portalled list to the trigger using viewport coordinates. */
+        const positionList = () => {
+            const rect      = trigger.getBoundingClientRect();
+            const direction = props.direction || 'down';
+
+            list.style.width = `${rect.width}px`;
+            list.style.left  = `${rect.left + window.scrollX}px`;
+
+            if (direction === 'up') {
+                list.style.top    = '';
+                list.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+            } else {
+                list.style.top    = `${rect.bottom + 4}px`;
+                list.style.bottom = '';
+            }
+        };
+
+        let cleanupScroll = null;
+        let cleanupResize = null;
+
+        const closeList = () => {
+            root.classList.remove('is-open');
+            list.classList.remove('is-open');
+            if (cleanupScroll) { cleanupScroll(); cleanupScroll = null; }
+            if (cleanupResize) { cleanupResize(); cleanupResize = null; }
+        };
+
+        /** Full teardown: close list, remove portal node, detach all listeners. */
+        const destroy = () => {
+            closeList();
+            if (list.parentNode) list.parentNode.removeChild(list);
+            document.removeEventListener('click', onOutside);
+            observer.disconnect();
+        };
 
         // Toggle list
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isOpen = root.classList.toggle('is-open');
-            list.setAttribute('aria-expanded', isOpen);
+            const opening = !list.classList.contains('is-open');
+
+            if (opening) {
+                positionList();
+                root.classList.add('is-open');
+                list.classList.add('is-open');
+                cleanupScroll = on(window, 'scroll', closeList, { passive: true, capture: true });
+                cleanupResize = on(window, 'resize', closeList, { passive: true });
+            } else {
+                closeList();
+            }
+
+            list.setAttribute('aria-expanded', opening);
         });
 
         // Select option
@@ -79,26 +133,28 @@ export const MpiDropdown = ComponentFactory.create({
             const value = option.dataset.value;
             const label = option.textContent.trim();
 
-            // Update active state
-            list.querySelectorAll('.mpi-dropdown__option').forEach(o =>
+            qsa('.mpi-dropdown__option', list).forEach(o =>
                 o.classList.toggle('is-active', o === option)
             );
 
             labelEl.textContent = label;
             props.value = value;
 
-            root.classList.remove('is-open');
+            closeList();
             emit('change', { value, label });
         });
 
-        // Close on outside click — self-removes once the element leaves the DOM
+        // Close on outside click; also handles el removal (no-click path covered by observer)
         const onOutside = (e) => {
-            if (!document.contains(el)) {
-                document.removeEventListener('click', onOutside);
-                return;
-            }
-            if (!el.contains(e.target)) root.classList.remove('is-open');
+            if (!el.contains(e.target) && !list.contains(e.target)) closeList();
         };
         document.addEventListener('click', onOutside);
+
+        // Watch for el being removed from the DOM and clean up the portal node.
+        // Observes document.body so it catches removal at any ancestor level.
+        const observer = new MutationObserver(() => {
+            if (!document.contains(el)) destroy();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 });

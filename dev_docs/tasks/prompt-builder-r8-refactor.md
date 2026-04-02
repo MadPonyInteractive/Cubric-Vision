@@ -7,7 +7,7 @@
 ## Use JSDocs extensively
 ## Ask questions if goal not clear
 ## Work on your assigned phase but the read the other phases for context
-
+## use `js/utils/` where appropriate
 ---
 
 ## Phase 1: Primitives Expansion (Tier 1 - No Dependencies)
@@ -27,16 +27,16 @@
 ## Phase 2: Functional Compounds (Tier 2 - Imports Primitives only)
 *Target: js/components/Compounds/*
 
-- [ ] **MpiToolbar**: A reusable bar combining `MpiDropdown` (Primitive) and action `MpiButton` (Primitive).
+- [x] **MpiToolbar**: A reusable bar combining `MpiDropdown` (Primitive) and action `MpiButton` (Primitive).
     - Use-cases: Global Presets, Tool-specific Presets.
-- [ ] **MpiVideoScene**: Configuration unit for video scenes (formerly "Shot"). 
+- [x] **MpiVideoScene**: Configuration unit for video scenes (formerly "Shot"). 
     - UI: Uses `MpiInput`, `MpiProgressBar`, `MpiDropdown`.
-- [ ] **Config Compounds**: Create individual Compounds for each tool category:
+- [x] **Config Compounds**: Create individual Compounds for each tool category:
     - `MpiCameraConfig`
     - `MpiLightingConfig`
     - `MpiStyleConfig`
     - These compounds contain the specific business logic and radio/select groups for their domain.
-- [ ] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding these new components
+- [x] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding these new components
 ---
 
 ## Phase 3: Main Orchestration (Tier 3 - Block)

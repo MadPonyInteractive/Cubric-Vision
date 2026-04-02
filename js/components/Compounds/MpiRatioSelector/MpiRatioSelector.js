@@ -96,37 +96,68 @@ export const MpiRatioSelector = ComponentFactory.create({
     setup: (el, props, emit) => {
         const trigger = el.querySelector('.mpi-ratio-sel__trigger');
         const popupEl = el.querySelector('.mpi-popup');
+        // Capture DOM refs before portaling (they live inside popupEl)
         const grid = el.querySelector('.mpi-ratio-sel__grid');
         const orientContainer = el.querySelector('.mpi-ratio-sel__orient-btn');
         let leaveTimer = null;
 
-        // Toggle popup
+        // ── Portal ──────────────────────────────────────────────────────────────
+        // MpiPopup is template-rendered here (not independently mounted), so we
+        // portal it manually. This escapes ancestor overflow/transform stacking
+        // contexts that would otherwise clip or misposition the fixed popup.
+        document.body.appendChild(popupEl);
+
+        // Remove portal node when this component is removed from the DOM.
+        const domObserver = new MutationObserver(() => {
+            if (!document.contains(el)) {
+                if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
+                domObserver.disconnect();
+            }
+        });
+        domObserver.observe(document.body, { childList: true, subtree: true });
+
+        // ── Positioning ─────────────────────────────────────────────────────────
+        const positionPopup = () => {
+            const rect = trigger.getBoundingClientRect();
+            popupEl.style.bottom = `${window.innerHeight - rect.top + 12}px`;
+            popupEl.style.left   = `${rect.left + rect.width / 2}px`;
+            popupEl.style.top    = '';
+        };
+
+        // ── Close helper ────────────────────────────────────────────────────────
+        const closePopup = () => {
+            props.showPopup = false;
+            popupEl.classList.remove('is-active');
+            const btn = trigger.querySelector('.mpi-btn');
+            if (btn) btn.classList.remove('is-active');
+            emit('popup_toggle', { active: false });
+        };
+
+        // ── Hover (keep open while hovering trigger OR popup) ────────────────────
+        // After portaling, the popup is outside el's DOM subtree, so el's
+        // mouseenter/mouseleave won't fire when the mouse moves into the popup.
+        // We cancel/restart the close timer on the popup element itself too.
+        const cancelClose = () => { clearTimeout(leaveTimer); leaveTimer = null; };
+        const scheduleClose = () => {
+            leaveTimer = setTimeout(() => { if (props.showPopup) closePopup(); }, 300);
+        };
+
+        el.addEventListener('mouseenter', cancelClose);
+        el.addEventListener('mouseleave', scheduleClose);
+        popupEl.addEventListener('mouseenter', cancelClose);
+        popupEl.addEventListener('mouseleave', scheduleClose);
+
+        // ── Toggle popup ─────────────────────────────────────────────────────────
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
             props.showPopup = !props.showPopup;
+            if (props.showPopup) positionPopup();
             popupEl.classList.toggle('is-active', props.showPopup);
 
             const btn = trigger.querySelector('.mpi-btn');
             if (btn) btn.classList.toggle('is-active', props.showPopup);
 
             emit('popup_toggle', { active: props.showPopup });
-        });
-
-        // Hover behavior (keep open while hovering)
-        el.addEventListener('mouseleave', () => {
-            leaveTimer = setTimeout(() => {
-                if (props.showPopup) {
-                    props.showPopup = false;
-                    popupEl.classList.remove('is-active');
-                    const btn = trigger.querySelector('.mpi-btn');
-                    if (btn) btn.classList.remove('is-active');
-                    emit('popup_toggle', { active: false });
-                }
-            }, 300);
-        });
-
-        el.addEventListener('mouseenter', () => {
-            if (leaveTimer) clearTimeout(leaveTimer);
         });
 
         // Helper to regenerate the grid content manually (avoids factory update loop)
@@ -169,8 +200,9 @@ export const MpiRatioSelector = ComponentFactory.create({
             });
         };
 
+        // ── Popup interaction (delegated to popupEl since it's portaled) ─────────
         // Orientation change handler
-        el.addEventListener('click', (e) => {
+        popupEl.addEventListener('click', (e) => {
             const orientBtn = e.target.closest('.mpi-ratio-sel__orient-btn');
             if (orientBtn) {
                 const currentOrient = props.orientation || props.initialOrientation || 'portrait';
@@ -181,7 +213,7 @@ export const MpiRatioSelector = ComponentFactory.create({
         });
 
         // Ratio selection handler
-        el.addEventListener('click', (e) => {
+        popupEl.addEventListener('click', (e) => {
             const item = e.target.closest('.mpi-ratio-sel__item');
             if (item) {
                 const label = item.dataset.label;

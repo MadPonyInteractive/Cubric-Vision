@@ -71,11 +71,15 @@
 
 /* ── Option list ───────────────────────────────────────────────────────────── */
 
+/* The list is portalled to document.body by MpiDropdown.js setup, escaping
+   all ancestor overflow and CSS transform stacking contexts.
+   Coordinates (top/bottom/left/width) are injected as inline styles via
+   getBoundingClientRect(). Visibility is toggled with .is-open on the list
+   itself (not via a parent selector) since it lives in document.body. */
+
 .mpi-dropdown__list {
-    position: absolute;
-    left: 0;
-    right: 0;
-    z-index: 200;
+    position: fixed;
+    z-index: 9000;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -83,6 +87,7 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     overflow-y: auto;
     max-height: 220px;
+    transform-origin: top center;
 
     /* Hidden by default */
     opacity: 0;
@@ -91,25 +96,15 @@
     transition: opacity var(--transition), transform var(--transition);
 }
 
-.mpi-dropdown.is-open .mpi-dropdown__list {
+.mpi-dropdown__list.is-open {
     opacity: 1;
     pointer-events: auto;
     transform: scaleY(1);
 }
 
-/* ── Direction: down (default) — list appears below trigger ─────────────────── */
-
-.mpi-dropdown--down .mpi-dropdown__list {
-    top: calc(100% + 4px);
-    bottom: auto;
-    transform-origin: top center;
-}
-
-/* ── Direction: up — list appears above trigger ──────────────────────────────── */
-
-.mpi-dropdown--up .mpi-dropdown__list {
-    bottom: calc(100% + 4px);
-    top: auto;
+/* Direction-aware transform-origin — class is on the portal list via JS
+   because .mpi-dropdown--up/.mpi-dropdown--down live on the trigger wrapper */
+.mpi-dropdown__list[data-direction='up'] {
     transform-origin: bottom center;
 }
 

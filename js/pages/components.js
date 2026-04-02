@@ -8,6 +8,7 @@
 
 import { state } from '../state.js';
 import { toggleTheme } from '../themeManager.js';
+import { Events } from '../events.js';
 
 // Primitives
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
@@ -29,6 +30,11 @@ import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
+import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCameraConfig.js';
+import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
+import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleConfig.js';
+import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -155,10 +161,10 @@ function mountAll() {
         triggerSlot.style.position = 'relative';
         triggerSlot.style.display = 'inline-block';
 
-        const btn = MpiButton.mount(triggerSlot, { 
-            icon: 'settings', 
-            label: 'Toggle Popup', 
-            toggleable: true 
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'settings',
+            label: 'Toggle Popup',
+            toggleable: true
         });
 
         const popup = MpiPopup.mount(triggerSlot, {
@@ -218,10 +224,10 @@ function mountAll() {
         triggerSlot.style.position = 'relative';
         triggerSlot.style.display = 'inline-block';
 
-        const btn = MpiButton.mount(triggerSlot, { 
-            icon: 'menu', 
-            label: 'Bottom Menu', 
-            toggleable: true 
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'menu',
+            label: 'Bottom Menu',
+            toggleable: true
         });
 
         const popup = MpiPopup.mount(triggerSlot, {
@@ -486,8 +492,8 @@ function mountAll() {
         const rg = MpiRadioGroup.mount(slot('preview-radio-group-values'), {
             options: [
                 { label: '16:9', value: '16_9' },
-                { label: '4:3',  value: '4_3'  },
-                { label: '1:1',  value: '1_1'  },
+                { label: '4:3', value: '4_3' },
+                { label: '1:1', value: '1_1' },
             ],
             value: '16_9',
             name: 'aspect-ratio',
@@ -598,6 +604,78 @@ function mountAll() {
             includeNegative: true
         });
         pb.on('toggle-negative', ({ active }) => console.log('[gallery] negative toggle:', active));
+    });
+
+    mount('preview-toolbar-default', () => {
+        // Correct pattern: Mount first, then attach listeners, then pass to parent
+        const save = MpiButton.mount(document.createElement('div'), { icon: 'save', info: 'Save current settings as a preset', size: 'sm', variant: 'ghost' });
+        save.on('click', () => {
+            console.log('[gallery] toolbar save clicked');
+            Events.emit('media:updated', { msg: 'Preset saved to library', type: 'success' });
+        });
+
+        const trash = MpiButton.mount(document.createElement('div'), { icon: 'trash', info: 'Delete selected preset', size: 'sm', variant: 'ghost' });
+        trash.on('click', () => console.log('[gallery] toolbar delete'));
+
+        const tb = MpiToolbar.mount(slot('preview-toolbar-default'), {
+            presets: ['Cinematic Look', 'Portrait Mode', 'Action Shot'],
+            value: 'Cinematic Look',
+            placeholder: 'Select preset...',
+            comps: [save, trash]
+        });
+
+        // System-level reaction
+        Events.on('media:updated', ({ msg, type }) => {
+            const toastWrapper = document.createElement('div');
+            document.body.appendChild(toastWrapper);
+            MpiToast.mount(toastWrapper, { message: msg, variant: type || 'info', duration: 3000 });
+        });
+
+        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
+    });
+
+    mount('preview-toolbar-empty', () => {
+        const tb = MpiToolbar.mount(slot('preview-toolbar-empty'), {
+            presets: [],
+            placeholder: 'No presets saved yet...'
+        });
+        tb.on('save', () => console.log('[gallery] toolbar save (default)'));
+        tb.on('delete', () => console.log('[gallery] toolbar delete (default)'));
+    });
+
+    // ── MpiCameraConfig (Compound) ────────────────────────────────────────────
+    mount('preview-camera-config', () => {
+        const cc = MpiCameraConfig.mount(slot('preview-camera-config'), {
+            value: { cam_type: '35mm Film', shot_angle: 'Low Angle (LA)', shot_size: 'Medium Shot (MS)' }
+        });
+        cc.on('change', ({ values }) => console.log('[gallery] camera config change:', values));
+    });
+
+    // ── MpiLightingConfig (Compound) ──────────────────────────────────────────
+    mount('preview-lighting-config', () => {
+        const lc = MpiLightingConfig.mount(slot('preview-lighting-config'), {
+            value: { light_type: 'Cinematic Lighting', light_color: 'Teal and Orange' }
+        });
+        lc.on('change', ({ values }) => console.log('[gallery] lighting config change:', values));
+    });
+
+    // ── MpiStyleConfig (Compound) ─────────────────────────────────────────────
+    mount('preview-style-config', () => {
+        const sc = MpiStyleConfig.mount(slot('preview-style-config'), {
+            value: { color_grade: 'Cinematic Teal & Orange', color_contrast: 'High Contrast' }
+        });
+        sc.on('change', ({ values }) => console.log('[gallery] style config change:', values));
+    });
+
+    // ── MpiVideoScene (Compound) ──────────────────────────────────────────────
+    mount('preview-video-scene', () => {
+        const vs = MpiVideoScene.mount(slot('preview-video-scene'), {
+            scenes: [
+                { description: 'Hero walks through door', angle: 'Low Angle (LA)', size: 'Wide Shot (WS)', movement: 'Dolly In', speed: 'Normal Time', duration: 8 },
+                { description: 'Close-up on face', angle: 'Front Angle (FA)', size: 'Close-Up (CU)', movement: 'Static', speed: 'Slow Motion 60fps', duration: 4 }
+            ]
+        });
+        vs.on('change', ({ scenes }) => console.log('[gallery] video scene change:', scenes));
     });
 }
 

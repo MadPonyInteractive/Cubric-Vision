@@ -223,6 +223,67 @@
 
 
 /**
+ * @typedef {Object} MpiToolbarProps (Compound — js/components/Compounds/MpiToolbar)
+ * @property {Array<string|{label:string,value:string}>} [presets=[]] - Saved preset list
+ * @property {string} [value=''] - Currently selected preset value
+ * @property {string} [placeholder='Select preset...'] - Dropdown placeholder
+ *
+ * Emits:
+ * 'select' { value: string } — preset selected
+ * 'save'   {}               — save button clicked
+ * 'delete' {}               — delete button clicked
+ */
+
+/**
+ * @typedef {Object} MpiCameraConfigProps (Compound — js/components/Compounds/MpiCameraConfig)
+ * @property {Object} [value={}] - Initial values. Keys: cam_type, cam_lens, cam_focal,
+ *   cam_aperture, cam_shutter, cam_iso, shot_angle, shot_size, shot_dof, shot_comp
+ *
+ * Emits:
+ * 'change' { values: Object } — full values object on any field change
+ */
+
+/**
+ * @typedef {Object} MpiLightingConfigProps (Compound — js/components/Compounds/MpiLightingConfig)
+ * @property {Object} [value={}] - Initial values. Keys: light_type, light_color,
+ *   light_intensity, light_dir
+ *
+ * Emits:
+ * 'change' { values: Object } — full values object on any field change
+ */
+
+/**
+ * @typedef {Object} MpiStyleConfigProps (Compound — js/components/Compounds/MpiStyleConfig)
+ * @property {Object} [value={}] - Initial values. Keys: color_grade, color_contrast,
+ *   color_sat, color_sharp
+ *
+ * Emits:
+ * 'change' { values: Object } — full values object on any field change
+ */
+
+/**
+ * @typedef {Object} MpiVideoSceneProps (Compound — js/components/Compounds/MpiVideoScene)
+ * @property {MpiVideoSceneItem[]} [scenes=[]] - Initial scene list
+ * @property {string[]} [angles]               - Override angle options
+ * @property {string[]} [sizes]                - Override size options
+ * @property {string[]} [movements]            - Override movement options
+ * @property {string[]} [speeds]               - Override speed options
+ *
+ * Emits:
+ * 'change' { scenes: MpiVideoSceneItem[] } — emitted on any field change or add/remove
+ */
+
+/**
+ * @typedef {Object} MpiVideoSceneItem
+ * @property {string} [description=''] - Brief shot description
+ * @property {string} [angle='']       - Camera angle
+ * @property {string} [size='']        - Shot size
+ * @property {string} [movement='']    - Camera movement
+ * @property {string} [speed='']       - Playback speed modifier
+ * @property {number} [duration=5]     - Shot duration in seconds (1–30)
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

@@ -1,6 +1,6 @@
 /* ── MpiPopup — Floating Glass Container ─────────────────────────────────── */
 .mpi-popup {
-    position: absolute;
+    position: fixed;
     background: var(--surface-glass);
     backdrop-filter: blur(24px);
     border: 1px solid var(--border);
@@ -22,12 +22,11 @@
 }
 
 /* ── Position Variants ─────────────────────────────────────────────────── */
+/* Base coordinates (top/left/bottom/right) are set by JS positionPopup().   */
+/* CSS only owns the entrance transform animation.                            */
 
 /* Top (Default) */
 .mpi-popup--top {
-    bottom: 100%;
-    left: 50%;
-    margin-bottom: 12px;
     transform: translateX(-50%) translateY(10px);
 }
 .mpi-popup--top.is-active {
@@ -36,9 +35,6 @@
 
 /* Bottom */
 .mpi-popup--bottom {
-    top: 100%;
-    left: 50%;
-    margin-top: 12px;
     transform: translateX(-50%) translateY(-10px);
 }
 .mpi-popup--bottom.is-active {
@@ -47,9 +43,6 @@
 
 /* Left */
 .mpi-popup--left {
-    right: 100%;
-    top: 50%;
-    margin-right: 12px;
     transform: translateY(-50%) translateX(10px);
 }
 .mpi-popup--left.is-active {
@@ -58,9 +51,6 @@
 
 /* Right */
 .mpi-popup--right {
-    left: 100%;
-    top: 50%;
-    margin-left: 12px;
     transform: translateY(-50%) translateX(-10px);
 }
 .mpi-popup--right.is-active {

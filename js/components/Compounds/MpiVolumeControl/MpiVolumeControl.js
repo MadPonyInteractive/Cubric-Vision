@@ -52,8 +52,13 @@ export const MpiVolumeControl = ComponentFactory.create({
             muteBtn.el.setAttribute('data-info', muted ? 'Unmute' : 'Mute');
         };
 
-        // Mount Popup
-        const popup = MpiPopup.mount(popupContainer, { variant: 'glass' });
+        // Mount Popup — pass iconContainer as the anchor so the portaled popup
+        // positions itself above the icon regardless of popupContainer's size.
+        const popup = MpiPopup.mount(popupContainer, { variant: 'glass', triggerEl: iconContainer });
+
+        // Custom dimensions for the vertical volume slider popup.
+        popup.el.style.width  = '40px';
+        popup.el.style.height = '140px';
 
         // Create slot for slider inside popup
         const sliderSlot = document.createElement('div');
@@ -73,17 +78,19 @@ export const MpiVolumeControl = ComponentFactory.create({
         });
 
         // Toggle Visibility on Hover
+        // After portaling, the popup is outside el's DOM subtree, so el's
+        // mouseenter/mouseleave won't fire when the mouse moves into the popup.
+        // Mirror the timer on the popup's own mouseenter/mouseleave events.
         let hoverTimer;
-        el.addEventListener('mouseenter', () => {
-            clearTimeout(hoverTimer);
-            popup.el.classList.add('is-active');
-        });
+        const cancelClose = () => clearTimeout(hoverTimer);
+        const scheduleClose = () => {
+            hoverTimer = setTimeout(() => popup.el.classList.remove('is-active'), 300);
+        };
 
-        el.addEventListener('mouseleave', () => {
-            hoverTimer = setTimeout(() => {
-                popup.el.classList.remove('is-active');
-            }, 300);
-        });
+        el.addEventListener('mouseenter', () => { cancelClose(); popup.el.classList.add('is-active'); });
+        el.addEventListener('mouseleave', scheduleClose);
+        popup.on('mouseenter', cancelClose);
+        popup.on('mouseleave', scheduleClose);
 
         // Handle Mute Toggle
         muteBtn.on('click', () => {

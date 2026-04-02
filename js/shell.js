@@ -116,6 +116,11 @@ export async function initShell() {
     'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',
     'js/components/Compounds/MpiDropdown/MpiDropdown.css',
     'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
+    'js/components/Compounds/MpiToolbar/MpiToolbar.css',
+    'js/components/Compounds/MpiCameraConfig/MpiCameraConfig.css',
+    'js/components/Compounds/MpiLightingConfig/MpiLightingConfig.css',
+    'js/components/Compounds/MpiStyleConfig/MpiStyleConfig.css',
+    'js/components/Compounds/MpiVideoScene/MpiVideoScene.css',
 
     // Blocks
     'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css'

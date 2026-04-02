@@ -204,15 +204,15 @@
                     </div>
 
                     <!-- MpiDropdown (Primitive) -->
-                    <div class="comp-card is-overflow-visible" data-name="mpidropdown" data-label="direction: down">
+                    <div class="comp-card" data-name="mpidropdown" data-label="direction: down">
                         <div class="comp-card-header"><span class="comp-card-name">MpiDropdown</span><span
                                 class="comp-card-badge">direction: down</span></div>
-                        <div class="comp-card-preview" id="preview-prim-dropdown-down" style="min-height: 160px;"></div>
+                        <div class="comp-card-preview" id="preview-prim-dropdown-down" style="min-height: 60px;"></div>
                     </div>
-                    <div class="comp-card is-overflow-visible" data-name="mpidropdown" data-label="direction: up">
+                    <div class="comp-card" data-name="mpidropdown" data-label="direction: up">
                         <div class="comp-card-header"><span class="comp-card-name">MpiDropdown</span><span
                                 class="comp-card-badge">direction: up</span></div>
-                        <div class="comp-card-preview" id="preview-prim-dropdown-up" style="min-height: 160px;"></div>
+                        <div class="comp-card-preview" id="preview-prim-dropdown-up" style="min-height: 60px;"></div>
                     </div>
                     <div class="comp-card" data-name="mpidropdown" data-label="disabled">
                         <div class="comp-card-header"><span class="comp-card-name">MpiDropdown</span><span
@@ -289,13 +289,13 @@
                 <div class="comp-grid" id="grid-Compounds">
 
                     <!-- MpiPopupButton -->
-                    <div class="comp-card is-overflow-visible" data-name="mpipopupbutton" data-label="top (default)">
+                    <div class="comp-card" data-name="mpipopupbutton" data-label="top (default)">
                         <div class="comp-card-header"><span class="comp-card-name">MpiPopupButton</span><span
                                 class="comp-card-badge">top (default)</span></div>
                         <div class="comp-card-preview" id="preview-popupbtn-default" style="min-height: 150px;"></div>
                     </div>
 
-                    <div class="comp-card is-overflow-visible" data-name="mpipopupbutton" data-label="bottom">
+                    <div class="comp-card" data-name="mpipopupbutton" data-label="bottom">
                         <div class="comp-card-header"><span class="comp-card-name">MpiPopupButton</span><span
                                 class="comp-card-badge">bottom</span></div>
                         <div class="comp-card-preview" id="preview-popupbtn-bottom" style="min-height: 150px;"></div>
@@ -318,7 +318,7 @@
 
 
                     <!-- MpiVolumeControl -->
-                    <div class="comp-card is-overflow-visible" data-name="mpivolumecontrol" data-label="default">
+                    <div class="comp-card" data-name="mpivolumecontrol" data-label="default">
                         <div class="comp-card-header"><span class="comp-card-name">MpiVolumeControl</span><span
                                 class="comp-card-badge">hover for slider</span></div>
                         <div class="comp-card-preview" id="preview-vol-control" style="min-height: 120px;"></div>
@@ -346,12 +346,12 @@
                     </div>
 
                     <!-- MpiRatioSelector -->
-                    <div class="comp-card is-overflow-visible" data-name="mpiratioselector" data-label="default">
+                    <div class="comp-card" data-name="mpiratioselector" data-label="default">
                         <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
                                 class="comp-card-badge">flux: portrait</span></div>
                         <div class="comp-card-preview" id="preview-ratio-flux" style="min-height: 180px;"></div>
                     </div>
-                    <div class="comp-card is-overflow-visible" data-name="mpiratioselector" data-label="video">
+                    <div class="comp-card" data-name="mpiratioselector" data-label="video">
                         <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
                                 class="comp-card-badge">video</span></div>
                         <div class="comp-card-preview" id="preview-ratio-video" style="min-height: 180px;"></div>
@@ -374,6 +374,47 @@
                         <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
                                 class="comp-card-badge">negative prompt enabled</span></div>
                         <div class="comp-card-preview" id="preview-promptbox-negative"></div>
+                    </div>
+
+                    <!-- MpiToolbar -->
+                    <div class="comp-card" data-name="mpitoolbar" data-label="with presets" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                class="comp-card-badge">with presets</span></div>
+                        <div class="comp-card-preview" id="preview-toolbar-default"></div>
+                    </div>
+
+                    <div class="comp-card" data-name="mpitoolbar" data-label="empty" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                class="comp-card-badge">empty preset list</span></div>
+                        <div class="comp-card-preview" id="preview-toolbar-empty"></div>
+                    </div>
+
+                    <!-- MpiCameraConfig -->
+                    <div class="comp-card" data-name="mpicameraconfig" data-label="default" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiCameraConfig</span><span
+                                class="comp-card-badge">camera + shot settings</span></div>
+                        <div class="comp-card-preview" id="preview-camera-config"></div>
+                    </div>
+
+                    <!-- MpiLightingConfig -->
+                    <div class="comp-card" data-name="mpilightingconfig" data-label="default" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiLightingConfig</span><span
+                                class="comp-card-badge">lighting settings</span></div>
+                        <div class="comp-card-preview" id="preview-lighting-config"></div>
+                    </div>
+
+                    <!-- MpiStyleConfig -->
+                    <div class="comp-card" data-name="mpistyleconfig" data-label="default" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiStyleConfig</span><span
+                                class="comp-card-badge">color grading settings</span></div>
+                        <div class="comp-card-preview" id="preview-style-config"></div>
+                    </div>
+
+                    <!-- MpiVideoScene -->
+                    <div class="comp-card" data-name="mpivideoscene" data-label="default" style="grid-column: 1 / -1;">
+                        <div class="comp-card-header"><span class="comp-card-name">MpiVideoScene</span><span
+                                class="comp-card-badge">shot list with 2 pre-filled scenes</span></div>
+                        <div class="comp-card-preview" id="preview-video-scene"></div>
                     </div>
 
 
@@ -523,27 +564,6 @@
             outline-offset: 2px;
         }
 
-        /* ── Popups / Clipping Fixes ──────────────────────────────────────────── */
-        .comp-card.is-overflow-visible,
-        .comp-card.is-overflow-visible .comp-card-preview {
-            overflow: visible !important;
-            z-index: 100 !important;
-            /* Ensure it floats above the grid */
-        }
-
-        .comp-card.is-overflow-visible:hover,
-        .comp-card.is-overflow-visible:focus-within {
-            z-index: 200 !important;
-            /* Bring to very top when interacted with to avoid sibling clipping */
-        }
-
-        .comp-section#section-Blocks {
-            overflow: visible !important;
-        }
-
-        .comp-grid#grid-Blocks {
-            overflow: visible !important;
-        }
 
         /* ── Header controls ──────────────────────────────────────────────────── */
         .header-action-group {

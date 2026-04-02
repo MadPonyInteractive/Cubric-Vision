@@ -1,0 +1,49 @@
+/* ── MpiCameraConfig ───────────────────────────────────────────────────────── */
+
+/* Shared .mpi-cfg layout — also used by Lighting & Style config compounds */
+.mpi-cfg {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.mpi-cfg__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mpi-cfg__label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 0.15rem;
+}
+
+.mpi-cfg__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mpi-cfg__field-label {
+    flex-shrink: 0;
+    width: 7rem;
+    font-size: 0.75rem;
+    color: var(--text-2);
+    text-align: right;
+}
+
+.mpi-cfg__field-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.mpi-cfg__field-input .mpi-dropdown {
+    width: 100%;
+}

@@ -1,0 +1,26 @@
+/* ── MpiToolbar ────────────────────────────────────────────────────────────── */
+
+.mpi-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.25rem 0;
+}
+
+/* Flex-grow so the dropdown fills available width */
+.mpi-toolbar__dropdown {
+    flex: 1;
+    min-width: 0;
+}
+
+.mpi-toolbar__dropdown .mpi-dropdown {
+    width: 100%;
+}
+
+.mpi-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
