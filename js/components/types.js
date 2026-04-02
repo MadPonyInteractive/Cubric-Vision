@@ -11,12 +11,36 @@
 'use strict';
 
 /**
- * @typedef {Object} MpiDropdownProps (Compound — js/components/Compounds/MpiDropdown)
- * @param {string[]} titles - Options to display in the list
- * @param {string} [label='Select...'] - Initial trigger text
- * @param {string|number} [maxHeight='250px'] - Max list height before scrolling
- * @param {'top'|'bottom'} [position='top'] - Where the dropdown appears (above/below trigger)
- * @param {string} [icon] - Custom icon name (defaults to chevronUp for top, chevronDown for bottom)
+ * @typedef {Object} MpiDropdownProps (Primitive — js/components/Primitives/MpiDropdown)
+ * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
+ * @property {string} [value=''] - Currently selected value
+ * @property {string} [placeholder='Select...'] - Placeholder text (empty/unselected label)
+ * @property {boolean} [disabled=false] - Disabled state
+ * @property {'up'|'down'} [direction='down'] - Preferred open direction
+ * @property {string} [info] - Info Bar description
+ *
+ * Emits:
+ * 'change' { value: string }
+ */
+
+/**
+ * @typedef {Object} MpiRadioGroupProps (Primitive — js/components/Primitives/MpiRadioGroup)
+ * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
+ * @property {string} [value=''] - Currently selected value
+ * @property {string} [name='radio'] - Accessible group name
+ * @property {string} [info] - Info Bar description
+ *
+ * Emits:
+ * 'select' { value: string }
+ */
+
+/**
+ * @typedef {Object} MpiDropdownCompoundProps (Compound — js/components/Compounds/MpiDropdown)
+ * @property {string[]} titles - Options to display in the list
+ * @property {string} [label='Select...'] - Initial trigger text
+ * @property {string|number} [maxHeight='250px'] - Max list height before scrolling
+ * @property {'top'|'bottom'} [position='top'] - Where the dropdown appears (above/below trigger)
+ * @property {string} [icon] - Custom icon name (defaults to chevronUp for top, chevronDown for bottom)
  */
 
 /**
@@ -137,6 +161,8 @@
  * @property {string|number} [value=''] - Initial value
  * @property {string} [label=''] - Field label
  * @property {boolean} [disabled=false] - Disabled state
+ * @property {boolean} [readonly=false] - Read-only (displayed but not editable)
+ * @property {boolean} [autoHeight=false] - textarea only: auto-resize to content height
  * @property {string} [error=''] - Error message
  * @property {string} [info=''] - Info Bar description
  */

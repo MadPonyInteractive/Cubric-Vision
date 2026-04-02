@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiDropdown — Primitive Select Component
+   BEM block: .mpi-dropdown
+═══════════════════════════════════════════════════════════════════════════ */
+
+.mpi-dropdown {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    width: 100%;
+    user-select: none;
+}
+
+/* ── Trigger button ────────────────────────────────────────────────────────── */
+
+.mpi-dropdown__trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.75rem 0.55rem 0.8rem;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--bounce);
+    outline: none;
+    text-align: left;
+}
+
+.mpi-dropdown__trigger:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--border-soft);
+}
+
+.mpi-dropdown.is-open .mpi-dropdown__trigger {
+    border-color: var(--neon-electric);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 10px var(--neon-glow-sm);
+}
+
+.mpi-dropdown__label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Chevron ───────────────────────────────────────────────────────────────── */
+
+.mpi-dropdown__chevron {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-3);
+    border-bottom: 2px solid var(--text-3);
+    rotate: 45deg;
+    transition: rotate var(--transition), border-color var(--transition);
+    margin-bottom: 2px;
+}
+
+.mpi-dropdown.is-open .mpi-dropdown__chevron {
+    rotate: 225deg;
+    margin-bottom: -2px;
+    border-color: var(--neon-electric);
+}
+
+/* ── Option list ───────────────────────────────────────────────────────────── */
+
+.mpi-dropdown__list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    overflow-y: auto;
+    max-height: 220px;
+
+    /* Hidden by default */
+    opacity: 0;
+    pointer-events: none;
+    transform: scaleY(0.9);
+    transition: opacity var(--transition), transform var(--transition);
+}
+
+.mpi-dropdown.is-open .mpi-dropdown__list {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scaleY(1);
+}
+
+/* ── Direction: down (default) — list appears below trigger ─────────────────── */
+
+.mpi-dropdown--down .mpi-dropdown__list {
+    top: calc(100% + 4px);
+    bottom: auto;
+    transform-origin: top center;
+}
+
+/* ── Direction: up — list appears above trigger ──────────────────────────────── */
+
+.mpi-dropdown--up .mpi-dropdown__list {
+    bottom: calc(100% + 4px);
+    top: auto;
+    transform-origin: bottom center;
+}
+
+/* ── Option items ──────────────────────────────────────────────────────────── */
+
+.mpi-dropdown__option {
+    padding: 0.45rem 0.75rem;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.88rem;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mpi-dropdown__option:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text);
+}
+
+.mpi-dropdown__option.is-active {
+    background: rgba(var(--neon-electric-rgb, 0, 200, 255), 0.12);
+    color: var(--neon-electric);
+}
+
+/* ── Disabled state ────────────────────────────────────────────────────────── */
+
+.mpi-dropdown--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}

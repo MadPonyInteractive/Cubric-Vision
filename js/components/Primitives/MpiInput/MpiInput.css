@@ -71,6 +71,29 @@
     margin-left: 2px;
 }
 
+/* ── Read-only ────────────────────────────────────────────────────────────── */
+
+.mpi-input--readonly .mpi-input__field {
+    cursor: default;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--border-soft);
+    color: var(--text-2);
+}
+
+.mpi-input--readonly .mpi-input__field:focus {
+    border-color: var(--border-soft);
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Auto-height textarea ─────────────────────────────────────────────────── */
+
+.mpi-input__field--auto-height {
+    resize: none;
+    overflow: hidden;
+    min-height: 2.6rem;
+}
+
 /* ── Specific Types ────────────────────────────────────────────────────────── */
 input[type="number"].mpi-input__field::-webkit-inner-spin-button,
 input[type="number"].mpi-input__field::-webkit-outer-spin-button {

@@ -17,6 +17,8 @@ import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { MpiSpinner } from '../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
+import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
@@ -27,7 +29,6 @@ import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiDropdown } from '../components/Compounds/MpiDropdown/MpiDropdown.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -432,6 +433,70 @@ function mountAll() {
     mount('preview-input-email', () => MpiInput.mount(slot('preview-input-email'), { type: 'email', label: 'Email Address', placeholder: 'user@example.com', info: 'Email type input' }));
     mount('preview-input-password', () => MpiInput.mount(slot('preview-input-password'), { type: 'password', label: 'Password', placeholder: '••••••••', info: 'Password masking' }));
     mount('preview-input-number', () => MpiInput.mount(slot('preview-input-number'), { type: 'number', label: 'Quantity', value: 42, info: 'Numeric input' }));
+    mount('preview-input-readonly', () => MpiInput.mount(slot('preview-input-readonly'), { type: 'text', label: 'Read-only Field', value: 'Cannot edit this', readonly: true, info: 'readonly prop' }));
+    mount('preview-input-autoheight', () => MpiInput.mount(slot('preview-input-autoheight'), { type: 'textarea', label: 'Auto-height Textarea', placeholder: 'Type here to grow...', autoHeight: true, info: 'autoHeight prop' }));
+
+    // ── MpiDropdown (Primitive) ───────────────────────────────────────────────
+    mount('preview-prim-dropdown-down', () => {
+        const dd = MpiDropdown.mount(slot('preview-prim-dropdown-down'), {
+            options: ['Option A', 'Option B', 'Option C', 'Option D'],
+            placeholder: 'Choose...',
+            direction: 'down',
+        });
+        dd.on('change', ({ value }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `Dropdown (Primitive): ${value}`;
+        });
+    });
+
+    mount('preview-prim-dropdown-up', () => {
+        const dd = MpiDropdown.mount(slot('preview-prim-dropdown-up'), {
+            options: ['Red', 'Green', 'Blue', 'Cyan', 'Magenta'],
+            value: 'Green',
+            direction: 'up',
+        });
+        dd.on('change', ({ value }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `Dropdown (Primitive) up: ${value}`;
+        });
+    });
+
+    mount('preview-prim-dropdown-disabled', () => {
+        MpiDropdown.mount(slot('preview-prim-dropdown-disabled'), {
+            options: ['Alpha', 'Beta'],
+            placeholder: 'Disabled',
+            disabled: true,
+        });
+    });
+
+    // ── MpiRadioGroup (Primitive) ─────────────────────────────────────────────
+    mount('preview-radio-group-default', () => {
+        const rg = MpiRadioGroup.mount(slot('preview-radio-group-default'), {
+            options: ['Camera', 'Lighting', 'Style'],
+            value: 'Camera',
+            name: 'config-tab',
+        });
+        rg.on('select', ({ value }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `RadioGroup select: ${value}`;
+        });
+    });
+
+    mount('preview-radio-group-values', () => {
+        const rg = MpiRadioGroup.mount(slot('preview-radio-group-values'), {
+            options: [
+                { label: '16:9', value: '16_9' },
+                { label: '4:3',  value: '4_3'  },
+                { label: '1:1',  value: '1_1'  },
+            ],
+            value: '16_9',
+            name: 'aspect-ratio',
+        });
+        rg.on('select', ({ value }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `RadioGroup (obj options): ${value}`;
+        });
+    });
 
     // ── MpiBadge ──────────────────────────────────────────────────────────────
     mount('preview-badge-variants', () => {
@@ -503,33 +568,6 @@ function mountAll() {
         sel.on('change', (data) => console.log('[gallery] video ratio change:', data));
     });
 
-    // ── MpiDropdown (Compound) ────────────────────────────────────────────────────
-    mount('preview-dropdown-top', () => {
-        const dd = MpiDropdown.mount(slot('preview-dropdown-top'), {
-            label: 'Choose Option',
-            titles: ['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5'],
-            position: 'top',
-            maxHeight: '150px',
-        });
-        dd.on('select', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
-            if (infoBar) infoBar.textContent = `Dropdown Select: ${value}`;
-        });
-    });
-
-    mount('preview-dropdown-bottom', () => {
-        const dd = MpiDropdown.mount(slot('preview-dropdown-bottom'), {
-            label: 'Custom Icon)',
-            titles: ['Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta'],
-            position: 'bottom',
-            maxHeight: '150px',
-            icon: 'download'
-        });
-        dd.on('select', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
-            if (infoBar) infoBar.textContent = `Dropdown Select: ${value}`;
-        });
-    });
 
     // ── MpiPromptBox (Compound) ────────────────────────────────────────────────
     mount('preview-promptbox-standard', () => {

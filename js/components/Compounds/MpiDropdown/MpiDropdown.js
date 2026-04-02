@@ -6,6 +6,9 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 /**
  * MpiDropdown — Block Component
  * 
+ * WARNING: This is a legacy component scheduled for deletion
+ * Update js/provisioning.js before deleting!!!
+ * 
  * A custom dropdown leveraging MpiButton as trigger and MpiPopup as container.
  */
 export const MpiDropdown = ComponentFactory.create({
@@ -55,7 +58,7 @@ export const MpiDropdown = ComponentFactory.create({
             e.stopPropagation();
             props.showPopup = !props.showPopup;
             popupEl.classList.toggle('is-active', props.showPopup);
-            
+
             const btn = trigger.querySelector('.mpi-btn');
             if (btn) btn.classList.toggle('is-active', props.showPopup);
         });
@@ -71,7 +74,7 @@ export const MpiDropdown = ComponentFactory.create({
                     const value = data.value;
                     const labelEl = el.querySelector('.mpi-ibtn__label');
                     if (labelEl) labelEl.textContent = value;
-                    
+
                     emit('select', { value });
 
                     // Auto-close (Dropdown is usually single-select and closes on choice)
