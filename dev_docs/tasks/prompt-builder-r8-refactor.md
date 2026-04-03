@@ -39,7 +39,45 @@
 - [x] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding these new components
 ---
 
-## Phase 3: Main Orchestration (Tier 3 - Block)
+## Phase 3.1: Update Components
+*Target: js/components/Compounds/*
+- [x] **MpiToolbar**: Add a optional area to the Left Side of dropdown containing:
+    - Optional MpiBadge `Title`
+    - Optional `Model` strenght with MpiBadge on top and MpiInput (number) on bottom
+    - Optional `Clip` strenght with MpiBadge on top and MpiInput (number) on bottom
+- [x] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new variant
+
+## Phase 3.2: New Components
+*Target: js/components/Primitives/*
+- [ ] **Ovelay**: Primitive main area Overlay with:
+    - `X` icon on top right to close
+    - Large MpiIcon on top centre
+    - Large Title MpiBadge
+    - Small Text MpiBadge
+    - `container` that takes in components
+    - MpiBadge Small 
+    Side bar, status bar and app header remain visible (occupies main area only)
+*Target: js/components/Compounds/*
+- [ ] **MpiOkCancel**: Compound  with:
+    - MpiBadge
+    - optional MpiInput field
+    - `OK` MpiButton
+    - optional `Cancel` MpiButon
+- [ ] **MpiInstalledDisplay**: Container with:
+    - Title MpiBadge on top left
+    - Small MpiBadge on top right
+    - Text area
+    - MpiIcon and MpiBadge
+    - MpiBadge `Installed`
+    - Optional MpiButton on left `Delete Models` (toggle) 
+    - MpiButton on right `Delete`
+
+
+## Phase 4: Overlay pages
+- [ ] Download Manager
+- [ ] Advanced Settings
+
+## Phase 5: Main Orchestration (Tier 3 - Block)
 *Target: js/components/Blocks/*
 
 - [ ] **MpiPromptBuilder**: The top-level tool orchestrator.

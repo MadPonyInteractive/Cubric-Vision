@@ -22,6 +22,13 @@ export const qs = (sel, root = document) => root.querySelector(sel);
 export const qsa = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /**
+ * Shorthand for getElementById.
+ * @param {string} id
+ * @returns {HTMLElement|null}
+ */
+export const gid = (id) => document.getElementById(id);
+
+/**
  * Convenience addEventListener. Returns a cleanup function.
  * @param {EventTarget} el
  * @param {string} event
@@ -41,3 +48,25 @@ export const on = (el, event, fn, opts) => {
  * @param {Function} fn
  */
 export const off = (el, event, fn) => el.removeEventListener(event, fn);
+
+/**
+ * Shorthand for document.createElement with optional properties and children.
+ * @param {string} tag
+ * @param {Object} [props] - Properties to assign (e.g. { className, id, onclick })
+ * @param {Array|Node|string} [children] - Child nodes, text, or an array of both
+ * @returns {HTMLElement}
+ * Usage:
+const myBtn = ce('button', { 
+    className: 'primary', 
+    onclick: () => console.log('click') 
+}, 'Click Me');
+ */
+export const ce = (tag, props, children) => {
+    const el = document.createElement(tag);
+    if (props) Object.assign(el, props);
+    if (children) {
+        if (Array.isArray(children)) el.append(...children.filter(Boolean));
+        else el.append(children);
+    }
+    return el;
+};

@@ -608,19 +608,18 @@ function mountAll() {
 
     mount('preview-toolbar-default', () => {
         // Correct pattern: Mount first, then attach listeners, then pass to parent
-        const save = MpiButton.mount(document.createElement('div'), { icon: 'save', info: 'Save current settings as a preset', size: 'sm', variant: 'ghost' });
+        const save = MpiButton.mount(document.createElement('div'), { icon: 'download', info: 'Save current settings as a preset', size: 'sm', variant: 'ghost' });
         save.on('click', () => {
             console.log('[gallery] toolbar save clicked');
             Events.emit('media:updated', { msg: 'Preset saved to library', type: 'success' });
         });
 
-        const trash = MpiButton.mount(document.createElement('div'), { icon: 'trash', info: 'Delete selected preset', size: 'sm', variant: 'ghost' });
+        const trash = MpiButton.mount(document.createElement('div'), { icon: 'edit', info: 'Delete selected preset', size: 'sm', variant: 'ghost' });
         trash.on('click', () => console.log('[gallery] toolbar delete'));
 
         const tb = MpiToolbar.mount(slot('preview-toolbar-default'), {
-            presets: ['Cinematic Look', 'Portrait Mode', 'Action Shot'],
-            value: 'Cinematic Look',
-            placeholder: 'Select preset...',
+            presets: ['Wokflow A', 'Workflow B'],
+            value: 'Wokflow A',
             comps: [save, trash]
         });
 
@@ -641,6 +640,35 @@ function mountAll() {
         });
         tb.on('save', () => console.log('[gallery] toolbar save (default)'));
         tb.on('delete', () => console.log('[gallery] toolbar delete (default)'));
+    });
+
+    mount('preview-toolbar-left-area', () => {
+        const tb = MpiToolbar.mount(slot('preview-toolbar-left-area'), {
+            title: 'Generation',
+            model: { value: 0.75 },
+            clip: { value: 0.50 },
+            presets: ['None', 'Model A', 'Model B'],
+            value: 'None',
+            placeholder: 'None',
+            comps: []
+        });
+
+        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
+        tb.on('modelChange', ({ value }) => console.log('[gallery] model strength changed:', value));
+        tb.on('clipChange', ({ value }) => console.log('[gallery] clip strength changed:', value));
+    });
+
+    mount('preview-toolbar-strengths-only', () => {
+        const tb = MpiToolbar.mount(slot('preview-toolbar-strengths-only'), {
+            model: { value: 1.00 },
+            clip: { value: 0.00 },
+            presets: ['Model A', 'Model B'],
+            placeholder: 'None'
+        });
+
+        tb.on('modelChange', ({ value }) => console.log('[gallery] model strength:', value));
+        tb.on('clipChange', ({ value }) => console.log('[gallery] clip strength:', value));
+        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
     });
 
     // ── MpiCameraConfig (Compound) ────────────────────────────────────────────
