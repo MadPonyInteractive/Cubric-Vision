@@ -40,6 +40,7 @@ import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoSce
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
 import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
+import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -289,6 +290,15 @@ function mountAll() {
             if (infoBar) infoBar.textContent = deep ? 'Deep clean triggered (gallery demo)' : 'VRAM release triggered (gallery demo)';
             console.log('[gallery] memory monitor release:', { deep });
         });
+    });
+
+    // ── MpiProjectName (Compound) ────────────────────────────────────────────
+    mount('preview-project-name', () => {
+        const pn = MpiProjectName.mount(slot('preview-project-name'), {
+            projectName: 'My Cool Project',
+            pageName: 'Image',
+        });
+        pn.on('back', () => console.log('[gallery] project name back clicked'));
     });
 
     // ── MpiOverlay (Primitive) ────────────────────────────────────────────────

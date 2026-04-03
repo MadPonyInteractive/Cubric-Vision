@@ -163,7 +163,7 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         /** Hide the radial menu */
         function _hide() {
-            if (!_visible) return;
+            if (!_visible && !el.classList.contains('mpi-radial--visible')) return;
             _visible = false;
             _locked  = false;
             el.classList.remove('mpi-radial--visible');
@@ -233,7 +233,12 @@ export const MpiRadialMenu = ComponentFactory.create({
         // ── Initial state ───────────────────────────────────────────────────────
 
         if (props.open) {
-            _show();
+            // Auto-open on workspace entry: render and show visually, but keep
+            // _visible=false so the first Tab-down can properly pick up state.
+            // The first Tab-release will hide it; all subsequent Tab-holds work normally.
+            _render();
+            el.classList.add('mpi-radial--visible');
+            emit('open', {});
         } else {
             el.classList.add('mpi-radial--hidden');
         }
