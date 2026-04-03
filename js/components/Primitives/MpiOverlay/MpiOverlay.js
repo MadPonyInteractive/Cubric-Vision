@@ -69,7 +69,7 @@ export const MpiOverlay = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        let _savedContent = null;
+        let _stash = null;
         let _toolContainer = null;
 
         /**
@@ -79,9 +79,20 @@ export const MpiOverlay = ComponentFactory.create({
         const _doShow = () => {
              _toolContainer = document.getElementById('tool-container');
              if (!_toolContainer) return;
-             // Save and clear the current tool content
-             _savedContent = Array.from(_toolContainer.childNodes);
-             _toolContainer.innerHTML = '';
+
+             // 1. Create a hidden stash container to keep existing nodes alive in the document
+             // This prevents portaled components (Popups, Dropdowns) from unmounting/destroying portals
+             _stash = document.createElement('div');
+             _stash.style.display = 'none';
+             _stash.classList.add('mpi-overlay-stash');
+
+             // 2. Move all current children to the stash
+             while (_toolContainer.firstChild) {
+                 _stash.appendChild(_toolContainer.firstChild);
+             }
+
+             // 3. Mount the stash and the overlay itself
+             _toolContainer.appendChild(_stash);
              _toolContainer.appendChild(el);
         };
 
@@ -102,12 +113,19 @@ export const MpiOverlay = ComponentFactory.create({
          */
         el.hide = () => {
             if (!_toolContainer) return;
+
+            // 4. Remove this overlay
             if (el.parentNode === _toolContainer) {
                 _toolContainer.removeChild(el);
             }
-            if (_savedContent) {
-                _savedContent.forEach(node => _toolContainer.appendChild(node));
-                _savedContent = null;
+
+            // 5. Restore siblings from the stash
+            if (_stash && _stash.parentNode === _toolContainer) {
+                while (_stash.firstChild) {
+                    _toolContainer.appendChild(_stash.firstChild);
+                }
+                _toolContainer.removeChild(_stash);
+                _stash = null;
             }
 
             // Signal the OverlayManager that we are done
@@ -131,5 +149,17 @@ export const MpiOverlay = ComponentFactory.create({
                 emit('close', {});
             });
         }
+
+        // ── Safety Release ───────────────────────────────────────────────────
+        // If the overlay is removed from the DOM unceremoniously (e.g. by navigation
+        // logic clearing #tool-container), we must notify OverlayManager to release 
+        // the queue, otherwise the app "locks" because it thinks an overlay is active.
+        const unmountObserver = new MutationObserver(() => {
+            if (!document.contains(el)) {
+                Overlays.release(el);
+                unmountObserver.disconnect();
+            }
+        });
+        unmountObserver.observe(document.body, { childList: true, subtree: true });
     }
 });

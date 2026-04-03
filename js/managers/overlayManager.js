@@ -110,8 +110,14 @@ class OverlayManager {
      */
     _setActive(instance) {
         this._active = instance;
+
+        // Force-close any unmanaged floating UI (Popups, Dropdowns, etc.)
+        Events.emit('ui:close-all-popups');
+
         try {
-            instance.show();
+            if (typeof instance.show === 'function') {
+                instance.show();
+            }
         } catch (err) {
             console.error('[Overlays] Error showing overlay:', err);
             this._active = null;

@@ -61,6 +61,8 @@
     - Small Text 
     - `container` that takes in components
     - Small Text 
+    *   **Architecture**: Uses the **Stash Pattern**. Moves current tool DOM into a hidden container instead of clearing it, preserving background state and portaled popups.
+    *   **Management**: Registers with `OverlayManager` for queueing and emits/listens for global close events.
     Side bar, status bar and app header remain visible (occupies main area only)
     ***Update Component Gallery***: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new component (use a MpiButton to trigger the overlay and add a MpiBadge to the overlay container for display purposes)
 *Target: js/components/Compounds/*
@@ -79,12 +81,21 @@
     - Optional MpiButton on left `Delete Models` (toggle) 
     - MpiButton on right `Delete`
 
-## Phase 4: Overlay pages 
-*Target: js/components/Blocks/*
-- [ ] Download Manager
-- [ ] Advanced Settings
 
-## Phase 5: Main Orchestration (Tier 3 - Block)
+## Phase 4: Overlay pages (Foundation Complete)
+*Target: js/components/Blocks/*
+- [ ] **Download Manager**: Refactor `provisioning.js` logic into an `MpiOverlay` block.
+- [ ] **Advanced Settings**: Refactor `provisioning.js` logic into an `MpiOverlay` block.
+*   **Requirement**: Must use `MpiOverlay.show()` to ensure background tool persistence.
+*   **Requirement**: Must listen for `ui:close-all-popups` to clean up sub-page selectors.
+
+## Phase 5: Media Previewer
+*Target: js/components/Blocks/*
+## Phase 6: Media Gallery
+*Target: js/components/Blocks/*
+
+
+## Phase 7: Main Orchestration (Tier 3 - Block)
 *Target: js/components/Blocks/*
 
 - [ ] **MpiPromptBuilder**: The top-level tool orchestrator.
@@ -100,7 +111,7 @@
 - [ ] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new component
 ---
 
-## Phase 4: Integration & Deletion (Cleanup)
+## Phase 8: Integration & Deletion (Cleanup)
 - [ ] **Router Update**: Update `js/toolRegistry.js` to mount the `MpiPromptBuilder` Block.
 - [ ] **`elements.js` Cleanup**: Delete all `pb-` and `pe-` element references once encapsulated.
 - [ ] **`formBuilder.js` Retirement**: Deprecate the legacy procedural form builder once all tools are converted to R8 Compounds.

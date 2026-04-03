@@ -17,6 +17,11 @@
     animation: mpi-overlay-fadein 0.3s ease-out both;
 }
 
+/* ── Stash: hidden container for background tool nodes ─────── */
+.mpi-overlay-stash {
+    display: none !important;
+}
+
 @keyframes mpi-overlay-fadein {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0);    }

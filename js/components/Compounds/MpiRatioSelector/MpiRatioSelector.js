@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { Events } from '../../../events.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
@@ -107,11 +108,17 @@ export const MpiRatioSelector = ComponentFactory.create({
         // contexts that would otherwise clip or misposition the fixed popup.
         document.body.appendChild(popupEl);
 
+        // Force-dismiss from global bus
+        const unsub = Events.on('ui:close-all-popups', () => {
+            if (props.showPopup) closePopup();
+        });
+
         // Remove portal node when this component is removed from the DOM.
         const domObserver = new MutationObserver(() => {
             if (!document.contains(el)) {
                 if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
                 domObserver.disconnect();
+                unsub(); // Cleanup bus subscription
             }
         });
         domObserver.observe(document.body, { childList: true, subtree: true });

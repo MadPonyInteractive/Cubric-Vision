@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { Events } from '../../../events.js';
 
 /**
  * MpiPopup — Floating container primitive
@@ -86,12 +87,22 @@ export const MpiPopup = ComponentFactory.create({
         });
         classObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
 
+        // Force-dismiss from global bus
+        const unsub = Events.on('ui:close-all-popups', () => {
+            if (props.active) {
+                props.active = false;
+                el.classList.remove('is-active');
+                emit('close', {});
+            }
+        });
+
         // Remove portal node when the original anchor leaves the DOM.
         const domObserver = new MutationObserver(() => {
             if (!document.contains(anchor)) {
                 if (el.parentNode) el.parentNode.removeChild(el);
                 classObserver.disconnect();
                 domObserver.disconnect();
+                unsub(); // Cleanup bus subscription
             }
         });
         domObserver.observe(document.body, { childList: true, subtree: true });

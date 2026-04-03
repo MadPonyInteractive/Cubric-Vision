@@ -29,63 +29,44 @@ The system is built on a **3-Tier Hierarchy** following Atomic Design principles
 
 ---
 
-## 🛠️ How to Implement a Component
+## 🛠️ How to Implement a Component (The Low-Effort Way)
 
-### 1. Structure
-Every component must live in its own directory within `js/components/[Tier]/[ComponentName]/`.
-```
-MyComponent/
-  ├── MyComponent.js    <-- Blueprint, Template, and Logic
-  └── MyComponent.css   <-- Scoped Styles (using BEM naming)
-```
+To add a new feature, follow this minimalist 3-step checklist:
 
-### 2. The Blueprint (`ComponentFactory`)
-All components use the central engine at `js/components/factory.js`.
+### 1. Create your files
+In `js/components/[Tier]/[ComponentName]/`:
+- `[Name].js`: Your logic and template.
+- `[Name].css`: Your styles (use BEM, like `.mpi-btn--neon`).
+
+### 2. Export the Blueprint
+Use the `ComponentFactory` to define your component.
 
 ```javascript
 import { ComponentFactory } from '../../factory.js';
 
 export const MyComponent = ComponentFactory.create({
     name: 'MyComponent',
-    // Template: Return a string. Logic is bound in setup.
-    template: (props, children) => `
-        <div class="mpi-comp mpi-comp--${props.variant}">
-            ${props.text}
-        </div>
-    `,
-    // CSS: Handled by the factory to avoid duplicate injections
-    css: ['js/components/Primitives/MyComponent/MyComponent.css'],
-    // Setup: Attach DOM events and logic here
+    css: ['js/components/[Tier]/MyComponent/MyComponent.css'],
+    template: (props) => `<div class="mpi-my-comp">${props.text}</div>`,
     setup: (el, props, emit) => {
-        el.onclick = () => emit('action', { value: props.val });
+        // Logic here. Infrastructure is handled globally.
     }
 });
 ```
 
-### 3. JSDoc Types
-Add all component properties to `js/components/types.js`. This allows other agents to understand your component's API via a single, low-token file.
-
-### 4. Update CSS Preloader
-To prevent **FOUC** (Flash of Unstyled Content) during app startup, you **MUST** add your component's CSS path to the `preloadComponentStyles()` function in `js/shell.js`.
-
-```javascript
-// js/shell.js
-function preloadComponentStyles() {
-    const paths = [
-        // ... existing paths
-        'js/components/[Tier]/MyComponent/MyComponent.css', // <-- ADD YOURS HERE
-    ];
-    // ...
-}
-```
+### 3. Registry update
+- **Vitals**: Add the CSS path to `js/shell.js` to prevent flickering.
+- **Intellisense**: Add a quick JSDoc prop definition in `js/components/types.js` so AI agents can use it correctly.
 
 ---
 
-## 🔗 Communication Protocol
+## 🔗 Simplified Life-Cycle Management (Persistence)
 
-Components use a **Dual-Event System**:
-1.  **Direct (`on`)**: Use `instance.on('event', cb)` for parent-to-child communication.
-2.  **Bubbling (`CustomEvent`)**: Every `emit` also triggers a standard DOM event (e.g., `mycomponent:action`) that bubbles up. This allows **Page-Level Delegation** in the tool's `.js` or `.events.js` file.
+You no longer need to worry about background state or manual DOM purging. 
+
+- **Page Overlays**: Use `MpiOverlay.mount()`. It uses the **Stash Pattern** to keep background tools alive in the DOM without them being visible.
+- **Portals (Popups)**: Use `MpiPopup`. It cleans itself up automatically if its anchor is truly deleted, but survives "Stashing".
+- **Global Reset**: All popups/dropdowns close automatically when a blocking UI opens (via the `ui:close-all-popups` event).
 
 ## 🎨 Styling Standards (BEM)
 
@@ -130,6 +111,54 @@ el.hide = () => {
     // Release the queue so the next overlay can show
     Overlays.release(el); 
 };
+```
+
+### 3. Floating UI & Popups (`ui:close-all-popups`)
+Any component that portals to `document.body` (Popups, Dropdowns, Selectors) **MUST** listen for the global `ui:close-all-popups` event. This ensures that floating elements don't remain visible when a blocking overlay or modal is opened.
+
+```javascript
+import { Events } from '../../../events.js';
+
+setup: (el, props, emit) => {
+    const unsub = Events.on('ui:close-all-popups', () => {
+        if (props.show) hideMyPopup(); // Logic to close your floating UI
+    });
+    
+    // IMPORTANT: Cleanup subscription when component is destroyed
+    // See "Lifecycle & Portal Persistence" below.
+}
+```
+
+---
+
+## 🔄 Lifecycle & Portal Persistence
+
+Because MpiAiSuite tools often swap large portions of the DOM (e.g., `MpiOverlay` replacing the tool area), components must distinguish between **temporary detachment** and **permanent removal**.
+
+### 1. The Stash Pattern (For Overlays)
+When an overlay or tool-switcher clears a container, it **MUST NOT** use `.innerHTML = ''`. Instead, it should "stash" existing nodes in a hidden container to keep their lifecycle observers and portals alive.
+
+```javascript
+// Correct way to "clear" a container for an overlay
+const _stash = document.createElement('div');
+_stash.style.display = 'none';
+while (container.firstChild) _stash.appendChild(container.firstChild);
+container.appendChild(_stash);  // Keeps nodes in document.contains()
+container.appendChild(overlayEl);
+```
+
+### 2. Portal Cleanup (MutationObserver)
+Components that append elements to `document.body` (Portals) must use a `MutationObserver` to clean up their body-level nodes. However, they should only trigger cleanup if their **own anchor/trigger** is truly gone from the document.
+
+```javascript
+const observer = new MutationObserver(() => {
+    if (!document.contains(anchorEl)) {
+        portalNode.remove(); // Permanent cleanup
+        observer.disconnect();
+        unsubBus(); // Cleanup any Events.on listeners
+    }
+});
+observer.observe(document.body, { childList: true, subtree: true });
 ```
 
 ---
