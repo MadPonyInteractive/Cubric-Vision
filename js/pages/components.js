@@ -37,6 +37,7 @@ import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/Mpi
 import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleConfig.js';
 import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -929,6 +930,45 @@ function mountAll() {
             console.log('[gallery] MpiOkCancel OK clicked');
             closeDialog();
         });
+    });
+
+    // ── MpiInstalledDisplay (Compound) ────────────────────────────────────────
+    mount('preview-installed-display-full', () => {
+        const slotEl = slot('preview-installed-display-full');
+        const wrap = document.createElement('div');
+        wrap.style.width = '340px';
+        slotEl.appendChild(wrap);
+        const inst = MpiInstalledDisplay.mount(wrap, {
+            title: 'SDXL (Uncensored)',
+            meta: '13.75GB REQUIRED',
+            text: 'A NSFW SDXL-based workflow using the Lustify V7 for fast generations and the official SDXL Refiner for higher quality images.',
+            icon: 'info',
+            iconText: '8GB VRAM REQUIRED',
+            iconColor: 'danger',
+            showDeleteModels: true,
+            deleteModelsActive: false,
+            deleteLabel: 'Uninstall'
+        });
+        inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay delete clicked'));
+        inst.on('deleteModels', ({ active }) => console.log('[gallery] MpiInstalledDisplay deleteModels:', active));
+    });
+
+    mount('preview-installed-display-simple', () => {
+        const slotEl = slot('preview-installed-display-simple');
+        const wrap = document.createElement('div');
+        wrap.style.width = '340px';
+        slotEl.appendChild(wrap);
+        const inst = MpiInstalledDisplay.mount(wrap, {
+            title: 'Flux Dev',
+            meta: '23.8GB REQUIRED',
+            text: 'The standard Flux Dev model for high-quality text-to-image generation at various resolutions.',
+            icon: 'info',
+            iconText: '16GB VRAM REQUIRED',
+            iconColor: 'danger',
+            showDeleteModels: false,
+            deleteLabel: 'Uninstall'
+        });
+        inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay simple delete clicked'));
     });
 }
 

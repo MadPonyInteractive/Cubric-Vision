@@ -70,7 +70,7 @@
     - optional MpiInput field
     - `OK` MpiButton
     - optional `Cancel` MpiButon
-***task 3*** - [ ] **MpiInstalledDisplay**: Compound Container with:
+***task 3*** - [x] **MpiInstalledDisplay**: Compound Container with:
     - Title Text on top left
     - Small text on top right
     - Text area
@@ -79,8 +79,8 @@
     - Optional MpiButton on left `Delete Models` (toggle) 
     - MpiButton on right `Delete`
 
-
-## Phase 4: Overlay pages
+## Phase 4: Overlay pages 
+*Target: js/components/Blocks/*
 - [ ] Download Manager
 - [ ] Advanced Settings
 

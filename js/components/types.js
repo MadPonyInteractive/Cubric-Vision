@@ -309,6 +309,24 @@
  */
 
 /**
+ * @typedef {Object} MpiInstalledDisplayProps (Compound — js/components/Compounds/MpiInstalledDisplay)
+ * @property {string} [title='']          - Title text on the top-left
+ * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
+ * @property {string} [text='']           - Descriptive body text
+ * @property {string} [icon='info']       - MpiIcon registry key for the info row
+ * @property {string} [iconText='']       - Text shown next to the icon
+ * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Info icon size
+ * @property {'muted'|'accent'|'primary'|'danger'|'success'} [iconColor='danger'] - Info icon color
+ * @property {boolean} [showDeleteModels=false]  - Show the optional Delete Models toggle button
+ * @property {boolean} [deleteModelsActive=false] - Initial active state of Delete Models toggle
+ * @property {string} [deleteLabel='Uninstall']  - Label for the right action button
+ *
+ * Emits:
+ * 'delete'       {}                  — Uninstall/Delete button clicked
+ * 'deleteModels' { active: boolean } — Delete Models toggle changed
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

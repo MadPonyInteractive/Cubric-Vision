@@ -123,6 +123,7 @@ export async function initShell() {
     'js/components/Compounds/MpiStyleConfig/MpiStyleConfig.css',
     'js/components/Compounds/MpiVideoScene/MpiVideoScene.css',
     'js/components/Compounds/MpiOkCancel/MpiOkCancel.css',
+    'js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css',
 
     // Blocks
     'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css'

@@ -1,0 +1,90 @@
+/* ── MpiInstalledDisplay ─────────────────────────────────────────────────── */
+
+.mpi-installed-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+/* ── Header row: Title left, Meta right ─────────────────────────────────── */
+.mpi-installed-display__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.mpi-installed-display__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.mpi-installed-display__meta {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+/* ── Text body ───────────────────────────────────────────────────────────── */
+.mpi-installed-display__text {
+    font-size: 0.875rem;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+
+/* ── Info row: icon + text ───────────────────────────────────────────────── */
+.mpi-installed-display__info-row {
+    display: flex;
+}
+
+.mpi-installed-display__info-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.mpi-installed-display__icon-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-3);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+/* ── Badge row ───────────────────────────────────────────────────────────── */
+.mpi-installed-display__badge-row {
+    display: flex;
+}
+
+/* Stretch the badge to fill full width */
+.mpi-installed-display__badge-row .mpi-badge {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border-radius: var(--radius-sm);
+}
+
+/* ── Actions row ─────────────────────────────────────────────────────────── */
+.mpi-installed-display__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+}
+
+.mpi-installed-display__spacer {
+    flex: 1;
+}
