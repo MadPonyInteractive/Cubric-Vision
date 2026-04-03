@@ -3,11 +3,14 @@
 **Goal**: Systematically migrate the Legacy Prompt Builder (Stage 11) to the new R8 Component Architecture using the `ComponentFactory`, strictly following the **Primitive > Compound > Block** hierarchy.
 
 # 🤖 IMPORTANT for agents 
-## Must Read: `dev_docs/05_components.md`
+## CRITICAL Must Read: `dev_docs/05_components.md`
 ## Use JSDocs extensively
+## Use the `styles/01_base.css` as the source of thruth for styles
+## USe `js/utils/dom.js` for shorthands
 ## Ask questions if goal not clear
 ## Work on your assigned phase but the read the other phases for context
 ## use `js/utils/` where appropriate
+## Do not commit git
 ---
 
 ## Phase 1: Primitives Expansion (Tier 1 - No Dependencies)
@@ -49,25 +52,27 @@
 
 ## Phase 3.2: New Components
 *Target: js/components/Primitives/*
-- [ ] **Ovelay**: Primitive main area Overlay with:
+***task 1*** - [x] **Ovelay**: Primitive main area Overlay with:
     - `X` icon on top right to close
     - Large MpiIcon on top centre
-    - Large Title MpiBadge
-    - Small Text MpiBadge
+    - Large Title 
+    - Small Text 
     - `container` that takes in components
-    - MpiBadge Small 
+    - Small Text 
     Side bar, status bar and app header remain visible (occupies main area only)
+    ***Update Component Gallery***: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new component (use a MpiButton to trigger the overlay and add a MpiBadge to the overlay container for display purposes)
 *Target: js/components/Compounds/*
-- [ ] **MpiOkCancel**: Compound  with:
-    - MpiBadge
+***task 2*** - [ ] **MpiOkCancel**: Compound  with:
+    - Large Title
+    - Text area
     - optional MpiInput field
     - `OK` MpiButton
     - optional `Cancel` MpiButon
-- [ ] **MpiInstalledDisplay**: Container with:
-    - Title MpiBadge on top left
-    - Small MpiBadge on top right
+***task 3*** - [ ] **MpiInstalledDisplay**: Container with:
+    - Title Text on top left
+    - Small text on top right
     - Text area
-    - MpiIcon and MpiBadge
+    - MpiIcon and text
     - MpiBadge `Installed`
     - Optional MpiButton on left `Delete Models` (toggle) 
     - MpiButton on right `Delete`

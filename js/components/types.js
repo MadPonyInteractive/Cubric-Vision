@@ -213,15 +213,6 @@
  * @property {number} [duration=3000] - Auto-hide duration in ms
  */
 
-
-
-
-
-
-
-
-
-
 /**
  * @typedef {Object} MpiToolbarProps (Compound — js/components/Compounds/MpiToolbar)
  * @property {Array<string|{label:string,value:string}>} [presets=[]] - Saved preset list
@@ -281,6 +272,24 @@
  * @property {string} [movement='']    - Camera movement
  * @property {string} [speed='']       - Playback speed modifier
  * @property {number} [duration=5]     - Shot duration in seconds (1–30)
+ */
+
+/**
+ * @typedef {Object} MpiOverlayProps (Primitive — js/components/Primitives/MpiOverlay)
+ * @property {string}   [icon='info']   - MpiIcon registry key shown at top centre
+ * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='xl'] - Icon size
+ * @property {string}   [title='']      - Large title text
+ * @property {string}   [text='']       - Small descriptive text shown above the container slot
+ * @property {string}   [footer='']     - Small text shown below the container slot
+ * @property {boolean}  [closable=true] - Show the X close button
+ *
+ * Instance methods (on instance.el):
+ *   show()  — injects the overlay into #tool-container, saving prior content
+ *   hide()  — removes overlay and restores prior tool-container content
+ *   appendToContainer(el: HTMLElement) — append a child element into the container slot
+ *
+ * Emits:
+ * 'close' {} — X button clicked (hide() called automatically)
  */
 
 /**

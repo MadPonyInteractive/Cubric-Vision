@@ -25,6 +25,7 @@ import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiM
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js';
+import { MpiOverlay } from '../components/Primitives/MpiOverlay/MpiOverlay.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
@@ -274,6 +275,40 @@ function mountAll() {
     mount('preview-vol-control', () => {
         const vc = MpiVolumeControl.mount(slot('preview-vol-control'), { volume: 0.5 });
         vc.on('change', ({ volume, muted }) => console.log('[gallery] volume control change:', { volume, muted }));
+    });
+
+    // ── MpiOverlay (Primitive) ────────────────────────────────────────────────
+    mount('preview-overlay-default', () => {
+        const slotEl = slot('preview-overlay-default');
+
+        // Trigger button shown in the gallery card
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'layers',
+            label: 'Open Overlay',
+            variant: 'primary',
+            info: 'Click to show the MpiOverlay — replaces the main area'
+        });
+
+        // Overlay — created once; show()/hide() swaps it into #tool-container
+        const overlayWrap = document.createElement('div');
+        document.body.appendChild(overlayWrap); // detached holder, not rendered here
+        const overlay = MpiOverlay.mount(overlayWrap, {
+            icon: 'download',
+            title: 'Download Manager',
+            text: 'Select a model pack to install. Required files will be fetched automatically.',
+            footer: 'Models are stored locally and never shared.',
+            closable: true
+        });
+
+        // Add a MpiBadge into the overlay container slot for demo purposes
+        const badgeWrap = document.createElement('div');
+        overlay.el.appendToContainer(badgeWrap);
+        MpiBadge.mount(badgeWrap, { label: 'Installed', variant: 'success', pill: true });
+
+        btn.on('click', () => overlay.el.show());
+        overlay.on('close', () => console.log('[gallery] overlay closed'));
     });
 
     // ── MpiDragList (Primitive) ─────────────────────────────────────────────────
