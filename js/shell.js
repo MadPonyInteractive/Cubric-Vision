@@ -26,6 +26,7 @@ import { unloadModel } from './llmService.js';
 import { initShaderBackground, stopShaderBackground } from './components/shaderBackground.js';
 import { ComfyUIController } from './comfyController.js';
 import { Hotkeys } from './managers/hotkeyManager.js';
+import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const pageLanding        = document.getElementById('page-landing');
@@ -33,28 +34,19 @@ const appShell           = document.getElementById('app-shell');
 const toolContainer      = document.getElementById('tool-container');
 const titlebarProjectName = document.getElementById('titlebar-project-name');
 const projectGrid        = document.getElementById('projectGrid');
-
-// Memory Monitoring
-const vramBarFill = document.getElementById('vramBarFill');
-const ramBarFill  = document.getElementById('ramBarFill');
-const vramValue   = document.getElementById('vramValue');
-const ramValue    = document.getElementById('ramValue');
+const monitorMount       = document.getElementById('memory-monitor-mount');
 
 // Landing
 const newProjectBtn = document.getElementById('newProjectBtn');
 
 // Modal – New Project
-const newProjectModal    = document.getElementById('newProjectModal');
+const newProjectModal      = document.getElementById('newProjectModal');
 const closeNewProjectModal = document.getElementById('closeNewProjectModal');
 const cancelNewProjectBtn  = document.getElementById('cancelNewProjectBtn');
 const confirmNewProjectBtn = document.getElementById('confirmNewProjectBtn');
-const newProjectName     = document.getElementById('newProjectName');
-const newProjectFolder   = document.getElementById('newProjectFolder');
-const chooseFolderBtn    = document.getElementById('chooseFolderBtn');
-
-// Maintenance
-const globalUnloadBtn    = document.getElementById('globalUnloadBtn');
-const unloadStatusPopup  = document.getElementById('unload-status-popup');
+const newProjectName       = document.getElementById('newProjectName');
+const newProjectFolder     = document.getElementById('newProjectFolder');
+const chooseFolderBtn      = document.getElementById('chooseFolderBtn');
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initShell() {
@@ -88,6 +80,7 @@ export async function initShell() {
     'js/components/Compounds/MpiVideoScene/MpiVideoScene.css',
     'js/components/Compounds/MpiOkCancel/MpiOkCancel.css',
     'js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css',
+    'js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css',
 
     // Blocks
     'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
@@ -95,12 +88,17 @@ export async function initShell() {
 
   bindModalEvents();
   bindInfoBarEvents();
-  bindMaintenanceEvents();
   bindWindowControls();
 
-  // Start memory monitoring
-  updateMemoryStats();
-  setInterval(updateMemoryStats, 2000);
+  // Mount MpiMemoryMonitor — owns polling and unload button
+  const memMonitor = MpiMemoryMonitor.mount(monitorMount);
+  memMonitor.on('release', ({ deep }) => triggerMemoryRelease(deep, memMonitor.el));
+
+  // F5 — trigger memory release (Ctrl+F5 = deep clean)
+  Hotkeys.register('f5', (e) => {
+    e.preventDefault();
+    triggerMemoryRelease(e.ctrlKey, memMonitor.el);
+  });
 
   // Background registry fetches (non-blocking)
   refreshModelRegistry().catch(err => console.error('[shell] model registry fetch failed:', err));
@@ -339,13 +337,14 @@ function updateTitlebarProject() {
 }
 
 // ── Memory Release ────────────────────────────────────────────────────────────
-async function triggerMemoryRelease(isDeep = false) {
-  if (globalUnloadBtn.disabled) return;
-
+/**
+ * Calls the ComfyUI + LLM unload APIs and updates the MpiMemoryMonitor status badge.
+ * @param {boolean} isDeep - If true, performs a deep clean (Ctrl+F5)
+ * @param {HTMLElement} monitorEl - The mounted MpiMemoryMonitor element
+ */
+async function triggerMemoryRelease(isDeep = false, monitorEl) {
   const statusPrefix = isDeep ? 'Deep Cleaning...' : 'Releasing VRAM...';
-  unloadStatusPopup.textContent = statusPrefix;
-  unloadStatusPopup.classList.remove('hide');
-  globalUnloadBtn.disabled = true;
+  if (monitorEl?.showStatus) monitorEl.showStatus(statusPrefix);
 
   try {
     await unloadModel().catch(err => console.error('[shell] LLM unload failed:', err));
@@ -360,41 +359,11 @@ async function triggerMemoryRelease(isDeep = false) {
       await fetch('http://127.0.0.1:8188/extra/unload_models', { method: 'POST' }).catch(() => null);
     }
 
-    unloadStatusPopup.textContent = isDeep ? 'Deep Clean Complete ✓' : 'VRAM Released ✓';
-    setTimeout(() => {
-      unloadStatusPopup.classList.add('hide');
-      globalUnloadBtn.disabled = false;
-    }, 2000);
+    if (monitorEl?.showStatus) monitorEl.showStatus(isDeep ? 'Deep Clean ✓' : 'VRAM Released ✓');
   } catch (err) {
     console.error('[shell] Global unload failed:', err);
-    unloadStatusPopup.textContent = 'Unload Failed';
-    setTimeout(() => {
-      unloadStatusPopup.classList.add('hide');
-      globalUnloadBtn.disabled = false;
-    }, 3000);
+    if (monitorEl?.showStatus) monitorEl.showStatus('Unload Failed');
   }
-}
-
-function bindMaintenanceEvents() {
-  if (!globalUnloadBtn || !unloadStatusPopup) return;
-
-  globalUnloadBtn.addEventListener('click', (e) => {
-    triggerMemoryRelease(e.ctrlKey);
-  });
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'F5') {
-      e.preventDefault();
-      triggerMemoryRelease(e.ctrlKey);
-      return;
-    }
-    if (['input', 'textarea'].includes(document.activeElement.tagName.toLowerCase())) return;
-    if (e.key === 'Control') globalUnloadBtn.classList.add('ctrl-held');
-  });
-
-  window.addEventListener('keyup', (e) => {
-    if (e.key === 'Control') globalUnloadBtn.classList.remove('ctrl-held');
-  });
 }
 
 // ── Window Controls ───────────────────────────────────────────────────────────
@@ -498,38 +467,6 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-async function updateMemoryStats() {
-  try {
-    const res  = await fetch('/system/stats');
-    const data = await res.json();
-    if (!data.success) return;
-
-    const ramGB      = (data.ram.used  / (1024 ** 3)).toFixed(1);
-    const totalRamGB = (data.ram.total / (1024 ** 3)).toFixed(0);
-    const ramPercent = data.ram.percent;
-
-    if (ramValue)   ramValue.textContent = `${ramGB} / ${totalRamGB} GB`;
-    if (ramBarFill) {
-      ramBarFill.style.width = `${ramPercent}%`;
-      ramBarFill.style.setProperty('--fill-percent', `${ramPercent}%`);
-      ramBarFill.classList.toggle('warning', parseFloat(ramPercent) > 85);
-    }
-
-    const vramGB      = (data.vram.used  / (1024 ** 3)).toFixed(1);
-    const totalVramGB = (data.vram.total / (1024 ** 3)).toFixed(0);
-    const vramPercent = data.vram.percent;
-
-    if (vramValue)   vramValue.textContent = `${vramGB} / ${totalVramGB} GB`;
-    if (vramBarFill) {
-      vramBarFill.style.width = `${vramPercent}%`;
-      vramBarFill.style.setProperty('--fill-percent', `${vramPercent}%`);
-      vramBarFill.classList.toggle('warning', parseFloat(vramPercent) > 85);
-    }
-  } catch (err) {
-    console.warn('[shell] Failed to fetch memory stats:', err);
-  }
 }
 
 /**

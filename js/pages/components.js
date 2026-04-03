@@ -38,6 +38,7 @@ import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleC
 import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
+import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -277,6 +278,16 @@ function mountAll() {
     mount('preview-vol-control', () => {
         const vc = MpiVolumeControl.mount(slot('preview-vol-control'), { volume: 0.5 });
         vc.on('change', ({ volume, muted }) => console.log('[gallery] volume control change:', { volume, muted }));
+    });
+
+    // ── MpiMemoryMonitor (Compound) ──────────────────────────────────
+    mount('preview-mem-monitor', () => {
+        const mm = MpiMemoryMonitor.mount(slot('preview-mem-monitor'), { pollInterval: 2000 });
+        mm.on('release', ({ deep }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = deep ? 'Deep clean triggered (gallery demo)' : 'VRAM release triggered (gallery demo)';
+            console.log('[gallery] memory monitor release:', { deep });
+        });
     });
 
     // ── MpiOverlay (Primitive) ────────────────────────────────────────────────

@@ -1,0 +1,134 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   MpiMemoryMonitor — Compound Component
+   BEM: .mpi-mem-monitor
+   Bar colours live in MpiProgressBar.css (variants: vram, ram).
+───────────────────────────────────────────────────────────────────────────── */
+
+.mpi-mem-monitor {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    height: 100%;
+}
+
+/* ── Bar group ──────────────────────────────────────────────────────────────── */
+.mpi-mem-monitor__bars {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex: 1;
+}
+
+.mpi-mem-monitor__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mpi-mem-monitor__label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    min-width: 2.5rem;
+    user-select: none;
+}
+
+/* ── MpiProgressBar slot — compact topbar dimensions ───────────────────────── */
+.mpi-mem-monitor__bar-wrap {
+    width: 80px;
+    flex-shrink: 0;
+}
+
+/* Make the primitive flush to the wrapper — no extra height/padding needed */
+.mpi-mem-monitor__bar-wrap .mpi-progress {
+    min-width: unset;
+    height: 4px;
+    padding: 0;
+}
+
+.mpi-mem-monitor__bar-wrap .mpi-progress__track-container {
+    height: 4px;
+    border-radius: 2px;
+}
+
+.mpi-mem-monitor__bar-wrap .mpi-progress__track-fill {
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Value readout ──────────────────────────────────────────────────────────── */
+.mpi-mem-monitor__value {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.02em;
+    color: var(--text-2);
+    min-width: 6rem;
+    user-select: none;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────────── */
+.mpi-mem-monitor__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mpi-mem-monitor__btn-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Style the MpiButton as a compact workspace icon button */
+.mpi-mem-monitor__btn-wrap .mpi-ibtn {
+    width: 30px;
+    height: 30px;
+    background: none !important;
+    border: 1px solid transparent !important;
+    color: var(--text-2) !important;
+    border-radius: var(--radius-sm) !important;
+    transition: all var(--transition) !important;
+}
+
+.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover {
+    background: var(--surface-2) !important;
+    border-color: var(--border) !important;
+    color: #00d2ff !important;
+}
+
+.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover .mpi-ibtn__icon {
+    filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.5));
+}
+
+/* Ctrl-held — deep clean signal */
+.mpi-mem-monitor__btn--ctrl .mpi-ibtn__icon {
+    color: #ff4d4d !important;
+    filter: drop-shadow(0 0 8px rgba(255, 77, 77, 0.7)) !important;
+    animation: mpi-mem-ctrl-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes mpi-mem-ctrl-pulse {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 77, 77, 0.4)); opacity: 1; }
+    50%       { filter: drop-shadow(0 0 15px rgba(255, 77, 77, 0.9)); opacity: 0.8; }
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────────── */
+.mpi-mem-monitor__status {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-2);
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.15s ease-out;
+    pointer-events: none;
+}

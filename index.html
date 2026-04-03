@@ -97,30 +97,10 @@
   ══════════════════════════════════════════════════════════════════════════════ -->
   <div id="app-shell" class="app-shell hide">
 
-    <!-- ── Workspace Topbar (replaces sidebar monitors + unload) ────────────── -->
+    <!-- ── Workspace Topbar ──────────────────────────────────────────────────── -->
     <div id="workspace-topbar" class="workspace-topbar">
-      <div class="workspace-monitors">
-        <div class="monitor-item" id="monitor-vram">
-          <span class="monitor-label">VRAM</span>
-          <div class="monitor-bar"><div class="monitor-bar-fill vram" id="vramBarFill"></div></div>
-          <span class="monitor-value" id="vramValue">0 / 0 GB</span>
-        </div>
-        <div class="monitor-item" id="monitor-ram">
-          <span class="monitor-label">RAM</span>
-          <div class="monitor-bar"><div class="monitor-bar-fill ram" id="ramBarFill"></div></div>
-          <span class="monitor-value" id="ramValue">0 / 0 GB</span>
-        </div>
-      </div>
-      <div class="workspace-topbar-actions">
-        <div class="unload-control-wrapper">
-          <button id="globalUnloadBtn" class="workspace-icon-btn" title="Release Memory (F5)" data-info="Release VRAM — F5 standard · Ctrl+F5 deep clean">
-            <svg viewBox="0 0 24 24" width="16" height="16">
-              <path fill="currentColor" d="M17 17H7V7h10v10zm3-3V4c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v10H2v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h4v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2zm-2-2v6H6v-6h12zm0-8v6H6V4h12z"/>
-            </svg>
-          </button>
-          <div id="unload-status-popup" class="unload-status-popup hide"></div>
-        </div>
-      </div>
+      <!-- MpiMemoryMonitor compound component mounts here -->
+      <div id="memory-monitor-mount"></div>
     </div>
 
     <!-- ── Main Area ─────────────────────────────────────────────────────────── -->

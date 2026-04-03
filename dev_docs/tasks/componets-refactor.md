@@ -7,11 +7,11 @@
 ## Use JSDocs extensively
 ## Use the `styles/01_base.css` as the source of thruth for styles
 ## USe `js/utils/dom.js` for shorthands
-## Ask questions if goal not clear
-## Work on your assigned phase but the read the other phases for context
 ## use `js/utils/` where appropriate
 ## Do not commit git
 ## Do not test
+## Ask questions if goal not clear
+## Work on your assigned phase but the read the other phases for context
 ## Remember to update `js/shell.js` and `js/components/types.js` if adding or removing components
 ---
 
@@ -80,6 +80,9 @@
     - MpiBadge `Installed`
     - Optional MpiButton on left `Delete Models` (toggle) 
     - MpiButton on right `Delete`
+
+## Phase 3.3: Radial Menu
+
 
 
 ## Phase 4: Overlay pages (Foundation Complete)

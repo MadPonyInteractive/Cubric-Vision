@@ -1,9 +1,18 @@
 # Component System Architecture (2026-03-30 Update)
 
-> [!IMPORTANT]
-> **ATTENTION AGENTS**: MpiAiSuite is currently transitioning from an ad-hoc template-based UI to a formal **Factory-Based Component Architecture**. ALL new UI elements must be implemented using this system. Legacy tools are being migrated gradually.
-
+# 🤖 IMPORTANT for agents 
+## CRITICAL Must Read: `dev_docs/05_components.md`
+## Use JSDocs extensively
+## Use the `styles/01_base.css` as the source of thruth for styles
+## USe `js/utils/dom.js` for shorthands
+## use `js/utils/` where appropriate
+## Do not commit git
+## Do not test
+## Ask questions if goal not clear
+## Remember to update `js/shell.js` and `js/components/types.js` if adding or removing components and add your new components variants to the components galery: 
+`js/pages/components.js` and `templates/tpl-components`
 ---
+
 
 ## 🎯 Main Goals
 

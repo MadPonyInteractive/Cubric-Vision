@@ -113,6 +113,20 @@
  */
 
 /**
+ * @typedef {Object} MpiMemoryMonitorProps (Compound — js/components/Compounds/MpiMemoryMonitor)
+ * @property {number} [pollInterval=2000] - Stats fetch interval in milliseconds
+ * @property {string} [info] - Info bar description for the unload button
+ *
+ * Instance methods (on instance.el):
+ *   startPolling()          — begin or resume polling /system/stats
+ *   stopPolling()           — pause polling
+ *   showStatus(text)        — show a temporary badge message (called by shell after release)
+ *
+ * Emits:
+ *   'release' { deep: boolean } — unload button clicked; shell handles the actual API call
+ */
+
+/**
  * @typedef {Object} MpiBadgeProps
  * @property {string} label - Badge text or count
  * @property {'primary'|'secondary'|'success'|'warning'|'danger'|'info'} [variant='primary'] - Color variant

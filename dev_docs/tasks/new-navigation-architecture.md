@@ -1,6 +1,16 @@
 # Architecture Vision: Radial Navigation & Workspace System
 
-> 🔴 **AGENT RULE**: Do NOT touch legacy tool pages (`provisioning.js`, existing tool `.js` files, `shell.js` sidebar logic). Build the new system alongside the old. The legacy pages will be reintroduced into the new patterns once the foundation is proven.
+# 🤖 IMPORTANT for agents 
+## CRITICAL Must Read: `dev_docs/05_components.md`
+## Use JSDocs extensively
+## Use the `styles/01_base.css` as the source of thruth for styles
+## USe `js/utils/dom.js` for shorthands
+## use `js/utils/` where appropriate
+## Do not commit git
+## Do not test
+## Ask questions if goal not clear
+## Work on your assigned phase but the read the other phases for context
+## Remember to update `js/shell.js` and `js/components/types.js` if adding or removing components
 
 ---
 
