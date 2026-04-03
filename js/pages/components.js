@@ -36,6 +36,7 @@ import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCame
 import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
 import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleConfig.js';
 import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
+import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -739,6 +740,195 @@ function mountAll() {
             ]
         });
         vs.on('change', ({ scenes }) => console.log('[gallery] video scene change:', scenes));
+    });
+
+    // ── MpiOkCancel (Compound) ────────────────────────────────────────────────
+    mount('preview-okcancal-standard', () => {
+        const slotEl = slot('preview-okcancal-standard');
+
+        // Trigger button shown in the gallery card
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'help',
+            label: 'Confirm',
+            variant: 'primary',
+            size: 'md',
+            info: 'Click to show standard confirmation dialog'
+        });
+
+        // Backdrop — blocks interaction with background
+        const backdrop = document.createElement('div');
+        backdrop.style.display = 'none';
+        backdrop.style.position = 'fixed';
+        backdrop.style.top = '0';
+        backdrop.style.left = '0';
+        backdrop.style.width = '100%';
+        backdrop.style.height = '100%';
+        backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        backdrop.style.zIndex = '9999';
+        document.body.appendChild(backdrop);
+
+        // Popup dialog — created separately
+        const popupWrap = document.createElement('div');
+        document.body.appendChild(popupWrap);
+        const okc = MpiOkCancel.mount(popupWrap, {
+            title: 'Confirm Action',
+            text: 'Are you sure you want to proceed with this operation?'
+        });
+
+        // Simple toggle overlay pattern (shows in popup position)
+        let isVisible = false;
+        btn.on('click', () => {
+            isVisible = !isVisible;
+            backdrop.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.position = 'fixed';
+            popupWrap.style.top = '50%';
+            popupWrap.style.left = '50%';
+            popupWrap.style.transform = 'translate(-50%, -50%)';
+            popupWrap.style.zIndex = '10000';
+        });
+
+        const closeDialog = () => {
+            isVisible = false;
+            backdrop.style.display = 'none';
+            popupWrap.style.display = 'none';
+        };
+
+        okc.on('ok', () => {
+            console.log('[gallery] MpiOkCancel OK clicked');
+            closeDialog();
+        });
+        okc.on('cancel', () => {
+            console.log('[gallery] MpiOkCancel Cancel clicked');
+            closeDialog();
+        });
+    });
+
+    mount('preview-okcancal-with-input', () => {
+        const slotEl = slot('preview-okcancal-with-input');
+
+        // Trigger button
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'edit',
+            label: 'New Preset',
+            variant: 'primary',
+            size: 'md',
+            info: 'Click to save a new preset with custom name'
+        });
+
+        // Backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.display = 'none';
+        backdrop.style.position = 'fixed';
+        backdrop.style.top = '0';
+        backdrop.style.left = '0';
+        backdrop.style.width = '100%';
+        backdrop.style.height = '100%';
+        backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        backdrop.style.zIndex = '9999';
+        document.body.appendChild(backdrop);
+
+        // Popup dialog with input
+        const popupWrap = document.createElement('div');
+        document.body.appendChild(popupWrap);
+        const okc = MpiOkCancel.mount(popupWrap, {
+            title: 'Enter Preset Name',
+            text: 'Create a new preset with a unique name:',
+            inputPlaceholder: 'e.g., My Custom Preset',
+            showCancel: true
+        });
+
+        let isVisible = false;
+        btn.on('click', () => {
+            isVisible = !isVisible;
+            backdrop.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.position = 'fixed';
+            popupWrap.style.top = '50%';
+            popupWrap.style.left = '50%';
+            popupWrap.style.transform = 'translate(-50%, -50%)';
+            popupWrap.style.zIndex = '10000';
+        });
+
+        const closeDialog = () => {
+            isVisible = false;
+            backdrop.style.display = 'none';
+            popupWrap.style.display = 'none';
+        };
+
+        okc.on('ok', ({ inputValue }) => {
+            console.log('[gallery] MpiOkCancel OK with input:', inputValue);
+            closeDialog();
+        });
+        okc.on('cancel', () => {
+            console.log('[gallery] MpiOkCancel Cancel clicked');
+            closeDialog();
+        });
+        okc.on('input', ({ value }) => console.log('[gallery] MpiOkCancel input changed:', value));
+    });
+
+    mount('preview-okcancal-no-cancel', () => {
+        const slotEl = slot('preview-okcancal-no-cancel');
+
+        // Trigger button
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'check',
+            label: 'Status',
+            variant: 'primary',
+            size: 'md',
+            info: 'Click to show completion status (no cancel button)'
+        });
+
+        // Backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.display = 'none';
+        backdrop.style.position = 'fixed';
+        backdrop.style.top = '0';
+        backdrop.style.left = '0';
+        backdrop.style.width = '100%';
+        backdrop.style.height = '100%';
+        backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        backdrop.style.zIndex = '9999';
+        document.body.appendChild(backdrop);
+
+        // Popup dialog without cancel
+        const popupWrap = document.createElement('div');
+        document.body.appendChild(popupWrap);
+        const okc = MpiOkCancel.mount(popupWrap, {
+            title: 'Operation Complete',
+            text: 'Your changes have been saved successfully.',
+            showCancel: false,
+            okLabel: 'Close'
+        });
+
+        let isVisible = false;
+        btn.on('click', () => {
+            isVisible = !isVisible;
+            backdrop.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.display = isVisible ? 'block' : 'none';
+            popupWrap.style.position = 'fixed';
+            popupWrap.style.top = '50%';
+            popupWrap.style.left = '50%';
+            popupWrap.style.transform = 'translate(-50%, -50%)';
+            popupWrap.style.zIndex = '10000';
+        });
+
+        const closeDialog = () => {
+            isVisible = false;
+            backdrop.style.display = 'none';
+            popupWrap.style.display = 'none';
+        };
+
+        okc.on('ok', () => {
+            console.log('[gallery] MpiOkCancel OK clicked');
+            closeDialog();
+        });
     });
 }
 

@@ -1,0 +1,73 @@
+/* ── MpiOkCancel ────────────────────────────────────────────────────────────── */
+
+.mpi-ok-cancel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    border-radius: 8px;
+}
+
+/* Content Container — Title, Text, and Optional Input */
+.mpi-ok-cancel__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Large Title */
+.mpi-ok-cancel__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    line-height: 1.2;
+}
+
+/* Text Area */
+.mpi-ok-cancel__text {
+    font-size: 0.95rem;
+    color: var(--text-secondary, #aaa);
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+/* Optional Input Field Container */
+.mpi-ok-cancel__input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mpi-ok-cancel__input .mpi-input {
+    width: 100%;
+}
+
+.mpi-ok-cancel__input .mpi-input input {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-tertiary, rgba(40, 40, 50, 0.6));
+    border: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.3));
+    border-radius: 4px;
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+}
+
+/* Action Buttons Container */
+.mpi-ok-cancel__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.2));
+}
+
+.mpi-ok-cancel__actions .mpi-button {
+    flex: 0 0 auto;
+    min-width: 6rem;
+}
+
+/* Ensure buttons display text properly */
+.mpi-ok-cancel__actions .mpi-button button {
+    min-width: 5rem;
+    padding: 0.5rem 1rem;
+}

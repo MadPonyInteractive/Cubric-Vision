@@ -11,6 +11,8 @@
 ## Work on your assigned phase but the read the other phases for context
 ## use `js/utils/` where appropriate
 ## Do not commit git
+## Do not test
+## Remember to update `js/shell.js` and `js/components/types.js` if adding or removing components
 ---
 
 ## Phase 1: Primitives Expansion (Tier 1 - No Dependencies)
@@ -62,13 +64,13 @@
     Side bar, status bar and app header remain visible (occupies main area only)
     ***Update Component Gallery***: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new component (use a MpiButton to trigger the overlay and add a MpiBadge to the overlay container for display purposes)
 *Target: js/components/Compounds/*
-***task 2*** - [ ] **MpiOkCancel**: Compound  with:
+***task 2*** - [x] **MpiOkCancel**: Compound  with:
     - Large Title
     - Text area
     - optional MpiInput field
     - `OK` MpiButton
     - optional `Cancel` MpiButon
-***task 3*** - [ ] **MpiInstalledDisplay**: Container with:
+***task 3*** - [ ] **MpiInstalledDisplay**: Compound Container with:
     - Title Text on top left
     - Small text on top right
     - Text area

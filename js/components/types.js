@@ -293,6 +293,22 @@
  */
 
 /**
+ * @typedef {Object} MpiOkCancelProps (Compound — js/components/Compounds/MpiOkCancel)
+ * @property {string} [title=''] - Large title text at the top
+ * @property {string} [text=''] - Descriptive text content
+ * @property {string} [inputPlaceholder] - Optional input field placeholder (if present, shows input)
+ * @property {string} [inputValue=''] - Initial value for the optional input field
+ * @property {boolean} [showCancel=true] - Whether to display the Cancel button
+ * @property {string} [okLabel='OK'] - Custom label for the OK button
+ * @property {string} [cancelLabel='Cancel'] - Custom label for the Cancel button
+ *
+ * Emits:
+ * 'ok'     { inputValue?: string } — OK button clicked (includes input value if present)
+ * 'cancel' {}                      — Cancel button clicked
+ * 'input'  { value: string }        — Optional input field changed
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties
