@@ -4,7 +4,7 @@
  */
 
 import { state } from './state.js';
-import { navigate, PAGE_TOOL, PAGE_LANDING } from './router.js';
+import { navigate, PAGE_LANDING, PAGE_WORKSPACE } from './router.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ export async function listProjects() {
  */
 export function openProject(project) {
   state.currentProject = project;
-  
+
   // Restore toolComfySettings if present in project metadata
   if (project.toolComfySettings) {
     state.toolComfySettings = {
@@ -79,7 +79,7 @@ export function openProject(project) {
   }
   localStorage.setItem('mpi_last_project', project.folderPath);
   document.dispatchEvent(new CustomEvent('project:changed', { detail: { project } }));
-  navigate(PAGE_TOOL, { name: project.selectedTool || 'promptBuilder' });
+  navigate(PAGE_WORKSPACE);
 }
 
 /**

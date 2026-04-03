@@ -488,11 +488,98 @@ body.light-mode .project-card:hover {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: calc(100vh - var(--titlebar-h));
   margin-top: var(--titlebar-h);
   overflow: hidden;
+}
+
+/* ── Workspace Topbar ────────────────────────────────────────────────────── */
+.workspace-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.25rem;
+  height: 42px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-soft);
+  z-index: 10;
+}
+
+.workspace-monitors {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.workspace-topbar .monitor-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workspace-topbar .monitor-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  min-width: 2.5rem;
+}
+
+.workspace-topbar .monitor-bar {
+  width: 80px;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.workspace-topbar .monitor-value {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  min-width: 6rem;
+}
+
+.workspace-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workspace-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.workspace-icon-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: #00d2ff;
+}
+
+.workspace-icon-btn:hover svg {
+  filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.5));
+}
+
+.workspace-icon-btn.ctrl-held svg {
+  color: #ff4d4d;
+  filter: drop-shadow(0 0 8px rgba(255, 77, 77, 0.7));
+  animation: pulse-red 1.5s infinite ease-in-out;
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────────── */
@@ -877,9 +964,10 @@ body.light-mode .project-card:hover {
 .main-area {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--titlebar-h));
+  flex: 1;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 /* ── App Header ─────────────────────────────────────────────────────────────── */

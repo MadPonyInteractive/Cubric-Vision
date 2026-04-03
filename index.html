@@ -97,241 +97,31 @@
   ══════════════════════════════════════════════════════════════════════════════ -->
   <div id="app-shell" class="app-shell hide">
 
-    <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
-    <aside id="sidebar" class="sidebar">
-      <!-- Fixed Header: System Vitals & Panic Button -->
-      <div class="sidebar-header-fixed">
-        <div class="sidebar-header-top">
-          <button id="sidebar-toggle" class="sidebar-icon-btn" data-tooltip="Toggle Sidebar">
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-            </svg>
-          </button>
-          <div class="unload-control-wrapper">
-            <button id="globalUnloadBtn" class="sidebar-icon-btn unload-icon" data-tooltip="Release Memory">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M17 17H7V7h10v10zm3-3V4c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v10H2v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h4v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2zm-2-2v6H6v-6h12zm0-8v6H6V4h12z" />
-              </svg>
-            </button>
-            <div id="unload-status-popup" class="unload-status-popup hide"></div>
-          </div>
+    <!-- ── Workspace Topbar (replaces sidebar monitors + unload) ────────────── -->
+    <div id="workspace-topbar" class="workspace-topbar">
+      <div class="workspace-monitors">
+        <div class="monitor-item" id="monitor-vram">
+          <span class="monitor-label">VRAM</span>
+          <div class="monitor-bar"><div class="monitor-bar-fill vram" id="vramBarFill"></div></div>
+          <span class="monitor-value" id="vramValue">0 / 0 GB</span>
         </div>
-
-        <div class="sidebar-monitors">
-          <div class="monitor-item" id="monitor-vram">
-            <div class="monitor-label-row">
-              <span class="monitor-label">VRAM</span>
-              <span class="monitor-value" id="vramValue">0 / 0 GB</span>
-            </div>
-            <div class="monitor-bar">
-              <div class="monitor-bar-fill vram" id="vramBarFill"></div>
-            </div>
-          </div>
-
-          <div class="monitor-item" id="monitor-ram">
-            <div class="monitor-label-row">
-              <span class="monitor-label">RAM</span>
-              <span class="monitor-value" id="ramValue">0 / 0 GB</span>
-            </div>
-            <div class="monitor-bar">
-              <div class="monitor-bar-fill ram" id="ramBarFill"></div>
-            </div>
-          </div>
+        <div class="monitor-item" id="monitor-ram">
+          <span class="monitor-label">RAM</span>
+          <div class="monitor-bar"><div class="monitor-bar-fill ram" id="ramBarFill"></div></div>
+          <span class="monitor-value" id="ramValue">0 / 0 GB</span>
         </div>
       </div>
-
-      <!-- Scrollable Middle: Tools & Media -->
-      <div class="sidebar-nav-scroll">
-        <nav class="sidebar-nav" id="sidebarNav">
-          <button class="nav-item media-library-btn" id="sidebarMediaBtn" data-tooltip="Media Library"
-            style="margin-bottom: 0.5rem;">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor"
-                d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" />
+      <div class="workspace-topbar-actions">
+        <div class="unload-control-wrapper">
+          <button id="globalUnloadBtn" class="workspace-icon-btn" title="Release Memory (F5)" data-info="Release VRAM — F5 standard · Ctrl+F5 deep clean">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path fill="currentColor" d="M17 17H7V7h10v10zm3-3V4c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v10H2v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h4v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2zm-2-2v6H6v-6h12zm0-8v6H6V4h12z"/>
             </svg>
-            <span>Media</span>
           </button>
-
-          <div class="nav-group-header" data-group="create">
-            <span class="nav-group-label">PROMPTS</span>
-            <svg class="nav-group-chevron" viewBox="0 0 24 24" width="14" height="14">
-              <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
-            </svg>
-          </div>
-          <div class="nav-group-content" id="group-create">
-            <button class="nav-item" data-tool="promptBuilder" data-tooltip="Prompt Builder">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-              </svg>
-              <span>Prompt Builder</span>
-            </button>
-            <button class="nav-item" data-tool="llm" data-tooltip="LLM">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-              </svg>
-              <span>LLM</span>
-            </button>
-            <button class="nav-item" data-tool="descriptor" data-tooltip="Descriptor">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-              </svg>
-              <span>Descriptor</span>
-            </button>
-            <button class="nav-item" data-tool="translator" data-tooltip="Translator">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
-              </svg>
-              <span>Translator</span>
-            </button>
-            <button class="nav-item" data-tool="jsonFormatter" data-tooltip="JSON Formatter">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2zm14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3h2zm-7 12a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm-4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm8 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-              </svg>
-              <span>JSON Formatter</span>
-            </button>
-          </div>
-
-          <div class="nav-group-header" data-group="generate">
-            <span class="nav-group-label">IMAGES</span>
-            <svg class="nav-group-chevron" viewBox="0 0 24 24" width="14" height="14">
-              <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
-            </svg>
-          </div>
-          <div class="nav-group-content" id="group-generate">
-            <button class="nav-item" data-tool="generator" data-tooltip="Generator">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2 .9 2 2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-7l-3 3.72L9 13l-3 4h12l-4-4z" />
-              </svg>
-              <span>Generator</span>
-            </button>
-            <button class="nav-item" data-tool="editor" data-tooltip="Editor">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-              </svg>
-              <span>Editor</span>
-              <span class="nav-badge soon">Soon</span>
-            </button>
-            <button class="nav-item" data-tool="detailer" data-tooltip="Detailer">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-              </svg>
-              <span>Detailer</span>
-            </button>
-            <button class="nav-item" data-tool="upscaler" data-tooltip="Upscaler">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM4 14v2h16v-2H4zm0 4v2h16v-2H4z" />
-              </svg>
-              <span>Upscaler</span>
-            </button>
-            <button class="nav-item" data-tool="resizer" data-tooltip="Resizer">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor" d="M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10z" />
-              </svg>
-              <span>Resizer</span>
-              <span class="nav-badge soon">Soon</span>
-            </button>
-            <button class="nav-item" data-tool="compare" data-tooltip="Compare">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5V5h5v13zm9-15h-5v2h5v13h-5v2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-              </svg>
-              <span>Compare</span>
-            </button>
-          </div>
-
-          <div class="nav-group-header" data-group="video">
-            <span class="nav-group-label">Video & Audio</span>
-            <svg class="nav-group-chevron" viewBox="0 0 24 24" width="14" height="14">
-              <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
-            </svg>
-          </div>
-          <div class="nav-group-content" id="group-video">
-            <button class="nav-item" data-tool="cropExtract" data-tooltip="Crop & Extract">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M7 1L5 3v14c0 1.1.9 2 2 2h14l2-2V3l-2-2H7zm14 16H7V3h14v14zM9 5h10v10H9V5zm2 2v6h6V7h-6z" />
-              </svg>
-              <span>Crop & Extract</span>
-            </button>
-            <button class="nav-item" data-tool="videoGenerator" data-tooltip="Video Generator">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
-              </svg>
-              <span>Video Generator</span>
-              <span class="nav-badge soon">Soon</span>
-            </button>
-            <button class="nav-item" data-tool="videoMotionControl" data-tooltip="Motion Control">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
-              </svg>
-              <span>Motion Control</span>
-              <span class="nav-badge soon">Soon</span>
-            </button>
-            <button class="nav-item" data-tool="audioGenerator" data-tooltip="Audio Generator">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" />
-              </svg>
-              <span>Audio Generator</span>
-              <span class="nav-badge soon">Soon</span>
-            </button>
-          </div>
-        </nav>
-      </div>
-
-      <!-- Fixed Footer: Global Navigation -->
-      <div class="sidebar-footer-fixed">
-        <div class="sidebar-footer-container">
-          <button class="nav-item global-link projects-btn" id="sidebarProjectsBtn" data-tooltip="Projects">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor"
-                d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z" />
-            </svg>
-            <span>Projects</span>
-          </button>
-
-          <div class="sidebar-footer-links">
-            <button class="nav-item" id="sidebarSettingsBtn" data-tooltip="Settings">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-              </svg>
-              <span>Settings</span>
-            </button>
-            <button class="nav-item" id="sidebarHelpBtn" data-tooltip="Help">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" />
-              </svg>
-              <span>Help</span>
-            </button>
-            <button class="nav-item" id="sidebarAboutBtn" data-tooltip="About">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor"
-                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-              </svg>
-              <span>About</span>
-            </button>
-            <button class="nav-item" id="sidebarComponentsBtn" data-tooltip="Components">
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path fill="currentColor" d="M13 13v8h8v-8h-8zM3 21h8v-8H3v8zM3 11h8V3H3v8zM13 3v8h8V3h-8z" />
-              </svg>
-              <span>Components</span>
-            </button>
-          </div>
+          <div id="unload-status-popup" class="unload-status-popup hide"></div>
         </div>
       </div>
-    </aside>
+    </div>
 
     <!-- ── Main Area ─────────────────────────────────────────────────────────── -->
     <div class="main-area">
@@ -347,7 +137,7 @@
 
 
   </div>
-  </div>
+
 
   <!-- ══════════════════════════════════════════════════════════════════════════
        SHARED MODALS

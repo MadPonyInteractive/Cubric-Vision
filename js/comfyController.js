@@ -1,8 +1,6 @@
 // ComfyUI integration: WebSocket connection, workflow execution, 
 // live preview, and cancel support.
-import { els } from './elements.js';
 import { state } from './state.js';
-import { getFormAnswers } from './formBuilder.js';
 
 export const ComfyUIController = {
     serverAddress: "127.0.0.1:8188",
@@ -45,52 +43,6 @@ export const ComfyUIController = {
     },
 
     init() {
-        if (els.testComfyBtn) {
-            els.testComfyBtn.addEventListener('click', () => {
-                if (this.isRunning) { this.interrupt(); } else { this.runTestWorkflow(); }
-            });
-        }
-        if (els.comfyCopyPromptBtn) {
-            els.comfyCopyPromptBtn.addEventListener('click', () => {
-                const combined = this.getCombinedPrompt();
-                if (combined) {
-                    navigator.clipboard.writeText(combined).then(() => {
-                        const originalText = els.comfyCopyPromptBtn.textContent;
-                        els.comfyCopyPromptBtn.textContent = "Copied! ✓";
-                        setTimeout(() => els.comfyCopyPromptBtn.textContent = originalText, 2000);
-                    });
-                } else {
-                    alert("Please type a Base Idea prompt first!");
-                }
-            });
-        }
-        if (els.comfyPreview) {
-            els.comfyPreview.draggable = true;
-            els.comfyPreview.addEventListener('dragstart', (e) => {
-                if (els.comfyPreview.src) {
-                    e.dataTransfer.setData('text/plain', els.comfyPreview.src);
-                    e.dataTransfer.effectAllowed = 'copy';
-                }
-            });
-        }
-        if (els.comfyAutoSeed) {
-            els.comfyAutoSeed.addEventListener('change', () => {
-                const auto = els.comfyAutoSeed.checked;
-                if (els.comfyNewSeedBtn) els.comfyNewSeedBtn.disabled = auto;
-                if (auto) this.generateRandomSeed();
-            });
-        }
-        if (els.comfyNewSeedBtn) {
-            els.comfyNewSeedBtn.addEventListener('click', () => {
-                this.generateRandomSeed();
-            });
-        }
-        // Initial setup
-        if (els.comfyAutoSeed && els.comfyAutoSeed.checked) {
-            if (els.comfyNewSeedBtn) els.comfyNewSeedBtn.disabled = true;
-            this.generateRandomSeed();
-        }
-
         // Handle aspect ratio sync for preview container
         const aspectRadios = document.querySelectorAll('input[name="comfyAspect"]');
         aspectRadios.forEach(radio => {
@@ -109,35 +61,14 @@ export const ComfyUIController = {
         }
     },
 
-    getCombinedPrompt() {
-        let textPrompt = els.basePrompt.value.trim();
-        if (state.g_wizardStep === 2) {
-            const answers = getFormAnswers();
-            const detailsList = [];
-            for (const [label, val] of Object.entries(answers.details)) {
-                if (val && val !== 'Any') {
-                    detailsList.push(`${label}: ${val}`);
-                }
-            }
-            if (detailsList.length > 0) {
-                textPrompt += "\n\n" + detailsList.join(", ");
-            }
-        }
-        return textPrompt;
-    },
 
     generateRandomSeed() {
         const seed = Math.floor(Math.random() * 100000000000000);
-        if (els.comfySeedInput) els.comfySeedInput.value = seed;
         return seed;
     },
 
     setLoading(loading) {
         this.isRunning = loading;
-        if (els.testComfyBtn && els.testComfyBtn.nodeType === 1) {
-            els.testComfyBtn.textContent = loading ? "Cancel" : "Preview Prompt";
-            els.testComfyBtn.disabled = false;
-        }
     },
 
     async interrupt() {
@@ -148,11 +79,8 @@ export const ComfyUIController = {
                 body: JSON.stringify({ client_id: this.clientId })
             });
             this.setLoading(false);
-            if (els.comfyProgressWrapper && els.comfyProgressWrapper.classList) {
-                els.comfyProgressWrapper.classList.add('hide');
-            }
-        } catch (e) { 
-            console.error("Interrupt failed:", e); 
+        } catch (e) {
+            console.error("Interrupt failed:", e);
             this.setLoading(false);
         }
     },
@@ -167,8 +95,7 @@ export const ComfyUIController = {
                 if (event.data instanceof ArrayBuffer) {
                     const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
                     const url = URL.createObjectURL(blob);
-                    if (this.activeListener) this.activeListener({ type: 'preview', url });
-                    else if (els.comfyPreview) els.comfyPreview.src = url;
+                    this.activeListener({ type: 'preview', url });
                 } else {
                     const msg = JSON.parse(event.data);
                     if (this.activeListener) this.activeListener(msg);
@@ -188,38 +115,30 @@ export const ComfyUIController = {
             this.ws.onclose = null;
             this.ws.close();
         }
-        
+
         this.ws = new WebSocket(`ws://${this.serverAddress}/ws?clientId=${this.clientId}`);
         this.ws.binaryType = "arraybuffer";
         this.ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
                 const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
                 const url = URL.createObjectURL(blob);
-                if (this.activeListener) this.activeListener({ type: 'preview', url });
-                else if (els.comfyPreview) els.comfyPreview.src = url;
+                this.activeListener({ type: 'preview', url });
             } else {
                 const msg = JSON.parse(event.data);
                 if (this.activeListener) this.activeListener(msg);
-                
+
                 // Fallback built-in behavior
                 if (!this.activeListener) {
-                    if (msg.type === 'progress') {
-                        els.comfyProgressWrapper.classList.remove('hide');
-                        els.comfyProgressBar.style.width = Math.round((msg.data.value / msg.data.max) * 100) + '%';
-                    } else if (msg.type === 'executed') {
-                        els.comfyProgressWrapper.classList.add('hide');
-                        this.setLoading(false);
-                        const nodeOutput = msg.data.output;
-                        if (nodeOutput && nodeOutput.images && nodeOutput.images.length > 0) {
-                            const img = nodeOutput.images[0];
-                            els.comfyPreview.src = `http://${this.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder}`;
-                        }
+                    this.setLoading(false);
+                    const nodeOutput = msg.data.output;
+                    if (nodeOutput && nodeOutput.images && nodeOutput.images.length > 0) {
+                        const img = nodeOutput.images[0];
                     }
                 }
             }
         };
 
-        this.ws.onerror = (e) => { 
+        this.ws.onerror = (e) => {
             // Transient WS errors are expected before the server is fully ready.
             // Do NOT reset isRunning — the generation may still be queued and running.
             if (onMessage) onMessage({ type: 'error', error: e });
@@ -240,18 +159,18 @@ export const ComfyUIController = {
     async queuePrompt(workflow) {
         await this.ensureServerRunning();
         this.connectWebSocket();
-        
+
         const req = await fetch(`http://${this.serverAddress}/prompt`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt: workflow, client_id: this.clientId })
         });
-        
+
         if (!req.ok) {
             const errData = await req.json();
             throw new Error(errData.error?.message || "ComfyUI Error");
         }
-        
+
         return await req.json();
     },
 
@@ -260,9 +179,6 @@ export const ComfyUIController = {
 
         if (!textPrompt) { alert("Please type a Base Idea prompt first!"); return; }
 
-        els.comfyOutputArea.classList.remove('hide');
-        els.comfyProgressWrapper.classList.add('hide');
-        els.comfyProgressBar.style.width = '0%';
         this.setLoading(true);
 
         try {
@@ -289,15 +205,13 @@ export const ComfyUIController = {
 
             const widthNodeId = findNodeId("Width");
             if (widthNodeId) workflow[widthNodeId].inputs.value = w;
-            
+
             const heightNodeId = findNodeId("Height");
             if (heightNodeId) workflow[heightNodeId].inputs.value = h;
 
             const posNodeId = findNodeId("Positive");
             if (posNodeId) workflow[posNodeId].inputs.value = textPrompt;
 
-            const seed = (els.comfyAutoSeed && els.comfyAutoSeed.checked) ? this.generateRandomSeed() : (parseInt(els.comfySeedInput.value) || this.generateRandomSeed());
-            
             const seedNodeId = findNodeId("Seed");
             if (seedNodeId) {
                 workflow[seedNodeId].inputs.value = seed;
@@ -360,7 +274,7 @@ export const ComfyUIController = {
      */
     async runWorkflow(workflowOrId, params = {}, onMessage = null) {
         await this.ensureServerRunning();
-        
+
         let workflow = workflowOrId;
 
         // 1. Load workflow if it's an ID string
@@ -369,7 +283,7 @@ export const ComfyUIController = {
             const wfConfig = registry.find(w => w.id === workflow);
             const fallbackFile = workflow.includes('.json') ? workflow : `${workflow}.json`;
             const file = wfConfig?.file || fallbackFile;
-            
+
             const res = await fetch(`/comfy_workflows/${file}`);
             if (!res.ok) throw new Error(`Failed to load workflow: ${file}`);
             workflow = await res.json();
@@ -455,7 +369,7 @@ export const ComfyUIController = {
                 }
 
                 if (onMessage) onMessage(msg); // Forward JSON messages to caller
-                
+
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
                     if (nodeOutput && nodeOutput.images) {
@@ -464,7 +378,7 @@ export const ComfyUIController = {
                         });
                     }
                 }
-                
+
                 if (msg.type === 'executing' && msg.data.node === null) {
                     this.isRunning = false;
                     resolve({ success: true, images: outputs });
@@ -480,7 +394,7 @@ export const ComfyUIController = {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: workflow, client_id: this.clientId })
                 });
-                
+
                 if (!req.ok) {
                     const errData = await req.json();
                     throw new Error(errData.error?.message || "ComfyUI Error");
