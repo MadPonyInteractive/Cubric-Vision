@@ -52,7 +52,8 @@ The menu is **context-aware** — it shows different options depending on where 
 
 #### Root Context (no active tool)
 ```
-[ Gallery ]  [ Image ]  [ Video ]  [ Audio ]
+[ Gallery ]  [ Image ]  [ Video ]  [ Audio ] + 
+DEV ONLY (use flag in `dev_configs/app_config.js`) -> [Components Gallery]
 ```
 
 #### Image Context

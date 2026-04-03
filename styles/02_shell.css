@@ -451,10 +451,6 @@ body.light-mode .project-card:hover {
   color: var(--text-2);
 }
 
-#titlebar-project-name {
-  color: var(--primary);
-}
-
 .window-controls {
   display: flex;
   height: 100%;
@@ -497,15 +493,26 @@ body.light-mode .project-card:hover {
 
 /* ── Workspace Topbar ────────────────────────────────────────────────────── */
 .workspace-topbar {
+  /* Float over the workspace canvas — no solid background */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0 1.25rem;
-  height: 42px;
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border-soft);
-  z-index: 10;
+  justify-content: space-between;
+  padding: 0 1rem;
+  background: transparent;
+  border-bottom: none;
+  pointer-events: none;   /* passthrough clicks to canvas by default */
+  z-index: 50;
+}
+
+/* Both mount slots re-enable pointer events for their own content */
+#project-name-mount,
+#memory-monitor-mount {
+  pointer-events: auto;
 }
 
 .workspace-monitors {
@@ -967,6 +974,7 @@ body.light-mode .project-card:hover {
   flex: 1;
   overflow: hidden;
   min-width: 0;
+  position: relative;   /* contains the absolute .workspace-topbar */
   min-height: 0;
 }
 

@@ -22,7 +22,7 @@
     <div class="titlebar-drag-region">
       <div class="titlebar-logo">
         <img src="favicon.png" alt="Mpi Logo" class="titlebar-logo-img">
-        <span class="titlebar-text">Mpi AI Suite<span id="titlebar-project-name"></span></span>
+        <span class="titlebar-text">Mpi AI Suite</span>
       </div>
     </div>
     <div class="window-controls">
@@ -97,14 +97,17 @@
   ══════════════════════════════════════════════════════════════════════════════ -->
   <div id="app-shell" class="app-shell hide">
 
-    <!-- ── Workspace Topbar ──────────────────────────────────────────────────── -->
-    <div id="workspace-topbar" class="workspace-topbar">
-      <!-- MpiMemoryMonitor compound component mounts here -->
-      <div id="memory-monitor-mount"></div>
-    </div>
-
     <!-- ── Main Area ─────────────────────────────────────────────────────────── -->
     <div class="main-area">
+
+      <!-- Workspace Topbar — floats over the canvas via position:absolute -->
+      <div id="workspace-topbar" class="workspace-topbar">
+        <!-- MpiProjectName mounts here (top-left) -->
+        <div id="project-name-mount"></div>
+        <!-- MpiMemoryMonitor mounts here (top-right) -->
+        <div id="memory-monitor-mount"></div>
+      </div>
+
       <main id="tool-container" class="tool-container">
         <!-- Tool panels injected here by the router -->
       </main>

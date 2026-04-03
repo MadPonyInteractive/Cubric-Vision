@@ -27,14 +27,17 @@ import { initShaderBackground, stopShaderBackground } from './components/shaderB
 import { ComfyUIController } from './comfyController.js';
 import { Hotkeys } from './managers/hotkeyManager.js';
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
+import { MpiRadialMenu } from './components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
+import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const pageLanding        = document.getElementById('page-landing');
-const appShell           = document.getElementById('app-shell');
-const toolContainer      = document.getElementById('tool-container');
-const titlebarProjectName = document.getElementById('titlebar-project-name');
-const projectGrid        = document.getElementById('projectGrid');
-const monitorMount       = document.getElementById('memory-monitor-mount');
+const pageLanding         = document.getElementById('page-landing');
+const appShell            = document.getElementById('app-shell');
+const toolContainer       = document.getElementById('tool-container');
+
+const projectGrid         = document.getElementById('projectGrid');
+const monitorMount        = document.getElementById('memory-monitor-mount');
+const projectNameMount    = document.getElementById('project-name-mount');
 
 // Landing
 const newProjectBtn = document.getElementById('newProjectBtn');
@@ -67,6 +70,7 @@ export async function initShell() {
     'js/components/Primitives/MpiMediaDropzone/MpiMediaDropzone.css',
     'js/components/Primitives/MpiDragList/MpiDragList.css',
     'js/components/Primitives/MpiOverlay/MpiOverlay.css',
+    'js/components/Primitives/MpiRadialMenu/MpiRadialMenu.css',
 
     // Compounds
     'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
@@ -81,6 +85,7 @@ export async function initShell() {
     'js/components/Compounds/MpiOkCancel/MpiOkCancel.css',
     'js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css',
     'js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css',
+    'js/components/Compounds/MpiProjectName/MpiProjectName.css',
 
     // Blocks
     'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
@@ -89,6 +94,13 @@ export async function initShell() {
   bindModalEvents();
   bindInfoBarEvents();
   bindWindowControls();
+
+  // Mount MpiProjectName — top-left HUD: project name + page label + back arrow
+  _projectNameInstance = MpiProjectName.mount(projectNameMount, {
+    projectName: state.currentProject?.name || '',
+    pageName: 'Main Menu',
+  });
+  _projectNameInstance.on('back', () => navigate(PAGE_LANDING));
 
   // Mount MpiMemoryMonitor — owns polling and unload button
   const memMonitor = MpiMemoryMonitor.mount(monitorMount);
@@ -197,9 +209,88 @@ function handleNavigation(page, params) {
     showShell();
     updateTitlebarProject();
     stopShaderBackground();
-    // Workspace entry point — MpiRadialMenu mounts here in a future task
     toolContainer.innerHTML = '';
+    _mountWorkspace();
   }
+}
+
+// ── Workspace ────────────────────────────────────────────────────────────────
+
+/** @type {import('./components/Primitives/MpiRadialMenu/MpiRadialMenu.js').MpiRadialMenuProps|null} */
+let _radialInstance = null;
+
+/** @type {Object|null} MpiProjectName instance — kept at module scope so _mountWorkspace can update it */
+let _projectNameInstance = null;
+
+/**
+ * Mounts the workspace canvas and the radial menu.
+ * Called each time the router transitions to PAGE_WORKSPACE.
+ */
+function _mountWorkspace() {
+  // Destroy previous instance if navigating back into workspace
+  if (_radialInstance) {
+    _radialInstance.destroy();
+    _radialInstance = null;
+  }
+
+  // Reset page label to Main Menu on workspace entry
+  if (_projectNameInstance) _projectNameInstance.el.setPageName('Main Menu');
+
+  // toolContainer acts as the workspace canvas — needs relative positioning
+  toolContainer.style.position = 'relative';
+
+  // Dev-only: inject Components Gallery shortcut into every radial context
+  const extraItems = APP_CONFIG.dev_mode ? [
+    { action: 'components', label: 'Components', icon: 'grid' }
+  ] : [];
+
+  // Mount the radial menu — open immediately so first-run onboarding is shown
+  _radialInstance = MpiRadialMenu.mount(toolContainer, { context: 'root', open: true, extraItems });
+
+  // Map action → display label for MpiProjectName
+  const ACTION_LABELS = {
+    root:       'Main Menu',
+    image:      'Image',
+    video:      'Video',
+    audio:      'Audio',
+    gallery:    'Gallery',
+    components: 'Components',
+  };
+
+  _radialInstance.on('select', ({ action }) => {
+    console.log('[shell] radial select:', action);
+
+    if (action === 'components') {
+      if (_projectNameInstance) _projectNameInstance.el.setPageName('Components');
+      _loadComponentsGallery();
+      return;
+    }
+
+    // Update page label in HUD
+    if (_projectNameInstance && ACTION_LABELS[action]) {
+      _projectNameInstance.el.setPageName(ACTION_LABELS[action]);
+    }
+
+    // Future: navigate to sub-tools or overlays based on action
+  });
+}
+
+/**
+ * Loads the Components Gallery page into the tool container.
+ * Dev-only — only reachable when APP_CONFIG.dev_mode is true.
+ */
+async function _loadComponentsGallery() {
+  const { ensureTemplate } = await import('./templateLoader.js');
+  const { initComponentsPage } = await import('./pages/components.js');
+
+  toolContainer.innerHTML = '';
+  toolContainer.style.position = '';
+
+  await ensureTemplate('tpl-components');
+  const tpl = document.getElementById('tpl-components');
+  toolContainer.appendChild(tpl.content.cloneNode(true));
+
+  await initComponentsPage();
 }
 
 // ── Page visibility ───────────────────────────────────────────────────────────
@@ -329,10 +420,8 @@ function bindInfoBarEvents() {
 
 // ── Titlebar ──────────────────────────────────────────────────────────────────
 function updateTitlebarProject() {
-  if (state.currentProject && titlebarProjectName) {
-    titlebarProjectName.textContent = ` - ${state.currentProject.name}`;
-  } else if (titlebarProjectName) {
-    titlebarProjectName.textContent = '';
+  if (_projectNameInstance) {
+    _projectNameInstance.el.setProjectName(state.currentProject?.name || '');
   }
 }
 

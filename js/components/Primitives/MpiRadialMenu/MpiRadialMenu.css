@@ -1,0 +1,169 @@
+/* ═══════════════════════════════════════════════════════════
+   MpiRadialMenu — Radial navigation primitive
+   BEM: .mpi-radial / .mpi-radial__item / .mpi-radial__hint
+═══════════════════════════════════════════════════════════ */
+
+/* ── Container ─────────────────────────────────────────── */
+
+.mpi-radial {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 500;
+    /* Base font size for em-based radius */
+    font-size: 1rem;
+}
+
+/* Translucent dark backdrop — only active when visible */
+.mpi-radial::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 16, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.mpi-radial--visible {
+    pointer-events: auto;
+}
+
+.mpi-radial--visible::before {
+    opacity: 1;
+}
+
+/* ── Hidden / Visible states ───────────────────────────── */
+
+.mpi-radial--hidden .mpi-radial__item,
+.mpi-radial--hidden .mpi-radial__hint {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ── Items ─────────────────────────────────────────────── */
+
+.mpi-radial__item {
+    position: absolute;
+
+    /* Offset from centre using CSS custom properties set by JS */
+    left: calc(50% + var(--rx, 0em));
+    top:  calc(50% + var(--ry, 0em));
+    transform: translate(-50%, -50%) scale(0.6);
+    transform-origin: center center;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35em;
+
+    width: 5em;
+    padding: 0.75em 0.5em 0.6em;
+
+    background: var(--surface-glass, rgba(22, 19, 31, 0.75));
+    border: 1px solid var(--border, #2a2540);
+    border-radius: var(--radius, 14px);
+    color: var(--text-2, #9590b0);
+    cursor: pointer;
+    user-select: none;
+
+    /* Animation origin — in from centre */
+    opacity: 0;
+    transition:
+        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        color 0.15s ease,
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+
+    /* Stagger via --ri custom property */
+    transition-delay: calc(var(--ri, 0) * 0.035s);
+}
+
+/* Visible state — items fly out from centre */
+.mpi-radial--visible .mpi-radial__item {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* Hover / focus state */
+.mpi-radial__item:hover,
+.mpi-radial__item:focus-visible {
+    color: var(--text, #f0eeff);
+    background: var(--surface-2, #1e1a2e);
+    border-color: var(--neon-border, rgba(191, 0, 255, 0.4));
+    box-shadow:
+        0 0 10px var(--neon-glow-sm, rgba(191, 0, 255, 0.15)),
+        0 0 24px var(--neon-glow, rgba(191, 0, 255, 0.35));
+    transform: translate(-50%, -50%) scale(1.12);
+    outline: none;
+    transition-delay: 0s;
+    z-index: 1;
+}
+
+/* Active / press state */
+.mpi-radial__item:active {
+    transform: translate(-50%, -50%) scale(1.04);
+    transition-duration: 0.08s;
+}
+
+/* ── Item internals ─────────────────────────────────────── */
+
+.mpi-radial__item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    transition: color 0.15s ease;
+    line-height: 1;
+}
+
+.mpi-radial__item-label {
+    font-family: var(--font-display, 'Outfit', sans-serif);
+    font-size: 0.62em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+    color: inherit;
+    white-space: nowrap;
+}
+
+/* ── Centre hint ────────────────────────────────────────── */
+
+.mpi-radial__hint {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-display, 'Outfit', sans-serif);
+    font-size: 0.78rem;
+    color: var(--text-3, #534e6b);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.85);
+    transition:
+        opacity 0.3s ease 0.15s,
+        transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s;
+}
+
+.mpi-radial--visible .mpi-radial__hint {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ── Reduced motion ─────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .mpi-radial__item,
+    .mpi-radial__hint {
+        transition: opacity 0.1s ease;
+    }
+}

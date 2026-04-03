@@ -341,6 +341,37 @@
  */
 
 /**
+ * @typedef {Object} MpiProjectNameProps (Compound — js/components/Compounds/MpiProjectName)
+ * @property {string} [projectName=''] - Active project name displayed as the title
+ * @property {string} [pageName='']    - Current page / context label (e.g. 'Main Menu', 'Image')
+ *
+ * Instance methods (on instance.el):
+ *   setProjectName(name)  — update project name text
+ *   setPageName(name)     — update page/context label text
+ *
+ * Emits:
+ *   'back' {} — back-arrow clicked; shell handles navigation to landing
+ */
+
+/**
+ * @typedef {Object} MpiRadialMenuProps (Primitive — js/components/Primitives/MpiRadialMenu)
+ * @property {'root'|'image'|'video'|'audio'} [context='root'] - Active context that determines which items are shown
+ * @property {boolean} [open=false] - Force the menu open on mount (used for first-run/workspace entry)
+ * @property {Array<{action:string, label:string, icon:string}>} [extraItems=[]] - Extra items appended to every context (use for dev/conditional entries like the Components Gallery)
+ *
+ * Instance methods (on instance.el):
+ *   show()                  — programmatically show the menu
+ *   hide()                  — programmatically hide the menu
+ *   setContext(ctx)         — switch context and re-render if visible
+ *   setExtraItems(items)    — replace injected extra items and re-render if visible
+ *
+ * Emits:
+ * 'select' { action: string } — user chose an item (action key from the context map)
+ * 'open'   {}                 — menu became visible
+ * 'close'  {}                 — menu became hidden
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

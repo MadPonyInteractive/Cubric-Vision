@@ -26,6 +26,7 @@ import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
 import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js';
 import { MpiOverlay } from '../components/Primitives/MpiOverlay/MpiOverlay.js';
+import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
@@ -341,6 +342,24 @@ function mountAll() {
             const infoBar = document.getElementById('shell-info-text');
             if (infoBar) infoBar.textContent = `List Reordered: ${items[0].label} is now first`;
             console.log('[gallery] drag list reorder:', items);
+        });
+    });
+
+    // ── MpiRadialMenu (Primitive) ─────────────────────────────────────────────
+    mount('preview-radial-menu', () => {
+        const slotEl = slot('preview-radial-menu');
+
+        // Render inside the card preview — force open so it's always visible in gallery
+        const radial = MpiRadialMenu.mount(slotEl, { context: 'root', open: true });
+
+        // Cycle contexts on select to showcase all states
+        const CONTEXTS = ['root', 'image', 'video', 'audio'];
+        let ctxIndex = 0;
+        radial.on('select', ({ action }) => {
+            console.log('[gallery] radial select:', action);
+            ctxIndex = (ctxIndex + 1) % CONTEXTS.length;
+            radial.el.setContext(CONTEXTS[ctxIndex]);
+            radial.el.show();
         });
     });
 
