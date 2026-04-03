@@ -34,6 +34,7 @@ import {
   showAdvancedSettingsScreen,
   closeActiveSubPage,
 } from './provisioning.js';
+import { Hotkeys } from './managers/hotkeyManager.js';
 // Re-export so existing importers (tools, init.js) don't need updating
 export { showProvisioningScreen, showAdvancedSettingsScreen, closeActiveSubPage };
 
@@ -249,16 +250,13 @@ export async function initShell() {
     }, context);
   }, { capture: true });
 
-  // Global Dev Tools Shortcut (Ctrl+Shift+I)
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') {
-      e.preventDefault();
-      if (APP_CONFIG.dev_mode) {
-        if (ipcRenderer) {
-          ipcRenderer.send('toggle-dev-tools'); // More common binding
-        } else {
-          console.log('[shell] Dev Tools shortcut caught, but not in Electron.');
-        }
+  // Global Dev Tools Shortcut (Control+Shift+I) registered via HotkeyManager
+  Hotkeys.register('control+shift+i', () => {
+    if (APP_CONFIG.dev_mode) {
+      if (ipcRenderer) {
+        ipcRenderer.send('toggle-dev-tools');
+      } else {
+        console.log('[shell] Dev Tools shortcut caught, but not in Electron.');
       }
     }
   });

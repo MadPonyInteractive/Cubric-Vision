@@ -96,6 +96,44 @@ Since there is no bundler, we use strict **BEM (Block Element Modifier)** conven
 
 ---
 
+## ⌨️ Global Interaction Management (2026-04-03)
+
+ALL interactive components must register with the global Managers to ensure the app remains accessible and bug-free.
+
+### 1. Hotkeys (`js/managers/hotkeyManager.js`)
+Do not add global `keydown` listeners. Instead, register with the manager in your component's `setup` or upon `show`:
+
+```javascript
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
+
+setup: (el, props, emit) => {
+    const handleAction = () => emit('action');
+    Hotkeys.register('control+enter', handleAction);
+}
+```
+
+### 2. Overlays & Modals (`js/managers/overlayManager.js`)
+If your component obscures the UI or blocks user flow (Modals, Overlays, Dialogs), it **MUST** use the queue system. Only one overlay can be active at once.
+
+```javascript
+import { Overlays } from '../../../managers/overlayManager.js';
+
+el.show = () => {
+    Overlays.request({
+        show: () => { /* Actual display logic */ },
+        hide: () => { /* Actual hide logic */ },
+        id: el // Unique identifier
+    });
+};
+
+el.hide = () => {
+    // Release the queue so the next overlay can show
+    Overlays.release(el); 
+};
+```
+
+---
+
 ## 🤖 Agent Workflow for UI Changes
 
 1.  **Check `js/components/types.js`** to see if a suitable Primitive or Compound exists.

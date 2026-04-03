@@ -14,6 +14,8 @@ import { showAlert, showConfirm, showPrompt } from './dialogs.js';
 import { initTheme } from './themeManager.js';
 import { triggerToolAction } from './toolUtils.js';
 import { ComfyUIController } from './comfyController.js';
+import { Hotkeys } from './managers/hotkeyManager.js';
+import { Overlays } from './managers/overlayManager.js';
 
 window.MpiAlert = showAlert;
 window.MpiConfirm = showConfirm;
@@ -37,86 +39,10 @@ async function init() {
 }
 
 // ── Global Keyboard Shortcuts ────────────────────────────────────────────────
-document.addEventListener('keydown', async (e) => {
-    const isEnter = e.key === 'Enter';
-    const isEscape = e.key === 'Escape';
+// NOTE: Global shortcut handling for Enter/Escape has been moved to js/managers/hotkeyManager.js
+// Transitioning to a registration-based system for the new MpiComponent architecture.
+// Primitives and Compounds now register their own behavior with Hotkeys/Overlays.
 
-    if (isEnter) {
-        const currentTool = state.currentTool;
-        const isModEnter = (e.ctrlKey || e.metaKey);
-
-        if (isModEnter) {
-            e.preventDefault();
-
-            if (currentTool === 'generator') {
-                const { triggerGenerate } = await import('./tools/generator.js');
-                triggerGenerate();
-            } else if (currentTool === 'descriptor') {
-                const { _runDescribe, cancelDescriptor } = await import('./tools/descriptor.js');
-                triggerToolAction(!!state.descriptorRunning, _runDescribe, cancelDescriptor);
-            } else if (currentTool === 'translator') {
-                const { _runTranslate, cancelTranslator } = await import('./tools/translator.js');
-                triggerToolAction(!!state.translatorRunning, _runTranslate, cancelTranslator);
-            } else if (currentTool === 'jsonFormatter') {
-                const { _runFormat, cancelJsonFormatter } = await import('./tools/jsonFormatter.js');
-                triggerToolAction(!!state.jsonFormatterRunning, _runFormat, cancelJsonFormatter);
-            } else if (currentTool === 'llm') {
-                const { runLlm, cancelLlm } = await import('./tools/llm.js');
-                triggerToolAction(!!state.llmRunning, runLlm, cancelLlm);
-            } else if (currentTool === 'detailer') {
-                // Guard: only allow cancel if THIS tool owns the run
-                if (ComfyUIController.isRunning && state.runningComfyTool && state.runningComfyTool !== 'detailer') return;
-                const { triggerEnhance, cancelEnhance } = await import('./tools/detailer.js');
-                triggerToolAction(ComfyUIController.isRunning && state.runningComfyTool === 'detailer', triggerEnhance, cancelEnhance);
-            } else if (currentTool === 'upscaler') {
-                if (ComfyUIController.isRunning && state.runningComfyTool && state.runningComfyTool !== 'upscaler') return;
-                const { triggerUpscale, cancelUpscale } = await import('./tools/upscaler.js');
-                triggerToolAction(ComfyUIController.isRunning && state.runningComfyTool === 'upscaler', triggerUpscale, cancelUpscale);
-            } else if (currentTool === 'promptBuilder') {
-                const { showFinalPrompt } = await import('./tools/promptBuilder.js');
-                showFinalPrompt();
-            }
-        }
-    }
-
-    if (isEscape) {
-        // Cancel active tool generations if applicable
-        const currentTool = state.currentTool;
-        if (currentTool === 'llm') {
-            const { cancelLlm } = await import('./tools/llm.js');
-            cancelLlm();
-        } else if (currentTool === 'descriptor') {
-            const { cancelDescriptor } = await import('./tools/descriptor.js');
-            cancelDescriptor();
-        } else if (currentTool === 'translator') {
-            const { cancelTranslator } = await import('./tools/translator.js');
-            cancelTranslator();
-        } else if (currentTool === 'jsonFormatter') {
-            const { cancelJsonFormatter } = await import('./tools/jsonFormatter.js');
-            cancelJsonFormatter();
-        }
-
-        const activeModals = document.querySelectorAll('.modal-overlay:not(.hide)');
-        if (activeModals.length > 0) {
-            // For specifically complex modals like Media Detail, we should call their close function
-            const mediaModal = document.getElementById('mediaDetailModal');
-            if (mediaModal && !mediaModal.classList.contains('hide')) {
-                const { closeMediaModal } = await import('./components/mediaDetailModal.js');
-                closeMediaModal();
-            }
-
-            // General close for others
-            activeModals.forEach(m => m.classList.add('hide'));
-        }
-
-        // Close subpages (Provisioning, Advanced Settings)
-        if (state.activeSubPage) {
-            import('./shell.js').then(m => {
-                m.closeActiveSubPage(state.activeSubPage.toolName, state.activeSubPage.isManual);
-            });
-        }
-    }
-});
 
 // ── Global Mouse Wheel for Numbers/Sliders ─────────────────────────────────
 document.addEventListener('wheel', (e) => {

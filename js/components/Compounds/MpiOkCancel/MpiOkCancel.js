@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { qs, ce } from '../../../utils/dom.js';
+import { Overlays } from '../../../managers/overlayManager.js';
 
 /**
  * MpiOkCancel — Dialog Action Compound
@@ -99,5 +100,31 @@ export const MpiOkCancel = ComponentFactory.create({
             emit('ok', { inputValue });
         });
         actionsSlot.appendChild(okBtn.el);
+
+        /**
+         * Optional: Manual show/hide methods to integrate with OverlayManager
+         * if this component is used as a standalone dialog.
+         */
+        const _doShow = () => {
+           // Basic display logic if parented
+           el.style.display = 'flex';
+        };
+
+        el.show = () => {
+            // Register with the global OverlayManager
+            Overlays.request({
+                show: _doShow,
+                hide: el.hide,
+                id: el
+            });
+        };
+
+        el.hide = () => {
+            el.style.display = 'none';
+            if (props.showCancel !== false) {
+                emit('cancel', {});
+            }
+            Overlays.release(el);
+        };
     }
 });

@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { Overlays } from '../../../managers/overlayManager.js';
 
 /**
  * MpiOverlay — Main-Area Page Overlay Primitive
@@ -72,16 +73,28 @@ export const MpiOverlay = ComponentFactory.create({
         let _toolContainer = null;
 
         /**
+         * Internal implementation for showing the overlay in the DOM.
+         * Note: This is triggered exclusively by the OverlayManager to handle queueing.
+         */
+        const _doShow = () => {
+             _toolContainer = document.getElementById('tool-container');
+             if (!_toolContainer) return;
+             // Save and clear the current tool content
+             _savedContent = Array.from(_toolContainer.childNodes);
+             _toolContainer.innerHTML = '';
+             _toolContainer.appendChild(el);
+        };
+
+        /**
          * Injects the overlay into #tool-container, saving the current content.
          */
         el.show = () => {
-            _toolContainer = document.getElementById('tool-container');
-            if (!_toolContainer) return;
-
-            // Save and clear the current tool content
-            _savedContent = Array.from(_toolContainer.childNodes);
-            _toolContainer.innerHTML = '';
-            _toolContainer.appendChild(el);
+            // Register with the global OverlayManager (provides queueing and hotkeys)
+            Overlays.request({
+                show: _doShow,
+                hide: el.hide,
+                id: el // Unique identifier for release
+            });
         };
 
         /**
@@ -96,6 +109,9 @@ export const MpiOverlay = ComponentFactory.create({
                 _savedContent.forEach(node => _toolContainer.appendChild(node));
                 _savedContent = null;
             }
+
+            // Signal the OverlayManager that we are done
+            Overlays.release(el);
         };
 
         /**
