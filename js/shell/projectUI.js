@@ -3,7 +3,7 @@
  */
 
 import { state } from '../state.js';
-import { listProjects, createProject, deleteProject, openProject, chooseFolder } from '../projectManager.js';
+import { listProjects, createProject, deleteProject, openProject, chooseFolder } from '../managers/projectManager.js';
 
 // DOM refs (kept at module level to simplify event binding)
 let projectGrid = null;
@@ -15,16 +15,16 @@ let newProjectFolder = null;
  * Initializes the project management UI: modal events and grid loading.
  */
 export function initProjectUI() {
-  projectGrid       = document.getElementById('projectGrid');
-  newProjectModal   = document.getElementById('newProjectModal');
-  newProjectName    = document.getElementById('newProjectName');
-  newProjectFolder  = document.getElementById('newProjectFolder');
+  projectGrid = document.getElementById('projectGrid');
+  newProjectModal = document.getElementById('newProjectModal');
+  newProjectName = document.getElementById('newProjectName');
+  newProjectFolder = document.getElementById('newProjectFolder');
 
-  const newProjectBtn       = document.getElementById('newProjectBtn');
+  const newProjectBtn = document.getElementById('newProjectBtn');
   const closeNewProjectModal = document.getElementById('closeNewProjectModal');
-  const cancelNewProjectBtn  = document.getElementById('cancelNewProjectBtn');
+  const cancelNewProjectBtn = document.getElementById('cancelNewProjectBtn');
   const confirmNewProjectBtn = document.getElementById('confirmNewProjectBtn');
-  const chooseFolderBtn      = document.getElementById('chooseFolderBtn');
+  const chooseFolderBtn = document.getElementById('chooseFolderBtn');
 
   if (newProjectBtn) {
     newProjectBtn.addEventListener('click', () => {
@@ -138,7 +138,7 @@ async function _handleConfirmNewProject() {
   const confirmBtn = document.getElementById('confirmNewProjectBtn');
   const name = newProjectName.value.trim() || 'Untitled Project';
   const folder = newProjectFolder.value.trim() || null;
-  
+
   if (confirmBtn) confirmBtn.classList.add('loading');
   try {
     const project = await createProject(name, folder);

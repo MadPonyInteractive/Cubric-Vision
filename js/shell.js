@@ -6,7 +6,7 @@
 import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
-import { refreshModelRegistry } from './modelManager.js';
+import { refreshModelRegistry } from './managers/modelManager.js';
 import { refreshComfyWorkflowRegistry } from './comfyModelManager.js';
 
 // Components
@@ -32,11 +32,11 @@ export async function initShell() {
   preloadComponentStyles();
 
   // 2. DOM Selection
-  const pageLanding       = document.getElementById('page-landing');
-  const appShell          = document.getElementById('app-shell');
-  const toolContainer     = document.getElementById('tool-container');
-  const monitorMount     = document.getElementById('memory-monitor-mount');
-  const projectNameMount  = document.getElementById('project-name-mount');
+  const pageLanding = document.getElementById('page-landing');
+  const appShell = document.getElementById('app-shell');
+  const toolContainer = document.getElementById('tool-container');
+  const monitorMount = document.getElementById('memory-monitor-mount');
+  const projectNameMount = document.getElementById('project-name-mount');
 
   // 3. Mount Global HUD Components
   _projectNameInstance = MpiProjectName.mount(projectNameMount, {
@@ -45,7 +45,7 @@ export async function initShell() {
   });
 
   const memMonitor = MpiMemoryMonitor.mount(monitorMount);
-  
+
   // 4. Bind Interactions
   initProjectUI();
   bindInfoBarEvents();

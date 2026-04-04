@@ -7,7 +7,7 @@
 'use strict';
 
 import { state } from '../state.js';
-import { toggleTheme } from '../themeManager.js';
+import { toggleTheme } from '../managers/themeManager.js';
 import { Events } from '../events.js';
 
 // Primitives

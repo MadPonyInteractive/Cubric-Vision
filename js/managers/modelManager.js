@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from '../state.js';
 
 /**
  * Fetches the current list of models from the backend and updates global state.
@@ -53,11 +53,11 @@ export async function downloadModel(modelId, onProgress) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modelId })
     });
-    
+
     const data = await res.json();
     if (res.ok) {
-        await refreshModelRegistry();
-        return { success: true };
+      await refreshModelRegistry();
+      return { success: true };
     }
     return { success: false, error: data.error || 'Server error' };
   } catch (err) {
@@ -77,8 +77,8 @@ export async function deleteModel(modelId) {
       body: JSON.stringify({ modelId })
     });
     if (res.ok) {
-        await refreshModelRegistry();
-        return true;
+      await refreshModelRegistry();
+      return true;
     }
     return false;
   } catch (err) {

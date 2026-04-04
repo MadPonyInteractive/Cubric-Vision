@@ -112,7 +112,7 @@ function _mountWorkspace() {
 }
 
 async function _loadComponentsGallery() {
-  const { ensureTemplate } = await import('../templateLoader.js');
+  const { ensureTemplate } = await import('../managers/templateManager.js');
   const { initComponentsPage } = await import('../pages/components.js');
 
   _toolContainer.innerHTML = '';

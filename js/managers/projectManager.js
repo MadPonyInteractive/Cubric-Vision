@@ -3,8 +3,8 @@
  * Talks to the server routes added in server.js Stage 1.
  */
 
-import { state } from './state.js';
-import { navigate, PAGE_LANDING, PAGE_WORKSPACE } from './router.js';
+import { state } from '../state.js';
+import { navigate, PAGE_LANDING, PAGE_WORKSPACE } from '../router.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

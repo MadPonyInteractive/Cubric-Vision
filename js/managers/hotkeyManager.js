@@ -2,10 +2,6 @@
  * js/managers/hotkeyManager.js — Centralized Shortcut Registration for MpiAiSuite.
  * 
  * TODO:
- * - [ ] Move projectManager.js to js/managers/ (Migration)
- * - [ ] Move modelManager.js to js/managers/ (Migration)
- * - [ ] Move templateManager.js to js/managers/ (Migration)
- * - [ ] Move themeManager.js to js/managers/ (Migration)
  * - [ ] Implement Enter for Modal Confirmation (Global)
  * - [ ] Implement F11 for Toggle Full Screen
  * - [ ] Implement F5 / Ctrl+F5 for VRAM/Model Unloading
@@ -63,7 +59,7 @@ class HotkeyManager {
      */
     _handleKeyDown(e) {
         const key = this._getEventKeyString(e);
-        
+
         // Check for exact matches in the registry
         if (this._handlers.has(key)) {
             const callbacks = this._handlers.get(key);
@@ -72,7 +68,7 @@ class HotkeyManager {
                 // Note: Some system keys like Escape should usually close the top-most layer
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // Execute all registered handlers (most recent first if we want ordering, but Set is insertion order)
                 callbacks.forEach(cb => {
                     try { cb(e); } catch (err) { console.error(`[Hotkeys] Error in "${key}" handler:`, err); }
@@ -95,13 +91,13 @@ class HotkeyManager {
         if (e.ctrlKey || e.metaKey) parts.push('control');
         if (e.shiftKey) parts.push('shift');
         if (e.altKey) parts.push('alt');
-        
+
         const key = e.key.toLowerCase();
         // Don't add if it's just a modifier key release
         if (!['control', 'shift', 'alt', 'meta'].includes(key)) {
             parts.push(key);
         }
-        
+
         return parts.join('+');
     }
 }

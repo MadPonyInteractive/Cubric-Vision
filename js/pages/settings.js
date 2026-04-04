@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { toggleTheme } from '../themeManager.js';
+import { toggleTheme } from '../managers/themeManager.js';
 
 export function initSettingsPage() {
   const modelList = document.getElementById('settingsModelList');
@@ -28,7 +28,7 @@ export function initSettingsPage() {
     comfyUrl.value = localStorage.getItem('mpi_comfy_url') || 'http://localhost:8188';
     comfyUrl.addEventListener('change', () => localStorage.setItem('mpi_comfy_url', comfyUrl.value));
   }
-  
+
   const autoStartComfy = document.getElementById('settingsAutoStartComfy');
   if (autoStartComfy) {
     autoStartComfy.checked = localStorage.getItem('mpi_auto_start_comfy') === 'true';
@@ -41,21 +41,21 @@ export function initSettingsPage() {
     // Stage 12.4 Fix: Clear if it was set to a temp path or as requested to point to internal engine
     const currentPath = localStorage.getItem('mpi_comfy_root_path') || '';
     if (currentPath.toLowerCase().includes('temp') || currentPath.toLowerCase().includes('tmp')) {
-        localStorage.removeItem('mpi_comfy_root_path');
-        comfyRootPath.value = '';
-        setComfyPath('');
+      localStorage.removeItem('mpi_comfy_root_path');
+      comfyRootPath.value = '';
+      setComfyPath('');
     } else {
-        comfyRootPath.value = currentPath;
+      comfyRootPath.value = currentPath;
     }
     const syncComfyPath = () => {
-        if (comfyRootPath.value !== localStorage.getItem('mpi_comfy_root_path')) {
-            setComfyPath(comfyRootPath.value);
-        }
+      if (comfyRootPath.value !== localStorage.getItem('mpi_comfy_root_path')) {
+        setComfyPath(comfyRootPath.value);
+      }
     };
     comfyRootPath.addEventListener('change', syncComfyPath);
     comfyRootPath.addEventListener('blur', syncComfyPath);
     comfyRootPath.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') syncComfyPath();
+      if (e.key === 'Enter') syncComfyPath();
     });
   }
 
@@ -78,7 +78,7 @@ export function initSettingsPage() {
 async function setComfyPath(path) {
   localStorage.setItem('mpi_comfy_root_path', path);
   state.comfyRootPath = path;
-  
+
   try {
     const res = await fetch('/comfy/set-path', {
       method: 'POST',
@@ -161,7 +161,7 @@ async function startModelDownload(modelId, btn, card) {
   const progressContainer = document.createElement('div');
   progressContainer.className = 'download-progress-container';
   progressContainer.innerHTML = '<div class="download-progress-bar"></div>';
-  
+
   // Replace button with progress
   btn.style.display = 'none';
   actions.appendChild(progressContainer);
