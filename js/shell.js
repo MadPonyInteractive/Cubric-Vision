@@ -22,34 +22,34 @@ import { navigate, onNavigate, PAGE_LANDING, PAGE_WORKSPACE } from './router.js'
 import { listProjects, createProject, deleteProject, openProject, chooseFolder } from './projectManager.js';
 import { refreshModelRegistry } from './modelManager.js';
 import { refreshComfyWorkflowRegistry } from './comfyModelManager.js';
-import { unloadModel } from './llmService.js';
+import { unloadModel } from './services/llmService.js';
 import { initShaderBackground, stopShaderBackground } from './components/shaderBackground.js';
-import { ComfyUIController } from './comfyController.js';
+import { ComfyUIController } from './services/comfyController.js';
 import { Hotkeys } from './managers/hotkeyManager.js';
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 import { MpiRadialMenu } from './components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const pageLanding         = document.getElementById('page-landing');
-const appShell            = document.getElementById('app-shell');
-const toolContainer       = document.getElementById('tool-container');
+const pageLanding = document.getElementById('page-landing');
+const appShell = document.getElementById('app-shell');
+const toolContainer = document.getElementById('tool-container');
 
-const projectGrid         = document.getElementById('projectGrid');
-const monitorMount        = document.getElementById('memory-monitor-mount');
-const projectNameMount    = document.getElementById('project-name-mount');
+const projectGrid = document.getElementById('projectGrid');
+const monitorMount = document.getElementById('memory-monitor-mount');
+const projectNameMount = document.getElementById('project-name-mount');
 
 // Landing
 const newProjectBtn = document.getElementById('newProjectBtn');
 
 // Modal – New Project
-const newProjectModal      = document.getElementById('newProjectModal');
+const newProjectModal = document.getElementById('newProjectModal');
 const closeNewProjectModal = document.getElementById('closeNewProjectModal');
-const cancelNewProjectBtn  = document.getElementById('cancelNewProjectBtn');
+const cancelNewProjectBtn = document.getElementById('cancelNewProjectBtn');
 const confirmNewProjectBtn = document.getElementById('confirmNewProjectBtn');
-const newProjectName       = document.getElementById('newProjectName');
-const newProjectFolder     = document.getElementById('newProjectFolder');
-const chooseFolderBtn      = document.getElementById('chooseFolderBtn');
+const newProjectName = document.getElementById('newProjectName');
+const newProjectFolder = document.getElementById('newProjectFolder');
+const chooseFolderBtn = document.getElementById('chooseFolderBtn');
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initShell() {
@@ -127,7 +127,7 @@ export async function initShell() {
 
   // Dev Mode: restore last page on refresh; otherwise always start at landing
   if (APP_CONFIG.test_styles) {
-    const savedPage   = sessionStorage.getItem('mpi_dev_page');
+    const savedPage = sessionStorage.getItem('mpi_dev_page');
     const savedParams = JSON.parse(sessionStorage.getItem('mpi_dev_params') || '{}');
     navigate(savedPage || PAGE_LANDING, savedParams);
   } else {
@@ -147,7 +147,7 @@ export async function initShell() {
     e.preventDefault();
 
     const target = e.target;
-    let mediaUrl  = null;
+    let mediaUrl = null;
     const mediaType = 'image';
 
     if (target.tagName.toLowerCase() === 'img' && target.src) {
@@ -158,7 +158,7 @@ export async function initShell() {
       if (base && !comp) {
         mediaUrl = base;
       } else if (base && comp) {
-        const rect      = target.getBoundingClientRect();
+        const rect = target.getBoundingClientRect();
         const relativeX = (e.clientX - rect.left) / rect.width;
         const sliderPos = parseFloat(target.dataset.sliderPos ?? 0.5);
         mediaUrl = relativeX < sliderPos ? base : comp;
@@ -181,9 +181,9 @@ export async function initShell() {
 
     const { MediaContextMenu } = await import('./components/mediaContextMenu.js');
     MediaContextMenu.show(e.clientX, e.clientY, {
-      url:      mediaUrl,
+      url: mediaUrl,
       filename: mediaUrl.split('/').pop().split('?')[0] || 'media_file',
-      type:     mediaType,
+      type: mediaType,
       isSaved,
     }, context);
   }, { capture: true });
@@ -249,11 +249,11 @@ function _mountWorkspace() {
 
   // Map action → display label for MpiProjectName
   const ACTION_LABELS = {
-    root:       'Main Menu',
-    image:      'Image',
-    video:      'Video',
-    audio:      'Audio',
-    gallery:    'Gallery',
+    root: 'Main Menu',
+    image: 'Image',
+    video: 'Video',
+    audio: 'Audio',
+    gallery: 'Gallery',
     components: 'Components',
   };
 
@@ -330,7 +330,7 @@ function buildProjectCard(project) {
   card.className = 'project-card';
   card.dataset.folderPath = project.folderPath;
 
-  const date    = new Date(project.updatedAt);
+  const date = new Date(project.updatedAt);
   const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
   const thumbHtml = project.recentThumbnail
@@ -439,9 +439,9 @@ async function triggerMemoryRelease(isDeep = false, monitorEl) {
     await unloadModel().catch(err => console.error('[shell] LLM unload failed:', err));
 
     const comfyRes = await fetch('/comfy/unload', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ deep: isDeep }),
+      body: JSON.stringify({ deep: isDeep }),
     }).catch(() => null);
 
     if (comfyRes && !comfyRes.ok) {
@@ -457,14 +457,14 @@ async function triggerMemoryRelease(isDeep = false, monitorEl) {
 
 // ── Window Controls ───────────────────────────────────────────────────────────
 function bindWindowControls() {
-  const btnMin       = document.getElementById('win-minimize');
-  const btnMax       = document.getElementById('win-maximize');
-  const btnClose     = document.getElementById('win-close');
-  const btnFS        = document.getElementById('win-fullscreen');
-  const maxIcon      = document.getElementById('max-icon');
-  const restoreIcon  = document.getElementById('restore-icon');
-  const fsEnterIcon  = document.getElementById('fullscreen-enter-icon');
-  const fsExitIcon   = document.getElementById('fullscreen-exit-icon');
+  const btnMin = document.getElementById('win-minimize');
+  const btnMax = document.getElementById('win-maximize');
+  const btnClose = document.getElementById('win-close');
+  const btnFS = document.getElementById('win-fullscreen');
+  const maxIcon = document.getElementById('max-icon');
+  const restoreIcon = document.getElementById('restore-icon');
+  const fsEnterIcon = document.getElementById('fullscreen-enter-icon');
+  const fsExitIcon = document.getElementById('fullscreen-exit-icon');
 
   if (btnMin) btnMin.addEventListener('click', () => {
     if (ipcRenderer) ipcRenderer.send('window-minimize');
@@ -510,7 +510,7 @@ function bindWindowControls() {
 // ── Modal: New Project ────────────────────────────────────────────────────────
 function bindModalEvents() {
   newProjectBtn.addEventListener('click', () => {
-    newProjectName.value   = '';
+    newProjectName.value = '';
     newProjectFolder.value = '';
     newProjectModal.classList.remove('hide');
     setTimeout(() => newProjectName.focus(), 50);
@@ -530,7 +530,7 @@ function bindModalEvents() {
   });
 
   confirmNewProjectBtn.addEventListener('click', async () => {
-    const name   = newProjectName.value.trim() || 'Untitled Project';
+    const name = newProjectName.value.trim() || 'Untitled Project';
     const folder = newProjectFolder.value.trim() || null;
     confirmNewProjectBtn.classList.add('loading');
     try {
@@ -567,8 +567,8 @@ function preloadComponentStyles(paths) {
   paths.forEach(path => {
     if (head.querySelector(`link[href="${path}"]`)) return;
     const link = document.createElement('link');
-    link.rel   = 'stylesheet';
-    link.href  = path;
+    link.rel = 'stylesheet';
+    link.href = path;
     head.appendChild(link);
   });
 }

@@ -1,6 +1,6 @@
 // ComfyUI integration: WebSocket connection, workflow execution, 
 // live preview, and cancel support.
-import { state } from './state.js';
+import { state } from '../state.js';
 
 export const ComfyUIController = {
     serverAddress: "127.0.0.1:8188",

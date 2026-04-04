@@ -10,7 +10,7 @@
 
 import { state } from './state.js';
 import { resizeImageIfNeeded } from './utils/images.js';
-import { ComfyUIController } from './comfyController.js';
+import { ComfyUIController } from './services/comfyController.js';
 import { Events } from './events.js';
 
 // ─── URL Normalization ─────────────────────────────────────────────────────────

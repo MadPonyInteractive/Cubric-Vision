@@ -3,7 +3,7 @@
  * Provides low-level communication with the llama-server.exe backend.
  */
 
-import { state } from './state.js';
+import { state } from '../state.js';
 
 let _llmLock = Promise.resolve();
 
