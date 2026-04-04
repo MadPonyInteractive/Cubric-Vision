@@ -41,6 +41,7 @@ import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js'
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
 import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
+import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -1009,6 +1010,32 @@ function mountAll() {
             deleteLabel: 'Uninstall'
         });
         inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay simple delete clicked'));
+    });
+
+    // ── MpiProjectCard (Compound) ───────────────────────────────────────────
+    mount('preview-project-card-none', () => {
+        const pc = MpiProjectCard.mount(slot('preview-project-card-none'), {
+            title: 'Empty Project',
+            date: '4 Apr 2026'
+        });
+        pc.on('click', () => console.log('[gallery] project card clicked'));
+        pc.on('delete', () => console.log('[gallery] project card delete clicked'));
+    });
+
+    mount('preview-project-card-image', () => {
+        MpiProjectCard.mount(slot('preview-project-card-image'), {
+            title: 'Landscape Design',
+            date: '3 Apr 2026',
+            media: { type: 'image', src: 'media-for-testing/img (1).png' }
+        });
+    });
+
+    mount('preview-project-card-video', () => {
+        MpiProjectCard.mount(slot('preview-project-card-video'), {
+            title: 'Motion Graphics',
+            date: '2 Apr 2026',
+            media: { type: 'video', src: 'media-for-testing/video-16-9.mp4' }
+        });
     });
 }
 

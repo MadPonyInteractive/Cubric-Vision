@@ -372,6 +372,19 @@
  */
 
 /**
+ * @typedef {Object} MpiProjectCardProps (Compound — js/components/Compound/MpiProjectCard)
+ * @property {string} title - Project title
+ * @property {string} [date] - Last modified date or similar
+ * @property {Object} [media] - Optional background media
+ * @property {'image'|'video'} [media.type] - Media type
+ * @property {string} [media.src] - Media source URL
+ *
+ * Emits:
+ * 'click'  {} - Card clicked
+ * 'delete' {} - Delete icon clicked
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

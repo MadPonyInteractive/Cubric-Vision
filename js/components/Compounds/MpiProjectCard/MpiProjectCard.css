@@ -1,0 +1,120 @@
+.mpi-project-card {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 4 / 3.2;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    border: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+
+.mpi-project-card:hover {
+    border-color: var(--neon-border);
+    box-shadow: 0 0 20px var(--neon-glow-sm), 0 10px 25px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px);
+}
+
+.mpi-project-card__preview {
+    position: relative;
+    flex: 1;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.mpi-project-card__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.4;
+    transition: opacity var(--transition), transform 0.5s ease;
+}
+
+.mpi-project-card:hover .mpi-project-card__media {
+    opacity: 0.7;
+    transform: scale(1.05);
+}
+
+.mpi-project-card__icon-wrap {
+    position: relative;
+    z-index: 1;
+    width: 56px;
+    height: 56px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform var(--transition), background var(--transition);
+}
+
+.mpi-project-card:hover .mpi-project-card__icon-wrap {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.mpi-project-card__icon-wrap .mpi-icon {
+    color: #ffb700; /* Folder Yellow vibrancy */
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.mpi-project-card__delete-mount {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity var(--transition), transform var(--transition);
+    z-index: 2;
+}
+
+.mpi-project-card:hover .mpi-project-card__delete-mount {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.mpi-project-card__footer {
+    padding: 16px 20px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border-soft);
+}
+
+.mpi-project-card__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-display);
+}
+
+.mpi-project-card__date {
+    font-size: 0.85rem;
+    color: var(--text-3);
+    font-weight: 500;
+}
+
+/* Light mode specific tweaks */
+body.light-mode .mpi-project-card__icon-wrap {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .mpi-project-card__footer {
+    background: var(--surface-2);
+}
