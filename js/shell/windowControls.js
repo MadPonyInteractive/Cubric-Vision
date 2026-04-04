@@ -3,8 +3,6 @@
  * Fail-safe for browser testing.
  */
 
-import { APP_CONFIG } from '../../dev_configs/app_config.js';
-
 let ipcRenderer = null;
 
 try {
@@ -50,22 +48,6 @@ export function bindWindowControls() {
 
   if (btnClose) btnClose.addEventListener('click', () => {
     if (ipcRenderer) ipcRenderer.send('window-close');
-  });
-
-  // Global F11 listener
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'F11') {
-      e.preventDefault();
-      if (ipcRenderer) ipcRenderer.send('window-fullscreen');
-    }
-    
-    // Dev Tools shortcut (Ctrl+Shift+I)
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') {
-       if (APP_CONFIG.dev_mode) {
-         if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
-         else console.log('[shell/windowControls] Dev Tools shortcut — not in Electron.');
-       }
-    }
   });
 
   // Listen for Electron State changes

@@ -1,10 +1,9 @@
 /**
  * js/managers/hotkeyManager.js — Centralized Shortcut Registration for MpiAiSuite.
- * 
+ *
  * TODO:
- * - [ ] Implement F11 for Toggle Full Screen
  * - [ ] Implement F5 / Ctrl+F5 for VRAM/Model Unloading
- * 
+ *
  * - [ ] Implement Enter for Modal Confirmation (Global)
  * - [ ] Implement M, B, E for Masking Mode (Tool Specific)
  * - [ ] Implement Ctrl+Enter for main tool execution (Global)
@@ -12,7 +11,15 @@
 
 'use strict';
 
+import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { Events } from '../events.js';
+
+let ipcRenderer = null;
+try {
+    if (typeof window.require === 'function') {
+        ipcRenderer = window.require('electron').ipcRenderer;
+    }
+} catch (e) { /* Silent fail — expected in Browser Mode */ }
 
 class HotkeyManager {
     constructor() {
@@ -28,6 +35,26 @@ class HotkeyManager {
      */
     _init() {
         window.addEventListener('keydown', (e) => this._handleKeyDown(e), { capture: true });
+        this._registerBuiltins();
+    }
+
+    /**
+     * Register built-in system hotkeys.
+     * @private
+     */
+    _registerBuiltins() {
+        // F11 — Toggle fullscreen
+        this.register('f11', () => {
+            if (ipcRenderer) ipcRenderer.send('window-fullscreen');
+        });
+
+        // Ctrl+Shift+I — Toggle DevTools (dev mode only)
+        this.register('control+shift+i', () => {
+            if (APP_CONFIG.dev_mode) {
+                if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
+                else console.log('[Hotkeys] Dev Tools shortcut — not in Electron.');
+            }
+        });
     }
 
     /**
