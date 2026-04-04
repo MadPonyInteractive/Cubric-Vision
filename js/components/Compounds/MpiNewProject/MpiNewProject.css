@@ -1,0 +1,90 @@
+/* ── MpiNewProject ───────────────────────────────────────────────────────────── */
+
+/* Portal backdrop — injected directly to body on show */
+.mpi-new-project-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+}
+
+/* Centred wrapper — holds the dialog above the backdrop */
+.mpi-new-project-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    width: min(480px, 90vw);
+}
+
+.mpi-new-project {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    border-radius: 8px;
+}
+
+/* Content Container */
+.mpi-new-project__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Title */
+.mpi-new-project__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    line-height: 1.2;
+}
+
+/* Field row */
+.mpi-new-project__field {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Location row — input + browse button side by side */
+.mpi-new-project__field--location {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.mpi-new-project__field--location #location-slot {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mpi-new-project__field--location #browse-slot {
+    flex: 0 0 auto;
+}
+
+/* Hint text */
+.mpi-new-project__hint {
+    font-size: 0.8rem;
+    color: var(--text-muted, rgba(160, 160, 180, 0.6));
+    line-height: 1.4;
+}
+
+/* Action Buttons */
+.mpi-new-project__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.2));
+}
+
+.mpi-new-project__actions .mpi-button {
+    flex: 0 0 auto;
+}
+
+.mpi-new-project__actions .mpi-button button {
+    padding: 0.5rem 1rem;
+}

@@ -73,12 +73,7 @@
       <h1 class="hero-title">Your Local AI <span class="gradient-text">Workstation</span></h1>
       <p class="hero-subtitle">Generate, enhance, and refine AI images and videos. <br> All running locally on your
         machine.</p>
-      <button id="newProjectBtn" class="btn primary hero-cta">
-        <svg viewBox="0 0 24 24" width="20" height="20">
-          <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-        </svg>
-        New Project
-      </button>
+      <div id="newProjectBtn"></div>
     </div>
 
     <div class="landing-recent">
@@ -126,41 +121,6 @@
        SHARED MODALS
   ══════════════════════════════════════════════════════════════════════════════ -->
 
-  <!-- New Project Modal -->
-  <div id="newProjectModal" class="modal-overlay hide">
-    <div class="modal-box">
-      <button class="modal-close" id="closeNewProjectModal">
-        <svg viewBox="0 0 24 24" width="20" height="20">
-          <path fill="currentColor"
-            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-        </svg>
-      </button>
-      <h2 class="modal-title">New Project</h2>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="newProjectName">Project Name</label>
-          <input type="text" id="newProjectName" placeholder="My AI Project" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label>Project Location</label>
-          <div class="folder-picker-row">
-            <input type="text" id="newProjectFolder" placeholder="Default (projects/ folder)">
-            <button class="btn secondary small" id="chooseFolderBtn">Browse…</button>
-          </div>
-          <span class="field-hint">Leave blank to use the default projects/ folder inside the app directory.</span>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn secondary" id="cancelNewProjectBtn">Cancel</button>
-        <button class="btn primary" id="confirmNewProjectBtn">
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-          </svg>
-          Create Project
-        </button>
-      </div>
-    </div>
-  </div>
 
   <script type="module" src="js/init.js"></script>
 </body>

@@ -91,7 +91,7 @@
 ## Phase 3.4: Load comfy engine popup
 ## Phase 3.4: New Project popup and button on landing page []
 ### Phase 3.4: MpiProjectCard [X]
-## Phase 3.4: Implement confirm for project delete []
+## Phase 3.4: Implement confirm for project delete [X]
 
 ## Phase 3.5.1: Video preview (crop grid + snapshot)
 ## Phase 3.5.2: Video Controller (play/stop, vol, seek, repeat) 

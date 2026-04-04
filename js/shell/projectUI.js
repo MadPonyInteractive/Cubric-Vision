@@ -1,68 +1,49 @@
 /**
- * projectUI.js — UI logic for the Landing page project grid and New Project modal.
- * Cards are rendered using the MpiProjectCard compound component.
+ * projectUI.js — UI logic for the Landing page project grid and New Project dialog.
+ * Cards are rendered using MpiProjectCard. The "+ New Project" trigger uses MpiButton.
+ * The creation dialog uses the MpiNewProject compound component.
  */
 
-import { state } from '../state.js';
-import { listProjects, createProject, deleteProject, openProject, chooseFolder } from '../managers/projectManager.js';
+import { listProjects, createProject, deleteProject, openProject } from '../managers/projectManager.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
+import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 
-// DOM refs (kept at module level to simplify event binding)
+// DOM refs
 let projectGrid = null;
-let newProjectModal = null;
-let newProjectName = null;
-let newProjectFolder = null;
+
+/** Lazily created MpiNewProject dialog instance (reused across opens). */
+let _newProjectDialog = null;
 
 /**
- * Initializes the project management UI: modal events and grid loading.
+ * Initializes the project management UI: trigger button and grid loading.
  */
 export function initProjectUI() {
   projectGrid = document.getElementById('projectGrid');
-  newProjectModal = document.getElementById('newProjectModal');
-  newProjectName = document.getElementById('newProjectName');
-  newProjectFolder = document.getElementById('newProjectFolder');
 
-  const newProjectBtn = document.getElementById('newProjectBtn');
-  const closeNewProjectModal = document.getElementById('closeNewProjectModal');
-  const cancelNewProjectBtn = document.getElementById('cancelNewProjectBtn');
-  const confirmNewProjectBtn = document.getElementById('confirmNewProjectBtn');
-  const chooseFolderBtn = document.getElementById('chooseFolderBtn');
-
-  if (newProjectBtn) {
-    newProjectBtn.addEventListener('click', () => {
-      newProjectName.value = '';
-      newProjectFolder.value = '';
-      newProjectModal.classList.remove('hide');
-      setTimeout(() => newProjectName.focus(), 50);
+  const btnSlot = document.getElementById('newProjectBtn');
+  if (btnSlot) {
+    const triggerBtn = MpiButton.mount(btnSlot, {
+      text: '+ New Project',
+      variant: 'primary',
+      size: 'lg',
     });
-  }
 
-  if (closeNewProjectModal) closeNewProjectModal.addEventListener('click', () => newProjectModal.classList.add('hide'));
-  if (cancelNewProjectBtn) cancelNewProjectBtn.addEventListener('click', () => newProjectModal.classList.add('hide'));
-
-  if (newProjectModal) {
-    newProjectModal.addEventListener('click', (e) => {
-      if (e.target === newProjectModal) newProjectModal.classList.add('hide');
-    });
-  }
-
-  if (chooseFolderBtn) {
-    chooseFolderBtn.addEventListener('click', async () => {
-      chooseFolderBtn.classList.add('loading');
-      const chosen = await chooseFolder();
-      chooseFolderBtn.classList.remove('loading');
-      if (chosen) newProjectFolder.value = chosen;
-    });
-  }
-
-  if (confirmNewProjectBtn) {
-    confirmNewProjectBtn.addEventListener('click', _handleConfirmNewProject);
-  }
-
-  if (newProjectName) {
-    newProjectName.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') confirmNewProjectBtn.click();
+    triggerBtn.on('click', () => {
+      if (!_newProjectDialog) {
+        _newProjectDialog = MpiNewProject.mount(document.createElement('div'));
+        _newProjectDialog.on('create', async ({ name, location }) => {
+          try {
+            const project = await createProject(name || 'Untitled Project', location);
+            openProject(project);
+          } catch (err) {
+            console.error('[projectUI] createProject failed:', err);
+            alert('Could not create project: ' + err.message);
+          }
+        });
+      }
+      _newProjectDialog.el.show();
     });
   }
 }
@@ -141,21 +122,4 @@ function _buildProjectCard(project) {
   });
 
   return card.el;
-}
-
-async function _handleConfirmNewProject() {
-  const confirmBtn = document.getElementById('confirmNewProjectBtn');
-  const name = newProjectName.value.trim() || 'Untitled Project';
-  const folder = newProjectFolder.value.trim() || null;
-
-  if (confirmBtn) confirmBtn.classList.add('loading');
-  try {
-    const project = await createProject(name, folder);
-    newProjectModal.classList.add('hide');
-    openProject(project);
-  } catch (err) {
-    alert('Could not create project: ' + err.message);
-  } finally {
-    if (confirmBtn) confirmBtn.classList.remove('loading');
-  }
 }

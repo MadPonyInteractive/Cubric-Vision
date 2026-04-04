@@ -42,6 +42,7 @@ import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay
 import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
+import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -805,7 +806,7 @@ function mountAll() {
         });
 
         btn.on('click', () => okc.el.show());
-        okc.on('ok',     () => console.log('[gallery] MpiOkCancel OK clicked'));
+        okc.on('ok', () => console.log('[gallery] MpiOkCancel OK clicked'));
         okc.on('cancel', () => console.log('[gallery] MpiOkCancel Cancel clicked'));
     });
 
@@ -829,9 +830,9 @@ function mountAll() {
         });
 
         btn.on('click', () => okc.el.show());
-        okc.on('ok',     ({ inputValue }) => console.log('[gallery] MpiOkCancel OK with input:', inputValue));
-        okc.on('cancel', ()               => console.log('[gallery] MpiOkCancel Cancel clicked'));
-        okc.on('input',  ({ value })      => console.log('[gallery] MpiOkCancel input changed:', value));
+        okc.on('ok', ({ inputValue }) => console.log('[gallery] MpiOkCancel OK with input:', inputValue));
+        okc.on('cancel', () => console.log('[gallery] MpiOkCancel Cancel clicked'));
+        okc.on('input', ({ value }) => console.log('[gallery] MpiOkCancel input changed:', value));
     });
 
     mount('preview-okcancal-no-cancel', () => {
@@ -856,6 +857,25 @@ function mountAll() {
 
         btn.on('click', () => okc.el.show());
         okc.on('ok', () => console.log('[gallery] MpiOkCancel OK clicked'));
+    });
+
+    // ── MpiNewProject (Compound) ──────────────────────────────────────────────
+    mount('preview-newproject-standard', () => {
+        const slotEl = slot('preview-newproject-standard');
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'plus',
+            label: '+ New Project',
+            variant: 'primary',
+            size: 'md',
+            info: 'Click to show the New Project dialog'
+        });
+        const dialog = MpiNewProject.mount(document.createElement('div'));
+        dialog.on('create', ({ name, location }) =>
+            console.log('[gallery] MpiNewProject create:', { name, location }));
+        dialog.on('cancel', () => console.log('[gallery] MpiNewProject cancelled'));
+        btn.on('click', () => dialog.el.show());
     });
 
     // ── MpiInstalledDisplay (Compound) ────────────────────────────────────────

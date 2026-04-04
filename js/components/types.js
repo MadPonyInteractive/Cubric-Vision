@@ -389,6 +389,26 @@
  */
 
 /**
+ * @typedef {Object} MpiNewProjectProps (Compound — js/components/Compounds/MpiNewProject)
+ * No props required — all content is internal.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a blurred backdrop + centred dialog to document.body.
+ *             Registers with OverlayManager (Escape auto-closes). Resets fields on each show.
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *             Does NOT emit 'cancel' — only the explicit Cancel button does.
+ *
+ * Usage:
+ *   const d = MpiNewProject.mount(document.createElement('div'));
+ *   d.on('create', ({ name, location }) => createProject(name, location));
+ *   d.el.show();
+ *
+ * Emits:
+ * 'create' { name: string, location: string|null } — "+ Create Project" clicked
+ * 'cancel' {}                                       — Cancel button clicked only
+ */
+
+/**
  * @typedef {Object} MpiProjectCardProps (Compound — js/components/Compounds/MpiProjectCard)
  * @property {string}               [title='Untitled'] - Project name shown in the card footer.
  * @property {string}               [date='']          - Formatted date string shown below the title.
