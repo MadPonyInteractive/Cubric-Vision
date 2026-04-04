@@ -1,0 +1,75 @@
+/* ── Workspace Topbar ────────────────────────────────────────────────────── */
+.workspace-topbar {
+  /* Float over the workspace canvas — no solid background */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  background: transparent;
+  border-bottom: none;
+  pointer-events: none;
+  /* passthrough clicks to canvas by default */
+  z-index: 50;
+}
+
+/* Both mount slots re-enable pointer events for their own content */
+#project-name-mount,
+#memory-monitor-mount {
+  pointer-events: auto;
+}
+
+/* ── Tool Container ─────────────────────────────────────────────────────────── */
+.tool-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.25rem 20px 5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.tool-panel {
+  width: 100%;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  animation: fadeIn 0.4s ease-out;
+  min-height: auto;
+}
+
+.tool-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem 2rem 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 440px;
+}
+
+.tool-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky;
+  top: -1.25rem;
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.tool-header-text {
+  flex: 1;
+}

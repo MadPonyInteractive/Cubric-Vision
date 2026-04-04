@@ -9,4 +9,10 @@
 
 
 @import url('styles/01_base.css');
-@import url('styles/02_shell.css');
+
+/* Shell Partial Modules */
+@import url('styles/shell/base.css');
+@import url('styles/shell/titlebar.css');
+@import url('styles/shell/landing.css');
+@import url('styles/shell/workspace.css');
+@import url('styles/shell/components.css');

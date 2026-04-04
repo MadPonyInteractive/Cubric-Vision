@@ -1,0 +1,78 @@
+/* ── Titlebar (Custom Window Controls) ────────────────────────────────────────── */
+.titlebar {
+  height: var(--titlebar-h);
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-2);
+}
+
+.titlebar-drag-region {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-left: 1rem;
+  -webkit-app-region: drag;
+}
+
+.titlebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.titlebar-logo-img {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 8px var(--neon-glow));
+}
+
+.titlebar-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+}
+
+.window-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.control-btn {
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  transition: background var(--transition), color var(--transition);
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.control-btn.close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.control-btn svg {
+  pointer-events: none;
+}

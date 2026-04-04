@@ -85,6 +85,18 @@
 
 
 
+## Phase 3.4: Status Bar (Info Bar) [Implement the Progress into it]
+## Phase 3.4: Load comfy engine 
+## Phase 3.4: New Project popup and button on landing page
+## Phase 3.4: Recent Project
+## Phase 3.4: Implement confirm for project delete
+
+## Phase 3.5: Media Previewer (Mask separate?)
+*Target: js/components/Blocks/*
+## Phase 3.6: Media Gallery
+*Target: js/components/Blocks/*
+
+
 ## Phase 4: Overlay pages (Foundation Complete)
 *Target: js/components/Blocks/*
 - [ ] **Download Manager**: Refactor `provisioning.js` logic into an `MpiOverlay` block.
@@ -92,13 +104,8 @@
 *   **Requirement**: Must use `MpiOverlay.show()` to ensure background tool persistence.
 *   **Requirement**: Must listen for `ui:close-all-popups` to clean up sub-page selectors.
 
-## Phase 5: Media Previewer
-*Target: js/components/Blocks/*
-## Phase 6: Media Gallery
-*Target: js/components/Blocks/*
 
-
-## Phase 7: Main Orchestration (Tier 3 - Block)
+## Phase 5: Main Orchestration (Tier 3 - Block) ??? its a page
 *Target: js/components/Blocks/*
 
 - [ ] **MpiPromptBuilder**: The top-level tool orchestrator.
@@ -114,7 +121,7 @@
 - [ ] **Update Component Gallery**: the `js/pages/components.js` and `templates/tpl-components.html` need to be updated by adding this new component
 ---
 
-## Phase 8: Integration & Deletion (Cleanup)
+## Phase 6: Integration & Deletion (Cleanup)
 - [ ] **Router Update**: Update `js/toolRegistry.js` to mount the `MpiPromptBuilder` Block.
 - [ ] **`elements.js` Cleanup**: Delete all `pb-` and `pe-` element references once encapsulated.
 - [ ] **`formBuilder.js` Retirement**: Deprecate the legacy procedural form builder once all tools are converted to R8 Compounds.

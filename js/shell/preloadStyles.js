@@ -1,0 +1,55 @@
+/**
+ * preloadStyles.js — Manifest of all primitive, compound, and block styles
+ * that must be preloaded at startup to prevent FOUC (Flash of Unstyled Content).
+ */
+
+export const PRELOAD_COMPONENT_STYLES = [
+  // Primitives
+  'js/components/Primitives/MpiButton/MpiButton.css',
+  'js/components/Primitives/MpiIcon/MpiIcon.css',
+  'js/components/Primitives/MpiBadge/MpiBadge.css',
+  'js/components/Primitives/MpiSpinner/MpiSpinner.css',
+  'js/components/Primitives/MpiProgressBar/MpiProgressBar.css',
+  'js/components/Primitives/MpiInput/MpiInput.css',
+  'js/components/Primitives/MpiDropdown/MpiDropdown.css',
+  'js/components/Primitives/MpiRadioGroup/MpiRadioGroup.css',
+  'js/components/Primitives/MpiPopup/MpiPopup.css',
+  'js/components/Primitives/MpiToast/MpiToast.css',
+  'js/components/Primitives/MpiScrollableBox/MpiScrollableBox.css',
+  'js/components/Primitives/MpiMediaDropzone/MpiMediaDropzone.css',
+  'js/components/Primitives/MpiDragList/MpiDragList.css',
+  'js/components/Primitives/MpiOverlay/MpiOverlay.css',
+  'js/components/Primitives/MpiRadialMenu/MpiRadialMenu.css',
+
+  // Compounds
+  'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
+  'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',
+  'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
+  'js/components/Compounds/MpiToolbar/MpiToolbar.css',
+  'js/components/Compounds/MpiCameraConfig/MpiCameraConfig.css',
+  'js/components/Compounds/MpiLightingConfig/MpiLightingConfig.css',
+  'js/components/Compounds/MpiStyleConfig/MpiStyleConfig.css',
+  'js/components/Compounds/MpiVideoScene/MpiVideoScene.css',
+  'js/components/Compounds/MpiOkCancel/MpiOkCancel.css',
+  'js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css',
+  'js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css',
+  'js/components/Compounds/MpiProjectName/MpiProjectName.css',
+
+  // Blocks
+  'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
+];
+
+/**
+ * Injects <link> tags for all shared component CSS files.
+ * @param {string[]} [paths=PRELOAD_COMPONENT_STYLES] - Optional custom paths
+ */
+export function preloadComponentStyles(paths = PRELOAD_COMPONENT_STYLES) {
+  const head = document.head;
+  paths.forEach(path => {
+    if (head.querySelector(`link[href="${path}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = path;
+    head.appendChild(link);
+  });
+}

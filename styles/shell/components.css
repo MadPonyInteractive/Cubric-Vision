@@ -1,0 +1,58 @@
+/* ── Shell Info / Status Bar ────────────────────────────────────────────────── */
+#shell-info-bar {
+  flex-shrink: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  gap: 0.6rem;
+}
+
+#shell-info-bar::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 12px;
+  background: linear-gradient(to bottom, var(--neon-electric), var(--primary));
+  border-radius: 2px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.shell-info-content {
+  font-family: var(--font-main);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  color: var(--text-3);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.shell-info-content.updating {
+  opacity: 0;
+  transform: translateY(2px);
+}
+
+body.light-mode #shell-info-bar {
+  background: rgba(255, 255, 255, 0.85);
+  border-top-color: var(--border);
+}
+
+body.light-mode .shell-info-content {
+  color: var(--text-3);
+}
+
+body.light-mode #shell-info-bar::before {
+  background: linear-gradient(to bottom, var(--neon-electric), var(--primary));
+  opacity: 0.5;
+}
