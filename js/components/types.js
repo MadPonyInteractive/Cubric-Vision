@@ -308,18 +308,29 @@
 
 /**
  * @typedef {Object} MpiOkCancelProps (Compound — js/components/Compounds/MpiOkCancel)
- * @property {string} [title=''] - Large title text at the top
- * @property {string} [text=''] - Descriptive text content
- * @property {string} [inputPlaceholder] - Optional input field placeholder (if present, shows input)
- * @property {string} [inputValue=''] - Initial value for the optional input field
- * @property {boolean} [showCancel=true] - Whether to display the Cancel button
- * @property {string} [okLabel='OK'] - Custom label for the OK button
- * @property {string} [cancelLabel='Cancel'] - Custom label for the Cancel button
+ * @property {string}  [title='']             - Large title text at the top of the dialog.
+ * @property {string}  [text='']              - Descriptive body text shown below the title.
+ * @property {string}  [inputPlaceholder]     - If provided, an input field is rendered below the text.
+ * @property {string}  [inputValue='']        - Initial value pre-filled in the optional input field.
+ * @property {boolean} [showCancel=true]      - Whether to display the Cancel button.
+ * @property {string}  [okLabel='OK']         - Label for the confirm/OK button.
+ * @property {string}  [cancelLabel='Cancel'] - Label for the cancel button.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a blurred backdrop + centred dialog to document.body.
+ *             Registers with OverlayManager (Escape auto-closes). Caller needs nothing else.
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *             Does NOT emit 'cancel' — only the explicit Cancel button does.
+ *
+ * Usage:
+ *   const d = MpiOkCancel.mount(document.createElement('div'), { title: 'Sure?', text: '...' });
+ *   d.on('ok', () => doWork());
+ *   d.el.show(); // all backdrop/Escape/queue handling is internal
  *
  * Emits:
- * 'ok'     { inputValue?: string } — OK button clicked (includes input value if present)
- * 'cancel' {}                      — Cancel button clicked
- * 'input'  { value: string }        — Optional input field changed
+ * 'ok'     { inputValue?: string } — OK button clicked (includes input value if field is present)
+ * 'cancel' {}                      — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
+ * 'input'  { value: string }       — Optional input field value changed
  */
 
 /**
@@ -372,16 +383,23 @@
  */
 
 /**
- * @typedef {Object} MpiProjectCardProps (Compound — js/components/Compound/MpiProjectCard)
- * @property {string} title - Project title
- * @property {string} [date] - Last modified date or similar
- * @property {Object} [media] - Optional background media
- * @property {'image'|'video'} [media.type] - Media type
- * @property {string} [media.src] - Media source URL
+ * @typedef {Object} MpiProjectCardMedia
+ * @property {'image'|'video'} type - Media type to render as the card background.
+ * @property {string}          src  - URL or local path to the image or video file.
+ */
+
+/**
+ * @typedef {Object} MpiProjectCardProps (Compound — js/components/Compounds/MpiProjectCard)
+ * @property {string}               [title='Untitled'] - Project name shown in the card footer.
+ * @property {string}               [date='']          - Formatted date string shown below the title.
+ * @property {MpiProjectCardMedia}  [media]            - Optional image or video background.
+ *                                                       Omit or set to null for an icon-only card.
+ *
+ * Instance methods: none (card is fully declarative via props + events).
  *
  * Emits:
- * 'click'  {} - Card clicked
- * 'delete' {} - Delete icon clicked
+ * 'click'  {} — Card body clicked (delete button area is excluded).
+ * 'delete' {} — Delete button (trash icon) clicked. Caller decides confirmation flow.
  */
 
 /**

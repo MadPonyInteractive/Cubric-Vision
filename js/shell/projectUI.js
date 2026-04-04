@@ -1,9 +1,12 @@
 /**
  * projectUI.js — UI logic for the Landing page project grid and New Project modal.
+ * Cards are rendered using the MpiProjectCard compound component.
  */
 
 import { state } from '../state.js';
 import { listProjects, createProject, deleteProject, openProject, chooseFolder } from '../managers/projectManager.js';
+import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
+import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 
 // DOM refs (kept at module level to simplify event binding)
 let projectGrid = null;
@@ -88,50 +91,56 @@ export async function loadProjectGrid() {
   }
 }
 
-function _buildProjectCard(project) {
-  const card = document.createElement('div');
-  card.className = 'project-card';
-  card.dataset.folderPath = project.folderPath;
+/**
+ * Shows an MpiOkCancel confirmation dialog for project deletion.
+ * The component self-manages the backdrop, portal, and overlay queue.
+ * @param {string} projectName
+ * @param {Function} onConfirm - Called only when user confirms.
+ */
+function _showDeleteConfirm(projectName, onConfirm) {
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Delete Project',
+    text: `Are you sure you want to delete "${projectName}"? This cannot be undone.`,
+    okLabel: 'Delete',
+    cancelLabel: 'Keep it',
+  });
+  dialog.on('ok', () => onConfirm());
+  dialog.el.show();
+}
 
+/**
+ * Builds a single project card using the MpiProjectCard compound component.
+ * @param {Object} project - Project data from projectManager.
+ * @returns {HTMLElement} Mounted card wrapper element.
+ */
+function _buildProjectCard(project) {
   const date = new Date(project.updatedAt);
   const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
-  const thumbHtml = project.recentThumbnail
-    ? `<img src="${project.recentThumbnail}" alt="${project.name}" onerror="this.style.display='none'">`
-    : ``;
+  /** @type {import('../components/Compounds/MpiProjectCard/MpiProjectCard.js').MpiProjectCardProps} */
+  const props = {
+    title: project.name,
+    date: dateStr,
+    media: project.recentThumbnail ? { type: 'image', src: project.recentThumbnail } : null,
+  };
 
-  card.innerHTML = `
-    <div class="project-card-thumb">
-      ${thumbHtml}
-      <span class="project-card-folder-icon">📁</span>
-    </div>
-    <div class="project-card-body">
-      <div class="project-card-name">${escapeHtml(project.name)}</div>
-      <div class="project-card-date">${dateStr}</div>
-    </div>
-    <button class="project-card-delete" title="Delete project" data-folder="${escapeHtml(project.folderPath)}">
-      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-    </button>`;
+  const wrapper = document.createElement('div');
+  const card = MpiProjectCard.mount(wrapper, props);
 
-  card.addEventListener('click', (e) => {
-    if (e.target.closest('.project-card-delete')) return;
-    openProject(project);
-  });
+  card.on('click', () => openProject(project));
 
-  const delBtn = card.querySelector('.project-card-delete');
-  delBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (await window.MpiConfirm(`Are you sure you want to delete ${project.name}? This cannot be undone.`)) {
+  card.on('delete', () => {
+    _showDeleteConfirm(project.name, async () => {
       try {
         await deleteProject(project.folderPath);
         loadProjectGrid();
       } catch (err) {
         window.MpiAlert('Could not delete project: ' + err.message);
       }
-    }
+    });
   });
 
-  return card;
+  return card.el;
 }
 
 async function _handleConfirmNewProject() {
@@ -149,12 +158,4 @@ async function _handleConfirmNewProject() {
   } finally {
     if (confirmBtn) confirmBtn.classList.remove('loading');
   }
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

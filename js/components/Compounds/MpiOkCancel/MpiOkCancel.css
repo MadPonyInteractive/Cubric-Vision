@@ -1,5 +1,25 @@
 /* ── MpiOkCancel ────────────────────────────────────────────────────────────── */
 
+/* Portal backdrop — injected directly to body on show */
+.mpi-ok-cancel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+}
+
+/* Centred wrapper — holds the dialog above the backdrop */
+.mpi-ok-cancel-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    width: min(440px, 90vw);
+}
+
+
 .mpi-ok-cancel {
     display: flex;
     flex-direction: column;
