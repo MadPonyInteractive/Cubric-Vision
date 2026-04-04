@@ -2,9 +2,10 @@
  * js/managers/hotkeyManager.js — Centralized Shortcut Registration for MpiAiSuite.
  * 
  * TODO:
- * - [ ] Implement Enter for Modal Confirmation (Global)
  * - [ ] Implement F11 for Toggle Full Screen
  * - [ ] Implement F5 / Ctrl+F5 for VRAM/Model Unloading
+ * 
+ * - [ ] Implement Enter for Modal Confirmation (Global)
  * - [ ] Implement M, B, E for Masking Mode (Tool Specific)
  * - [ ] Implement Ctrl+Enter for main tool execution (Global)
  */

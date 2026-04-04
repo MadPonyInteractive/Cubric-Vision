@@ -81,19 +81,25 @@
     - Optional MpiButton on left `Delete Models` (toggle) 
     - MpiButton on right `Delete`
 
+
+# Reimplement settings/about/help in projects page
+
 ## Phase 3.3: Radial Menu
 
 
-
 ## Phase 3.4: Status Bar (Info Bar) [Implement the Progress into it]
-## Phase 3.4: Load comfy engine 
+## Phase 3.4: Load comfy engine popup
 ## Phase 3.4: New Project popup and button on landing page
 ## Phase 3.4: Recent Project
 ## Phase 3.4: Implement confirm for project delete
 
+## Phase 3.5.1: Video preview (crop grid + snapshot)
+## Phase 3.5.2: Video Controller (play/stop, vol, seek, repeat) 
+## Phase 3.5.3: Video Region Select
+
 ## Phase 3.5: Media Previewer (Mask separate?)
 *Target: js/components/Blocks/*
-## Phase 3.6: Media Gallery
+## Phase 3.6: Media Gallery (small popup VS full overlay??)
 *Target: js/components/Blocks/*
 
 
@@ -125,6 +131,15 @@
 - [ ] **Router Update**: Update `js/toolRegistry.js` to mount the `MpiPromptBuilder` Block.
 - [ ] **`elements.js` Cleanup**: Delete all `pb-` and `pe-` element references once encapsulated.
 - [ ] **`formBuilder.js` Retirement**: Deprecate the legacy procedural form builder once all tools are converted to R8 Compounds.
+
+## Phase 7: All systems ready
+**Regenerate the lock file:**
+    rm package-lock.json
+    npm install
+    This will rebuild package-lock.json based on your current package.json
+
+**Verify it's correct:**
+    npm list  # Check that dependencies resolve properly
 
 ---
 

@@ -18,7 +18,7 @@ import { preloadComponentStyles } from './shell/preloadStyles.js';
 import { bindWindowControls } from './shell/windowControls.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
-import { bindInfoBarEvents, bindGlobalContextMenu } from './shell/uiEvents.js';
+import { bindInfoBarEvents } from './shell/uiEvents.js';
 import { initNavigation, handleNavigation, updateTitlebarProject } from './shell/navigation.js';
 
 // Internal references for communication
@@ -50,7 +50,6 @@ export async function initShell() {
   initProjectUI();
   bindInfoBarEvents();
   bindWindowControls();
-  bindGlobalContextMenu();
   bindMemoryHotkeys(memMonitor);
 
   // 5. Initialize Navigation Orchestrator

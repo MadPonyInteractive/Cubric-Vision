@@ -30,4 +30,3 @@ desktop.ini
 # Secrets / local config (if any added later)
 .env
 .env.local
-
