@@ -10,7 +10,7 @@
     border-radius: 12px;
     overflow: hidden;
     user-select: none;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 50px var(--bg-recessed);
     border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -31,7 +31,7 @@
     left: 0;
     right: 0;
     padding: 12px 16px;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(0deg, var(--bg-recessed) 0%, var(--bg-recessed) 60%, rgba(0, 0, 0, 0) 100%);
     backdrop-filter: blur(4px);
     opacity: 0;
     transform: translateY(10px);
@@ -129,7 +129,7 @@
     opacity: 0;
     transform: scale(0.6);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 40px var(--bg-recessed);
 }
 
 .mpi-video-player[data-playing="false"] .mpi-video-player__big-play {
@@ -147,7 +147,7 @@
 
 /* Accessibility & State */
 .mpi-video-player:focus-within {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 20px 50px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 20px 50px var(--bg-recessed);
 }
 
 /* Adjust volume control for video context */

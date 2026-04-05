@@ -128,7 +128,7 @@
     color: var(--text-2);
     white-space: nowrap;
     z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px var(--bg-recessed);
     animation: fadeIn 0.15s ease-out;
     pointer-events: none;
 }

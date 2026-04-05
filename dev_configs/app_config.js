@@ -9,7 +9,7 @@
 
 export const APP_CONFIG = {
     // Enables the "Inspect Element" action in the media context menu, etc.
-    dev_mode: false,
+    dev_mode: true,
     // Restores the last-visited page on browser refresh (dev convenience).
     test_styles: true
 };

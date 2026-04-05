@@ -84,7 +84,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.2rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px var(--bg-recessed);
     overflow-y: auto;
     max-height: 220px;
     transform-origin: top center;

@@ -43,21 +43,21 @@
 
 /* ── Color Modifiers ─────────────────────────────────────────────────────── */
 .mpi-icon--muted {
-    color: var(--text-3, #534e6b);
+    color: var(--text-3);
 }
 
 .mpi-icon--accent {
-    color: var(--neon-accent, #e0aaff);
+    color: var(--neon-accent);
 }
 
 .mpi-icon--primary {
-    color: var(--primary, #9a82bb);
+    color: var(--primary);
 }
 
 .mpi-icon--danger {
-    color: var(--danger, #ef4444);
+    color: var(--danger);
 }
 
 .mpi-icon--success {
-    color: var(--success, #10b981);
+    color: var(--success);
 }

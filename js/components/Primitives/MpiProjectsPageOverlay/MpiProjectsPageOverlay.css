@@ -8,7 +8,7 @@
     position: fixed;
     inset: 0;
     z-index: 400;
-    background: var(--bg-base, #0e0e12);
+    background: var(--bg);
 }
 
 /* ── Stash: hidden container preserving background DOM ──────── */

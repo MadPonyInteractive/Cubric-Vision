@@ -16,7 +16,7 @@
 
 .mpi-project-card:hover {
     border-color: var(--neon-border);
-    box-shadow: 0 0 20px var(--neon-glow-sm), 0 10px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 20px var(--neon-glow-sm), 0 10px 25px var(--bg-recessed);
     transform: translateY(-4px);
 }
 
@@ -55,7 +55,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 30px var(--bg-recessed);
     backdrop-filter: blur(8px);
     border: 1px solid var(--border);
     transition: transform var(--transition), background var(--transition);
@@ -69,7 +69,7 @@
 .mpi-project-card__icon-wrap .mpi-icon {
     color: #ffb700;
     /* Folder Yellow vibrancy */
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    filter: drop-shadow(0 2px 4px var(--bg-recessed));
 }
 
 .mpi-project-card__delete-mount {
