@@ -1,9 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { qs } from '../../../utils/dom.js';
-import { Overlays } from '../../../managers/overlayManager.js';
-import { Events } from '../../../events.js';
 import { chooseFolder } from '../../../managers/projectManager.js';
 
 /**
@@ -44,9 +43,22 @@ export const MpiNewProject = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        // ── Portal nodes (created on show, destroyed on hide) ────────────────
-        let _backdrop = null;
-        let _wrapper  = null;
+        // ── Modal primitive — owns backdrop, portal, Overlays, Events ────────
+        let _nameField = null;
+
+        const modal = MpiModal.mount(document.createElement('div'), {
+            width: 'min(480px, 90vw)',
+            onShow: () => setTimeout(() => _nameField?.focus(), 50),
+        });
+        modal.el.appendChild(el);
+        el.show = () => {
+            // Reset fields each time the dialog is opened
+            if (_nameField) _nameField.value = '';
+            const locField = locationInput.el.querySelector('input');
+            if (locField) locField.value = '';
+            modal.el.show();
+        };
+        el.hide = () => modal.el.hide();
 
         // ── Name input ───────────────────────────────────────────────────────
         const nameInput = MpiInput.mount(document.createElement('div'), {
@@ -54,6 +66,7 @@ export const MpiNewProject = ComponentFactory.create({
             label: 'Project Name',
             placeholder: 'My Project'
         });
+        _nameField = nameInput.el.querySelector('input');
         qs('#name-slot', el).appendChild(nameInput.el);
 
         // ── Location input ───────────────────────────────────────────────────
@@ -110,54 +123,5 @@ export const MpiNewProject = ComponentFactory.create({
             el.hide();
         });
         actionsSlot.appendChild(createBtn.el);
-
-        // ── Internal: Build and inject the portal ────────────────────────────
-        const _doShow = () => {
-            // Reset fields each time the dialog is opened
-            const nameField = nameInput.el.querySelector('input');
-            const locField  = locationInput.el.querySelector('input');
-            if (nameField) nameField.value = '';
-            if (locField)  locField.value  = '';
-
-            _backdrop = document.createElement('div');
-            _backdrop.className = 'mpi-new-project-backdrop';
-            _backdrop.addEventListener('click', () => el.hide());
-            document.body.appendChild(_backdrop);
-
-            _wrapper = document.createElement('div');
-            _wrapper.className = 'mpi-new-project-wrapper';
-            _wrapper.appendChild(el);
-            document.body.appendChild(_wrapper);
-
-            // Focus the name field for immediate typing
-            setTimeout(() => nameField?.focus(), 50);
-        };
-
-        // ── Public: show ─────────────────────────────────────────────────────
-        el.show = () => {
-            Overlays.request({ show: _doShow, hide: el.hide, id: el });
-        };
-
-        // ── Public: hide ─────────────────────────────────────────────────────
-        // NOTE: Does NOT emit 'cancel'. Only the explicit Cancel button does.
-        el.hide = () => {
-            _backdrop?.remove(); _backdrop = null;
-            _wrapper?.remove();  _wrapper  = null;
-            Overlays.release(el);
-        };
-
-        // ── Global: respond to ui:close-all-popups ───────────────────────────
-        const _unsubClose = Events.on('ui:close-all-popups', () => {
-            if (_backdrop) el.hide();
-        });
-
-        // ── Cleanup: unsubscribe when dialog root is permanently removed ──────
-        const _observer = new MutationObserver(() => {
-            if (!document.contains(el) && !_wrapper) {
-                _unsubClose();
-                _observer.disconnect();
-            }
-        });
-        _observer.observe(document.body, { childList: true, subtree: true });
     }
 });

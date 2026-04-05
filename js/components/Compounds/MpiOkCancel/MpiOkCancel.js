@@ -1,9 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { qs } from '../../../utils/dom.js';
-import { Overlays } from '../../../managers/overlayManager.js';
-import { Events } from '../../../events.js';
 
 /**
  * MpiOkCancel — Self-contained Confirmation Dialog (Compound)
@@ -49,9 +48,13 @@ export const MpiOkCancel = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        // ── Portal nodes (created on show, destroyed on hide) ────────────────
-        let _backdrop = null;
-        let _wrapper  = null;
+        // ── Modal primitive — owns backdrop, portal, Overlays, Events ────────
+        const modal = MpiModal.mount(document.createElement('div'), {
+            width: 'min(440px, 90vw)',
+        });
+        modal.el.appendChild(el);
+        el.show = () => modal.el.show();
+        el.hide = () => modal.el.hide();
 
         // ── Content: Title ───────────────────────────────────────────────────
         const titleSlot = qs('#title-slot', el);
@@ -106,54 +109,5 @@ export const MpiOkCancel = ComponentFactory.create({
             el.hide();
         });
         actionsSlot.appendChild(okBtn.el);
-
-        // ── Internal: Build and inject the portal ────────────────────────────
-        const _doShow = () => {
-            // Backdrop
-            _backdrop = document.createElement('div');
-            _backdrop.className = 'mpi-ok-cancel-backdrop';
-            _backdrop.addEventListener('click', () => el.hide());
-            document.body.appendChild(_backdrop);
-
-            // Centred wrapper
-            _wrapper = document.createElement('div');
-            _wrapper.className = 'mpi-ok-cancel-wrapper';
-            _wrapper.appendChild(el);
-            document.body.appendChild(_wrapper);
-        };
-
-        // ── Public: show ─────────────────────────────────────────────────────
-        el.show = () => {
-            Overlays.request({
-                show: _doShow,
-                hide: el.hide,
-                id: el
-            });
-        };
-
-        // ── Public: hide ─────────────────────────────────────────────────────
-        // NOTE: Does NOT emit 'cancel'. Escape/external closes should not fire
-        // cancel events — only the explicit Cancel button does.
-        el.hide = () => {
-            _backdrop?.remove();
-            _backdrop = null;
-            _wrapper?.remove();
-            _wrapper = null;
-            Overlays.release(el);
-        };
-
-        // ── Global: respond to ui:close-all-popups ───────────────────────────
-        const _unsubClose = Events.on('ui:close-all-popups', () => {
-            if (_backdrop) el.hide(); // Only close if currently visible
-        });
-
-        // ── Cleanup: unsubscribe when dialog root is permanently removed ──────
-        const _observer = new MutationObserver(() => {
-            if (!document.contains(el) && !_wrapper) {
-                _unsubClose();
-                _observer.disconnect();
-            }
-        });
-        _observer.observe(document.body, { childList: true, subtree: true });
     }
 });

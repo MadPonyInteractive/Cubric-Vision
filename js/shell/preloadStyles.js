@@ -20,6 +20,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiDragList/MpiDragList.css',
   'js/components/Primitives/MpiOverlay/MpiOverlay.css',
   'js/components/Primitives/MpiRadialMenu/MpiRadialMenu.css',
+  'js/components/Primitives/MpiModal/MpiModal.css',
 
   // Compounds
   'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',

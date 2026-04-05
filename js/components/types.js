@@ -11,6 +11,23 @@
 'use strict';
 
 /**
+ * @typedef {Object} MpiModalProps (Primitive — js/components/Primitives/MpiModal)
+ * @property {string}   [width='min(480px, 90vw)'] - CSS width of the centred wrapper.
+ * @property {boolean}  [backdropClose=true]        - Whether clicking the backdrop calls hide().
+ * @property {Function} [onShow]                    - Called once the portal DOM is appended.
+ *
+ * Instance methods (on instance.el):
+ *   show() — portals backdrop + wrapper to document.body, registers with OverlayManager.
+ *   hide() — removes portal nodes, releases OverlayManager. Does NOT emit 'cancel'.
+ *
+ * Usage (inside a Compound setup):
+ *   const modal = MpiModal.mount(document.createElement('div'), { width: 'min(440px, 90vw)' });
+ *   modal.el.appendChild(el);           // put compound content inside the shell
+ *   el.show = () => modal.el.show();
+ *   el.hide = () => modal.el.hide();
+ */
+
+/**
  * @typedef {Object} MpiDropdownProps (Primitive — js/components/Primitives/MpiDropdown)
  * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
  * @property {string} [value=''] - Currently selected value

@@ -37,6 +37,7 @@ import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCame
 import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
 import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleConfig.js';
 import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
+import { MpiModal } from '../components/Primitives/MpiModal/MpiModal.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
 import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -857,6 +858,54 @@ function mountAll() {
 
         btn.on('click', () => okc.el.show());
         okc.on('ok', () => console.log('[gallery] MpiOkCancel OK clicked'));
+    });
+
+    // ── MpiModal (Primitive) ──────────────────────────────────────────────────
+    mount('preview-modal-standard', () => {
+        const slotEl = slot('preview-modal-standard');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'layers',
+            label: 'Open Modal',
+            variant: 'primary',
+            size: 'md',
+            info: 'Click to show a bare MpiModal shell'
+        });
+
+        const modal = MpiModal.mount(document.createElement('div'), {
+            width: 'min(400px, 90vw)',
+        });
+
+        // Simple content placed inside the modal shell
+        const inner = document.createElement('div');
+        inner.style.cssText = 'padding:1.5rem;display:flex;flex-direction:column;gap:1rem;';
+
+        const title = document.createElement('div');
+        title.textContent = 'MpiModal Shell';
+        title.style.cssText = 'font-size:1.25rem;font-weight:700;color:var(--text-primary,#fff);';
+        inner.appendChild(title);
+
+        const body = document.createElement('div');
+        body.textContent = 'This is a bare MpiModal primitive. It owns the backdrop, portal, Overlays queue, and Escape handling. Compounds mount their content inside.';
+        body.style.cssText = 'font-size:0.9rem;color:var(--text-secondary,#aaa);line-height:1.5;';
+        inner.appendChild(body);
+
+        const closeSlot = document.createElement('div');
+        closeSlot.style.cssText = 'display:flex;justify-content:flex-end;padding-top:0.5rem;border-top:1px solid var(--border-secondary,rgba(100,100,120,0.2));';
+        const closeBtn = MpiButton.mount(document.createElement('div'), {
+            text: 'Close',
+            variant: 'secondary',
+            size: 'md'
+        });
+        closeBtn.on('click', () => modal.el.hide());
+        closeSlot.appendChild(closeBtn.el);
+        inner.appendChild(closeSlot);
+
+        modal.el.appendChild(inner);
+        btn.on('click', () => modal.el.show());
+        console.log('[gallery] MpiModal mounted');
     });
 
     // ── MpiNewProject (Compound) ──────────────────────────────────────────────

@@ -1,0 +1,27 @@
+/* ── MpiModal ────────────────────────────────────────────────────────────────── */
+
+/* Portal backdrop — injected directly to body on show */
+.mpi-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+}
+
+/* Centred wrapper — holds the dialog above the backdrop */
+.mpi-modal-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    width: min(480px, 90vw);
+}
+
+/* Shell — content is rendered inside by the consuming compound */
+.mpi-modal {
+    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    border-radius: 8px;
+    overflow: hidden;
+}
