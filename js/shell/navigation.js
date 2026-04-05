@@ -93,19 +93,36 @@ export function initNavigation(refs) {
     _pageLanding     = refs.pageLanding;
     _projectNameInst = refs.projectNameInstance;
 
-    // Back arrow uses the history stack
-    _projectNameInst.on('back', () => back());
+    // Back arrow — navigates up the breadcrumb hierarchy rather than the history stack
+    _projectNameInst.on('back', () => {
+        const view = state.currentParams?.view;
+        if (!view) { back(); return; }
+
+        // Tool → parent workspace
+        if (VIEW_TOOL_PARENT[view]) {
+            navigate(PAGE_WORKSPACE, { view: VIEW_TOOL_PARENT[view] });
+            return;
+        }
+        // Workspace (non-root) → main gallery
+        if (view !== 'workspace') {
+            navigate(PAGE_WORKSPACE, { view: 'workspace' });
+            return;
+        }
+        // Main gallery → landing (project picker)
+        navigate(PAGE_LANDING);
+    });
 
     // Root breadcrumb ("MAIN GALLERY") — always goes to workspace root
     _projectNameInst.on('root', () => {
         navigate(PAGE_WORKSPACE, { view: 'workspace' });
     });
 
-    // Workspace breadcrumb (e.g. "IMAGE") — goes back to that workspace
+    // Workspace breadcrumb (e.g. "IMAGE") — navigates to the parent workspace of the current tool
     _projectNameInst.on('workspace', () => {
         const view = state.currentParams?.view;
         if (VIEW_TOOL_LABEL[view]) {
-            back();
+            const parentView = VIEW_TOOL_PARENT[view] || 'imageWorkspace';
+            navigate(PAGE_WORKSPACE, { view: parentView });
         }
     });
 }

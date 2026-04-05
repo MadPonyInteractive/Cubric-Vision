@@ -88,7 +88,7 @@
 
 
 ## Phase 3.4: Status Bar (Info Bar) [Implement the Progress into it]
-## Phase 3.4: Load comfy engine popup
+## Phase 3.4: Load comfy engine popup []
 ## Phase 3.4: New Project popup and button on landing page [X]
 ### Phase 3.4: MpiProjectCard [X]
 ## Phase 3.4: Implement confirm for project delete [X]
