@@ -11,7 +11,7 @@
     overflow: hidden;
     user-select: none;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
 }
@@ -83,7 +83,7 @@
     font-family: 'Outfit', -apple-system, system-ui, sans-serif;
     font-size: 0.8rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-2);
     letter-spacing: 0.02em;
     display: flex;
     gap: 4px;
@@ -97,7 +97,7 @@
 
 .mpi-video-player__duration {
     min-width: 60px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-2);
 }
 
 .mpi-video-player__separator {
@@ -118,9 +118,9 @@
 .mpi-video-player__big-play {
     width: 80px;
     height: 80px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-recessed);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--border);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -138,8 +138,8 @@
 }
 
 .mpi-video-player:hover[data-playing="false"] .mpi-video-player__big-play {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--bg-recessed);
+    border-color: var(--border);
     transform: scale(1.1);
 }
 

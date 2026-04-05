@@ -14,7 +14,10 @@
     backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 10px var(--primary-glow-sm);
+    box-shadow: 
+        0 10px 30px var(--bg-recessed), 
+        -10px 0 15px var(--primary-glow-sm),
+         10px 0 15px var(--neon-glow-sm);
     color: var(--text);
     z-index: 9999;
     max-width: 400px;

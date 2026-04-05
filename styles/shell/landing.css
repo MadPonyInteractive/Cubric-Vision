@@ -83,11 +83,6 @@
   opacity: 0.9;
 }
 
-body.light-mode .hero-subtitle {
-  color: var(--text-2);
-  font-weight: 500;
-}
-
 .hero-cta {
   font-size: 1rem;
   padding: 0.9rem 2.4rem;
@@ -98,23 +93,11 @@ body.light-mode .hero-subtitle {
   transition: all 0.3s var(--bounce);
 }
 
-body.light-mode .hero-cta {
-  background: var(--primary);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.25);
-}
-
 .hero-cta:hover {
   box-shadow: 0 0 40px var(--neon-glow);
   background: var(--neon-electric);
   color: #fff;
   transform: scale(1.05);
-}
-
-body.light-mode .hero-cta:hover {
-  background: #6d28d9;
-  box-shadow: 0 12px 35px rgba(124, 58, 237, 0.4);
 }
 
 /* Recent Projects */
@@ -186,7 +169,7 @@ body.light-mode .hero-cta:hover {
   border-radius: var(--radius);
   padding: 1rem;
   z-index: 1001;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px var(--bg-recessed);
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -208,7 +191,7 @@ body.light-mode .hero-cta:hover {
   min-width: 48px;
   overflow: hidden;
   z-index: 1001;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px var(--bg-recessed);
 }
 
 .batch-option {
@@ -228,7 +211,7 @@ body.light-mode .hero-cta:hover {
 
 .batch-option.active {
   color: var(--primary);
-  background: rgba(154, 130, 187, 0.1);
+  background: var(--primary-glow-sm);
 }
 
 /* Project Cards */
@@ -244,27 +227,13 @@ body.light-mode .hero-cta:hover {
   animation: fadeIn 0.4s ease-out;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-body.light-mode .project-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-color: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 12px var(--bg-recessed);
 }
 
 .project-card:hover {
   border-color: var(--primary);
   transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-body.light-mode .project-card:hover {
-  border-color: var(--primary);
-  background: #ffffff;
-  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 12px 24px var(--bg-recessed);
 }
 
 .project-card-thumb {
@@ -282,25 +251,25 @@ body.light-mode .project-card:hover {
 .project-card-folder-icon {
   position: relative;
   z-index: 2;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 4px 12px var(--bg-recessed);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 54px;
   height: 54px;
-  background: rgba(16, 14, 24, 0.4);
+  background: var(--surface-glass);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 8px 32px var(--bg-recessed);
   transition: transform 0.3s var(--bounce);
 }
 
 .project-card:hover .project-card-folder-icon {
   transform: scale(1.1);
-  background: rgba(154, 130, 187, 0.25);
-  border-color: rgba(154, 130, 187, 0.4);
+  background: var(--primary-glow);
+  border-color: var(--primary);
 }
 
 .project-card-thumb img {
@@ -348,7 +317,7 @@ body.light-mode .project-card:hover {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--surface-glass);
   border: 1px solid var(--border);
   color: var(--text-2);
   display: flex;

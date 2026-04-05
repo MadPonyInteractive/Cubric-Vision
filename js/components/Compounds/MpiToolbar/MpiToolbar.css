@@ -24,7 +24,7 @@
     gap: 0.15rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-recessed);
 }
 
 .mpi-toolbar__strength-group .mpi-badge {

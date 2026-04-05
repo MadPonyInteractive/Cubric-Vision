@@ -51,7 +51,6 @@ import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlay
 
 export async function initComponentsPage() {
     const debugToggle = document.getElementById('comp-debugToggle');
-    const themeToggle = document.getElementById('comp-themeToggle');
     const searchInput = document.getElementById('comp-search');
 
     // Restore debug state
@@ -60,10 +59,6 @@ export async function initComponentsPage() {
         document.body.classList.add('comp-debug');
     }
 
-    if (themeToggle) {
-        themeToggle.checked = state.isLightMode;
-        themeToggle.addEventListener('change', () => toggleTheme(themeToggle.checked));
-    }
 
     debugToggle.addEventListener('change', (e) => {
         document.body.classList.toggle('comp-debug', e.target.checked);

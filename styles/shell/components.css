@@ -42,17 +42,3 @@
   opacity: 0;
   transform: translateY(2px);
 }
-
-body.light-mode #shell-info-bar {
-  background: rgba(255, 255, 255, 0.85);
-  border-top-color: var(--border);
-}
-
-body.light-mode .shell-info-content {
-  color: var(--text-3);
-}
-
-body.light-mode #shell-info-bar::before {
-  background: linear-gradient(to bottom, var(--neon-electric), var(--primary));
-  opacity: 0.5;
-}

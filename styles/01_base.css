@@ -10,83 +10,55 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  --primary: #9a82bb;
-  --primary-dim: #7a62a0;
-  --primary-glow: rgba(154, 130, 187, 0.3);
-  --primary-glow-sm: rgba(154, 130, 187, 0.15);
+  /* Spatial/Vaporwave Palette */
+  --primary: #4facfe;        /* Soft Blue */
+  --primary-dim: #00f2fe;    /* Bright Cyan */
+  --primary-glow: rgba(79, 172, 254, 0.3);
+  --primary-glow-sm: rgba(79, 172, 254, 0.15);
 
-  /* Neon Highlights (Intensity 4/10) */
-  --neon-electric: #bf00ff;
-  --neon-glow: rgba(191, 0, 255, 0.35);
-  --neon-glow-sm: rgba(191, 0, 255, 0.15);
-  --neon-accent: #e0aaff;
-  --neon-border: rgba(191, 0, 255, 0.4);
+  --neon-electric: #f093fb;  /* Soft Warm Pink */
+  --neon-glow: rgba(240, 147, 251, 0.35);
+  --neon-glow-sm: rgba(240, 147, 251, 0.15);
+  --neon-accent: #f5576c;    /* Deep Watermelon Pink */
+  --neon-border: rgba(240, 147, 251, 0.4);
 
-  --bg: #0b0a10;
-  --bg-elevated: #100e18;
-  --surface: #16131f;
-  --surface-2: #1e1a2e;
-  --surface-3: #252038;
+  /* Unified Dim Dark Backgrounds */
+  --bg: #15151e;             /* Deep space violet-dark */
+  --bg-elevated: #1e1e28;    /* Slightly elevated */
+  --surface: #262633;        /* UI surface */
+  --surface-2: #303040;      /* Hover surface */
+  --surface-3: #3b3b4f;      /* Active surface */
 
-  --border: #2a2540;
-  --border-color: #2a2540;
-  --border-soft: rgba(255, 255, 255, 0.06);
+  --border: #3b3b4f;
+  --border-color: #3b3b4f;
+  --border-soft: rgba(255, 255, 255, 0.08);
 
-  --text: #f0eeff;
-  --text-2: #9590b0;
-  --text-3: #534e6b;
-  --text-muted: #534e6b;
+  --text: #c0caf5;
+  --text-2: #a9b1d6;
+  --text-3: #565f89;
+  --text-muted: #565f89;
 
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --info: #60a5fa;
-  --surface-glass: rgba(22, 19, 31, 0.75);
+  --success: #73daca;        /* Mint Green */
+  --danger: #f7768e;         /* Soft Red */
+  --warning: #e0af68;        /* Cyber Yellow */
+  --info: #7aa2f7;           /* Cool Blue */
+  
+  --surface-glass: rgba(21, 21, 30, 0.88); /* Deep space glass */
 
   --titlebar-h: 32px;
 
-  --radius-sm: 8px;
-  --radius: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 30px;
+  /* Sharper Radiuses */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 
-  --font-main: 'DM Sans', sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-main: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
 
-  --bg-recessed: rgba(255, 255, 255, 0.02);
+  --bg-recessed: rgba(0, 0, 0, 0.2);
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --bounce: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* ── Light Mode Overrides ─────────────────────────────────────────────────── */
-body.light-mode {
-  --bg: #f8fafc;
-  --bg-elevated: #ffffff;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --surface-3: #e2e8f0;
-
-  --border: #e2e8f0;
-  --border-color: #e2e8f0;
-  --border-soft: rgba(0, 0, 0, 0.04);
-
-  --text: #0f172a;
-  --text-2: #334155;
-  --text-3: #64748b;
-  --text-muted: #64748b;
-
-  --primary: #7c3aed;
-  --primary-glow: rgba(124, 58, 237, 0.15);
-  --primary-glow-sm: rgba(124, 58, 237, 0.08);
-  --surface-glass: rgba(255, 255, 255, 0.82);
-  --bg-recessed: #f7f5ff;
-  /* Soft Logo Lavender */
-
-  /* Light Mode Neon */
-  --neon-electric: #8b5cf6;
-  --neon-glow: rgba(139, 92, 246, 0.12);
-  --neon-glow-sm: rgba(139, 92, 246, 0.06);
-  --neon-border: rgba(139, 92, 246, 0.2);
 }
 
 
@@ -187,19 +159,12 @@ h4 {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--neon-electric) 0%, #c084fc 50%, #818cf8 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   font-weight: 700;
   letter-spacing: -0.02em;
-}
-
-body.light-mode .gradient-text {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 @keyframes fadeIn {

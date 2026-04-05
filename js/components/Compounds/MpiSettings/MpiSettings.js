@@ -44,17 +44,6 @@ export const MpiSettings = ComponentFactory.create({
             </div>
 
             <div class="mpi-settings__section">
-                <h3 class="mpi-settings__section-title">Interface</h3>
-                <div class="mpi-settings__row">
-                    <label>Light Mode</label>
-                    <label class="mpi-settings__toggle">
-                        <input type="checkbox" id="mpiSettingsToggleTheme">
-                        <span class="mpi-settings__toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="mpi-settings__section">
                 <h3 class="mpi-settings__section-title">External Connections</h3>
                 <div class="mpi-settings__form-group">
                     <label>Llama API URL</label>
@@ -90,15 +79,6 @@ export const MpiSettings = ComponentFactory.create({
 
         // ── Field initialisation (called each show so values are fresh) ──────
         function _initFields(root) {
-            const themeToggle = root.querySelector('#mpiSettingsToggleTheme');
-            if (themeToggle) {
-                themeToggle.checked = state.isLightMode;
-                // Remove stale listener before re-adding
-                themeToggle.replaceWith(themeToggle.cloneNode(true));
-                root.querySelector('#mpiSettingsToggleTheme')
-                    .addEventListener('change', (e) => toggleTheme(e.target.checked));
-            }
-
             const ollamaUrl = root.querySelector('#mpiSettingsOllamaUrl');
             if (ollamaUrl) {
                 ollamaUrl.value = localStorage.getItem('mpi_ollama_url') || 'http://localhost:8080';

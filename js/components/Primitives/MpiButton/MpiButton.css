@@ -42,30 +42,32 @@
 
 /* primary — neon electric fill, matches .btn.primary */
 .mpi-btn--primary {
-    background: var(--neon-electric);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
     color: #fff;
-    box-shadow: 0 0 10px var(--neon-glow-sm);
+    box-shadow: 0 4px 15px var(--neon-glow-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mpi-btn--primary:hover:not(:disabled),
 .mpi-btn--primary.is-pressed:not(:disabled) {
-    background: var(--neon-accent);
-    color: #000;
-    box-shadow: 0 0 25px var(--neon-glow);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, var(--primary-dim) 0%, var(--neon-accent) 100%);
+    color: #fff;
+    box-shadow: 0 8px 25px var(--neon-glow);
+    transform: translateY(-2px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* secondary — glass surface, matches .btn.secondary */
 .mpi-btn--secondary {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-recessed);
     border: 1px solid var(--border);
     color: var(--text);
 }
 
 .mpi-btn--secondary:hover:not(:disabled),
 .mpi-btn--secondary.is-pressed:not(:disabled) {
-    background: rgba(255, 255, 255, 0.09);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--bg-recessed);
+    border-color: var(--border);
     transform: translateY(-1px);
 }
 
@@ -90,8 +92,8 @@
 }
 
 .mpi-btn--outline:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--bg-recessed);
+    border-color: var(--border);
     transform: translateY(-1px);
 }
 
@@ -102,7 +104,7 @@
 }
 
 .mpi-btn--ghost:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-recessed);
     color: var(--text);
 }
 
@@ -133,7 +135,7 @@
     position: absolute;
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid var(--border);
     border-top-color: #fff;
     border-radius: 50%;
     animation: mpi-btn-spin 0.6s linear infinite;
@@ -145,7 +147,7 @@
 }
 
 .mpi-btn--secondary.mpi-btn--loading::after {
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--border);
     border-top-color: #fff;
 }
 
@@ -243,7 +245,7 @@
 .mpi-ibtn__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid var(--border);
     border-top-color: currentColor;
     border-radius: 50%;
     animation: mpi-ibtn-spin 0.7s linear infinite;

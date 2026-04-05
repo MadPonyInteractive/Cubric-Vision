@@ -4,7 +4,7 @@
 .mpi-modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
+    background: var(--bg-recessed);
     backdrop-filter: blur(4px);
     z-index: 9999;
 }
@@ -21,7 +21,7 @@
 
 /* Shell — content is rendered inside by the consuming compound */
 .mpi-modal {
-    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    background: var(--surface);
     border-radius: 8px;
     overflow: hidden;
 }

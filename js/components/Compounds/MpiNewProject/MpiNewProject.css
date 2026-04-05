@@ -5,7 +5,7 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 1.5rem;
-    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    background: var(--surface);
     border-radius: 8px;
 }
 
@@ -20,7 +20,7 @@
 .mpi-new-project__title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-primary, #fff);
+    color: var(--text);
     line-height: 1.2;
 }
 
@@ -59,7 +59,7 @@
     gap: 0.75rem;
     justify-content: flex-end;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.2));
+    border-top: 1px solid var(--border);
 }
 
 .mpi-new-project__actions .mpi-button {

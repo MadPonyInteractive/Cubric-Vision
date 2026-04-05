@@ -8,7 +8,7 @@
     overscroll-behavior: contain;
     border: 1px solid var(--border);
     border-radius: 2px; /* Sharp geometry as requested */
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--bg-recessed);
 }
 
 /* Custom scrollbar to match the workstation theme */
@@ -46,16 +46,16 @@
 }
 
 .mpi-scrollable-box__item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-recessed);
     color: var(--text);
 }
 
 .mpi-scrollable-box__item:active {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-recessed);
 }
 
 .mpi-scrollable-box__item.is-selected {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-recessed);
     color: var(--accent);
     border-left-color: var(--accent);
 }

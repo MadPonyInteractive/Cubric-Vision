@@ -22,18 +22,12 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(ellipse at 60% -10%, rgba(154, 130, 187, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at -10% 80%, rgba(99, 72, 160, 0.08) 0%, transparent 50%),
+  background: radial-gradient(ellipse at 60% -10%, var(--primary-glow-sm) 0%, transparent 60%),
+    radial-gradient(ellipse at -10% 80%, var(--neon-glow-sm) 0%, transparent 50%),
     var(--bg);
   z-index: -3;
   pointer-events: none;
   transition: background 0.5s ease;
-}
-
-body.light-mode::before {
-  background: radial-gradient(ellipse at 70% -20%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 90%, rgba(99, 102, 241, 0.06) 0%, transparent 40%),
-    var(--bg);
 }
 
 .app-shell {

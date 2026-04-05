@@ -6,7 +6,7 @@
 
 .mpi-spinner {
     display: inline-block;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--border);
     border-radius: 50%;
     animation: mpi-spinner-rotate 0.8s linear infinite;
     vertical-align: middle;

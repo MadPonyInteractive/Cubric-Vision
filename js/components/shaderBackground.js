@@ -21,7 +21,6 @@ const fragmentShaderSource = `
   precision highp float;
   uniform vec2 iResolution;
   uniform float iTime;
-  uniform float iMode; // 0.0 for dark, 1.0 for light
 
   const float overallSpeed = 0.35; // Increased for 'energetic' feel
   const float gridSmoothWidth = 0.015;
@@ -77,16 +76,11 @@ const fragmentShaderSource = `
     space.x += random(space.y * warpFrequency + iTime * warpSpeed + 2.0) * warpAmplitude * horizontalFade;
 
     vec4 lines = vec4(0.0);
-    
-    // Background Interp
-    vec4 bgDark1 = vec4(0.02, 0.01, 0.05, 1.0);
-    vec4 bgDark2 = vec4(0.08, 0.04, 0.15, 1.0);
-    vec4 bgLight1 = vec4(0.93, 0.95, 0.98, 1.0);
-    vec4 bgLight2 = vec4(0.97, 0.98, 1.0, 1.0);
-    
-    vec4 bgColor1 = mix(bgDark1, bgLight1, iMode);
-    vec4 bgColor2 = mix(bgDark2, bgLight2, iMode);
-    vec4 lineColor = mix(darkLineColor, lightLineColor, iMode);
+
+    // Background Interp (matches #15151e and #1e1e28 Deep Space Palette)
+    vec4 bgColor1 = vec4(0.08, 0.08, 0.11, 1.0);
+    vec4 bgColor2 = vec4(0.12, 0.12, 0.15, 1.0);
+    vec4 lineColor = darkLineColor;
 
     for(int l = 0; l < 12; l++) {
       float normalizedLineIndex = float(l) / 12.0;
@@ -188,10 +182,6 @@ function render(time) {
 
     const timeLocation = gl.getUniformLocation(program, "iTime");
     gl.uniform1f(timeLocation, elapsedTime);
-
-    const modeLocation = gl.getUniformLocation(program, "iMode");
-    const isLightMode = document.body.classList.contains('light-mode');
-    gl.uniform1f(modeLocation, isLightMode ? 1.0 : 0.0);
 
     const resolutionLocation = gl.getUniformLocation(program, "iResolution");
     gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);

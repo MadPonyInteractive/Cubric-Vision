@@ -97,10 +97,11 @@
 .mpi-radial__item:focus-visible {
     color: var(--text, #f0eeff);
     background: var(--surface-2, #1e1a2e);
-    border-color: var(--neon-border, rgba(191, 0, 255, 0.4));
+    border-color: var(--neon-electric);
     box-shadow:
-        0 0 10px var(--neon-glow-sm, rgba(191, 0, 255, 0.15)),
-        0 0 24px var(--neon-glow, rgba(191, 0, 255, 0.35));
+        0 10px 30px var(--bg-recessed),
+        -12px 8px 30px var(--primary-glow-sm),
+         12px -8px 30px var(--neon-glow-sm);
     transform: translate(-50%, -50%) scale(1.12);
     outline: none;
     transition-delay: 0s;
@@ -125,7 +126,7 @@
 }
 
 .mpi-radial__item-label {
-    font-family: var(--font-display, 'Outfit', sans-serif);
+    font-family: var(--font-display);
     font-size: 0.62em;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -141,7 +142,7 @@
 .mpi-radial__hint {
     position: relative;
     z-index: 1;
-    font-family: var(--font-display, 'Outfit', sans-serif);
+    font-family: var(--font-display);
     font-size: 0.78rem;
     color: var(--text-3, #534e6b);
     letter-spacing: 0.04em;

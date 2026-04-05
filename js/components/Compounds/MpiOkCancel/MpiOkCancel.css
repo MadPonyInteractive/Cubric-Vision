@@ -5,7 +5,7 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 1rem;
-    background: var(--bg-secondary, rgba(20, 20, 25, 0.8));
+    background: var(--surface);
     border-radius: 8px;
 }
 
@@ -20,7 +20,7 @@
 .mpi-ok-cancel__title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-primary, #fff);
+    color: var(--text);
     line-height: 1.2;
 }
 
@@ -45,10 +45,10 @@
 
 .mpi-ok-cancel__input .mpi-input input {
     padding: 0.5rem 0.75rem;
-    background: var(--bg-tertiary, rgba(40, 40, 50, 0.6));
-    border: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.3));
-    border-radius: 4px;
-    color: var(--text-primary, #fff);
+    background: var(--bg-recessed);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
     font-size: 0.9rem;
 }
 
@@ -58,7 +58,7 @@
     gap: 0.75rem;
     justify-content: flex-end;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--border-secondary, rgba(100, 100, 120, 0.2));
+    border-top: 1px solid var(--border);
 }
 
 .mpi-ok-cancel__actions .mpi-button {
