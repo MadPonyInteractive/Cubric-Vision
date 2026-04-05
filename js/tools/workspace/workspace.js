@@ -16,62 +16,7 @@ export function mount(container) {
     container.innerHTML = `
         <div class="tool-placeholder">
             <h1 class="tool-placeholder__title"><br>MAIN GALLERY</h1>
-            <p>This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
-            <p>This should be all the media of this project in a gallery This should be all the media of this project in a gallery This should be all the media of this project in a gallery</p>
+            <p>This should be all the media of this project in the project's gallery</p>
         </div>
     `;
 }

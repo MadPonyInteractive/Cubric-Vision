@@ -13,7 +13,7 @@ export function mount(container) {
     container.innerHTML = `
         <div class="tool-placeholder">
             <h1 class="tool-placeholder__title"><br>IMAGE</h1>
-            <p>This should be all the images of this project in a gallery</p>
+            <p>This should be all the images of this project filtered in the project's gallery</p>
         </div>
     `;
 }

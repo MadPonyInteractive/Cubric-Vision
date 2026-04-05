@@ -33,16 +33,6 @@
     font-size: 0.65rem;
 }
 
-.mpi-toolbar__strength-group .mpi-input {
-    width: 3.5rem;
-    font-size: 0.85rem;
-    text-align: center;
-}
-
-.mpi-toolbar__strength-group .mpi-input input {
-    text-align: center;
-}
-
 /* Center Dropdown — Flex-grow so it fills available width */
 .mpi-toolbar__dropdown {
     flex: 1;

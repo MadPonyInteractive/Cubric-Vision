@@ -71,16 +71,18 @@ export const MpiToolbar = ComponentFactory.create({
             });
             const modelInput = MpiInput.mount(document.createElement('div'), {
                 type: 'number',
-                value: props.model.value || 1.00,
+                value: props.model.value ?? 1.00,
                 placeholder: '1.00',
                 min: 0.00,
                 max: 1.00,
                 step: 0.01,
                 decimals: 2,
+                info: `Model Strength: ${props.model.value ?? 1.00}`,
                 size: 'sm'
             });
             modelInput.on('change', ({ value }) => {
                 props.model.value = value;
+                modelInput.el.querySelector('[data-info]').setAttribute('data-info', `Model Strength: ${value}`);
                 emit('modelChange', { value });
             });
             modelContainer.appendChild(modelBadge.el);
@@ -98,16 +100,18 @@ export const MpiToolbar = ComponentFactory.create({
             });
             const clipInput = MpiInput.mount(document.createElement('div'), {
                 type: 'number',
-                value: props.clip.value || 1.00,
+                value: props.clip.value ?? 1.00,
                 placeholder: '1.00',
                 min: 0.00,
                 max: 1.00,
                 step: 0.01,
                 decimals: 2,
+                info: `Clip Strength: ${props.clip.value ?? 1.00}`,
                 size: 'sm'
             });
             clipInput.on('change', ({ value }) => {
                 props.clip.value = value;
+                clipInput.el.querySelector('[data-info]').setAttribute('data-info', `Clip Strength: ${value}`);
                 emit('clipChange', { value });
             });
             clipContainer.appendChild(clipBadge.el);
