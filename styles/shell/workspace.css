@@ -1,6 +1,5 @@
 /* ── Workspace Topbar ────────────────────────────────────────────────────── */
 .workspace-topbar {
-  /* Float over the workspace canvas — no solid background */
   position: absolute;
   top: 0;
   left: 0;
@@ -10,10 +9,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
-  background: transparent;
-  border-bottom: none;
-  pointer-events: none;
+  
+  /* Glassmorphism background for legibility while floating over canvas */
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid var(--border-soft);
+  
   /* passthrough clicks to canvas by default */
+  pointer-events: none;
   z-index: 50;
 }
 
@@ -46,14 +50,16 @@
 
 .tool-body {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
   padding: 2rem 2rem 180px;
-  box-shadow: 
-    0 12px 40px var(--bg-recessed), 
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    -20px -20px 60px var(--primary-glow-sm),
-    20px 20px 60px var(--neon-glow-sm);
+  box-shadow:
+    var(--border-glass),
+    0 20px 50px var(--bg-recessed),
+    -10px -10px 40px var(--primary-glow-sm),
+    10px 10px 40px var(--neon-glow-sm);
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;

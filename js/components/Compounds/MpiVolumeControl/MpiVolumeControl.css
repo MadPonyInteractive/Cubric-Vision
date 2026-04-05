@@ -25,6 +25,8 @@
 /* Force vertical slider using CSS rotation */
 .mpi-volume-control__slider-wrapper .mpi-progress {
     transform: rotate(-90deg);
-    width: 100px; /* slider length */
+    width: 100px;
+    /* slider length */
     height: 30px;
+    margin-bottom: -142px;
 }

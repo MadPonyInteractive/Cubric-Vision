@@ -9,7 +9,7 @@
   flex-direction: column;
   animation: fadeIn 0.6s ease-out;
   padding: 0 clamp(1.5rem, 5vw, 4rem);
-  background: transparent;
+  background: #46334f4a;
 }
 
 #shader-background {

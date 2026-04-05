@@ -57,8 +57,8 @@ export const MpiVolumeControl = ComponentFactory.create({
         const popup = MpiPopup.mount(popupContainer, { variant: 'glass', triggerEl: iconContainer });
 
         // Custom dimensions for the vertical volume slider popup.
-        popup.el.style.width  = '40px';
-        popup.el.style.height = '140px';
+        popup.el.style.width = '40px';
+        popup.el.style.height = '177px';
 
         // Create slot for slider inside popup
         const sliderSlot = document.createElement('div');

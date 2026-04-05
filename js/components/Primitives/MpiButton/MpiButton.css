@@ -59,15 +59,19 @@
 
 /* secondary — glass surface, matches .btn.secondary */
 .mpi-btn--secondary {
-    background: var(--bg-recessed);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--border-glass), 0 4px 12px rgba(0, 0, 0, 0.2);
     color: var(--text);
 }
 
 .mpi-btn--secondary:hover:not(:disabled),
 .mpi-btn--secondary.is-pressed:not(:disabled) {
-    background: var(--bg-recessed);
+    background: var(--surface-2);
     border-color: var(--border);
+    box-shadow: var(--border-glass), 0 6px 16px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
 }
 

@@ -10,53 +10,66 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Spatial/Vaporwave Palette */
-  --primary: #4facfe;        /* Soft Blue */
-  --primary-dim: #00f2fe;    /* Bright Cyan */
-  --primary-glow: rgba(79, 172, 254, 0.3);
-  --primary-glow-sm: rgba(79, 172, 254, 0.15);
+  /* High-End Neon Glassmorphism Palette */
+  --primary: #55b3f1;
+  /* Cyan/Mint */
+  --primary-dim: #7198d1;
+  /* Mint Green */
+  --primary-glow: rgba(77, 238, 234, 0.3);
+  --primary-glow-sm: rgba(77, 238, 234, 0.15);
 
-  --neon-electric: #f093fb;  /* Soft Warm Pink */
-  --neon-glow: rgba(240, 147, 251, 0.35);
-  --neon-glow-sm: rgba(240, 147, 251, 0.15);
-  --neon-accent: #f5576c;    /* Deep Watermelon Pink */
-  --neon-border: rgba(240, 147, 251, 0.4);
+  --neon-electric: #aa8bcd;
+  /* Ambient Purple/Magenta */
+  --neon-glow: rgba(182, 120, 255, 0.35);
+  --neon-glow-sm: rgba(182, 120, 255, 0.15);
+  --neon-accent: #d17ddb;
+  /* Electric Pink */
+  --neon-border: rgba(182, 120, 255, 0.4);
 
-  /* Unified Dim Dark Backgrounds */
-  --bg: #15151e;             /* Deep space violet-dark */
-  --bg-elevated: #1e1e28;    /* Slightly elevated */
-  --surface: #262633;        /* UI surface */
-  --surface-2: #303040;      /* Hover surface */
-  --surface-3: #3b3b4f;      /* Active surface */
+  /* Deep Dark Environment */
+  --bg: #3c2d38;
+  /* True deep navy/black from the image */
+  --bg-elevated: #425462f7;
+  /* Slightly elevated layer */
 
-  --border: #3b3b4f;
-  --border-color: #3b3b4f;
-  --border-soft: rgba(255, 255, 255, 0.08);
+  /* Advanced Glass Surfaces (designed for backdrop-filter) */
+  --surface: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --surface-2: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --surface-3: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
 
-  --text: #c0caf5;
-  --text-2: #a9b1d6;
-  --text-3: #565f89;
-  --text-muted: #565f89;
+  /* Sophisticated inner borders and highlights */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.04);
+  /* Highlight specular borders for glass edges */
+  --border-glass: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 1px 0 0 rgba(255, 255, 255, 0.05);
 
-  --success: #73daca;        /* Mint Green */
-  --danger: #f7768e;         /* Soft Red */
-  --warning: #e0af68;        /* Cyber Yellow */
-  --info: #7aa2f7;           /* Cool Blue */
-  
-  --surface-glass: rgba(21, 21, 30, 0.88); /* Deep space glass */
+  --text: #f8f8f2;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --text-muted: #71717a;
+
+  --success: #2ef093;
+  --danger: #d76ead;
+  --warning: #f0c36b;
+  --info: #4deeea;
+
+  --surface-glass: rgb(11 12 16 / 20%);
+  /* Frost base */
 
   --titlebar-h: 32px;
 
-  /* Sharper Radiuses */
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  /* Smooth, modern container radii */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 
   --font-main: 'Inter', sans-serif;
   --font-display: 'Inter', sans-serif;
 
-  --bg-recessed: rgba(0, 0, 0, 0.2);
+  --bg-recessed: rgba(20, 20, 20, 0.2);
+  --bg-modal: rgb(19 15 20 / 91%);
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --bounce: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -80,7 +93,13 @@ body {
 }
 
 body {
-  background: var(--bg);
+  /* Ambient studio lighting using multi-layered radial gradients to give the background depth */
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(182, 120, 255, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 15% 50%, rgba(77, 238, 234, 0.06) 0%, transparent 40%),
+    var(--bg);
+  background-color: var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-main);
   line-height: 1.6;

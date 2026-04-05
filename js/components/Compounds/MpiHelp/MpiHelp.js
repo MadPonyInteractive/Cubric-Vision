@@ -69,6 +69,13 @@ export const MpiHelp = ComponentFactory.create({
                             <li><span>Ctrl+Enter</span><span>Cancel Generation</span></li>
                         </ul>
                     </div>
+
+                    <div class="mpi-help__shortcut-group">
+                        <h4>Radial Menu</h4>
+                        <ul>
+                            <li><span>Hold Tab</span><span>Hover destination and release</span></li>
+                        </ul>
+                    </div>
                 </div>
             </div>`;
 

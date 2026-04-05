@@ -13,7 +13,7 @@
     pointer-events: none;
     transition: all var(--bounce);
     width: max-content;
-    min-width: 120px;
+    /* min-width: 120px; */
 }
 
 .mpi-popup.is-active {
@@ -29,6 +29,7 @@
 .mpi-popup--top {
     transform: translateX(-50%) translateY(10px);
 }
+
 .mpi-popup--top.is-active {
     transform: translateX(-50%) translateY(0);
 }
@@ -37,6 +38,7 @@
 .mpi-popup--bottom {
     transform: translateX(-50%) translateY(-10px);
 }
+
 .mpi-popup--bottom.is-active {
     transform: translateX(-50%) translateY(0);
 }
@@ -45,6 +47,7 @@
 .mpi-popup--left {
     transform: translateY(-50%) translateX(10px);
 }
+
 .mpi-popup--left.is-active {
     transform: translateY(-50%) translateX(0);
 }
@@ -53,6 +56,7 @@
 .mpi-popup--right {
     transform: translateY(-50%) translateX(-10px);
 }
+
 .mpi-popup--right.is-active {
     transform: translateY(-50%) translateX(0);
 }

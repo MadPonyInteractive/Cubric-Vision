@@ -4,7 +4,7 @@
 .mpi-modal-backdrop {
     position: fixed;
     inset: 0;
-    background: var(--bg-recessed);
+    background: var(--bg-modal);
     backdrop-filter: blur(4px);
     z-index: 9999;
 }

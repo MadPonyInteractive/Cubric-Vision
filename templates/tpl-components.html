@@ -335,186 +335,196 @@
                     <div class="comp-card" data-name="mpivolumecontrol" data-label="default">
                         <div class="comp-card-header"><span class="comp-card-name">MpiVolumeControl</span><span
                                 class="comp-card-badge">hover for slider</span></div>
-                        <div class="comp-card-preview" id="preview-vol-control" style="min-height: 120px;"></div>
+                        <div class="comp-card-preview" id="preview-vol-control""></div>
                     </div>
 
                     <!-- MpiMemoryMonitor -->
-                    <div class="comp-card" data-name="mpimemorymonitor" data-label="live" style="grid-column: 1 / -1;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiMemoryMonitor</span><span
-                                class="comp-card-badge">VRAM + RAM + unload</span></div>
-                        <div class="comp-card-preview" id="preview-mem-monitor"
-                            style="padding: 0.75rem 1rem; justify-content: flex-start;"></div>
-                    </div>
-
-                    <!-- MpiProjectName -->
-                    <div class="comp-card" data-name="mpiprojectname" data-label="hud">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiProjectName</span><span
-                                class="comp-card-badge">back + title + page</span></div>
-                        <div class="comp-card-preview" id="preview-project-name"
-                            style="padding: 0.75rem 1rem; justify-content: flex-start;"></div>
-                    </div>
-
-                    <!-- MpiRatioSelector -->
-                    <div class="comp-card" data-name="mpiratioselector" data-label="default">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
-                                class="comp-card-badge">flux: portrait</span></div>
-                        <div class="comp-card-preview" id="preview-ratio-flux" style="min-height: 180px;"></div>
-                    </div>
-                    <div class="comp-card" data-name="mpiratioselector" data-label="video">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
-                                class="comp-card-badge">video</span></div>
-                        <div class="comp-card-preview" id="preview-ratio-video" style="min-height: 180px;"></div>
-                    </div>
-
-                    <!-- MpiPromptBox -->
-                    <div class="comp-card" data-name="mpipromptbox" data-label="standard" style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
-                                class="comp-card-badge">standard</span></div>
-                        <div class="comp-card-preview" id="preview-promptbox-standard"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpipromptbox" data-label="expanded" style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
-                                class="comp-card-badge">expanded layout</span></div>
-                        <div class="comp-card-preview" id="preview-promptbox-expanded"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpipromptbox" data-label="negative" style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
-                                class="comp-card-badge">negative prompt enabled</span></div>
-                        <div class="comp-card-preview" id="preview-promptbox-negative"></div>
-                    </div>
-
-                    <!-- MpiToolbar -->
-                    <div class="comp-card" data-name="mpitoolbar" data-label="with presets"
-                        style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
-                                class="comp-card-badge">with presets</span></div>
-                        <div class="comp-card-preview" id="preview-toolbar-default"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpitoolbar" data-label="empty" style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
-                                class="comp-card-badge">empty preset list</span></div>
-                        <div class="comp-card-preview" id="preview-toolbar-empty"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpitoolbar" data-label="with left area (title + strengths)"
-                        style="grid-column: 1/-1;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
-                                class="comp-card-badge">with left area (title + strengths)</span></div>
-                        <div class="comp-card-preview" id="preview-toolbar-left-area"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpitoolbar" data-label="model & clip strengths only"
-                        style="grid-column: 1/-1;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
-                                class="comp-card-badge">model & clip strengths only</span></div>
-                        <div class="comp-card-preview" id="preview-toolbar-strengths-only"></div>
-                    </div>
-
-                    <!-- MpiCameraConfig -->
-                    <div class="comp-card" data-name="mpicameraconfig" data-label="default"
-                        style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiCameraConfig</span><span
-                                class="comp-card-badge">camera + shot settings</span></div>
-                        <div class="comp-card-preview" id="preview-camera-config"></div>
-                    </div>
-
-                    <!-- MpiLightingConfig -->
-                    <div class="comp-card" data-name="mpilightingconfig" data-label="default"
-                        style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiLightingConfig</span><span
-                                class="comp-card-badge">lighting settings</span></div>
-                        <div class="comp-card-preview" id="preview-lighting-config"></div>
-                    </div>
-
-                    <!-- MpiStyleConfig -->
-                    <div class="comp-card" data-name="mpistyleconfig" data-label="default" style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiStyleConfig</span><span
-                                class="comp-card-badge">color grading settings</span></div>
-                        <div class="comp-card-preview" id="preview-style-config"></div>
-                    </div>
-
-                    <!-- MpiVideoScene -->
-                    <div class="comp-card" data-name="mpivideoscene" data-label="default" style="grid-column: 1 / -1;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiVideoScene</span><span
-                                class="comp-card-badge">shot list with 2 pre-filled scenes</span></div>
-                        <div class="comp-card-preview" id="preview-video-scene"></div>
-                    </div>
-
-                    <!-- MpiOkCancel -->
-                    <div class="comp-card" data-name="mpiokcancel" data-label="standard" style="grid-column: 1 / 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
-                                class="comp-card-badge">standard confirm</span></div>
-                        <div class="comp-card-preview" id="preview-okcancal-standard"></div>
-                    </div>
-
-                    <!-- MpiOkCancel with Input -->
-                    <div class="comp-card" data-name="mpiokcancel" data-label="with input" style="grid-column: 2 / 3;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
-                                class="comp-card-badge">with optional input</span></div>
-                        <div class="comp-card-preview" id="preview-okcancal-with-input"></div>
-                    </div>
-
-                    <!-- MpiOkCancel No Cancel -->
-                    <div class="comp-card" data-name="mpiokcancel" data-label="no cancel" style="grid-column: 3 / 4;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
-                                class="comp-card-badge">no cancel button</span></div>
-                        <div class="comp-card-preview" id="preview-okcancal-no-cancel"></div>
-                    </div>
-
-                    <!-- MpiModal -->
-                    <div class="comp-card" data-name="mpimodal" data-label="bare shell" style="grid-column: 1 / 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiModal</span><span
-                                class="comp-card-badge">bare shell</span></div>
-                        <div class="comp-card-preview" id="preview-modal-standard"></div>
-                    </div>
-
-                    <!-- MpiNewProject -->
-                    <div class="comp-card" data-name="mpinewproject" data-label="standard" style="grid-column: 2 / 3;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiNewProject</span><span
-                                class="comp-card-badge">standard</span></div>
-                        <div class="comp-card-preview" id="preview-newproject-standard"></div>
-                    </div>
-
-                    <!-- MpiInstalledDisplay -->
-                    <div class="comp-card" data-name="mpiinstalleddisplay" data-label="with delete models"
-                        style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiInstalledDisplay</span><span
-                                class="comp-card-badge">with delete models toggle</span></div>
-                        <div class="comp-card-preview" id="preview-installed-display-full"></div>
-                    </div>
-
-                    <!-- MpiInstalledDisplay — no delete models -->
-                    <div class="comp-card" data-name="mpiprojectcard" data-label="no media">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
-                                class="comp-card-badge">no media</span></div>
-                        <div class="comp-card-preview" id="preview-project-card-none" style="width: 100%;"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpiprojectcard" data-label="image bg">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
-                                class="comp-card-badge">image bg</span></div>
-                        <div class="comp-card-preview" id="preview-project-card-image" style="width: 100%;"></div>
-                    </div>
-
-                    <div class="comp-card" data-name="mpiprojectcard" data-label="video bg">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
-                                class="comp-card-badge">video bg</span></div>
-                        <div class="comp-card-preview" id="preview-project-card-video" style="width: 100%;"></div>
-                    </div>
-
-                    <!-- MpiModelsModal -->
-                    <div class="comp-card" data-name="mpimodalsmodal" data-label="models overlay"
-                        style="grid-column: span 2;">
-                        <div class="comp-card-header"><span class="comp-card-name">MpiModelsModal</span><span
-                                class="comp-card-badge">models overlay</span></div>
-                        <div class="comp-card-preview" id="preview-models-modal-default" style="min-height: 80px;">
+                    <div class=" comp-card" data-name="mpimemorymonitor" data-label="live"
+                            style="grid-column: 1 / -1;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiMemoryMonitor</span><span
+                                    class="comp-card-badge">VRAM + RAM + unload</span></div>
+                            <div class="comp-card-preview" id="preview-mem-monitor"
+                                style="padding: 0.75rem 1rem; justify-content: flex-start;"></div>
                         </div>
-                    </div>
 
-                </div>
+                        <!-- MpiProjectName -->
+                        <div class="comp-card" data-name="mpiprojectname" data-label="hud">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiProjectName</span><span
+                                    class="comp-card-badge">back + title + page</span></div>
+                            <div class="comp-card-preview" id="preview-project-name"
+                                style="padding: 0.75rem 1rem; justify-content: flex-start;"></div>
+                        </div>
+
+                        <!-- MpiRatioSelector -->
+                        <div class="comp-card" data-name="mpiratioselector" data-label="default">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
+                                    class="comp-card-badge">flux: portrait</span></div>
+                            <div class="comp-card-preview" id="preview-ratio-flux" style="min-height: 180px;"></div>
+                        </div>
+                        <div class="comp-card" data-name="mpiratioselector" data-label="video">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiRatioSelector</span><span
+                                    class="comp-card-badge">video</span></div>
+                            <div class="comp-card-preview" id="preview-ratio-video" style="min-height: 180px;"></div>
+                        </div>
+
+                        <!-- MpiPromptBox -->
+                        <div class="comp-card" data-name="mpipromptbox" data-label="standard"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                    class="comp-card-badge">standard</span></div>
+                            <div class="comp-card-preview" id="preview-promptbox-standard"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpipromptbox" data-label="expanded"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                    class="comp-card-badge">expanded layout</span></div>
+                            <div class="comp-card-preview" id="preview-promptbox-expanded"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpipromptbox" data-label="negative"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiPromptBox</span><span
+                                    class="comp-card-badge">negative prompt enabled</span></div>
+                            <div class="comp-card-preview" id="preview-promptbox-negative"></div>
+                        </div>
+
+                        <!-- MpiToolbar -->
+                        <div class="comp-card" data-name="mpitoolbar" data-label="with presets"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                    class="comp-card-badge">with presets</span></div>
+                            <div class="comp-card-preview" id="preview-toolbar-default"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpitoolbar" data-label="empty" style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                    class="comp-card-badge">empty preset list</span></div>
+                            <div class="comp-card-preview" id="preview-toolbar-empty"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpitoolbar" data-label="with left area (title + strengths)"
+                            style="grid-column: 1/-1;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                    class="comp-card-badge">with left area (title + strengths)</span></div>
+                            <div class="comp-card-preview" id="preview-toolbar-left-area"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpitoolbar" data-label="model & clip strengths only"
+                            style="grid-column: 1/-1;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiToolbar</span><span
+                                    class="comp-card-badge">model & clip strengths only</span></div>
+                            <div class="comp-card-preview" id="preview-toolbar-strengths-only"></div>
+                        </div>
+
+                        <!-- MpiCameraConfig -->
+                        <div class="comp-card" data-name="mpicameraconfig" data-label="default"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiCameraConfig</span><span
+                                    class="comp-card-badge">camera + shot settings</span></div>
+                            <div class="comp-card-preview" id="preview-camera-config"></div>
+                        </div>
+
+                        <!-- MpiLightingConfig -->
+                        <div class="comp-card" data-name="mpilightingconfig" data-label="default"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiLightingConfig</span><span
+                                    class="comp-card-badge">lighting settings</span></div>
+                            <div class="comp-card-preview" id="preview-lighting-config"></div>
+                        </div>
+
+                        <!-- MpiStyleConfig -->
+                        <div class="comp-card" data-name="mpistyleconfig" data-label="default"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiStyleConfig</span><span
+                                    class="comp-card-badge">color grading settings</span></div>
+                            <div class="comp-card-preview" id="preview-style-config"></div>
+                        </div>
+
+                        <!-- MpiVideoScene -->
+                        <div class="comp-card" data-name="mpivideoscene" data-label="default"
+                            style="grid-column: 1 / -1;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiVideoScene</span><span
+                                    class="comp-card-badge">shot list with 2 pre-filled scenes</span></div>
+                            <div class="comp-card-preview" id="preview-video-scene"></div>
+                        </div>
+
+                        <!-- MpiOkCancel -->
+                        <div class="comp-card" data-name="mpiokcancel" data-label="standard"
+                            style="grid-column: 1 / 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
+                                    class="comp-card-badge">standard confirm</span></div>
+                            <div class="comp-card-preview" id="preview-okcancal-standard"></div>
+                        </div>
+
+                        <!-- MpiOkCancel with Input -->
+                        <div class="comp-card" data-name="mpiokcancel" data-label="with input"
+                            style="grid-column: 2 / 3;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
+                                    class="comp-card-badge">with optional input</span></div>
+                            <div class="comp-card-preview" id="preview-okcancal-with-input"></div>
+                        </div>
+
+                        <!-- MpiOkCancel No Cancel -->
+                        <div class="comp-card" data-name="mpiokcancel" data-label="no cancel"
+                            style="grid-column: 3 / 4;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiOkCancel</span><span
+                                    class="comp-card-badge">no cancel button</span></div>
+                            <div class="comp-card-preview" id="preview-okcancal-no-cancel"></div>
+                        </div>
+
+                        <!-- MpiModal -->
+                        <div class="comp-card" data-name="mpimodal" data-label="bare shell" style="grid-column: 1 / 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiModal</span><span
+                                    class="comp-card-badge">bare shell</span></div>
+                            <div class="comp-card-preview" id="preview-modal-standard"></div>
+                        </div>
+
+                        <!-- MpiNewProject -->
+                        <div class="comp-card" data-name="mpinewproject" data-label="standard"
+                            style="grid-column: 2 / 3;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiNewProject</span><span
+                                    class="comp-card-badge">standard</span></div>
+                            <div class="comp-card-preview" id="preview-newproject-standard"></div>
+                        </div>
+
+                        <!-- MpiInstalledDisplay -->
+                        <div class="comp-card" data-name="mpiinstalleddisplay" data-label="with delete models"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiInstalledDisplay</span><span
+                                    class="comp-card-badge">with delete models toggle</span></div>
+                            <div class="comp-card-preview" id="preview-installed-display-full"></div>
+                        </div>
+
+                        <!-- MpiInstalledDisplay — no delete models -->
+                        <div class="comp-card" data-name="mpiprojectcard" data-label="no media">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
+                                    class="comp-card-badge">no media</span></div>
+                            <div class="comp-card-preview" id="preview-project-card-none" style="width: 100%;"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpiprojectcard" data-label="image bg">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
+                                    class="comp-card-badge">image bg</span></div>
+                            <div class="comp-card-preview" id="preview-project-card-image" style="width: 100%;"></div>
+                        </div>
+
+                        <div class="comp-card" data-name="mpiprojectcard" data-label="video bg">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiProjectCard</span><span
+                                    class="comp-card-badge">video bg</span></div>
+                            <div class="comp-card-preview" id="preview-project-card-video" style="width: 100%;"></div>
+                        </div>
+
+                        <!-- MpiModelsModal -->
+                        <div class="comp-card" data-name="mpimodalsmodal" data-label="models overlay"
+                            style="grid-column: span 2;">
+                            <div class="comp-card-header"><span class="comp-card-name">MpiModelsModal</span><span
+                                    class="comp-card-badge">models overlay</span></div>
+                            <div class="comp-card-preview" id="preview-models-modal-default" style="min-height: 80px;">
+                            </div>
+                        </div>
+
+                    </div>
             </section>
 
 
@@ -555,7 +565,7 @@
             flex-direction: column;
             height: 100%;
             overflow: hidden;
-            background: var(--bg);
+            /* background: var(--bg); */
         }
 
         .components-container {
@@ -595,7 +605,7 @@
 
         /* ── Component card — matches .tool-body card style ───────────────────── */
         .comp-card {
-            background: var(--surface);
+            /* background: var(--surface); */
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             overflow: hidden;
@@ -651,7 +661,7 @@
             justify-content: center;
             flex-wrap: wrap;
             gap: 0.5rem;
-            background: var(--surface-2);
+            /* background: var(--surface-2); */
         }
 
         /* Debug outline mode */
@@ -760,6 +770,16 @@
             font-size: 0.85rem;
             border: 1px dashed var(--border);
             border-radius: var(--radius);
+        }
+
+        .tool-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 53px 0px 0px 0px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
         }
     </style>
 </template>
