@@ -44,6 +44,7 @@ import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMe
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
+import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -318,21 +319,13 @@ function mountAll() {
             info: 'Click to show the MpiOverlay — replaces the main area'
         });
 
-        // Overlay — created once; show()/hide() swaps it into #tool-container
-        const overlayWrap = document.createElement('div');
-        document.body.appendChild(overlayWrap); // detached holder, not rendered here
-        const overlay = MpiOverlay.mount(overlayWrap, {
-            icon: 'download',
-            title: 'Download Manager',
-            text: 'Select a model pack to install. Required files will be fetched automatically.',
-            footer: 'Models are stored locally and never shared.',
-            closable: true
-        });
+        // Overlay — empty shell; show()/hide() swaps it into #tool-container
+        const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
 
-        // Add a MpiBadge into the overlay container slot for demo purposes
+        // Add a MpiBadge into the content slot for demo purposes
         const badgeWrap = document.createElement('div');
         overlay.el.appendToContainer(badgeWrap);
-        MpiBadge.mount(badgeWrap, { label: 'Installed', variant: 'success', pill: true });
+        MpiBadge.mount(badgeWrap, { label: 'Empty Overlay', variant: 'info', pill: true });
 
         btn.on('click', () => overlay.el.show());
         overlay.on('close', () => console.log('[gallery] overlay closed'));
@@ -990,6 +983,35 @@ function mountAll() {
             date: '2 Apr 2026',
             media: { type: 'video', src: 'media-for-testing/video-16-9.mp4' }
         });
+    });
+
+    // ── MpiModelsModal (Compound) ─────────────────────────────────────────────
+    mount('preview-models-modal-default', () => {
+        const slotEl = slot('preview-models-modal-default');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'download',
+            label: 'Open Models',
+            variant: 'primary',
+            info: 'Click to show MpiModelsModal — replaces the main area'
+        });
+
+        const modal = MpiModelsModal.mount(document.createElement('div'), {
+            icon: 'download',
+            title: 'Model Manager',
+            text: 'Select a model pack to install. Required files will be fetched automatically.',
+            footer: 'Models are stored locally and never shared.',
+            closable: true
+        });
+
+        const badgeWrap = document.createElement('div');
+        modal.el.appendToContainer(badgeWrap);
+        MpiBadge.mount(badgeWrap, { label: 'Installed', variant: 'success', pill: true });
+
+        btn.on('click', () => modal.el.show());
+        modal.on('close', () => console.log('[gallery] MpiModelsModal closed'));
     });
 }
 

@@ -1,34 +1,42 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiOverlay — Main-Area Page Overlay Primitive
-   Full scrollable page injected into #tool-container.
-   Sidebar, titlebar, and status bar remain untouched.
+   MpiProjectsPageOverlay — Full-viewport overlay for the landing page.
+   Mirrors MpiOverlay visually but mounts over document.body.
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Root: fills tool-container as a scrollable page ────────── */
-.mpi-overlay {
-    position: relative;
-    width: 100%;
-    min-height: 100%;
+/* ── Backdrop — covers the full viewport ────────────────────── */
+.mpi-ppo-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: var(--bg-base, #0e0e12);
+}
+
+/* ── Stash: hidden container preserving background DOM ──────── */
+.mpi-ppo-stash {
+    display: none !important;
+}
+
+/* ── Root: scrollable full-viewport page on top of backdrop ─── */
+.mpi-ppo {
+    position: fixed;
+    inset: 0;
+    z-index: 401;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 3rem 2rem 5rem;
     gap: 1.5rem;
-    animation: mpi-overlay-fadein 0.3s ease-out both;
+    animation: mpi-ppo-fadein 0.3s ease-out both;
 }
 
-/* ── Stash: hidden container for background tool nodes ─────── */
-.mpi-overlay-stash {
-    display: none !important;
-}
-
-@keyframes mpi-overlay-fadein {
+@keyframes mpi-ppo-fadein {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0);    }
 }
 
 /* ── Close button — top-right of the page ─────────────────────── */
-.mpi-overlay__close {
+.mpi-ppo__close {
     position: absolute;
     top: 1.5rem;
     right: 1.5rem;
@@ -45,13 +53,13 @@
     line-height: 1;
 }
 
-.mpi-overlay__close:hover {
+.mpi-ppo__close:hover {
     color: var(--danger);
     background: rgba(239, 68, 68, 0.1);
 }
 
 /* ── Container slot (children) ───────────────────────────────── */
-.mpi-overlay__container {
+.mpi-ppo__container {
     width: 100%;
     max-width: 600px;
     display: flex;
@@ -59,6 +67,6 @@
     gap: 1rem;
 }
 
-.mpi-overlay__container:empty {
+.mpi-ppo__container:empty {
     display: none;
 }

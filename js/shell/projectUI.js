@@ -9,6 +9,9 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiSettings } from '../components/Compounds/MpiSettings/MpiSettings.js';
+import { MpiHelp } from '../components/Compounds/MpiHelp/MpiHelp.js';
+import { MpiAbout } from '../components/Compounds/MpiAbout/MpiAbout.js';
 
 // DOM refs
 let projectGrid = null;
@@ -16,12 +19,50 @@ let projectGrid = null;
 /** Lazily created MpiNewProject dialog instance (reused across opens). */
 let _newProjectDialog = null;
 
+/** Lazily created landing-action overlay instances (reused across opens). */
+let _settingsOverlay = null;
+let _helpOverlay     = null;
+let _aboutOverlay    = null;
+
 /**
  * Initializes the project management UI: trigger button and grid loading.
  */
 export function initProjectUI() {
   projectGrid = document.getElementById('projectGrid');
 
+  // ── Landing action buttons (top-right of header) ──────────────────────────
+  const actionsSlot = document.getElementById('landingActions');
+  if (actionsSlot) {
+    const defs = [
+      { icon: 'settings', label: 'Settings', handler: () => {
+          if (!_settingsOverlay) _settingsOverlay = MpiSettings.mount(document.createElement('div'));
+          _settingsOverlay.el.show();
+      }},
+      { icon: 'help',     label: 'Help',     handler: () => {
+          if (!_helpOverlay) _helpOverlay = MpiHelp.mount(document.createElement('div'));
+          _helpOverlay.el.show();
+      }},
+      { icon: 'info',     label: 'About',    handler: () => {
+          if (!_aboutOverlay) _aboutOverlay = MpiAbout.mount(document.createElement('div'));
+          _aboutOverlay.el.show();
+      }},
+    ];
+
+    defs.forEach(({ icon, label, handler }) => {
+      const slot = document.createElement('div');
+      actionsSlot.appendChild(slot);
+      const btn = MpiButton.mount(slot, {
+        icon,
+        label,
+        labelPosition: 'right',
+        variant: 'ghost',
+        size: 'sm',
+      });
+      btn.on('click', handler);
+    });
+  }
+
+  // ── New Project button ─────────────────────────────────────────────────────
   const btnSlot = document.getElementById('newProjectBtn');
   if (btnSlot) {
     const triggerBtn = MpiButton.mount(btnSlot, {

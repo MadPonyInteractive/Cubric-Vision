@@ -19,6 +19,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiMediaDropzone/MpiMediaDropzone.css',
   'js/components/Primitives/MpiDragList/MpiDragList.css',
   'js/components/Primitives/MpiOverlay/MpiOverlay.css',
+  'js/components/Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.css',
   'js/components/Primitives/MpiRadialMenu/MpiRadialMenu.css',
   'js/components/Primitives/MpiModal/MpiModal.css',
 
@@ -37,6 +38,10 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiProjectName/MpiProjectName.css',
   'js/components/Compounds/MpiProjectCard/MpiProjectCard.css',
   'js/components/Compounds/MpiNewProject/MpiNewProject.css',
+  'js/components/Compounds/MpiModelsModal/MpiModelsModal.css',
+  'js/components/Compounds/MpiSettings/MpiSettings.css',
+  'js/components/Compounds/MpiHelp/MpiHelp.css',
+  'js/components/Compounds/MpiAbout/MpiAbout.css',
 
   // Blocks
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',

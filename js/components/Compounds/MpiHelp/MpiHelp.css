@@ -1,0 +1,104 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiHelp — Help overlay compound
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-help {
+    display: contents;
+}
+
+.mpi-help__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.mpi-help__header {
+    margin-bottom: 0.5rem;
+}
+
+.mpi-help__title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin: 0 0 0.4rem;
+}
+
+.mpi-help__desc {
+    color: var(--text-3);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ── Shortcuts block ─────────────────────────────────────────── */
+.mpi-help__shortcuts {
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+}
+
+.mpi-help__shortcuts-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin: 0 0 1rem;
+}
+
+.mpi-help__shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.mpi-help__shortcut-group h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin: 0 0 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mpi-help__shortcut-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mpi-help__shortcut-group li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+}
+
+.mpi-help__shortcut-group li span:first-child {
+    color: var(--text-1);
+    background: var(--surface-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-sm);
+    padding: 0.1rem 0.45rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.mpi-help__shortcut-group li span:last-child {
+    color: var(--text-3);
+}
+
+.mpi-help__subheading {
+    padding-top: 0.4rem;
+}
+
+.mpi-help__subheading strong {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    font-weight: 500;
+}

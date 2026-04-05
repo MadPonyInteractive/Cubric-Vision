@@ -306,21 +306,86 @@
  */
 
 /**
- * @typedef {Object} MpiOverlayProps (Primitive — js/components/Primitives/MpiOverlay)
- * @property {string}   [icon='info']   - MpiIcon registry key shown at top centre
- * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='xl'] - Icon size
- * @property {string}   [title='']      - Large title text
- * @property {string}   [text='']       - Small descriptive text shown above the container slot
- * @property {string}   [footer='']     - Small text shown below the container slot
- * @property {boolean}  [closable=true] - Show the X close button
+ * @typedef {Object} MpiProjectsPageOverlayProps (Primitive — js/components/Primitives/MpiProjectsPageOverlay)
+ * @property {boolean} [closable=true] - Show the X close button in the top-right corner
+ *
+ * Identical API to MpiOverlay but mounts over document.body instead of #tool-container.
+ * Use on the landing page where #app-shell / #tool-container are hidden.
  *
  * Instance methods (on instance.el):
- *   show()  — injects the overlay into #tool-container, saving prior content
- *   hide()  — removes overlay and restores prior tool-container content
- *   appendToContainer(el: HTMLElement) — append a child element into the container slot
+ *   show()                      — stashes body children, appends backdrop + overlay
+ *   hide()                      — restores body children, releases OverlayManager queue
+ *   appendToContainer(el: HTMLElement) — append a child into the scrollable content slot
  *
  * Emits:
  * 'close' {} — X button clicked (hide() called automatically)
+ */
+
+/**
+ * @typedef {Object} MpiSettingsProps (Compound — js/components/Compounds/MpiSettings)
+ * No props required — all state is read from localStorage / app state internally.
+ *
+ * Instance methods (on instance.el):
+ *   show() — opens the full-page settings overlay, initialises fields with current values
+ *   hide() — closes the overlay
+ *
+ * Emits:
+ * 'close' {} — overlay closed
+ */
+
+/**
+ * @typedef {Object} MpiHelpProps (Compound — js/components/Compounds/MpiHelp)
+ * No props required.
+ *
+ * Instance methods (on instance.el):
+ *   show() — opens the full-page help overlay
+ *   hide() — closes the overlay
+ *
+ * Emits:
+ * 'close' {} — overlay closed
+ */
+
+/**
+ * @typedef {Object} MpiAboutProps (Compound — js/components/Compounds/MpiAbout)
+ * No props required.
+ *
+ * Instance methods (on instance.el):
+ *   show() — opens the full-page about overlay
+ *   hide() — closes the overlay
+ *
+ * Emits:
+ * 'close' {} — overlay closed
+ */
+
+/**
+ * @typedef {Object} MpiOverlayProps (Primitive — js/components/Primitives/MpiOverlay)
+ * @property {boolean} [closable=true] - Show the X close button in the top-right corner
+ *
+ * Instance methods (on instance.el):
+ *   show()                      — injects into #tool-container, stashing prior content
+ *   hide()                      — restores prior content, releases OverlayManager queue
+ *   appendToContainer(el: HTMLElement) — append a child into the scrollable content slot
+ *
+ * Emits:
+ * 'close' {} — X button clicked (hide() called automatically)
+ */
+
+/**
+ * @typedef {Object} MpiModelsModalProps (Compound — js/components/Compounds/MpiModelsModal)
+ * @property {string}   [icon='info']                    - MpiIcon registry key shown at top centre
+ * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='xl'] - Icon size
+ * @property {string}   [title='']                       - Large title text
+ * @property {string}   [text='']                        - Descriptive text above the content slot
+ * @property {string}   [footer='']                      - Small text below the content slot
+ * @property {boolean}  [closable=true]                  - Show the X close button
+ *
+ * Instance methods (on instance.el):
+ *   show()                      — delegates to MpiOverlay; injects into #tool-container
+ *   hide()                      — delegates to MpiOverlay; restores prior content
+ *   appendToContainer(el: HTMLElement) — append a child into the content slot
+ *
+ * Emits:
+ * 'close' {} — X button clicked (forwarded from MpiOverlay)
  */
 
 /**
