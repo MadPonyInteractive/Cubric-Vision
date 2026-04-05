@@ -67,7 +67,8 @@
 }
 
 .mpi-project-card__icon-wrap .mpi-icon {
-    color: #ffb700; /* Folder Yellow vibrancy */
+    color: #ffb700;
+    /* Folder Yellow vibrancy */
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
@@ -107,14 +108,4 @@
     font-size: 0.85rem;
     color: var(--text-3);
     font-weight: 500;
-}
-
-/* Light mode specific tweaks */
-body.light-mode .mpi-project-card__icon-wrap {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-body.light-mode .mpi-project-card__footer {
-    background: var(--surface-2);
 }

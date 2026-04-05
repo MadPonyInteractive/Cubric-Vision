@@ -1,7 +1,8 @@
 /* MpiMediaDropzone.css — Modern Drag-and-Drop Media Box Styling */
 
 .mpi-media-dropzone {
-    --mz-width: 250px; /* Default fixed width */
+    --mz-width: 250px;
+    /* Default fixed width */
     --mz-bg: var(--surface-2);
     --mz-border: var(--border);
     --mz-color: var(--text-3);
@@ -29,11 +30,13 @@
 }
 
 .mpi-media-dropzone--has-value {
-    padding: 0 !important; /* Force override */
+    padding: 0 !important;
+    /* Force override */
     min-height: 0 !important;
     height: auto !important;
     border-style: solid;
-    justify-content: flex-start; /* Important to keep media at the top */
+    justify-content: flex-start;
+    /* Important to keep media at the top */
 }
 
 /* Internal Elements */
@@ -62,7 +65,8 @@
     display: block;
     width: 100%;
     height: auto;
-    max-height: none; /* Let it grow */
+    max-height: none;
+    /* Let it grow */
     object-fit: contain;
     border-radius: 0;
 }
@@ -143,11 +147,4 @@
     color: var(--text-3);
     font-weight: 600;
     font-family: 'IBM Plex Mono', monospace;
-}
-
-/* Light Mode Specific Adjustments */
-body.light-mode .mpi-media-dropzone {
-    --mz-bg: var(--bg-recessed);
-    --mz-color: var(--text-3);
-    --mz-border: var(--border);
 }

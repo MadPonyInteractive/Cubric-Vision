@@ -9,11 +9,30 @@
 }
 
 /* Scaling */
-.mpi-icon--xs { width: 14px; height: 14px; }
-.mpi-icon--sm { width: 18px; height: 18px; }
-.mpi-icon--md { width: 24px; height: 24px; }
-.mpi-icon--lg { width: 32px; height: 32px; }
-.mpi-icon--xl { width: 42px; height: 42px; }
+.mpi-icon--xs {
+    width: 14px;
+    height: 14px;
+}
+
+.mpi-icon--sm {
+    width: 18px;
+    height: 18px;
+}
+
+.mpi-icon--md {
+    width: 24px;
+    height: 24px;
+}
+
+.mpi-icon--lg {
+    width: 32px;
+    height: 32px;
+}
+
+.mpi-icon--xl {
+    width: 42px;
+    height: 42px;
+}
 
 /* In a theme-aware icon set, currentColor ensures icons 
    automatically match the text color of their parent. */
@@ -23,14 +42,22 @@
 }
 
 /* ── Color Modifiers ─────────────────────────────────────────────────────── */
-.mpi-icon--muted   { color: var(--text-3, #534e6b); }
-.mpi-icon--accent  { color: var(--neon-accent, #e0aaff); }
-.mpi-icon--primary { color: var(--primary, #9a82bb); }
-.mpi-icon--danger  { color: var(--danger, #ef4444); }
-.mpi-icon--success { color: var(--success, #10b981); }
+.mpi-icon--muted {
+    color: var(--text-3, #534e6b);
+}
 
-/* ── Light Mode Overrides ─────────────────────────────────────────────────── */
-body.light-mode .mpi-icon--muted   { color: var(--text-3, #64748b); }
-body.light-mode .mpi-icon--accent  { color: var(--primary, #7c3aed); }
-body.light-mode .mpi-icon--primary { color: var(--primary, #7c3aed); }
+.mpi-icon--accent {
+    color: var(--neon-accent, #e0aaff);
+}
 
+.mpi-icon--primary {
+    color: var(--primary, #9a82bb);
+}
+
+.mpi-icon--danger {
+    color: var(--danger, #ef4444);
+}
+
+.mpi-icon--success {
+    color: var(--success, #10b981);
+}

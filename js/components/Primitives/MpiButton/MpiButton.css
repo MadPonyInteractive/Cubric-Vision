@@ -157,50 +157,6 @@
 
 /* ── Loader ───────────────────────────────────────────────────────────────── */
 
-/* ── Light Mode Overrides ─────────────────────────────────────────────────── */
-body.light-mode .mpi-btn--primary {
-    background: var(--neon-electric);
-    color: #fff;
-    box-shadow: 0 2px 12px var(--neon-glow-sm);
-}
-
-body.light-mode .mpi-btn--primary:hover:not(:disabled),
-body.light-mode .mpi-btn--primary.is-pressed:not(:disabled) {
-    background: var(--neon-accent);
-    color: var(--bg);
-    box-shadow: 0 4px 20px var(--neon-glow);
-}
-
-body.light-mode .mpi-btn--secondary {
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid var(--border);
-    color: var(--text);
-}
-
-body.light-mode .mpi-btn--secondary:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.06);
-    border-color: var(--primary);
-}
-
-body.light-mode .mpi-btn--ghost {
-    color: var(--text-2);
-}
-
-body.light-mode .mpi-btn--ghost:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--text);
-}
-
-body.light-mode .mpi-btn--outline {
-    border-color: var(--border);
-    color: var(--text);
-}
-
-body.light-mode .mpi-btn--outline:hover:not(:disabled) {
-    background: rgba(124, 58, 237, 0.05);
-    border-color: var(--primary);
-}
-
 /* ══════════════════════════════════════════════════════════════════════════════
    Icon Button Mode — .mpi-ibtn
    Activated when MpiButton renders with an `icon` prop.
@@ -218,14 +174,33 @@ body.light-mode .mpi-btn--outline:hover:not(:disabled) {
 }
 
 /* Icon size — inherits button size class */
-.mpi-btn--sm.mpi-ibtn .mpi-icon { width: 16px; height: 16px; }
-.mpi-btn--md.mpi-ibtn .mpi-icon { width: 20px; height: 20px; }
-.mpi-btn--lg.mpi-ibtn .mpi-icon { width: 24px; height: 24px; }
+.mpi-btn--sm.mpi-ibtn .mpi-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.mpi-btn--md.mpi-ibtn .mpi-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.mpi-btn--lg.mpi-ibtn .mpi-icon {
+    width: 24px;
+    height: 24px;
+}
 
 /* ── Icon swap (toggleable icon) ──────────────────────────────────────────── */
-.mpi-ibtn.has-icon-swap .mpi-ibtn__icon-swap          { display: none; }
-.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon     { display: none; }
-.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon-swap { display: flex; }
+.mpi-ibtn.has-icon-swap .mpi-ibtn__icon-swap {
+    display: none;
+}
+
+.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon {
+    display: none;
+}
+
+.mpi-ibtn.has-icon-swap.is-active .mpi-ibtn__icon-swap {
+    display: flex;
+}
 
 /* ── Label & Layout ────────────────────────────────────────────────────────── */
 .mpi-ibtn__label {
@@ -242,13 +217,27 @@ body.light-mode .mpi-btn--outline:hover:not(:disabled) {
 }
 
 /* Position modifiers */
-.mpi-ibtn--label-right  { flex-direction: row; }
-.mpi-ibtn--label-left   { flex-direction: row-reverse; }
-.mpi-ibtn--label-bottom { flex-direction: column; }
-.mpi-ibtn--label-top    { flex-direction: column-reverse; gap: 0.1rem; }
+.mpi-ibtn--label-right {
+    flex-direction: row;
+}
+
+.mpi-ibtn--label-left {
+    flex-direction: row-reverse;
+}
+
+.mpi-ibtn--label-bottom {
+    flex-direction: column;
+}
+
+.mpi-ibtn--label-top {
+    flex-direction: column-reverse;
+    gap: 0.1rem;
+}
 
 /* No gap for icon-only buttons */
-.mpi-btn--icon-only.mpi-ibtn { gap: 0; }
+.mpi-btn--icon-only.mpi-ibtn {
+    gap: 0;
+}
 
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 .mpi-ibtn__spinner {
@@ -262,7 +251,9 @@ body.light-mode .mpi-btn--outline:hover:not(:disabled) {
 }
 
 @keyframes mpi-ibtn-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ── Press / Active (compound selector — only for icon buttons) ───────────── */
@@ -289,14 +280,3 @@ body.light-mode .mpi-btn--outline:hover:not(:disabled) {
     border-color: var(--neon-accent);
     color: #000;
 }
-
-/* ── Light Mode ───────────────────────────────────────────────────────────── */
-body.light-mode .mpi-ibtn:not(.is-active) {
-    background: rgba(0, 0, 0, 0.04);
-    border-color: var(--border);
-}
-
-body.light-mode .mpi-btn.mpi-ibtn:hover:not(:disabled):not(.is-active) {
-    background: rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.18);
-}
