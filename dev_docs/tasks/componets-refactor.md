@@ -82,16 +82,15 @@
     - MpiButton on right `Delete`
 
 
-# Reimplement settings/about/help in projects page
-
-## Phase 3.3: Radial Menu
-
-
-## Phase 3.4: Status Bar (Info Bar) [Implement the Progress into it]
-## Phase 3.4: Load comfy engine popup []
 ## Phase 3.4: New Project popup and button on landing page [X]
-### Phase 3.4: MpiProjectCard [X]
+# Reimplement settings/about/help in projects page [X]
 ## Phase 3.4: Implement confirm for project delete [X]
+### Phase 3.4: MpiProjectCard [X]
+## Phase 3.3: Radial Menu [X]
+
+
+## Phase 3.4: Status Bar (Info Bar) [Create Component and Implement the Progress into it]
+## Phase 3.4: Load comfy engine popup []
 
 ## Phase 3.5.1: Video preview (crop grid + snapshot)
 ## Phase 3.5.2: Video Controller (play/stop, vol, seek, repeat) 

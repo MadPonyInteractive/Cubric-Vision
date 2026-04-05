@@ -15,7 +15,7 @@
 export function mount(container) {
     container.innerHTML = `
         <div class="tool-placeholder">
-            <h1 class="tool-placeholder__title"><br>MAIN GALLERY</h1>
+            <h1 class="tool-placeholder__title">MAIN GALLERY</h1>
             <p>This should be all the media of this project in the project's gallery</p>
             <p>This should be all the media of this project in the project's gallery This should be all the media of this project in the project's gallery This should be all the media of this project in the project's gallery</p>
             <p>This should be all the media of this project in the project's gallery This should be all the media of this project in the project's gallery This should be all the media of this project in the project's gallery</p>
