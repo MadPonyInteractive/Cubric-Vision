@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
@@ -266,6 +266,28 @@ app.on('ready', () => {
   ipcMain.on('window-fullscreen', () => {
     if (mainWindow) {
       mainWindow.setFullScreen(!mainWindow.isFullScreen());
+    }
+  });
+
+  // TODO: replace platform branches with screen.setCursorScreenPoint({x,y})
+  // once Electron exposes it (not available as of Electron 41).
+  ipcMain.on('warp-cursor', (event, x, y) => {
+    const { execFile } = require('child_process');
+    const px = Math.round(x);
+    const py = Math.round(y);
+    if (process.platform === 'win32') {
+      execFile('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-Command',
+        `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${px}, ${py})`
+      ], { windowsHide: true }, () => {});
+    } else if (process.platform === 'darwin') {
+      // macOS: move cursor via osascript (no deps required)
+      execFile('osascript', [
+        '-e', `tell application "System Events" to set the position of the mouse cursor to {${px}, ${py}}`
+      ], () => {});
+    } else {
+      // Linux: use xdotool if available, silent fail if not installed
+      execFile('xdotool', ['mousemove', '--', String(px), String(py)], () => {});
     }
   });
 });

@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
    MpiRadialMenu — Radial navigation primitive
    BEM: .mpi-radial / .mpi-radial__item / .mpi-radial__hint
+        .mpi-radial__dot / .mpi-radial__cone
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Container ─────────────────────────────────────────── */
@@ -13,37 +14,78 @@
     justify-content: center;
     pointer-events: none;
     z-index: 500;
-    /* Base font size for em-based radius */
     font-size: 1rem;
 }
 
-/* Translucent dark backdrop — only active when visible */
-.mpi-radial::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(11, 10, 16, 0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-}
+/* No backdrop — menu is overlay-free in the new design */
 
 .mpi-radial--visible {
     pointer-events: auto;
 }
 
-.mpi-radial--visible::before {
-    opacity: 1;
-}
-
 /* ── Hidden / Visible states ───────────────────────────── */
 
 .mpi-radial--hidden .mpi-radial__item,
-.mpi-radial--hidden .mpi-radial__hint {
+.mpi-radial--hidden .mpi-radial__hint,
+.mpi-radial--hidden .mpi-radial__dot {
     opacity: 0;
     pointer-events: none;
+}
+
+.mpi-radial--hidden .mpi-radial__cone {
+    opacity: 0;
+}
+
+/* ── Centre dot ─────────────────────────────────────────── */
+
+.mpi-radial__dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--neon-electric);
+    box-shadow: 0 0 8px var(--neon-glow), 0 0 16px var(--neon-glow-sm);
+    z-index: 2;
+    pointer-events: none;
+
+    opacity: 0;
+    transform: scale(0);
+    transition:
+        opacity 0.2s ease,
+        transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mpi-radial--visible .mpi-radial__dot {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ── Gradient cone ──────────────────────────────────────── */
+
+.mpi-radial__cone {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    transform-origin: center center;
+    pointer-events: none;
+    z-index: 1;
+
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.mpi-radial__cone--visible {
+    opacity: 1;
+}
+
+.mpi-radial__cone-svg {
+    display: block;
+    /* Rotate the SVG so the wedge points at the active item.
+       The wedge is built pointing right (0°).
+       CSS rotate() is applied to the parent .mpi-radial__cone via JS. */
+    transform: rotate(var(--cone-angle, 0deg));
+    transform-origin: 50% 50%;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Items ─────────────────────────────────────────────── */
@@ -51,7 +93,6 @@
 .mpi-radial__item {
     position: absolute;
 
-    /* Offset from centre using CSS custom properties set by JS */
     left: calc(50% + var(--rx, 0em));
     top:  calc(50% + var(--ry, 0em));
     transform: translate(-50%, -50%) scale(0.6);
@@ -65,24 +106,21 @@
     width: 5em;
     padding: 0.75em 0.5em 0.6em;
 
-    background: var(--surface-glass);
-    border: 1px solid var(--border);
+    /* Ghost — no background, no border */
+    background: transparent;
+    border: none;
     border-radius: var(--radius);
-    color: var(--text-2);
-    cursor: pointer;
+    color: var(--text-3);
+    cursor: default;
     user-select: none;
+    z-index: 3;
 
-    /* Animation origin — in from centre */
     opacity: 0;
     transition:
         opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
         transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-        color 0.15s ease,
-        border-color 0.15s ease,
-        background 0.15s ease,
-        box-shadow 0.15s ease;
+        color 0.15s ease;
 
-    /* Stagger via --ri custom property */
     transition-delay: calc(var(--ri, 0) * 0.035s);
 }
 
@@ -92,26 +130,15 @@
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* Hover / focus state */
-.mpi-radial__item:hover,
-.mpi-radial__item:focus-visible {
-    color: var(--text);
-    background: var(--surface-2);
-    border-color: var(--neon-electric);
-    box-shadow:
-        0 10px 30px var(--bg-recessed),
-        -12px 8px 30px var(--primary-glow-sm),
-         12px -8px 30px var(--neon-glow-sm);
-    transform: translate(-50%, -50%) scale(1.12);
-    outline: none;
+/* Active / selected item — blue, no scale change */
+.mpi-radial__item--active {
+    color: var(--primary) !important;
     transition-delay: 0s;
-    z-index: 1;
 }
 
-/* Active / press state */
-.mpi-radial__item:active {
-    transform: translate(-50%, -50%) scale(1.04);
-    transition-duration: 0.08s;
+/* No hover styles — interaction is purely mouse-distance based */
+.mpi-radial__item:focus {
+    outline: none;
 }
 
 /* ── Item internals ─────────────────────────────────────── */
@@ -121,7 +148,6 @@
     align-items: center;
     justify-content: center;
     color: inherit;
-    transition: color 0.15s ease;
     line-height: 1;
 }
 
@@ -141,13 +167,14 @@
 
 .mpi-radial__hint {
     position: relative;
-    z-index: 1;
+    z-index: 4;
     font-family: var(--font-display);
     font-size: 0.78rem;
     color: var(--text-3);
     letter-spacing: 0.04em;
     pointer-events: none;
     text-align: center;
+
     opacity: 0;
     transform: scale(0.85);
     transition:
@@ -160,11 +187,18 @@
     transform: scale(1);
 }
 
+/* Hidden once tutorial is seen — stays invisible even when menu is open */
+.mpi-radial__hint--hidden {
+    display: none;
+}
+
 /* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
     .mpi-radial__item,
-    .mpi-radial__hint {
+    .mpi-radial__hint,
+    .mpi-radial__dot,
+    .mpi-radial__cone-svg {
         transition: opacity 0.1s ease;
     }
 }

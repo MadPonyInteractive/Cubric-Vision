@@ -52,7 +52,7 @@ const _state = {
             { name: null, modelStrength: 1.0, clipStrength: 1.0 },
             { name: null, modelStrength: 1.0, clipStrength: 1.0 }
         ],
-        upscaleModel: null 
+        upscaleModel: null
     },
     toolComfySettings: {},      // Persistent selections per tool (e.g. {'generator': {...}, 'detailer': {...}})
     upscaleModels: [],          // Shared list of available upscalers
@@ -67,14 +67,6 @@ const _state = {
     upscalerGridV: 1,
     upscalerCreative: true,
     downloadingWorkflows: {},   // Tracks ongoing downloads: { workflowId: { msg, current, total } }
-    isLightMode: false,         // Modern theme persistence
-    
-    // ── Crop & Extract persistent state ───────────────────────────────
-    cropExtractVideoUrl: null,
-    cropExtractTime: 0,
-    cropExtractVolume: 1.0,
-    cropExtractMuted: false,
-    cropExtractRatio: null,
 
     // ── Running tool tracking (for sidebar indicator + Ctrl+Enter guard) ──
     // Set to the tool's name string while a run is active; null when idle.
