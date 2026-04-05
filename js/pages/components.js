@@ -27,6 +27,7 @@ import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiS
 import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js';
 import { MpiOverlay } from '../components/Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
+import { StatusBar } from '../shell/statusBar.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
@@ -583,6 +584,26 @@ function mountAll() {
         MpiBadge.mount(slotEl, { label: 'Info', variant: 'info' });
         MpiBadge.mount(slotEl, { label: '99+', variant: 'primary', pill: true });
         MpiBadge.mount(slotEl, { label: 'Draft', variant: 'secondary' });
+    });
+
+    // ── StatusBar progress test ───────────────────────────────────────────────
+    mount('preview-statusbar-progress', () => {
+        const wrapper = slot('preview-statusbar-progress');
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.gap = '0.5rem';
+        wrapper.style.alignItems = 'flex-start';
+
+        const mkSlot = () => { const d = document.createElement('div'); wrapper.appendChild(d); return d; };
+
+        const input = MpiInput.mount(mkSlot(), { type: 'number', label: 'Progress (0–100)', value: 0, min: 0, max: 100, step: 1, info: 'Set a value to drive the StatusBar progress fill' });
+        const btnStart = MpiButton.mount(mkSlot(), { text: 'Start', variant: 'primary', size: 'sm', info: 'Begin a fake generation job' });
+        const btnComplete = MpiButton.mount(mkSlot(), { text: 'Complete', variant: 'secondary', size: 'sm', info: 'Mark job done and fire a toast' });
+        const btnCancel = MpiButton.mount(mkSlot(), { text: 'Cancel', variant: 'danger', size: 'sm', info: 'Cancel the active job' });
+
+        input.on('change', ({ value }) => StatusBar.progress.update(value / 100));
+        btnStart.on('click', () => StatusBar.progress.start('Generating image...'));
+        btnComplete.on('click', () => StatusBar.progress.complete('Image generated successfully!'));
+        btnCancel.on('click', () => StatusBar.progress.cancel());
     });
 
     // ── MpiToast ──────────────────────────────────────────────────────────────

@@ -13,8 +13,49 @@
   bottom: 0;
   z-index: 50;
   gap: 0.6rem;
+  overflow: hidden;
 }
 
+/* Progress fill layer — sits behind content */
+.shell-info__fill {
+  position: absolute;
+  inset: 0;
+  width: calc(var(--sb-progress, 0) * 1%);
+  background: linear-gradient(
+    90deg,
+    var(--neon-electric) 0%,
+    var(--primary)       40%,
+    var(--neon-accent)   70%,
+    var(--primary)       100%
+  );
+  background-size: 200% 100%;
+  opacity: 0.28;
+  box-shadow: inset 0 -1px 0 0 rgba(182, 120, 255, 0.25),
+              0 0 12px 0 rgba(182, 120, 255, 0.12);
+  transition: width 0.25s ease, opacity 0.4s ease;
+  pointer-events: none;
+  animation: sb-shimmer 2.4s linear infinite;
+}
+
+@keyframes sb-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position:   0% 0; }
+}
+
+.shell-info__fill--flash {
+  opacity: 0.55;
+  box-shadow: inset 0 -1px 0 0 rgba(182, 120, 255, 0.6),
+              0 0 20px 4px rgba(182, 120, 255, 0.25);
+  transition: opacity 0.1s ease, box-shadow 0.1s ease;
+}
+
+.shell-info__fill--fade {
+  opacity: 0;
+  box-shadow: none;
+  transition: width 0.6s ease, opacity 0.6s ease, box-shadow 0.6s ease;
+}
+
+/* Decorative left rule */
 #shell-info-bar::before {
   content: '';
   display: block;
@@ -24,9 +65,12 @@
   border-radius: 2px;
   opacity: 0.6;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
-.shell-info-content {
+/* Left text slot */
+.shell-info__left {
   font-family: var(--font-main);
   font-size: 0.72rem;
   letter-spacing: 0.01em;
@@ -36,9 +80,47 @@
   overflow: hidden;
   text-overflow: ellipsis;
   transition: opacity 0.12s ease, transform 0.12s ease;
+  position: relative;
+  z-index: 1;
 }
 
-.shell-info-content.updating {
+.shell-info__left.updating {
   opacity: 0;
   transform: translateY(2px);
+}
+
+/* Right process slot */
+.shell-info__right {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.shell-info__right.active {
+  display: flex;
+}
+
+.shell-info__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex-shrink: 0;
+  animation: sb-pulse 1.4s ease-in-out infinite;
+}
+
+.shell-info__process-label {
+  font-family: var(--font-main);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+@keyframes sb-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.75); }
 }

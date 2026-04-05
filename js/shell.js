@@ -18,7 +18,7 @@ import { preloadComponentStyles } from './shell/preloadStyles.js';
 import { bindWindowControls } from './shell/windowControls.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
-import { bindInfoBarEvents } from './shell/uiEvents.js';
+import { StatusBar } from './shell/statusBar.js';
 import { initNavigation, handleNavigation, updateTitlebarProject } from './shell/navigation.js';
 
 // Internal references for communication
@@ -48,7 +48,7 @@ export async function initShell() {
 
   // 4. Bind Interactions
   initProjectUI();
-  bindInfoBarEvents();
+  StatusBar.init();
   bindWindowControls();
   bindMemoryHotkeys(memMonitor);
 

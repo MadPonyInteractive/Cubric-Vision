@@ -15,7 +15,7 @@ export const MpiToast = ComponentFactory.create({
     template: (props) => {
         const variant = props.variant || 'info';
         const message = props.message || '';
-        
+
         // Icon mapping (hardcoded for simplicity since it's a primitive)
         const icons = {
             info: 'info-circle',
