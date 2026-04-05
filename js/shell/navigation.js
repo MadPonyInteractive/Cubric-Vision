@@ -204,14 +204,16 @@ function _syncRadial(view) {
     if (!_radialInstance) {
         _radialInstance = MpiRadialMenu.mount(_radialMount, {
             context: view,
-            open: true,
             extraItems,
         });
 
         // Inject all UX-defined context item sets into the radial upfront
+        // (must happen before show so _render() has items available)
         Object.entries(RADIAL_CONTEXTS).forEach(([ctx, items]) => {
             _radialInstance.el.setContextItems(ctx, items);
         });
+
+        _radialInstance.el.show();
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {

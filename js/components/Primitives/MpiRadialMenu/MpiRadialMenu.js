@@ -67,7 +67,7 @@ export const MpiRadialMenu = ComponentFactory.create({
          * Called whenever context changes or menu opens.
          */
         function _render() {
-            const items = [...(CONTEXTS[_context] || CONTEXTS.root), ..._extraItems];
+            const items = [...(CONTEXTS[_context] || CONTEXTS.root || []), ..._extraItems];
             const count = items.length;
 
             // Clear previous items (keep container, reset state classes)
