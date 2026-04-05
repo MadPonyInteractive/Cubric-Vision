@@ -35,13 +35,13 @@ export async function initShell() {
   const pageLanding = document.getElementById('page-landing');
   const appShell = document.getElementById('app-shell');
   const toolContainer = document.getElementById('tool-container');
+  const radialMount = document.getElementById('radial-mount');
   const monitorMount = document.getElementById('memory-monitor-mount');
   const projectNameMount = document.getElementById('project-name-mount');
 
   // 3. Mount Global HUD Components
   _projectNameInstance = MpiProjectName.mount(projectNameMount, {
     projectName: state.currentProject?.name || '',
-    pageName: 'Main Menu',
   });
 
   const memMonitor = MpiMemoryMonitor.mount(monitorMount);
@@ -57,11 +57,12 @@ export async function initShell() {
     pageLanding,
     appShell,
     toolContainer,
+    radialMount,
     projectNameInstance: _projectNameInstance
   });
 
   // Wiring actions to logic
-  _projectNameInstance.on('back', () => handleNavigation(PAGE_LANDING));
+  // Note: 'back' and 'workspace' on _projectNameInstance are wired inside initNavigation()
   memMonitor.on('release', ({ deep }) => triggerMemoryRelease(deep, memMonitor.el));
 
   // 6. Router Integration

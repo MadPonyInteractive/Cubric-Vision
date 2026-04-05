@@ -11,9 +11,9 @@ import { ICONS } from '../../../utils/icons.js';
  *
  * @typedef {import('../../types.js').MpiRadialMenuProps} MpiRadialMenuProps
  *
- * @param {'root'|'image'|'video'|'audio'} [context='root'] - Active context
+ * @param {string} [context=''] - Active context key. Must match a key injected via el.setContextItems().
  * @param {boolean} [open=false] - Force-open state (used by workspace for first-run)
- * @param {Array<{action:string, label:string, icon:string, dev?:boolean}>} [extraItems=[]] - Additional items appended to every context (e.g. dev-only entries)
+ * @param {Array<{action:string, label:string, icon:string}>} [extraItems=[]] - Additional items appended to the active context (e.g. dev-only entries)
  *
  * Emits:
  * 'select' { action: string } — user chose an item
@@ -30,38 +30,10 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         // ── Context item definitions ────────────────────────────────────────────
 
+        // Context items are injected externally via el.setContextItems().
+        // navigation.js owns all context definitions — this map starts empty.
         /** @type {Record<string, Array<{action:string, label:string, icon:string}>>} */
-        const CONTEXTS = {
-            root: [
-                { action: 'gallery',    label: 'Gallery',    icon: 'gallery' },
-                { action: 'image',      label: 'Image',      icon: 'image' },
-                { action: 'video',      label: 'Video',      icon: 'video' },
-                { action: 'audio',      label: 'Audio',      icon: 'audio' },
-            ],
-            image: [
-                { action: 'upscale',    label: 'Upscale',    icon: 'upscaler' },
-                { action: 'enhance',    label: 'Enhance',    icon: 'enhance' },
-                { action: 'edit',       label: 'Edit',       icon: 'edit' },
-                { action: 'settings',   label: 'Settings',   icon: 'settings' },
-                { action: 'downloads',  label: 'Downloads',  icon: 'download' },
-                { action: 'gallery',    label: 'Gallery',    icon: 'gallery' },
-                { action: 'root',       label: '← Menu',     icon: 'back' },
-            ],
-            video: [
-                { action: 'generate',   label: 'Generate',   icon: 'generate' },
-                { action: 'edit',       label: 'Edit',       icon: 'edit' },
-                { action: 'settings',   label: 'Settings',   icon: 'settings' },
-                { action: 'downloads',  label: 'Downloads',  icon: 'download' },
-                { action: 'gallery',    label: 'Gallery',    icon: 'gallery' },
-                { action: 'root',       label: '← Menu',     icon: 'back' },
-            ],
-            audio: [
-                { action: 'generate',   label: 'Generate',   icon: 'generate' },
-                { action: 'settings',   label: 'Settings',   icon: 'settings' },
-                { action: 'gallery',    label: 'Gallery',    icon: 'gallery' },
-                { action: 'root',       label: '← Menu',     icon: 'back' },
-            ],
-        };
+        const CONTEXTS = {};
 
         // ── State ───────────────────────────────────────────────────────────────
 
@@ -228,6 +200,18 @@ export const MpiRadialMenu = ComponentFactory.create({
         el.setExtraItems = (items) => {
             _extraItems = items;
             if (_visible) _render();
+        };
+
+        /**
+         * Inject or replace the item set for a named context.
+         * Allows external callers (e.g. navigation.js) to define custom contexts
+         * without modifying the radial's internal CONTEXTS map.
+         * @param {string} ctx - Context name (can be any string, not just built-in ones)
+         * @param {Array<{action:string, label:string, icon:string}>} items
+         */
+        el.setContextItems = (ctx, items) => {
+            CONTEXTS[ctx] = items;
+            if (_context === ctx && _visible) _render();
         };
 
         // ── Initial state ───────────────────────────────────────────────────────

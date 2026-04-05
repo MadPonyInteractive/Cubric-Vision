@@ -1,6 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
    MpiProjectName — Compound
-   BEM: .mpi-project-name / __back / __text / __title / __page
+   BEM: .mpi-project-name / __back / __breadcrumb /
+        __segment / __segment--workspace / __segment--tool /
+        __separator
 ═══════════════════════════════════════════════════════════ */
 
 .mpi-project-name {
@@ -18,16 +20,18 @@
     flex-shrink: 0;
 }
 
-/* ── Text block ─────────────────────────────────────────── */
+/* ── Text block (project name + breadcrumb stacked) ────── */
 
 .mpi-project-name__text {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    line-height: 1.2;
+    gap: 0.1rem;
+    line-height: 1;
 }
 
-.mpi-project-name__title {
+/* ── Project name ───────────────────────────────────────── */
+
+.mpi-project-name__project {
     font-family: var(--font-display);
     font-size: 0.8rem;
     font-weight: 600;
@@ -36,15 +40,61 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 180px;
+    max-width: 200px;
 }
 
-.mpi-project-name__page {
+/* ── Breadcrumb row ─────────────────────────────────────── */
+
+.mpi-project-name__breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    line-height: 1;
+}
+
+/* ── Shared segment styles ──────────────────────────────── */
+
+.mpi-project-name__segment {
     font-family: var(--font-main);
     font-size: 0.62rem;
-    font-weight: 500;
-    color: var(--text-3);
-    text-transform: uppercase;
+    font-weight: 600;
     letter-spacing: 0.08em;
     white-space: nowrap;
+    text-transform: uppercase;
+}
+
+/* ── Clickable link segments (root + workspace) ─────────── */
+
+.mpi-project-name__segment--link {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-3);
+    transition: color 0.15s ease;
+}
+
+.mpi-project-name__segment--link:hover {
+    color: var(--text);
+}
+
+/* ── Separator › ────────────────────────────────────────── */
+
+.mpi-project-name__separator {
+    font-size: 0.62rem;
+    color: var(--text-3);
+    opacity: 0.5;
+    user-select: none;
+}
+
+/* ── Current page segment (plain text) ──────────────────── */
+
+.mpi-project-name__segment--current {
+    color: var(--text);
+}
+
+/* ── Hidden state ───────────────────────────────────────── */
+
+.mpi-project-name--hidden {
+    display: none;
 }
