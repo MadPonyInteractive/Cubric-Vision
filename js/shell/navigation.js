@@ -138,6 +138,12 @@ export function handleNavigation(page, params = {}) {
     if (page === PAGE_LANDING) {
         clearHistory();
         state.activeSubPage = null;
+        // Tear down radial so the next project entry re-mounts fresh,
+        // correctly re-evaluating tutorialSeen for the new project.
+        if (_radialInstance) {
+            _radialMount.innerHTML = '';
+            _radialInstance = null;
+        }
         _showLanding();
         loadProjectGrid();
         updateTitlebarProject();
@@ -230,7 +236,10 @@ function _syncRadial(view) {
             _radialInstance.el.setContextItems(ctx, items);
         });
 
-        _radialInstance.el.show();
+        // Only auto-open on first entry for new projects (tutorial not yet seen)
+        if (!state.currentProject?.tutorialSeen) {
+            _radialInstance.el.show();
+        }
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {

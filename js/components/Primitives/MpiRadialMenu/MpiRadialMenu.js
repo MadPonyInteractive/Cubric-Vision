@@ -119,11 +119,18 @@ export const MpiRadialMenu = ComponentFactory.create({
             el.appendChild(dot);
 
             // Tutorial hint — only if not yet seen
-            const hint = document.createElement('div');
-            hint.className = 'mpi-radial__hint';
-            hint.textContent = 'Hold Tab to call me';
-            if (_tutorialSeen()) hint.classList.add('mpi-radial__hint--hidden');
-            el.appendChild(hint);
+            const hintTop = document.createElement('div');
+            hintTop.className = 'mpi-radial__hint mpi-radial__hint--top';
+            hintTop.textContent = 'Hold Tab...';
+            const hintBottom = document.createElement('div');
+            hintBottom.className = 'mpi-radial__hint mpi-radial__hint--bottom';
+            hintBottom.textContent = 'when you need me.';
+            if (_tutorialSeen()) {
+                hintTop.classList.add('mpi-radial__hint--hidden');
+                hintBottom.classList.add('mpi-radial__hint--hidden');
+            }
+            el.appendChild(hintTop);
+            el.appendChild(hintBottom);
 
             // Cone SVG (one per menu, rotated/clipped by JS)
             const cone = document.createElement('div');

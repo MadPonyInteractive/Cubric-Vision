@@ -17,16 +17,31 @@
     font-size: 1rem;
 }
 
-/* No backdrop — menu is overlay-free in the new design */
+/* Full-screen dark overlay — flat, no blur, gives ghost items contrast */
+.mpi-radial::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 16, 0.90);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    z-index: 0;
+}
 
 .mpi-radial--visible {
     pointer-events: auto;
 }
 
+.mpi-radial--visible::before {
+    opacity: 1;
+}
+
 /* ── Hidden / Visible states ───────────────────────────── */
 
 .mpi-radial--hidden .mpi-radial__item,
-.mpi-radial--hidden .mpi-radial__hint,
+.mpi-radial--hidden .mpi-radial__hint--top,
+.mpi-radial--hidden .mpi-radial__hint--bottom,
 .mpi-radial--hidden .mpi-radial__dot {
     opacity: 0;
     pointer-events: none;
@@ -94,7 +109,7 @@
     position: absolute;
 
     left: calc(50% + var(--rx, 0em));
-    top:  calc(50% + var(--ry, 0em));
+    top: calc(50% + var(--ry, 0em));
     transform: translate(-50%, -50%) scale(0.6);
     transform-origin: center center;
 
@@ -166,7 +181,9 @@
 /* ── Centre hint ────────────────────────────────────────── */
 
 .mpi-radial__hint {
-    position: relative;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) scale(0.85);
     z-index: 4;
     font-family: var(--font-display);
     font-size: 0.78rem;
@@ -174,17 +191,25 @@
     letter-spacing: 0.04em;
     pointer-events: none;
     text-align: center;
+    white-space: nowrap;
 
     opacity: 0;
-    transform: scale(0.85);
     transition:
         opacity 0.3s ease 0.15s,
         transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s;
 }
 
+.mpi-radial__hint--top {
+    bottom: calc(50% + 10px);
+}
+
+.mpi-radial__hint--bottom {
+    top: calc(50% + 10px);
+}
+
 .mpi-radial--visible .mpi-radial__hint {
     opacity: 1;
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
 }
 
 /* Hidden once tutorial is seen — stays invisible even when menu is open */
@@ -195,8 +220,10 @@
 /* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+
     .mpi-radial__item,
-    .mpi-radial__hint,
+    .mpi-radial__hint--top,
+    .mpi-radial__hint--bottom,
     .mpi-radial__dot,
     .mpi-radial__cone-svg {
         transition: opacity 0.1s ease;
