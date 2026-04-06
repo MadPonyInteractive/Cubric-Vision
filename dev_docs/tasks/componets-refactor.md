@@ -96,6 +96,112 @@
 ## Error Handling & Logging [X]
 
 
+## MpiPromptBox ReVamp [to-accomodate-new-system]
+
+
+
+## GALLERY (Media Items)
+* Controls
+- Display names
+- Select Multiple [use badges for selection order numbers]
+this should change options on the radial for workflows with multiple inputs[compare/edit/startframe-endframe]
+* Filtering
+- Favs/imgs/vids/audio
+- Type (uploaded/generated/detailed/upscaled)
+- Media type (img/mp4/mp3)
+* order (new to old/old to new)
+* Media naming convenction based on source (uploaded/generated/detailed/upscaled)
+* Drag/Drop functionality [to the canvas/screen and from the canvas to the prompt box]
+* PromptBox here will behave based on inputs
+
+## Media item history --------------------------------------------------------------------------------------
+Media items will possibly be files with a history, they are the thing represented in the gallery.
+CLicking one in the galery will open a separate workspace for altering the file, creating new versions with alterations.
+This workspace should consist of: 
+- icon tool pallete on the left [crop/mask]
+- the image preview in canvas using most of the screen space with modes: [display/compare-widget/mask/crop]
+- the history cards on the right with [image/prompt/btn-icons]
+Each History entry should be a selectable card component.
+Every history entry has: 
+- 'Make Unique' btn, that creates a new Media item from the media
+- 'Set as main' toggle to make it be the item used and seen in the galery [gets-a-feedback-badge]
+- 'Delete'
+
+User should be able to select 2 entries at a time, when this happens the main area converts into
+the `compare widget` with both images loaded into it.
+
+Converting an image to a video or extracting a frame from a video will create a new Media Item automatically, 
+so each media item always has one type, img, video or audio.
+
+Here the tab radial menu is used contextualy. 
+* 1 entry           = tools to use [upscale/edit/animate]
+* 1 entry masked    = tools to use [remove/change/detail]
+Selecting one of these will change the MpiPromptBox to the appropriate variant with a dropdown to select model
+and its own unique params.
+
+**Video differences**
+* tool pallete [crop]
+* 1 entry           = tools to use [upscale/snapshot]
+
+
+
+## DOWNLOADER with resume
+UI states:
+- Queued: "Waiting to download..."
+- Downloading: "Downloading SDXL (2.3GB / 6.9GB) - 33%"
+- Paused: "Download paused. Click to resume."
+- Verifying: "Verifying file integrity..."
+- Failed: "Download failed. Retry?"
+- Complete: ✓
+
+Model Manifest Schema (Revised)
+{
+  "id": "sdxl_base",
+  "file": "sd_xl_base_1.0.safetensors",
+  "source": "huggingface",
+  "repo": "stabilityai/stable-diffusion-xl-base-1.0",
+  "path": "sd_xl_base_1.0.safetensors",
+  "sha256": "...",
+  "size": 6938078208,
+  "requiredForWorkflows": ["txt2img-sdxl"],
+  "minTier": 2
+}
+
+Download Strategy
+Use HuggingFace's direct download URLs:
+https://huggingface.co/{repo}/resolve/main/{path}
+Implementation via modelDownloader.js:
+
+Check if model exists locally (verify checksum)
+If not, queue download
+Use streaming download with progress (Node.js https + fs.createWriteStream)
+Verify SHA256 after download
+Move from temp to models folder
+Update installation.modelsDownloaded state
+Critical: Resumable downloads
+
+HuggingFace supports HTTP range requests. If download fails midway:
+
+Save partial file + metadata (how many bytes downloaded)
+Resume with Range: bytes=X- header
+Libraries that handle this:
+
+got (Node.js, supports resume)
+node-downloader-helper (built for this)
+DIY with native https (more control, more code)
+Recommendation: Use got with retry logic.
+
+
+## Build feature gating system (new workflows and tools) ?? 
+## updates??
+## State persistence (project system, settings survive restart)
+
+
+## 
+
+
+
+
 ## Phase 3.5.1: Video preview (crop grid + snapshot)
 ## Phase 3.5.2: Video Controller (play/stop, vol, seek, repeat) 
 ## Phase 3.5.3: Video Region Select

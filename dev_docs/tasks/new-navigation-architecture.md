@@ -1,17 +1,5 @@
 # Architecture Vision: Radial Navigation & Workspace System
 
-# 🤖 IMPORTANT for agents 
-## CRITICAL Must Read: `dev_docs/05_components.md`
-## Use JSDocs extensively
-## Use the `styles/01_base.css` as the source of thruth for styles
-## USe `js/utils/dom.js` for shorthands
-## use `js/utils/` where appropriate
-## Do not commit git
-## Do not test
-## Ask questions if goal not clear
-## Work on your assigned phase but the read the other phases for context
-## Remember to update `js/shell.js` and `js/components/types.js` if adding or removing components
-
 ---
 
 ## 🎯 The Vision

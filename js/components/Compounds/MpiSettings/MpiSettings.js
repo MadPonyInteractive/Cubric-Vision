@@ -125,7 +125,7 @@ export const MpiSettings = ComponentFactory.create({
             if (browseBtn && comfyPath) {
                 browseBtn.addEventListener('click', async () => {
                     try {
-                        const res  = await fetch('/choose-folder', { method: 'POST' });
+                        const res = await fetch('/choose-folder', { method: 'POST' });
                         const data = await res.json();
                         if (!data.cancelled && data.path) {
                             comfyPath.value = data.path;
@@ -142,14 +142,14 @@ export const MpiSettings = ComponentFactory.create({
             localStorage.setItem('mpi_comfy_root_path', path);
             state.comfyRootPath = path;
             try {
-                const res  = await fetch('/comfy/set-path', {
+                const res = await fetch('/comfy/set-path', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path }),
                 });
                 const data = await res.json();
                 if (data.success) {
-                    const { refreshComfyWorkflowRegistry } = await import('../../../comfyModelManager.js');
+                    const { refreshComfyWorkflowRegistry } = await import('../../../comfyWorkflowManager.js');
                     await refreshComfyWorkflowRegistry();
                 } else {
                     console.error('[MpiSettings] Failed to sync ComfyUI path:', data.error);

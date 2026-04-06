@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
 import { refreshModelRegistry } from './managers/modelManager.js';
-import { refreshComfyWorkflowRegistry } from './comfyModelManager.js';
+import { refreshComfyWorkflowRegistry } from './comfyWorkflowManager.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -34,8 +34,8 @@ const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
  * @param {string} message - Actionable detail shown to the user
  */
 export function showError(title, message) {
-    _errorDialog.el.setError(title, message);
-    _errorDialog.el.show();
+  _errorDialog.el.setError(title, message);
+  _errorDialog.el.show();
 }
 
 /**
