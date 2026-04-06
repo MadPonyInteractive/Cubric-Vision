@@ -31,9 +31,9 @@ const fragmentShaderSource = `
   const float minorLineFrequency = 1.0;
   const float scale = 5.0;
   
-  // Base colors
-  const vec4 darkLineColor = vec4(0.4, 0.2, 0.8, 1.0);
-  const vec4 lightLineColor = vec4(0.5, 0.3, 0.9, 0.8);
+  // Base colors (Primary and Neon Accent)
+  const vec4 color1 = vec4(0.33, 0.70, 0.95, 1.0); // --primary (Baby Blue)
+  const vec4 color2 = vec4(0.82, 0.49, 0.86, 1.0); // --neon-accent (Pink)
   
   const float minLineWidth = 0.01;
   const float maxLineWidth = 0.2;
@@ -80,10 +80,10 @@ const fragmentShaderSource = `
     // Background Interp (matches #15151e and #1e1e28 Deep Space Palette)
     vec4 bgColor1 = vec4(0.08, 0.08, 0.11, 1.0);
     vec4 bgColor2 = vec4(0.12, 0.12, 0.15, 1.0);
-    vec4 lineColor = darkLineColor;
 
     for(int l = 0; l < 12; l++) {
       float normalizedLineIndex = float(l) / 12.0;
+      vec4 lineColor = mix(color1, color2, normalizedLineIndex);
       float offsetTime = iTime * offsetSpeed;
       float offsetPosition = float(l) + space.x * offsetFrequency;
       float rand = random(offsetPosition + offsetTime) * 0.5 + 0.5;

@@ -97,6 +97,20 @@
 
 
 ## MpiPromptBox ReVamp [to-accomodate-new-system]
+* Model Selector dropdown [default-option->-Model-Downloads]
+- models in the dropdown should have icons indicating their type [img/vid]
+- and badges indicating their supported operations [i2v/t2v/t2i/etc]
+* Contextual Operation Type dropdown based on [model/mask/images-present]
+* Options some models do not support [i2i/change/remove/edit]
+- Mask on [detail/change/remove] [img-models-only]
+- Mask off 
+    - Images present [i2i/upscale/edit]
+    - No Images present [t2i]
+
+[change]    = Inpaint (or image editor with stitch)
+[remove]    = Inpaint removal (or image editor with stitch)
+[edit]      = Image edit
+[detail]    = Mask Detailer
 
 
 
@@ -118,26 +132,23 @@ this should change options on the radial for workflows with multiple inputs[comp
 Media items will possibly be files with a history, they are the thing represented in the gallery.
 CLicking one in the galery will open a separate workspace for altering the file, creating new versions with alterations.
 This workspace should consist of: 
-- icon tool pallete on the left [crop/mask]
+- icon tool pallete on the left [crop/mask-for-images-only]
 - the image preview in canvas using most of the screen space with modes: [display/compare-widget/mask/crop]
-- the history cards on the right with [image/prompt/btn-icons]
+- the history cards on the right with [name/image/prompt/dimensions/btn-icons]
 Each History entry should be a selectable card component.
-Every history entry has: 
+Every history entry has [btn-icons]: 
 - 'Make Unique' btn, that creates a new Media item from the media
 - 'Set as main' toggle to make it be the item used and seen in the galery [gets-a-feedback-badge]
 - 'Delete'
 
-User should be able to select 2 entries at a time, when this happens the main area converts into
-the `compare widget` with both images loaded into it.
+User should be able to select 2 entries at a time holding [ctrl], when this happens the main area converts into the `compare widget` with both images loaded into it.
 
-Converting an image to a video or extracting a frame from a video will create a new Media Item automatically, 
-so each media item always has one type, img, video or audio.
+Converting an image to a video or extracting a frame from a video will create a new Media Item automatically, so each media item always has one type, img, video or audio.
 
 Here the tab radial menu is used contextualy. 
 * 1 entry           = tools to use [upscale/edit/animate]
 * 1 entry masked    = tools to use [remove/change/detail]
-Selecting one of these will change the MpiPromptBox to the appropriate variant with a dropdown to select model
-and its own unique params.
+Selecting one of these will change the MpiPromptBox to the appropriate variant with a dropdown to select model and its own unique params.
 
 **Video differences**
 * tool pallete [crop]
