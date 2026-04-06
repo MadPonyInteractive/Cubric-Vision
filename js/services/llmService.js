@@ -3,6 +3,13 @@
  * Provides low-level communication with the llama-server.exe backend.
  */
 
+// TODO: Wire showError() into catch blocks for user-facing error notifications.
+// Import with: import { showError } from '../shell.js';
+// Key failure points to handle:
+//   llamaGenerate() catch  → showError('Generation failed', e.message)
+//                            OOM case → showError('Out of VRAM', 'Not enough VRAM to run this model. Try a smaller model.')
+//   unloadModel() catch    → showError('Failed to unload model', e.message)
+
 import { state } from '../state.js';
 
 let _llmLock = Promise.resolve();

@@ -1,5 +1,14 @@
-// ComfyUI integration: WebSocket connection, workflow execution, 
+// ComfyUI integration: WebSocket connection, workflow execution,
 // live preview, and cancel support.
+
+// TODO: Wire showError() into catch blocks for user-facing error notifications.
+// Import with: import { showError } from '../shell.js';
+// Key failure points to handle:
+//   ensureServerRunning() catch  → showError('ComfyUI failed to start', e.message)
+//   runWorkflow() reject         → showError('Workflow failed', e.message)
+//   interrupt() catch            → showError('Failed to cancel generation', e.message)
+//   ws.onerror                   → showError('ComfyUI connection lost', ...)
+
 import { state } from '../state.js';
 
 export const ComfyUIController = {
