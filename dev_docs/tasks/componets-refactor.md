@@ -89,8 +89,32 @@
 ## Phase 3.3: Radial Menu [X]
 
 
-## Phase 3.4: Status Bar (Info Bar) [Create Component and Implement the Progress into it]
+## Phase 3.4: Status Bar (Info Bar) [Create Component and Implement the Progress into it] [X]
 ## Phase 3.4: Load comfy engine popup []
+
+
+## Error Handling & Logging
+You mentioned debugging — build this into the foundation:
+
+Log categories:
+
+system (startup, process management)
+comfy (API calls, workflow execution)
+llm (model loads, inference)
+project (file I/O)
+Implementation:
+
+Write to logs/app.log in project folder
+Rotate logs (don't let them grow forever)
+In-app log viewer (help users help themselves)
+Error states every workflow must handle:
+
+ComfyUI unresponsive
+Out of VRAM
+Missing model file
+Corrupted input media
+Don't just console.error — surface these in UI with actionable messages ("Download missing model?" not "Error 500").
+
 
 ## Phase 3.5.1: Video preview (crop grid + snapshot)
 ## Phase 3.5.2: Video Controller (play/stop, vol, seek, repeat) 

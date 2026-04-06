@@ -505,6 +505,18 @@
  */
 
 /**
+ * @typedef {Object} MpiStartingComfyProps (Compound — js/components/Compounds/MpiStartingComfy)
+ * @property {string}   [title]  - Large title text
+ * @property {string}   [text]   - Descriptive text below title
+ *
+ * Instance methods (on instance.el):
+ *   show()                      — Shows the modal with loading spinner
+ *   hide()                      — Hides the modal
+ *   setError(errMsg)            — Hides spinner and shows error text
+ *   setLoading(isLoading)       — Toggles loading spinner
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

@@ -46,6 +46,7 @@ import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjec
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
+import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -1028,6 +1029,30 @@ function mountAll() {
 
         btn.on('click', () => modal.el.show());
         modal.on('close', () => console.log('[gallery] MpiModelsModal closed'));
+    });
+
+    // ── MpiStartingComfy (Compound) ─────────────────────────────────────────────
+    mount('preview-starting-comfy-default', () => {
+        const slotEl = slot('preview-starting-comfy-default');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'play',
+            label: 'Start Engine',
+            variant: 'primary',
+            info: 'Click to test the engine startup modal'
+        });
+
+        const modal = MpiStartingComfy.mount(document.createElement('div'));
+        
+        btn.on('click', () => {
+            modal.el.show();
+            // Simulate startup success after 3 seconds
+            setTimeout(() => {
+                modal.el.hide();
+            }, 3000);
+        });
     });
 }
 

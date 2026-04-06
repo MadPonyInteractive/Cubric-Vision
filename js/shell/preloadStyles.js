@@ -42,6 +42,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiSettings/MpiSettings.css',
   'js/components/Compounds/MpiHelp/MpiHelp.css',
   'js/components/Compounds/MpiAbout/MpiAbout.css',
+  'js/components/Compounds/MpiStartingComfy/MpiStartingComfy.css',
 
   // Blocks
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
