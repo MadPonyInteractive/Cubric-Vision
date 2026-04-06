@@ -21,8 +21,9 @@
 
 const express = require('express');
 const router = express.Router();
-const fs = require('fs-extra');
-const path = require('path');
+const fs     = require('fs-extra');
+const path   = require('path');
+const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_PROJECTS_ROOT } = require('./shared');
 
@@ -68,7 +69,7 @@ router.post('/create-project', async (req, res) => {
         await fs.writeFile(path.join(projectRoot, 'project.md'), `# ${project.name}\n\nProject notes go here.\n`);
         res.json({ success: true, project });
     } catch (err) {
-        console.error('create-project error:', err);
+        logger.error('project', 'create-project error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -122,7 +123,7 @@ router.post('/list-projects', async (req, res) => {
         });
         res.json({ success: true, projects: unique });
     } catch (err) {
-        console.error('list-projects error:', err);
+        logger.error('project', 'list-projects error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -255,7 +256,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             res.status(404).json({ success: false, error: 'File not found' });
         }
     } catch (err) {
-        console.error('[server] delete failed:', err);
+        logger.error('project', 'delete failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -292,7 +293,7 @@ router.post('/project-media/:projectId/update-meta', async (req, res) => {
         await fs.writeJson(metaPath, meta, { spaces: 2 });
         res.json({ success: true, metadata: meta });
     } catch (err) {
-        console.error('[server] update-meta failed:', err);
+        logger.error('project', 'update-meta failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -371,7 +372,7 @@ router.post('/project-media/:projectId/upload-raw', async (req, res) => {
         });
 
         writeStream.on('error', (err) => {
-            console.error('[server] raw upload error:', err);
+            logger.error('project', 'raw upload error', err);
             res.status(500).json({ success: false, error: err.message });
         });
     } catch (err) {
@@ -394,7 +395,7 @@ router.post('/project-data/:projectId/upload', async (req, res) => {
         await fs.writeFile(filePath, buffer);
         res.json({ success: true, filePath, filename });
     } catch (err) {
-        console.error('project-data upload error:', err);
+        logger.error('project', 'project-data upload error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -460,12 +461,12 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
         // libx264 for universal compatibility
         const ffmpegCmd = `ffmpeg -ss ${startTime} -t ${duration} -i "${inputPath}" -filter:v "crop=${cropW}:${cropH}:${cropX}:${cropY}" -c:v libx264 -crf 18 -preset fast -c:a copy "${outputPath}"`;
 
-        console.log(`[ffmpeg] Executing: ${ffmpegCmd}`);
+        logger.info('project', `ffmpeg: ${ffmpegCmd}`);
         await execPromise(ffmpegCmd);
 
         res.json({ success: true, filePath: outputPath, filename });
     } catch (err) {
-        console.error('[server] extract error:', err);
+        logger.error('project', 'extract error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

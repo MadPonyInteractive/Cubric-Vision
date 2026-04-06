@@ -13,6 +13,7 @@ const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 const { SYS_DEPS_PATH, streamDownload } = require('./shared');
+const logger = require('./logger');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -55,12 +56,12 @@ router.post('/engine/download', async (req, res) => {
         await fs.ensureDir(targetDir);
         const archivePath = path.join(targetDir, engineInfo.filename);
 
-        console.log(`Downloading Engine: ${engineInfo.url}`);
+        logger.info('system', `Downloading engine: ${engineInfo.url}`);
         if (!(await fs.pathExists(archivePath)) || (await fs.stat(archivePath)).size === 0) {
             await streamDownload(engineInfo.url, archivePath);
         }
 
-        console.log('Extracting Archive...');
+        logger.info('system', 'Extracting engine archive...');
         const sevenBin = require('7zip-bin');
         const { extractFull } = require('node-7z');
         const myStream = extractFull(archivePath, targetDir, { $bin: sevenBin.path7za });
@@ -77,7 +78,7 @@ router.post('/engine/download', async (req, res) => {
             if (await fs.pathExists(batPath)) {
                 let content = await fs.readFile(batPath, 'utf8');
                 if (!content.includes('--enable-cors-header')) {
-                    console.log('Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
+                    logger.info('system', 'Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
                     content = content.replace('ComfyUI\\main.py', 'ComfyUI\\main.py --listen 127.0.0.1 --preview-method taesd --enable-cors-header');
                     await fs.writeFile(batPath, content, 'utf8');
                 }
@@ -90,9 +91,9 @@ router.post('/engine/download', async (req, res) => {
                 settings['Comfy.Execution.PreviewMethod'] = 'taesd';
                 settings['Comfy.PreviewMethod'] = 'taesd';
                 await fs.writeJson(settingsPath, settings, { spaces: 4 });
-                console.log('ComfyUI settings updated to use TAESD previews.');
+                logger.info('system', 'ComfyUI settings updated to use TAESD previews.');
             } catch (err) {
-                console.warn('Failed to update ComfyUI settings:', err);
+                logger.warn('system', `Failed to update ComfyUI settings: ${err}`);
             }
         } else if (type === 'llama') {
             const findServer = async (dir) => {
@@ -116,7 +117,7 @@ router.post('/engine/download', async (req, res) => {
 
         res.json({ success: true });
     } catch (e) {
-        console.error('Engine provisioning failed:', e);
+        logger.error('system', 'Engine provisioning failed', e);
         res.status(500).json({ success: false, error: e.message });
     }
 });

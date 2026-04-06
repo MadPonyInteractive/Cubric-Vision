@@ -1,0 +1,52 @@
+/* ── MpiErrorDialog ──────────────────────────────────────────────────────────── */
+
+.mpi-error-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border-top: 2px solid var(--danger);
+}
+
+/* Header — icon + title side by side */
+.mpi-error-dialog__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mpi-error-dialog__icon {
+    flex-shrink: 0;
+}
+
+.mpi-error-dialog__title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+/* Message */
+.mpi-error-dialog__message {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    line-height: 1.6;
+    word-break: break-word;
+    padding: 0.75rem;
+    background: var(--bg-recessed);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    min-height: 2.5rem;
+    white-space: pre-wrap;
+}
+
+/* Actions */
+.mpi-error-dialog__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}

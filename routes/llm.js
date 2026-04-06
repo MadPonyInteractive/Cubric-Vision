@@ -16,6 +16,7 @@ const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
+const logger = require('./logger');
 const {
     MODELS_ROOT,
     LLM_CONFIG_PATH,
@@ -76,18 +77,18 @@ router.post('/llm/download', async (req, res) => {
         if (!model) return res.status(404).json({ error: 'Model not found' });
 
         await fs.ensureDir(MODELS_ROOT);
-        console.log(`Starting download for core model ${model.name}...`);
+        logger.info('llm', `Starting download for core model ${model.name}...`);
         const mainPath = path.join(MODELS_ROOT, model.filename);
         await streamDownload(model.url, mainPath);
 
         if (model.mmproj_url && model.mmproj_filename) {
-            console.log(`Starting download for vision projector ${model.mmproj_filename}...`);
+            logger.info('llm', `Starting download for vision projector ${model.mmproj_filename}...`);
             await streamDownload(model.mmproj_url, path.join(MODELS_ROOT, model.mmproj_filename));
         }
 
         res.json({ success: true, path: mainPath });
     } catch (err) {
-        console.error('[server] LLM Download failed:', err);
+        logger.error('llm', 'Download failed', err);
         res.status(500).json({ success: false, error: `Server Error: ${err.message}`, stack: err.stack });
     }
 });
@@ -108,7 +109,7 @@ router.post('/llm/delete', async (req, res) => {
             res.status(404).json({ error: 'Model not found on disk' });
         }
     } catch (err) {
-        console.error('[server] LLM delete failed:', err);
+        logger.error('llm', 'Delete failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -116,7 +117,7 @@ router.post('/llm/delete', async (req, res) => {
 router.post('/llm/unload', async (req, res) => {
     try {
         stopLlamaServer();
-        console.log('[server] Active model manual unload complete');
+        logger.info('llm', 'Active model manual unload complete');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -142,7 +143,7 @@ router.post('/llm/generate', async (req, res) => {
         }
 
         if (processState.activeModelId !== modelId || !processState.activeLlamaProcess) {
-            console.log(`Starting llama-server for model: ${modelInfo.name}...`);
+            logger.info('llm', `Starting llama-server for model: ${modelInfo.name}...`);
             stopLlamaServer();
 
             const spawnArgs = ['-m', modelPath, '--port', LLAMA_SERVER_PORT.toString(), '-c', '8192'];
@@ -151,9 +152,9 @@ router.post('/llm/generate', async (req, res) => {
                 const mmprojPath = path.join(MODELS_ROOT, modelInfo.mmproj_filename);
                 if (await fs.pathExists(mmprojPath)) {
                     spawnArgs.push('--mmproj', mmprojPath);
-                    console.log(`Using vision projector: ${modelInfo.mmproj_filename}`);
+                    logger.info('llm', `Using vision projector: ${modelInfo.mmproj_filename}`);
                 } else {
-                    console.warn(`Warning: mmproj_filename defined but not found at ${mmprojPath}`);
+                    logger.warn('llm', `mmproj_filename defined but not found at ${mmprojPath}`);
                 }
             }
 
@@ -162,7 +163,7 @@ router.post('/llm/generate', async (req, res) => {
                 if (processState.activeModelId === modelId) processState.activeModelId = null;
             });
 
-            console.log(`Waiting for llama-server.exe on port ${LLAMA_SERVER_PORT}...`);
+            logger.info('llm', `Waiting for llama-server on port ${LLAMA_SERVER_PORT}...`);
             const ready = await checkLlamaServerReady();
             if (!ready) {
                 stopLlamaServer();
@@ -172,7 +173,7 @@ router.post('/llm/generate', async (req, res) => {
             await new Promise(r => setTimeout(r, 2000));
         }
 
-        console.log(`Generating with ${modelInfo.name}...`);
+        logger.info('llm', `Generating with ${modelInfo.name}...`);
         let reqMessages = [];
         if (system && system.trim()) reqMessages.push({ role: 'system', content: system });
 
@@ -191,7 +192,7 @@ router.post('/llm/generate', async (req, res) => {
         res.json({ response: completionRes.data.choices[0].message.content });
 
     } catch (err) {
-        console.error('LLM Generation error:', err);
+        logger.error('llm', 'Generation error', err);
         let msg = err.message || 'Internal Error';
         if (err.response?.data?.error) msg = err.response.data.error.message || err.response.data.error;
         if (msg.includes('allocate') || msg.includes('CUDA') || msg.includes('GGML')) {

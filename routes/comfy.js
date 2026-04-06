@@ -21,6 +21,7 @@ const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 const { exec, spawn } = require('child_process');
+const logger = require('./logger');
 const {
     COMFY_WORKFLOWS_PATH,
     COMFYUI_PORT,
@@ -80,20 +81,20 @@ router.post('/comfy/start', async (req, res) => {
             return res.status(500).json({ error: 'ComfyUI Python not found. Provision engine first.' });
         }
 
-        console.log('[server] Starting ComfyUI background process...');
+        logger.info('comfy', 'Starting ComfyUI background process...');
         const extraConfigPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'extra_model_paths.yaml');
         const args = [mainPath, '--listen', '127.0.0.1', '--port', COMFYUI_PORT.toString(), '--lowvram', '--preview-method', 'taesd', '--enable-cors-header'];
 
         if (await fs.pathExists(extraConfigPath)) {
-            console.log(`[server] Using extra model paths: ${extraConfigPath}`);
+            logger.info('comfy', `Using extra model paths: ${extraConfigPath}`);
             args.push('--extra-model-paths-config', extraConfigPath);
         }
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath) });
-        processState.activeComfyProcess.stdout.on('data', (d) => console.log(`[comfy] ${d.toString().trim()}`));
-        processState.activeComfyProcess.stderr.on('data', (d) => console.error(`[comfy-err] ${d.toString().trim()}`));
+        processState.activeComfyProcess.stdout.on('data', (d) => logger.info('comfy', d.toString().trim()));
+        processState.activeComfyProcess.stderr.on('data', (d) => logger.warn('comfy', d.toString().trim()));
         processState.activeComfyProcess.on('exit', () => {
-            console.log('[server] ComfyUI process exited');
+            logger.info('comfy', 'ComfyUI process exited');
             processState.activeComfyProcess = null;
         });
 
@@ -176,7 +177,7 @@ comfyui:
         await syncWorkflowStates(customPath);
         res.json({ success: true, writtenTo: extraConfigPath });
     } catch (err) {
-        console.error('[server] set-path failed:', err);
+        logger.error('comfy', 'set-path failed', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -223,7 +224,7 @@ router.get('/comfy/list-files', async (req, res) => {
         const files = await getAllFiles(targetPath, targetPath);
         res.json({ success: true, files: files.sort() });
     } catch (err) {
-        console.error('list-files error:', err);
+        logger.error('comfy', 'list-files error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -291,7 +292,7 @@ router.post('/comfy/model/download', async (req, res) => {
 
         if (isCustomNode) {
             stopComfyUI();
-            console.log(`Cloning custom node ${model.name} from ${model.url}...`);
+            logger.info('comfy', `Cloning custom node ${model.name} from ${model.url}...`);
             if (await fs.pathExists(localPath)) await fs.remove(localPath);
 
             try {
@@ -301,28 +302,28 @@ router.post('/comfy/model/download', async (req, res) => {
                         resolve();
                     });
                 });
-                console.log(`Successfully cloned ${model.name}`);
+                logger.info('comfy', `Successfully cloned ${model.name}`);
 
                 if (model.install_requirements) {
                     const reqPath = path.join(localPath, 'requirements.txt');
                     if (await fs.pathExists(reqPath)) {
-                        console.log(`[server] Installing requirements for ${model.name}...`);
+                        logger.info('comfy', `Installing requirements for ${model.name}...`);
                         await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
                     }
                 }
                 res.json({ success: true, path: localPath });
             } catch (err) {
-                console.error('[server] Custom node setup failed:', err);
+                logger.error('comfy', 'Custom node setup failed', err);
                 res.status(500).json({ success: false, error: err.message });
             }
             return;
         }
 
-        console.log(`Starting download for ComfyUI model ${model.name}...`);
+        logger.info('comfy', `Starting download for ComfyUI model ${model.name}...`);
         await streamDownload(model.url, localPath);
         res.json({ success: true, path: localPath });
     } catch (err) {
-        console.error('[server] ComfyUI Asset Download failed:', err);
+        logger.error('comfy', 'Asset download failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -373,11 +374,11 @@ router.post('/comfy/workflow/delete', async (req, res) => {
                                     if (isProtected) continue;
                                     const isRequiredElsewhere = await isPackageRequiredElsewhere(pkg, localPath);
                                     if (!isRequiredElsewhere) {
-                                        await runPipCommand(['uninstall', pkg, '-y']).catch(e => console.error(`Failed to uninstall ${pkg}:`, e));
+                                        await runPipCommand(['uninstall', pkg, '-y']).catch(e => logger.error('comfy', `Failed to uninstall ${pkg}`, e));
                                     }
                                 }
                             } catch (e) {
-                                console.error('[server] Pruning logic failed for ' + dep.filename, e);
+                                logger.error('comfy', `Pruning logic failed for ${dep.filename}`, e);
                             }
                         }
                     }
@@ -398,7 +399,7 @@ router.post('/comfy/workflow/delete', async (req, res) => {
         await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
         res.json({ success: true, deleted, skipped });
     } catch (err) {
-        console.error('[server] ComfyUI Workflow Delete failed:', err);
+        logger.error('comfy', 'Workflow delete failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -413,7 +414,7 @@ router.post('/comfy/workflow/install-complete', async (req, res) => {
         await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
         res.json({ success: true });
     } catch (err) {
-        console.error('[server] Workflow Install Complete failed:', err);
+        logger.error('comfy', 'Workflow install-complete failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

@@ -12,6 +12,7 @@ import { refreshComfyWorkflowRegistry } from './comfyModelManager.js';
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
+import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
@@ -23,6 +24,19 @@ import { initNavigation, handleNavigation, updateTitlebarProject } from './shell
 
 // Internal references for communication
 let _projectNameInstance = null;
+
+// ── Global Error Dialog singleton ─────────────────────────────────────────────
+const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
+
+/**
+ * Show a user-facing error dialog with an optional log download button.
+ * @param {string} title   - Short error title (e.g. "ComfyUI failed to start")
+ * @param {string} message - Actionable detail shown to the user
+ */
+export function showError(title, message) {
+    _errorDialog.el.setError(title, message);
+    _errorDialog.el.show();
+}
 
 /**
  * Main initialization entry point called by init.js.

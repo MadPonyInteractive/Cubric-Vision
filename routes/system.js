@@ -11,8 +11,11 @@
 
 const express = require('express');
 const router = express.Router();
-const os = require('os');
+const os   = require('os');
+const fs   = require('fs-extra');
+const path = require('path');
 const { exec } = require('child_process');
+const logger = require('./logger');
 
 // ── VRAM Helper ───────────────────────────────────────────────────────────────
 
@@ -68,7 +71,7 @@ if ($result -eq 'OK') { Write-Output $dialog.SelectedPath }
 `;
     exec(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Sta -WindowStyle Hidden -Command "${ps.replace(/\n/g, ' ')}"`, (err, stdout) => {
         if (err) {
-            console.error('Folder picker error:', err);
+            logger.error('system', 'Folder picker error', err);
             return res.json({ cancelled: true, path: null, error: err.message });
         }
         if (!stdout.trim()) return res.json({ cancelled: true, path: null });
@@ -81,7 +84,7 @@ router.post('/open-folder', (req, res) => {
     if (!folderPath) return res.status(400).send('No path provided');
     exec(`start "" "${folderPath}"`, (err) => {
         if (err) {
-            console.error('Failed to open folder:', err);
+            logger.error('system', 'Failed to open folder', err);
             return res.status(500).send('Failed to open folder');
         }
         res.send('Folder opened');
@@ -113,6 +116,24 @@ router.get('/system/list-components', (req, res) => {
         });
         res.json({ success: true, components: results });
     } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ── Log Download ──────────────────────────────────────────────────────────────
+
+router.get('/logs/download', async (req, res) => {
+    const logPath = logger.getLogPath();
+    try {
+        const exists = await fs.pathExists(logPath);
+        if (!exists) {
+            return res.status(404).json({ success: false, error: 'No log file found yet.' });
+        }
+        res.setHeader('Content-Disposition', 'attachment; filename="mpi-app.log"');
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        fs.createReadStream(logPath).pipe(res);
+    } catch (err) {
+        logger.error('system', 'Log download failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

@@ -505,6 +505,26 @@
  */
 
 /**
+ * @typedef {Object} MpiErrorDialogProps (Compound — js/components/Compounds/MpiErrorDialog)
+ * @property {string}  [title='An error occurred'] - Dialog title
+ * @property {string}  [message='']               - Error detail shown to the user
+ * @property {boolean} [downloadLog=true]          - Whether to show the Download Log button
+ *
+ * Instance methods (on instance.el):
+ *   show()                    — portals backdrop + dialog to document.body
+ *   hide()                    — removes portal, releases OverlayManager
+ *   setError(title, message)  — update content before or after show()
+ *
+ * Preferred usage — call the shell singleton instead of mounting directly:
+ *   import { showError } from '../../shell.js';
+ *   showError('ComfyUI failed to start', 'Connection refused on port 8188');
+ *
+ * Emits:
+ * 'dismiss'     {} — Dismiss button clicked
+ * 'downloadLog' {} — Download Log button clicked
+ */
+
+/**
  * @typedef {Object} MpiStartingComfyProps (Compound — js/components/Compounds/MpiStartingComfy)
  * @property {string}   [title]  - Large title text
  * @property {string}   [text]   - Descriptive text below title

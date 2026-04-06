@@ -192,7 +192,9 @@ function createWindow() {
 
 // Start the Express server
 function startServer() {
-  serverProcess = fork(path.join(__dirname, 'server.js'));
+  serverProcess = fork(path.join(__dirname, 'server.js'), [], {
+    env: { ...process.env, APP_USER_DATA: app.getPath('userData') }
+  });
 
   serverProcess.on('error', (err) => {
     console.error('Failed to start server:', err);

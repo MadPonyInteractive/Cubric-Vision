@@ -10,8 +10,9 @@
 
 'use strict';
 
-const fs = require('fs-extra');
-const path = require('path');
+const fs     = require('fs-extra');
+const path   = require('path');
+const logger = require('./logger');
 const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
@@ -39,7 +40,7 @@ const processState = {
 
 function stopLlamaServer() {
     if (processState.activeLlamaProcess) {
-        console.log('[server] Killing active llama-server process...');
+        logger.info('llm', 'Killing active llama-server process...');
         processState.activeLlamaProcess.kill('SIGINT');
         processState.activeLlamaProcess = null;
     }
@@ -48,7 +49,7 @@ function stopLlamaServer() {
 
 function stopComfyUI() {
     if (processState.activeComfyProcess) {
-        console.log('[server] Killing active ComfyUI process...');
+        logger.info('comfy', 'Killing active ComfyUI process...');
         processState.activeComfyProcess.kill('SIGKILL');
         processState.activeComfyProcess = null;
     }
@@ -110,11 +111,11 @@ async function runPipCommand(args) {
     if (!(await fs.pathExists(pythonPath))) {
         throw new Error('Embedded Python not found. Cannot run pip.');
     }
-    console.log(`[pip] Running: python -m pip ${args.join(' ')}`);
+    logger.info('system', `Running: python -m pip ${args.join(' ')}`);
     return new Promise((resolve, reject) => {
         const pip = spawn(pythonPath, ['-m', 'pip', ...args]);
-        pip.stdout.on('data', (data) => console.log(`[pip-out] ${data.toString().trim()}`));
-        pip.stderr.on('data', (data) => console.error(`[pip-err] ${data.toString().trim()}`));
+        pip.stdout.on('data', (data) => logger.info('system', `[pip] ${data.toString().trim()}`));
+        pip.stderr.on('data', (data) => logger.warn('system', `[pip-err] ${data.toString().trim()}`));
         pip.on('close', (code) => {
             if (code === 0) resolve();
             else reject(new Error(`Pip command failed with code ${code}`));
@@ -277,7 +278,7 @@ async function syncWorkflowStates(customRootOverride = undefined) {
             if (wf.installed !== currentlyInstalled) {
                 wf.installed = currentlyInstalled;
                 changed = true;
-                console.log(`[server] State Sync: Workflow ${wf.id} is now ${currentlyInstalled ? 'INSTALLED' : 'NOT INSTALLED'}`);
+                logger.info('comfy', `State Sync: Workflow ${wf.id} is now ${currentlyInstalled ? 'INSTALLED' : 'NOT INSTALLED'}`);
             }
         }
 
@@ -285,7 +286,7 @@ async function syncWorkflowStates(customRootOverride = undefined) {
             await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
         }
     } catch (err) {
-        console.error('[server] syncWorkflowStates failed:', err);
+        logger.error('comfy', 'syncWorkflowStates failed', err);
     }
 }
 

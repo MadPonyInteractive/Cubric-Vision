@@ -47,6 +47,7 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
+import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -1029,6 +1030,27 @@ function mountAll() {
 
         btn.on('click', () => modal.el.show());
         modal.on('close', () => console.log('[gallery] MpiModelsModal closed'));
+    });
+
+    // ── MpiErrorDialog (Compound) ────────────────────────────────────────────────
+    mount('preview-error-dialog-default', () => {
+        const slotEl = slot('preview-error-dialog-default');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'info',
+            label: 'Trigger Error',
+            variant: 'danger',
+            info: 'Click to test the error dialog'
+        });
+
+        const dialog = MpiErrorDialog.mount(document.createElement('div'), {
+            title: 'ComfyUI failed to start',
+            message: 'Connection refused on port 8188. Ensure the engine is installed and try again.',
+        });
+
+        btn.on('click', () => dialog.el.show());
     });
 
     // ── MpiStartingComfy (Compound) ─────────────────────────────────────────────

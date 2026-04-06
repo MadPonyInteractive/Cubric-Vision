@@ -32,6 +32,7 @@ app.use(express.static(__dirname));
 
 // ── Route Modules ──────────────────────────────────────────────────────────────
 
+const logger        = require('./routes/logger');
 const systemRoutes  = require('./routes/system');
 const projectRoutes = require('./routes/projects');
 const llmRoutes     = require('./routes/llm');
@@ -56,9 +57,9 @@ app.listen(port, '127.0.0.1', () => {
 
         // Sync workflow install states on startup
         const { syncWorkflowStates } = require('./routes/shared');
-        syncWorkflowStates().catch(err => console.error('[server] startup sync failed:', err));
+        syncWorkflowStates().catch(err => logger.error('system', 'Startup workflow sync failed', err));
 
-        console.log(`Prompt Builder Server running at http://127.0.0.1:${port}`);
+        logger.info('system', `Server started at http://127.0.0.1:${port}`);
         if (process.send) process.send('server-ready');
     }).catch(err => {
         console.error('Failed to load dynamic modules:', err);
