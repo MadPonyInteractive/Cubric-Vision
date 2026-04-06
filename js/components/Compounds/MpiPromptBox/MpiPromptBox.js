@@ -96,7 +96,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // 3. Copy Button (Bottom Right)
         MpiButton.mount(el.querySelector('#copy-btn-slot'), {
             icon: 'copy',
-            variant: 'primary',
+            variant: 'ghost',
             size: 'sm',
             info: 'Copy current Text to Clipboard'
         }).on('click', () => {
@@ -125,7 +125,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 icon: 'check',
                 iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
-                size: 'md',
+                size: 'sm',
                 variant: 'primary',
                 toggleable: true,
                 active: isNegativeMode

@@ -45,9 +45,12 @@
 /* Textarea styling overrides */
 .mpi-prompt-box .mpi-input__field--textarea {
     resize: none;
-    min-height: 3.5rem; /* ~2 lines */
-    max-height: 14rem; /* ~8 lines */
-    padding-right: 3rem; /* Room for copy button */
+    min-height: 3.5rem;
+    /* ~2 lines */
+    max-height: 14rem;
+    /* ~8 lines */
+    padding-right: 3rem;
+    /* Room for copy button */
     overflow-y: auto;
     background: transparent !important;
     border: none !important;
@@ -64,7 +67,8 @@
 }
 
 .mpi-prompt-box .mpi-input__field--textarea--locked {
-    height: 3.5rem !important; /* Fixed at ~2 lines */
+    height: 3.5rem !important;
+    /* Fixed at ~2 lines */
     max-height: 3.5rem !important;
 }
 
@@ -91,7 +95,7 @@
 .mpi-prompt-box__separator {
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--border-soft) 20%, var(--border-soft) 80%, transparent);
-    margin: 1rem 0;
+    margin: 0.3rem 0;
     width: 100%;
 }
 
@@ -100,7 +104,7 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    min-height: 2.5rem;
+    /* min-height: 2.5rem; */
 }
 
 .mpi-prompt-box__area {
