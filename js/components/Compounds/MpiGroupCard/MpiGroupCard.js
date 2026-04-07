@@ -38,8 +38,7 @@ export const MpiGroupCard = ComponentFactory.create({
                 <img class="mpi-group-card__thumb" alt="" draggable="true">
                 <div class="mpi-group-card__preview">
                     <div class="mpi-group-card__spinner"></div>
-                    <img class="mpi-group-card__preview-img" alt="Generating...">
-                    <div class="mpi-group-card__generating-label">Generating...</div>
+                    <img class="mpi-group-card__preview-img" alt="">
                 </div>
             </div>
             <div class="mpi-group-card__select-wrap">
@@ -75,9 +74,18 @@ export const MpiGroupCard = ComponentFactory.create({
             const selected = _group.history[_group.selectedIndex];
             const src = selected?.filePath || '';
 
-            thumb.src = src;
-            thumb.alt = _group.name;
-            thumb.onerror = () => emit('media-missing', { group: _group, itemId: selected?.id });
+            if (src) {
+                thumb.onload  = () => card.classList.remove('mpi-group-card--missing');
+                thumb.onerror = () => {
+                    card.classList.add('mpi-group-card--missing');
+                    emit('media-missing', { group: _group, itemId: selected?.id });
+                };
+                thumb.src = src;
+            } else {
+                thumb.onload  = null;
+                thumb.onerror = null;
+                thumb.removeAttribute('src');
+            }
             nameEl.textContent = _group.name;
             typeEl.textContent = _group.type.toUpperCase();
 
@@ -108,7 +116,6 @@ export const MpiGroupCard = ComponentFactory.create({
             _generating = val;
             card.classList.toggle('mpi-group-card--generating', val);
             preview.classList.toggle('mpi-group-card__preview--visible', val);
-            // Show spinner until the first latent preview image arrives
             if (val) spinner.style.display = '';
         }
 
@@ -150,7 +157,7 @@ export const MpiGroupCard = ComponentFactory.create({
         el.updatePreview = (previewUrl) => {
             if (!_generating) return;
             previewImg.src = previewUrl;
-            spinner.style.display = 'none'; // latent preview arrived — hide spinner
+            spinner.style.display = 'none';
         };
 
         /**

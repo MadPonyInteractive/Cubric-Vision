@@ -36,11 +36,6 @@
 .mpi-group-card__preview {
     position: absolute;
     inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 0.5rem;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -59,36 +54,28 @@
     object-fit: cover;
 }
 
-/* Spinner — visible until the first latent preview image arrives */
+/* Spinner — centered, visible until the first latent preview image arrives */
 .mpi-group-card__spinner {
-    position: relative;
-    z-index: 1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
     width: 2rem;
     height: 2rem;
     border: 3px solid rgba(255,255,255,0.15);
     border-top-color: var(--neon-electric, #7df);
     border-radius: 50%;
     animation: mpi-card-spin 0.75s linear infinite;
-    flex-shrink: 0;
 }
 
 @keyframes mpi-card-spin {
-    to { transform: rotate(360deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-.mpi-group-card__generating-label {
-    position: relative;
-    z-index: 1;
-    font-size: var(--font-xs);
-    color: var(--text-muted);
-    background: rgba(0,0,0,0.6);
-    padding: 0.15rem 0.5rem;
-    border-radius: var(--radius-sm);
-    margin-top: 0.5rem;
-}
 
 .mpi-group-card--generating .mpi-group-card__thumb {
-    opacity: 0.2;
+    visibility: hidden;
 }
 
 /* ── Select checkbox ─────────────────────────────────────────────────────── */
@@ -137,6 +124,15 @@
     font-size: var(--font-xxs, 0.6rem);
     color: var(--text-muted);
     flex-shrink: 0;
+}
+
+/* ── Missing media state ─────────────────────────────────────────────────── */
+
+.mpi-group-card--missing .mpi-group-card__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--surface-3);
 }
 
 /* ── Selected state ──────────────────────────────────────────────────────── */
