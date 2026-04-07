@@ -62,7 +62,7 @@ export const MpiGroupCard = ComponentFactory.create({
         const checkbox    = el.querySelector('.mpi-group-card__checkbox');
         const nameEl      = el.querySelector('.mpi-group-card__name');
         const typeEl      = el.querySelector('.mpi-group-card__type');
-        const card        = el.querySelector('.mpi-group-card');
+        const card        = el; // el IS the .mpi-group-card root element
 
         // ── Render from group data ──────────────────────────────────────────────
 

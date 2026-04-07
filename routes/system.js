@@ -120,6 +120,18 @@ router.get('/system/list-components', (req, res) => {
     }
 });
 
+// ── Client-side log bridge ────────────────────────────────────────────────────
+// Allows frontend JS errors to be written into the same app.log file.
+
+router.post('/log', (req, res) => {
+    const { level = 'error', category = 'client', message = '', detail = '' } = req.body || {};
+    const allowed = ['info', 'warn', 'error'];
+    const safeLevel = allowed.includes(level) ? level : 'error';
+    const fullMessage = detail ? `${message} — ${detail}` : message;
+    logger[safeLevel](category, fullMessage);
+    res.json({ success: true });
+});
+
 // ── Log Download ──────────────────────────────────────────────────────────────
 
 router.get('/logs/download', async (req, res) => {

@@ -42,6 +42,14 @@
     white-space: pre-wrap;
 }
 
+/* Support hint */
+.mpi-error-dialog__support-hint {
+    font-size: 0.8rem;
+    color: var(--text-3);
+    text-align: center;
+    margin: 0;
+}
+
 /* Actions */
 .mpi-error-dialog__actions {
     display: flex;

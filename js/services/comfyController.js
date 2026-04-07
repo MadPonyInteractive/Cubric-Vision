@@ -1,15 +1,9 @@
 // ComfyUI integration: WebSocket connection, workflow execution,
 // live preview, and cancel support.
 
-// TODO: Wire showError() into catch blocks for user-facing error notifications.
-// Import with: import { showError } from '../shell.js';
-// Key failure points to handle:
-//   ensureServerRunning() catch  → showError('ComfyUI failed to start', e.message)
-//   runWorkflow() reject         → showError('Workflow failed', e.message)
-//   interrupt() catch            → showError('Failed to cancel generation', e.message)
-//   ws.onerror                   → showError('ComfyUI connection lost', ...)
-
 import { state } from '../state.js';
+import { showError } from '../shell.js';
+import { clientLogger } from './clientLogger.js';
 
 export const ComfyUIController = {
     serverAddress: "127.0.0.1:8188",
@@ -46,7 +40,8 @@ export const ComfyUIController = {
             throw new Error('ComfyUI server failed to become ready in time.');
         } catch (e) {
             if (modal) modal.classList.add('hide');
-            console.error('[ComfyUIController] Server ensure failed:', e);
+            clientLogger.error('comfy', 'ComfyUI failed to start', e);
+            showError('ComfyUI failed to start', e.message);
             throw e;
         }
     },
@@ -89,7 +84,7 @@ export const ComfyUIController = {
             });
             this.setLoading(false);
         } catch (e) {
-            console.error("Interrupt failed:", e);
+            clientLogger.error('comfy', 'Interrupt failed', e);
             this.setLoading(false);
         }
     },
@@ -150,6 +145,7 @@ export const ComfyUIController = {
         this.ws.onerror = (e) => {
             // Transient WS errors are expected before the server is fully ready.
             // Do NOT reset isRunning — the generation may still be queued and running.
+            clientLogger.warn('comfy', 'WebSocket error (may be transient)');
             if (onMessage) onMessage({ type: 'error', error: e });
         };
 

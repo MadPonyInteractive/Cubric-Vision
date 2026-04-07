@@ -126,3 +126,105 @@
 .mpi-prompt-box__area--right {
     justify-content: flex-end;
 }
+
+/* ── Media drop zone ──────────────────────────────────────────────────────── */
+
+.mpi-prompt-box__media-zone {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px dashed var(--border-soft);
+    margin-bottom: 0.5rem;
+    transition: border-color var(--transition), background var(--transition);
+    flex-wrap: wrap;
+}
+
+.mpi-prompt-box__media-zone--drag-over {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+    border-radius: var(--radius);
+}
+
+.mpi-prompt-box__media-zone--has-media {
+    border-style: solid;
+}
+
+/* Drop hint (shown when zone is empty) */
+.mpi-prompt-box__drop-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-3);
+    font-size: 0.8rem;
+    opacity: 0.6;
+    pointer-events: none;
+    user-select: none;
+}
+
+.mpi-prompt-box__drop-hint-icon {
+    display: flex;
+    align-items: center;
+}
+
+/* Media chips */
+.mpi-prompt-box__media-chips {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.mpi-prompt-box__media-chip {
+    position: relative;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius);
+    overflow: visible;
+    border: 1px solid var(--border-soft);
+    flex-shrink: 0;
+}
+
+.mpi-prompt-box__chip-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius);
+    display: block;
+}
+
+.mpi-prompt-box__chip-video-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    color: var(--text-2);
+}
+
+.mpi-prompt-box__chip-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background var(--transition), border-color var(--transition);
+    padding: 0;
+    z-index: 5;
+}
+
+.mpi-prompt-box__chip-remove:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+}

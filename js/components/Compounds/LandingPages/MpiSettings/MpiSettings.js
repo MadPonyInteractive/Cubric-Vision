@@ -18,7 +18,7 @@ import { toggleTheme } from '../../../../managers/themeManager.js';
  */
 export const MpiSettings = ComponentFactory.create({
     name: 'MpiSettings',
-    css: ['js/components/Compounds/MpiSettings/MpiSettings.css'],
+    css: ['js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css'],
 
     template: () => `<div class="mpi-settings"></div>`,
 
@@ -148,10 +148,7 @@ export const MpiSettings = ComponentFactory.create({
                     body: JSON.stringify({ path }),
                 });
                 const data = await res.json();
-                if (data.success) {
-                    const { refreshComfyWorkflowRegistry } = await import('../../../comfyWorkflowManager.js');
-                    await refreshComfyWorkflowRegistry();
-                } else {
+                if (!data.success) {
                     console.error('[MpiSettings] Failed to sync ComfyUI path:', data.error);
                 }
             } catch (err) {

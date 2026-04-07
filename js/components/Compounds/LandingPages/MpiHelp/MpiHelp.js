@@ -16,7 +16,7 @@ import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverl
  */
 export const MpiHelp = ComponentFactory.create({
     name: 'MpiHelp',
-    css: ['js/components/Compounds/MpiHelp/MpiHelp.css'],
+    css: ['js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css'],
 
     template: () => `<div class="mpi-help"></div>`,
 

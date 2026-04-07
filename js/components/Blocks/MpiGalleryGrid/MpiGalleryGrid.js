@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { ce } from '/js/utils/dom.js';
+import { ce, qs } from '/js/utils/dom.js';
 
 /**
  * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
@@ -22,6 +22,7 @@ import { ce } from '/js/utils/dom.js';
  * Instance methods (on instance.el):
  *   setGroups(groups)                    — replace all groups and re-render
  *   addGeneratingCard(tempId, type)      — adds a generating placeholder card, returns card el
+ *   removeGeneratingCard(tempId)         — removes a generating card on error/empty result
  *   finalizeCard(tempId, group)          — replaces generating card with real group data
  *   updatePreview(tempId, previewUrl)    — push latent preview url to generating card
  *
@@ -60,9 +61,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         let _selectionMode = false;
 
-        const grid          = el.querySelector('.mpi-gallery-grid__grid');
-        const sliderWrap    = el.querySelector('.mpi-gallery-grid__slider-wrap');
-        const promptSlot    = el.querySelector('.mpi-gallery-grid__promptbox-slot');
+        const grid = el.querySelector('.mpi-gallery-grid__grid');
+        const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
+        const promptSlot = el.querySelector('.mpi-gallery-grid__promptbox-slot');
         const selectionSlot = el.querySelector('.mpi-gallery-grid__selectionbar-slot');
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
@@ -109,9 +110,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (_selectionMode) return;
             _selectionMode = true;
             _cardMap.forEach(({ card }) => card.el.setSelectionMode(true));
-            promptSlot.style.display    = 'none';
+            promptSlot.style.display = 'none';
             selectionSlot.style.display = '';
-            el.querySelector('.mpi-gallery-grid').classList.add('mpi-gallery-grid--selecting');
+            el.classList.add('mpi-gallery-grid--selecting');
         }
 
         function _exitSelectionMode() {
@@ -122,9 +123,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 card.el.setSelected(false);
             });
             selectionBar.el.setCount(0);
-            promptSlot.style.display    = '';
+            promptSlot.style.display = '';
             selectionSlot.style.display = 'none';
-            el.querySelector('.mpi-gallery-grid').classList.remove('mpi-gallery-grid--selecting');
+            el.classList.remove('mpi-gallery-grid--selecting');
         }
 
         function _getSelectedGroups() {
@@ -209,6 +210,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
          */
         el.updatePreview = (tempId, previewUrl) => {
             _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
+        };
+
+        /**
+         * Remove a generating card without replacing it (on error or empty result).
+         * @param {string} tempId
+         */
+        el.removeGeneratingCard = (tempId) => {
+            const entry = _cardMap.get(tempId);
+            if (!entry) return;
+            entry.el.remove();
+            _cardMap.delete(tempId);
         };
 
         /**

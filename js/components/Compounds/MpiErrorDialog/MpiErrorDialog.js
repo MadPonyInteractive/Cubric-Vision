@@ -108,5 +108,11 @@ export const MpiErrorDialog = ComponentFactory.create({
             titleSlot.textContent = title || 'An error occurred';
             messageSlot.textContent = message || '';
         };
+
+        // ── Support hint (always shown) ───────────────────────────────────────
+        const hint = document.createElement('p');
+        hint.className = 'mpi-error-dialog__support-hint';
+        hint.textContent = 'If this keeps happening, download the log file and send it to support.';
+        qs('#actions-slot', el).before(hint);
     }
 });

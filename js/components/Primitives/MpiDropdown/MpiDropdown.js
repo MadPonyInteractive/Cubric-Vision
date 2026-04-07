@@ -37,10 +37,11 @@ export const MpiDropdown = ComponentFactory.create({
             : placeholder;
 
         const optionsHtml = options.map(opt => {
-            const label  = typeof opt === 'string' ? opt : opt.label;
-            const val    = typeof opt === 'string' ? opt : opt.value;
-            const active = val === value ? 'is-active' : '';
-            return `<div class="mpi-dropdown__option ${active}" data-value="${val}">${label}</div>`;
+            const label    = typeof opt === 'string' ? opt : opt.label;
+            const val      = typeof opt === 'string' ? opt : opt.value;
+            const active   = val === value ? 'is-active' : '';
+            const disabled = opt.disabled ? 'is-disabled' : '';
+            return `<div class="mpi-dropdown__option ${active} ${disabled}" data-value="${val}">${label}</div>`;
         }).join('');
 
         return `
@@ -128,7 +129,7 @@ export const MpiDropdown = ComponentFactory.create({
         // Select option
         list.addEventListener('click', (e) => {
             const option = e.target.closest('.mpi-dropdown__option');
-            if (!option) return;
+            if (!option || option.classList.contains('is-disabled')) return;
 
             const value = option.dataset.value;
             const label = option.textContent.trim();
@@ -143,6 +144,27 @@ export const MpiDropdown = ComponentFactory.create({
             closeList();
             emit('change', { value, label });
         });
+
+        /**
+         * Rebuild the option list and update the trigger label.
+         * @param {Array<string|{label:string, value:string, disabled?:boolean}>} newOptions
+         * @param {string} selectedValue
+         */
+        el.setOptions = (newOptions, selectedValue) => {
+            const selected = newOptions.find(o => (typeof o === 'string' ? o : o.value) === selectedValue);
+            labelEl.textContent = selected
+                ? (typeof selected === 'string' ? selected : selected.label)
+                : (props.placeholder ?? 'Select...');
+            props.value = selectedValue;
+
+            list.innerHTML = newOptions.map(opt => {
+                const label    = typeof opt === 'string' ? opt : opt.label;
+                const val      = typeof opt === 'string' ? opt : opt.value;
+                const active   = val === selectedValue ? 'is-active' : '';
+                const disabled = opt.disabled ? 'is-disabled' : '';
+                return `<div class="mpi-dropdown__option ${active} ${disabled}" data-value="${val}">${label}</div>`;
+            }).join('');
+        };
 
         // Close on outside click; also handles el removal (no-click path covered by observer)
         const onOutside = (e) => {

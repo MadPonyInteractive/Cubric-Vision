@@ -1,16 +1,13 @@
 /**
- * navigation.js — Routing logic and tool/workspace loading.
+ * navigation.js — Routing logic and workspace loading.
  *
  * Navigation model (history-stack based, see router.js):
- *   PAGE_LANDING  → project picker
- *   PAGE_WORKSPACE → all workspace views, differentiated by params.view:
- *     'workspace'       — Main workspace landing / gallery (default on project open)
- *     'imageWorkspace'  — Image workspace / gallery (filtered)
- *     'generator'       — Generator tool
- *     'upscaler'        — Upscaler tool
+ *   PAGE_LANDING      → project picker
+ *   PAGE_GALLERY      → main gallery (grid of ItemGroups); default on project open
+ *   PAGE_GROUP_HISTORY → history view for a single ItemGroup (params: { groupId })
  *
- * The radial menu context tracks the current view and shows contextual actions.
- * Selecting a radial action calls navigate() which pushes history and loads the view.
+ * The radial menu context tracks the current page and emits 'workspace:set-operation'
+ * so the active PromptBox can update its selected operation without navigating.
  */
 
 import { state } from '../state.js';
@@ -20,6 +17,7 @@ import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HI
 import { initShaderBackground, stopShaderBackground } from '../components/shaderBackground.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
+import { getAvailableCommands } from '../data/commandRegistry.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -31,24 +29,43 @@ let _appShell         = null;
 let _pageLanding      = null;
 
 // ── Radial context definitions ─────────────────────────────────────────────
-//
-// gallery      — shown in the main gallery; items set the active PromptBox operation
-// group-history — shown inside an item group's history view
 
-const RADIAL_CONTEXTS = {
-    gallery: [
-        { action: 't2i', label: 'Text to Image',  icon: 'image' },
-        { action: 'i2i', label: 'Image to Image', icon: 'image' },
-        { action: 't2v', label: 'Text to Video',  icon: 'video' },
-        { action: 'i2v', label: 'Image to Video', icon: 'video' },
-    ],
-    'group-history': [
-        { action: 'upscale', label: 'Upscale',  icon: 'upscaler' },
-        { action: 'detail',  label: 'Detail',   icon: 'generate' },
-        { action: 'edit',    label: 'Edit',      icon: 'generate' },
-        { action: 'extend',  label: 'Extend',    icon: 'video' },
-    ],
+// Icon to use for each operation key in the radial menu
+const OP_ICONS = {
+    t2i:         'image',
+    i2i:         'image',
+    upscale:     'upscaler',
+    detail:      'detailer',
+    edit:        'generate',
+    change:      'generate',
+    remove:      'generate',
+    t2v:         'video',
+    i2v:         'video',
+    extend:      'video',
+    interpolate: 'video',
+    videoUpscale:'upscaler',
 };
+
+/**
+ * Builds radial items for the gallery context from the active model + current
+ * media context. Only operations that are currently available (inputs met) are
+ * included — the radial is an action launcher, not a capability browser.
+ * @param {{ imageCount?: number, videoCount?: number }} [ctx]
+ * @returns {Array<{action:string, label:string, icon:string}>}
+ */
+function _buildGalleryItems(ctx = {}) {
+    const model = state.g_selectedModel;
+    if (!model) return [];
+    return getAvailableCommands(model.mediaType, model, ctx)
+        .filter(cmd => cmd.available)
+        .map(cmd => ({ action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate' }));
+}
+
+// group-history items are still static (no dynamic input context yet — that's item 6)
+const GROUP_HISTORY_ITEMS = [
+    { action: 'upscale', label: 'Upscale', icon: 'upscaler' },
+    { action: 'detail',  label: 'Detail',  icon: 'detailer' },
+];
 
 // ── Public init ─────────────────────────────────────────────────────────────
 
@@ -182,9 +199,8 @@ function _syncRadial(page) {
             extraItems,
         });
 
-        Object.entries(RADIAL_CONTEXTS).forEach(([ctx, items]) => {
-            _radialInstance.el.setContextItems(ctx, items);
-        });
+        _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
+        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, GROUP_HISTORY_ITEMS);
 
         if (!state.currentProject?.tutorialSeen) {
             _radialInstance.el.show();
@@ -195,16 +211,24 @@ function _syncRadial(page) {
                 _loadComponentsGallery();
                 return;
             }
-            // Radial actions are operation keys — broadcast to PromptBox
             Events.emit('workspace:set-operation', { operation: action });
         });
     } else {
-        Object.entries(RADIAL_CONTEXTS).forEach(([ctx, items]) => {
-            _radialInstance.el.setContextItems(ctx, items);
-        });
+        _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
+        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, GROUP_HISTORY_ITEMS);
         _radialInstance.el.setContext(page);
         _radialInstance.el.setExtraItems(extraItems);
     }
+}
+
+/**
+ * Rebuilds the gallery radial items using the current media context.
+ * Called by gallery.js when the PromptBox media-change fires.
+ * @param {{ imageCount?: number, videoCount?: number }} [ctx]
+ */
+export function refreshRadial(ctx = {}) {
+    if (!_radialInstance) return;
+    _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems(ctx));
 }
 
 // ── Lazy view imports ───────────────────────────────────────────────────────

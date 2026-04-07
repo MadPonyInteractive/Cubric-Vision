@@ -244,7 +244,7 @@ export function addGroupToProject(project, group) {
     return {
         ...project,
         updatedAt:  new Date().toISOString(),
-        itemGroups: [...project.itemGroups, group],
+        itemGroups: [...(project.itemGroups || []), group],
     };
 }
 

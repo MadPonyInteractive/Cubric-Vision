@@ -160,15 +160,11 @@ export const MODELS = [
         name: 'SDXL Lustify V7',
         mediaType: 'image',
         installed: false,
-        supportedOps: ['t2i', 'i2i', 'upscale', 'detail', 'edit', 'change', 'remove'],
+        supportedOps: ['t2i', 'upscale', 'detail'],
         workflows: {
-            t2i:    'sdxl_t2i_nsfw.json',
-            i2i:    null,   // stub — file not yet created
+            t2i:     'sdxl_t2i_nsfw.json',
             upscale: 'sdxl_upscaler.json',
-            detail: 'sdxl_detailer.json',
-            edit:   null,
-            change: null,
-            remove: null,
+            detail:  'sdxl_detailer.json',
         },
         dependencies: [
             'lustify-7',
