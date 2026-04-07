@@ -15,5 +15,5 @@ export default {
     label:     'Generator',
     workspace: 'image',
     icon:      'generate',
-    entry:     'js/tools/generator/generator.js',
+    entry:     'js/workspaces/generator/generator.js',
 };

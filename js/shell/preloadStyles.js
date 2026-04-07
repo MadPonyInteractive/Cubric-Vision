@@ -24,6 +24,8 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiModal/MpiModal.css',
 
   // Compounds
+  'js/components/Compounds/MpiGroupCard/MpiGroupCard.css',
+  'js/components/Compounds/MpiSelectionBar/MpiSelectionBar.css',
   'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
   'js/components/Compounds/MpiPromptBox/MpiPromptBox.css',
   'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
@@ -39,14 +41,15 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiProjectCard/MpiProjectCard.css',
   'js/components/Compounds/MpiNewProject/MpiNewProject.css',
   'js/components/Compounds/MpiModelsModal/MpiModelsModal.css',
-  'js/components/Compounds/MpiSettings/MpiSettings.css',
-  'js/components/Compounds/MpiHelp/MpiHelp.css',
-  'js/components/Compounds/MpiAbout/MpiAbout.css',
+  'js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css',
+  'js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css',
+  'js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css',
   'js/components/Compounds/MpiStartingComfy/MpiStartingComfy.css',
   'js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css',
 
   // Blocks
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
+  'js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.css',
 ];
 
 /**

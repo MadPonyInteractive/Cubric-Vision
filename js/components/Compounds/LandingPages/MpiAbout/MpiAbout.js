@@ -1,5 +1,5 @@
-import { ComponentFactory } from '../../factory.js';
-import { MpiProjectsPageOverlay } from '../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
+import { ComponentFactory } from '../../../factory.js';
+import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
 
 /**
  * MpiAbout — About overlay compound for the landing page.

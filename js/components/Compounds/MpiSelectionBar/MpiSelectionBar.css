@@ -1,0 +1,15 @@
+.mpi-selection-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.mpi-selection-bar__count {
+    font-size: var(--font-sm);
+    color: var(--text-primary);
+    margin-right: auto;
+}

@@ -14,8 +14,9 @@
  */
 
 import { state } from '../state.js';
+import { Events } from '../events.js';
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
-import { navigate, back, clearHistory, PAGE_LANDING, PAGE_WORKSPACE } from '../router.js';
+import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
 import { initShaderBackground, stopShaderBackground } from '../components/shaderBackground.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
@@ -29,55 +30,24 @@ let _toolContainer    = null;
 let _appShell         = null;
 let _pageLanding      = null;
 
-// ── Radial context definitions (new UX) ────────────────────────────────────
+// ── Radial context definitions ─────────────────────────────────────────────
 //
-// Each view declares which radial actions are available.
-// 'root' action = go back to main gallery.
+// gallery      — shown in the main gallery; items set the active PromptBox operation
+// group-history — shown inside an item group's history view
 
 const RADIAL_CONTEXTS = {
-    workspace: [
-        { action: 'imageWorkspace', label: 'Image',  icon: 'image' },
-        { action: 'videoWorkspace', label: 'Video',  icon: 'video' },
-        { action: 'audioWorkspace', label: 'Audio',  icon: 'audio' },
+    gallery: [
+        { action: 't2i', label: 'Text to Image',  icon: 'image' },
+        { action: 'i2i', label: 'Image to Image', icon: 'image' },
+        { action: 't2v', label: 'Text to Video',  icon: 'video' },
+        { action: 'i2v', label: 'Image to Video', icon: 'video' },
     ],
-    imageWorkspace: [
-        { action: 'generator',      label: 'Generate',  icon: 'generate' },
-        { action: 'upscaler',       label: 'Upscale',   icon: 'upscaler' },
-        { action: 'workspace',      label: '← Gallery', icon: 'back' },
+    'group-history': [
+        { action: 'upscale', label: 'Upscale',  icon: 'upscaler' },
+        { action: 'detail',  label: 'Detail',   icon: 'generate' },
+        { action: 'edit',    label: 'Edit',      icon: 'generate' },
+        { action: 'extend',  label: 'Extend',    icon: 'video' },
     ],
-    generator: [
-        { action: 'upscaler',       label: 'Upscaler',  icon: 'upscaler' },
-        { action: 'imageWorkspace', label: '← Gallery', icon: 'back' },
-    ],
-    upscaler: [
-        { action: 'generator',      label: 'Generator', icon: 'generate' },
-        { action: 'imageWorkspace', label: '← Gallery', icon: 'back' },
-    ],
-    videoWorkspace: [
-        { action: 'workspace',      label: '← Gallery', icon: 'back' },
-    ],
-    audioWorkspace: [
-        { action: 'workspace',      label: '← Gallery', icon: 'back' },
-    ],
-};
-
-// Human-readable labels for each view (used in breadcrumb)
-const VIEW_WORKSPACE_LABEL = {
-    workspace:      'Main Gallery',
-    imageWorkspace: 'Image',
-    videoWorkspace: 'Video',
-    audioWorkspace: 'Audio',
-};
-
-const VIEW_TOOL_LABEL = {
-    generator: 'Generator',
-    upscaler:  'Upscaler',
-};
-
-// Maps each tool view to its parent workspace view (for breadcrumb)
-const VIEW_TOOL_PARENT = {
-    generator: 'imageWorkspace',
-    upscaler:  'imageWorkspace',
 };
 
 // ── Public init ─────────────────────────────────────────────────────────────
@@ -93,38 +63,18 @@ export function initNavigation(refs) {
     _pageLanding     = refs.pageLanding;
     _projectNameInst = refs.projectNameInstance;
 
-    // Back arrow — navigates up the breadcrumb hierarchy rather than the history stack
-    _projectNameInst.on('back', () => {
-        const view = state.currentParams?.view;
-        if (!view) { back(); return; }
-
-        // Tool → parent workspace
-        if (VIEW_TOOL_PARENT[view]) {
-            navigate(PAGE_WORKSPACE, { view: VIEW_TOOL_PARENT[view] });
-            return;
-        }
-        // Workspace (non-root) → main gallery
-        if (view !== 'workspace') {
-            navigate(PAGE_WORKSPACE, { view: 'workspace' });
-            return;
-        }
-        // Main gallery → landing (project picker)
-        navigate(PAGE_LANDING);
-    });
-
-    // Root breadcrumb ("MAIN GALLERY") — always goes to workspace root
-    _projectNameInst.on('root', () => {
-        navigate(PAGE_WORKSPACE, { view: 'workspace' });
-    });
-
-    // Workspace breadcrumb (e.g. "IMAGE") — navigates to the parent workspace of the current tool
-    _projectNameInst.on('workspace', () => {
-        const view = state.currentParams?.view;
-        if (VIEW_TOOL_LABEL[view]) {
-            const parentView = VIEW_TOOL_PARENT[view] || 'imageWorkspace';
-            navigate(PAGE_WORKSPACE, { view: parentView });
+    // Up-arrow — navigates up one level (not back in history stack)
+    // group-history → gallery, gallery → landing
+    _projectNameInst.on('up', () => {
+        if (state.currentPage === PAGE_GROUP_HISTORY) {
+            navigate(PAGE_GALLERY);
+        } else {
+            navigate(PAGE_LANDING);
         }
     });
+
+    // Gallery breadcrumb — always goes to main gallery
+    _projectNameInst.on('gallery', () => navigate(PAGE_GALLERY));
 }
 
 // ── Core router handler ─────────────────────────────────────────────────────
@@ -151,11 +101,19 @@ export function handleNavigation(page, params = {}) {
         return;
     }
 
-    if (page === PAGE_WORKSPACE) {
+    if (page === PAGE_GALLERY) {
         _showShell();
         updateTitlebarProject();
         stopShaderBackground();
-        _loadView(params.view || 'workspace');
+        _loadView(PAGE_GALLERY, params);
+        return;
+    }
+
+    if (page === PAGE_GROUP_HISTORY) {
+        _showShell();
+        updateTitlebarProject();
+        stopShaderBackground();
+        _loadView(PAGE_GROUP_HISTORY, params);
     }
 }
 
@@ -170,91 +128,81 @@ export function updateTitlebarProject() {
 // ── View loader ─────────────────────────────────────────────────────────────
 
 /**
- * Loads the correct page/tool into _toolContainer and syncs the radial + breadcrumb.
- * @param {string} view - e.g. 'gallery' | 'imageWorkspace' | 'generator'
+ * Loads the correct workspace into _toolContainer and syncs the radial + breadcrumb.
+ * @param {string} page   - PAGE_GALLERY | PAGE_GROUP_HISTORY
+ * @param {Object} params - Route params (e.g. { groupId } for group-history)
  */
-async function _loadView(view) {
+async function _loadView(page, params = {}) {
     // ── Breadcrumb ──────────────────────────────────────────────────────────
-    const isRoot      = view === 'workspace';
-    const isTool      = !!VIEW_TOOL_LABEL[view];
-    const toolLabel   = VIEW_TOOL_LABEL[view] || '';
-
-    // Root segment: hidden when already at workspace root
-    _projectNameInst.el.setRootLabel(isRoot ? '' : 'Main Gallery');
-
-    // Workspace segment: the parent workspace when on a tool, the view label otherwise
-    if (isTool) {
-        // Each tool declares its parent workspace via VIEW_TOOL_PARENT
-        const parentView = VIEW_TOOL_PARENT[view] || 'imageWorkspace';
-        _projectNameInst.el.setWorkspaceLabel(VIEW_WORKSPACE_LABEL[parentView] || '');
-    } else {
-        // On a workspace page — show its own label, hidden at root
-        _projectNameInst.el.setWorkspaceLabel(isRoot ? '' : (VIEW_WORKSPACE_LABEL[view] || ''));
+    if (page === PAGE_GALLERY) {
+        // At gallery root: show project name only, no second segment
+        _projectNameInst.el.setGalleryLabel('');
+        _projectNameInst.el.setGroupLabel('');
+    } else if (page === PAGE_GROUP_HISTORY) {
+        // Inside a group: show "Gallery" as up-link + group name
+        const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
+        _projectNameInst.el.setGalleryLabel('Gallery');
+        _projectNameInst.el.setGroupLabel(group?.name || 'Group');
     }
 
-    _projectNameInst.el.setToolLabel(toolLabel);
-
     // ── Radial menu ─────────────────────────────────────────────────────────
-    _syncRadial(view);
+    _syncRadial(page);
 
     // ── Page content ────────────────────────────────────────────────────────
     _toolContainer.innerHTML = '';
     _toolContainer.style.position = 'relative';
 
-    if (view === 'components') {
+    if (params.view === 'components') {
         return _loadComponentsGallery();
     }
 
-    // Lazy-load the tool/page module
     try {
-        const mod = await _importView(view);
-        if (mod?.mount) mod.mount(_toolContainer);
+        const mod = await _importView(page);
+        if (mod?.mount) mod.mount(_toolContainer, params);
     } catch (err) {
-        console.error(`[navigation] Failed to load view "${view}":`, err);
+        console.error(`[navigation] Failed to load view "${page}":`, err);
     }
 }
 
 /**
- * Syncs the radial menu to the current view context.
- * Creates the radial on first call, injects context items and switches context on subsequent calls.
- * @param {string} view
+ * Syncs the radial menu to the current page context.
+ * Creates the radial on first call; switches context on subsequent calls.
+ * Radial actions in gallery/group-history set the PromptBox operation via
+ * the 'workspace:set-operation' event — they do NOT trigger navigation.
+ * @param {string} page - PAGE_GALLERY | PAGE_GROUP_HISTORY
  */
-function _syncRadial(view) {
+function _syncRadial(page) {
     const extraItems = APP_CONFIG.dev_mode
         ? [{ action: 'components', label: 'Components', icon: 'grid' }]
         : [];
 
     if (!_radialInstance) {
         _radialInstance = MpiRadialMenu.mount(_radialMount, {
-            context: view,
+            context: page,
             extraItems,
         });
 
-        // Inject all UX-defined context item sets into the radial upfront
-        // (must happen before show so _render() has items available)
         Object.entries(RADIAL_CONTEXTS).forEach(([ctx, items]) => {
             _radialInstance.el.setContextItems(ctx, items);
         });
 
-        // Only auto-open on first entry for new projects (tutorial not yet seen)
         if (!state.currentProject?.tutorialSeen) {
             _radialInstance.el.show();
         }
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {
-                _loadView('components');
+                _loadComponentsGallery();
                 return;
             }
-            // All actions are view names — push to history and load
-            navigate(PAGE_WORKSPACE, { view: action });
+            // Radial actions are operation keys — broadcast to PromptBox
+            Events.emit('workspace:set-operation', { operation: action });
         });
     } else {
-        // Inject updated context items (in case they changed) then switch context
         Object.entries(RADIAL_CONTEXTS).forEach(([ctx, items]) => {
             _radialInstance.el.setContextItems(ctx, items);
         });
-        _radialInstance.el.setContext(view);
+        _radialInstance.el.setContext(page);
         _radialInstance.el.setExtraItems(extraItems);
     }
 }
@@ -269,18 +217,10 @@ function _syncRadial(view) {
  */
 async function _importView(view) {
     switch (view) {
-        case 'workspace':
-            return import('../tools/workspace/workspace.js');
-        case 'imageWorkspace':
-            return import('../tools/imageWorkspace/imageWorkspace.js');
-        case 'generator':
-            return import('../tools/generator/generator.js');
-        case 'upscaler':
-            return import('../tools/upscaler/upscaler.js');
-        case 'videoWorkspace':
-            return import('../tools/videoWorkspace/videoWorkspace.js');
-        case 'audioWorkspace':
-            return import('../tools/audioWorkspace/audioWorkspace.js');
+        case PAGE_GALLERY:
+            return import('../workspaces/gallery/gallery.js');
+        case PAGE_GROUP_HISTORY:
+            return import('../workspaces/groupHistory/groupHistory.js');
         default:
             console.warn(`[navigation] Unknown view: "${view}"`);
             return null;

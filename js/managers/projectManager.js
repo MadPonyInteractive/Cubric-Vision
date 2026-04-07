@@ -4,7 +4,7 @@
  */
 
 import { state } from '../state.js';
-import { navigate, PAGE_LANDING, PAGE_WORKSPACE } from '../router.js';
+import { navigate, PAGE_LANDING, PAGE_GALLERY } from '../router.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ export function openProject(project) {
   }
   localStorage.setItem('mpi_last_project', project.folderPath);
   document.dispatchEvent(new CustomEvent('project:changed', { detail: { project } }));
-  navigate(PAGE_WORKSPACE);
+  navigate(PAGE_GALLERY);
 }
 
 /**

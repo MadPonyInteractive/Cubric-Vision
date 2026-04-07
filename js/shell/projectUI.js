@@ -9,9 +9,9 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
-import { MpiSettings } from '../components/Compounds/MpiSettings/MpiSettings.js';
-import { MpiHelp } from '../components/Compounds/MpiHelp/MpiHelp.js';
-import { MpiAbout } from '../components/Compounds/MpiAbout/MpiAbout.js';
+import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
+import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
+import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
 
 // DOM refs
 let projectGrid = null;

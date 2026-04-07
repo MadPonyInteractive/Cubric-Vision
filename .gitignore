@@ -11,7 +11,10 @@ llama_engine/
 
 # User data
 projects/
-data/
+/data/
+
+# agents
+/.agent
 
 # Temporary files
 media-for-testing/

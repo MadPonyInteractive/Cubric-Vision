@@ -435,15 +435,68 @@
 
 /**
  * @typedef {Object} MpiProjectNameProps (Compound — js/components/Compounds/MpiProjectName)
- * @property {string} [projectName=''] - Active project name displayed as the title
- * @property {string} [pageName='']    - Current page / context label (e.g. 'Main Menu', 'Image')
+ * @property {string} [projectName='']  - Active project name shown above breadcrumb
+ * @property {string} [galleryLabel=''] - 'Gallery' link segment; empty = hidden (at gallery root)
+ * @property {string} [groupLabel='']   - Current group name segment; empty = hidden
  *
  * Instance methods (on instance.el):
- *   setProjectName(name)  — update project name text
- *   setPageName(name)     — update page/context label text
+ *   setProjectName(name)    — update project name
+ *   setGalleryLabel(label)  — pass '' to hide (at gallery root)
+ *   setGroupLabel(label)    — pass '' to hide (not inside a group)
  *
  * Emits:
- *   'back' {} — back-arrow clicked; shell handles navigation to landing
+ *   'up'      {} — up-arrow clicked (navigate up one level: group→gallery, gallery→landing)
+ *   'gallery' {} — gallery breadcrumb segment clicked
+ */
+
+/**
+ * @typedef {Object} MpiGroupCardProps (Compound — js/components/Compounds/MpiGroupCard)
+ * @property {import('./data/projectModel.js').ItemGroup} group - The item group to display
+ * @property {boolean} [selectionMode=false] - When true, clicks toggle selection instead of opening
+ * @property {boolean} [selected=false]      - Whether this card is currently selected
+ *
+ * Instance methods (on instance.el):
+ *   setGenerating(previewUrl)  — switch to generating state with optional latent preview
+ *   updatePreview(previewUrl)  — update latent preview image mid-generation
+ *   setDone(group)             — generation complete, update group and return to normal state
+ *   setSelected(bool)          — toggle selection highlight externally
+ *   setSelectionMode(bool)     — switch between open-on-click and select-on-click
+ *
+ * Emits:
+ *   'open'   { group }             — card clicked in normal mode
+ *   'select' { group, selected }   — checkbox toggled or card clicked in selection mode
+ */
+
+/**
+ * @typedef {Object} MpiSelectionBarProps (Compound — js/components/Compounds/MpiSelectionBar)
+ * @property {number} [count=0] - Initial selected item count
+ *
+ * Instance methods (on instance.el):
+ *   setCount(n) — update count; auto-enables compare only when n === 2
+ *
+ * Emits:
+ *   'compare'  {} — compare button clicked (only when count === 2)
+ *   'download' {} — download button clicked
+ *   'delete'   {} — delete button clicked
+ *   'cancel'   {} — cancel/exit selection mode
+ */
+
+/**
+ * @typedef {Object} MpiGalleryGridProps (Block — js/components/Blocks/MpiGalleryGrid)
+ * @property {import('./data/projectModel.js').ItemGroup[]} [groups=[]] - Initial groups to render
+ *
+ * Instance methods (on instance.el):
+ *   setGroups(groups)                 — replace all groups and re-render
+ *   addGeneratingCard(tempId, type)   — add a generating placeholder, returns card instance
+ *   updatePreview(tempId, previewUrl) — push latent preview to a generating card
+ *   finalizeCard(tempId, group)       — replace generating card with completed group data
+ *   getPromptSlot()                   — returns the HTMLElement slot for mounting MpiPromptBox
+ *
+ * Emits:
+ *   'open-group' { group }         — user clicked a card in normal mode
+ *   'compare'    { groups }        — compare 2 selected groups
+ *   'download'   { groups }        — download selected groups
+ *   'delete'     { groups }        — delete selected groups
  */
 
 /**

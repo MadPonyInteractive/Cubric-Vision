@@ -7,7 +7,6 @@ import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
 import { refreshModelRegistry } from './managers/modelManager.js';
-import { refreshComfyWorkflowRegistry } from './comfyWorkflowManager.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -117,10 +116,7 @@ function _bootApp() {
 
 async function _initDataRegistries() {
   try {
-    await Promise.all([
-      refreshModelRegistry(),
-      refreshComfyWorkflowRegistry()
-    ]);
+    await refreshModelRegistry();
   } catch (err) {
     console.error('[shell] background registry failed:', err);
   }
