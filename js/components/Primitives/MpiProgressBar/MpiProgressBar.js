@@ -21,19 +21,19 @@ export const MpiProgressBar = ComponentFactory.create({
     css: ['js/components/Primitives/MpiProgressBar/MpiProgressBar.css'],
 
     template: (props) => {
-        const min     = props.min     !== undefined ? props.min     : 0;
-        const max     = props.max     !== undefined ? props.max     : 100;
-        const step    = props.step    !== undefined ? props.step    : 1;
-        const value   = props.value   !== undefined ? props.value   : 50;
+        const min = props.min !== undefined ? props.min : 0;
+        const max = props.max !== undefined ? props.max : 100;
+        const step = props.step !== undefined ? props.step : 1;
+        const value = props.value !== undefined ? props.value : 50;
         const variant = props.variant || 'primary';
 
         // info template: explicit string wins, then prefix/suffix, then bare value
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
-        const info    = infoTpl.replace('{value}', value);
+        const info = infoTpl.replace('{value}', value);
 
-        const isInteractive  = props.interactive === true;
+        const isInteractive = props.interactive === true;
         const isDisabledAttr = isInteractive ? '' : 'disabled';
-        const stateClass     = isInteractive ? 'mpi-progress--interactive' : 'mpi-progress--disabled';
+        const stateClass = isInteractive ? 'mpi-progress--interactive' : 'mpi-progress--disabled';
 
         return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" data-info="${info}">
             <div class="mpi-progress__track-container">
@@ -52,15 +52,15 @@ export const MpiProgressBar = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const input     = el.querySelector('.mpi-progress__input');
+        const input = el.querySelector('.mpi-progress__input');
         const trackFill = el.querySelector('.mpi-progress__track-fill');
 
         // Resolve info template once from props (supports prefix/suffix pattern too)
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
 
         const updateVisuals = (val) => {
-            const min     = props.min !== undefined ? props.min : 0;
-            const max     = props.max !== undefined ? props.max : 100;
+            const min = props.min !== undefined ? props.min : 0;
+            const max = props.max !== undefined ? props.max : 100;
             const percent = ((val - min) / (max - min)) * 100;
             if (trackFill) trackFill.style.width = `${percent}%`;
 
@@ -84,9 +84,9 @@ export const MpiProgressBar = ComponentFactory.create({
             el.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const step = props.step !== undefined ? props.step : 1;
-                const min  = props.min  !== undefined ? props.min  : 0;
-                const max  = props.max  !== undefined ? props.max  : 100;
-                let val    = parseFloat(input.value);
+                const min = props.min !== undefined ? props.min : 0;
+                const max = props.max !== undefined ? props.max : 100;
+                let val = parseFloat(input.value);
 
                 val = e.deltaY < 0
                     ? Math.min(max, val + step)
@@ -96,6 +96,9 @@ export const MpiProgressBar = ComponentFactory.create({
                 input.dispatchEvent(new Event('input'));
                 input.dispatchEvent(new Event('change'));
             }, { passive: false });
+        } else {
+            el.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+            input.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
         }
     }
 });

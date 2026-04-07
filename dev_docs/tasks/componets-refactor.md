@@ -87,21 +87,22 @@
 ## Phase 3.4: Implement confirm for project delete [X]
 ### Phase 3.4: MpiProjectCard [X]
 ## Phase 3.3: Radial Menu [X]
-
-
 ## Phase 3.4: Status Bar (Info Bar) [Create Component and Implement the Progress into it] [X]
-## Phase 3.4: Load comfy engine popup []
+## Phase 3.4: Load comfy engine popup [X]
 
 
-## Error Handling & Logging [X]
+## Error Handling & Logging [X] TODO: connect to services
+
+
+
 
 
 ## MpiPromptBox ReVamp [to-accomodate-new-system]
 * Model Selector dropdown [default-option->-Model-Downloads]
-- models in the dropdown should have icons indicating their type [img/vid]
+- models in the dropdown should have icons indicating their type [img/vid] or we use a radio
 - and badges indicating their supported operations [i2v/t2v/t2i/etc]
 * Contextual Operation Type dropdown based on [model/mask/images-present]
-* Options some models do not support [i2i/change/remove/edit]
+[i] Options some models do not support [i2i/change/remove/edit]
 - Mask on [detail/change/remove] [img-models-only]
 - Mask off 
     - Images present [i2i/upscale/edit]
@@ -116,21 +117,25 @@
 
 ## GALLERY (Media Items)
 * Controls
-- Display names
-- Select Multiple [use badges for selection order numbers]
-this should change options on the radial for workflows with multiple inputs[compare/edit/startframe-endframe]
+- Display names toggle -> when on it displays a name badge on every item card [upscaled/detailed/generated/etc]
 * Filtering
 - Favs/imgs/vids/audio
 - Type (uploaded/generated/detailed/upscaled)
 - Media type (img/mp4/mp3)
 * order (new to old/old to new)
 * Media naming convenction based on source (uploaded/generated/detailed/upscaled)
-* Drag/Drop functionality [to the canvas/screen and from the canvas to the prompt box]
+* Interactions
+- Drag/Drop functionality [from the canvas to the prompt box and from the file system to the prompt box]
+- ctrl+click for Multiple selection [use badges for selection order numbers]
+this should change options on the radial for workflows with multiple inputs[compare/edit/startframe-endframe]??
+- click to select
+- dblClick to enter Media Item Workspace
+
 * PromptBox here will behave based on inputs
 
-## Media item history --------------------------------------------------------------------------------------
+## Media item history/workspace --------------------------------------------------------------------------------------
 Media items will possibly be files with a history, they are the thing represented in the gallery.
-CLicking one in the galery will open a separate workspace for altering the file, creating new versions with alterations.
+Double Clicking one in the galery will open a separate workspace for altering the file, creating new versions with alterations.
 This workspace should consist of: 
 - icon tool pallete on the left [crop/mask-for-images-only]
 - the image preview in canvas using most of the screen space with modes: [display/compare-widget/mask/crop]
