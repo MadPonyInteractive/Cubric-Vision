@@ -167,6 +167,7 @@ async function _loadView(page, params = {}) {
 
     // ── Page content ────────────────────────────────────────────────────────
     _toolContainer.innerHTML = '';
+    _toolContainer.classList.remove('gh-workspace');
     _toolContainer.style.position = 'relative';
 
     if (params.view === 'components') {
