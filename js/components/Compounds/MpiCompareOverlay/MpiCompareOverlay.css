@@ -1,0 +1,71 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiCompareOverlay — Side-by-side comparison overlay
+   Fills the MpiOverlay container slot.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Override MpiOverlay container — comparison needs full width, no max-width ── */
+.mpi-overlay .mpi-overlay__container:has(.mpi-compare-overlay) {
+    max-width: 100%;
+    padding: 0;
+    gap: 0;
+}
+
+/* ── Root ─────────────────────────────────────────────────────── */
+.mpi-compare-overlay {
+    position: relative;
+    width: 100%;
+    /* Fill the viewport height minus titlebar + statusbar; let MpiOverlay handle scroll */
+    height: calc(100vh - 10rem);
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-0, #0d0d0f);
+    border-radius: var(--radius, 8px);
+    overflow: hidden;
+}
+
+/* ── Canvas wrapper — fills remaining space ──────────────────── */
+.mpi-compare-overlay__canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* InteractiveCanvas appends its own <canvas> element here */
+.mpi-compare-overlay__canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Before / After labels ───────────────────────────────────── */
+.mpi-compare-overlay__labels {
+    position: absolute;
+    top: 0.75rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 1rem;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.mpi-compare-overlay__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-sm, 4px);
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--text-1, #e8e6f0);
+    backdrop-filter: blur(4px);
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-compare-overlay__label--after {
+    text-align: right;
+}

@@ -307,13 +307,13 @@ export const ComfyUIController = {
             if (!val) continue;
 
             // Normalize path to URL if it's a local project path
-            if (typeof val === 'string' && !val.startsWith('data:') && !val.startsWith('http') && !val.includes('project-file')) {
+            if (typeof val === 'string' && !val.startsWith('data:') && !val.startsWith('blob:') && !val.startsWith('http') && !val.includes('project-file')) {
                 // Ensure forward slashes and wrap in project-file API
                 const cleanPath = val.replace(/\\/g, '/');
                 val = `/project-file?path=${encodeURIComponent(cleanPath)}`;
             }
 
-            if (typeof val === 'string' && (val.startsWith('data:') || val.startsWith('http') || val.includes('project-file') || val.includes('/project-media/'))) {
+            if (typeof val === 'string' && (val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http') || val.includes('project-file') || val.includes('/project-media/'))) {
                 console.log(`[ComfyUIController] Uploading asset for ${paramKey}:`, val.substring(0, 100));
                 try {
                     const uploadRes = await this._uploadImage(val, staticName);

@@ -19,7 +19,8 @@ import { getAvailableCommands } from '../../data/commandRegistry.js';
 import { refreshRadial } from '../../shell/navigation.js';
 import { runCommand } from '../../services/commandExecutor.js';
 import { StatusBar } from '../../shell/statusBar.js';
-import { createImageItem, createItemGroup, appendToHistory, addGroupToProject } from '../../data/projectModel.js';
+import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, getSelectedItem } from '../../data/projectModel.js';
+import { MpiCompareOverlay } from '../../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 
 /**
  * Mounts the gallery workspace into the given container.
@@ -34,8 +35,17 @@ export function mount(container) {
     // ── Navigate to group history on card open ──────────────────────────────
     grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
 
-    // ── Stub handlers ───────────────────────────────────────────────────────
-    grid.on('compare',  ({ groups: g }) => console.log('[gallery] compare',  g.map(x => x.id)));
+    // ── Compare — two selected groups ──────────────────────────────────────
+    const _compareOverlay = MpiCompareOverlay.mount(document.createElement('div'));
+
+    grid.on('compare', ({ groups: g }) => {
+        const itemA = getSelectedItem(g[0]);
+        const itemB = getSelectedItem(g[1]);
+        if (!itemA || !itemB) return;
+        _compareOverlay.el.open(itemA, itemB);
+    });
+
+    // ── Stub handlers (download / delete) ──────────────────────────────────
     grid.on('download', ({ groups: g }) => console.log('[gallery] download', g.map(x => x.id)));
     grid.on('delete',   ({ groups: g }) => console.log('[gallery] delete',   g.map(x => x.id)));
 
@@ -161,7 +171,7 @@ export function mount(container) {
                 StatusBar.progress.update(value);
             };
 
-            exec.onComplete = (urls) => {
+            exec.onComplete = async (urls) => {
                 _activeExec = null;
                 promptBox.el.setGenerating(false);
 
@@ -172,21 +182,66 @@ export function mount(container) {
                     return;
                 }
 
+                // Persist to disk and get a stable filename
+                let filePath = urls[0]; // fallback: comfy view URL (ephemeral)
+                let displayName = operation; // fallback card name
+
+                if (state.currentProject?.folderPath) {
+                    try {
+                        const res = await fetch('/project/save-generation', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({
+                                folderPath:   state.currentProject.folderPath,
+                                comfyViewUrl: urls[0],
+                                operation,
+                                meta: {
+                                    prompt:         positive,
+                                    negativePrompt: negative,
+                                    modelId:        activeModel.id,
+                                },
+                            }),
+                        });
+                        if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
+                        const data = await res.json();
+                        if (data.success) {
+                            // Serve the saved file through project-file API
+                            filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                            displayName = data.filename.replace(/\.[^.]+$/, ''); // no extension
+                        }
+                    } catch (err) {
+                        console.warn('[gallery] save-generation failed, using comfy URL:', err);
+                    }
+                }
+
+                // Truncate display name to 28 chars max
+                const cardName = displayName.length > 28
+                    ? displayName.slice(0, 27) + '…'
+                    : displayName;
+
                 // Build the MediaItem and ItemGroup
                 const item = createImageItem({
-                    filePath:      urls[0], // comfy view URL; server-persisted path added later
-                    modelId:       activeModel.id,
+                    filePath,
+                    modelId:        activeModel.id,
                     operation,
-                    prompt:        positive,
+                    prompt:         positive,
                     negativePrompt: negative,
                 });
 
-                let group = createItemGroup(cardType, { name: positive.slice(0, 48) || 'Untitled' });
+                let group = createItemGroup(cardType, { name: cardName });
                 group = appendToHistory(group, item);
 
-                // Update in-memory project state
+                // Persist itemGroups to project.json
                 if (state.currentProject) {
                     state.currentProject = addGroupToProject(state.currentProject, group);
+                    fetch('/update-project', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({
+                            folderPath: state.currentProject.folderPath,
+                            updates:    { itemGroups: state.currentProject.itemGroups },
+                        }),
+                    }).catch(err => console.warn('[gallery] update-project failed:', err));
                 }
 
                 StatusBar.progress.complete('Image generated!');

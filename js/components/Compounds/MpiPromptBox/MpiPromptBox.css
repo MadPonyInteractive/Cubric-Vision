@@ -52,7 +52,8 @@
     padding-right: 3rem;
     /* Room for copy button */
     overflow-y: auto;
-    background: transparent !important;
+    /* background: transparent !important; */
+    background: var(--bg-recessed);
     border: none !important;
     box-shadow: none !important;
     color: var(--text) !important;
@@ -134,7 +135,7 @@
     align-items: center;
     gap: 0.5rem;
     min-height: 2.5rem;
-    padding: 0.25rem 0;
+    /* padding: 0.25rem 0; */
     border-bottom: 1px dashed var(--border-soft);
     margin-bottom: 0.5rem;
     transition: border-color var(--transition), background var(--transition);
@@ -147,16 +148,16 @@
     border-radius: var(--radius);
 }
 
-.mpi-prompt-box__media-zone--has-media {
+/* .mpi-prompt-box__media-zone--has-media {
     border-style: solid;
-}
+} */
 
 /* Drop hint (shown when zone is empty) */
 .mpi-prompt-box__drop-hint {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    color: var(--text-3);
+    color: var(--text);
     font-size: 0.8rem;
     opacity: 0.6;
     pointer-events: none;

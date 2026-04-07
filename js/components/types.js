@@ -558,6 +558,19 @@
  */
 
 /**
+ * @typedef {Object} MpiCompareOverlayProps (Compound — js/components/Compounds/MpiCompareOverlay)
+ * No props required at mount time.
+ *
+ * Instance methods (on instance.el):
+ *   open(itemA, itemB) — load two MediaItems and show the overlay
+ *                        itemA = left/before, itemB = right/after
+ *   hide()             — close the overlay and destroy the canvas
+ *
+ * Emits:
+ *   'close' {} — overlay closed
+ */
+
+/**
  * @typedef {Object} MpiErrorDialogProps (Compound — js/components/Compounds/MpiErrorDialog)
  * @property {string}  [title='An error occurred'] - Dialog title
  * @property {string}  [message='']               - Error detail shown to the user

@@ -25,7 +25,7 @@ const fs     = require('fs-extra');
 const path   = require('path');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
-const { DEFAULT_PROJECTS_ROOT } = require('./shared');
+const { DEFAULT_PROJECTS_ROOT, COMFYUI_PORT, streamDownload } = require('./shared');
 
 // ── Project CRUD ──────────────────────────────────────────────────────────────
 
@@ -467,6 +467,97 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
         res.json({ success: true, filePath: outputPath, filename });
     } catch (err) {
         logger.error('project', 'extract error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ─── Generation Persistence ───────────────────────────────────────────────────
+
+/**
+ * POST /project/save-generation
+ *
+ * Downloads a ComfyUI output image from its view URL, saves it to
+ * Media/<operation>_NNN.ext under the project folder, writes a sidecar
+ * to Media/.meta/<operation>_NNN.ext.json, and garbage-collects orphaned
+ * sidecars (meta files whose media file no longer exists).
+ *
+ * Body:
+ *   folderPath    {string}  — absolute project folder path
+ *   comfyViewUrl  {string}  — http://127.0.0.1:8188/view?filename=...
+ *   operation     {string}  — command key, e.g. 't2i', 'upscale'
+ *   meta          {Object}  — { prompt, negativePrompt, seed, modelId }
+ *
+ * Response:
+ *   { success, filename, relativePath, filePath }
+ *   relativePath is relative to folderPath, e.g. "Media/t2i_001.png"
+ */
+router.post('/project/save-generation', async (req, res) => {
+    try {
+        const { folderPath, comfyViewUrl, operation = 'generated', meta = {} } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir  = path.join(mediaDir, '.meta');
+        await fs.ensureDir(metaDir);
+
+        // Derive extension from the comfy URL filename param
+        let ext = 'png';
+        try {
+            const u = new URL(comfyViewUrl);
+            const fname = u.searchParams.get('filename') || '';
+            const dotIdx = fname.lastIndexOf('.');
+            if (dotIdx !== -1) ext = fname.slice(dotIdx + 1).toLowerCase();
+        } catch (_) { /* keep default */ }
+
+        // Sanitise operation key to a safe filename prefix (max 24 chars)
+        const prefix = operation.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24);
+
+        // Find the next available sequence number by scanning existing files
+        const existing = await fs.readdir(mediaDir);
+        let maxNum = 0;
+        const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
+        for (const f of existing) {
+            const m = f.match(re);
+            if (m) {
+                const n = parseInt(m[1], 10);
+                if (n > maxNum) maxNum = n;
+            }
+        }
+        const seq      = String(maxNum + 1).padStart(3, '0');
+        const filename = `${prefix}_${seq}.${ext}`;
+        const filePath = path.join(mediaDir, filename);
+
+        // Download from ComfyUI server-side
+        await streamDownload(comfyViewUrl, filePath);
+
+        // Write sidecar to .meta/
+        const sidecarPath = path.join(metaDir, `${filename}.json`);
+        await fs.writeJson(sidecarPath, {
+            operation,
+            prompt:         meta.prompt        || '',
+            negativePrompt: meta.negativePrompt || '',
+            seed:           meta.seed          ?? null,
+            modelId:        meta.modelId       || null,
+            createdAt:      new Date().toISOString(),
+        }, { spaces: 2 });
+
+        // Garbage-collect orphaned sidecars
+        try {
+            const sidecars = await fs.readdir(metaDir);
+            for (const sc of sidecars) {
+                if (!sc.endsWith('.json')) continue;
+                const mediaFile = sc.slice(0, -5); // strip .json
+                if (!(await fs.pathExists(path.join(mediaDir, mediaFile)))) {
+                    await fs.remove(path.join(metaDir, sc));
+                }
+            }
+        } catch (_) { /* GC failure is non-fatal */ }
+
+        const relativePath = `Media/${filename}`;
+        res.json({ success: true, filename, relativePath, filePath });
+    } catch (err) {
+        logger.error('project', 'save-generation error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

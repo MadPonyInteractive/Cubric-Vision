@@ -185,7 +185,7 @@ export const MpiPromptBox = ComponentFactory.create({
                         const { filePath, type } = JSON.parse(appData);
                         if (type === 'image' && !acceptsImage) return;
                         if (type === 'video' && !acceptsVideo) return;
-                        _tryAddMedia({ url: `/${filePath}`, file: null, mediaType: type, source: 'app' });
+                        _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
                     } catch { /* malformed payload */ }
                     return;
                 }

@@ -47,7 +47,8 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
-import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
+import { MpiErrorDialog }      from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
+import { MpiCompareOverlay }   from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -1051,6 +1052,30 @@ function mountAll() {
         });
 
         btn.on('click', () => dialog.el.show());
+    });
+
+    // ── MpiCompareOverlay (Compound) ────────────────────────────────────────────
+    mount('preview-compare-overlay-default', () => {
+        const slotEl = slot('preview-compare-overlay-default');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon:    'compare',
+            label:   'Open Compare',
+            variant: 'primary',
+            info:    'Click to test the compare overlay with two placeholder images',
+        });
+
+        const overlay = MpiCompareOverlay.mount(document.createElement('div'));
+
+        btn.on('click', () => {
+            // Use placeholder images for gallery demo
+            overlay.el.open(
+                { filePath: 'https://picsum.photos/seed/before/800/600', name: 't2i_001' },
+                { filePath: 'https://picsum.photos/seed/after/800/600',  name: 'upscaled_001' }
+            );
+        });
     });
 
     // ── MpiStartingComfy (Compound) ─────────────────────────────────────────────
