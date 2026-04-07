@@ -3,6 +3,7 @@ import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { ce, qs } from '/js/utils/dom.js';
+import { removeHistoryEntry } from '../../../data/projectModel.js';
 
 /**
  * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
@@ -31,6 +32,8 @@ import { ce, qs } from '/js/utils/dom.js';
  *   'compare'     { groups: [g1, g2] }   — compare 2 selected groups
  *   'delete'      { groups: [...] }      — delete selected groups
  *   'download'    { groups: [...] }      — download selected groups
+ *   'gc-group'    { group }              — group was mutated by GC (missing file); persist to disk
+ *   'gc-remove'   { groupId }            — all history entries missing; group removed from grid
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -157,6 +160,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 selectionBar.el.setCount(_selectedIds.size);
             });
 
+            card.on('media-missing', ({ group: g, itemId }) => {
+                // Find the missing entry index
+                const missingIdx = g.history.findIndex(item => item.id === itemId);
+                if (missingIdx === -1) return;
+
+                if (g.history.length <= 1) {
+                    // Last entry is missing — remove the card entirely
+                    el.removeCard(g.id);
+                    emit('gc-remove', { groupId: g.id });
+                } else {
+                    // Prune the missing entry and promote the next best
+                    const pruned = removeHistoryEntry(g, missingIdx);
+                    const idx = _groups.findIndex(x => x.id === g.id);
+                    if (idx !== -1) _groups[idx] = pruned;
+                    card.el.setDone(pruned);
+                    emit('gc-group', { group: pruned });
+                }
+            });
+
             return { card, wrapper };
         }
 
@@ -238,6 +260,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _cardMap.delete(tempId);
             _cardMap.set(group.id, entry);
             entry.card.el.setDone(group);
+        };
+
+        /**
+         * Remove a card by group id (after deletion).
+         * @param {string} groupId
+         */
+        el.removeCard = (groupId) => {
+            const entry = _cardMap.get(groupId);
+            if (!entry) return;
+            entry.el.remove();
+            _cardMap.delete(groupId);
+            _groups = _groups.filter(g => g.id !== groupId);
+            _selectedIds.delete(groupId);
+            if (_selectedIds.size === 0 && _selectionMode) _exitSelectionMode();
+            else selectionBar.el.setCount(_selectedIds.size);
         };
 
         /**

@@ -24,8 +24,9 @@ import { ce } from '/js/utils/dom.js';
  *   setSelectionMode(bool)     — switch between open-on-click and select-on-click
  *
  * Emits:
- *   'open'   { group }         — card clicked in normal mode (open group history)
- *   'select' { group, selected } — checkbox toggled or card clicked in selection mode
+ *   'open'          { group }              — card clicked in normal mode (open group history)
+ *   'select'        { group, selected }    — checkbox toggled or card clicked in selection mode
+ *   'media-missing' { group, itemId }      — selected item's file returned 404; parent should promote or remove
  */
 export const MpiGroupCard = ComponentFactory.create({
     name: 'MpiGroupCard',
@@ -36,6 +37,7 @@ export const MpiGroupCard = ComponentFactory.create({
             <div class="mpi-group-card__media">
                 <img class="mpi-group-card__thumb" alt="" draggable="true">
                 <div class="mpi-group-card__preview">
+                    <div class="mpi-group-card__spinner"></div>
                     <img class="mpi-group-card__preview-img" alt="Generating...">
                     <div class="mpi-group-card__generating-label">Generating...</div>
                 </div>
@@ -58,6 +60,7 @@ export const MpiGroupCard = ComponentFactory.create({
 
         const thumb       = el.querySelector('.mpi-group-card__thumb');
         const preview     = el.querySelector('.mpi-group-card__preview');
+        const spinner     = el.querySelector('.mpi-group-card__spinner');
         const previewImg  = el.querySelector('.mpi-group-card__preview-img');
         const checkbox    = el.querySelector('.mpi-group-card__checkbox');
         const nameEl      = el.querySelector('.mpi-group-card__name');
@@ -74,6 +77,7 @@ export const MpiGroupCard = ComponentFactory.create({
 
             thumb.src = src;
             thumb.alt = _group.name;
+            thumb.onerror = () => emit('media-missing', { group: _group, itemId: selected?.id });
             nameEl.textContent = _group.name;
             typeEl.textContent = _group.type.toUpperCase();
 
@@ -104,6 +108,8 @@ export const MpiGroupCard = ComponentFactory.create({
             _generating = val;
             card.classList.toggle('mpi-group-card--generating', val);
             preview.classList.toggle('mpi-group-card__preview--visible', val);
+            // Show spinner until the first latent preview image arrives
+            if (val) spinner.style.display = '';
         }
 
         // ── Click handling ──────────────────────────────────────────────────────
@@ -142,7 +148,9 @@ export const MpiGroupCard = ComponentFactory.create({
          * @param {string} previewUrl
          */
         el.updatePreview = (previewUrl) => {
-            if (_generating) previewImg.src = previewUrl;
+            if (!_generating) return;
+            previewImg.src = previewUrl;
+            spinner.style.display = 'none'; // latent preview arrived — hide spinner
         };
 
         /**

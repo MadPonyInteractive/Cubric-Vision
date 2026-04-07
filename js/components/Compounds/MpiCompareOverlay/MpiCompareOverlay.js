@@ -137,6 +137,13 @@ export const MpiCompareOverlay = ComponentFactory.create({
 
 function _basenameNoExt(filePath) {
     if (!filePath) return '';
+    // If it's a project-file API URL, decode the path param to get the real filename
+    if (filePath.includes('project-file')) {
+        try {
+            const match = filePath.match(/[?&]path=([^&]+)/);
+            if (match) filePath = decodeURIComponent(match[1]);
+        } catch (_) { /* use filePath as-is */ }
+    }
     const base = filePath.replace(/\\/g, '/').split('/').pop() || '';
     const dot = base.lastIndexOf('.');
     return dot > 0 ? base.slice(0, dot) : base;

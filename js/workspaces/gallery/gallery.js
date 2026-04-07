@@ -19,8 +19,9 @@ import { getAvailableCommands } from '../../data/commandRegistry.js';
 import { refreshRadial } from '../../shell/navigation.js';
 import { runCommand } from '../../services/commandExecutor.js';
 import { StatusBar } from '../../shell/statusBar.js';
-import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, getSelectedItem } from '../../data/projectModel.js';
+import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, getSelectedItem, removeGroupFromProject, updateGroupInProject } from '../../data/projectModel.js';
 import { MpiCompareOverlay } from '../../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
+import { MpiOkCancel } from '../../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 
 /**
  * Mounts the gallery workspace into the given container.
@@ -45,9 +46,92 @@ export function mount(container) {
         _compareOverlay.el.open(itemA, itemB);
     });
 
-    // ── Stub handlers (download / delete) ──────────────────────────────────
+    // ── GC: missing file detected by card onerror ───────────────────────────
+    // Helper: persist current itemGroups to project.json
+    function _persistGroups() {
+        if (!state.currentProject) return;
+        fetch('/update-project', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                folderPath: state.currentProject.folderPath,
+                updates:    { itemGroups: state.currentProject.itemGroups },
+            }),
+        }).catch(err => console.warn('[gallery] update-project failed:', err));
+    }
+
+    grid.on('gc-group', ({ group }) => {
+        if (!state.currentProject) return;
+        state.currentProject = updateGroupInProject(state.currentProject, group);
+        _persistGroups();
+    });
+
+    grid.on('gc-remove', ({ groupId }) => {
+        if (!state.currentProject) return;
+        state.currentProject = removeGroupFromProject(state.currentProject, groupId);
+        _persistGroups();
+    });
+
+    // ── Download ────────────────────────────────────────────────────────────
     grid.on('download', ({ groups: g }) => console.log('[gallery] download', g.map(x => x.id)));
-    grid.on('delete',   ({ groups: g }) => console.log('[gallery] delete',   g.map(x => x.id)));
+
+    // ── Delete ──────────────────────────────────────────────────────────────
+    const _deleteDialog = MpiOkCancel.mount(document.createElement('div'), {
+        title:      'Delete',
+        text:       'Permanently delete the selected cards and their media files?',
+        okLabel:    'Delete',
+        cancelLabel: 'Cancel',
+    });
+
+    let _pendingDeleteGroups = [];
+
+    _deleteDialog.on('ok', async () => {
+        const project = state.currentProject;
+        if (!project || !_pendingDeleteGroups.length) return;
+        const g = _pendingDeleteGroups;
+        _pendingDeleteGroups = [];
+
+        // Delete each group's media files from disk
+        for (const group of g) {
+            for (const item of group.history) {
+                const fp = item.filePath;
+                if (!fp) continue;
+                // Extract filename from /project-file?path=... URL
+                let filename = null;
+                if (fp.includes('project-file')) {
+                    try {
+                        const match = fp.match(/[?&]path=([^&]+)/);
+                        if (match) {
+                            const absPath = decodeURIComponent(match[1]);
+                            filename = absPath.replace(/\\/g, '/').split('/').pop();
+                        }
+                    } catch (_) { /* skip */ }
+                }
+                if (!filename) continue;
+                fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
+                    method: 'DELETE',
+                }).catch(err => console.warn('[gallery] delete file failed:', err));
+            }
+        }
+
+        // Remove groups from state and persist
+        let updated = project;
+        for (const group of g) {
+            updated = removeGroupFromProject(updated, group.id);
+        }
+        state.currentProject = updated;
+        _persistGroups();
+
+        // Remove cards from the grid
+        for (const group of g) {
+            grid.el.removeCard(group.id);
+        }
+    });
+
+    grid.on('delete', ({ groups: g }) => {
+        _pendingDeleteGroups = g;
+        _deleteDialog.el.show();
+    });
 
     // ── PromptBox + operation dropdown ─────────────────────────────────────
 
