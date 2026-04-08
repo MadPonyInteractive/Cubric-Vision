@@ -87,6 +87,8 @@ export function mount(container, params = {}) {
     let _selectMode = false;
     /** Indices currently selected (for compare / delete) */
     const _selection = new Set();
+    /** Saved mask data URLs keyed by history index — persists across entry switches */
+    const _maskStore = new Map();
 
     // ── Scaffold ───────────────────────────────────────────────────────────────
 
@@ -217,13 +219,31 @@ export function mount(container, params = {}) {
     }
 
     function _selectEntry(idx) {
+        // Save the current mask before switching away
+        if (_hasMask) {
+            _maskStore.set(_selectedIdx, _canvas.getMaskDataURL());
+        } else {
+            _maskStore.delete(_selectedIdx);
+        }
+
         _selectedIdx = idx;
         _exitCropMode();
-        _canvas.clearMask();
-        _hasMask = false;
         _exitMaskMode();
         _applyCardStates();
-        _showEntry(_group.history[idx]);
+
+        // _showEntry loads the image (which re-inits the mask canvas to image dims),
+        // then we restore any previously saved mask for this entry.
+        _showEntry(_group.history[idx]).then(() => {
+            const saved = _maskStore.get(idx);
+            if (saved) {
+                _canvas.setMaskDataURL(saved);
+                _hasMask = true;
+            } else {
+                _canvas.clearMask();
+                _hasMask = false;
+            }
+            _refreshOpOptions();
+        });
 
         // Persist selectedIndex
         _group = promoteHistoryEntry(_group, idx);
@@ -415,6 +435,7 @@ export function mount(container, params = {}) {
         // Sort descending so removing by index doesn't shift subsequent indices
         const indices = [..._selection].sort((a, b) => b - a);
         for (const idx of indices) {
+            _maskStore.delete(idx);
             _group = removeHistoryEntry(_group, idx);
         }
         _selectedIdx = _group.selectedIndex;
@@ -454,7 +475,7 @@ export function mount(container, params = {}) {
 
             const newItem = createImageItem({
                 filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
-                operation: 'crop',
+                operation: data.filename.replace(/\.[^.]+$/, ''),
             });
 
             _group = appendToHistory(_group, newItem);
@@ -533,6 +554,7 @@ export function mount(container, params = {}) {
         });
 
         _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
+            // ComfyUI LoadImage mask convention: white = masked (processed), black = background
             const maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null;
             _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl });
         });
@@ -639,7 +661,8 @@ export function mount(container, params = {}) {
                 negativePrompt: negative,
             });
 
-            // Clear mask after a successful generation
+            // Clear mask after a successful generation — all saved masks are stale
+            _maskStore.clear();
             _canvas.clearMask();
             _hasMask = false;
             _refreshOpOptions();

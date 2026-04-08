@@ -5,7 +5,7 @@
 export class MaskManager {
     constructor() {
         this.maskCanvas = document.createElement('canvas');
-        this.maskCtx = this.maskCanvas.getContext('2d');
+        this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
         
         this.isMaskingMode = false;
         this.isDrawingMask = false;
@@ -107,31 +107,40 @@ export class MaskManager {
             return this.maskCanvas.toDataURL('image/png');
         }
 
+        const w = this.maskCanvas.width;
+        const h = this.maskCanvas.height;
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.maskCanvas.width;
-        tempCanvas.height = this.maskCanvas.height;
+        tempCanvas.width = w;
+        tempCanvas.height = h;
         const tempCtx = tempCanvas.getContext('2d');
 
-        if (bg) {
-            tempCtx.fillStyle = bg;
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        // Simple black/white mapping — the only callers use 'white'/'black'
+        const bgIsWhite = bg === 'white';
+        const fgIsBlack = fg === 'black';
+        const [bgR, bgG, bgB] = bgIsWhite ? [255, 255, 255] : [0, 0, 0];
+        const [fgR, fgG, fgB] = fgIsBlack ? [0, 0, 0] : [255, 255, 255];
+
+        const src = this.maskCtx.getImageData(0, 0, w, h);
+        const out = tempCtx.createImageData(w, h);
+
+        for (let i = 0; i < src.data.length; i += 4) {
+            const a = src.data[i + 3]; // alpha of painted pixel
+            if (a > 0) {
+                // Painted area → fg color, fully opaque
+                out.data[i]     = fgR;
+                out.data[i + 1] = fgG;
+                out.data[i + 2] = fgB;
+                out.data[i + 3] = 255;
+            } else {
+                // Unpainted area → bg color, fully opaque
+                out.data[i]     = bgR;
+                out.data[i + 1] = bgG;
+                out.data[i + 2] = bgB;
+                out.data[i + 3] = 255;
+            }
         }
 
-        if (fg) {
-            const alphaCanvas = document.createElement('canvas');
-            alphaCanvas.width = this.maskCanvas.width;
-            alphaCanvas.height = this.maskCanvas.height;
-            const alphaCtx = alphaCanvas.getContext('2d');
-            alphaCtx.drawImage(this.maskCanvas, 0, 0);
-            
-            alphaCtx.globalCompositeOperation = 'source-in';
-            alphaCtx.fillStyle = fg;
-            alphaCtx.fillRect(0, 0, alphaCanvas.width, alphaCanvas.height);
-            tempCtx.drawImage(alphaCanvas, 0, 0);
-        } else {
-            tempCtx.drawImage(this.maskCanvas, 0, 0);
-        }
-
+        tempCtx.putImageData(out, 0, 0);
         return tempCanvas.toDataURL('image/png');
     }
 }

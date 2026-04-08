@@ -64,7 +64,7 @@
   },
   "502": {
     "inputs": {
-      "image": "gen_1774206645579_0.png"
+      "image": "Mask_test_00001_ (1).png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -232,15 +232,6 @@
     "class_type": "MpiDoubleLora",
     "_meta": {
       "title": "Lora_5"
-    }
-  },
-  "1555": {
-    "inputs": {
-      "image": "mask.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Mask"
     }
   },
   "1559": {
@@ -419,8 +410,8 @@
         0
       ],
       "false": [
-        "1555",
-        1
+        "1626",
+        0
       ]
     },
     "class_type": "MpiIfElse",
@@ -549,6 +540,16 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "auto mask"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "image": "Mask_test_00002_ (1).png",
+      "channel": "red"
+    },
+    "class_type": "LoadImageMask",
+    "_meta": {
+      "title": "Input_Mask"
     }
   }
 }

@@ -137,8 +137,12 @@
 
 /* ── Selected state ──────────────────────────────────────────────────────── */
 
-.mpi-group-card--selected {
-    outline: 2px solid var(--neon-electric);
-    outline-offset: -2px;
+.mpi-group-card--selected .mpi-group-card__footer {
+    background: var(--neon-electric);
+}
+
+.mpi-group-card--selected .mpi-group-card__name,
+.mpi-group-card--selected .mpi-group-card__type {
+    color: var(--surface-1, #000);
 }
 

@@ -73,7 +73,31 @@ export function mount(container) {
     });
 
     // ── Download ────────────────────────────────────────────────────────────
-    grid.on('download', ({ groups: g }) => console.log('[gallery] download', g.map(x => x.id)));
+    grid.on('download', ({ groups: g }) => {
+        const project = state.currentProject;
+        if (!project) return;
+        for (const group of g) {
+            const item = getSelectedItem(group);
+            if (!item?.filePath) continue;
+            // Extract filename from /project-file?path=... URL
+            let filename = null;
+            try {
+                const match = item.filePath.match(/[?&]path=([^&]+)/);
+                if (match) {
+                    const absPath = decodeURIComponent(match[1]);
+                    filename = absPath.replace(/\\/g, '/').split('/').pop();
+                }
+            } catch (_) { continue; }
+            if (!filename) continue;
+            const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    });
 
     // ── Delete ──────────────────────────────────────────────────────────────
     const _deleteDialog = MpiOkCancel.mount(document.createElement('div'), {
@@ -318,14 +342,7 @@ export function mount(container) {
                 // Persist itemGroups to project.json
                 if (state.currentProject) {
                     state.currentProject = addGroupToProject(state.currentProject, group);
-                    fetch('/update-project', {
-                        method:  'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({
-                            folderPath: state.currentProject.folderPath,
-                            updates:    { itemGroups: state.currentProject.itemGroups },
-                        }),
-                    }).catch(err => console.warn('[gallery] update-project failed:', err));
+                    _persistGroups();
                 }
 
                 StatusBar.progress.complete('Image generated!');

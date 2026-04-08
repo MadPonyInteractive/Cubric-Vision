@@ -6,7 +6,9 @@
       "Bash(node -c c:/AI/Mpi/MpiAiSuite/js/pages/components.js)",
       "Bash(ls c:/AI/Mpi/MpiAiSuite/*.css)",
       "Skill(taches-cc-resources:whats-next)",
-      "Skill(taches-cc-resources:whats-next:*)"
+      "Skill(taches-cc-resources:whats-next:*)",
+      "Skill(whats-next)",
+      "Skill(whats-next:*)"
     ]
   }
 }

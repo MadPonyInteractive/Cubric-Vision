@@ -87,6 +87,8 @@ function _buildParams(payload) {
     if (imageItem) params['Input_Image'] = imageItem.url;
     if (videoItem) params['Input_Image'] = videoItem.url; // video ops use same slot
 
+    if (payload.maskDataUrl) params['Input_Mask'] = payload.maskDataUrl;
+
     return params;
 }
 

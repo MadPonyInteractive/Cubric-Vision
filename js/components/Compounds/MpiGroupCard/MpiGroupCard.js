@@ -86,7 +86,7 @@ export const MpiGroupCard = ComponentFactory.create({
                 thumb.onerror = null;
                 thumb.removeAttribute('src');
             }
-            nameEl.textContent = _group.name;
+            nameEl.textContent = selected?.operation || _group.name;
             typeEl.textContent = _group.type.toUpperCase();
 
             // Drag the selected media item to PromptBox for i2i / i2v
