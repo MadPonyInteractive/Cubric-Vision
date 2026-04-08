@@ -1,6 +1,6 @@
 /**
  * InputController.js
- * Manages event listeners and coordinates user interaction.
+ * Manages event listeners and coordinates user interaction for MpiCanvas.
  */
 
 import { CropManager } from './CropManager.js';
@@ -39,7 +39,7 @@ export class InputController {
         this.startPanX = 0;
         this.startPanY = 0;
         this.isSpacePressed = false;
-        
+
         this.currentMouseX = undefined;
         this.currentMouseY = undefined;
 
@@ -174,7 +174,7 @@ export class InputController {
         // KeyDown: Space and Hotkeys
         this._boundHandlers.keydown = (e) => {
             const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-            
+
             if (e.code === 'Space' && !this.isSpacePressed) {
                 if (this.container.offsetParent === null || isInput) return;
                 e.preventDefault();

@@ -1,7 +1,7 @@
 /**
  * MpiCompareOverlay — Side-by-side image comparison overlay (Compound)
  *
- * Full #tool-container takeover that renders two images on an InteractiveCanvas
+ * Full #tool-container takeover that renders two images on an MpiCanvas
  * in comparison mode. The vertical slider reveals the second image (imgAfter).
  *
  * Uses MpiOverlay as its base — inherits the Stash Pattern, OverlayManager
@@ -23,8 +23,8 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay }       from '../../Primitives/MpiOverlay/MpiOverlay.js';
-import { InteractiveCanvas } from '../../../components/interactiveCanvas.js';
-import { qs }                from '../../../utils/dom.js';
+import { MpiCanvas }        from '../../Primitives/MpiCanvas/MpiCanvas.js';
+import { qs }               from '../../../utils/dom.js';
 
 /** Max chars shown in a label before truncation */
 const LABEL_MAX = 28;
@@ -77,7 +77,7 @@ export const MpiCompareOverlay = ComponentFactory.create({
 
         function _ensureCanvas() {
             if (_canvas) return;
-            _canvas = new InteractiveCanvas(canvasWrap);
+            _canvas = MpiCanvas.mount(canvasWrap);
         }
 
         /**
@@ -102,8 +102,8 @@ export const MpiCompareOverlay = ComponentFactory.create({
             overlay.el.show();
 
             try {
-                await _canvas.loadImage(urlA);
-                await _canvas.loadComparisonImage(urlB);
+                await _canvas.el.loadImage(urlA);
+                await _canvas.el.loadComparisonImage(urlB);
             } catch (err) {
                 console.error('[MpiCompareOverlay] Failed to load images:', err);
             }
@@ -115,7 +115,7 @@ export const MpiCompareOverlay = ComponentFactory.create({
         const _origHide = el.hide;
         el.hide = () => {
             if (_canvas) {
-                _canvas.destroy();
+                _canvas.el.destroy();
                 _canvas = null;
             }
             _origHide();
@@ -124,7 +124,7 @@ export const MpiCompareOverlay = ComponentFactory.create({
         // Safety: MutationObserver in case overlay is removed externally
         const _obs = new MutationObserver(() => {
             if (!document.contains(el) && _canvas) {
-                _canvas.destroy();
+                _canvas.el.destroy();
                 _canvas = null;
                 _obs.disconnect();
             }

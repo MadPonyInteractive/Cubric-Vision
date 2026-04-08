@@ -5,7 +5,7 @@
  *
  * Layout:
  *   Left toolbar  — compare tool (+ crop/mask in future sessions)
- *   Centre        — InteractiveCanvas viewer (pan/zoom, mask/compare modes)
+ *   Centre        — MpiCanvas viewer (pan/zoom, mask/compare modes)
  *   Right panel   — scrollable history stack with always-visible checkboxes
  *   Bottom        — MpiPromptBox (floating, same style as gallery)
  *
@@ -23,7 +23,7 @@ import { MpiPromptBox }      from '../../components/Compounds/MpiPromptBox/MpiPr
 import { MpiDropdown }       from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiSpinner }        from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiRatioSelector }  from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { InteractiveCanvas } from '../../components/interactiveCanvas.js';
+import { MpiCanvas } from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
 import { getModelsByType }   from '../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS }     from '../../utils/ratios.js';
@@ -98,7 +98,7 @@ export function mount(container, params = {}) {
 
     container.append(header, leftBar, centre, rightPanel, bottom, cropBar);
 
-    // ── InteractiveCanvas viewer ───────────────────────────────────────────────
+    // ── MpiCanvas viewer ──────────────────────────────────────────────────────
 
     const canvasWrap    = ce('div', { className: 'gh-canvas-wrap' });
     const spinnerWrap   = ce('div', { className: 'gh-canvas-spinner' });
@@ -106,7 +106,25 @@ export function mount(container, params = {}) {
     centre.appendChild(canvasWrap);
     centre.appendChild(spinnerWrap);
 
-    const _canvas = new InteractiveCanvas(canvasWrap);
+    const _canvasInst = MpiCanvas.mount(canvasWrap);
+    const _canvas = _canvasInst.el;
+
+    // Mutual exclusion: when the canvas mode changes from any source
+    // (toolbar button OR compare checkbox selection), keep workspace state in sync.
+    _canvasInst.on('modechange', ({ mode }) => {
+        // Sync crop toolbar state
+        if (mode !== 'crop' && _isCropMode) {
+            _isCropMode = false;
+            bottom.classList.remove('gh-workspace__bottom--hidden');
+            cropBar.classList.remove('gh-crop-bar--visible');
+            cropBtn.el.setActive(false);
+        }
+        // Sync compare checkbox state
+        if (mode !== 'compare' && _compareSet.size > 0) {
+            _compareSet.clear();
+            _applyCardStates();
+        }
+    });
 
     function _setGeneratingSpinner(on) {
         spinnerWrap.classList.toggle('gh-canvas-spinner--visible', on);

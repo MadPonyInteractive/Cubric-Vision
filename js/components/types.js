@@ -11,6 +11,30 @@
 'use strict';
 
 /**
+ * @typedef {Object} MpiCanvasProps (Primitive — js/components/Primitives/MpiCanvas)
+ * @property {(size: number) => void} [onBrushSizeChange] - Called when brush size changes via wheel in mask mode
+ * @property {(type: string) => void} [onBrushTypeChange] - Called when brush type changes via hotkey (b/e)
+ *
+ * Active modes (canvas.el.activeMode): 'none' | 'mask' | 'crop' | 'compare'
+ * Setting any mode automatically deactivates all others (mutual exclusion).
+ *
+ * Instance methods (on instance.el):
+ *   loadImage(url)            — load primary image; resets mode to 'none'
+ *   loadComparisonImage(url)  — load secondary; sets mode to 'compare'
+ *   clearImage()              — clear canvas; resets mode to 'none'
+ *   resetView()               — fit image to container
+ *   setGrid(h, v)             — draw overlay grid lines
+ *   setMaskingMode(bool)      — shorthand for activeMode = 'mask'/'none'
+ *   setBrushSize(size), setBrushType(type), flipMaskColor(),
+ *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
+ *   setCropRatio(ratio), getCropRect()
+ *   destroy()                 — remove canvas + detach all window listeners
+ *
+ * Emits:
+ *   'modechange' { mode: string } — fired whenever activeMode changes
+ */
+
+/**
  * @typedef {Object} MpiModalProps (Primitive — js/components/Primitives/MpiModal)
  * @property {string}   [width='min(480px, 90vw)'] - CSS width of the centred wrapper.
  * @property {boolean}  [backdropClose=true]        - Whether clicking the backdrop calls hide().

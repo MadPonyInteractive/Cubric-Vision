@@ -1,6 +1,6 @@
 /**
  * ViewManager.js
- * Manages viewport state (scale, offsets) and 'contain' logic for InteractiveCanvas.
+ * Manages viewport state (scale, offsets) and 'contain' logic for MpiCanvas.
  */
 export class ViewManager {
     constructor() {
@@ -14,8 +14,8 @@ export class ViewManager {
 
     /**
      * Resets the view to 'contain' the image within the container.
-     * @param {HTMLElement} container 
-     * @param {HTMLImageElement} img 
+     * @param {HTMLElement} container
+     * @param {HTMLImageElement} img
      * @returns {Promise<void>}
      */
     async reset(container, img) {
@@ -34,10 +34,10 @@ export class ViewManager {
 
                 const iw = img.width;
                 const ih = img.height;
-                
+
                 this.scale = Math.min(cw / iw, ch / ih);
                 this.minScale = this.scale;
-                
+
                 this.offsetX = (cw - iw * this.scale) / 2;
                 this.offsetY = (ch - ih * this.scale) / 2;
                 this.isManagedView = true;
@@ -50,10 +50,10 @@ export class ViewManager {
 
     /**
      * Adjusts offsets during container resize to maintain visual center.
-     * @param {number} oldW 
-     * @param {number} oldH 
-     * @param {number} newW 
-     * @param {number} newH 
+     * @param {number} oldW
+     * @param {number} oldH
+     * @param {number} newW
+     * @param {number} newH
      */
     handleResize(oldW, oldH, newW, newH) {
         if (oldW > 0 && oldH > 0) {
@@ -64,10 +64,10 @@ export class ViewManager {
 
     /**
      * Returns the current transformation state, potentially calculating auto-center.
-     * @param {number} canvasW 
-     * @param {number} canvasH 
-     * @param {number} imgW 
-     * @param {number} imgH 
+     * @param {number} canvasW
+     * @param {number} canvasH
+     * @param {number} imgW
+     * @param {number} imgH
      * @returns {{scale: number, offsetX: number, offsetY: number}}
      */
     getViewState(canvasW, canvasH, imgW, imgH) {

@@ -3,7 +3,7 @@
  * Manages crop-rect state, ratio locking, handle hit-testing, and draw logic.
  *
  * Coordinates are always in image-space pixels unless noted.
- * The host InteractiveCanvas calls draw() and passes the 2D context
+ * The host MpiCanvas calls draw() and passes the 2D context
  * (already translated/scaled into image-space).
  *
  * Handles:
@@ -239,7 +239,7 @@ export class CropManager {
 
     /**
      * Draws the crop overlay.
-     * Called inside interactiveCanvas.draw() AFTER ctx.save/translate/scale,
+     * Called inside MpiCanvas draw() AFTER ctx.save/translate/scale,
      * so all coordinates are in image-space. Scale is passed for handle sizing.
      *
      * @param {CanvasRenderingContext2D} ctx - Already transformed to image-space
