@@ -18,12 +18,13 @@ import { state }             from '../../state.js';
 import { Events }            from '../../events.js';
 import { navigate, PAGE_GALLERY } from '../../router.js';
 import { ce }                from '../../utils/dom.js';
-import { MpiButton }         from '../../components/Primitives/MpiButton/MpiButton.js';
 import { MpiPromptBox }      from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDropdown }       from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiSpinner }        from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiRatioSelector }  from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiCanvas } from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
+import { MpiCanvas }          from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
+import { MpiHistoryTools }    from '../../components/Compounds/MpiHistoryTools/MpiHistoryTools.js';
+import { MpiToolActionBar }   from '../../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { getModelsByType }   from '../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS }     from '../../utils/ratios.js';
@@ -106,25 +107,13 @@ export function mount(container, params = {}) {
     centre.appendChild(canvasWrap);
     centre.appendChild(spinnerWrap);
 
-    const _canvasInst = MpiCanvas.mount(canvasWrap);
-    const _canvas = _canvasInst.el;
-
-    // Mutual exclusion: when the canvas mode changes from any source
-    // (toolbar button OR compare checkbox selection), keep workspace state in sync.
-    _canvasInst.on('modechange', ({ mode }) => {
-        // Sync crop toolbar state
-        if (mode !== 'crop' && _isCropMode) {
-            _isCropMode = false;
-            bottom.classList.remove('gh-workspace__bottom--hidden');
-            cropBar.classList.remove('gh-crop-bar--visible');
-            cropBtn.el.setActive(false);
-        }
-        // Sync compare checkbox state
-        if (mode !== 'compare' && _compareSet.size > 0) {
-            _compareSet.clear();
-            _applyCardStates();
-        }
+    const _canvasInst = MpiCanvas.mount(canvasWrap, {
+        onBrushTypeChange: (type) => {
+            // Sync brush/eraser toggle buttons when B or E hotkey is used
+            maskBar?.el.setActive(type === 'eraser' ? 'eraser' : 'brush');
+        },
     });
+    const _canvas = _canvasInst.el;
 
     function _setGeneratingSpinner(on) {
         spinnerWrap.classList.toggle('gh-canvas-spinner--visible', on);
@@ -132,8 +121,7 @@ export function mount(container, params = {}) {
 
     async function _showEntry(item) {
         if (!item?.filePath) return;
-        // Exit compare mode before showing a single entry
-        _canvas.isComparisonMode = false;
+        // loadImage() resets activeMode to 'none' internally
         try {
             await _canvas.loadImage(_resolveUrl(item.filePath));
         } catch (err) {
@@ -147,8 +135,8 @@ export function mount(container, params = {}) {
         if (!itemA?.filePath || !itemB?.filePath) return;
         try {
             await _canvas.loadImage(_resolveUrl(itemA.filePath));
+            // loadComparisonImage() sets activeMode to 'compare' internally
             await _canvas.loadComparisonImage(_resolveUrl(itemB.filePath));
-            _canvas.isComparisonMode = true;
         } catch (err) {
             console.warn('[groupHistory] Failed to load compare images:', err);
         }
@@ -218,9 +206,12 @@ export function mount(container, params = {}) {
 
     function _selectEntry(idx) {
         _selectedIdx = idx;
-        // Selecting a card exits compare mode and crop mode
+        // Selecting a card exits all active tool modes and clears the mask
         _compareSet.clear();
         _exitCropMode();
+        _canvas.clearMask();
+        _hasMask = false;
+        _exitMaskMode();
         _applyCardStates();
         _showEntry(_group.history[idx]);
 
@@ -254,66 +245,127 @@ export function mount(container, params = {}) {
 
     // ── Left toolbar ───────────────────────────────────────────────────────────
 
+    const historyTools = MpiHistoryTools.mount(leftBar, {
+        tools: [
+            { mode: 'crop', icon: 'crop',   info: 'Crop image to social media ratio' },
+            { mode: 'mask', icon: 'pencil', info: 'Paint a mask for inpainting'      },
+        ],
+    });
+
     // ── Crop state ─────────────────────────────────────────────────────────────
-    let _isCropMode    = false;
-    let _activeCropRatio = SOCIAL_RATIOS[0].ratio; // default: 4:5
+    let _isCropMode      = false;
+    let _activeCropRatio = SOCIAL_RATIOS[0].ratio;
 
     function _enterCropMode() {
         _isCropMode = true;
-        _canvas.isCroppingMode = true;
+        _canvas.activeMode = 'crop';
         _canvas.setCropRatio(_activeCropRatio);
         bottom.classList.add('gh-workspace__bottom--hidden');
-        cropBar.classList.add('gh-crop-bar--visible');
-        cropBtn.el.setActive(true);
+        cropActionBar.el.show();
     }
 
     function _exitCropMode() {
         _isCropMode = false;
-        _canvas.isCroppingMode = false;
+        _canvas.activeMode = 'none';
         bottom.classList.remove('gh-workspace__bottom--hidden');
-        cropBar.classList.remove('gh-crop-bar--visible');
-        cropBtn.el.setActive(false);
+        cropActionBar.el.hide();
     }
 
-    // ── Left toolbar — Crop toggle only ────────────────────────────────────────
-    const cropBtnSlot = ce('div');
-    leftBar.append(cropBtnSlot);
+    // ── Mask state ─────────────────────────────────────────────────────────────
+    let _isMaskMode  = false;
+    let _hasMask     = false; // true once user has painted anything
 
-    const cropBtn = MpiButton.mount(cropBtnSlot, {
-        icon: 'crop', size: 'sm', variant: 'ghost',
-        info: 'Crop image to social media ratio', toggleable: true,
+    function _enterMaskMode() {
+        _isMaskMode = true;
+        _canvas.activeMode = 'mask';
+        bottom.classList.add('gh-workspace__bottom--hidden');
+        maskActionBar.el.show();
+        maskActionBar.el.setActive('brush');
+        _refreshOpOptions();
+    }
+
+    function _exitMaskMode() {
+        _isMaskMode = false;
+        _canvas.activeMode = 'none';
+        bottom.classList.remove('gh-workspace__bottom--hidden');
+        maskActionBar.el.hide();
+    }
+
+    historyTools.on('activate',   ({ mode }) => {
+        if (mode === 'crop') _enterCropMode();
+        if (mode === 'mask') _enterMaskMode();
     });
-    cropBtn.on('toggle', ({ active }) => {
-        if (active) _enterCropMode();
-        else _exitCropMode();
+    historyTools.on('deactivate', ({ mode }) => {
+        if (mode === 'crop') _exitCropMode();
+        if (mode === 'mask') _exitMaskMode();
     });
 
-    // ── Crop bar — Ratio Selector + Confirm + Cancel ────────────────────────────
-    const ratioSelSlot = ce('div');
-    const confirmSlot  = ce('div');
-    const cancelSlot   = ce('div');
-    cropBar.append(ratioSelSlot, confirmSlot, cancelSlot);
+    // Mutual exclusion: when the canvas mode changes from any source
+    // (MpiHistoryTools button OR compare checkbox selection), sync all UI.
+    _canvasInst.on('modechange', ({ mode }) => {
+        historyTools.el.syncMode(mode);
 
-    const ratioSel = MpiRatioSelector.mount(ratioSelSlot, {
+        if (mode !== 'crop' && _isCropMode) {
+            _isCropMode = false;
+            bottom.classList.remove('gh-workspace__bottom--hidden');
+            cropActionBar.el.hide();
+        }
+
+        if (mode !== 'mask' && _isMaskMode) {
+            _isMaskMode = false;
+            bottom.classList.remove('gh-workspace__bottom--hidden');
+            maskActionBar.el.hide();
+        }
+
+        if (mode !== 'compare' && _compareSet.size > 0) {
+            _compareSet.clear();
+            _applyCardStates();
+        }
+    });
+
+    // ── Crop action bar ────────────────────────────────────────────────────────
+
+    const ratioSel = MpiRatioSelector.mount(ce('div'), {
         modelType: 'social',
-        value: SOCIAL_RATIOS[0].label,
+        value:     SOCIAL_RATIOS[0].label,
     });
     ratioSel.on('change', ({ ratio }) => {
         _activeCropRatio = ratio;
         _canvas.setCropRatio(ratio);
     });
 
-    const cropConfirmBtn = MpiButton.mount(confirmSlot, {
-        icon: 'check', label: 'Apply Crop', variant: 'primary', size: 'sm',
-        info: 'Save crop as a new history entry',
+    const cropActionBar = MpiToolActionBar.mount(cropBar, {
+        leftSlot: ratioSel,
+        actions: [
+            { key: 'apply',  icon: 'check', label: 'Apply',  variant: 'primary', info: 'Save crop as a new history entry' },
+            { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost',   info: 'Cancel crop' },
+        ],
     });
-    const cropCancelBtn = MpiButton.mount(cancelSlot, {
-        icon: 'close', label: 'Cancel', variant: 'ghost', size: 'sm',
-        info: 'Cancel crop',
+    cropActionBar.on('action', ({ key }) => {
+        if (key === 'apply')  _runCrop();
+        if (key === 'cancel') _exitCropMode();
     });
 
-    cropConfirmBtn.on('click', () => _runCrop());
-    cropCancelBtn.on('click',  () => _exitCropMode());
+    // ── Mask action bar ────────────────────────────────────────────────────────
+
+    const maskActionBar = MpiToolActionBar.mount(cropBar, {
+        actions: [
+            { key: 'brush',  icon: 'pencil', label: 'Brush',       variant: 'ghost',   toggleable: true, active: true, radioGroup: 'tool', info: 'Paint mask (B)' },
+            { key: 'eraser', icon: 'eraser', label: 'Eraser',      variant: 'ghost',   toggleable: true,              radioGroup: 'tool', info: 'Erase mask (E)' },
+            { key: 'clear',  icon: 'trash',  label: 'Clear',       variant: 'ghost',   info: 'Clear entire mask' },
+            { key: 'invert', icon: 'swap',   label: 'Invert',      variant: 'ghost',   info: 'Invert mask colours' },
+            { key: 'cancel', icon: 'close',  label: 'Cancel',      variant: 'ghost',   info: 'Cancel mask and discard' },
+            { key: 'apply',  icon: 'check',  label: 'Apply Mask',  variant: 'primary', info: 'Confirm mask for generation' },
+        ],
+    });
+    maskActionBar.on('action', ({ key, active }) => {
+        if (key === 'brush')  { _canvas.setBrushType('brush');  }
+        if (key === 'eraser') { _canvas.setBrushType('eraser'); }
+        if (key === 'clear')  { _canvas.clearMask(); _hasMask = false; _refreshOpOptions(); }
+        if (key === 'invert') { _canvas.flipMaskColor(); }
+        if (key === 'cancel') { _canvas.clearMask(); _hasMask = false; _exitMaskMode(); _refreshOpOptions(); }
+        if (key === 'apply')  { _hasMask = true; _exitMaskMode(); _refreshOpOptions(); }
+    });
 
 
     // ── Crop execution ────────────────────────────────────────────────────────
@@ -369,10 +421,27 @@ export function mount(container, params = {}) {
 
     function _opOptions(ctx = _baseCtx) {
         if (!activeModel) return [];
-        return getAvailableCommands(activeModel.mediaType, activeModel, ctx)
+        const maskCtx = { ..._baseCtx, hasMask: _hasMask };
+        return getAvailableCommands(activeModel.mediaType, activeModel, { ...maskCtx, ...ctx })
             // Exclude ops that need no input image — groupHistory always works on an existing entry
             .filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
             .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
+    }
+
+    /** Re-evaluate which operations are available and push to the dropdown. */
+    function _refreshOpOptions() {
+        if (!_opDropdown) return;
+        const opts = _opOptions();
+        // If the current operation just became disabled, switch to first available
+        const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
+        if (!currentStillOk) {
+            const fallback = opts.find(o => !o.disabled);
+            if (fallback) {
+                activeOperation = fallback.value;
+                _promptBox?.el.setOperation(activeOperation);
+            }
+        }
+        _opDropdown.el.setOptions(opts, activeOperation);
     }
 
     // Default to first available operation (not t2i — groupHistory always has an input image)
@@ -404,7 +473,8 @@ export function mount(container, params = {}) {
         });
 
         _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
-            _runGenerate({ operation, positive, negative, mediaItems });
+            const maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null;
+            _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl });
         });
 
         _promptBox.on('cancel', () => {
@@ -429,7 +499,7 @@ export function mount(container, params = {}) {
 
     // ── Generation ─────────────────────────────────────────────────────────────
 
-    function _runGenerate({ operation, positive, negative, mediaItems = [] }) {
+    function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null }) {
         if (!activeModel) return;
 
         StatusBar.progress.start('Generating...');
@@ -447,10 +517,11 @@ export function mount(container, params = {}) {
 
         _activeExec = runCommand({
             operation,
-            modelId:   activeModel.id,
+            modelId:    activeModel.id,
             positive,
             negative,
             mediaItems: resolvedMedia,
+            maskDataUrl,
         });
         const exec = _activeExec;
 
@@ -507,6 +578,11 @@ export function mount(container, params = {}) {
                 prompt:         positive,
                 negativePrompt: negative,
             });
+
+            // Clear mask after a successful generation
+            _canvas.clearMask();
+            _hasMask = false;
+            _refreshOpOptions();
 
             _group = appendToHistory(_group, newItem);
             _selectedIdx = _group.selectedIndex; // appendToHistory selects the new entry

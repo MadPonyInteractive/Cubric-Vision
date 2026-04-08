@@ -31,9 +31,8 @@
     overflow: hidden;
 }
 
-/* InteractiveCanvas appends its own <canvas> element here */
-.mpi-compare-overlay__canvas-wrap canvas {
-    display: block;
+/* MpiCanvas wrapper must fill the slot — the <canvas> pixel size is set by JS */
+.mpi-compare-overlay__canvas-wrap .mpi-canvas {
     width: 100%;
     height: 100%;
 }

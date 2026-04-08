@@ -35,6 +35,52 @@
  */
 
 /**
+ * @typedef {Object} MpiToolActionBarDef
+ * @property {string}  key              - Unique key emitted with 'action' event
+ * @property {string}  icon             - Icon registry key
+ * @property {string}  [label]          - Text label shown below icon
+ * @property {string}  [variant='ghost'] - MpiButton variant
+ * @property {boolean} [toggleable]     - Button commits active state on click
+ * @property {boolean} [active]         - Initial active state
+ * @property {string}  [radioGroup]     - Buttons in the same group are mutually exclusive
+ * @property {string}  [info]           - Tooltip / info bar text
+ */
+
+/**
+ * @typedef {Object} MpiToolActionBarProps (Compound — js/components/Compounds/MpiToolActionBar)
+ * @property {MpiToolActionBarDef[]} actions  - Button definitions
+ * @property {Object}               [leftSlot] - A mounted component instance to embed on the left
+ *
+ * Instance methods (on instance.el):
+ *   show()          — make the bar visible (slide-up animation)
+ *   hide()          — hide the bar
+ *   setActive(key)  — activate a toggleable button and deactivate its radio siblings (no event emitted)
+ *
+ * Emits:
+ *   'action' { key: string, active: boolean } — any button clicked
+ */
+
+/**
+ * @typedef {Object} MpiHistoryToolsDef
+ * @property {string} mode - Canvas mode key ('crop'|'mask'|...)
+ * @property {string} icon - Icon registry key
+ * @property {string} [info] - Info bar / tooltip text
+ */
+
+/**
+ * @typedef {Object} MpiHistoryToolsProps (Compound — js/components/Compounds/MpiHistoryTools)
+ * @property {MpiHistoryToolsDef[]} tools - Ordered list of tool definitions to render
+ *
+ * Instance methods (on instance.el):
+ *   syncMode(mode) — reflect an external modechange onto button states without emitting events.
+ *                    Pass 'none' to deactivate all buttons.
+ *
+ * Emits:
+ *   'activate'   { mode: string } — user pressed an inactive tool button
+ *   'deactivate' { mode: string } — user pressed the currently-active tool button (toggle off)
+ */
+
+/**
  * @typedef {Object} MpiModalProps (Primitive — js/components/Primitives/MpiModal)
  * @property {string}   [width='min(480px, 90vw)'] - CSS width of the centred wrapper.
  * @property {boolean}  [backdropClose=true]        - Whether clicking the backdrop calls hide().

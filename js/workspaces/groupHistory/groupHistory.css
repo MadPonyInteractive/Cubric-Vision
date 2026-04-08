@@ -88,31 +88,10 @@
     pointer-events: none;
 }
 
-/* ── Crop confirm/cancel bar ──────────────────────────────────────────────── */
-
+/* ── Tool action bar mount point — MpiToolActionBar handles its own positioning ── */
 .gh-crop-bar {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--surface-glass);
-    border: 1px solid var(--neon-electric, #00cfff);
-    border-radius: var(--radius-xl);
-    z-index: 10;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
-}
-
-.gh-crop-bar--visible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
+    /* Empty container used as mount target for MpiToolActionBar instances.
+       MpiToolActionBar uses position:fixed so this needs no layout of its own. */
 }
 
 

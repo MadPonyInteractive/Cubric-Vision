@@ -379,7 +379,9 @@ export const MpiCanvas = ComponentFactory.create({
     css: [],
 
     // A single wrapper div; _CanvasCore appends the <canvas> element inside it.
-    template: () => `<div class="mpi-canvas"></div>`,
+    // width/height:100% ensures the wrapper is sized by its parent, not by its child
+    // canvas element — prevents a ResizeObserver feedback loop.
+    template: () => `<div class="mpi-canvas" style="width:100%;height:100%;display:block;overflow:hidden;"></div>`,
 
     setup: (el, props, emit) => {
         const core = new _CanvasCore(el, props, (mode) => emit('modechange', { mode }));
