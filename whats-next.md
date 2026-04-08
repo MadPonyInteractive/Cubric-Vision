@@ -1,164 +1,138 @@
 ```xml
-<original_task>
-Fix two mask-related bugs in groupHistory.js:
-1. Mask not being sent to ComfyUI correctly — the painted mask was not reaching the workflow.
-2. Mask visual feedback disappearing when a different history entry is selected.
-</original_task>
-
 <work_completed>
 
-## Bug 1: Mask not sent to ComfyUI
+## modelRegistry.js — Runtime Installed Check
 
-### Root cause chain (multi-step investigation)
+### Approach: Option D (client sends dep data to server)
 
-**Step 1 — Missing param in commandExecutor.js**
-`_buildParams()` in `js/services/commandExecutor.js` was building the params map for
-ComfyUI injection but never included the mask. `maskDataUrl` was passed to `runCommand()`
-from groupHistory.js but silently dropped.
+`modelRegistry.js` is the single source of truth. The server cannot import ESM,
+so the client posts pre-resolved dep filenames to the server; the server only
+does `fs.pathExists` checks and returns results.
 
-Fix: Added to `_buildParams()` (line ~88):
-```js
-if (payload.maskDataUrl) params['Input_Mask'] = payload.maskDataUrl;
-```
-`comfyController.runWorkflow` already handled `Input_Mask` in its `assetMap` — uploads as
-`mpi_input_mask.png` and injects filename into the node titled `Input_Mask`. One-line fix.
+### Server — `POST /comfy/models/check` (routes/comfy.js)
 
-**Step 2 — Mask canvas GPU corruption (Chromium premultiplied alpha bug)**
-After fixing the param, the mask was uploading but arriving as a uniform grey/white image
-with no visible strokes. Debug logging revealed:
-- `paint()` correctly writes `[255,255,255,255]` to the mask canvas immediately after each stroke
-- But `getURL()` reads those same pixels back as `[255,255,255,26]` — alpha dropped from 255 to ~26
+Receives: `{ models: [{ id, deps: [{ type, filename }] }] }`
+- For `custom_nodes` deps: checks `engine/.../custom_nodes/<filename>`
+- For model file deps: checks `engine/.../models/<filename>` (or custom root if set)
+- Custom root: uses `getCustomRoot()` from shared.js; tries direct path then
+  recursive basename search under the relevant sub-dir
+- Returns: `{ success: true, results: { [modelId]: boolean } }`
+- Private `_findFile(dir, filename)` helper added for custom root fuzzy lookup
 
-Cause: Chromium's hardware-accelerated canvas GPU backend corrupts offscreen canvas pixel
-data when that canvas is used as a `drawImage()` source on another canvas. In `_CanvasCore.draw()`,
-`this.ctx.drawImage(this.mask.maskCanvas, 0, 0)` renders the mask canvas onto the display canvas
-at `globalAlpha = 0.7`. Chromium's GPU compositor then wrote the composited alpha back into the
-SOURCE canvas (`maskCanvas`), corrupting subsequent `getImageData()` reads.
+### Client — `syncModelInstalled()` (js/data/modelRegistry.js)
 
-Fix: `js/components/Primitives/MpiCanvas/managers/MaskManager.js` — constructor line:
-```js
-// Before:
-this.maskCtx = this.maskCanvas.getContext('2d');
-// After:
-this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
-```
-`willReadFrequently: true` forces the context into software rendering mode, bypassing the
-GPU entirely and preventing the readback corruption.
+- Builds payload from `MODELS` + `DEPS` (resolves dep ids to `{type, filename}`)
+- POSTs to `/comfy/models/check`
+- Patches `model.installed` in-place on each MODELS entry
+- Called at startup from `shell.js` `_initDataRegistries()`
+- Fixed hardcoded `installed: true` → `installed: false` on `sdxl-lustify`
 
-**Step 3 — `getURL()` source-in composite unreliable**
-The original `getURL(bg, fg)` used `globalCompositeOperation = 'source-in'` to recolor the
-mask canvas pixels. This proved unreliable in practice (produced grey instead of clean black/white),
-likely due to interaction with the GPU corruption above or browser-specific composite behavior.
+### Cleanup — modelManager.js deleted
 
-Fix: Replaced the entire `getURL()` method with a direct pixel-mapping approach using
-`getImageData` / `putImageData`. For each pixel: if alpha > 0 → write fg color at full opacity;
-else → write bg color at full opacity. No compositing, no ambiguity.
+`js/managers/modelManager.js` was an orphaned LLM scaffold:
+- Hit `/llm/models`, stored results in `state.allModels`
+- Exported `refreshModelRegistry`, `getFirstAvailableModel`, `getRequiredModelsForTool`,
+  `downloadModel`, `deleteModel` — none consumed outside the file itself
+- `state.allModels` was only written/read inside modelManager.js
+- Deleted the file, removed `allModels` from `state.js`, removed import + call from `shell.js`
 
-**Step 4 — Mask color convention (inverted)**
-After the above fixes the mask was uploading with visible strokes, but ComfyUI was detailing
-the WRONG area (the area the user did NOT paint). Confirmed by inspecting the uploaded mask PNG.
+### What `installed` does NOT do yet
 
-The ComfyUI workflow (`sdxl_detailer.json` node `1555`, `Input_Mask` LoadImage) feeds into
-`MaskDetailerPipe` which processes **white areas**. Our initial call `getMaskDataURL('black', 'white')`
-produced white where the user painted — should have worked. Then we tried `('white', 'black')` —
-also wrong in a different way. Finally confirmed directly in the ComfyUI workflow UI: the mask
-needs **white = painted (processed area), black = background**. The user paints white strokes on
-the mask canvas, so `getMaskDataURL('black', 'white')` is correct.
+`model.installed` is now set correctly at runtime, but nothing reads it yet.
+Natural next consumers:
+- `getModelsByType()` callers in gallery.js and groupHistory.js — could filter
+  to installed-only so the model dropdown only shows ready models
+- MpiPromptBox — disable run button if `activeModel.installed === false`
+- Gallery card — surface a warning if a group's modelId is no longer installed
+  (model was uninstalled after group was created)
 
-Current call in groupHistory.js line ~557:
-```js
-// ComfyUI convention: white = masked (processed), black = background
-const maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null;
-```
-
-## Bug 2: Mask visual disappears on history entry switch
-
-`_selectEntry()` previously called `_canvas.clearMask()` before loading the new entry,
-discarding any painted mask with no way to recover it.
-
-Fix: Added `_maskStore` (a `Map<index, dataURL>`) to `groupHistory.js`:
-- Before switching away: if `_hasMask`, save current mask as data URL keyed by `_selectedIdx`
-- After loading new entry's image: restore saved mask for the new index if one exists
-- On delete: remove the deleted index's entry from `_maskStore`
-- On generation complete: `_maskStore.clear()` (all masks stale after new entry added)
-
-Key detail: the restore happens in a `.then()` after `_showEntry()` because `loadImage()` calls
-`mask.init(w, h)` which clears the canvas — must restore AFTER the image load completes.
-
-## Files modified
-
-| File | Change |
-|------|--------|
-| `js/services/commandExecutor.js` | Added `Input_Mask` to `_buildParams()` |
-| `js/components/Primitives/MpiCanvas/managers/MaskManager.js` | `willReadFrequently: true` on maskCtx; rewrote `getURL()` to use pixel mapping |
-| `js/workspaces/groupHistory/groupHistory.js` | Added `_maskStore` Map; rewrote `_selectEntry()` to save/restore masks; mask cleared on delete and generation complete |
-| `whats-next.md` | Updated mask convention docs |
-| `MaskManager_OLD.js` | Deleted (was a temp reference copy) |
+No GC / data deletion is planned for uninstalled models — media files remain
+valid and viewable; only further generation is blocked. UI should handle the
+"no installed model" state gracefully rather than deleting user data.
 
 </work_completed>
 
 <work_remaining>
 
-## 1. modelRegistry.js — runtime installed check
+## 1. Model UI — Zero-installed state + install flow
 
-`installed: false` hardcoded in all model definitions. Server needs to check disk and return status.
+`syncModelInstalled()` runs at startup and patches MODELS in-place, but nothing
+reads `model.installed` yet. The full model management story is:
 
----
+### 1a. Zero-installed state (gallery / groupHistory)
+- If no installed models exist, hide the prompt box / model dropdown entirely
+- Show a single clear message: "No models installed. Install a model to get started."
+- Link/button to open the model installer
 
-## 2. groupHistory — video group support
+### 1b. Installed-only model dropdown
+- `getModelsByType()` callers in gallery.js and groupHistory.js should filter
+  to `m.installed === true` so uninstalled models never appear in the dropdown
+- MpiPromptBox: disable Run if `activeModel?.installed === false`
 
-Deferred — no ComfyUI workflow for video yet, and the video player component is being
-refactored into three separate pieces (preview, controls, selection) before this is tackled.
+### 1c. Gallery card — uninstalled model warning
+- If a group's `modelId` refers to a model that is now uninstalled, surface a
+  warning on the card (e.g. badge or icon) so the user knows further generation
+  is unavailable without reinstalling
+
+### 1d. Model installer UI
+- A page/overlay where the user can browse available models (from MODELS in
+  modelRegistry.js) and trigger download/install for uninstalled ones
+- Uses `POST /comfy/model/download` per dependency
+- Shows per-dep progress; marks model installed on completion
+- Calls `syncModelInstalled()` after install completes to refresh flags
+
+## 2. Model Garbage Collection (uninstall)
+
+When a model is uninstalled:
+- Delete its dep files from disk via a new `POST /comfy/models/uninstall` route
+  (mirrors the dep resolution logic in `/comfy/models/check`)
+- Call `syncModelInstalled()` after to update `model.installed` flags
+- Do NOT delete user media files — groups remain intact and browsable
+- UI: disable Run / show warning on affected gallery cards (covered by 1b/1c above)
+- Shared deps (e.g. `lustify-7` used by multiple models): only delete if no other
+  installed model references the same dep filename
+
+## 3. LLM Models — Future
+
+`modelManager.js` was deleted — it was an orphaned LLM scaffold with no live
+consumers. When LLM model support is added it should be built fresh:
+- New route module `routes/llm.js` already exists for the server side
+- Client side: new manager in `js/managers/` following the same Option D pattern
+  (client sends model data, server checks disk)
+- LLM models are a separate registry from ComfyUI models — do not conflate
+
+## 4. groupHistory — video group support
+
+Deferred — no ComfyUI workflow for video yet, and the video player component is
+being refactored into three separate pieces (preview, controls, selection).
 
 - `_showEntry()` calls `_canvas.loadImage()` which fails silently for `.mp4` items
-- Detect `item.type === 'video'` and swap `canvasWrap` (hide) for new video preview component (show)
+- Detect `item.type === 'video'` and swap `canvasWrap` for video preview component
 - Reverse swap for image items
 - `_showCompare` for video groups: skip or handle separately
 
----
+## 5. Deferred / Low priority
 
-## Deferred / Low priority
-
-- `state.js` legacy flat properties (`g_currentGuide`, `g_promptEN`, `g_images`, etc.) — remove when old workspace references confirmed gone
+- `state.js` legacy flat properties (`g_currentGuide`, `g_promptEN`, `g_images`, etc.)
+  — remove when old workspace references confirmed gone
 - `PAGE_WORKSPACE` deprecated alias in `router.js` — remove when confirmed unused
 - `MpiSelectionBar` — not yet in `js/pages/components.js` dev gallery
 
 </work_remaining>
 
-<attempted_approaches>
-
-## `getURL()` source-in composite approach
-Original code used `globalCompositeOperation = 'source-in'` to recolor mask pixels.
-Produced uniform grey output instead of clean black/white mask. Root cause was the GPU
-corruption making the source canvas data unreliable before we found `willReadFrequently`.
-Replaced with direct `getImageData` pixel mapping — reliable regardless of GPU state.
-
-## `_parseColor()` CSS helper in getURL
-Tried parsing `'white'`/`'black'` CSS strings via a 1×1 canvas fill + readback to get RGB
-components. This was overly complex and potentially affected by the same GPU readback issues.
-Replaced with a simple hardcoded check: `bg === 'white'` → `[255,255,255]`, else `[0,0,0]`.
-
-## Mask color convention iterations
-Went through three iterations on the bg/fg arguments:
-1. `('black', 'white')` — initial guess, wrong (white on black, ComfyUI processed wrong area)
-2. `('white', 'black')` — tried after researching ComfyUI conventions, still wrong
-3. Back to `('black', 'white')` — confirmed correct by directly testing in the ComfyUI workflow UI
-
-The confusion: the actual bug masking (pun intended) the convention issue was the GPU corruption
-making the mask all-uniform regardless of arguments. Once that was fixed, convention could be
-tested empirically.
-
-## Debug logging added and removed
-Several rounds of debug logs were added to `MaskManager.js` (`paint()`, `getURL()`) and removed
-once the root cause was found. No debug logs remain in production code.
-
-</attempted_approaches>
-
 <critical_context>
 
-## Chromium GPU canvas corruption — willReadFrequently
+## modelRegistry.js — Architecture Rules
 
-**This is the most important discovery of this session.**
+- `js/data/modelRegistry.js` is the **single source of truth** for all ComfyUI models.
+- `dev_configs/comfy_workflows.json` is **legacy** — do not use it as reference for
+  model/dependency data.
+- The server (CJS) cannot import modelRegistry.js (ESM). Use Option D pattern:
+  client posts pre-resolved dep data, server only checks disk.
+- `syncModelInstalled()` must be called before any UI that reads `model.installed`.
+  Currently called non-blocking at startup in `shell.js _initDataRegistries()`.
+
+## Chromium GPU canvas corruption — willReadFrequently
 
 When an offscreen canvas (not in the DOM) is used as a `drawImage()` source on another
 hardware-accelerated canvas, Chromium's GPU compositor can corrupt the source canvas's
@@ -186,20 +160,6 @@ Call: `canvas.getMaskDataURL('black', 'white')` → black background, white stro
 The `Input_Mask` node in `sdxl_detailer.json` is node `1555` (LoadImage, titled `Input_Mask`).
 Its output port `[1]` (MASK) feeds into the `auto mask` if/else (node `1594`), which routes to
 `MaskDetailerPipe` when `Auto_Mask` boolean is false (default).
-
-## Mask canvas vs display canvas — separate lifetimes
-
-`MaskManager.maskCanvas` is an offscreen canvas sized to the image dimensions (e.g. 1742×980).
-The display canvas (`_CanvasCore.canvas`) is sized to the container (viewport size).
-They are completely separate. `draw()` reads FROM maskCanvas (via `drawImage`) onto the display
-canvas — it never writes back to maskCanvas. The GPU corruption was a Chromium-specific exception
-to this rule.
-
-## _maskStore save/restore timing
-
-`_selectEntry()` saves the mask BEFORE calling `_showEntry()`. Restore happens in `.then()`
-AFTER `_showEntry()` resolves, because `loadImage()` → `mask.init(w, h)` clears the canvas.
-Order must be preserved: save → load image → restore.
 
 ## ComfyUI mapping rules
 
@@ -343,6 +303,8 @@ const selectionBar = MpiSelectionBar.mount(_selBarSlot, { count: 0 });
 - Event bus: `js/events.js`
 - App state: `js/state.js`
 - Router: `js/router.js`
+- Model registry (source of truth): `js/data/modelRegistry.js`
+- Model installed check route: `routes/comfy.js` → `POST /comfy/models/check`
 
 ## #tool-container class — MUST NOT be wiped
 
@@ -376,20 +338,15 @@ calls `_canvas.destroy()` and `Events.off('workspace:set-operation', _onSetOp)`.
 | groupHistory — selection mode + MpiSelectionBar | Complete |
 | groupHistory — mask sent to ComfyUI correctly | Complete |
 | groupHistory — mask visual persists across entry switches | Complete |
-| groupHistory — `_hasMask` tracks first paint stroke | Scrapped — current behaviour (Apply as trigger) is correct |
-| gallery.js onComplete — use _persistGroups() | **Complete (this session)** |
-| gallery.js — download handler | **Complete (this session) — downloads selected item per group** |
-| MpiGroupCard selected state — footer highlight | **Complete (this session)** |
-| MpiGroupCard display name (card label shows selected entry operation) | **Complete (this session)** |
-| groupHistory — history entry label shows sequenced filename | **Complete (this session)** |
-| groupHistory — video group support | Deferred — no workflow yet; video player component being refactored |
-| modelRegistry.js — runtime installed check | Not started |
-
-## What's finalized
-
-All items from the previous session remain solid. This session closed out the remaining
-gallery/groupHistory polish: download handler, persist cleanup, card selection styling,
-and history entry label consistency (crop_001, upscale_001, etc.).
+| gallery.js onComplete — use _persistGroups() | Complete |
+| gallery.js — download handler | Complete |
+| MpiGroupCard selected state — footer highlight | Complete |
+| MpiGroupCard display name (card label shows selected entry operation) | Complete |
+| groupHistory — history entry label shows sequenced filename | Complete |
+| modelRegistry.js — runtime installed check | **Complete (this session)** |
+| modelManager.js — deleted (orphaned LLM scaffold) | **Complete (this session)** |
+| model.installed — wired into UI (gallery, groupHistory, MpiPromptBox) | Not started |
+| groupHistory — video group support | Deferred — no workflow yet |
 
 ## Open questions
 

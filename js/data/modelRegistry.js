@@ -159,9 +159,10 @@ export const MODELS = [
         id: 'sdxl-lustify',
         name: 'SDXL Lustify V7',
         mediaType: 'image',
-        installed: true,// TODO: check if this flag is wired
+        installed: false,
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
+        description: 'A NSFW SDXL-based workflow using the Lustify V7 for fast generations and the official SDXL Refiner for higher quality images.',
         workflows: {
             t2i: 'sdxl_t2i_nsfw.json',
             upscale: 'sdxl_upscaler.json',
@@ -209,6 +210,48 @@ export const UNIVERSAL_WORKFLOWS = {
     interpolate: 'video_interpolate.json',
     videoUpscale: 'video_upscale.json',
 };
+
+// ── Runtime Installed Sync ────────────────────────────────────────────────────
+
+/**
+ * Fetches disk-presence status for all models from the server and patches
+ * the `installed` flag on each entry in MODELS in-place.
+ *
+ * Sends pre-resolved dep filenames so the server only needs to stat paths —
+ * modelRegistry.js remains the single source of truth for all model data.
+ *
+ * @returns {Promise<boolean>} true if the sync succeeded
+ */
+export async function syncModelInstalled() {
+    try {
+        const payload = MODELS.map(model => ({
+            id: model.id,
+            deps: model.dependencies.map(depId => {
+                const dep = DEPS[depId];
+                return dep ? { type: dep.type, filename: dep.filename } : null;
+            }).filter(Boolean),
+        }));
+
+        const res = await fetch('/comfy/models/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ models: payload }),
+        });
+
+        if (!res.ok) return false;
+        const { results } = await res.json();
+
+        for (const model of MODELS) {
+            if (Object.prototype.hasOwnProperty.call(results, model.id)) {
+                model.installed = results[model.id];
+            }
+        }
+        return true;
+    } catch (err) {
+        console.error('[modelRegistry] syncModelInstalled failed:', err);
+        return false;
+    }
+}
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 

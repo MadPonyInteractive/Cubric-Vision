@@ -182,6 +182,86 @@ comfyui:
     }
 });
 
+// ── Model Registry — Runtime Installed Check ─────────────────────────────────
+
+/**
+ * POST /comfy/models/check
+ *
+ * Body: { models: ModelDef[] }  — the full MODELS array from modelRegistry.js,
+ *       each entry having { id, dependencies: string[] } where dependencies are
+ *       dep ids, and { deps: Record<id, { type, filename }> } for resolution.
+ *
+ * Actually simpler: client sends pre-resolved dep filenames per model:
+ *   { models: [{ id, deps: [{ type: 'checkpoint'|'custom_nodes'|..., filename: string }] }] }
+ *
+ * Returns: { results: { [modelId]: boolean } }
+ * A model is installed if every dep exists on disk.
+ */
+router.post('/comfy/models/check', async (req, res) => {
+    const { models } = req.body;
+    if (!Array.isArray(models)) return res.status(400).json({ error: 'models array required' });
+
+    try {
+        const customRoot = await getCustomRoot();
+        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+        const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+        const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+
+        const results = {};
+
+        for (const model of models) {
+            if (!model.id || !Array.isArray(model.deps)) { results[model.id] = false; continue; }
+
+            let allPresent = true;
+            for (const dep of model.deps) {
+                if (!dep.filename) continue;
+                let depPath;
+                if (dep.type === 'custom_nodes') {
+                    depPath = path.join(defaultCustomNodesRoot, dep.filename);
+                } else if (customRoot) {
+                    // Custom root — strip sub-type prefix from filename if present, search flexibly
+                    const baseFilename = path.basename(dep.filename);
+                    const subDir = path.dirname(dep.filename);
+                    const directPath = path.join(customRoot, dep.filename);
+                    if (await fs.pathExists(directPath)) {
+                        depPath = directPath;
+                    } else {
+                        const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
+                        depPath = found || directPath;
+                    }
+                } else {
+                    depPath = path.join(defaultModelsRoot, dep.filename);
+                }
+
+                if (!(await fs.pathExists(depPath))) { allPresent = false; break; }
+            }
+
+            results[model.id] = allPresent;
+        }
+
+        res.json({ success: true, results });
+    } catch (err) {
+        logger.error('comfy', 'models/check failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+async function _findFile(dir, filename) {
+    if (!(await fs.pathExists(dir))) return null;
+    const entries = await fs.readdir(dir);
+    for (const entry of entries) {
+        const full = path.join(dir, entry);
+        const stat = await fs.stat(full);
+        if (stat.isDirectory()) {
+            const found = await _findFile(full, filename);
+            if (found) return found;
+        } else if (entry === filename) {
+            return full;
+        }
+    }
+    return null;
+}
+
 // ── Model / Workflow Management ───────────────────────────────────────────────
 
 router.get('/comfy/list-files', async (req, res) => {

@@ -33,7 +33,6 @@ const _state = {
     generatorPrompt: '',        // Prompt to pre-fill in the Generator tool
     generatorSeed: null,        // Seed to pre-fill in the Generator tool
     pendingImageUrl: null,      // Image URL to inject into the next tool's image input
-    allModels: [],              // Currently available local models and their status
     allComfyWorkflows: [],      // Currently available ComfyUI workflows (SDXL, etc.)
     toolModelIds: {},           // Selected model ID per tool (e.g. {'descriptor': 'qwen3...'})
     currentLoadedModel: null,   // Model currently resident in VRAM
