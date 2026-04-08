@@ -88,6 +88,7 @@ export const Events = new EventBus();
 /**
  * @typedef {Object} MpiEventMap — Canonical event names for MpiAiSuite
  *
+ * 'ui:error'         { title: string, message: string } — show error dialog (shell listens)
  * 'media:updated'    { projectId: string }           — any tool saving to library
  * 'tool:running'     { tool: string, type: string }  — tool started a run
  * 'tool:idle'        { tool: string, type: string }  — tool run finished/cancelled

@@ -115,6 +115,7 @@ async function _bootApp() {
   Events.on('comfy:starting', () => _startingComfy.el.show());
   Events.on('comfy:ready',    () => _startingComfy.el.hide());
   Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
+  Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
   // ComfyUI Auto-start (optional)
   if (localStorage.getItem('mpi_auto_start_comfy') === 'true') {

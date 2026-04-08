@@ -1,7 +1,35 @@
 ```xml
 <work_completed>
 
-## This Session — modelRegistry.js + MpiStartingComfy Wiring
+## This Session — Event Bus Audit + Universal Tool Routing
+
+### Event Bus Audit — P0 + P1 complete
+- `comfyController.js` + `commandExecutor.js`: removed `import { showError }` from shell;
+  both now emit `Events.emit('ui:error', { title, message })`
+- `shell.js`: added `Events.on('ui:error', ...)` listener alongside comfy events
+- `groupHistory.js`: `tool:running` emitted at start of `_runGenerate`;
+  `tool:idle` emitted in both `onComplete` and `onError`;
+  `media:updated` emitted in `_persistGroup` before the fetch
+- `events.js`: `ui:error` added to canonical `MpiEventMap`
+- P2 (StatusBar import in groupHistory) remains — deferred until something
+  subscribes to `tool:running`/`tool:idle` and drives the bar
+
+### Universal Workflows — removed from PromptBox, routed to tools panel
+- **Architecture decision**: ALL `universal: true` commands belong in the tools
+  panel (MpiHistoryTools), not the PromptBox. They are tool actions, not
+  generation operations. Each has its own activation behaviour:
+  - `autoMaskImg` → run workflow → load B&W output as canvas mask layer → exit
+    tool mode with `_hasMask = true` (mask-dependent ops become available)
+  - `interpolate` → run workflow → append new video history entry
+  - `videoUpscale` → run workflow → append new video history entry
+- `commandRegistry.js`: `getAvailableCommands` now excludes `universal: true`;
+  new `getToolCommands(mediaType)` returns only universal commands for a media type
+- `groupHistory.js`: `MpiHistoryTools` tools array is now
+  `[crop, mask, ...getToolCommands('image')]` — registry-driven, not hardcoded;
+  `_universalToolIcons` map provides icon/info per key (add here for new tools);
+  stub `activate` handlers in place for `autoMaskImg`, `interpolate`, `videoUpscale`
+
+## Previous Session — modelRegistry.js + MpiStartingComfy Wiring
 
 ### UNIVERSAL_WORKFLOWS — Promoted to proper registry
 - `UNIVERSAL_WORKFLOWS` promoted from flat `{ key: filename }` strings to
@@ -32,65 +60,11 @@
 
 <work_remaining>
 
-## 🔴 TOP PRIORITY — Event Bus Audit (Agent Debt)
+## 🟡 DEFERRED — Event Bus P2
 
-The `MpiStartingComfy` wiring revealed a systemic failure: previous agent sessions
-implemented cross-layer communication via direct function imports instead of the
-event bus. This creates tight coupling between architecture layers that must never
-know about each other. This must be fixed before adding more features.
-
-### Audit Results
-
-| File | Violation | Severity |
-|---|---|---|
-| `js/services/comfyController.js` | `import { showError } from '../shell.js'` | 🔴 P0 |
-| `js/services/commandExecutor.js` | `import { showError } from '../shell.js'` | 🔴 P0 |
-| `js/workspaces/groupHistory/groupHistory.js` | `import { StatusBar } from '../../shell/statusBar.js'` | 🟡 P2 |
-| `js/workspaces/groupHistory/groupHistory.js` | `tool:running` / `tool:idle` not emitted at lines 584–686 | 🟠 P1 |
-| `js/workspaces/groupHistory/groupHistory.js` | `media:updated` not emitted after `_persistGroup()` at line 700 | 🟠 P1 |
-| `js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.js` | ✅ Clean — uses component `emit()` correctly | — |
-
-### P0 — `showError` must become an event
-
-**Emit (in services — already have Events import):**
-```js
-// comfyController.js (line 43) and commandExecutor.js (line 184):
-Events.emit('ui:error', { title: 'Generation failed', message: err.message });
-```
-
-**Listen (shell.js — add once alongside the comfy event subscriptions):**
-```js
-Events.on('ui:error', ({ title, message }) => showError(title, message));
-```
-
-Then remove `import { showError } from '../shell.js'` from both service files.
-
-### P1 — Dead canonical events must be emitted
-
-`tool:running`, `tool:idle`, and `media:updated` are in the canonical map but
-**never emitted**. These are the wiring points to add:
-
-**In `groupHistory.js _runGenerate()` (around line 584):**
-```js
-Events.emit('tool:running', { tool: 'groupHistory', type: operation });
-```
-
-**In `groupHistory.js exec.onComplete` and `exec.onError` (lines 618, 678):**
-```js
-Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
-```
-
-**In `groupHistory.js _persistGroup()` (line 690) and `gallery.js _persistGroups()`:**
-```js
-Events.emit('media:updated', { projectId: state.currentProject?.id });
-```
-
-### P2 — `groupHistory` StatusBar import
-
-`groupHistory.js` line 33 imports `StatusBar` from `../../shell/statusBar.js`.
-This is less critical (statusBar is a utility, not a component), but ideally
-the status bar should listen to `tool:running` / `tool:idle` and drive itself.
-Defer until P1 is done — the events will unblock this naturally.
+`groupHistory.js` still imports `StatusBar` directly from `../../shell/statusBar.js`.
+Ideally the status bar subscribes to `tool:running` / `tool:idle` and drives itself.
+Unblock naturally once a subscriber exists for those events.
 
 ---
 
@@ -316,7 +290,14 @@ unmounted. groupHistory uses MutationObserver on `document.body` for this.
 | getUniversalWorkflow() — parallel helper to getWorkflowFile() | Complete |
 | commandExecutor — uses getUniversalWorkflow(), not raw UNIVERSAL_WORKFLOWS | Complete |
 | MpiStartingComfy — wired to comfy:starting/ready/error events | Complete |
-| Event bus audit — showError, tool:running, tool:idle, media:updated | **NOT STARTED** |
+| Event bus audit — showError, tool:running, tool:idle, media:updated | Complete |
+| Event bus audit — StatusBar import in groupHistory (P2) | Deferred |
+| Universal workflows removed from PromptBox, routed to tools panel | Complete |
+| getToolCommands(mediaType) — registry-driven tool panel population | Complete |
+| autoMaskImg tool stub wired in MpiHistoryTools | Complete |
+| autoMaskImg — run workflow + load output as canvas mask | Not started |
+| interpolate — run workflow + append video history entry | Not started |
+| videoUpscale — run workflow + append video history entry | Not started |
 | model.installed — wired into UI (gallery, groupHistory, MpiPromptBox) | Not started |
 | Universal workflow installed gating in UI | Not started |
 | groupHistory — video group support | Deferred — no workflow yet |

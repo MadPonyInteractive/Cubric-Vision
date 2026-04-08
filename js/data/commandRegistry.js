@@ -179,7 +179,7 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
     return Object.entries(commands)
         .filter(([, cmd]) => !cmd.stub && cmd.mediaType === mediaType)
         .filter(([key, cmd]) => {
-            if (cmd.universal) return true;
+            if (cmd.universal) return false;
             if (!model) return true;
             return model.supportedOps.includes(key);
         })
@@ -190,6 +190,20 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
                 (!cmd.requiresMask || hasMask);
             return { key, available, ...cmd };
         });
+}
+
+/**
+ * Returns all universal (tool-panel) commands for a given media type.
+ * These are NOT shown in the PromptBox — they are wired to toolbar buttons
+ * in the history workspace, each with its own activation behaviour.
+ *
+ * @param {'image'|'video'} mediaType
+ * @returns {Array<{key: string} & CommandDef>}
+ */
+export function getToolCommands(mediaType) {
+    return Object.entries(commands)
+        .filter(([, cmd]) => cmd.universal && cmd.mediaType === mediaType)
+        .map(([key, cmd]) => ({ key, ...cmd }));
 }
 
 /**

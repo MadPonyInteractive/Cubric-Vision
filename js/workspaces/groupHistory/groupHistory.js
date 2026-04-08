@@ -27,7 +27,7 @@ import { MpiHistoryTools } from '../../components/Compounds/MpiHistoryTools/MpiH
 import { MpiToolActionBar } from '../../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { getModelsByType } from '../../data/modelRegistry.js';
-import { getAvailableCommands } from '../../data/commandRegistry.js';
+import { getAvailableCommands, getToolCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS } from '../../utils/ratios.js';
 import { runCommand } from '../../services/commandExecutor.js';
 import { StatusBar } from '../../shell/statusBar.js';
@@ -294,10 +294,25 @@ export function mount(container, params = {}) {
 
     // ── Left toolbar ───────────────────────────────────────────────────────────
 
+    // Icon map for universal tool commands — add an entry here when a new
+    // universal command is added to commandRegistry.js
+    const _universalToolIcons = {
+        autoMaskImg:  { icon: 'magic',  info: 'Auto Mask' },
+        interpolate:  { icon: 'film',   info: 'Interpolate' },
+        videoUpscale: { icon: 'rocket', info: 'Video Upscale' },
+    };
+
+    const _universalTools = getToolCommands('image').map(({ key, label }) => ({
+        mode: key,
+        icon: _universalToolIcons[key]?.icon ?? 'settings',
+        info: _universalToolIcons[key]?.info ?? label,
+    }));
+
     const historyTools = MpiHistoryTools.mount(leftBar, {
         tools: [
             { mode: 'crop', icon: 'crop', info: 'Crop Mode' },
             { mode: 'mask', icon: 'edit', info: 'Mask Mode' },
+            ..._universalTools,
         ],
     });
 
@@ -343,6 +358,13 @@ export function mount(container, params = {}) {
     historyTools.on('activate', ({ mode }) => {
         if (mode === 'crop') _enterCropMode();
         if (mode === 'mask') _enterMaskMode();
+        // Universal tool handlers — each has its own behaviour:
+        // autoMaskImg: run workflow → load result as canvas mask layer
+        // interpolate: run workflow → append new video history entry
+        // videoUpscale: run workflow → append new video history entry
+        if (mode === 'autoMaskImg')  { /* TODO: implement */ }
+        if (mode === 'interpolate')  { /* TODO: implement */ }
+        if (mode === 'videoUpscale') { /* TODO: implement */ }
     });
     historyTools.on('deactivate', ({ mode }) => {
         if (mode === 'crop') _exitCropMode();
@@ -584,6 +606,7 @@ export function mount(container, params = {}) {
     function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null }) {
         if (!activeModel) return;
 
+        Events.emit('tool:running', { tool: 'groupHistory', type: operation });
         StatusBar.progress.start('Generating...');
 
         // Show spinner until first latent preview arrives
@@ -672,6 +695,7 @@ export function mount(container, params = {}) {
             _persistGroup();
             _buildHistoryCards();
             _showEntry(_group.history[_selectedIdx]);
+            Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
             StatusBar.progress.complete('Done!');
         };
 
@@ -679,6 +703,7 @@ export function mount(container, params = {}) {
             _activeExec = null;
             _promptBox?.el.setGenerating(false);
             _setGeneratingSpinner(false);
+            Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
             StatusBar.progress.cancel();
             _showEntry(_group.history[_selectedIdx]);
             console.error('[groupHistory] Generation error:', err);
@@ -690,6 +715,7 @@ export function mount(container, params = {}) {
     function _persistGroup() {
         if (!state.currentProject) return;
         state.currentProject = updateGroupInProject(state.currentProject, _group);
+        Events.emit('media:updated', { projectId: state.currentProject.id });
         fetch('/update-project', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

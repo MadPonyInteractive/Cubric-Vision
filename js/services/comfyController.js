@@ -2,7 +2,6 @@
 // live preview, and cancel support.
 
 import { state } from '../state.js';
-import { showError } from '../shell.js';
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
 
@@ -40,7 +39,7 @@ export const ComfyUIController = {
         } catch (e) {
             Events.emit('comfy:error', { message: e.message });
             clientLogger.error('comfy', 'ComfyUI failed to start', e);
-            showError('ComfyUI failed to start', e.message);
+            Events.emit('ui:error', { title: 'ComfyUI failed to start', message: e.message });
             throw e;
         }
     },

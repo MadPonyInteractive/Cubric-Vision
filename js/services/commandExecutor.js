@@ -22,7 +22,7 @@
 import { ComfyUIController } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow } from '../data/modelRegistry.js';
 import { getCommand } from '../data/commandRegistry.js';
-import { showError } from '../shell.js';
+import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 
 /**
@@ -181,7 +181,7 @@ export function runCommand(payload) {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
         } catch (err) {
             clientLogger.error('comfy', `Workflow failed: ${payload.operation} / ${payload.modelId}`, err);
-            showError('Generation failed', err.message);
+            Events.emit('ui:error', { title: 'Generation failed', message: err.message });
             exec.onError?.(err);
         }
     })();
