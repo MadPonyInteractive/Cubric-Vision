@@ -22,9 +22,11 @@ import { MpiButton }         from '../../components/Primitives/MpiButton/MpiButt
 import { MpiPromptBox }      from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
 import { MpiDropdown }       from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiSpinner }        from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
+import { MpiRatioSelector }  from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { InteractiveCanvas } from '../../components/interactiveCanvas.js';
 import { getModelsByType }   from '../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../data/commandRegistry.js';
+import { SOCIAL_RATIOS }     from '../../utils/ratios.js';
 import { runCommand }        from '../../services/commandExecutor.js';
 import { StatusBar }         from '../../shell/statusBar.js';
 import {
@@ -92,8 +94,9 @@ export function mount(container, params = {}) {
     const centre      = ce('div', { className: 'gh-workspace__centre' });
     const rightPanel  = ce('div', { className: 'gh-workspace__right' });
     const bottom      = ce('div', { className: 'gh-workspace__bottom' });
+    const cropBar     = ce('div', { className: 'gh-crop-bar' });
 
-    container.append(header, leftBar, centre, rightPanel, bottom);
+    container.append(header, leftBar, centre, rightPanel, bottom, cropBar);
 
     // ── InteractiveCanvas viewer ───────────────────────────────────────────────
 
@@ -197,8 +200,9 @@ export function mount(container, params = {}) {
 
     function _selectEntry(idx) {
         _selectedIdx = idx;
-        // Selecting a card exits compare mode
+        // Selecting a card exits compare mode and crop mode
         _compareSet.clear();
+        _exitCropMode();
         _applyCardStates();
         _showEntry(_group.history[idx]);
 
@@ -232,7 +236,108 @@ export function mount(container, params = {}) {
 
     // ── Left toolbar ───────────────────────────────────────────────────────────
 
-    // ── PromptBox ──────────────────────────────────────────────────────────────
+    // ── Crop state ─────────────────────────────────────────────────────────────
+    let _isCropMode    = false;
+    let _activeCropRatio = SOCIAL_RATIOS[0].ratio; // default: 4:5
+
+    function _enterCropMode() {
+        _isCropMode = true;
+        _canvas.isCroppingMode = true;
+        _canvas.setCropRatio(_activeCropRatio);
+        bottom.classList.add('gh-workspace__bottom--hidden');
+        cropBar.classList.add('gh-crop-bar--visible');
+        cropBtn.el.setActive(true);
+    }
+
+    function _exitCropMode() {
+        _isCropMode = false;
+        _canvas.isCroppingMode = false;
+        bottom.classList.remove('gh-workspace__bottom--hidden');
+        cropBar.classList.remove('gh-crop-bar--visible');
+        cropBtn.el.setActive(false);
+    }
+
+    // ── Left toolbar — Crop toggle only ────────────────────────────────────────
+    const cropBtnSlot = ce('div');
+    leftBar.append(cropBtnSlot);
+
+    const cropBtn = MpiButton.mount(cropBtnSlot, {
+        icon: 'crop', size: 'sm', variant: 'ghost',
+        info: 'Crop image to social media ratio', toggleable: true,
+    });
+    cropBtn.on('toggle', ({ active }) => {
+        if (active) _enterCropMode();
+        else _exitCropMode();
+    });
+
+    // ── Crop bar — Ratio Selector + Confirm + Cancel ────────────────────────────
+    const ratioSelSlot = ce('div');
+    const confirmSlot  = ce('div');
+    const cancelSlot   = ce('div');
+    cropBar.append(ratioSelSlot, confirmSlot, cancelSlot);
+
+    const ratioSel = MpiRatioSelector.mount(ratioSelSlot, {
+        modelType: 'social',
+        value: SOCIAL_RATIOS[0].label,
+    });
+    ratioSel.on('change', ({ ratio }) => {
+        _activeCropRatio = ratio;
+        _canvas.setCropRatio(ratio);
+    });
+
+    const cropConfirmBtn = MpiButton.mount(confirmSlot, {
+        icon: 'check', label: 'Apply Crop', variant: 'primary', size: 'sm',
+        info: 'Save crop as a new history entry',
+    });
+    const cropCancelBtn = MpiButton.mount(cancelSlot, {
+        icon: 'close', label: 'Cancel', variant: 'ghost', size: 'sm',
+        info: 'Cancel crop',
+    });
+
+    cropConfirmBtn.on('click', () => _runCrop());
+    cropCancelBtn.on('click',  () => _exitCropMode());
+
+
+    // ── Crop execution ────────────────────────────────────────────────────────
+
+    async function _runCrop() {
+        const rect = _canvas.getCropRect();
+        const currentItem = _group.history[_selectedIdx];
+        if (!currentItem?.filePath || !state.currentProject?.folderPath) return;
+
+        StatusBar.progress.start('Cropping...');
+        _exitCropMode();
+
+        try {
+            const res = await fetch('/project/crop-media', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    folderPath:     state.currentProject.folderPath,
+                    sourceFilePath: _resolveUrl(currentItem.filePath),
+                    x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                }),
+            });
+            if (!res.ok) throw new Error(`crop-media ${res.status}`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Crop failed');
+
+            const newItem = createImageItem({
+                filePath:  `/project-file?path=${encodeURIComponent(data.filePath)}`,
+                operation: 'crop',
+            });
+
+            _group = appendToHistory(_group, newItem);
+            _selectedIdx = _group.selectedIndex;
+            _persistGroup();
+            _buildHistoryCards();
+            _showEntry(_group.history[_selectedIdx]);
+            StatusBar.progress.complete('Crop saved!');
+        } catch (err) {
+            console.error('[groupHistory] Crop failed:', err);
+            StatusBar.progress.cancel();
+        }
+    }
 
     const isVideo     = _group.type === 'video';
     const models      = getModelsByType(isVideo ? 'video' : 'image');

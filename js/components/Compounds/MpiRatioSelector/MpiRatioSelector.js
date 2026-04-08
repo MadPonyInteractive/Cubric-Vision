@@ -49,8 +49,9 @@ export const MpiRatioSelector = ComponentFactory.create({
         }).join('');
 
         // The popup content
-        const orientContainerStyle = modelType === 'video' ? 'display: none;' : '';
-        const headerHtml = modelType === 'video' ? '' : `
+        const isFlat = modelType === 'video' || modelType === 'social';
+        const orientContainerStyle = isFlat ? 'display: none;' : '';
+        const headerHtml = isFlat ? '' : `
             <div class="mpi-ratio-sel__header">
                 ${MpiBadge.template({ label: 'RATIO', variant: 'secondary' })}
                 <div class="mpi-ratio-sel__orient-btn" style="${orientContainerStyle}">
@@ -188,7 +189,8 @@ export const MpiRatioSelector = ComponentFactory.create({
 
             // 2. Update Orientation Trigger Icon
             const orientIcon = orientation === 'portrait' ? 'ratio_16_9' : 'ratio_9_16';
-            if (modelType !== 'video') {
+            const isFlat = modelType === 'video' || modelType === 'social';
+            if (!isFlat) {
                 if (orientContainer) {
                     orientContainer.style.display = 'block';
                     orientContainer.innerHTML = MpiButton.template({
@@ -229,10 +231,14 @@ export const MpiRatioSelector = ComponentFactory.create({
                 const ratios = getModelRatios(props.modelType || 'flux', props.orientation || 'portrait');
                 const ratio = ratios.find(r => r.label === label);
 
+                // SOCIAL_RATIOS have only `ratio` (float); generation ratios have `w`/`h`.
+                const ratioFloat = ratio.ratio ?? (ratio.w && ratio.h ? ratio.w / ratio.h : null);
                 emit('change', {
                     value: label,
-                    w: ratio.w, h: ratio.h, ratio: ratio.ratio,
-                    orientation: props.orientation || 'portrait'
+                    ratio: ratioFloat,
+                    w: ratio.w ?? null,
+                    h: ratio.h ?? null,
+                    orientation: props.orientation || null,
                 });
 
                 props.showPopup = false;

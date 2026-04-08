@@ -79,7 +79,42 @@
     background: var(--surface-glass);
     border-radius: var(--radius-xl);
     z-index: 10;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
 }
+
+.gh-workspace__bottom--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ── Crop confirm/cancel bar ──────────────────────────────────────────────── */
+
+.gh-crop-bar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-glass);
+    border: 1px solid var(--neon-electric, #00cfff);
+    border-radius: var(--radius-xl);
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.gh-crop-bar--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
 
 /* ── Right history panel ──────────────────────────────────────────────────── */
 

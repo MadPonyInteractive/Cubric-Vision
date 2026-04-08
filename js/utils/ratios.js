@@ -48,7 +48,12 @@ export const SDXL_RATIOS = {
     ]
 };
 
-export const VIDEO_RATIOS = [
+// TODO: Wan video, LTX 2.3 video
+
+// Ratios for social media image and video
+export const SOCIAL_RATIOS = [
+    { label: "4:5", ratio: 4 / 5, icon: "rect_4_5" },
+    { label: "5:4", ratio: 5 / 4, icon: "rect_5_4" },
     { label: "16:9", ratio: 16 / 9, icon: "rect_16_9" },
     { label: "9:16", ratio: 9 / 16, icon: "rect_9_16" },
     { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" }
@@ -71,14 +76,28 @@ export const RATIO_ICONS = Object.keys(ICONS)
 
 /**
  * Retrieve aspect ratio presets for a given model type and orientation.
- * @param {string} modelType - The model type ('flux', 'sdxl', or 'video').
- * @param {string} orientation - The orientation ('portrait', 'landscape', or 'square').
- * @returns {Array} Array of aspect ratio presets for the specified model and orientation.
+ *
+ * For generation (t2i / i2i): modelType comes from model.type in modelRegistry.js
+ *   'flux'   → FLUX_RATIOS[orientation]
+ *   'sdxl'   → SDXL_RATIOS[orientation]
+ *   others   → falls back to SDXL_RATIOS[orientation]
+ *
+ * For crop / social export: pass modelType = 'social' — returns SOCIAL_RATIOS (flat, no orientation).
+ *
+ * TODO: Add WAN_RATIOS when the Wan model is registered (model.type = 'wan').
+ * TODO: Add LTX_RATIOS for LTX 2.3 video.
+ *
+ * @param {string} modelType
+ * @param {'portrait'|'landscape'} [orientation]
+ * @returns {Array}
  */
 export function getModelRatios(modelType, orientation) {
-    if (modelType?.toLowerCase() === 'video') return VIDEO_RATIOS;
-    const isFlux = modelType?.toLowerCase() === 'flux';
-    return isFlux ? FLUX_RATIOS[orientation] : SDXL_RATIOS[orientation];
+    switch (modelType?.toLowerCase()) {
+        case 'flux':   return FLUX_RATIOS[orientation]  ?? FLUX_RATIOS.portrait;
+        case 'social': return SOCIAL_RATIOS;
+        case 'sdxl':
+        default:       return SDXL_RATIOS[orientation] ?? SDXL_RATIOS.portrait;
+    }
 }
 
 /**

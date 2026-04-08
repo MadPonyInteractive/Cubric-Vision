@@ -47,8 +47,8 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
-import { MpiErrorDialog }      from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
-import { MpiCompareOverlay }   from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
+import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
+import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -660,7 +660,7 @@ function mountAll() {
 
     mount('preview-ratio-video', () => {
         const sel = MpiRatioSelector.mount(slot('preview-ratio-video'), {
-            modelType: 'video',
+            modelType: 'social',
             value: '16:9'
         });
         sel.on('change', (data) => console.log('[gallery] video ratio change:', data));
@@ -1061,10 +1061,10 @@ function mountAll() {
         const triggerSlot = document.createElement('div');
         slotEl.appendChild(triggerSlot);
         const btn = MpiButton.mount(triggerSlot, {
-            icon:    'compare',
-            label:   'Open Compare',
+            icon: 'compare',
+            label: 'Open Compare',
             variant: 'primary',
-            info:    'Click to test the compare overlay with two placeholder images',
+            info: 'Click to test the compare overlay with two placeholder images',
         });
 
         const overlay = MpiCompareOverlay.mount(document.createElement('div'));
@@ -1073,7 +1073,7 @@ function mountAll() {
             // Use placeholder images for gallery demo
             overlay.el.open(
                 { filePath: 'https://picsum.photos/seed/before/800/600', name: 't2i_001' },
-                { filePath: 'https://picsum.photos/seed/after/800/600',  name: 'upscaled_001' }
+                { filePath: 'https://picsum.photos/seed/after/800/600', name: 'upscaled_001' }
             );
         });
     });
@@ -1092,7 +1092,7 @@ function mountAll() {
         });
 
         const modal = MpiStartingComfy.mount(document.createElement('div'));
-        
+
         btn.on('click', () => {
             modal.el.show();
             // Simulate startup success after 3 seconds

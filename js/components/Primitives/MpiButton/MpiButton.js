@@ -143,6 +143,13 @@ export const MpiButton = ComponentFactory.create({
 
             emit('click', { originalEvent: e, active: props.active });
         });
+
+        // Public API: sync active state from external code (e.g. _exitCropMode()).
+        // Mirrors the pattern of el.setGenerating() in MpiPromptBox.
+        el.setActive = (active) => {
+            props.active = active;
+            el.classList.toggle('is-active', active);
+        };
     }
 });
 

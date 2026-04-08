@@ -4,10 +4,11 @@
  * Now modularized into sub-managers (View, Mask, Comparison, Input).
  */
 
-import { ViewManager } from './interactiveCanvas/ViewManager.js';
-import { MaskManager } from './interactiveCanvas/MaskManager.js';
+import { ViewManager }       from './interactiveCanvas/ViewManager.js';
+import { MaskManager }       from './interactiveCanvas/MaskManager.js';
 import { ComparisonManager } from './interactiveCanvas/ComparisonManager.js';
-import { InputController } from './interactiveCanvas/InputController.js';
+import { CropManager }       from './interactiveCanvas/CropManager.js';
+import { InputController }   from './interactiveCanvas/InputController.js';
 
 export class InteractiveCanvas {
     constructor(container, options = {}) {
@@ -17,9 +18,10 @@ export class InteractiveCanvas {
         this.container.appendChild(this.canvas);
 
         // State Managers
-        this.view = new ViewManager();
-        this.mask = new MaskManager();
+        this.view       = new ViewManager();
+        this.mask       = new MaskManager();
         this.comparison = new ComparisonManager();
+        this.crop       = new CropManager();
 
         this.img = new Image();
         this.img.crossOrigin = "anonymous";
@@ -35,9 +37,9 @@ export class InteractiveCanvas {
 
         // Orchestrate Input
         this.input = new InputController(
-            this.canvas, 
-            this.container, 
-            { view: this.view, mask: this.mask, comparison: this.comparison },
+            this.canvas,
+            this.container,
+            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop },
             {
                 onDraw: () => this.draw(),
                 onResetView: () => this.resetView(),
@@ -71,8 +73,10 @@ export class InteractiveCanvas {
     set maskOpacity(v) { this.mask.maskOpacity = v; }
     get maskColor() { return this.mask.maskColor; }
     set maskColor(v) { this.mask.maskColor = v; }
-    get isMaskingMode() { return this.mask.isMaskingMode; }
-    set isMaskingMode(v) { this.mask.isMaskingMode = v; }
+    get isMaskingMode()    { return this.mask.isMaskingMode; }
+    set isMaskingMode(v)   { this.mask.isMaskingMode = v; }
+    get isCroppingMode()   { return this.crop.isCroppingMode; }
+    set isCroppingMode(v)  { this.crop.isCroppingMode = v; this.input.updateCursor(); this.draw(); }
     get imgAfter() { return this.comparison.imgAfter; }
     set imgAfter(v) { this.comparison.imgAfter = v; }
     get isComparisonMode() { return this.comparison.isComparisonMode; }
@@ -115,6 +119,7 @@ export class InteractiveCanvas {
             });
 
             this.mask.init(this.img.width, this.img.height);
+            this.crop.init(this.img.width, this.img.height);
             await this.resetView();
         } catch (err) {
             console.error('[InteractiveCanvas] Failed to load image:', err);
@@ -176,8 +181,12 @@ export class InteractiveCanvas {
         // 3. Mask Layer
         this.ctx.globalAlpha = this.mask.maskOpacity;
         this.ctx.drawImage(this.mask.maskCanvas, 0, 0);
+        this.ctx.globalAlpha = 1;
 
-        // 4. Grid Overlay
+        // 4. Crop Overlay (drawn in image-space; scale passed for handle sizing)
+        this.crop.draw(this.ctx, this.img.width, this.img.height, scale);
+
+        // 5. Grid Overlay
         if (this.gridH > 1 || this.gridV > 1) {
             this._drawGridOverlay(scale);
         }
@@ -286,15 +295,19 @@ export class InteractiveCanvas {
     }
 
     // --- Masking API Proxies ---
-    setMaskingMode(enabled) { 
-        this.mask.isMaskingMode = enabled; 
+    setMaskingMode(enabled) {
+        this.mask.isMaskingMode = enabled;
         this.input.updateCursor();
         this.draw();
     }
-    setBrushSize(size) { this.mask.brushSize = Math.max(1, size); this.draw(); }
-    setBrushType(type) { this.mask.brushType = type; }
-    flipMaskColor() { const color = this.mask.flipColor(); this.draw(); return color; }
+    setBrushSize(size)  { this.mask.brushSize = Math.max(1, size); this.draw(); }
+    setBrushType(type)  { this.mask.brushType = type; }
+    flipMaskColor()     { const color = this.mask.flipColor(); this.draw(); return color; }
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
-    clearMask() { this.mask.clear(); this.draw(); }
+    clearMask()         { this.mask.clear(); this.draw(); }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
+
+    // --- Crop API Proxies ---
+    setCropRatio(ratio)  { this.crop.setRatio(ratio); this.draw(); }
+    getCropRect()        { return this.crop.getCropRect(); }
 }

@@ -562,6 +562,96 @@ router.post('/project/save-generation', async (req, res) => {
     }
 });
 
+/**
+ * POST /project/crop-media
+ *
+ * Crops an existing project image to a new file using Sharp.
+ * The source file is NOT modified — the crop is saved as a new history entry.
+ *
+ * Body:
+ *   folderPath    {string}  — absolute project folder path
+ *   sourceFilePath {string} — absolute path to the source image file
+ *   x             {number}  — crop origin x in image-space pixels (integer)
+ *   y             {number}  — crop origin y in image-space pixels (integer)
+ *   w             {number}  — crop width in image-space pixels (integer)
+ *   h             {number}  — crop height in image-space pixels (integer)
+ *
+ * Response:
+ *   { success, filename, filePath }
+ */
+router.post('/project/crop-media', async (req, res) => {
+    try {
+        const { folderPath, sourceFilePath, x, y, w, h } = req.body;
+
+        if (!folderPath)      return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!sourceFilePath)  return res.status(400).json({ success: false, error: 'sourceFilePath required' });
+        if (w <= 0 || h <= 0) return res.status(400).json({ success: false, error: 'Invalid crop dimensions' });
+
+        // Resolve the source path (may come as a /project-file?path=... URL)
+        let inputPath = sourceFilePath;
+        if (sourceFilePath.includes('project-file?path=')) {
+            const urlObj = new URL(sourceFilePath, 'http://localhost');
+            inputPath = decodeURIComponent(urlObj.searchParams.get('path'));
+        }
+
+        if (!(await fs.pathExists(inputPath))) {
+            return res.status(400).json({ success: false, error: 'Source file not found: ' + inputPath });
+        }
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir  = path.join(mediaDir, '.meta');
+        await fs.ensureDir(metaDir);
+
+        // Derive extension from source
+        const ext = path.extname(inputPath).slice(1).toLowerCase() || 'png';
+
+        // Sequenced filename using 'crop' prefix
+        const existing = await fs.readdir(mediaDir);
+        let maxNum = 0;
+        const re = /^crop_(\d+)\./i;
+        for (const f of existing) {
+            const m = f.match(re);
+            if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
+        }
+        const seq      = String(maxNum + 1).padStart(3, '0');
+        const filename = `crop_${seq}.${ext}`;
+        const filePath = path.join(mediaDir, filename);
+
+        // Sharp crop
+        let sharp;
+        try {
+            sharp = require('sharp');
+        } catch (_) {
+            return res.status(500).json({ success: false, error: 'Sharp is not installed on the server.' });
+        }
+
+        await sharp(inputPath)
+            .extract({
+                left:   Math.max(0, Math.round(x)),
+                top:    Math.max(0, Math.round(y)),
+                width:  Math.round(w),
+                height: Math.round(h),
+            })
+            .toFile(filePath);
+
+        // Sidecar metadata
+        const sidecarPath = path.join(metaDir, `${filename}.json`);
+        await fs.writeJson(sidecarPath, {
+            operation:  'crop',
+            sourceFile: inputPath,
+            cropRect:   { x, y, w, h },
+            createdAt:  new Date().toISOString(),
+        }, { spaces: 2 });
+
+        res.json({ success: true, filename, filePath });
+    } catch (err) {
+        logger.error('project', 'crop-media error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+
+
 // ─── Project Templates ────────────────────────────────────────────────────────
 
 /**

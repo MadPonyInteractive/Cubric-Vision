@@ -19,9 +19,9 @@
 // ── Path Config ───────────────────────────────────────────────────────────────
 
 export const PATHS = Object.freeze({
-    models:      'engine/ComfyUI_windows_portable/ComfyUI/models',
+    models: 'engine/ComfyUI_windows_portable/ComfyUI/models',
     customNodes: 'engine/ComfyUI_windows_portable/ComfyUI/custom_nodes',
-    workflows:   'comfy_workflows',
+    workflows: 'comfy_workflows',
 });
 
 // ── Shared Dependencies ───────────────────────────────────────────────────────
@@ -159,12 +159,13 @@ export const MODELS = [
         id: 'sdxl-lustify',
         name: 'SDXL Lustify V7',
         mediaType: 'image',
-        installed: false,
+        installed: true,// TODO: check if this flag is wired
+        type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         workflows: {
-            t2i:     'sdxl_t2i_nsfw.json',
+            t2i: 'sdxl_t2i_nsfw.json',
             upscale: 'sdxl_upscaler.json',
-            detail:  'sdxl_detailer.json',
+            detail: 'sdxl_detailer.json',
         },
         dependencies: [
             'lustify-7',
@@ -189,6 +190,7 @@ export const MODELS = [
     //     name: 'Wan 2.1',
     //     mediaType: 'video',
     //     installed: false,
+    //     type: 'wan',
     //     supportedOps: ['t2v', 'i2v', 'extend'],
     //     workflows: {
     //         t2v: 'wan21_t2v.json',
@@ -204,7 +206,7 @@ export const MODELS = [
 // Keys must match commandRegistry entries marked universal: true.
 
 export const UNIVERSAL_WORKFLOWS = {
-    interpolate:  'video_interpolate.json',
+    interpolate: 'video_interpolate.json',
     videoUpscale: 'video_upscale.json',
 };
 
