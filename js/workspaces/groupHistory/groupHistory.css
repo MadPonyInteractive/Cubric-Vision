@@ -203,3 +203,11 @@
     text-decoration: underline;
     font-size: inherit;
 }
+
+/* ── Auto-mask left slot — model dropdown + mode radio side by side ─────── */
+
+.gh-auto-mask-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}

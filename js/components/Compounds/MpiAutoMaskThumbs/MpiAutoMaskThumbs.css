@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiAutoMaskThumbs — Segment detection thumbnail strip (Compound)
+   Displayed above MpiToolActionBar when auto-mask tool is active.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-auto-mask-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    max-width: 640px;
+    justify-content: center;
+}
+
+/* ── Individual thumbnail button ─────────────────────────────── */
+.mpi-auto-mask-thumbs__item {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        border-color 0.12s ease,
+        transform    0.1s ease;
+    flex-shrink: 0;
+}
+
+.mpi-auto-mask-thumbs__item:hover {
+    border-color: var(--neon-electric, #aa8bcd);
+    transform: scale(1.06);
+}
+
+.mpi-auto-mask-thumbs__item--selected {
+    border-color: var(--primary, #9a82bb);
+    box-shadow: 0 0 0 2px var(--primary, #9a82bb);
+}
+
+/* ── Thumbnail image ─────────────────────────────────────────── */
+.mpi-auto-mask-thumbs__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Index badge (top-left) ──────────────────────────────────── */
+.mpi-auto-mask-thumbs__badge {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary, #fff);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+}

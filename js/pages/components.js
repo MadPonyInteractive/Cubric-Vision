@@ -49,6 +49,8 @@ import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModels
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
+import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
+import { MpiToolActionBar } from '../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
 
 // Blocks
 import { MpiVideoPlayer } from '../components/Blocks/MpiVideoPlayer/MpiVideoPlayer.js';
@@ -1100,6 +1102,55 @@ function mountAll() {
                 modal.el.hide();
             }, 3000);
         });
+    });
+
+    // ── MpiAutoMaskThumbs (Compound) ──────────────────────────────────────────
+    mount('preview-auto-mask-thumbs', () => {
+        const thumbs = MpiAutoMaskThumbs.mount(slot('preview-auto-mask-thumbs'));
+        // Seed with placeholder data URLs representing detected segments
+        const placeholders = Array.from({ length: 6 }, (_, i) => {
+            const c = document.createElement('canvas');
+            c.width = 56; c.height = 56;
+            const ctx = c.getContext('2d');
+            const hue = (i * 55) % 360;
+            ctx.fillStyle = `hsl(${hue}, 60%, 35%)`;
+            ctx.fillRect(0, 0, 56, 56);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(i + 1, 28, 28);
+            return c.toDataURL();
+        });
+        thumbs.el.setImages(placeholders);
+        thumbs.on('change', ({ picks }) =>
+            console.log('[gallery] MpiAutoMaskThumbs picks:', [...picks])
+        );
+    });
+
+    // ── MpiToolActionBar with topSlot (Compound) ─────────────────────────────
+    mount('preview-tool-action-bar-top', () => {
+        const thumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
+        const placeholders = Array.from({ length: 4 }, (_, i) => {
+            const c = document.createElement('canvas');
+            c.width = 56; c.height = 56;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = `hsl(${i * 80}, 55%, 40%)`;
+            ctx.fillRect(0, 0, 56, 56);
+            return c.toDataURL();
+        });
+        thumbs.el.setImages(placeholders);
+
+        const bar = MpiToolActionBar.mount(slot('preview-tool-action-bar-top'), {
+            topSlot: thumbs,
+            actions: [
+                { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
+                { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary', info: 'Apply mask' },
+                { key: 'cancel', icon: 'close',  label: 'Cancel', variant: 'ghost',   info: 'Cancel' },
+            ],
+        });
+        bar.el.show();
+        bar.on('action', ({ key }) => console.log('[gallery] MpiToolActionBar action:', key));
     });
 }
 

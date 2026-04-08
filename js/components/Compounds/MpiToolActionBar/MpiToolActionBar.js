@@ -2,21 +2,23 @@
  * MpiToolActionBar — Floating bottom action bar for canvas tools (Compound)
  *
  * A pill-shaped bar that slides up from the bottom of the workspace when a
- * canvas tool is active. Renders an optional left-side content slot (for
- * arbitrary controls like a ratio selector) and a right-side row of action
- * buttons. Toggleable buttons within the same `radioGroup` enforce radio
- * behaviour (at most one active at a time).
+ * canvas tool is active. Renders an optional top-slot (for e.g. a thumbnail
+ * strip), an optional left-side content slot (for arbitrary controls like a
+ * ratio selector), and a right-side row of action buttons. Toggleable buttons
+ * within the same `radioGroup` enforce radio behaviour (at most one active at
+ * a time).
  *
  * Usage:
  *   const bar = MpiToolActionBar.mount(container, {
+ *       topSlot:  thumbsInstance,          // optional — shown above the pill
+ *       leftSlot: ratioSelectorInstance,   // optional — shown left of actions
  *       actions: [
- *           { key: 'brush',  icon: 'pencil', label: 'Brush',      variant: 'ghost', toggleable: true, active: true, radioGroup: 'tool' },
- *           { key: 'eraser', icon: 'eraser', label: 'Eraser',     variant: 'ghost', toggleable: true, radioGroup: 'tool' },
- *           { key: 'clear',  icon: 'trash',  label: 'Clear',      variant: 'ghost' },
- *           { key: 'cancel', icon: 'close',  label: 'Cancel',     variant: 'ghost' },
- *           { key: 'apply',  icon: 'check',  label: 'Apply',      variant: 'primary' },
+ *           { key: 'brush',  icon: 'pencil', label: 'Brush',  variant: 'ghost', toggleable: true, active: true, radioGroup: 'tool' },
+ *           { key: 'eraser', icon: 'eraser', label: 'Eraser', variant: 'ghost', toggleable: true, radioGroup: 'tool' },
+ *           { key: 'clear',  icon: 'trash',  label: 'Clear',  variant: 'ghost' },
+ *           { key: 'cancel', icon: 'close',  label: 'Cancel', variant: 'ghost' },
+ *           { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary' },
  *       ],
- *       leftSlot: ratioSelectorInstance,  // optional — a mounted component instance
  *   });
  *   bar.el.show();
  *   bar.el.hide();
@@ -25,7 +27,8 @@
  *
  * Props:
  * @param {Array<ActionDef>} actions      - Button definitions (see typedef below)
- * @param {Object}           [leftSlot]   - A mounted component instance to embed on the left
+ * @param {Object}           [topSlot]    - A mounted component instance to embed above the pill
+ * @param {Object}           [leftSlot]   - A mounted component instance to embed on the left of the pill
  *
  * @typedef {Object} ActionDef
  * @property {string}  key           - Unique identifier emitted with 'action' event
@@ -55,13 +58,24 @@ export const MpiToolActionBar = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-tool-action-bar">
-            <div class="mpi-tool-action-bar__left"></div>
-            <div class="mpi-tool-action-bar__actions"></div>
+            <div class="mpi-tool-action-bar__top"></div>
+            <div class="mpi-tool-action-bar__pill">
+                <div class="mpi-tool-action-bar__left"></div>
+                <div class="mpi-tool-action-bar__actions"></div>
+            </div>
         </div>`,
 
     setup: (el, props, emit) => {
+        const topEl     = el.querySelector('.mpi-tool-action-bar__top');
         const leftEl    = el.querySelector('.mpi-tool-action-bar__left');
         const actionsEl = el.querySelector('.mpi-tool-action-bar__actions');
+
+        // ── Top slot (optional — e.g. thumbnail strip above the pill) ─────────
+        if (props.topSlot?.el) {
+            topEl.appendChild(props.topSlot.el);
+        } else {
+            topEl.style.display = 'none';
+        }
 
         // ── Left slot (optional arbitrary component) ───────────────────────────
         if (props.leftSlot?.el) {

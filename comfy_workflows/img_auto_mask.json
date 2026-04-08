@@ -1,0 +1,185 @@
+{
+  "502": {
+    "inputs": {
+      "image": "Mask_test_00001_ (1).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1559": {
+    "inputs": {
+      "images": [
+        "1627",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1571": {
+    "inputs": {
+      "alpha_mode": false,
+      "min_alpha": 0.2,
+      "segs": [
+        "1592",
+        0
+      ],
+      "fallback_image_opt": [
+        "502",
+        0
+      ]
+    },
+    "class_type": "SEGSPreview",
+    "_meta": {
+      "title": "SEGSPreview"
+    }
+  },
+  "1587": {
+    "inputs": {
+      "model_name": "bbox/face_yolov8n.pt"
+    },
+    "class_type": "UltralyticsDetectorProvider",
+    "_meta": {
+      "title": "sams"
+    }
+  },
+  "1588": {
+    "inputs": {
+      "bbox_threshold": 0.5,
+      "bbox_dilation": 15,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "sub_threshold": 0.5,
+      "sub_dilation": 0,
+      "sub_bbox_expansion": 0,
+      "sam_mask_hint_threshold": 0.7,
+      "post_dilation": 0,
+      "bbox_detector": [
+        "1587",
+        0
+      ],
+      "image": [
+        "502",
+        0
+      ],
+      "sam_model_opt": [
+        "1589",
+        0
+      ]
+    },
+    "class_type": "ImpactSimpleDetectorSEGS",
+    "_meta": {
+      "title": "Simple Detector (SEGS)"
+    }
+  },
+  "1589": {
+    "inputs": {
+      "model_name": "sam_vit_b_01ec64.pth",
+      "device_mode": "AUTO"
+    },
+    "class_type": "SAMLoader",
+    "_meta": {
+      "title": "SAMLoader (Impact)"
+    }
+  },
+  "1591": {
+    "inputs": {
+      "bbox_threshold": 0.5,
+      "bbox_dilation": 24,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "sub_threshold": 0.5,
+      "sub_dilation": 0,
+      "sub_bbox_expansion": 0,
+      "sam_mask_hint_threshold": 0.7,
+      "post_dilation": 0,
+      "bbox_detector": [
+        "1587",
+        0
+      ],
+      "image": [
+        "502",
+        0
+      ]
+    },
+    "class_type": "ImpactSimpleDetectorSEGS",
+    "_meta": {
+      "title": "Simple Detector (SEGS)"
+    }
+  },
+  "1592": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "1591",
+        0
+      ],
+      "false": [
+        "1588",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Box"
+    }
+  },
+  "1593": {
+    "inputs": {
+      "picks": "",
+      "pick": "image",
+      "segs": [
+        "1592",
+        0
+      ],
+      "fallback_image_opt": [
+        "502",
+        0
+      ]
+    },
+    "class_type": "ImpactSEGSPicker",
+    "_meta": {
+      "title": "Selected_Masks_Input"
+    }
+  },
+  "1596": {
+    "inputs": {
+      "segs": [
+        "1593",
+        0
+      ]
+    },
+    "class_type": "SegsToCombinedMask",
+    "_meta": {
+      "title": "SEGS to MASK (combined)"
+    }
+  },
+  "1627": {
+    "inputs": {
+      "mask": [
+        "1596",
+        0
+      ]
+    },
+    "class_type": "MaskToImage",
+    "_meta": {
+      "title": "Convert Mask to Image"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "images": [
+        "1571",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Detected"
+    }
+  }
+}

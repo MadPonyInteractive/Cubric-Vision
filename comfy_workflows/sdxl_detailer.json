@@ -38,7 +38,7 @@
   },
   "29": {
     "inputs": {
-      "text": "Liora, redhead, green-eyes, winged eyeliner, parted lips, looking at you",
+      "text": "",
       "clip": [
         "28",
         1
@@ -107,7 +107,7 @@
         0
       ],
       "mask": [
-        "1594",
+        "1626",
         0
       ],
       "basic_pipe": [
@@ -237,7 +237,7 @@
   "1559": {
     "inputs": {
       "images": [
-        "1603",
+        "1534",
         0
       ]
     },
@@ -264,24 +264,6 @@
       "title": "Steps"
     }
   },
-  "1571": {
-    "inputs": {
-      "alpha_mode": false,
-      "min_alpha": 0.2,
-      "segs": [
-        "1592",
-        0
-      ],
-      "fallback_image_opt": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "SEGSPreview",
-    "_meta": {
-      "title": "SEGSPreview"
-    }
-  },
   "1582": {
     "inputs": {
       "int": 30
@@ -289,257 +271,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Seed"
-    }
-  },
-  "1587": {
-    "inputs": {
-      "model_name": "bbox/face_yolov8n.pt"
-    },
-    "class_type": "UltralyticsDetectorProvider",
-    "_meta": {
-      "title": "sams"
-    }
-  },
-  "1588": {
-    "inputs": {
-      "bbox_threshold": 0.5,
-      "bbox_dilation": 15,
-      "crop_factor": 1.8,
-      "drop_size": 10,
-      "sub_threshold": 0.5,
-      "sub_dilation": 0,
-      "sub_bbox_expansion": 0,
-      "sam_mask_hint_threshold": 0.7,
-      "post_dilation": 0,
-      "bbox_detector": [
-        "1587",
-        0
-      ],
-      "image": [
-        "502",
-        0
-      ],
-      "sam_model_opt": [
-        "1589",
-        0
-      ]
-    },
-    "class_type": "ImpactSimpleDetectorSEGS",
-    "_meta": {
-      "title": "Simple Detector (SEGS)"
-    }
-  },
-  "1589": {
-    "inputs": {
-      "model_name": "sam_vit_b_01ec64.pth",
-      "device_mode": "AUTO"
-    },
-    "class_type": "SAMLoader",
-    "_meta": {
-      "title": "SAMLoader (Impact)"
-    }
-  },
-  "1591": {
-    "inputs": {
-      "bbox_threshold": 0.5,
-      "bbox_dilation": 24,
-      "crop_factor": 1.8,
-      "drop_size": 10,
-      "sub_threshold": 0.5,
-      "sub_dilation": 0,
-      "sub_bbox_expansion": 0,
-      "sam_mask_hint_threshold": 0.7,
-      "post_dilation": 0,
-      "bbox_detector": [
-        "1587",
-        0
-      ],
-      "image": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "ImpactSimpleDetectorSEGS",
-    "_meta": {
-      "title": "Simple Detector (SEGS)"
-    }
-  },
-  "1592": {
-    "inputs": {
-      "boolean": true,
-      "true": [
-        "1591",
-        0
-      ],
-      "false": [
-        "1588",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Box"
-    }
-  },
-  "1593": {
-    "inputs": {
-      "picks": "",
-      "pick": "image",
-      "segs": [
-        "1592",
-        0
-      ],
-      "fallback_image_opt": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "ImpactSEGSPicker",
-    "_meta": {
-      "title": "Selected_Masks_Input"
-    }
-  },
-  "1594": {
-    "inputs": {
-      "boolean": [
-        "1613",
-        0
-      ],
-      "true": [
-        "1596",
-        0
-      ],
-      "false": [
-        "1626",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "auto mask"
-    }
-  },
-  "1596": {
-    "inputs": {
-      "segs": [
-        "1593",
-        0
-      ]
-    },
-    "class_type": "SegsToCombinedMask",
-    "_meta": {
-      "title": "SEGS to MASK (combined)"
-    }
-  },
-  "1599": {
-    "inputs": {
-      "mask": [
-        "1594",
-        0
-      ]
-    },
-    "class_type": "MaskPreview",
-    "_meta": {
-      "title": "Output_Mask"
-    }
-  },
-  "1603": {
-    "inputs": {
-      "boolean": true,
-      "true": [
-        "1534",
-        0
-      ],
-      "false": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Ready"
-    }
-  },
-  "1609": {
-    "inputs": {
-      "select": [
-        "1621",
-        0
-      ],
-      "input": [
-        "1625",
-        0
-      ]
-    },
-    "class_type": "MpiAnyInvSwitch",
-    "_meta": {
-      "title": "Mpi Any Inverted Switch"
-    }
-  },
-  "1612": {
-    "inputs": {
-      "images": [
-        "1609",
-        1
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Detected"
-    }
-  },
-  "1613": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiBoolean",
-    "_meta": {
-      "title": "Auto_Mask"
-    }
-  },
-  "1614": {
-    "inputs": {
-      "images": [
-        "1609",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "dummy"
-    }
-  },
-  "1621": {
-    "inputs": {
-      "math_expression": "a+1",
-      "a": [
-        "1613",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "1625": {
-    "inputs": {
-      "boolean": [
-        "1613",
-        0
-      ],
-      "true": [
-        "1571",
-        0
-      ],
-      "false": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "auto mask"
     }
   },
   "1626": {

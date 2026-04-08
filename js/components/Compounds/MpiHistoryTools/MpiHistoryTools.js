@@ -31,11 +31,11 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiButton }        from '../../../components/Primitives/MpiButton/MpiButton.js';
+import { MpiButton } from '../../../components/Primitives/MpiButton/MpiButton.js';
 
 export const MpiHistoryTools = ComponentFactory.create({
     name: 'MpiHistoryTools',
-    css:  ['js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css'],
+    css: ['js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css'],
 
     template: () => `<div class="mpi-history-tools"></div>`,
 
@@ -54,11 +54,11 @@ export const MpiHistoryTools = ComponentFactory.create({
 
             const btn = MpiButton.mount(slot, {
                 icon,
-                size:       'sm',
-                variant:    'ghost',
-                info:       info || mode,
+                size: 'sm',
+                variant: 'ghost',
+                info: info || mode,
                 toggleable: true,
-                active:     false,
+                active: false,
             });
 
             btn.on('toggle', ({ active }) => {

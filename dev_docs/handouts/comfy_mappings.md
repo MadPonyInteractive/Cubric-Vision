@@ -1,7 +1,3 @@
----
-description: Comfyui Mapping Rules
----
-
 # ComfyUI Node Injection Standard
 
 When modifying or integrating with ComfyUI workflows in this application, **NEVER use hardcoded Node IDs** (e.g., `workflow["14"]`). Node IDs are inherently unstable in ComfyUI and change whenever users rebuild or copy parts of the workflow.

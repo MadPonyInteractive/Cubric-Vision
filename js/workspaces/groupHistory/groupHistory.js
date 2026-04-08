@@ -25,11 +25,13 @@ import { MpiRatioSelector } from '../../components/Compounds/MpiRatioSelector/Mp
 import { MpiCanvas } from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
 import { MpiHistoryTools } from '../../components/Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiToolActionBar } from '../../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
+import { MpiAutoMaskThumbs } from '../../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
+import { MpiRadioGroup } from '../../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { getModelsByType } from '../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS } from '../../utils/ratios.js';
-import { runCommand } from '../../services/commandExecutor.js';
+import { runCommand, runAutoMask } from '../../services/commandExecutor.js';
 import { StatusBar } from '../../shell/statusBar.js';
 import {
     promoteHistoryEntry,
@@ -297,10 +299,19 @@ export function mount(container, params = {}) {
     // Icon map for universal tool commands — add an entry here when a new
     // universal command is added to commandRegistry.js
     const _universalToolIcons = {
-        autoMaskImg:  { icon: 'magic',  info: 'Auto Mask' },
-        interpolate:  { icon: 'film',   info: 'Interpolate' },
-        videoUpscale: { icon: 'rocket', info: 'Video Upscale' },
+        autoMaskImg:  { icon: 'enhance', info: 'Auto Mask' },
+        interpolate:  { icon: 'film',    info: 'Interpolate' },
+        videoUpscale: { icon: 'rocket',  info: 'Video Upscale' },
     };
+
+    // ── Detection models for auto-mask ─────────────────────────────────────────
+    // Human-readable labels mapped to the UltralyticsDetector model filenames.
+    // The value is injected into the workflow's "sams" node.
+    const DETECTION_MODELS = [
+        { label: 'Face',   value: 'bbox/face_yolov8n.pt' },
+        { label: 'Hand',   value: 'bbox/hand_yolov8n.pt' },
+        { label: 'Person', value: 'bbox/person_yolov8n-seg.pt' },
+    ];
 
     const _universalTools = getToolCommands('image').map(({ key, label }) => ({
         mode: key,
@@ -310,8 +321,8 @@ export function mount(container, params = {}) {
 
     const historyTools = MpiHistoryTools.mount(leftBar, {
         tools: [
-            { mode: 'crop', icon: 'crop', info: 'Crop Mode' },
-            { mode: 'mask', icon: 'edit', info: 'Mask Mode' },
+            { mode: 'crop', icon: 'crop', info: 'Crop' },
+            { mode: 'mask', icon: 'edit', info: 'Draw Mask' },
             ..._universalTools,
         ],
     });
@@ -358,17 +369,14 @@ export function mount(container, params = {}) {
     historyTools.on('activate', ({ mode }) => {
         if (mode === 'crop') _enterCropMode();
         if (mode === 'mask') _enterMaskMode();
-        // Universal tool handlers — each has its own behaviour:
-        // autoMaskImg: run workflow → load result as canvas mask layer
+        if (mode === 'autoMaskImg') _enterAutoMaskMode();
         // interpolate: run workflow → append new video history entry
         // videoUpscale: run workflow → append new video history entry
-        if (mode === 'autoMaskImg')  { /* TODO: implement */ }
-        if (mode === 'interpolate')  { /* TODO: implement */ }
-        if (mode === 'videoUpscale') { /* TODO: implement */ }
     });
     historyTools.on('deactivate', ({ mode }) => {
         if (mode === 'crop') _exitCropMode();
         if (mode === 'mask') _exitMaskMode();
+        if (mode === 'autoMaskImg') _exitAutoMaskMode(false);
     });
 
     // Mutual exclusion: when the canvas mode changes from any source
@@ -386,6 +394,12 @@ export function mount(container, params = {}) {
             _isMaskMode = false;
             bottom.classList.remove('gh-workspace__bottom--hidden');
             maskActionBar.el.hide();
+        }
+
+        if (_isAutoMaskMode) {
+            _isAutoMaskMode = false;
+            bottom.classList.remove('gh-workspace__bottom--hidden');
+            autoMaskBar.el.hide();
         }
 
         if (mode !== 'compare' && _selectMode && !_comparingActive) {
@@ -439,6 +453,206 @@ export function mount(container, params = {}) {
         if (key === 'invert') { _canvas.flipMaskColor(); }
         if (key === 'cancel') { _canvas.clearMask(); _hasMask = false; _exitMaskMode(); _refreshOpOptions(); }
         if (key === 'apply') { _hasMask = true; _exitMaskMode(); _refreshOpOptions(); }
+    });
+
+    // ── Auto-mask action bar ───────────────────────────────────────────────────
+
+    // Auto-mask state
+    let _isAutoMaskMode = false;
+    let _autoMaskExec   = null;
+    let _autoMaskPicks  = new Set();
+    let _autoMaskModel  = DETECTION_MODELS[0].value;
+    let _autoMaskUseBox = true;
+
+    /**
+     * Convert a ComfyUI mask URL (white = masked, black = background) to a
+     * canvas-compatible data URL where white pixels are opaque and black pixels
+     * are fully transparent. This is required because MaskManager draws the mask
+     * canvas at maskOpacity over the image — black pixels would show as a dark
+     * tint if left opaque.
+     *
+     * @param {string} maskUrl - ComfyUI /view? URL of the mask image
+     * @returns {Promise<string>} data URL safe to pass to canvas.setMaskDataURL()
+     */
+    async function _maskUrlToTransparentDataUrl(maskUrl) {
+        const res  = await fetch(maskUrl);
+        const blob = await res.blob();
+        const bmp  = await createImageBitmap(blob);
+
+        const tmp    = document.createElement('canvas');
+        tmp.width    = bmp.width;
+        tmp.height   = bmp.height;
+        const tmpCtx = tmp.getContext('2d', { willReadFrequently: true });
+        tmpCtx.drawImage(bmp, 0, 0);
+        bmp.close();
+
+        const imageData = tmpCtx.getImageData(0, 0, tmp.width, tmp.height);
+        const data      = imageData.data;
+
+        // White pixels (bright) → keep opaque white; black pixels → transparent
+        for (let i = 0; i < data.length; i += 4) {
+            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            if (brightness < 128) {
+                data[i + 3] = 0; // transparent — not masked
+            } else {
+                data[i]     = 255;
+                data[i + 1] = 255;
+                data[i + 2] = 255;
+                data[i + 3] = 255; // opaque white — masked area
+            }
+        }
+
+        tmpCtx.putImageData(imageData, 0, 0);
+        return tmp.toDataURL('image/png');
+    }
+
+    /**
+     * Run the auto-mask workflow with current state.
+     * Reuses the same exec pattern as runCommand but captures "Detected" + "Output".
+     */
+    /**
+     * @param {boolean} [populateThumbs=false] - true = Detect run; populate thumbnails from
+     *   the "Detected" node. false = picks run; thumbnails already shown, only update the mask.
+     */
+    function _runAutoMaskWorkflow(populateThumbs = false) {
+        const currentItem = _group.history[_selectedIdx];
+        if (!currentItem?.filePath) return;
+
+        // Cancel any in-flight run before starting a new one
+        _autoMaskExec?.cancel();
+
+        _autoMaskExec = runAutoMask({
+            imageUrl:       _resolveUrl(currentItem.filePath),
+            detectorModel:  _autoMaskModel,
+            useBox:         _autoMaskUseBox,
+            picks:          _autoMaskPicks,
+        });
+
+        _autoMaskExec.onDetected = (urls) => {
+            // Only repopulate thumbnails on an explicit Detect run — thumb-click
+            // re-runs must never wipe the selection the user just made.
+            if (populateThumbs) {
+                autoMaskThumbs.el.setImages(urls);
+            }
+        };
+
+        _autoMaskExec.onMask = async (maskUrl) => {
+            if (_autoMaskPicks.size === 0) return; // all-black mask — don't apply
+            try {
+                const dataUrl = await _maskUrlToTransparentDataUrl(maskUrl);
+                await _canvas.setMaskDataURL(dataUrl);
+                _hasMask = true;
+            } catch (err) {
+                console.warn('[groupHistory] Failed to apply auto-mask:', err);
+            }
+        };
+
+        _autoMaskExec.onError = (err) => {
+            _autoMaskExec = null;
+            console.error('[groupHistory] Auto-mask error:', err);
+        };
+    }
+
+    function _enterAutoMaskMode() {
+        _isAutoMaskMode = true;
+        bottom.classList.add('gh-workspace__bottom--hidden');
+        autoMaskBar.el.show();
+    }
+
+    /**
+     * @param {boolean} apply - true = keep mask, false = discard mask
+     */
+    function _exitAutoMaskMode(apply) {
+        _isAutoMaskMode = false;
+        _autoMaskExec?.cancel();
+        _autoMaskExec = null;
+
+        if (!apply) {
+            _canvas.clearMask();
+            _hasMask = false;
+        }
+
+        autoMaskThumbs.el.clear();
+        _autoMaskPicks.clear();
+
+        bottom.classList.remove('gh-workspace__bottom--hidden');
+        autoMaskBar.el.hide();
+        historyTools.el.syncMode('none');
+        _refreshOpOptions();
+    }
+
+    // Thumbnail strip — passed as topSlot to the action bar
+    const autoMaskThumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
+    autoMaskThumbs.on('change', ({ picks }) => {
+        _autoMaskPicks = picks;
+        _runAutoMaskWorkflow(false); // picks run — thumbnails stay as-is
+    });
+
+    // Detection model dropdown
+    const autoMaskModelDropdown = MpiDropdown.mount(document.createElement('div'), {
+        options:   DETECTION_MODELS,
+        value:     _autoMaskModel,
+        info:      'Detection model',
+        direction: 'up',
+    });
+    autoMaskModelDropdown.on('change', ({ value }) => {
+        _autoMaskModel = value;
+        // Clear thumbnails and mask — new model means new detection run needed
+        autoMaskThumbs.el.clear();
+        autoMaskThumbs.el.clearPicks?.();
+        _autoMaskPicks.clear();
+        _canvas.clearMask();
+        _hasMask = false;
+    });
+
+    // Box / Segment radio
+    const autoMaskModeRadio = MpiRadioGroup.mount(document.createElement('div'), {
+        options: [
+            { label: 'Box',     value: 'box' },
+            { label: 'Segment', value: 'segment' },
+        ],
+        value: 'box',
+        name:  'auto-mask-mode',
+        info:  'Detection mode',
+    });
+    autoMaskModeRadio.on('select', ({ value }) => {
+        _autoMaskUseBox = value === 'box';
+        // Clear thumbnails and mask — detection mode changed, results are stale
+        autoMaskThumbs.el.clear();
+        _autoMaskPicks.clear();
+        _canvas.clearMask();
+        _hasMask = false;
+    });
+
+    // Compose the left slot: dropdown + radio side by side
+    const _autoMaskLeftSlot = document.createElement('div');
+    _autoMaskLeftSlot.className = 'gh-auto-mask-controls';
+    _autoMaskLeftSlot.appendChild(autoMaskModelDropdown.el);
+    _autoMaskLeftSlot.appendChild(autoMaskModeRadio.el);
+    // Wrap in a pseudo-instance so MpiToolActionBar accepts it via leftSlot.el
+    const _autoMaskLeftSlotInst = { el: _autoMaskLeftSlot };
+
+    const _autoMaskBarSlot = ce('div', { className: 'gh-bar-slot' });
+    cropBar.appendChild(_autoMaskBarSlot);
+    const autoMaskBar = MpiToolActionBar.mount(_autoMaskBarSlot, {
+        topSlot:  autoMaskThumbs,
+        leftSlot: _autoMaskLeftSlotInst,
+        actions: [
+            { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
+            { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary', info: 'Apply mask and exit' },
+            { key: 'cancel', icon: 'close',  label: 'Cancel', variant: 'ghost',   info: 'Cancel and clear mask' },
+        ],
+    });
+    autoMaskBar.on('action', ({ key }) => {
+        if (key === 'detect') {
+            autoMaskThumbs.el.clear();
+            _autoMaskPicks.clear();
+            _canvas.clearMask();
+            _hasMask = false;
+            _runAutoMaskWorkflow(true); // detect run — populate thumbnails
+        }
+        if (key === 'apply')  _exitAutoMaskMode(true);
+        if (key === 'cancel') _exitAutoMaskMode(false);
     });
 
     // ── Selection bar ──────────────────────────────────────────────────────────

@@ -48,8 +48,9 @@
 
 /**
  * @typedef {Object} MpiToolActionBarProps (Compound — js/components/Compounds/MpiToolActionBar)
- * @property {MpiToolActionBarDef[]} actions  - Button definitions
- * @property {Object}               [leftSlot] - A mounted component instance to embed on the left
+ * @property {MpiToolActionBarDef[]} actions   - Button definitions
+ * @property {Object}               [topSlot]  - A mounted component instance shown above the pill (e.g. MpiAutoMaskThumbs)
+ * @property {Object}               [leftSlot] - A mounted component instance to embed on the left of the pill
  *
  * Instance methods (on instance.el):
  *   show()          — make the bar visible (slide-up animation)
@@ -58,6 +59,20 @@
  *
  * Emits:
  *   'action' { key: string, active: boolean } — any button clicked
+ */
+
+/**
+ * @typedef {Object} MpiAutoMaskThumbsProps (Compound — js/components/Compounds/MpiAutoMaskThumbs)
+ * No props required — all state is managed imperatively.
+ *
+ * Instance methods (on instance.el):
+ *   setImages(urls: string[]) — replace the thumbnail list; clears selection
+ *   clear()                  — remove all thumbnails and reset selection
+ *   getPicks()               — returns a copy of the current Set<number> of selected indices
+ *   clearPicks()             — deselect all thumbnails without removing them
+ *
+ * Emits:
+ *   'change' { picks: Set<number> } — any thumbnail toggled; picks = selected 0-based indices
  */
 
 /**

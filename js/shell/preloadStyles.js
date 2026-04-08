@@ -49,6 +49,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.css',
   'js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css',
   'js/components/Compounds/MpiToolActionBar/MpiToolActionBar.css',
+  'js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css',
 
   // Blocks
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
