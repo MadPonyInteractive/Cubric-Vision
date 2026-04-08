@@ -14,27 +14,29 @@
  * @param {{ groupId: string }} params
  */
 
-import { state }             from '../../state.js';
-import { Events }            from '../../events.js';
+import { state } from '../../state.js';
+import { Events } from '../../events.js';
 import { navigate, PAGE_GALLERY } from '../../router.js';
-import { ce }                from '../../utils/dom.js';
-import { MpiPromptBox }      from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
-import { MpiDropdown }       from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiSpinner }        from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
-import { MpiRatioSelector }  from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiCanvas }          from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
-import { MpiHistoryTools }    from '../../components/Compounds/MpiHistoryTools/MpiHistoryTools.js';
-import { MpiToolActionBar }   from '../../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
-import { getModelsByType }   from '../../data/modelRegistry.js';
+import { ce } from '../../utils/dom.js';
+import { MpiPromptBox } from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
+import { MpiDropdown } from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiSpinner } from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
+import { MpiRatioSelector } from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiCanvas } from '../../components/Primitives/MpiCanvas/MpiCanvas.js';
+import { MpiHistoryTools } from '../../components/Compounds/MpiHistoryTools/MpiHistoryTools.js';
+import { MpiToolActionBar } from '../../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
+import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
+import { getModelsByType } from '../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../data/commandRegistry.js';
-import { SOCIAL_RATIOS }     from '../../utils/ratios.js';
-import { runCommand }        from '../../services/commandExecutor.js';
-import { StatusBar }         from '../../shell/statusBar.js';
+import { SOCIAL_RATIOS } from '../../utils/ratios.js';
+import { runCommand } from '../../services/commandExecutor.js';
+import { StatusBar } from '../../shell/statusBar.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
     updateGroupInProject,
     createImageItem,
+    removeHistoryEntry,
 } from '../../data/projectModel.js';
 
 // ── CSS ────────────────────────────────────────────────────────────────────────
@@ -44,7 +46,7 @@ function _ensureCss() {
     if (_cssLoaded) return;
     _cssLoaded = true;
     const link = document.createElement('link');
-    link.rel  = 'stylesheet';
+    link.rel = 'stylesheet';
     link.href = 'js/workspaces/groupHistory/groupHistory.css';
     document.head.appendChild(link);
 }
@@ -81,28 +83,29 @@ export function mount(container, params = {}) {
 
     // ── State ──────────────────────────────────────────────────────────────────
 
-    let _selectedIdx  = _group.selectedIndex ?? 0;
-    /** Indices checked for compare (max 2) */
-    const _compareSet = new Set();
+    let _selectedIdx = _group.selectedIndex ?? 0;
+    let _selectMode = false;
+    /** Indices currently selected (for compare / delete) */
+    const _selection = new Set();
 
     // ── Scaffold ───────────────────────────────────────────────────────────────
 
     container.innerHTML = '';
     container.classList.add('gh-workspace');
 
-    const header      = ce('div', { className: 'gh-workspace__header' });
-    const leftBar     = ce('div', { className: 'gh-workspace__left' });
-    const centre      = ce('div', { className: 'gh-workspace__centre' });
-    const rightPanel  = ce('div', { className: 'gh-workspace__right' });
-    const bottom      = ce('div', { className: 'gh-workspace__bottom' });
-    const cropBar     = ce('div', { className: 'gh-crop-bar' });
+    const header = ce('div', { className: 'gh-workspace__header' });
+    const leftBar = ce('div', { className: 'gh-workspace__left' });
+    const centre = ce('div', { className: 'gh-workspace__centre' });
+    const rightPanel = ce('div', { className: 'gh-workspace__right' });
+    const bottom = ce('div', { className: 'gh-workspace__bottom' });
+    const cropBar = ce('div', { className: 'gh-crop-bar' });
 
     container.append(header, leftBar, centre, rightPanel, bottom, cropBar);
 
     // ── MpiCanvas viewer ──────────────────────────────────────────────────────
 
-    const canvasWrap    = ce('div', { className: 'gh-canvas-wrap' });
-    const spinnerWrap   = ce('div', { className: 'gh-canvas-spinner' });
+    const canvasWrap = ce('div', { className: 'gh-canvas-wrap' });
+    const spinnerWrap = ce('div', { className: 'gh-canvas-spinner' });
     MpiSpinner.mount(spinnerWrap, { size: 'lg', variant: 'primary' });
     centre.appendChild(canvasWrap);
     centre.appendChild(spinnerWrap);
@@ -129,16 +132,21 @@ export function mount(container, params = {}) {
         }
     }
 
+    let _comparingActive = false;
+
     async function _showCompare(idxA, idxB) {
         const itemA = _group.history[idxA];
         const itemB = _group.history[idxB];
         if (!itemA?.filePath || !itemB?.filePath) return;
         try {
+            _comparingActive = true;
             await _canvas.loadImage(_resolveUrl(itemA.filePath));
             // loadComparisonImage() sets activeMode to 'compare' internally
             await _canvas.loadComparisonImage(_resolveUrl(itemB.filePath));
         } catch (err) {
             console.warn('[groupHistory] Failed to load compare images:', err);
+        } finally {
+            _comparingActive = false;
         }
     }
 
@@ -157,13 +165,13 @@ export function mount(container, params = {}) {
         _group.history.forEach((item, idx) => {
             const card = ce('div', { className: 'gh-history__card' });
 
-            // Always-visible checkbox for compare selection
+            // Checkbox — checking one enters select mode
             const cbWrap = ce('label', { className: 'gh-history__cb-wrap' });
             const cb = ce('input', { type: 'checkbox', className: 'gh-history__cb' });
-            cb.checked = _compareSet.has(idx);
+            cb.checked = _selection.has(idx);
             cb.addEventListener('change', (e) => {
                 e.stopPropagation();
-                _toggleCompare(idx, cb.checked);
+                _toggleSelection(idx, cb.checked);
             });
             cbWrap.appendChild(cb);
 
@@ -182,10 +190,14 @@ export function mount(container, params = {}) {
             meta.append(label, date);
             card.append(cbWrap, thumb, meta);
 
-            // Click on card body (not checkbox) → select and display
             card.addEventListener('click', (e) => {
                 if (e.target === cb || e.target === cbWrap) return;
-                _selectEntry(idx);
+                if (_selectMode) {
+                    // In select mode: card click toggles selection
+                    _toggleSelection(idx, !_selection.has(idx));
+                } else {
+                    _selectEntry(idx);
+                }
             });
 
             historyList.appendChild(card);
@@ -197,17 +209,15 @@ export function mount(container, params = {}) {
 
     function _applyCardStates() {
         _historyCards.forEach((card, idx) => {
-            card.classList.toggle('gh-history__card--active',  idx === _selectedIdx);
-            card.classList.toggle('gh-history__card--compare', _compareSet.has(idx));
+            card.classList.toggle('gh-history__card--active', idx === _selectedIdx);
+            card.classList.toggle('gh-history__card--selected', _selection.has(idx));
             const cb = card.querySelector('.gh-history__cb');
-            if (cb) cb.checked = _compareSet.has(idx);
+            if (cb) cb.checked = _selection.has(idx);
         });
     }
 
     function _selectEntry(idx) {
         _selectedIdx = idx;
-        // Selecting a card exits all active tool modes and clears the mask
-        _compareSet.clear();
         _exitCropMode();
         _canvas.clearMask();
         _hasMask = false;
@@ -220,40 +230,59 @@ export function mount(container, params = {}) {
         _persistGroup();
     }
 
-    // ── Compare selection ──────────────────────────────────────────────────────
+    // ── Selection mode ─────────────────────────────────────────────────────────
 
-    function _toggleCompare(idx, checked) {
+    function _toggleSelection(idx, checked) {
         if (checked) {
-            if (_compareSet.size >= 2) {
-                const [oldest] = _compareSet;
-                _compareSet.delete(oldest);
-            }
-            _compareSet.add(idx);
+            _selection.add(idx);
         } else {
-            _compareSet.delete(idx);
+            _selection.delete(idx);
         }
-        _applyCardStates();
 
-        if (_compareSet.size === 2) {
-            const [idxA, idxB] = [..._compareSet];
-            _showCompare(idxA, idxB);
-        } else if (_compareSet.size === 0) {
+        if (_selection.size > 0 && !_selectMode) {
+            _enterSelectMode();
+        } else if (_selection.size === 0 && _selectMode) {
+            _exitSelectMode();
+            return;
+        }
+
+        _applyCardStates();
+        selectionBar.el.setCount(_selection.size);
+    }
+
+    function _enterSelectMode() {
+        // Deactivate any active canvas tool first — set _selectMode after so
+        // the modechange fired by _exitCropMode/_exitMaskMode doesn't trigger _exitSelectMode.
+        if (_isCropMode) _exitCropMode();
+        if (_isMaskMode) _exitMaskMode();
+        _selectMode = true;
+        bottom.classList.add('gh-workspace__bottom--hidden');
+        _selBarSlot.classList.remove('gh-workspace__bottom--hidden');
+    }
+
+    function _exitSelectMode() {
+        _selectMode = false;
+        _selection.clear();
+        _selBarSlot.classList.add('gh-workspace__bottom--hidden');
+        bottom.classList.remove('gh-workspace__bottom--hidden');
+        _applyCardStates();
+        // Reset canvas if compare was active
+        if (_canvas.activeMode === 'compare') {
             _showEntry(_group.history[_selectedIdx]);
         }
-        // size === 1: keep current canvas view unchanged
     }
 
     // ── Left toolbar ───────────────────────────────────────────────────────────
 
     const historyTools = MpiHistoryTools.mount(leftBar, {
         tools: [
-            { mode: 'crop', icon: 'crop',   info: 'Crop image to social media ratio' },
-            { mode: 'mask', icon: 'pencil', info: 'Paint a mask for inpainting'      },
+            { mode: 'crop', icon: 'crop', info: 'Crop Mode' },
+            { mode: 'mask', icon: 'edit', info: 'Mask Mode' },
         ],
     });
 
     // ── Crop state ─────────────────────────────────────────────────────────────
-    let _isCropMode      = false;
+    let _isCropMode = false;
     let _activeCropRatio = SOCIAL_RATIOS[0].ratio;
 
     function _enterCropMode() {
@@ -272,8 +301,8 @@ export function mount(container, params = {}) {
     }
 
     // ── Mask state ─────────────────────────────────────────────────────────────
-    let _isMaskMode  = false;
-    let _hasMask     = false; // true once user has painted anything
+    let _isMaskMode = false;
+    let _hasMask = false; // true once user has painted anything
 
     function _enterMaskMode() {
         _isMaskMode = true;
@@ -291,7 +320,7 @@ export function mount(container, params = {}) {
         maskActionBar.el.hide();
     }
 
-    historyTools.on('activate',   ({ mode }) => {
+    historyTools.on('activate', ({ mode }) => {
         if (mode === 'crop') _enterCropMode();
         if (mode === 'mask') _enterMaskMode();
     });
@@ -317,9 +346,8 @@ export function mount(container, params = {}) {
             maskActionBar.el.hide();
         }
 
-        if (mode !== 'compare' && _compareSet.size > 0) {
-            _compareSet.clear();
-            _applyCardStates();
+        if (mode !== 'compare' && _selectMode && !_comparingActive) {
+            _exitSelectMode();
         }
     });
 
@@ -327,46 +355,78 @@ export function mount(container, params = {}) {
 
     const ratioSel = MpiRatioSelector.mount(ce('div'), {
         modelType: 'social',
-        value:     SOCIAL_RATIOS[0].label,
+        value: SOCIAL_RATIOS[0].label,
     });
     ratioSel.on('change', ({ ratio }) => {
         _activeCropRatio = ratio;
         _canvas.setCropRatio(ratio);
     });
 
-    const cropActionBar = MpiToolActionBar.mount(cropBar, {
+    const _cropBarSlot = ce('div', { className: 'gh-bar-slot' });
+    cropBar.appendChild(_cropBarSlot);
+    const cropActionBar = MpiToolActionBar.mount(_cropBarSlot, {
         leftSlot: ratioSel,
         actions: [
-            { key: 'apply',  icon: 'check', label: 'Apply',  variant: 'primary', info: 'Save crop as a new history entry' },
-            { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost',   info: 'Cancel crop' },
+            { key: 'apply', icon: 'check', label: 'Apply', variant: 'primary', info: 'Save crop as a new history entry' },
+            { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel crop' },
         ],
     });
     cropActionBar.on('action', ({ key }) => {
-        if (key === 'apply')  _runCrop();
+        if (key === 'apply') _runCrop();
         if (key === 'cancel') _exitCropMode();
     });
 
     // ── Mask action bar ────────────────────────────────────────────────────────
 
-    const maskActionBar = MpiToolActionBar.mount(cropBar, {
+    const _maskBarSlot = ce('div', { className: 'gh-bar-slot' });
+    cropBar.appendChild(_maskBarSlot);
+    const maskActionBar = MpiToolActionBar.mount(_maskBarSlot, {
         actions: [
-            { key: 'brush',  icon: 'pencil', label: 'Brush',       variant: 'ghost',   toggleable: true, active: true, radioGroup: 'tool', info: 'Paint mask (B)' },
-            { key: 'eraser', icon: 'eraser', label: 'Eraser',      variant: 'ghost',   toggleable: true,              radioGroup: 'tool', info: 'Erase mask (E)' },
-            { key: 'clear',  icon: 'trash',  label: 'Clear',       variant: 'ghost',   info: 'Clear entire mask' },
-            { key: 'invert', icon: 'swap',   label: 'Invert',      variant: 'ghost',   info: 'Invert mask colours' },
-            { key: 'cancel', icon: 'close',  label: 'Cancel',      variant: 'ghost',   info: 'Cancel mask and discard' },
-            { key: 'apply',  icon: 'check',  label: 'Apply Mask',  variant: 'primary', info: 'Confirm mask for generation' },
+            { key: 'brush', icon: 'pencil', label: 'Brush', variant: 'ghost', toggleable: true, active: true, radioGroup: 'tool', info: 'Paint mask (B)' },
+            { key: 'eraser', icon: 'eraser', label: 'Eraser', variant: 'ghost', toggleable: true, radioGroup: 'tool', info: 'Erase mask (E)' },
+            { key: 'clear', icon: 'trash', label: 'Clear', variant: 'ghost', info: 'Clear entire mask' },
+            { key: 'invert', icon: 'swap', label: 'Invert', variant: 'ghost', info: 'Invert mask colours' },
+            { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel mask and discard' },
+            { key: 'apply', icon: 'check', label: 'Apply Mask', variant: 'primary', info: 'Confirm mask for generation' },
         ],
     });
     maskActionBar.on('action', ({ key, active }) => {
-        if (key === 'brush')  { _canvas.setBrushType('brush');  }
+        if (key === 'brush') { _canvas.setBrushType('brush'); }
         if (key === 'eraser') { _canvas.setBrushType('eraser'); }
-        if (key === 'clear')  { _canvas.clearMask(); _hasMask = false; _refreshOpOptions(); }
+        if (key === 'clear') { _canvas.clearMask(); _hasMask = false; _refreshOpOptions(); }
         if (key === 'invert') { _canvas.flipMaskColor(); }
         if (key === 'cancel') { _canvas.clearMask(); _hasMask = false; _exitMaskMode(); _refreshOpOptions(); }
-        if (key === 'apply')  { _hasMask = true; _exitMaskMode(); _refreshOpOptions(); }
+        if (key === 'apply') { _hasMask = true; _exitMaskMode(); _refreshOpOptions(); }
     });
 
+    // ── Selection bar ──────────────────────────────────────────────────────────
+
+    const _selBarSlot = ce('div', { className: 'gh-workspace__bottom gh-workspace__bottom--hidden' });
+    cropBar.appendChild(_selBarSlot);
+    const selectionBar = MpiSelectionBar.mount(_selBarSlot, { count: 0 });
+
+    selectionBar.on('compare', () => {
+        if (_selection.size !== 2) return;
+        const [idxA, idxB] = [..._selection];
+        _showCompare(idxA, idxB);
+    });
+
+    selectionBar.on('delete', () => {
+        // Sort descending so removing by index doesn't shift subsequent indices
+        const indices = [..._selection].sort((a, b) => b - a);
+        for (const idx of indices) {
+            _group = removeHistoryEntry(_group, idx);
+        }
+        _selectedIdx = _group.selectedIndex;
+        _exitSelectMode();
+        _persistGroup();
+        _buildHistoryCards();
+        _showEntry(_group.history[_selectedIdx]);
+    });
+
+    selectionBar.on('cancel', () => {
+        _exitSelectMode();
+    });
 
     // ── Crop execution ────────────────────────────────────────────────────────
 
@@ -383,7 +443,7 @@ export function mount(container, params = {}) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    folderPath:     state.currentProject.folderPath,
+                    folderPath: state.currentProject.folderPath,
                     sourceFilePath: _resolveUrl(currentItem.filePath),
                     x: rect.x, y: rect.y, w: rect.w, h: rect.h,
                 }),
@@ -393,7 +453,7 @@ export function mount(container, params = {}) {
             if (!data.success) throw new Error(data.error || 'Crop failed');
 
             const newItem = createImageItem({
-                filePath:  `/project-file?path=${encodeURIComponent(data.filePath)}`,
+                filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
                 operation: 'crop',
             });
 
@@ -409,9 +469,9 @@ export function mount(container, params = {}) {
         }
     }
 
-    const isVideo     = _group.type === 'video';
-    const models      = getModelsByType(isVideo ? 'video' : 'image');
-    let activeModel   = models[0] || null;
+    const isVideo = _group.type === 'video';
+    const models = getModelsByType(isVideo ? 'video' : 'image');
+    let activeModel = models[0] || null;
 
     // In groupHistory there is always at least one existing image/video available
     // as input, so imageCount/videoCount start at 1.
@@ -449,14 +509,14 @@ export function mount(container, params = {}) {
     let activeOperation = isVideo ? 't2v' : (_firstAvailable?.value ?? 'upscale');
 
     let _opDropdown = null;
-    let _promptBox  = null;
+    let _promptBox = null;
     let _activeExec = null;
 
     if (activeModel) {
         _opDropdown = MpiDropdown.mount(ce('div'), {
-            options:   _opOptions(),
-            value:     activeOperation,
-            info:      'Generation operation',
+            options: _opOptions(),
+            value: activeOperation,
+            info: 'Generation operation',
             direction: 'up',
         });
         _opDropdown.on('change', ({ value }) => {
@@ -466,10 +526,10 @@ export function mount(container, params = {}) {
         });
 
         _promptBox = MpiPromptBox.mount(bottom, {
-            model:           activeModel,
-            operation:       activeOperation,
+            model: activeModel,
+            operation: activeOperation,
             includeNegative: true,
-            rightA:          _opDropdown,
+            rightA: _opDropdown,
         });
 
         _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
@@ -517,7 +577,7 @@ export function mount(container, params = {}) {
 
         _activeExec = runCommand({
             operation,
-            modelId:    activeModel.id,
+            modelId: activeModel.id,
             positive,
             negative,
             mediaItems: resolvedMedia,
@@ -528,7 +588,7 @@ export function mount(container, params = {}) {
         exec.onPreview = async (url) => {
             _setGeneratingSpinner(false); // hide spinner once latents start flowing
             _canvas.isComparisonMode = false;
-            try { await _canvas.loadImage(url); } catch (_) {}
+            try { await _canvas.loadImage(url); } catch (_) { }
         };
 
         exec.onProgress = (value) => StatusBar.progress.update(value);
@@ -545,16 +605,16 @@ export function mount(container, params = {}) {
                 return;
             }
 
-            let filePath    = urls[0];
+            let filePath = urls[0];
             let displayName = operation;
 
             if (state.currentProject?.folderPath) {
                 try {
                     const res = await fetch('/project/save-generation', {
-                        method:  'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({
-                            folderPath:   state.currentProject.folderPath,
+                        body: JSON.stringify({
+                            folderPath: state.currentProject.folderPath,
                             comfyViewUrl: urls[0],
                             operation,
                             meta: { prompt: positive, negativePrompt: negative, modelId: activeModel.id },
@@ -563,7 +623,7 @@ export function mount(container, params = {}) {
                     if (!res.ok) throw new Error(`save-generation ${res.status}`);
                     const data = await res.json();
                     if (data.success) {
-                        filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                        filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
                         displayName = data.filename.replace(/\.[^.]+$/, '');
                     }
                 } catch (err) {
@@ -573,9 +633,9 @@ export function mount(container, params = {}) {
 
             const newItem = createImageItem({
                 filePath,
-                modelId:        activeModel.id,
-                operation:      displayName,
-                prompt:         positive,
+                modelId: activeModel.id,
+                operation: displayName,
+                prompt: positive,
                 negativePrompt: negative,
             });
 
@@ -608,11 +668,11 @@ export function mount(container, params = {}) {
         if (!state.currentProject) return;
         state.currentProject = updateGroupInProject(state.currentProject, _group);
         fetch('/update-project', {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
+            body: JSON.stringify({
                 folderPath: state.currentProject.folderPath,
-                updates:    { itemGroups: state.currentProject.itemGroups },
+                updates: { itemGroups: state.currentProject.itemGroups },
             }),
         }).catch(err => console.warn('[groupHistory] update-project failed:', err));
     }

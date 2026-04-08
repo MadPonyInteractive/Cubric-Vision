@@ -133,7 +133,7 @@
     border-color: var(--neon-electric);
 }
 
-.gh-history__card--compare {
+.gh-history__card--selected {
     border-color: var(--neon-warm, #f90);
 }
 

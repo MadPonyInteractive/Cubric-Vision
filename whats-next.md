@@ -14,6 +14,8 @@
 | MpiCompareOverlay / gallery compare | Complete |
 | gallery.js workspace | Complete |
 | commandExecutor.js | Complete |
+| groupHistory — selection mode + MpiSelectionBar | Complete |
+| groupHistory — crop bar fix (shared mount container bug) | Complete |
 | All other previously completed items | Complete |
 
 ## Known Issues (test findings — fix first next session)
@@ -28,12 +30,6 @@
 </current_state>
 
 <work_remaining>
-
-## 0. ⚠️ Fix issues from last test session (FIRST priority)
-
-See "Known Issues" above. Fill in before starting.
-
----
 
 ## 1. groupHistory — mask painting needs `_hasMask` to track drawn pixels
 
@@ -152,6 +148,48 @@ bar.el.setActive('brush');   // syncs radio group, no event emitted
 bar.on('action', ({ key, active }) => {});
 ```
 
+## MpiSelectionBar API
+
+```js
+const sel = MpiSelectionBar.mount(mountEl, { count: 0 });
+// mountEl should use gh-workspace__bottom + gh-workspace__bottom--hidden classes for positioning/visibility
+sel.el.setCount(n);   // updates count label; auto shows/hides compare (=== 2) and delete/download (> 0)
+sel.on('compare',  () => {});
+sel.on('delete',   () => {});
+sel.on('cancel',   () => {});
+```
+
+## groupHistory mode exclusivity rules
+
+All three bottom-bar modes are mutually exclusive. Source of truth is `_canvas.activeMode` for tool modes;
+`_selectMode` boolean for selection. The `modechange` event drives all toolbar show/hide.
+
+- Entering select mode: calls `_exitCropMode()` / `_exitMaskMode()` BEFORE setting `_selectMode = true`
+  (so the modechange('none') they fire doesn't accidentally exit select mode)
+- Entering crop/mask: fires `modechange` → handler exits select mode (`_selectMode && !_comparingActive`)
+- Compare within select mode: `_comparingActive` flag suppresses select mode exit during `_showCompare()`
+- Exiting select mode: resets canvas to 'none' if compare was active (`_showEntry` handles this)
+
+## groupHistory mount pattern for bottom bars
+
+ComponentFactory.mount() does `container.innerHTML = html` — mounting two components
+into the same container destroys the first. Each bar needs its own slot div:
+
+```js
+const _cropBarSlot = ce('div', { className: 'gh-bar-slot' });
+cropBar.appendChild(_cropBarSlot);
+const cropActionBar = MpiToolActionBar.mount(_cropBarSlot, { ... });
+
+const _maskBarSlot = ce('div', { className: 'gh-bar-slot' });
+cropBar.appendChild(_maskBarSlot);
+const maskActionBar = MpiToolActionBar.mount(_maskBarSlot, { ... });
+
+// MpiSelectionBar has no fixed positioning of its own — give it a bottom-bar wrapper:
+const _selBarSlot = ce('div', { className: 'gh-workspace__bottom gh-workspace__bottom--hidden' });
+cropBar.appendChild(_selBarSlot);
+const selectionBar = MpiSelectionBar.mount(_selBarSlot, { count: 0 });
+```
+
 ## groupHistory mask flow
 
 - `_hasMask` (bool) — true after user presses "Apply Mask"; controls `hasMask` in `_opOptions` context
@@ -173,6 +211,7 @@ bar.on('action', ({ key, active }) => {});
 - MpiCanvas managers: `js/components/Primitives/MpiCanvas/managers/`
 - MpiHistoryTools: `js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js`
 - MpiToolActionBar: `js/components/Compounds/MpiToolActionBar/MpiToolActionBar.js`
+- MpiSelectionBar: `js/components/Compounds/MpiSelectionBar/MpiSelectionBar.js`
 - groupHistory workspace: `js/workspaces/groupHistory/groupHistory.js`
 - groupHistory CSS: `js/workspaces/groupHistory/groupHistory.css`
 - Gallery workspace: `js/workspaces/gallery/gallery.js`
