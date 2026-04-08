@@ -93,6 +93,9 @@ export const Events = new EventBus();
  * 'tool:idle'        { tool: string, type: string }  — tool run finished/cancelled
  * 'project:changed'  { project: Object }             — user switched active project
  * 'state:changed'    { key: string, value: any }     — reactive state mutation
+ * 'comfy:starting'   —                               — ComfyUI server is starting up
  * 'comfy:ready'      —                               — ComfyUI server is ready
+ * 'comfy:error'      { message: string }             — ComfyUI failed to start
  * 'nav:tool'         { toolName: string }            — user navigated to a tool
  */
+

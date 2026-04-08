@@ -20,7 +20,7 @@
 'use strict';
 
 import { ComfyUIController } from './comfyController.js';
-import { getWorkflowFile, UNIVERSAL_WORKFLOWS } from '../data/modelRegistry.js';
+import { getWorkflowFile, getUniversalWorkflow } from '../data/modelRegistry.js';
 import { getCommand } from '../data/commandRegistry.js';
 import { showError } from '../shell.js';
 import { clientLogger } from './clientLogger.js';
@@ -53,8 +53,9 @@ import { clientLogger } from './clientLogger.js';
  * @throws {Error} if no workflow file is registered
  */
 function _resolveWorkflowFile(modelId, operation) {
-    // Universal workflows take precedence (they don't need a model)
-    if (UNIVERSAL_WORKFLOWS[operation]) return UNIVERSAL_WORKFLOWS[operation];
+    // Universal workflows take precedence — use helper to stay decoupled from shape
+    const universal = getUniversalWorkflow(operation);
+    if (universal) return universal;
 
     const file = getWorkflowFile(modelId, operation);
     if (!file) throw new Error(`No workflow registered for model "${modelId}", operation "${operation}"`);

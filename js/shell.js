@@ -7,11 +7,13 @@ import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
 import { syncModelInstalled } from './data/modelRegistry.js';
+import { Events } from './events.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
 import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
+import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
@@ -24,8 +26,9 @@ import { initNavigation, handleNavigation, updateTitlebarProject } from './shell
 // Internal references for communication
 let _projectNameInstance = null;
 
-// ── Global Error Dialog singleton ─────────────────────────────────────────────
+// ── Global dialog singletons ──────────────────────────────────────────────────
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
+const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
 
 /**
  * Show a user-facing error dialog with an optional log download button.
@@ -98,7 +101,7 @@ export async function initShell() {
 /**
  * Restores session state in dev_mode or defaults to landing.
  */
-function _bootApp() {
+async function _bootApp() {
   if (APP_CONFIG.test_styles) {
     const savedPage = sessionStorage.getItem('mpi_dev_page');
     const savedParams = JSON.parse(sessionStorage.getItem('mpi_dev_params') || '{}');
@@ -107,10 +110,16 @@ function _bootApp() {
     handleNavigation(PAGE_LANDING);
   }
 
-  // ComfyUI Auto-start
+  // Wire startup modal to comfy engine events.
+  // comfyController emits these events; shell owns the component reference.
+  Events.on('comfy:starting', () => _startingComfy.el.show());
+  Events.on('comfy:ready',    () => _startingComfy.el.hide());
+  Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
+
+  // ComfyUI Auto-start (optional)
   if (localStorage.getItem('mpi_auto_start_comfy') === 'true') {
-    const { ComfyUIController } = import('./services/comfyController.js');
-    ComfyUIController.then(c => c.ComfyUIController.ensureServerRunning());
+    const { ComfyUIController } = await import('./services/comfyController.js');
+    ComfyUIController.ensureServerRunning();
   }
 }
 

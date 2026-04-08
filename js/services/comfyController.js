@@ -4,6 +4,7 @@
 import { state } from '../state.js';
 import { showError } from '../shell.js';
 import { clientLogger } from './clientLogger.js';
+import { Events } from '../events.js';
 
 export const ComfyUIController = {
     serverAddress: "127.0.0.1:8188",
@@ -13,33 +14,31 @@ export const ComfyUIController = {
     activeListener: null,
 
     async ensureServerRunning() {
-        let modal = document.getElementById('engineStartupModal');
         try {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
             if (status.running && status.ready) return true;
 
-            if (modal) modal.classList.remove('hide');
+            Events.emit('comfy:starting');
 
             if (!status.running) {
                 console.log('[ComfyUIController] Requesting server start...');
                 await fetch('/comfy/start', { method: 'POST' });
             }
 
-            // Wait for it to be ready
+            // Poll until ready (up to 60 seconds)
             for (let i = 0; i < 60; i++) {
                 const checkRes = await fetch('/comfy/status');
                 const check = await checkRes.json();
                 if (check.ready) {
-                    if (modal) modal.classList.add('hide');
+                    Events.emit('comfy:ready');
                     return true;
                 }
                 await new Promise(r => setTimeout(r, 1000));
             }
-            if (modal) modal.classList.add('hide');
             throw new Error('ComfyUI server failed to become ready in time.');
         } catch (e) {
-            if (modal) modal.classList.add('hide');
+            Events.emit('comfy:error', { message: e.message });
             clientLogger.error('comfy', 'ComfyUI failed to start', e);
             showError('ComfyUI failed to start', e.message);
             throw e;

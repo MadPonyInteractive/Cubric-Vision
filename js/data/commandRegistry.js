@@ -116,7 +116,7 @@ export const commands = {
         promptRequired: false,
     },
 
-    // ── Video — Universal Workflows (not model-tied) ──────────────────────────
+    // ── Universal Workflows (not model-tied) ──────────────────────────
     // These appear regardless of active model; they have their own workflow files.
 
     interpolate: {
@@ -130,6 +130,13 @@ export const commands = {
         label: 'Video Upscale',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
+        promptRequired: false,
+        universal: true,
+    },
+    autoMaskImg: {
+        label: 'Auto Masking',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
         promptRequired: false,
         universal: true,
     },
@@ -179,7 +186,7 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
         .map(([key, cmd]) => {
             const available =
                 imageCount >= (cmd.requiresImages ?? 0) &&
-                videoCount >= (cmd.requiresVideo  ?? 0) &&
+                videoCount >= (cmd.requiresVideo ?? 0) &&
                 (!cmd.requiresMask || hasMask);
             return { key, available, ...cmd };
         });

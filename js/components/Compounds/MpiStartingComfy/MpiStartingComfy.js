@@ -1,8 +1,20 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { qs } from '../../../utils/dom.js';
 
+/**
+ * MpiStartingComfy — Engine Startup Indicator (Compound)
+ *
+ * Portals directly to document.body, bypassing the Overlays queue.
+ * This is intentional: the ComfyUI engine startup is a system-level event
+ * that must be visible regardless of whatever overlay is currently active
+ * (e.g. the projects page overlay showing at app boot).
+ *
+ * API:
+ *   inst.el.show()           — portals backdrop + wrapper, starts spinner
+ *   inst.el.hide()           — removes portal, clears spinner
+ *   inst.el.setError(msg)    — switches spinner to error text (stays visible)
+ */
 export const MpiStartingComfy = ComponentFactory.create({
     name: 'MpiStartingComfy',
     css: ['js/components/Compounds/MpiStartingComfy/MpiStartingComfy.css'],
@@ -14,34 +26,24 @@ export const MpiStartingComfy = ComponentFactory.create({
             <div class="mpi-starting-comfy__content">
                 <h2 class="mpi-starting-comfy__title gradient-text">${props.title || 'Starting ComfyUI Engine...'}</h2>
                 <p class="mpi-starting-comfy__text text-muted">${props.text || 'This may take a few moments...'}</p>
-                
-                <div class="mpi-starting-comfy__status" data-ref="status">
-                    <!-- Spinner and Error text goes here -->
-                </div>
+                <div class="mpi-starting-comfy__status" data-ref="status"></div>
             </div>
         </div>
     `,
     setup: (el, props, emit) => {
-        // Compose with MpiModal for blocking UI pattern
-        const modal = MpiModal.mount(document.createElement('div'), {
-            width: 'min(440px, 90vw)',
-            backdropClose: false // Don't allow closing by clicking background while starting
-        });
-
-        // Put our content inside the modal
-        modal.el.appendChild(el);
-
-        const statusSlot = qs('[data-ref="status"]', el);
+        // Direct portal — bypasses Overlays queue so startup indicator always shows.
+        let _backdrop  = null;
+        let _wrapper   = null;
         let spinnerInst = null;
 
-        // Expose public methods
-        el.show = () => {
-            el.setLoading(true);
-            modal.el.show();
-        };
+        const statusSlot = qs('[data-ref="status"]', el);
 
-        el.hide = () => {
-            modal.el.hide();
+        el.setLoading = (isLoading) => {
+            statusSlot.innerHTML = '';
+            if (spinnerInst) { spinnerInst.destroy(); spinnerInst = null; }
+            if (isLoading) {
+                spinnerInst = MpiSpinner.mount(statusSlot, { size: 'lg', variant: 'primary' });
+            }
         };
 
         el.setError = (errMsg) => {
@@ -49,24 +51,29 @@ export const MpiStartingComfy = ComponentFactory.create({
             statusSlot.innerHTML = `<p class="mpi-starting-comfy__error">${errMsg}</p>`;
         };
 
-        el.setLoading = (isLoading) => {
-            statusSlot.innerHTML = '';
-            if (spinnerInst) {
-                spinnerInst.destroy();
-                spinnerInst = null;
-            }
-            if (isLoading) {
-                spinnerInst = MpiSpinner.mount(statusSlot, { size: 'lg', variant: 'primary' });
-            }
+        el.show = () => {
+            if (_backdrop) return; // already visible — idempotent
+            el.setLoading(true);
+
+            _backdrop = document.createElement('div');
+            _backdrop.className = 'mpi-modal-backdrop';
+            document.body.appendChild(_backdrop);
+
+            _wrapper = document.createElement('div');
+            _wrapper.className = 'mpi-modal-wrapper';
+            _wrapper.style.width = 'min(440px, 90vw)';
+            _wrapper.appendChild(el);
+            document.body.appendChild(_wrapper);
         };
 
-        // Init layout
-        el.setLoading(true);
+        el.hide = () => {
+            _backdrop?.remove(); _backdrop = null;
+            _wrapper?.remove();  _wrapper  = null;
+        };
 
-        // Cleanup
         el.destroy = () => {
             if (spinnerInst) spinnerInst.destroy();
-            modal.destroy();
+            el.hide();
         };
     }
 });

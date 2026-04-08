@@ -28,42 +28,7 @@ export const PATHS = Object.freeze({
 // Defined once, referenced by id in model dependency lists to avoid repetition.
 
 const DEPS = {
-    'ComfyUI-MpiNodes': {
-        id: 'ComfyUI-MpiNodes',
-        name: 'ComfyUI-MpiNodes',
-        type: 'custom_nodes',
-        filename: 'ComfyUI-MpiNodes',
-        url: 'https://github.com/MadPonyInteractive/ComfyUi-MpiNodes',
-        installRequirements: false,
-        size: '1.76MB',
-    },
-    'ComfyUI-Impact-Pack': {
-        id: 'ComfyUI-Impact-Pack',
-        name: 'ComfyUI Impact Pack',
-        type: 'custom_nodes',
-        filename: 'comfyui-impact-pack',
-        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack',
-        installRequirements: true,
-        size: '5MB',
-    },
-    'ComfyUI-Impact-Subpack': {
-        id: 'ComfyUI-Impact-Subpack',
-        name: 'ComfyUI Impact Subpack',
-        type: 'custom_nodes',
-        filename: 'ComfyUI-Impact-Subpack',
-        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack',
-        installRequirements: true,
-        size: '172KB',
-    },
-    'ComfyUI-UltimateSDUpscale': {
-        id: 'ComfyUI-UltimateSDUpscale',
-        name: 'ComfyUI Ultimate SD Upscale',
-        type: 'custom_nodes',
-        filename: 'comfyui_ultimatesdupscale',
-        url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale',
-        installRequirements: false,
-        size: '940KB',
-    },
+    // Models
     'lustify-7': {
         id: 'lustify-7',
         name: 'Lustify V7 (SDXL)',
@@ -82,6 +47,7 @@ const DEPS = {
         size: '6.08GB',
         vram: '8GB',
     },
+    // Loras
     'spo-sdxl-lora': {
         id: 'spo-sdxl-lora',
         name: 'SPO SDXL 10ep Lora',
@@ -98,6 +64,7 @@ const DEPS = {
         url: 'https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step_lora.safetensors',
         size: '385MB',
     },
+    // Upscale Models
     '4x-NMKD-Siax': {
         id: '4x-NMKD-Siax',
         name: '4x NMKD-Siax 200k',
@@ -105,6 +72,44 @@ const DEPS = {
         filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
         url: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
         size: '67MB',
+    },
+    // Nodes
+    'ComfyUI-MpiNodes': {
+        id: 'ComfyUI-MpiNodes',
+        name: 'ComfyUI-MpiNodes',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-MpiNodes',
+        url: 'https://github.com/MadPonyInteractive/ComfyUi-MpiNodes',
+        installRequirements: false,
+        size: '1.76MB',
+    },
+    'ComfyUI-Impact-Pack': {
+        id: 'ComfyUI-Impact-Pack',
+        name: 'ComfyUI Impact Pack',
+        type: 'custom_nodes',
+        filename: 'comfyui-impact-pack',
+        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack',
+        installRequirements: true,
+        size: '5MB',
+    },
+    'ComfyUI-UltimateSDUpscale': {
+        id: 'ComfyUI-UltimateSDUpscale',
+        name: 'ComfyUI Ultimate SD Upscale',
+        type: 'custom_nodes',
+        filename: 'comfyui_ultimatesdupscale',
+        url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale',
+        installRequirements: false,
+        size: '940KB',
+    },
+    // Auto Masking — nodes and detection models used by img_auto_mask workflow
+    'ComfyUI-Impact-Subpack': {
+        id: 'ComfyUI-Impact-Subpack',
+        name: 'ComfyUI Impact Subpack',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-Impact-Subpack',
+        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack',
+        installRequirements: true,
+        size: '172KB',
     },
     'face-yolov8n': {
         id: 'face-yolov8n',
@@ -174,13 +179,7 @@ export const MODELS = [
             'spo-sdxl-lora',
             'sdxl-lightning-lora',
             '4x-NMKD-Siax',
-            'face-yolov8n',
-            'hand-yolov8n',
-            'person-yolov8n-seg',
-            'sam-vit-b',
             'ComfyUI-MpiNodes',
-            'ComfyUI-Impact-Pack',
-            'ComfyUI-Impact-Subpack',
             'ComfyUI-UltimateSDUpscale',
         ],
     },
@@ -203,12 +202,44 @@ export const MODELS = [
 ];
 
 // ── Universal Workflows (not model-tied) ──────────────────────────────────────
-// These are available regardless of which model is active.
+// Available regardless of which model is active.
 // Keys must match commandRegistry entries marked universal: true.
+//
+// Unlike MODELS these workflows never need checkpoint / lora / safetensor files —
+// only custom nodes, detection models, and upscale models.
+// The `installed` flag is resolved at runtime by syncModelInstalled().
 
+/**
+ * @typedef {Object} UniversalWorkflowDef
+ * @property {string}   workflow     - Workflow filename in comfy_workflows/
+ * @property {string[]} dependencies - Dep ids from DEPS (no checkpoints/loras)
+ * @property {boolean}  installed    - Resolved at runtime; always false here
+ */
+
+/** @type {Record<string, UniversalWorkflowDef>} */
 export const UNIVERSAL_WORKFLOWS = {
-    interpolate: 'video_interpolate.json',
-    videoUpscale: 'video_upscale.json',
+    interpolate: {
+        workflow: 'video_interpolate.json',
+        dependencies: [],   // TODO: add interpolation model dep when workflow is ready
+        installed: false,
+    },
+    videoUpscale: {
+        workflow: 'video_upscale.json',
+        dependencies: [],   // TODO: add video upscale model dep when workflow is ready
+        installed: false,
+    },
+    autoMaskImg: {
+        workflow: 'img_auto_mask.json',
+        dependencies: [
+            'ComfyUI-Impact-Pack',
+            'ComfyUI-Impact-Subpack',
+            'face-yolov8n',
+            'hand-yolov8n',
+            'person-yolov8n-seg',
+            'sam-vit-b',
+        ],
+        installed: false,
+    },
 };
 
 // ── Runtime Installed Sync ────────────────────────────────────────────────────
@@ -224,9 +255,19 @@ export const UNIVERSAL_WORKFLOWS = {
  */
 export async function syncModelInstalled() {
     try {
-        const payload = MODELS.map(model => ({
+        // Build payload for model-tied workflows
+        const modelPayload = MODELS.map(model => ({
             id: model.id,
             deps: model.dependencies.map(depId => {
+                const dep = DEPS[depId];
+                return dep ? { type: dep.type, filename: dep.filename } : null;
+            }).filter(Boolean),
+        }));
+
+        // Build payload for universal workflows — namespaced to avoid id collisions
+        const universalPayload = Object.entries(UNIVERSAL_WORKFLOWS).map(([key, uw]) => ({
+            id: `universal:${key}`,
+            deps: uw.dependencies.map(depId => {
                 const dep = DEPS[depId];
                 return dep ? { type: dep.type, filename: dep.filename } : null;
             }).filter(Boolean),
@@ -235,7 +276,7 @@ export async function syncModelInstalled() {
         const res = await fetch('/comfy/models/check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ models: payload }),
+            body: JSON.stringify({ models: [...modelPayload, ...universalPayload] }),
         });
 
         if (!res.ok) return false;
@@ -246,6 +287,14 @@ export async function syncModelInstalled() {
                 model.installed = results[model.id];
             }
         }
+
+        for (const [key, uw] of Object.entries(UNIVERSAL_WORKFLOWS)) {
+            const resultKey = `universal:${key}`;
+            if (Object.prototype.hasOwnProperty.call(results, resultKey)) {
+                uw.installed = results[resultKey];
+            }
+        }
+
         return true;
     } catch (err) {
         console.error('[modelRegistry] syncModelInstalled failed:', err);
@@ -283,6 +332,16 @@ export function getModelById(id) {
 export function getWorkflowFile(modelId, operation) {
     const model = getModelById(modelId);
     return model?.workflows?.[operation] ?? null;
+}
+
+/**
+ * Returns the workflow filename for a universal (non-model-tied) operation.
+ * Returns null if the key does not exist in UNIVERSAL_WORKFLOWS.
+ * @param {string} key - Command key (must have universal: true in commandRegistry)
+ * @returns {string|null}
+ */
+export function getUniversalWorkflow(key) {
+    return UNIVERSAL_WORKFLOWS[key]?.workflow ?? null;
 }
 
 /**

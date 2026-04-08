@@ -1,119 +1,154 @@
 ```xml
 <work_completed>
 
-## modelRegistry.js — Runtime Installed Check
+## This Session — modelRegistry.js + MpiStartingComfy Wiring
 
-### Approach: Option D (client sends dep data to server)
+### UNIVERSAL_WORKFLOWS — Promoted to proper registry
+- `UNIVERSAL_WORKFLOWS` promoted from flat `{ key: filename }` strings to
+  `{ key: { workflow, dependencies[], installed } }` objects — same shape as MODELS
+- `syncModelInstalled()` now syncs universal workflows too via same
+  `/comfy/models/check` endpoint (namespaced as `universal:autoMaskImg` etc.)
+- `autoMaskImg` deps wired: ComfyUI-Impact-Pack, ComfyUI-Impact-Subpack,
+  face-yolov8n, hand-yolov8n, person-yolov8n-seg, sam-vit-b
+- `interpolate` and `videoUpscale` have `dependencies: []` pending workflow
+  creation — user will populate when workflows are ready
+- `getUniversalWorkflow(key)` — new parallel helper to `getWorkflowFile()`
+- `commandExecutor._resolveWorkflowFile()` updated to use new helper
 
-`modelRegistry.js` is the single source of truth. The server cannot import ESM,
-so the client posts pre-resolved dep filenames to the server; the server only
-does `fs.pathExists` checks and returns results.
+### MpiStartingComfy — wired to engine startup
 
-### Server — `POST /comfy/models/check` (routes/comfy.js)
+- `MpiStartingComfy` rewritten: direct body portal, bypasses Overlays queue.
+  (MpiModal delegation blocked it when MpiProjectsPageOverlay was active at boot)
+- `comfyController` now emits `comfy:starting`, `comfy:ready`, `comfy:error`
+  via the event bus — no longer holds any component reference
+- `shell.js` subscribes to those three events and drives `_startingComfy`
+- Three events added to canonical `MpiEventMap` in `events.js`
+- Fixed broken `_bootApp` (was non-async with `await`)
 
-Receives: `{ models: [{ id, deps: [{ type, filename }] }] }`
-- For `custom_nodes` deps: checks `engine/.../custom_nodes/<filename>`
-- For model file deps: checks `engine/.../models/<filename>` (or custom root if set)
-- Custom root: uses `getCustomRoot()` from shared.js; tries direct path then
-  recursive basename search under the relevant sub-dir
-- Returns: `{ success: true, results: { [modelId]: boolean } }`
-- Private `_findFile(dir, filename)` helper added for custom root fuzzy lookup
-
-### Client — `syncModelInstalled()` (js/data/modelRegistry.js)
-
-- Builds payload from `MODELS` + `DEPS` (resolves dep ids to `{type, filename}`)
-- POSTs to `/comfy/models/check`
-- Patches `model.installed` in-place on each MODELS entry
-- Called at startup from `shell.js` `_initDataRegistries()`
-- Fixed hardcoded `installed: true` → `installed: false` on `sdxl-lustify`
-
-### Cleanup — modelManager.js deleted
-
-`js/managers/modelManager.js` was an orphaned LLM scaffold:
-- Hit `/llm/models`, stored results in `state.allModels`
-- Exported `refreshModelRegistry`, `getFirstAvailableModel`, `getRequiredModelsForTool`,
-  `downloadModel`, `deleteModel` — none consumed outside the file itself
-- `state.allModels` was only written/read inside modelManager.js
-- Deleted the file, removed `allModels` from `state.js`, removed import + call from `shell.js`
-
-### What `installed` does NOT do yet
-
-`model.installed` is now set correctly at runtime, but nothing reads it yet.
-Natural next consumers:
-- `getModelsByType()` callers in gallery.js and groupHistory.js — could filter
-  to installed-only so the model dropdown only shows ready models
-- MpiPromptBox — disable run button if `activeModel.installed === false`
-- Gallery card — surface a warning if a group's modelId is no longer installed
-  (model was uninstalled after group was created)
-
-No GC / data deletion is planned for uninstalled models — media files remain
-valid and viewable; only further generation is blocked. UI should handle the
-"no installed model" state gracefully rather than deleting user data.
+### commandRegistry.js — autoMaskImg command registered
+- `autoMaskImg` added as universal command (mediaType IMAGE, requiresImages: 1)
 
 </work_completed>
 
 <work_remaining>
 
-## 1. Model UI — Zero-installed state + install flow
+## 🔴 TOP PRIORITY — Event Bus Audit (Agent Debt)
 
-`syncModelInstalled()` runs at startup and patches MODELS in-place, but nothing
-reads `model.installed` yet. The full model management story is:
+The `MpiStartingComfy` wiring revealed a systemic failure: previous agent sessions
+implemented cross-layer communication via direct function imports instead of the
+event bus. This creates tight coupling between architecture layers that must never
+know about each other. This must be fixed before adding more features.
 
-### 1a. Zero-installed state (gallery / groupHistory)
+### Audit Results
+
+| File | Violation | Severity |
+|---|---|---|
+| `js/services/comfyController.js` | `import { showError } from '../shell.js'` | 🔴 P0 |
+| `js/services/commandExecutor.js` | `import { showError } from '../shell.js'` | 🔴 P0 |
+| `js/workspaces/groupHistory/groupHistory.js` | `import { StatusBar } from '../../shell/statusBar.js'` | 🟡 P2 |
+| `js/workspaces/groupHistory/groupHistory.js` | `tool:running` / `tool:idle` not emitted at lines 584–686 | 🟠 P1 |
+| `js/workspaces/groupHistory/groupHistory.js` | `media:updated` not emitted after `_persistGroup()` at line 700 | 🟠 P1 |
+| `js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.js` | ✅ Clean — uses component `emit()` correctly | — |
+
+### P0 — `showError` must become an event
+
+**Emit (in services — already have Events import):**
+```js
+// comfyController.js (line 43) and commandExecutor.js (line 184):
+Events.emit('ui:error', { title: 'Generation failed', message: err.message });
+```
+
+**Listen (shell.js — add once alongside the comfy event subscriptions):**
+```js
+Events.on('ui:error', ({ title, message }) => showError(title, message));
+```
+
+Then remove `import { showError } from '../shell.js'` from both service files.
+
+### P1 — Dead canonical events must be emitted
+
+`tool:running`, `tool:idle`, and `media:updated` are in the canonical map but
+**never emitted**. These are the wiring points to add:
+
+**In `groupHistory.js _runGenerate()` (around line 584):**
+```js
+Events.emit('tool:running', { tool: 'groupHistory', type: operation });
+```
+
+**In `groupHistory.js exec.onComplete` and `exec.onError` (lines 618, 678):**
+```js
+Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
+```
+
+**In `groupHistory.js _persistGroup()` (line 690) and `gallery.js _persistGroups()`:**
+```js
+Events.emit('media:updated', { projectId: state.currentProject?.id });
+```
+
+### P2 — `groupHistory` StatusBar import
+
+`groupHistory.js` line 33 imports `StatusBar` from `../../shell/statusBar.js`.
+This is less critical (statusBar is a utility, not a component), but ideally
+the status bar should listen to `tool:running` / `tool:idle` and drive itself.
+Defer until P1 is done — the events will unblock this naturally.
+
+---
+
+## 2. Model UI — Zero-installed state + install flow
+
+`syncModelInstalled()` runs at startup and patches MODELS + UNIVERSAL_WORKFLOWS
+in-place, but nothing reads `model.installed` or `uw.installed` yet.
+
+### 2a. Zero-installed state (gallery / groupHistory)
 - If no installed models exist, hide the prompt box / model dropdown entirely
-- Show a single clear message: "No models installed. Install a model to get started."
-- Link/button to open the model installer
+- Show: "No models installed. Install a model to get started." + link to installer
 
-### 1b. Installed-only model dropdown
-- `getModelsByType()` callers in gallery.js and groupHistory.js should filter
-  to `m.installed === true` so uninstalled models never appear in the dropdown
+### 2b. Installed-only model dropdown
+- `getModelsByType()` callers in gallery.js + groupHistory.js: filter to
+  `m.installed === true` so uninstalled models never appear in the dropdown
 - MpiPromptBox: disable Run if `activeModel?.installed === false`
 
-### 1c. Gallery card — uninstalled model warning
-- If a group's `modelId` refers to a model that is now uninstalled, surface a
-  warning on the card (e.g. badge or icon) so the user knows further generation
-  is unavailable without reinstalling
+### 2c. Gallery card — uninstalled model warning
+- If a group's `modelId` refers to a now-uninstalled model, surface a badge/icon
+  so the user knows further generation is unavailable without reinstalling
 
-### 1d. Model installer UI
-- A page/overlay where the user can browse available models (from MODELS in
-  modelRegistry.js) and trigger download/install for uninstalled ones
-- Uses `POST /comfy/model/download` per dependency
-- Shows per-dep progress; marks model installed on completion
-- Calls `syncModelInstalled()` after install completes to refresh flags
+### 2d. Universal workflow installed gating
+- `autoMaskImg` command: show as unavailable (greyed) if
+  `UNIVERSAL_WORKFLOWS.autoMaskImg.installed === false`
+- `interpolate` / `videoUpscale`: same once their deps are populated
 
-## 2. Model Garbage Collection (uninstall)
+### 2e. Model installer UI
+- Page/overlay: browse MODELS + UNIVERSAL_WORKFLOWS, trigger download/install
+- Uses existing `POST /comfy/model/download` per dependency
+- Shows per-dep progress; calls `syncModelInstalled()` on completion
 
-When a model is uninstalled:
-- Delete its dep files from disk via a new `POST /comfy/models/uninstall` route
-  (mirrors the dep resolution logic in `/comfy/models/check`)
-- Call `syncModelInstalled()` after to update `model.installed` flags
-- Do NOT delete user media files — groups remain intact and browsable
-- UI: disable Run / show warning on affected gallery cards (covered by 1b/1c above)
-- Shared deps (e.g. `lustify-7` used by multiple models): only delete if no other
-  installed model references the same dep filename
+---
 
-## 3. LLM Models — Future
+## 3. Video Workflows
 
-`modelManager.js` was deleted — it was an orphaned LLM scaffold with no live
-consumers. When LLM model support is added it should be built fresh:
-- New route module `routes/llm.js` already exists for the server side
-- Client side: new manager in `js/managers/` following the same Option D pattern
-  (client sends model data, server checks disk)
-- LLM models are a separate registry from ComfyUI models — do not conflate
+User is authoring new ComfyUI workflow files for video. When ready:
 
-## 4. groupHistory — video group support
+- Add required dep entries to `DEPS` in `modelRegistry.js`
+- Populate `dependencies: []` arrays in `UNIVERSAL_WORKFLOWS.interpolate`
+  and `UNIVERSAL_WORKFLOWS.videoUpscale`
+- New video model (e.g. Wan 2.1): uncomment + fill the stub in `MODELS`
+- groupHistory video group support: detect `item.type === 'video'`,
+  swap canvasWrap for video preview component
 
-Deferred — no ComfyUI workflow for video yet, and the video player component is
-being refactored into three separate pieces (preview, controls, selection).
+---
 
-- `_showEntry()` calls `_canvas.loadImage()` which fails silently for `.mp4` items
-- Detect `item.type === 'video'` and swap `canvasWrap` for video preview component
-- Reverse swap for image items
-- `_showCompare` for video groups: skip or handle separately
+## 4. Model Garbage Collection (uninstall)
+
+- New route `POST /comfy/models/uninstall`
+- Shared dep safety (don't delete a dep file still needed by another model)
+- Call `syncModelInstalled()` after uninstall to refresh flags
+- Do NOT delete user media — groups remain browsable
+
+---
 
 ## 5. Deferred / Low priority
 
-- `state.js` legacy flat properties (`g_currentGuide`, `g_promptEN`, `g_images`, etc.)
+- `state.js` legacy flat properties (`g_currentGuide`, `g_promptEN`, etc.)
   — remove when old workspace references confirmed gone
 - `PAGE_WORKSPACE` deprecated alias in `router.js` — remove when confirmed unused
 - `MpiSelectionBar` — not yet in `js/pages/components.js` dev gallery
@@ -122,201 +157,132 @@ being refactored into three separate pieces (preview, controls, selection).
 
 <critical_context>
 
+## Event Bus Rules (MANDATORY for all agents)
+
+The event bus (`js/events.js`) is the ONLY approved communication channel between:
+- Services (`js/services/`) ↔ Shell (`js/shell.js`)
+- Services ↔ Workspaces
+- Services ↔ Components
+
+**NEVER import shell functions into services. NEVER pass component instances into
+services. If a service needs to trigger UI, it emits an event.**
+
+```js
+// ❌ WRONG — service importing shell
+import { showError } from '../shell.js';
+
+// ✅ CORRECT — service emits event
+Events.emit('ui:error', { title: '...', message: '...' });
+// shell listens: Events.on('ui:error', ({ title, message }) => showError(...))
+```
+
+```js
+// ❌ WRONG — injecting a component reference into a service
+ComfyUIController.setStartupModal(componentInstance);
+
+// ✅ CORRECT — service emits lifecycle event
+Events.emit('comfy:starting');
+// shell/component listens and drives its own UI
+```
+
+## Canonical Events (js/events.js MpiEventMap)
+
+| Event | Payload | Emitted by | Consumed by |
+|---|---|---|---|
+| `comfy:starting` | — | comfyController | shell → MpiStartingComfy |
+| `comfy:ready` | — | comfyController | shell → MpiStartingComfy |
+| `comfy:error` | `{ message }` | comfyController | shell → MpiStartingComfy |
+| `ui:error` | `{ title, message }` | **TODO: services** | shell → MpiErrorDialog |
+| `tool:running` | `{ tool, type }` | **TODO: commandExecutor** | status bar, HUD |
+| `tool:idle` | `{ tool, type }` | **TODO: commandExecutor** | status bar, HUD |
+| `media:updated` | `{ projectId }` | **TODO: gallery** | gallery refresh |
+| `media:updated` | `{ projectId }` | any tool | gallery |
+| `project:changed` | `{ project }` | shell | workspaces |
+| `state:changed` | `{ key, value }` | state.js | any subscriber |
+| `nav:tool` | `{ toolName }` | navigation | any subscriber |
+| `ui:close-all-popups` | — | overlayManager | all floating UI |
+
 ## modelRegistry.js — Architecture Rules
 
-- `js/data/modelRegistry.js` is the **single source of truth** for all ComfyUI models.
-- `dev_configs/comfy_workflows.json` is **legacy** — do not use it as reference for
-  model/dependency data.
-- The server (CJS) cannot import modelRegistry.js (ESM). Use Option D pattern:
-  client posts pre-resolved dep data, server only checks disk.
-- `syncModelInstalled()` must be called before any UI that reads `model.installed`.
-  Currently called non-blocking at startup in `shell.js _initDataRegistries()`.
+- `js/data/modelRegistry.js` is the single source of truth for all ComfyUI models
+  AND universal workflows.
+- Server (CJS) cannot import modelRegistry.js (ESM). Use Option D pattern.
+- `syncModelInstalled()` must be called before any UI that reads `model.installed`
+  or `UNIVERSAL_WORKFLOWS[key].installed`.
+- `UNIVERSAL_WORKFLOWS` values are now objects: `{ workflow, dependencies[], installed }`.
+  Use `getUniversalWorkflow(key)` to resolve filenames — never index directly.
 
 ## Chromium GPU canvas corruption — willReadFrequently
 
-When an offscreen canvas (not in the DOM) is used as a `drawImage()` source on another
-hardware-accelerated canvas, Chromium's GPU compositor can corrupt the source canvas's
-internal pixel buffer. Subsequent `getImageData()` reads return wrong values — specifically
-alpha channels get multiplied down (observed: painted pixels at alpha=255 read back as alpha=26-30).
-
-**Fix**: Always create off-screen canvases that will be read via `getImageData` with:
+Always create off-screen canvases read via `getImageData` with:
 ```js
 ctx = canvas.getContext('2d', { willReadFrequently: true });
 ```
-This forces software rendering for that context, preventing GPU corruption.
-
-**Applies to**: Any canvas used both as a `drawImage` source AND read via `getImageData`.
-`MaskManager.maskCanvas` is the current case. If similar patterns appear elsewhere, apply
-the same fix.
 
 ## ComfyUI mask convention
 
-Confirmed directly in the workflow UI: `MaskDetailerPipe` processes **white areas**.
-- White pixel = area to be detailed/inpainted
-- Black pixel = background, untouched
-
-Call: `canvas.getMaskDataURL('black', 'white')` → black background, white strokes where user painted.
-
-The `Input_Mask` node in `sdxl_detailer.json` is node `1555` (LoadImage, titled `Input_Mask`).
-Its output port `[1]` (MASK) feeds into the `auto mask` if/else (node `1594`), which routes to
-`MaskDetailerPipe` when `Auto_Mask` boolean is false (default).
+White = area to detail/inpaint, Black = background.
+Call: `canvas.getMaskDataURL('black', 'white')`
 
 ## ComfyUI mapping rules
 
-See `.agents/workflows/comfyui_mapping_rules.md`. Key points:
-- Never use hardcoded node IDs — always match by `_meta.title`
-- `Input_Image` → uploads as `mpi_input_image.png`, injects filename into `inputs.image`
-- `Input_Mask` → uploads as `mpi_input_mask.png`, injects filename into `inputs.image` (LoadImage node)
-- `Output` (case-insensitive) → the only node whose images are captured as results
-- `Seed` → `inputs.int` on MpiInt node
+See `.agents/workflows/comfyui_mapping_rules.md`. Never use hardcoded node IDs —
+always match by `_meta.title`.
 
 ## MpiCanvas API
 
 ```js
-const inst = MpiCanvas.mount(wrapperEl, {
-    onBrushSizeChange: (size) => {},
-    onBrushTypeChange: (type) => {},  // 'brush' | 'eraser' — fired by B/E hotkeys
-});
-const canvas = inst.el;
-
-canvas.activeMode = 'crop' | 'mask' | 'compare' | 'none';  // mutual exclusion built-in
-inst.on('modechange', ({ mode }) => {});
-
-await canvas.loadImage(url);            // resets mode to 'none', clears mask canvas via init()
-await canvas.loadComparisonImage(url);  // sets mode to 'compare'
-canvas.clearMask();
-canvas.flipMaskColor();
-canvas.getMaskDataURL('black', 'white'); // ComfyUI convention: white=masked, black=background
-canvas.setMaskDataURL(dataUrl);         // async — restores mask from saved data URL
-canvas.setCropRatio(ratio);
-canvas.getCropRect();
+const inst = MpiCanvas.mount(wrapperEl, { onBrushSizeChange, onBrushTypeChange });
+canvas.activeMode = 'crop' | 'mask' | 'compare' | 'none';
+await canvas.loadImage(url);
+await canvas.loadComparisonImage(url);
+canvas.getMaskDataURL('black', 'white');
+canvas.setCropRatio(ratio); canvas.getCropRect();
 canvas.destroy();
 ```
 
-## MpiHistoryTools API
+## MpiHistoryTools / MpiToolActionBar / MpiSelectionBar APIs
 
-```js
-const tools = MpiHistoryTools.mount(leftBarEl, {
-    tools: [
-        { mode: 'crop', icon: 'crop',   info: '...' },
-        { mode: 'mask', icon: 'pencil', info: '...' },
-    ]
-});
-tools.on('activate',   ({ mode }) => {});
-tools.on('deactivate', ({ mode }) => {});
-tools.el.syncMode(mode);  // called from modechange — updates buttons without emitting
-```
+See previous whats-next.md for full API tables.
 
-## MpiToolActionBar API
+## groupHistory mode exclusivity + mask flow
 
-```js
-const bar = MpiToolActionBar.mount(mountEl, {
-    leftSlot: someComponentInstance,  // optional — embedded on left side
-    actions: [
-        { key: 'brush', icon: 'pencil', label: 'Brush', variant: 'ghost',
-          toggleable: true, active: true, radioGroup: 'tool', info: '...' },
-        { key: 'apply', icon: 'check',  label: 'Apply', variant: 'primary' },
-    ],
-});
-bar.el.show();
-bar.el.hide();
-bar.el.setActive('brush');   // syncs radio group, no event emitted
-bar.on('action', ({ key, active }) => {});
-```
-
-## MpiSelectionBar API
-
-```js
-const sel = MpiSelectionBar.mount(mountEl, { count: 0 });
-// mountEl should use gh-workspace__bottom + gh-workspace__bottom--hidden classes for positioning/visibility
-sel.el.setCount(n);   // updates count label; auto shows/hides compare (=== 2) and delete/download (> 0)
-sel.on('compare',  () => {});
-sel.on('delete',   () => {});
-sel.on('cancel',   () => {});
-```
-
-## groupHistory mode exclusivity rules
-
-All three bottom-bar modes are mutually exclusive. Source of truth is `_canvas.activeMode` for tool modes;
-`_selectMode` boolean for selection. The `modechange` event drives all toolbar show/hide.
-
-- Entering select mode: calls `_exitCropMode()` / `_exitMaskMode()` BEFORE setting `_selectMode = true`
-  (so the modechange('none') they fire doesn't accidentally exit select mode)
-- Entering crop/mask: fires `modechange` → handler exits select mode (`_selectMode && !_comparingActive`)
-- Compare within select mode: `_comparingActive` flag suppresses select mode exit during `_showCompare()`
-- Exiting select mode: resets canvas to 'none' if compare was active (`_showEntry` handles this)
-
-## groupHistory mount pattern for bottom bars
-
-ComponentFactory.mount() does `container.innerHTML = html` — mounting two components
-into the same container destroys the first. Each bar needs its own slot div:
-
-```js
-const _cropBarSlot = ce('div', { className: 'gh-bar-slot' });
-cropBar.appendChild(_cropBarSlot);
-const cropActionBar = MpiToolActionBar.mount(_cropBarSlot, { ... });
-
-const _maskBarSlot = ce('div', { className: 'gh-bar-slot' });
-cropBar.appendChild(_maskBarSlot);
-const maskActionBar = MpiToolActionBar.mount(_maskBarSlot, { ... });
-
-// MpiSelectionBar has no fixed positioning of its own — give it a bottom-bar wrapper:
-const _selBarSlot = ce('div', { className: 'gh-workspace__bottom gh-workspace__bottom--hidden' });
-cropBar.appendChild(_selBarSlot);
-const selectionBar = MpiSelectionBar.mount(_selBarSlot, { count: 0 });
-```
-
-## groupHistory mask flow (current)
-
-- `_hasMask` (bool) — true after user presses "Apply Mask"; controls `hasMask` in `_opOptions` context
-- `_maskStore` (Map) — saves mask data URLs per history index; survives entry switches
-- `_refreshOpOptions()` — re-evaluates available ops and updates dropdown; call whenever `_hasMask` changes
-- On generate: `maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null` passed to `runCommand`
-- Mask cleared on: generation complete (`onComplete`) — `_maskStore.clear()`, `_canvas.clearMask()`, `_hasMask = false`
-- Mask SAVED on: `_selectEntry()` before switching if `_hasMask` is true
-- Mask RESTORED on: `_selectEntry()` after `_showEntry()` resolves if `_maskStore.get(idx)` exists
-- `_hasMask` reset to `false` on: mask bar "Cancel", mask bar "Clear", entry switch to entry with no saved mask
+See previous whats-next.md for full rules.
 
 ## Architecture Rules
 
 - **Tier 1 Primitives**: Cannot import anything from components
 - **Tier 2 Compounds**: Can only import Primitives (+ data/, utils/, events.js, state.js)
 - **Tier 3 Blocks**: Can import Primitives + Compounds
-- Workspaces (gallery.js, groupHistory.js): NOT components — plain `mount()` functions, CAN import anything
+- Workspaces: NOT components — plain `mount()` functions, CAN import anything
 
 ## Key file locations
 
 - MpiCanvas: `js/components/Primitives/MpiCanvas/MpiCanvas.js`
-- MpiCanvas managers: `js/components/Primitives/MpiCanvas/managers/`
-- MaskManager: `js/components/Primitives/MpiCanvas/managers/MaskManager.js`
+- MpiStartingComfy: `js/components/Compounds/MpiStartingComfy/MpiStartingComfy.js`
 - MpiHistoryTools: `js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js`
 - MpiToolActionBar: `js/components/Compounds/MpiToolActionBar/MpiToolActionBar.js`
 - MpiSelectionBar: `js/components/Compounds/MpiSelectionBar/MpiSelectionBar.js`
 - groupHistory workspace: `js/workspaces/groupHistory/groupHistory.js`
-- groupHistory CSS: `js/workspaces/groupHistory/groupHistory.css`
 - Gallery workspace: `js/workspaces/gallery/gallery.js`
 - commandExecutor: `js/services/commandExecutor.js`
 - comfyController: `js/services/comfyController.js`
-- ComfyUI workflows: `comfy_workflows/` (e.g. `sdxl_detailer.json`)
-- ComfyUI mapping rules: `.agents/workflows/comfyui_mapping_rules.md`
-- Component type definitions: `js/components/types.js`
+- Model registry: `js/data/modelRegistry.js`
+- Command registry: `js/data/commandRegistry.js`
 - Event bus: `js/events.js`
 - App state: `js/state.js`
 - Router: `js/router.js`
-- Model registry (source of truth): `js/data/modelRegistry.js`
-- Model installed check route: `routes/comfy.js` → `POST /comfy/models/check`
+- Comfy check route: `routes/comfy.js` → `POST /comfy/models/check`
 
 ## #tool-container class — MUST NOT be wiped
 
 `#tool-container` has `class="tool-container"` hardcoded in index.html.
-When groupHistory mounts, it ADDS `gh-workspace`. When leaving, ONLY `classList.remove('gh-workspace')`.
-NEVER use `element.className = ''` on this element.
+ONLY use `classList.remove('gh-workspace')` — never `element.className = ''`.
 
 ## MpiCanvas destroy rule
 
-InputController attaches listeners to `window`. MUST call `canvas.destroy()` when unmounted.
-groupHistory.js: MutationObserver on `document.body` watches for container leaving DOM →
-calls `_canvas.destroy()` and `Events.off('workspace:set-operation', _onSetOp)`.
+InputController attaches listeners to `window`. MUST call `canvas.destroy()` when
+unmounted. groupHistory uses MutationObserver on `document.body` for this.
 
 </critical_context>
 
@@ -341,12 +307,22 @@ calls `_canvas.destroy()` and `Events.off('workspace:set-operation', _onSetOp)`.
 | gallery.js onComplete — use _persistGroups() | Complete |
 | gallery.js — download handler | Complete |
 | MpiGroupCard selected state — footer highlight | Complete |
-| MpiGroupCard display name (card label shows selected entry operation) | Complete |
+| MpiGroupCard display name | Complete |
 | groupHistory — history entry label shows sequenced filename | Complete |
-| modelRegistry.js — runtime installed check | **Complete (this session)** |
-| modelManager.js — deleted (orphaned LLM scaffold) | **Complete (this session)** |
+| modelRegistry.js — runtime installed check | Complete |
+| modelManager.js — deleted (orphaned LLM scaffold) | Complete |
+| UNIVERSAL_WORKFLOWS — promoted to proper registry with deps + installed | Complete |
+| syncModelInstalled() — covers universal workflows | Complete |
+| getUniversalWorkflow() — parallel helper to getWorkflowFile() | Complete |
+| commandExecutor — uses getUniversalWorkflow(), not raw UNIVERSAL_WORKFLOWS | Complete |
+| MpiStartingComfy — wired to comfy:starting/ready/error events | Complete |
+| Event bus audit — showError, tool:running, tool:idle, media:updated | **NOT STARTED** |
 | model.installed — wired into UI (gallery, groupHistory, MpiPromptBox) | Not started |
+| Universal workflow installed gating in UI | Not started |
 | groupHistory — video group support | Deferred — no workflow yet |
+| Video workflows (interpolate, videoUpscale) — deps to populate | Pending user |
+| Model installer UI | Not started |
+| Model uninstall / GC route | Not started |
 
 ## Open questions
 
