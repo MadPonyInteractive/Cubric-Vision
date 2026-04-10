@@ -266,3 +266,82 @@ export function removeGroupFromProject(project, groupId) {
         itemGroups: project.itemGroups.filter(g => g.id !== groupId),
     };
 }
+
+// ── Two-Track Settings Helpers ────────────────────────────────────────────────
+
+const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
+    name: null,
+    strengthModel: 1.0,
+    strengthClip: 1.0,
+}));
+
+/**
+ * Returns the model settings for a given modelId on the project.
+ * Creates a default entry if none exists yet.
+ * @param {Project} project
+ * @param {string} modelId
+ * @returns {{ loras: Array, upscaleModel: string|null }}
+ */
+export function getModelSettings(project, modelId) {
+    if (!project.modelSettings[modelId]) {
+        project.modelSettings[modelId] = {
+            loras: _defaultLoraSlots(),
+            upscaleModel: null,
+        };
+    }
+    return project.modelSettings[modelId];
+}
+
+/**
+ * Returns a new project with updated model settings for the given modelId.
+ * Does not mutate the original.
+ * @param {Project} project
+ * @param {string} modelId
+ * @param {{ loras?: Array, upscaleModel?: string|null }} updates
+ * @returns {Project}
+ */
+export function setModelSettings(project, modelId, updates) {
+    const current = getModelSettings(project, modelId);
+    return {
+        ...project,
+        updatedAt: new Date().toISOString(),
+        modelSettings: {
+            ...project.modelSettings,
+            [modelId]: { ...current, ...updates },
+        },
+    };
+}
+
+/**
+ * Returns the tool settings for a given toolKey on the project.
+ * Creates a default entry if none exists yet.
+ * @param {Project} project
+ * @param {string} toolKey  - Command key, e.g. 'videoUpscale'
+ * @returns {{ upscaleModel: string|null }}
+ */
+export function getToolSettings(project, toolKey) {
+    if (!project.toolSettings[toolKey]) {
+        project.toolSettings[toolKey] = { upscaleModel: null };
+    }
+    return project.toolSettings[toolKey];
+}
+
+/**
+ * Returns a new project with updated tool settings for the given toolKey.
+ * Does not mutate the original.
+ * @param {Project} project
+ * @param {string} toolKey
+ * @param {{ upscaleModel?: string|null }} updates
+ * @returns {Project}
+ */
+export function setToolSettings(project, toolKey, updates) {
+    const current = getToolSettings(project, toolKey);
+    return {
+        ...project,
+        updatedAt: new Date().toISOString(),
+        toolSettings: {
+            ...project.toolSettings,
+            [toolKey]: { ...current, ...updates },
+        },
+    };
+}
