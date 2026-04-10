@@ -277,19 +277,16 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
 
 /**
  * Returns the model settings for a given modelId on the project.
- * Creates a default entry if none exists yet.
+ * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} modelId
  * @returns {{ loras: Array, upscaleModel: string|null }}
  */
 export function getModelSettings(project, modelId) {
-    if (!project.modelSettings[modelId]) {
-        project.modelSettings[modelId] = {
-            loras: _defaultLoraSlots(),
-            upscaleModel: null,
-        };
-    }
-    return project.modelSettings[modelId];
+    return project.modelSettings[modelId] ?? {
+        loras: _defaultLoraSlots(),
+        upscaleModel: null,
+    };
 }
 
 /**
@@ -314,16 +311,13 @@ export function setModelSettings(project, modelId, updates) {
 
 /**
  * Returns the tool settings for a given toolKey on the project.
- * Creates a default entry if none exists yet.
+ * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} toolKey  - Command key, e.g. 'videoUpscale'
  * @returns {{ upscaleModel: string|null }}
  */
 export function getToolSettings(project, toolKey) {
-    if (!project.toolSettings[toolKey]) {
-        project.toolSettings[toolKey] = { upscaleModel: null };
-    }
-    return project.toolSettings[toolKey];
+    return project.toolSettings[toolKey] ?? { upscaleModel: null };
 }
 
 /**

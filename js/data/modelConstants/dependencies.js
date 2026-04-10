@@ -149,7 +149,7 @@ export const DEPS = {
         id: '4x-AnimeSharp',
         name: '4x-AnimeSharp',
         type: 'upscale_model',
-        filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
+        filename: 'upscale_models/4x-AnimeSharp.pth',
         url: 'https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth',
         size: '65MB',
     },
