@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
 import { syncModelInstalled } from './data/modelRegistry.js';
+import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 
 // Components
@@ -113,7 +114,7 @@ async function _bootApp() {
   // Wire startup modal to comfy engine events.
   // comfyController emits these events; shell owns the component reference.
   Events.on('comfy:starting', () => _startingComfy.el.show());
-  Events.on('comfy:ready',    () => _startingComfy.el.hide());
+  Events.on('comfy:ready',    () => { _startingComfy.el.hide(); loadAssets(); });
   Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
