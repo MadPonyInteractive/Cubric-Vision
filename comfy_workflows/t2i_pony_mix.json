@@ -21,7 +21,7 @@
   },
   "1462": {
     "inputs": {
-      "ckpt_name": "ILL\\animemix_v80.safetensors"
+      "ckpt_name": "PONY\\PONY_Mix.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

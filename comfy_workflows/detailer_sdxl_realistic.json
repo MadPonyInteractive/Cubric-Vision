@@ -29,7 +29,7 @@
   },
   "28": {
     "inputs": {
-      "ckpt_name": "SDXL\\lustify_7.safetensors"
+      "ckpt_name": "SDXL\\SDXL_Realistic.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

@@ -1,7 +1,7 @@
 {
   "28": {
     "inputs": {
-      "ckpt_name": "SDXL\\lustify_7.safetensors"
+      "ckpt_name": "PONY\\PONY_Mix.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

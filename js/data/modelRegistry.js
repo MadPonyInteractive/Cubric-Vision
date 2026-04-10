@@ -34,7 +34,7 @@ const DEPS = {
         name: 'SDXL Realistic',
         type: 'checkpoint',
         origin: 'lustify_7',
-        filename: 'checkpoints/SDXL/lustify_7.safetensors',
+        filename: 'checkpoints/SDXL/SDXL_Realistic.safetensors',
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
@@ -44,7 +44,7 @@ const DEPS = {
         name: 'ILL Anime',
         type: 'checkpoint',
         origin: 'animemix_v80',
-        filename: 'checkpoints/ILL/animemix_v80.safetensors',
+        filename: 'checkpoints/ILL/ILL_Anime.safetensors',
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime.safetensors',
         size: '6.8GB',
         vram: '8GB',
@@ -54,7 +54,7 @@ const DEPS = {
         name: 'ILL Anime Beauty',
         type: 'checkpoint',
         origin: 'ramthrustsNSFWPINK_alchemyMix176',
-        filename: 'checkpoints/ILL/ramthrustsNSFWPINK_alchemyMix176.safetensors',
+        filename: 'checkpoints/ILL/ILL_Anime_Beauty.safetensors',
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime_Beauty.safetensors',
         size: '6.8GB',
         vram: '8GB',
@@ -64,7 +64,7 @@ const DEPS = {
         name: 'PONY Mix',
         type: 'checkpoint',
         origin: 'animergemeij_v30VAE',
-        filename: 'checkpoints/PONY/animergemeij_v30VAE.safetensors',
+        filename: 'checkpoints/PONY/PONY_Mix.safetensors',
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/PONY_Mix.safetensors',
         size: '6.8GB',
         vram: '8GB',
@@ -287,6 +287,10 @@ const DEPS = {
 // TODO: Consider allowing user to select model capabilities due to filesize
 // ex: wan t2v is about 40GB, so is wan i2v, maybe user only wants to use i2v, 
 // so user could select workflows/operations to unlock for each model
+// TODO: consider upscale model working as loras, selected and injected
+// TODO: Consider an workflow feature that chains multiple operations 
+// with different settings and runs them in sequence, like: 
+// i2v -> video_upscale -> video_interpolate -> crop video
 /** @type {ModelDef[]} */
 export const MODELS = [
     {
@@ -300,12 +304,12 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'SDXL workflows for realism using the famous Lustify model by Coyotte.',
         workflows: {
-            t2i: 'sdxl_t2i_Lustify7.json',
-            upscale: 'sdxl_upscaler_Lustify7.json',
-            detail: 'sdxl_detailer_Lustify7.json',
+            t2i: 't2i_sdxl_realistic.json',
+            upscale: 'upscaler_sdxl_realistic.json',
+            detail: 'detailer_sdxl_realistic.json',
         },
         dependencies: [
-            'lustify-7',
+            'sdxl-realistic',
             'spo-sdxl-lora',
             'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
@@ -324,12 +328,12 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
-            t2i: 'ill_t2i_AlchemyMix176.json',
-            upscale: 'ill_upscaler_AlchemyMix176.json',
-            detail: 'ill_detailer_AlchemyMix176.json',
+            t2i: 't2i__ill_anime_beauty.json',
+            upscale: 'upscaler__ill_anime_beauty.json',
+            detail: 'detailer__ill_anime_beauty.json',
         },
         dependencies: [
-            'lustify-7',
+            'ill-anime-beauty',
             'spo-sdxl-lora',
             'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
@@ -348,12 +352,12 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
-            t2i: 'ill_t2i_AnimeMixV80.json',
-            upscale: 'ill_upscaler_AnimeMixV80.json',
-            detail: 'ill_detailer_AnimeMixV80.json',
+            t2i: 't2i_ill_anime.json',
+            upscale: 'upscaler_ill_anime.json',
+            detail: 'detailer_ill_anime.json',
         },
         dependencies: [
-            'lustify-7',
+            'ill-anime',
             'spo-sdxl-lora',
             'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
@@ -372,12 +376,12 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'PONY workflows for a mix of anime and realism using AnimerJei V3.',
         workflows: {
-            t2i: 'pony_t2i_AnimerJeiV30.json',
-            upscale: 'pony_upscaler_AnimerJeiV30.json',
-            detail: 'pony_detailer_AnimerJeiV30.json',
+            t2i: 't2i_pony_mix.json',
+            upscale: 'upscaler_pony_mix.json',
+            detail: 'detailer_pony_mix.json',
         },
         dependencies: [
-            'lustify-7',
+            'pony-mix',
             'spo-sdxl-lora',
             'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
@@ -397,8 +401,8 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Wan 2.2 workflows for both anime and realism using the SmoothMix models.',
         workflows: {
-            t2v: 'wan22_t2v.json',
-            i2v: 'wan22_i2v.json',
+            t2v: 'Wan22_t2v.json',
+            i2v: 'Wan22_i2v.json',
         },
         dependencies: [
             'wan-22-t2v-high',

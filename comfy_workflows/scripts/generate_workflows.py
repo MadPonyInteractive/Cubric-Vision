@@ -19,28 +19,28 @@ WORKFLOWS = [
     {
         "template": "sdxl_t2i_template.json",
         "models": [
-            ("sdxl_t2i_Lustify7.json",         "SDXL\\lustify_7.safetensors"),
-            ("ill_t2i_AlchemyMix176.json",       "ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"),
-            ("ill_t2i_AnimeMixV80.json",        "ILL\\animemix_v80.safetensors"),
-            ("pony_t2i_AnimerJeiV30.json",      "PONY\\animergemeij_v30VAE.safetensors"),
+            ("t2i_sdxl_realistic.json",         "SDXL\\SDXL_Realistic.safetensors"),
+            ("t2i_ill_anime_beauty.json",       "ILL\\ILL_Anime_Beauty.safetensors"),
+            ("t2i_ill_anime.json",        "ILL\\ILL_Anime.safetensors"),
+            ("t2i_pony_mix.json",      "PONY\\PONY_Mix.safetensors"),
         ],
     },
     {
         "template": "sdxl_upscaler_template.json",
         "models": [
-            ("sdxl_upscaler_Lustify7.json",     "SDXL\\lustify_7.safetensors"),
-            ("ill_upscaler_AlchemyMix176.json","ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"),
-            ("ill_upscaler_AnimeMixV80.json",  "ILL\\animemix_v80.safetensors"),
-            ("pony_upscaler_AnimerJeiV30.json", "PONY\\animergemeij_v30VAE.safetensors"),
+            ("upscaler_sdxl_realistic.json",     "SDXL\\SDXL_Realistic.safetensors"),
+            ("upscaler_ill_anime_beauty.json","ILL\\ILL_Anime_Beauty.safetensors"),
+            ("upscaler_ill_anime.json",  "ILL\\ILL_Anime.safetensors"),
+            ("upscaler_pony_mix.json", "PONY\\PONY_Mix.safetensors"),
         ],
     },
     {
         "template": "sdxl_detailer_template.json",
         "models": [
-            ("sdxl_detailer_Lustify7.json",     "SDXL\\lustify_7.safetensors"),
-            ("ill_detailer_AlchemyMix176.json","ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"),
-            ("ill_detailer_AnimeMixV80.json",  "ILL\\animemix_v80.safetensors"),
-            ("pony_detailer_AnimerJeiV30.json", "PONY\\animergemeij_v30VAE.safetensors"),
+            ("detailer_sdxl_realistic.json",     "SDXL\\SDXL_Realistic.safetensors"),
+            ("detailer_ill_anime_beauty.json","ILL\\ILL_Anime_Beauty.safetensors"),
+            ("detailer_ill_anime.json",  "ILL\\ILL_Anime.safetensors"),
+            ("detailer_pony_mix.json", "PONY\\PONY_Mix.safetensors"),
         ],
     },
 ]

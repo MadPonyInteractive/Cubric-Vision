@@ -36,6 +36,7 @@ The application will look for exactly these titles to inject data:
 | **"Output"** | N/A (Read-only) | **REQUIRED for Result Capture**. Identifying the final PreviewImage, SaveImage, SaveAudio, or SaveVideo node. Results from nodes without this exact title will be ignored. |
 | **"Batch_Size"** | `inputs.value` (Integer) | Number of images to generate in a single batch. |
 | **"Input_Image"** | `inputs.image` (Image) | Receives the input image for detailing, img2img, upscaling, img2vid. |
+| **"Input_Video"** | `inputs.video` (String — absolute path) | Receives the absolute local path to the input video file from the project media folder. Used with `VHS_LoadVideoPath` node for video-to-video, interpolation, and upscaling workflows. |
 | **"Input_Mask"** | `inputs.mask` (Mask) | Receives the image mask for inpainting/detailing. |
 | **"Denoise"** | `inputs.denoise` / `inputs.value` (Float) | Denoising strength ("Power"). |
 | **"Steps"** | `inputs.steps` / `inputs.value` (Integer) | Number of sampling steps. |

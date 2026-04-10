@@ -48,10 +48,21 @@ to `tool:running`/`tool:idle`.
 - Model installer UI (browse, download, progress)
 - Model uninstall / GC route
 
-## 4. Video Workflows (pending user)
+## 2. Media Import — ComfyUI upload on add
+- When a user adds an image or video from the filesystem to the project, it must be
+  uploaded to ComfyUI immediately (not deferred to workflow execution time)
+- Images: upload via `POST /upload/image` using a static filename for caching
+- Videos: save to project media folder; inject absolute local path into `VHS_LoadVideoPath`
+  node via `"Input_Video"` title mapping (no upload needed — path is injected directly)
+- This must happen in the media import flow, before any workflow runs
+
+## 3. Video Workflows (pending user)
 - `interpolate` and `videoUpscale` activate handlers in groupHistory (stubs in place)
 - Populate `dependencies[]` in `UNIVERSAL_WORKFLOWS` when workflow files are ready
 - groupHistory video group support (swap canvas for video player)
+- Output: listen for `nodeOutput.gifs` (VHS_VideoCombine key name, regardless of format)
+  alongside existing `nodeOutput.images` in `commandExecutor.js` and `comfyController.js`
+- Input: inject project media path into `"Input_Video"` → `VHS_LoadVideoPath` node
 
 ## 5. Low priority
 - `state.js` legacy flat properties — remove when confirmed unused
@@ -106,6 +117,7 @@ Primitives → Compounds → Blocks. Workspaces can import anything.
 | groupHistory auto-mask wiring | Complete |
 | Live ComfyUI test | Complete |
 | Universal workflow installed gating | Complete |
+| Media import → ComfyUI upload on add | Not started |
 | interpolate / videoUpscale tools | Not started |
 | Model UI (installer, gating, GC) | Not started |
 

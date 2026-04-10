@@ -8,7 +8,18 @@
       "Skill(taches-cc-resources:whats-next)",
       "Skill(taches-cc-resources:whats-next:*)",
       "Skill(whats-next)",
-      "Skill(whats-next:*)"
+      "Skill(whats-next:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"history\" js/services/*.js)",
+      "Bash(awk '{print $NF}')",
+      "Bash(grep -E \"\\\\.\\(js|md\\)$\")",
+      "Bash(ls -d \"c:\\\\AI\\\\Mpi\\\\MpiAiSuite\\\\engine\\\\ComfyUI_windows_portable\\\\ComfyUI\\\\custom_nodes\"/*[Vv][Hh][Ss]*)",
+      "WebSearch",
+      "WebFetch(domain:comfyai.run)",
+      "WebFetch(domain:www.runcomfy.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.comfydeploy.com)"
     ]
   }
 }

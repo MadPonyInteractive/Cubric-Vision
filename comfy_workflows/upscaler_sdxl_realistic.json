@@ -1,7 +1,7 @@
 {
   "28": {
     "inputs": {
-      "ckpt_name": "ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"
+      "ckpt_name": "SDXL\\SDXL_Realistic.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

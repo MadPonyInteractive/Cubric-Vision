@@ -1,7 +1,7 @@
 {
   "28": {
     "inputs": {
-      "ckpt_name": "PONY\\animergemeij_v30VAE.safetensors"
+      "ckpt_name": "ILL\\ILL_Anime.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

@@ -49,34 +49,34 @@ export const SDXL_RATIOS = {
 };
 
 export const WAN_RATIOS = {
-    360: [
-        { label: "1:1", w: 240, h: 240, icon: "rect_1_1" },
-        { label: "9:16", w: 240, h: 360, icon: "rect_9_16" },
-        { label: "16:9", w: 360, h: 240, icon: "rect_16_9" }
+    very_low: [
+        { label: "1:1", w: 320, h: 320, icon: "rect_1_1" },
+        { label: "9:16", w: 176, h: 320, icon: "rect_9_16" },
+        { label: "16:9", w: 320, h: 176, icon: "rect_16_9" }
     ],
-    480: [
-        { label: "1:1", w: 480, h: 480, icon: "rect_1_1" },
-        { label: "9:16", w: 480, h: 720, icon: "rect_9_16" },
-        { label: "16:9", w: 720, h: 480, icon: "rect_16_9" }
+    low: [
+        { label: "1:1", w: 624, h: 624, icon: "rect_1_1" },
+        { label: "9:16", w: 368, h: 640, icon: "rect_9_16" },
+        { label: "16:9", w: 640, h: 368, icon: "rect_16_9" }
     ],
-    600: [
-        { label: "1:1", w: 600, h: 600, icon: "rect_1_1" },
-        { label: "9:16", w: 600, h: 900, icon: "rect_9_16" },
-        { label: "16:9", w: 900, h: 600, icon: "rect_16_9" }
-    ],
-    720: [
+    medium: [
         { label: "1:1", w: 720, h: 720, icon: "rect_1_1" },
+        { label: "9:16", w: 480, h: 832, icon: "rect_9_16" },
+        { label: "16:9", w: 832, h: 480, icon: "rect_16_9" }
+    ],
+    high: [
+        { label: "1:1", w: 960, h: 960, icon: "rect_1_1" },
         { label: "9:16", w: 720, h: 1280, icon: "rect_9_16" },
         { label: "16:9", w: 1280, h: 720, icon: "rect_16_9" }
     ],
-    1080: [
-        { label: "1:1", w: 1080, h: 1080, icon: "rect_1_1" },
-        { label: "9:16", w: 1080, h: 1920, icon: "rect_9_16" },
-        { label: "16:9", w: 1920, h: 1080, icon: "rect_16_9" }
+    very_high: [
+        { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
+        { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
     ]
-};
+};// Future reference [4:3 = 1088x832 | 704x544]
 
-// TODO: Wan video, LTX 2.3 video
+// TODO: LTX 2.3 video
 
 // Ratios for social media image and video
 export const SOCIAL_RATIOS = [

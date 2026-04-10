@@ -2,7 +2,7 @@
   "27": {
     "inputs": {
       "model": [
-        "1548",
+        "1634",
         0
       ],
       "clip": [
@@ -29,18 +29,18 @@
   },
   "28": {
     "inputs": {
-      "ckpt_name": "SDXL\\lustify_7.safetensors"
+      "ckpt_name": "ILL\\ILL_Anime.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
-      "title": "Loading SDXL..."
+      "title": "Checkpoint"
     }
   },
   "29": {
     "inputs": {
       "text": "",
       "clip": [
-        "28",
+        "1632",
         1
       ]
     },
@@ -53,7 +53,7 @@
     "inputs": {
       "text": "",
       "clip": [
-        "28",
+        "1632",
         1
       ]
     },
@@ -64,7 +64,7 @@
   },
   "502": {
     "inputs": {
-      "image": "Mask_test_00001_ (1).png"
+      "image": "t2i_007.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -85,9 +85,9 @@
         "1562",
         0
       ],
-      "cfg": 4,
-      "sampler_name": "dpmpp_3m_sde",
-      "scheduler": "karras",
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
       "denoise": [
         "1561",
         0
@@ -120,120 +120,6 @@
       "title": "MaskDetailer (SDXL)"
     }
   },
-  "1548": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "1553",
-        0
-      ],
-      "model_b": [
-        "1553",
-        1
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_6"
-    }
-  },
-  "1549": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "28",
-        0
-      ],
-      "model_b": [
-        "28",
-        0
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_1"
-    }
-  },
-  "1550": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "1549",
-        0
-      ],
-      "model_b": [
-        "1549",
-        1
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_2"
-    }
-  },
-  "1551": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "1550",
-        0
-      ],
-      "model_b": [
-        "1550",
-        1
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_3"
-    }
-  },
-  "1552": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "1551",
-        0
-      ],
-      "model_b": [
-        "1551",
-        1
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_4"
-    }
-  },
-  "1553": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model_a": [
-        "1552",
-        0
-      ],
-      "model_b": [
-        "1552",
-        1
-      ]
-    },
-    "class_type": "MpiDoubleLora",
-    "_meta": {
-      "title": "Lora_5"
-    }
-  },
   "1559": {
     "inputs": {
       "images": [
@@ -248,7 +134,7 @@
   },
   "1561": {
     "inputs": {
-      "float": 0.6
+      "float": 0.3
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -257,7 +143,7 @@
   },
   "1562": {
     "inputs": {
-      "int": 30
+      "int": 8
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -275,12 +161,184 @@
   },
   "1626": {
     "inputs": {
-      "image": "Mask_test_00002_ (1).png",
+      "image": "MAsk_00001_.png",
       "channel": "red"
     },
     "class_type": "LoadImageMask",
     "_meta": {
       "title": "Input_Mask"
+    }
+  },
+  "1627": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "28",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1627",
+        0
+      ],
+      "clip": [
+        "1627",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1629": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1628",
+        0
+      ],
+      "clip": [
+        "1628",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1630": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1629",
+        0
+      ],
+      "clip": [
+        "1629",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1631": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1630",
+        0
+      ],
+      "clip": [
+        "1630",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1632": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1631",
+        0
+      ],
+      "clip": [
+        "1631",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1633": {
+    "inputs": {
+      "lora_name": "SDXL\\spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+      "strength_model": 0.4,
+      "model": [
+        "1632",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1634": {
+    "inputs": {
+      "lora_name": "SDXL\\dmd2_sdxl_4step_lora.safetensors",
+      "strength_model": 0.7,
+      "model": [
+        "1633",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1637": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00005_.png&type=temp&subfolder=&rand=0.11153776947167604"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00006_.png&type=temp&subfolder=&rand=0.9529280827630856"
+          }
+        ]
+      },
+      "image_a": [
+        "1534",
+        0
+      ],
+      "image_b": [
+        "502",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
     }
   }
 }
