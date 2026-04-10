@@ -56,19 +56,9 @@ export async function listProjects() {
 export function openProject(project) {
   state.currentProject = project;
 
-  // Restore toolComfySettings if present in project metadata
-  if (project.toolComfySettings) {
-    state.toolComfySettings = {
-      ...state.toolComfySettings,
-      ...project.toolComfySettings
-    };
-  } else if (project.comfySettings) {
-    // Migration: Move old shared settings to 'generator' tool
-    state.toolComfySettings['generator'] = {
-      ...JSON.parse(JSON.stringify(state.defaultComfySettings)),
-      ...project.comfySettings
-    };
-  }
+  // modelSettings and toolSettings live on the project object itself
+  // and are accessible via state.currentProject.modelSettings / .toolSettings
+  // No separate restore step needed.
 
   // Store the folder path so future sessions can find it
   const extras = JSON.parse(localStorage.getItem('mpi_extra_project_paths') || '[]');
