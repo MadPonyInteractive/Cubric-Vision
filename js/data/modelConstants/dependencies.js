@@ -1,7 +1,7 @@
 // ── Shared Dependencies ───────────────────────────────────────────────────────
 // Defined once, referenced by id in model dependency lists to avoid repetition.
 
-const DEPS = {
+export const DEPS = {
     // Models
     'sdxl-realistic': {
         id: 'sdxl-realistic',
