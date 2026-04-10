@@ -104,7 +104,6 @@ export function initNavigation(refs) {
 export function handleNavigation(page, params = {}) {
     if (page === PAGE_LANDING) {
         clearHistory();
-        state.activeSubPage = null;
         // Tear down radial so the next project entry re-mounts fresh,
         // correctly re-evaluating tutorialSeen for the new project.
         if (_radialInstance) {
