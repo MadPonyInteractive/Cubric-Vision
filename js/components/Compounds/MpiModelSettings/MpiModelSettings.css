@@ -81,13 +81,3 @@
 .mpi-model-settings__strength-input:focus {
     border-color: var(--primary);
 }
-
-/* ── Footer actions ──────────────────────────────────────────────────── */
-
-.mpi-model-settings__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-}
