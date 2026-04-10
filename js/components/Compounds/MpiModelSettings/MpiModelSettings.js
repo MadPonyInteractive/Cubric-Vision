@@ -3,6 +3,8 @@
  *
  * Shows LoRA slot pickers + upscale model selector when opened with a modelId.
  * Shows only upscale model selector when opened with a toolKey.
+ * All changes auto-save on selection — no Save/Cancel buttons.
+ * Escape key closes via the global OverlayManager handler.
  *
  * Usage (model context):
  *   const overlay = MpiModelSettings.mount(document.createElement('div'));
@@ -17,14 +19,13 @@
  *   open({ modelId?, toolKey? }) — populate from state and show overlay
  *
  * Emits:
- *   'saved' {} — user confirmed changes (already persisted to disk)
- *   'close' {} — overlay dismissed without saving
+ *   'saved' {} — a change was auto-saved to disk
+ *   'close' {} — overlay dismissed
  */
 
 import { ComponentFactory }   from '../../factory.js';
 import { MpiOverlay }         from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown }        from '../../Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiButton }          from '../../Primitives/MpiButton/MpiButton.js';
 import { qs }                 from '../../../utils/dom.js';
 import { Events }             from '../../../events.js';
 import { state }              from '../../../state.js';
@@ -35,6 +36,7 @@ import {
     setToolSettings,
 } from '../../../data/projectModel.js';
 import { saveProjectSettings } from '../../../managers/projectManager.js';
+import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { clientLogger }       from '../../../services/clientLogger.js';
 
 const LORA_COUNT = 6;
@@ -67,10 +69,6 @@ export const MpiModelSettings = ComponentFactory.create({
                 <p class="mpi-model-settings__section-title">LoRA Slots</p>
                 <div class="mpi-model-settings__lora-list"></div>
             </div>
-            <div class="mpi-model-settings__actions">
-                <div class="mpi-model-settings__cancel-btn"></div>
-                <div class="mpi-model-settings__save-btn"></div>
-            </div>
         </div>
     `,
 
@@ -87,60 +85,64 @@ export const MpiModelSettings = ComponentFactory.create({
         /** Whether the overlay is currently visible */
         let _isOpen = false;
 
-        /** Currently selected upscale value (tracked locally from 'change' events) */
-        let _upscaleValue = '';
-
-        /**
-         * Per-slot tracking for LoRA selections.
-         * @type {Array<{ name: string, strengthModel: number, strengthClip: number }>}
-         */
+        /** Per-slot LoRA tracking (mutated by input events) */
         let _loraSlots = [];
 
-        // ── Mount buttons ────────────────────────────────────────────────────
-        const cancelBtnSlot = qs('.mpi-model-settings__cancel-btn', el);
-        const saveBtnSlot   = qs('.mpi-model-settings__save-btn',   el);
+        // ── Auto-save helper ──────────────────────────────────────────────────
 
-        const cancelBtn = MpiButton.mount(cancelBtnSlot, { text: 'Cancel', variant: 'secondary' });
-        const saveBtn   = MpiButton.mount(saveBtnSlot,   { text: 'Save',   variant: 'primary'   });
+        async function _autoSave() {
+            if (!state.currentProject || !_context) return;
+            try {
+                if (_context.modelId) {
+                    const upscaleModel = qs('.mpi-model-settings__upscale-slot', el)
+                        ?._dropdownInstance?.props?.value || null;
+                    state.currentProject = setModelSettings(
+                        state.currentProject,
+                        _context.modelId,
+                        { loras: _loraSlots, upscaleModel: upscaleModel || null }
+                    );
+                } else if (_context.toolKey) {
+                    const upscaleModel = qs('.mpi-model-settings__upscale-slot', el)
+                        ?._dropdownInstance?.props?.value || null;
+                    state.currentProject = setToolSettings(
+                        state.currentProject,
+                        _context.toolKey,
+                        { upscaleModel: upscaleModel || null }
+                    );
+                }
+                await saveProjectSettings();
+                emit('saved', {});
+            } catch (err) {
+                clientLogger.error('model-settings', 'Failed to auto-save model settings', err);
+                Events.emit('ui:error', { message: 'Failed to save settings. Please try again.' });
+            }
+        }
 
-        cancelBtn.on('click', () => {
-            overlay.el.hide();
-        });
-
-        saveBtn.on('click', async () => {
-            await _save();
-        });
-
-        // ── Upscale dropdown instance (replaced on each open) ─────────────────
-        let _upscaleDropdown = null;
+        // ── Upscale dropdown ──────────────────────────────────────────────────
 
         function _mountUpscaleDropdown(currentValue) {
             const slot = qs('.mpi-model-settings__upscale-slot', el);
             slot.innerHTML = '';
-            _upscaleValue = currentValue || '';
 
-            _upscaleDropdown = MpiDropdown.mount(slot, {
+            const dd = MpiDropdown.mount(slot, {
                 options: _upscaleOptions(state.upscaleModels),
-                value:   _upscaleValue,
+                value:   currentValue || '',
                 placeholder: '— Default —',
             });
 
-            _upscaleDropdown.on('change', ({ value }) => {
-                _upscaleValue = value;
-            });
+            // Store reference on the slot element for _autoSave to read
+            slot._dropdownInstance = dd;
+
+            dd.on('change', () => _autoSave());
         }
 
         // ── LoRA slots ────────────────────────────────────────────────────────
 
-        /**
-         * Build 6 LoRA slot rows into the lora-list container.
-         * @param {Array<{ name: string|null, strengthModel: number, strengthClip: number }>} slots
-         */
         function _mountLoraSlots(slots) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
 
-            // Normalise to exactly LORA_COUNT slots (pad with defaults if data is old/short)
+            // Normalise to exactly LORA_COUNT slots
             _loraSlots = Array.from({ length: LORA_COUNT }, (_, i) => {
                 const s = slots[i] ?? {};
                 return {
@@ -158,25 +160,22 @@ export const MpiModelSettings = ComponentFactory.create({
                     'mpi-model-settings__lora-slot',
                     !slot.name ? 'mpi-model-settings__lora-slot--empty' : '',
                 ].filter(Boolean).join(' ');
-                slotEl.dataset.slotIndex = String(i);
 
-                // Dropdown host
                 const dropHost = document.createElement('div');
                 dropHost.className = 'mpi-model-settings__lora-dropdown';
 
-                // Strength inputs wrapper
                 const strengthsEl = document.createElement('div');
                 strengthsEl.className = 'mpi-model-settings__lora-strengths';
                 strengthsEl.innerHTML = `
                     <label>Model</label>
                     <input class="mpi-model-settings__strength-input"
                            type="number" step="0.05" min="0" max="2"
-                           value="${slot.strengthModel ?? 1.0}"
+                           value="${parseFloat(slot.strengthModel) || 1.0}"
                            data-strength="model" />
                     <label>Clip</label>
                     <input class="mpi-model-settings__strength-input"
                            type="number" step="0.05" min="0" max="2"
-                           value="${slot.strengthClip ?? 1.0}"
+                           value="${parseFloat(slot.strengthClip) || 1.0}"
                            data-strength="clip" />
                 `;
 
@@ -184,7 +183,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 slotEl.appendChild(strengthsEl);
                 list.appendChild(slotEl);
 
-                // Bind strength inputs
+                // Strength inputs — save on blur (not every keystroke)
                 strengthsEl.querySelectorAll('input').forEach(input => {
                     input.addEventListener('input', () => {
                         const v = parseFloat(input.value);
@@ -195,67 +194,40 @@ export const MpiModelSettings = ComponentFactory.create({
                             _loraSlots[i].strengthClip = v;
                         }
                     });
+                    input.addEventListener('change', () => _autoSave());
                 });
 
-                // Mount dropdown into dropHost
                 const dd = MpiDropdown.mount(dropHost, {
                     options: loraOpts,
                     value:   slot.name || '',
-                    placeholder: '— None —',
+                    placeholder: `Slot ${i + 1} — None`,
                 });
 
                 dd.on('change', ({ value }) => {
                     _loraSlots[i].name = value || null;
                     slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
+                    _autoSave();
                 });
             });
         }
 
-        // ── Save handler ──────────────────────────────────────────────────────
-
-        async function _save() {
-            if (!state.currentProject || !_context) return;
-
-            try {
-                if (_context.modelId) {
-                    const updatedProject = setModelSettings(
-                        state.currentProject,
-                        _context.modelId,
-                        {
-                            loras:        _loraSlots,
-                            upscaleModel: _upscaleValue || null,
-                        }
-                    );
-                    state.currentProject = updatedProject;
-                } else if (_context.toolKey) {
-                    const updatedProject = setToolSettings(
-                        state.currentProject,
-                        _context.toolKey,
-                        { upscaleModel: _upscaleValue || null }
-                    );
-                    state.currentProject = updatedProject;
-                }
-
-                await saveProjectSettings();
-                emit('saved', {});
-                overlay.el.hide();
-            } catch (err) {
-                clientLogger.error('model-settings', 'Failed to save model settings', err);
-                Events.emit('ui:error', { message: 'Failed to save settings. Please try again.' });
-            }
-        }
-
         // ── Public open() method ──────────────────────────────────────────────
 
-        /**
-         * Populate settings from state and show the overlay.
-         * @param {{ modelId?: string, toolKey?: string }} ctx
-         */
-        el.open = (ctx = {}) => {
+        el.open = async (ctx = {}) => {
             if (!state.currentProject) {
                 clientLogger.error('model-settings', 'MpiModelSettings.open() called with no active project');
                 return;
             }
+            if (!ctx.modelId && !ctx.toolKey) {
+                clientLogger.error('model-settings', 'MpiModelSettings.open() requires modelId or toolKey');
+                return;
+            }
+
+            // Lazy-load asset lists if not yet populated (ComfyUI may not have fired comfy:ready)
+            if (!state.upscaleModels?.length || !state.availableLoras?.length) {
+                await loadAssets();
+            }
+
             _context = ctx;
 
             const lorasSection = qs('[data-section="loras"]', el);
@@ -265,13 +237,10 @@ export const MpiModelSettings = ComponentFactory.create({
                 _mountUpscaleDropdown(settings.upscaleModel);
                 _mountLoraSlots(settings.loras);
                 lorasSection.style.display = '';
-            } else if (ctx.toolKey) {
+            } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
                 _mountUpscaleDropdown(settings.upscaleModel);
                 lorasSection.style.display = 'none';
-            } else {
-                clientLogger.error('model-settings', 'MpiModelSettings.open() requires modelId or toolKey');
-                return;
             }
 
             overlay.el.show();
