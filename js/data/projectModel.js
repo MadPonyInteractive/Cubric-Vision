@@ -283,7 +283,7 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
  * @returns {{ loras: Array, upscaleModel: string|null }}
  */
 export function getModelSettings(project, modelId) {
-    return project.modelSettings[modelId] ?? {
+    return (project.modelSettings ?? {})[modelId] ?? {
         loras: _defaultLoraSlots(),
         upscaleModel: null,
     };
@@ -317,7 +317,7 @@ export function setModelSettings(project, modelId, updates) {
  * @returns {{ upscaleModel: string|null }}
  */
 export function getToolSettings(project, toolKey) {
-    return project.toolSettings[toolKey] ?? { upscaleModel: null };
+    return (project.toolSettings ?? {})[toolKey] ?? { upscaleModel: null };
 }
 
 /**
