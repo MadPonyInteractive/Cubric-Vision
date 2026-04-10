@@ -88,26 +88,25 @@ export const MpiModelSettings = ComponentFactory.create({
         /** Per-slot LoRA tracking (mutated by input events) */
         let _loraSlots = [];
 
+        /** Currently selected upscale value (tracked from change event) */
+        let _upscaleValue = '';
+
         // ── Auto-save helper ──────────────────────────────────────────────────
 
         async function _autoSave() {
             if (!state.currentProject || !_context) return;
             try {
                 if (_context.modelId) {
-                    const upscaleModel = qs('.mpi-model-settings__upscale-slot', el)
-                        ?._dropdownInstance?.props?.value || null;
                     state.currentProject = setModelSettings(
                         state.currentProject,
                         _context.modelId,
-                        { loras: _loraSlots, upscaleModel: upscaleModel || null }
+                        { loras: _loraSlots, upscaleModel: _upscaleValue || null }
                     );
                 } else if (_context.toolKey) {
-                    const upscaleModel = qs('.mpi-model-settings__upscale-slot', el)
-                        ?._dropdownInstance?.props?.value || null;
                     state.currentProject = setToolSettings(
                         state.currentProject,
                         _context.toolKey,
-                        { upscaleModel: upscaleModel || null }
+                        { upscaleModel: _upscaleValue || null }
                     );
                 }
                 await saveProjectSettings();
@@ -123,17 +122,18 @@ export const MpiModelSettings = ComponentFactory.create({
         function _mountUpscaleDropdown(currentValue) {
             const slot = qs('.mpi-model-settings__upscale-slot', el);
             slot.innerHTML = '';
+            _upscaleValue = currentValue || '';
 
             const dd = MpiDropdown.mount(slot, {
                 options: _upscaleOptions(state.upscaleModels),
-                value:   currentValue || '',
+                value:   _upscaleValue,
                 placeholder: '— Default —',
             });
 
-            // Store reference on the slot element for _autoSave to read
-            slot._dropdownInstance = dd;
-
-            dd.on('change', () => _autoSave());
+            dd.on('change', ({ value }) => {
+                _upscaleValue = value;
+                _autoSave();
+            });
         }
 
         // ── LoRA slots ────────────────────────────────────────────────────────
