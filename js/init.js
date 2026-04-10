@@ -1,7 +1,6 @@
 /**
  * init.js — Application entry point.
  */
-import { initTheme } from './managers/themeManager.js';
 import { initShell } from './shell.js';
 
 // Global alert/confirm system — will be replaced by MpiOkCancel component
@@ -24,7 +23,6 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 async function init() {
-    initTheme();
     await initShell();
 }
 

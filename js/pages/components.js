@@ -7,7 +7,6 @@
 'use strict';
 
 import { state } from '../state.js';
-import { toggleTheme } from '../managers/themeManager.js';
 import { Events } from '../events.js';
 
 // Primitives
@@ -1145,8 +1144,8 @@ function mountAll() {
             topSlot: thumbs,
             actions: [
                 { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
-                { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary', info: 'Apply mask' },
-                { key: 'cancel', icon: 'close',  label: 'Cancel', variant: 'ghost',   info: 'Cancel' },
+                { key: 'apply', icon: 'check', label: 'Apply', variant: 'primary', info: 'Apply mask' },
+                { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel' },
             ],
         });
         bar.el.show();

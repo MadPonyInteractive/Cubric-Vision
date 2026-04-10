@@ -11,6 +11,7 @@ llama_engine/
 
 # User data
 projects/
+resources/
 /data/
 
 # agents

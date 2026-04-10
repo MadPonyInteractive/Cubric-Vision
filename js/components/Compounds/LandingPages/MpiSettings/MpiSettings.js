@@ -1,7 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
 import { state } from '../../../../state.js';
-import { toggleTheme } from '../../../../managers/themeManager.js';
 
 /**
  * MpiSettings — Settings overlay compound for the landing page.
