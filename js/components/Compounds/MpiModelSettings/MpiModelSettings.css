@@ -1,0 +1,93 @@
+/* MpiModelSettings — Model/Tool settings overlay compound */
+
+.mpi-model-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 32px;
+    max-width: 560px;
+    width: 100%;
+    margin: 0 auto;
+    color: var(--text);
+}
+
+/* ── Section ─────────────────────────────────────────────────────────── */
+
+.mpi-model-settings__section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin: 0 0 12px 0;
+}
+
+/* ── Upscale row ─────────────────────────────────────────────────────── */
+
+.mpi-model-settings__upscale {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── LoRA slots ──────────────────────────────────────────────────────── */
+
+.mpi-model-settings__loras {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mpi-model-settings__lora-slot {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-recessed);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.mpi-model-settings__lora-slot--empty .mpi-model-settings__lora-strengths {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.mpi-model-settings__lora-strengths {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mpi-model-settings__lora-strengths label {
+    font-size: 0.7rem;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+
+.mpi-model-settings__strength-input {
+    width: 52px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 2px 0;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.mpi-model-settings__strength-input:focus {
+    border-color: var(--primary);
+}
+
+/* ── Footer actions ──────────────────────────────────────────────────── */
+
+.mpi-model-settings__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
