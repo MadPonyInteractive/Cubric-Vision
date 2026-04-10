@@ -701,6 +701,21 @@
  * 'templates:loaded'   { projectId: string, name: string } — template applied
  */
 
+/**
+ * @typedef {Object} MpiModelSettingsProps (Compound — js/components/Compounds/MpiModelSettings)
+ * No props required at mount time — all data is loaded imperatively via open().
+ *
+ * Instance methods (on instance.el):
+ *   open({ modelId?: string, toolKey?: string })
+ *     — Populate from state.currentProject and show the overlay.
+ *       Pass modelId for model context (shows LoRA slots + upscale selector).
+ *       Pass toolKey for tool context (shows upscale selector only).
+ *
+ * Emits:
+ *   'saved' {} — user confirmed changes; already persisted to disk
+ *   'close' {} — overlay dismissed without saving
+ */
+
 
 
 
