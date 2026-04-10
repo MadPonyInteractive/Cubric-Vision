@@ -87,6 +87,16 @@ export async function updateProject(updates) {
 }
 
 /**
+ * Persist modelSettings and toolSettings for the current project to disk.
+ * Call this whenever the user changes LoRA or upscale model selections.
+ */
+export async function saveProjectSettings() {
+  if (!state.currentProject) return;
+  const { modelSettings, toolSettings } = state.currentProject;
+  await updateProject({ modelSettings, toolSettings });
+}
+
+/**
  * Delete a project folder from disk and return to the landing page.
  * @param {string} folderPath
  */
