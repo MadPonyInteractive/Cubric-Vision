@@ -78,11 +78,14 @@ export const MpiModelSettings = ComponentFactory.create({
         // ── MpiOverlay base ───────────────────────────────────────────────────
         const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
         overlay.el.appendToContainer(el);
-        overlay.on('close', () => emit('close', {}));
+        overlay.on('close', () => { _isOpen = false; emit('close', {}); });
 
         // ── Internal state ────────────────────────────────────────────────────
         /** @type {{ modelId?: string, toolKey?: string } | null} */
         let _context = null;
+
+        /** Whether the overlay is currently visible */
+        let _isOpen = false;
 
         /** Currently selected upscale value (tracked locally from 'change' events) */
         let _upscaleValue = '';
@@ -102,7 +105,6 @@ export const MpiModelSettings = ComponentFactory.create({
 
         cancelBtn.on('click', () => {
             overlay.el.hide();
-            emit('close', {});
         });
 
         saveBtn.on('click', async () => {
@@ -138,12 +140,15 @@ export const MpiModelSettings = ComponentFactory.create({
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
 
-            // Reset internal tracking to match incoming slot data
-            _loraSlots = slots.map(s => ({
-                name:          s.name || null,
-                strengthModel: s.strengthModel ?? 1.0,
-                strengthClip:  s.strengthClip  ?? 1.0,
-            }));
+            // Normalise to exactly LORA_COUNT slots (pad with defaults if data is old/short)
+            _loraSlots = Array.from({ length: LORA_COUNT }, (_, i) => {
+                const s = slots[i] ?? {};
+                return {
+                    name:          s.name || null,
+                    strengthModel: s.strengthModel ?? 1.0,
+                    strengthClip:  s.strengthClip  ?? 1.0,
+                };
+            });
 
             const loraOpts = _loraOptions(state.availableLoras);
 
@@ -236,6 +241,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 overlay.el.hide();
             } catch (err) {
                 clientLogger.error('model-settings', 'Failed to save model settings', err);
+                Events.emit('ui:error', { message: 'Failed to save settings. Please try again.' });
             }
         }
 
@@ -246,6 +252,10 @@ export const MpiModelSettings = ComponentFactory.create({
          * @param {{ modelId?: string, toolKey?: string }} ctx
          */
         el.open = (ctx = {}) => {
+            if (!state.currentProject) {
+                clientLogger.error('model-settings', 'MpiModelSettings.open() called with no active project');
+                return;
+            }
             _context = ctx;
 
             const lorasSection = qs('[data-section="loras"]', el);
@@ -265,12 +275,13 @@ export const MpiModelSettings = ComponentFactory.create({
             }
 
             overlay.el.show();
+            _isOpen = true;
         };
 
         // ── ui:close-all-popups ───────────────────────────────────────────────
         const _unsubCloseAll = Events.on('ui:close-all-popups', () => {
+            if (!_isOpen) return;
             overlay.el.hide();
-            emit('close', {});
         });
 
         // ── Cleanup ───────────────────────────────────────────────────────────
