@@ -4,6 +4,7 @@
  * @property {string}   id           - Unique identifier
  * @property {string}   name         - Display name
  * @property {'image'|'video'} mediaType
+ * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
  * @property {string[]} supportedOps - Operation keys from commandRegistry.js
  * @property {Record<string,string>} workflows - op key → workflow filename
  * @property {string[]} dependencies - Dep ids from DEPS above
