@@ -2,17 +2,17 @@
 
 > **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in MpiAiSuite.
 
-## 🔴 CRITICAL "NEVER FORGET" RULES
+## CRITICAL "NEVER FORGET" RULES
 1. **Preload CSS:** You MUST add the `.css` path to `js/shell/preloadStyles.js` when creating a component.
 2. **JSDocs:** You MUST document the component's `props` in `js/components/types.js`.
 3. **CSS Source of Truth:** ALWAYS use `styles/01_base.css` variables, do not hardcode colors.
-4. **Gallery Demo:** Always ask the user if the new component should be added to the gallery (`js/pages/components.js`).
+4. **Gallery Demo:** You MUST ask the user if the new component should be added to the gallery (`js/pages/components.js`) before finishing the task.
 5. **DOM Utilities:** ALWAYS use `js/utils/dom.js` shorthands instead of raw DOM API where possible.
 6. **ComponentFactory:** NEVER modify `js/components/factory.js`. The factory is locked. If a component isn't working, you must fix your component implementation; do not alter the factory pattern.
 
 ---
 
-## 🏗️ The 3-Tier Hierarchy
+## The 3-Tier Hierarchy
 You MUST follow Atomic Design principles. **NEVER "import up".**
 * **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything).
 * **Tier 2 (Compounds):** Cards, forms, modals. (Can only import Primitives).
@@ -20,7 +20,7 @@ You MUST follow Atomic Design principles. **NEVER "import up".**
 
 ---
 
-## 🛠️ The Skeleton Pattern
+## The Skeleton Pattern
 Every component MUST use the `ComponentFactory`:
 
 ```javascript
@@ -38,7 +38,7 @@ export const MyComponent = ComponentFactory.create({
 
 ---
 
-## ⌨️ INTEGRATION (The Golden Rule)
+## INTEGRATION (The Golden Rule)
 **Callers MUST NEVER import `overlayManager`, `hotkeyManager`, or `Events` just to manage a component.**
 All state management, hotkeys, and overlay mounting MUST happen inside the component's `setup()` function.
 
@@ -59,7 +59,7 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 
 ---
 
-## 🔄 MutationObserver Cleanup Pattern
+## MutationObserver Cleanup Pattern
 Floating UI tools must clean themselves up when their parent anchor drops from the DOM.
 ```javascript
 const observer = new MutationObserver(() => {
