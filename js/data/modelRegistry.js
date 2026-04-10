@@ -29,23 +29,86 @@ export const PATHS = Object.freeze({
 
 const DEPS = {
     // Models
-    'lustify-7': {
-        id: 'lustify-7',
-        name: 'Lustify V7 (SDXL)',
+    'sdxl-realistic': {
+        id: 'sdxl-realistic',
+        name: 'SDXL Realistic',
         type: 'checkpoint',
+        origin: 'lustify_7',
         filename: 'checkpoints/SDXL/lustify_7.safetensors',
-        url: 'https://huggingface.co/Kutches/XL/resolve/main/lustifySDXLNSFW_ggwpV7.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
     },
-    'sdxl-refiner-1.0': {
-        id: 'sdxl-refiner-1.0',
-        name: 'SDXL Refiner 1.0',
+    'ill-anime': {
+        id: 'ill-anime',
+        name: 'ILL Anime',
         type: 'checkpoint',
-        filename: 'checkpoints/SDXL/sd_xl_refiner_1.0_0.9vae.safetensors',
-        url: 'https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0_0.9vae.safetensors',
-        size: '6.08GB',
+        origin: 'animemix_v80',
+        filename: 'checkpoints/ILL/animemix_v80.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime.safetensors',
+        size: '6.8GB',
         vram: '8GB',
+    },
+    'ill-anime-beauty': {
+        id: 'ill-anime-beauty',
+        name: 'ILL Anime Beauty',
+        type: 'checkpoint',
+        origin: 'ramthrustsNSFWPINK_alchemyMix176',
+        filename: 'checkpoints/ILL/ramthrustsNSFWPINK_alchemyMix176.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime_Beauty.safetensors',
+        size: '6.8GB',
+        vram: '8GB',
+    },
+    'pony-mix': {
+        id: 'pony-mix',
+        name: 'PONY Mix',
+        type: 'checkpoint',
+        origin: 'animergemeij_v30VAE',
+        filename: 'checkpoints/PONY/animergemeij_v30VAE.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/PONY_Mix.safetensors',
+        size: '6.8GB',
+        vram: '8GB',
+    },
+    // Video Models
+    'wan-22-t2v-high': {
+        id: 'wan-22-t2v-high',
+        name: 'Wan 2.2 t2v',
+        type: 'checkpoint',
+        origin: 'smoothMixWan2214BI2V_t2vHighV30',
+        filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_High.safetensors',
+        size: '21GB',
+        vram: '12GB',
+    },
+    'wan-22-t2v-low': {
+        id: 'wan-22-t2v-low',
+        name: 'Wan 2.2 t2v',
+        type: 'checkpoint',
+        origin: 'smoothMixWan2214BI2V_t2vLowV30',
+        filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_Low.safetensors',
+        size: '21GB',
+        vram: '12GB',
+    },
+    'wan-22-i2v-high': {
+        id: 'wan-22-i2v-high',
+        name: 'Wan 2.2 i2v',
+        type: 'checkpoint',
+        origin: 'smoothMixWan2214BI2V_i2vV20High',
+        filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_High.safetensors',
+        size: '15GB',
+        vram: '12GB',
+    },
+    'wan-22-i2v-low': {
+        id: 'wan-22-i2v-low',
+        name: 'Wan 2.2 i2v',
+        type: 'checkpoint',
+        origin: 'smoothMixWan2214BI2V_i2vV20Low',
+        filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
+        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_Low.safetensors',
+        size: '15GB',
+        vram: '12GB',
     },
     // Loras
     'spo-sdxl-lora': {
@@ -56,13 +119,48 @@ const DEPS = {
         url: 'https://huggingface.co/LyliaEngine/spo_sdxl_10ep_4k-data_lora_webui/resolve/main/spo_sdxl_10ep_4k-data_lora_webui.safetensors',
         size: '364MB',
     },
-    'sdxl-lightning-lora': {
-        id: 'sdxl-lightning-lora',
-        name: 'SDXL Lightning 4-step Lora',
+    'dmd2_sdxl_4step_lora': {
+        id: 'dmd2_sdxl_4step_lora',
+        name: 'DMD2 SDXL 4 step Lora',
         type: 'lora',
-        filename: 'loras/SDXL/sdxl_lightning_4step_lora.safetensors',
-        url: 'https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step_lora.safetensors',
-        size: '385MB',
+        filename: 'loras/SDXL/dmd2_sdxl_4step_lora.safetensors',
+        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
+        size: '787MB',
+    },
+    // video loras
+    'Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16': {
+        id: 'Wan22-4steps-lora-HIGH',
+        name: 'Wan22-4steps-lora-HIGH',
+        type: 'lora',
+        filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
+        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
+        size: '600MB',
+    },
+    'Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16': {
+        id: 'Wan22-4steps-lora-LOW',
+        name: 'Wan22-4steps-lora-LOW',
+        type: 'lora',
+        filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
+        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
+        size: '600MB',
+    },
+    // VAE
+    'wan_2.1_vae': {
+        id: 'wan_2.1_vae',
+        name: 'wan_2.1_vae',
+        type: 'vae',
+        filename: 'vae/wan_2.1_vae.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors',
+        size: '254MB',
+    },
+    // CLIP
+    'umt5_xxl_fp8_e4m3fn_scaled': {
+        id: 'umt5_xxl_fp8_e4m3fn_scaled',
+        name: 'umt5_xxl_fp8_e4m3fn_scaled',
+        type: 'text_encoders',
+        filename: 'vae/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
+        size: '6.27GB',
     },
     // Upscale Models
     '4x-NMKD-Siax': {
@@ -83,6 +181,24 @@ const DEPS = {
         installRequirements: false,
         size: '1.76MB',
     },
+    'ComfyUI-PainterI2Vadvanced': {
+        id: 'ComfyUI-PainterI2Vadvanced',
+        name: 'ComfyUI-PainterI2Vadvanced',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-PainterI2Vadvanced',
+        url: 'https://github.com/princepainter/ComfyUI-PainterI2Vadvanced',
+        installRequirements: false,
+        size: '144KB',
+    },
+    'ComfyUI-VideoHelperSuite': {
+        id: 'ComfyUI-VideoHelperSuite',
+        name: 'ComfyUI-VideoHelperSuite',
+        type: 'custom_nodes',
+        filename: 'comfyui-videohelpersuite',
+        url: 'https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite',
+        installRequirements: false,
+        size: '806KB',
+    },
     'ComfyUI-Impact-Pack': {
         id: 'ComfyUI-Impact-Pack',
         name: 'ComfyUI Impact Pack',
@@ -91,6 +207,15 @@ const DEPS = {
         url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack',
         installRequirements: true,
         size: '5MB',
+    },
+    'comfyui-kjnodes': {
+        id: 'comfyui-kjnodes',
+        name: 'ComfyUI KJNodes',
+        type: 'custom_nodes',
+        filename: 'comfyui-kjnodes',
+        url: 'https://github.com/kijai/ComfyUI-KJNodes',
+        installRequirements: true,
+        size: '28MB',
     },
     'ComfyUI-UltimateSDUpscale': {
         id: 'ComfyUI-UltimateSDUpscale',
@@ -157,48 +282,139 @@ const DEPS = {
  * @property {string[]} dependencies - Dep ids from DEPS above
  * @property {boolean}  installed    - Resolved at runtime; always false here
  */
-
+// TODO: Install size on disk needs to be calculated based on each model dependecies
+// TODO: VRAM comes from the highest VRAM of all model dependencies
+// TODO: Consider allowing user to select model capabilities due to filesize
+// ex: wan t2v is about 40GB, so is wan i2v, maybe user only wants to use i2v, 
+// so user could select workflows/operations to unlock for each model
 /** @type {ModelDef[]} */
 export const MODELS = [
     {
-        id: 'sdxl-lustify',
-        name: 'SDXL Lustify V7',
+        id: 'sdxl-realistic',
+        name: 'SDXL Realistic',
         mediaType: 'image',
         installed: false,
+        image: 'Lustify7.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
-        description: 'A NSFW SDXL-based workflow using the Lustify V7 for fast generations and the official SDXL Refiner for higher quality images.',
+        gen_speed: 'fast',
+        description: 'SDXL workflows for realism using the famous Lustify model by Coyotte.',
         workflows: {
-            t2i: 'sdxl_t2i_nsfw.json',
-            upscale: 'sdxl_upscaler.json',
-            detail: 'sdxl_detailer.json',
+            t2i: 'sdxl_t2i_Lustify7.json',
+            upscale: 'sdxl_upscaler_Lustify7.json',
+            detail: 'sdxl_detailer_Lustify7.json',
         },
         dependencies: [
             'lustify-7',
-            'sdxl-refiner-1.0',
             'spo-sdxl-lora',
-            'sdxl-lightning-lora',
+            'dmd2_sdxl_4step_lora',
+            '4x-NMKD-Siax',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        id: 'ill-anime-beauty',
+        name: 'ILL Anime Beauty',
+        mediaType: 'image',
+        installed: false,
+        image: 'AlchemyMix176.png',
+        type: 'sdxl',
+        supportedOps: ['t2i', 'upscale', 'detail'],
+        gen_speed: 'fast',
+        description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
+        workflows: {
+            t2i: 'ill_t2i_AlchemyMix176.json',
+            upscale: 'ill_upscaler_AlchemyMix176.json',
+            detail: 'ill_detailer_AlchemyMix176.json',
+        },
+        dependencies: [
+            'lustify-7',
+            'spo-sdxl-lora',
+            'dmd2_sdxl_4step_lora',
+            '4x-NMKD-Siax',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        id: 'ill-anime',
+        name: 'ILL Anime',
+        mediaType: 'image',
+        installed: false,
+        image: 'AnimeMixV80.png',
+        type: 'sdxl',
+        supportedOps: ['t2i', 'upscale', 'detail'],
+        gen_speed: 'fast',
+        description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
+        workflows: {
+            t2i: 'ill_t2i_AnimeMixV80.json',
+            upscale: 'ill_upscaler_AnimeMixV80.json',
+            detail: 'ill_detailer_AnimeMixV80.json',
+        },
+        dependencies: [
+            'lustify-7',
+            'spo-sdxl-lora',
+            'dmd2_sdxl_4step_lora',
+            '4x-NMKD-Siax',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        id: 'pony-mix',
+        name: 'PONY Mix',
+        mediaType: 'image',
+        installed: false,
+        image: 'AnimerJeiV30.png',
+        type: 'sdxl',
+        supportedOps: ['t2i', 'upscale', 'detail'],
+        gen_speed: 'fast',
+        description: 'PONY workflows for a mix of anime and realism using AnimerJei V3.',
+        workflows: {
+            t2i: 'pony_t2i_AnimerJeiV30.json',
+            upscale: 'pony_upscaler_AnimerJeiV30.json',
+            detail: 'pony_detailer_AnimerJeiV30.json',
+        },
+        dependencies: [
+            'lustify-7',
+            'spo-sdxl-lora',
+            'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
         ],
     },
 
-    // ── Add new models here ───────────────────────────────────────────────────
-    // {
-    //     id: 'wan-21',
-    //     name: 'Wan 2.1',
-    //     mediaType: 'video',
-    //     installed: false,
-    //     type: 'wan',
-    //     supportedOps: ['t2v', 'i2v', 'extend'],
-    //     workflows: {
-    //         t2v: 'wan21_t2v.json',
-    //         i2v: 'wan21_i2v.json',
-    //         extend: null,
-    //     },
-    //     dependencies: [ ... ],
-    // },
+    // ── Video Models ───────────────────────────────────────────────────
+    {
+        id: 'wan-22',
+        name: 'Wan 2.2 Smooth',
+        mediaType: 'video',
+        installed: false,
+        type: 'wan',
+        supportedOps: ['t2v', 'i2v'],
+        gen_speed: 'fast',
+        description: 'Wan 2.2 workflows for both anime and realism using the SmoothMix models.',
+        workflows: {
+            t2v: 'wan22_t2v.json',
+            i2v: 'wan22_i2v.json',
+        },
+        dependencies: [
+            'wan-22-t2v-high',
+            'wan-22-t2v-low',
+            'wan-22-i2v-high',
+            'wan-22-i2v-low',
+            'Wan22-4steps-lora-HIGH',
+            'Wan22-4steps-lora-LOW',
+            'wan_2.1_vae',
+            'umt5_xxl_fp8_e4m3fn_scaled',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-VideoHelperSuite',
+            'comfyui-kjnodes',
+            'ComfyUI-PainterI2Vadvanced'
+        ],
+    },
 ];
 
 // ── Universal Workflows (not model-tied) ──────────────────────────────────────

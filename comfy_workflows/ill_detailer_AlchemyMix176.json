@@ -1,0 +1,344 @@
+{
+  "27": {
+    "inputs": {
+      "model": [
+        "1634",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ],
+      "vae": [
+        "28",
+        2
+      ],
+      "positive": [
+        "29",
+        0
+      ],
+      "negative": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "28": {
+    "inputs": {
+      "ckpt_name": "ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
+  "29": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1632",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "30": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1632",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "502": {
+    "inputs": {
+      "image": "t2i_007.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1534": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "seed": [
+        "1582",
+        0
+      ],
+      "steps": [
+        "1562",
+        0
+      ],
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": [
+        "1561",
+        0
+      ],
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "502",
+        0
+      ],
+      "mask": [
+        "1626",
+        0
+      ],
+      "basic_pipe": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer (SDXL)"
+    }
+  },
+  "1559": {
+    "inputs": {
+      "images": [
+        "1534",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1561": {
+    "inputs": {
+      "float": 0.3
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Denoise"
+    }
+  },
+  "1562": {
+    "inputs": {
+      "int": 8
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Steps"
+    }
+  },
+  "1582": {
+    "inputs": {
+      "int": 30
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Seed"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "image": "MAsk_00001_.png",
+      "channel": "red"
+    },
+    "class_type": "LoadImageMask",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1627": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "28",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1627",
+        0
+      ],
+      "clip": [
+        "1627",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1629": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1628",
+        0
+      ],
+      "clip": [
+        "1628",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1630": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1629",
+        0
+      ],
+      "clip": [
+        "1629",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1631": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1630",
+        0
+      ],
+      "clip": [
+        "1630",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1632": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1631",
+        0
+      ],
+      "clip": [
+        "1631",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1633": {
+    "inputs": {
+      "lora_name": "SDXL\\spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+      "strength_model": 0.4,
+      "model": [
+        "1632",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1634": {
+    "inputs": {
+      "lora_name": "SDXL\\dmd2_sdxl_4step_lora.safetensors",
+      "strength_model": 0.7,
+      "model": [
+        "1633",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "1637": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00005_.png&type=temp&subfolder=&rand=0.11153776947167604"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00006_.png&type=temp&subfolder=&rand=0.9529280827630856"
+          }
+        ]
+      },
+      "image_a": [
+        "1534",
+        0
+      ],
+      "image_b": [
+        "502",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  }
+}

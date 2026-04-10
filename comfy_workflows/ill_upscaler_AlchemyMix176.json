@@ -1,7 +1,16 @@
 {
+  "28": {
+    "inputs": {
+      "ckpt_name": "ILL\\ramthrustsNSFWPINK_alchemyMix176.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
   "29": {
     "inputs": {
-      "text": "Liora, redhead, green-eyes, winged eyeliner, parted lips, looking at you",
+      "text": "",
       "clip": [
         "1601",
         1
@@ -23,36 +32,6 @@
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "Negative"
-    }
-  },
-  "383": {
-    "inputs": {
-      "rgthree_comparer": {
-        "images": [
-          {
-            "name": "A",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_pxrcs_00027_.png&type=temp&subfolder=&rand=0.9661562383576486"
-          },
-          {
-            "name": "B",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_pxrcs_00028_.png&type=temp&subfolder=&rand=0.37151746887880743"
-          }
-        ]
-      },
-      "image_a": [
-        "1615",
-        0
-      ],
-      "image_b": [
-        "1590",
-        0
-      ]
-    },
-    "class_type": "Image Comparer (rgthree)",
-    "_meta": {
-      "title": "A - B"
     }
   },
   "417": {
@@ -182,137 +161,6 @@
       "title": "Input_Image"
     }
   },
-  "1580": {
-    "inputs": {
-      "boolean": [
-        "1614",
-        0
-      ],
-      "true": [
-        "1585",
-        0
-      ],
-      "false": [
-        "1601",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "single iteration?"
-    }
-  },
-  "1583": {
-    "inputs": {
-      "horizontal_split": [
-        "1604",
-        0
-      ],
-      "vertical_split": [
-        "1605",
-        0
-      ],
-      "upscale_factor": [
-        "1552",
-        0
-      ],
-      "auto": [
-        "1613",
-        0
-      ],
-      "image": [
-        "1590",
-        0
-      ]
-    },
-    "class_type": "MpiGridDimensions",
-    "_meta": {
-      "title": "Mpi Grid Dimensions"
-    }
-  },
-  "1585": {
-    "inputs": {
-      "width": [
-        "1583",
-        0
-      ],
-      "height": [
-        "1583",
-        1
-      ],
-      "model_type": "auto",
-      "method": "vision_yarn",
-      "yarn_alt_scaling": true,
-      "enable_dype": true,
-      "base_resolution": 1024,
-      "dype_start_sigma": 1,
-      "dype_scale": 1.1,
-      "dype_exponent": 2,
-      "base_shift": 0.5,
-      "max_shift": 1.15,
-      "model": [
-        "1601",
-        0
-      ]
-    },
-    "class_type": "DyPE_FLUX",
-    "_meta": {
-      "title": "DyPE"
-    }
-  },
-  "1587": {
-    "inputs": {
-      "width": [
-        "1588",
-        0
-      ],
-      "height": [
-        "1588",
-        1
-      ],
-      "multiple_of": 64,
-      "round": false
-    },
-    "class_type": "MpiRoundToMultipleRes",
-    "_meta": {
-      "title": "Mpi Round To Multiple Res"
-    }
-  },
-  "1588": {
-    "inputs": {
-      "image": [
-        "1557",
-        0
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Image Size"
-    }
-  },
-  "1590": {
-    "inputs": {
-      "resize_type": "scale dimensions",
-      "resize_type.width": [
-        "1587",
-        0
-      ],
-      "resize_type.height": [
-        "1587",
-        1
-      ],
-      "resize_type.crop": "center",
-      "scale_method": "area",
-      "input": [
-        "1557",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
   "1591": {
     "inputs": {
       "resize_type": "scale dimensions",
@@ -325,7 +173,7 @@
         1
       ],
       "resize_type.crop": "center",
-      "scale_method": "area",
+      "scale_method": "lanczos",
       "input": [
         "417",
         0
@@ -338,7 +186,7 @@
   },
   "1594": {
     "inputs": {
-      "float": 0.4
+      "float": 0.15
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -351,11 +199,11 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "1623",
+        "28",
         0
       ],
       "clip": [
-        "1627",
+        "28",
         1
       ]
     },
@@ -474,7 +322,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Grid_V"
+      "title": "Grid_H"
     }
   },
   "1605": {
@@ -483,24 +331,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Grid_H"
-    }
-  },
-  "1607": {
-    "inputs": {
-      "math_expression": "(a==1) and (b==1)",
-      "a": [
-        "1604",
-        0
-      ],
-      "b": [
-        "1605",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
+      "title": "Grid_V"
     }
   },
   "1609": {
@@ -529,23 +360,6 @@
       "title": "Auto_Grid"
     }
   },
-  "1614": {
-    "inputs": {
-      "mode": "a_true_b_false",
-      "a": [
-        "1607",
-        0
-      ],
-      "b": [
-        "1613",
-        0
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
-    }
-  },
   "1615": {
     "inputs": {
       "upscale_by": [
@@ -556,21 +370,21 @@
         "1603",
         0
       ],
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "res_multistep",
-      "scheduler": "bong_tangent",
+      "steps": 8,
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
       "denoise": [
-        "1594",
+        "1640",
         0
       ],
       "mode_type": "Linear",
       "tile_width": [
-        "1583",
+        "1639",
         0
       ],
       "tile_height": [
-        "1583",
+        "1639",
         1
       ],
       "mask_blur": 8,
@@ -584,11 +398,11 @@
       "tiled_decode": false,
       "batch_size": 1,
       "image": [
-        "1590",
+        "1655",
         0
       ],
       "model": [
-        "1580",
+        "1625",
         0
       ],
       "positive": [
@@ -600,7 +414,7 @@
         0
       ],
       "vae": [
-        "1627",
+        "28",
         2
       ],
       "upscale_model": [
@@ -613,86 +427,88 @@
       "title": "Ultimate SD Upscale"
     }
   },
-  "1623": {
-    "inputs": {
-      "model": [
-        "1626",
-        0
-      ]
-    },
-    "class_type": "Mahiro",
-    "_meta": {
-      "title": "patch"
-    }
-  },
   "1624": {
     "inputs": {
-      "enable_fp16_accumulation": true,
+      "lora_name": "SDXL\\spo_sdxl_10ep_4k-data_lora_webui.safetensors",
+      "strength_model": 0.4,
       "model": [
-        "1625",
+        "1601",
         0
       ]
     },
-    "class_type": "ModelPatchTorchSettings",
+    "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "Model Patch Torch Settings"
+      "title": "Load LoRA"
     }
   },
   "1625": {
     "inputs": {
-      "sage_attention": "auto",
-      "allow_compile": false,
-      "model": [
-        "1627",
-        0
-      ]
-    },
-    "class_type": "PathchSageAttentionKJ",
-    "_meta": {
-      "title": "Patch Sage Attention KJ"
-    }
-  },
-  "1626": {
-    "inputs": {
-      "shift": 1,
-      "model": [
-        "1628",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingAuraFlow",
-    "_meta": {
-      "title": "Flow Shift"
-    }
-  },
-  "1627": {
-    "inputs": {
-      "model_name": "Chroma1-HD-Flash.safetensors",
-      "weight_dtype": "default",
-      "clip_name1_opt": "t5xxl_fp16.safetensors",
-      "clip_name2_opt": ".none",
-      "clip_name3_opt": ".none",
-      "clip_name4_opt": ".none",
-      "clip_type": "chroma",
-      "vae_name": "ae.safetensors"
-    },
-    "class_type": "ClownModelLoader",
-    "_meta": {
-      "title": "Loading Chroma..."
-    }
-  },
-  "1628": {
-    "inputs": {
-      "style_dtype": "float64",
-      "enable": true,
+      "lora_name": "SDXL\\dmd2_sdxl_4step_lora.safetensors",
+      "strength_model": 0.7,
       "model": [
         "1624",
         0
       ]
     },
-    "class_type": "ReChromaPatcher",
+    "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "ReChromaPatcher"
+      "title": "Load LoRA"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "horizontal_split": [
+        "1604",
+        0
+      ],
+      "vertical_split": [
+        "1605",
+        0
+      ],
+      "upscale_factor": [
+        "1552",
+        0
+      ],
+      "auto": [
+        "1613",
+        0
+      ],
+      "image": [
+        "1655",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "value": [
+        "1594",
+        0
+      ],
+      "exponent": 1.8
+    },
+    "class_type": "MpiExpoFloat",
+    "_meta": {
+      "title": "Mpi Expo Float"
+    }
+  },
+  "1655": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
     }
   }
 }
