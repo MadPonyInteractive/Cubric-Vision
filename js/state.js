@@ -15,12 +15,12 @@ const _state = {
     g_images: [],
     g_imageContext: "",
     g_isAnalyzing: false,
-    g_selectedModel: null,
+    g_selectedModel: null,// in use by js/shell/navigation.js and js/workspaces/gallery.js
     g_imagesDirty: false,
     g_currentGenFolder: null,
     g_formValues: {},
     g_isFirstLoad: true,
-    g_abortControllers: {},
+    g_abortControllers: {},// in use by legacy llmService.js (llm to be re-implemented)
     g_selectedModelType: 'image',
 
     // ── Stage 1: App shell / project system ───────────────────────────────────

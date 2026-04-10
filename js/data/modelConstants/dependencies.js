@@ -145,6 +145,14 @@ const DEPS = {
         url: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
         size: '67MB',
     },
+    '4x-AnimeSharp': {
+        id: '4x-AnimeSharp',
+        name: '4x-AnimeSharp',
+        type: 'upscale_model',
+        filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
+        url: 'https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth',
+        size: '65MB',
+    },
     // Nodes
     'ComfyUI-MpiNodes': {
         id: 'ComfyUI-MpiNodes',
