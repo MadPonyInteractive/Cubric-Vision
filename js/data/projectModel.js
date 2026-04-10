@@ -195,6 +195,8 @@ export function removeHistoryEntry(group, index) {
  * @property {string|null} thumbnail    - Relative path to thumbnail image
  * @property {ItemGroup[]} itemGroups
  * @property {boolean}     tutorialSeen
+ * @property {Object}      modelSettings  - Per-model user selections: { [modelId]: { loras, upscaleModel } }
+ * @property {Object}      toolSettings   - Per-tool user selections: { [toolKey]: { upscaleModel } }
  */
 
 /**
@@ -205,14 +207,16 @@ export function removeHistoryEntry(group, index) {
  */
 export function createProject(name, folderPath) {
     return {
-        id:          generateId(),
+        id:            generateId(),
         name,
         folderPath,
-        createdAt:   new Date().toISOString(),
-        updatedAt:   new Date().toISOString(),
-        thumbnail:   null,
-        itemGroups:  [],
-        tutorialSeen: false,
+        createdAt:     new Date().toISOString(),
+        updatedAt:     new Date().toISOString(),
+        thumbnail:     null,
+        itemGroups:    [],
+        tutorialSeen:  false,
+        modelSettings: {},
+        toolSettings:  {},
     };
 }
 
