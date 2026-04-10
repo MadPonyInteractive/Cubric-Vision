@@ -1,76 +1,27 @@
 import { Events } from './events.js';
 
-// Holds all mutable application state, shared globally 
-// across modules via a single exported object.
+// Global runtime state. Per-project persistent settings live on state.currentProject
+// (modelSettings, toolSettings) — not here.
 const _state = {
-    // ── Existing prompt-builder state ──────────────────────────────────────────
-    g_currentGuide: null,
-    g_promptEN: "",
-    g_promptCN: "",
-    g_promptEN_JSON: "",
-    g_promptCN_JSON: "",
-    g_currentTab: "en",
-    g_originalText: "",
-    g_wizardStep: 1,
-    g_images: [],
-    g_imageContext: "",
-    g_isAnalyzing: false,
-    g_selectedModel: null,// in use by js/shell/navigation.js and js/workspaces/gallery.js
-    g_imagesDirty: false,
-    g_currentGenFolder: null,
-    g_formValues: {},
-    g_isFirstLoad: true,
-    g_abortControllers: {},// in use by legacy llmService.js (llm to be re-implemented)
-    g_selectedModelType: 'image',
-
-    // ── Stage 1: App shell / project system ───────────────────────────────────
-    currentProject: null,       // Active project object (from project.json)
-    currentPage: 'landing',     // 'landing' | 'project' | 'tool' | 'media' | 'settings' | 'about'
+    // ── Core routing ──────────────────────────────────────────────────────────
+    currentProject: null,       // Active Project object (from project.json)
+    currentPage: 'landing',     // 'landing' | 'gallery' | 'groupHistory'
     currentParams: {},          // Extra router params
-    previousPage: null,         // For "Back" navigation
-    previousParams: {},         // For "Back" navigation
-    currentTool: 'promptBuilder', // Active tool name
-    generatorPrompt: '',        // Prompt to pre-fill in the Generator tool
-    generatorSeed: null,        // Seed to pre-fill in the Generator tool
-    pendingImageUrl: null,      // Image URL to inject into the next tool's image input
-    allComfyWorkflows: [],      // Currently available ComfyUI workflows (SDXL, etc.)
-    toolModelIds: {},           // Selected model ID per tool (e.g. {'descriptor': 'qwen3...'})
-    currentLoadedModel: null,   // Model currently resident in VRAM
-    descriptorImages: [],       // Persistent images for the Descriptor tool
-    comfyRootPath: null,        // Custom path to an external ComfyUI installation
-    activeSubPage: null,        // { toolName, isManual } if a subpage (provisioning/advanced) is open
-    defaultComfySettings: {     // Template for per-tool Advanced Settings overlay
-        model: null,
-        modelStrength: 1.0,
-        clipStrength: 1.0,
-        loras: [
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 },
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 },
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 },
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 },
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 },
-            { name: null, modelStrength: 1.0, clipStrength: 1.0 }
-        ],
-        upscaleModel: null
-    },
-    toolComfySettings: {},      // Persistent selections per tool (e.g. {'generator': {...}, 'detailer': {...}})
-    upscaleModels: [],          // Shared list of available upscalers
-    detailerInputImage: null,   // Image to Detail (URL or base64)
-    detailerInputMask: null,    // Mask for Detailer (base64 data URL)
-    detailerMaskMode: 'manual', // 'auto' | 'manual'
-    detailerSelectedMasks: '',  // Comma-separated string of indices for Auto Masking (e.g. "1,3,5")
-    detailerDetectionMode: 'box', // 'box' | 'segment'
-    upscalerInputImage: null,
-    upscalerAutoGrid: false,
-    upscalerGridH: 1,
-    upscalerGridV: 1,
-    upscalerCreative: true,
-    downloadingWorkflows: {},   // Tracks ongoing downloads: { workflowId: { msg, current, total } }
+    previousPage: null,
+    previousParams: {},
 
-    // ── Running tool tracking (for sidebar indicator + Ctrl+Enter guard) ──
-    // Set to the tool's name string while a run is active; null when idle.
-    runningComfyTool: null,  // e.g. 'generator' | 'detailer' | 'upscaler'
-    runningLlmTool: null,    // e.g. 'llm' | 'translator' | 'descriptor' | 'jsonFormatter'
+    // ── ComfyUI engine ────────────────────────────────────────────────────────
+    comfyRootPath: null,        // Custom path to an external ComfyUI installation
+    allComfyWorkflows: [],      // Workflow registry used by comfyController for id→file lookup
+
+    // ── Runtime asset lists (populated at startup / on demand) ────────────────
+    upscaleModels: [],          // Available upscale model filenames from ComfyUI backend
+    availableLoras: [],         // Available LoRA filenames from ComfyUI backend
+
+    // ── Legacy — keep until LLM re-implementation ─────────────────────────────
+    g_selectedModel: null,      // Used by navigation.js and gallery.js
+    g_abortControllers: {},     // Used by llmService.js
+    currentLoadedModel: null,   // Used by llmService.js
 };
 
 /**
@@ -88,13 +39,3 @@ export const state = new Proxy(_state, {
     }
 });
 
-/**
- * Helper to get or initialize per-tool Comfy settings
- */
-export function getToolComfySettings(toolName) {
-    if (!state.toolComfySettings[toolName]) {
-        // Deep clone the template
-        state.toolComfySettings[toolName] = JSON.parse(JSON.stringify(state.defaultComfySettings));
-    }
-    return state.toolComfySettings[toolName];
-}
