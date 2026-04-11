@@ -62,7 +62,7 @@ LISTENS: `ui:close-all-popups` — calls `el.hide()` if backdrop is active
 EMITS:   `select` `{ action: string }`
          `open`   `{}`
          `close`  `{}`
-LISTENS: (none — uses `Hotkeys.register('tab', ...)` and `window` keyup/mousemove)
+LISTENS: Hotkeys 'tab' (open/close toggle), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
 NOTE:    Reads `state.currentProject?.tutorialSeen` and calls `updateProject()` to mark tutorial seen.
 
 ### MpiRadioGroup
@@ -74,7 +74,7 @@ EMITS:   `select` `{ value: string, selection: string[] }`
 LISTENS: (none)
 
 ### MpiToast
-EMITS:   `close` (no payload)
+EMITS:   `close` `{}`
 LISTENS: (none)
 
 ---
@@ -145,8 +145,8 @@ EMITS:   `ok`     `{ inputValue?: string }`
 LISTENS: (none — internal MpiModal handles `ui:close-all-popups`)
 
 ### MpiProjectCard
-EMITS:   `click`  (no payload)
-         `delete` (no payload)
+EMITS:   `click`  `{}`
+         `delete` `{}`
 LISTENS: (none)
 
 ### MpiProjectName

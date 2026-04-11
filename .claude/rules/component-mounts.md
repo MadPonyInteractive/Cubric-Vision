@@ -1,12 +1,15 @@
 ## Sub-Agent Briefing
 > Use this file when you need to know who mounts a component, what props it receives, or where it appears in the UI.
 
+> **Scope:** Lists only components that perform internal sub-mounts. Components absent from this file have no internal mounts.
+
 ---
 
 ## gallery.js
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container; provides `getPromptSlot()` for PromptBox
 - `MpiPromptBox`     props: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   slot: `grid.el.getPromptSlot()` — only mounted when `activeModel` is non-null
+  - `updateContext`: called on `media-change` event only — `{ imageCount, videoCount, hasMask: false }`; not called at initial mount (initial props are final)
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event

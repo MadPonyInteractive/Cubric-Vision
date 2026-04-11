@@ -13,21 +13,7 @@
 
 ---
 
-## Standard Node Title → Field Mapping (from comfy_injection rules)
-
-<!-- Injected by `_buildParams()` in `commandExecutor.js` / `comfyController.js`, not from PromptBoxControls -->
-
-| Param key         | ComfyUI node title  | Field              |
-|-------------------|---------------------|--------------------|
-| `Width`           | `"Width"`           | `inputs.value`     |
-| `Height`          | `"Height"`          | `inputs.value`     |
-| positive prompt   | `"Positive"`        | `inputs.value`     |
-| negative prompt   | `"Negative"`        | `inputs.value`     |
-| seed              | `"Seed"`            | `inputs.int`       |
-| checkpoint        | `"Checkpoint"`      | `inputs.ckpt_name` |
-| input image       | `"Input_Image"`     | `inputs.image` (auto-uploaded) |
-| input mask        | `"Input_Mask"`      | `inputs.mask` (auto-uploaded)  |
-| lora slots        | `"Lora_1"`…`"Lora_6"` | `{ lora_name, strength_model, strength_clip }` |
+> Standard node title → field mapping is authoritative in `.claude/rules/comfy_injection.md`. Refer there for the full table.
 
 ---
 
@@ -63,22 +49,22 @@ MpiPromptBox 'run' event
 
 ## Operations and their controls[] (from commandRegistry.js)
 
-| Operation key     | Label              | mediaType | requiresImages | requiresVideo | requiresMask | promptRequired | components          |
-|-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|
-| `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio']`         |
-| `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio']`         |
-| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | `['']`              |
-| `edit`            | Edit               | image     | 1              | —             | —            | yes            | `['']`              |
-| `detail`          | Detail             | image     | 1              | —             | true         | yes            | `[]`                |
-| `change`          | Change             | image     | 1              | —             | true         | yes            | `[]`                |
-| `remove`          | Remove             | image     | 1              | —             | true         | yes            | `[]`                |
-| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         |
-| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         |
-| `extend`          | Extend             | video     | 0              | 1             | —            | no             | `[]`                |
-| `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | `[]` (universal)    |
-| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | `[]` (universal)    |
-| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | `[]` (universal)    |
+| Operation key     | Label              | mediaType | requiresImages | requiresVideo | requiresMask | promptRequired | components          | status      |
+|-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|-------------|
+| `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio']`         | active      |
+| `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio']`         | active      |
+| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | (none)              | active      |
+| `edit`            | Edit               | image     | 1              | —             | —            | yes            | (none)              | active      |
+| `detail`          | Detail             | image     | 1              | —             | true         | yes            | `[]`                | active      |
+| `change`          | Change             | image     | 1              | —             | true         | yes            | `[]`                | active      |
+| `remove`          | Remove             | image     | 1              | —             | true         | yes            | `[]`                | active      |
+| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         | active      |
+| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         | active      |
+| `extend`          | Extend             | video     | 0              | 1             | —            | no             | `[]`                | active      |
+| `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | `[]`                | universal   |
+| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | `[]`                | universal   |
+| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | `[]`                | universal   |
 
-> `universal: true` operations are NOT shown in the PromptBox dropdown — they are wired to toolbar buttons in groupHistory workspace.
-> `stub: true` operations are registered but disabled in UI.
-> `components: ['']` means the array contains an empty-string entry — `getCommandComponents` returns `['']`, which maps to no control in `PROMPT_BOX_CONTROLS` (the empty string key does not exist).
+> `status: active` — operation has a workflow file and is working.
+> `status: stub` — operation is defined but not yet implemented (`stub: true` in commandRegistry).
+> `status: universal` — operation does not use model-tied ComfyUI workflows; wired to toolbar buttons in groupHistory workspace, NOT shown in the PromptBox dropdown.
