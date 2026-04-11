@@ -1,7 +1,3 @@
-# Component Events Map
-
-> **AI INSTRUCTION:** This file is machine-generated. Use it when you need to know what events a component emits or listens to.
-
 ## Sub-Agent Briefing
 > Use this file when you need to know what events a component emits or listens to.
 

@@ -1,7 +1,3 @@
-# Component State Map
-
-> **AI INSTRUCTION:** This file is machine-generated. Use it when you need to know which state keys a component reads or writes.
-
 ## Sub-Agent Briefing
 > Use this file when you need to know which state keys a component reads or writes.
 > All keys live in `js/state.js` as a reactive Proxy. Writing any key auto-fires `state:changed`. Never manually emit `state:changed`.

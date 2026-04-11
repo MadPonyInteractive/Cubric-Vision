@@ -1,7 +1,3 @@
-# Component ComfyUI Injection Map
-
-> **AI INSTRUCTION:** This file is machine-generated. Use it when you need to know what gets injected into ComfyUI workflows and from which component.
-
 ## Sub-Agent Briefing
 > Use this file when you need to know what gets injected into ComfyUI workflows and from which component.
 

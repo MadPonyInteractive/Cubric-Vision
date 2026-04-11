@@ -1,7 +1,3 @@
-# Component Mount Map
-
-> **AI INSTRUCTION:** This file is machine-generated. Use it when you need to know who mounts a component, what props it receives, and where it appears in the UI. Re-generate after adding or moving mounts.
-
 ## Sub-Agent Briefing
 > Use this file when you need to know who mounts a component, what props it receives, or where it appears in the UI.
 
