@@ -4,10 +4,9 @@
 
 ## Sub-Agent Briefing
 > Use this file when you need to know which state keys a component reads or writes.
+> All keys live in `js/state.js` as a reactive Proxy. Writing any key auto-fires `state:changed`. Never manually emit `state:changed`.
 
 ---
-
-All keys below live in `js/state.js` as a reactive Proxy. Writing any key automatically fires `state:changed`. Never manually emit `state:changed`.
 
 | state key              | type                        | readers                                                                                 | writers                                                                            |
 |------------------------|-----------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|

@@ -61,14 +61,7 @@ MpiPromptBox 'run' event
 |---------|-------------------|-----------|--------------|-------------------------------|
 | `ratio` | `MpiRatioSelector` | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
 
-**Adding a new control:**
-1. Create the component (e.g. `js/components/Compounds/MpiDenoiseSlider/`)
-2. Import and add an entry to `PROMPT_BOX_CONTROLS` in `PromptBoxControls.js` with:
-   - `nodeTitle` (string or null)
-   - `mount(el, opts)` — mounts the component and wires `this.value`
-   - `getValue()` — returns current value
-   - `getInjectionParams()` — returns `{ NodeTitle: value }` object
-3. Add the control ID string to the desired operation's `components[]` array in `commandRegistry.js`
+> **Adding a new control:** (1) create component, (2) add entry to `PROMPT_BOX_CONTROLS` with `nodeTitle` + `getInjectionParams()`, (3) add control ID to operation's `components[]` in `commandRegistry.js`
 
 ---
 
