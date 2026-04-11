@@ -180,153 +180,297 @@ export function mount(container) {
     // Model settings overlay — single instance, reused across model changes
     const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-    function _mountPromptBox() {
+    // ── Initial PromptBox mount ──────────────────────────────────────────
+    {
         promptSlot.innerHTML = '';
         promptBox    = null;
         imageCount   = 0;
         videoCount   = 0;
 
-        if (!activeModel) return;
-
-        promptBox = MpiPromptBox.mount(promptSlot, {
-            model:           activeModel,
-            modelList:       installedImageModels,
-            operation:       activeOperation,
-            includeNegative: true,
-        });
-
-        promptBox.on('model-change', ({ model }) => {
-            state.s_selectedModelId = model.id;
-            activeModel       = model;
-            activeOperation   = 't2i';
-            _mountPromptBox();
-        });
-
-        promptBox.on('operation-change', ({ operation }) => {
-            activeOperation = operation;
-        });
-
-        promptBox.on('settings', () => {
-            _settingsOverlay.el.open({ modelId: activeModel.id });
-        });
-
-        promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
-            imageCount = ic;
-            videoCount = vc;
-            promptBox.el.updateContext({ imageCount, videoCount, hasMask: false });
-            refreshRadial({ imageCount, videoCount });
-        });
-
-        let _activeExec = null;
-
-        promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
-            if (!activeModel) return;
-
-            const tempId = crypto.randomUUID();
-            const cardType = activeModel.mediaType; // 'image' | 'video'
-
-            grid.el.addGeneratingCard(tempId, cardType);
-            StatusBar.progress.start('Generating...');
-
-            _activeExec = runCommand({
-                operation,
-                modelId:   activeModel.id,
-                positive,
-                negative,
-                mediaItems,
+        if (activeModel) {
+            promptBox = MpiPromptBox.mount(promptSlot, {
+                model:           activeModel,
+                modelList:       installedImageModels,
+                operation:       activeOperation,
+                includeNegative: true,
             });
-            const exec = _activeExec;
 
-            exec.onPreview = (url) => {
-                grid.el.updatePreview(tempId, url);
-            };
+            promptBox.on('model-change', ({ model }) => {
+                state.s_selectedModelId = model.id;
+                activeModel       = model;
+                activeOperation   = 't2i';
 
-            exec.onProgress = (value) => {
-                StatusBar.progress.update(value);
-            };
+                // ── Remount after model change ───────────────────────────
+                {
+                    promptSlot.innerHTML = '';
+                    promptBox    = null;
+                    imageCount   = 0;
+                    videoCount   = 0;
 
-            exec.onComplete = async (urls) => {
-                _activeExec = null;
-                promptBox.el.setGenerating(false);
+                    if (activeModel) {
+                        promptBox = MpiPromptBox.mount(promptSlot, {
+                            model:           activeModel,
+                            modelList:       installedImageModels,
+                            operation:       activeOperation,
+                            includeNegative: true,
+                        });
 
-                if (!urls.length) {
-                    clientLogger.warn('gallery', 'Generation completed but no Output node images returned.');
-                    StatusBar.progress.cancel();
-                    grid.el.removeGeneratingCard(tempId);
-                    return;
-                }
+                        promptBox.on('model-change', ({ model: m }) => {
+                            state.s_selectedModelId = m.id;
+                            activeModel       = m;
+                            activeOperation   = 't2i';
+                        });
 
-                let filePath = urls[0];
-                let displayName = operation;
+                        promptBox.on('operation-change', ({ operation }) => {
+                            activeOperation = operation;
+                        });
 
-                if (state.currentProject?.folderPath) {
-                    try {
-                        const res = await fetch('/project/save-generation', {
-                            method:  'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body:    JSON.stringify({
-                                folderPath:   state.currentProject.folderPath,
-                                comfyViewUrl: urls[0],
+                        promptBox.on('settings', () => {
+                            _settingsOverlay.el.open({ modelId: activeModel.id });
+                        });
+
+                        promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
+                            imageCount = ic;
+                            videoCount = vc;
+                            promptBox.el.updateContext({ imageCount, videoCount, hasMask: false });
+                            refreshRadial({ imageCount, videoCount });
+                        });
+
+                        let _activeExec = null;
+
+                        promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
+                            if (!activeModel) return;
+
+                            const tempId = crypto.randomUUID();
+                            const cardType = activeModel.mediaType; // 'image' | 'video'
+
+                            grid.el.addGeneratingCard(tempId, cardType);
+                            StatusBar.progress.start('Generating...');
+
+                            _activeExec = runCommand({
                                 operation,
-                                meta: {
+                                modelId:   activeModel.id,
+                                positive,
+                                negative,
+                                mediaItems,
+                            });
+                            const exec = _activeExec;
+
+                            exec.onPreview = (url) => {
+                                grid.el.updatePreview(tempId, url);
+                            };
+
+                            exec.onProgress = (value) => {
+                                StatusBar.progress.update(value);
+                            };
+
+                            exec.onComplete = async (urls) => {
+                                _activeExec = null;
+                                promptBox.el.setGenerating(false);
+
+                                if (!urls.length) {
+                                    clientLogger.warn('gallery', 'Generation completed but no Output node images returned.');
+                                    StatusBar.progress.cancel();
+                                    grid.el.removeGeneratingCard(tempId);
+                                    return;
+                                }
+
+                                let filePath = urls[0];
+                                let displayName = operation;
+
+                                if (state.currentProject?.folderPath) {
+                                    try {
+                                        const res = await fetch('/project/save-generation', {
+                                            method:  'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body:    JSON.stringify({
+                                                folderPath:   state.currentProject.folderPath,
+                                                comfyViewUrl: urls[0],
+                                                operation,
+                                                meta: {
+                                                    prompt:         positive,
+                                                    negativePrompt: negative,
+                                                    modelId:        activeModel.id,
+                                                },
+                                            }),
+                                        });
+                                        if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                                            displayName = data.filename.replace(/\.[^.]+$/, '');
+                                        }
+                                    } catch (err) {
+                                        clientLogger.warn('gallery', 'save-generation failed, using comfy URL:', err);
+                                    }
+                                }
+
+                                const cardName = displayName.length > 28
+                                    ? displayName.slice(0, 27) + '…'
+                                    : displayName;
+
+                                const item = createImageItem({
+                                    filePath,
+                                    modelId:        activeModel.id,
+                                    operation,
                                     prompt:         positive,
                                     negativePrompt: negative,
-                                    modelId:        activeModel.id,
-                                },
-                            }),
+                                });
+
+                                let group = createItemGroup(cardType, { name: cardName });
+                                group = appendToHistory(group, item);
+
+                                if (state.currentProject) {
+                                    state.currentProject = addGroupToProject(state.currentProject, group);
+                                    _persistGroups();
+                                }
+
+                                StatusBar.progress.complete('Image generated!');
+                                grid.el.finalizeCard(tempId, group);
+                            };
+
+                            exec.onError = (err) => {
+                                _activeExec = null;
+                                clientLogger.error('gallery', 'Generation error:', err);
+                                promptBox.el.setGenerating(false);
+                                StatusBar.progress.cancel();
+                                grid.el.removeGeneratingCard(tempId);
+                            };
                         });
-                        if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
-                        const data = await res.json();
-                        if (data.success) {
-                            filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                            displayName = data.filename.replace(/\.[^.]+$/, '');
-                        }
-                    } catch (err) {
-                        clientLogger.warn('gallery', 'save-generation failed, using comfy URL:', err);
+
+                        promptBox.on('cancel', () => {
+                            _activeExec?.cancel();
+                            _activeExec = null;
+                            StatusBar.progress.cancel();
+                        });
                     }
                 }
+            });
 
-                const cardName = displayName.length > 28
-                    ? displayName.slice(0, 27) + '…'
-                    : displayName;
+            promptBox.on('operation-change', ({ operation }) => {
+                activeOperation = operation;
+            });
 
-                const item = createImageItem({
-                    filePath,
-                    modelId:        activeModel.id,
+            promptBox.on('settings', () => {
+                _settingsOverlay.el.open({ modelId: activeModel.id });
+            });
+
+            promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
+                imageCount = ic;
+                videoCount = vc;
+                promptBox.el.updateContext({ imageCount, videoCount, hasMask: false });
+                refreshRadial({ imageCount, videoCount });
+            });
+
+            let _activeExec = null;
+
+            promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
+                if (!activeModel) return;
+
+                const tempId = crypto.randomUUID();
+                const cardType = activeModel.mediaType; // 'image' | 'video'
+
+                grid.el.addGeneratingCard(tempId, cardType);
+                StatusBar.progress.start('Generating...');
+
+                _activeExec = runCommand({
                     operation,
-                    prompt:         positive,
-                    negativePrompt: negative,
+                    modelId:   activeModel.id,
+                    positive,
+                    negative,
+                    mediaItems,
                 });
+                const exec = _activeExec;
 
-                let group = createItemGroup(cardType, { name: cardName });
-                group = appendToHistory(group, item);
+                exec.onPreview = (url) => {
+                    grid.el.updatePreview(tempId, url);
+                };
 
-                if (state.currentProject) {
-                    state.currentProject = addGroupToProject(state.currentProject, group);
-                    _persistGroups();
-                }
+                exec.onProgress = (value) => {
+                    StatusBar.progress.update(value);
+                };
 
-                StatusBar.progress.complete('Image generated!');
-                grid.el.finalizeCard(tempId, group);
-            };
+                exec.onComplete = async (urls) => {
+                    _activeExec = null;
+                    promptBox.el.setGenerating(false);
 
-            exec.onError = (err) => {
+                    if (!urls.length) {
+                        clientLogger.warn('gallery', 'Generation completed but no Output node images returned.');
+                        StatusBar.progress.cancel();
+                        grid.el.removeGeneratingCard(tempId);
+                        return;
+                    }
+
+                    let filePath = urls[0];
+                    let displayName = operation;
+
+                    if (state.currentProject?.folderPath) {
+                        try {
+                            const res = await fetch('/project/save-generation', {
+                                method:  'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body:    JSON.stringify({
+                                    folderPath:   state.currentProject.folderPath,
+                                    comfyViewUrl: urls[0],
+                                    operation,
+                                    meta: {
+                                        prompt:         positive,
+                                        negativePrompt: negative,
+                                        modelId:        activeModel.id,
+                                    },
+                                }),
+                            });
+                            if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
+                            const data = await res.json();
+                            if (data.success) {
+                                filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                                displayName = data.filename.replace(/\.[^.]+$/, '');
+                            }
+                        } catch (err) {
+                            clientLogger.warn('gallery', 'save-generation failed, using comfy URL:', err);
+                        }
+                    }
+
+                    const cardName = displayName.length > 28
+                        ? displayName.slice(0, 27) + '…'
+                        : displayName;
+
+                    const item = createImageItem({
+                        filePath,
+                        modelId:        activeModel.id,
+                        operation,
+                        prompt:         positive,
+                        negativePrompt: negative,
+                    });
+
+                    let group = createItemGroup(cardType, { name: cardName });
+                    group = appendToHistory(group, item);
+
+                    if (state.currentProject) {
+                        state.currentProject = addGroupToProject(state.currentProject, group);
+                        _persistGroups();
+                    }
+
+                    StatusBar.progress.complete('Image generated!');
+                    grid.el.finalizeCard(tempId, group);
+                };
+
+                exec.onError = (err) => {
+                    _activeExec = null;
+                    clientLogger.error('gallery', 'Generation error:', err);
+                    promptBox.el.setGenerating(false);
+                    StatusBar.progress.cancel();
+                    grid.el.removeGeneratingCard(tempId);
+                };
+            });
+
+            promptBox.on('cancel', () => {
+                _activeExec?.cancel();
                 _activeExec = null;
-                clientLogger.error('gallery', 'Generation error:', err);
-                promptBox.el.setGenerating(false);
                 StatusBar.progress.cancel();
-                grid.el.removeGeneratingCard(tempId);
-            };
-        });
-
-        promptBox.on('cancel', () => {
-            _activeExec?.cancel();
-            _activeExec = null;
-            StatusBar.progress.cancel();
-        });
+            });
+        }
     }
-
-    _mountPromptBox();
 
     // ── Radial menu → op dropdown sync ────────────────────────────────────
     // When the radial fires an operation change, update the dropdown to match.
