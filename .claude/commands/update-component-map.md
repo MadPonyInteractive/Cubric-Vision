@@ -2,7 +2,7 @@ Regenerate all 4 component map rule files in `.claude/rules/` by exploring the c
 
 ## Step 1 — Explore components
 
-Read EVERY component file under `js/components/Primitives/`, `js/components/Compounds/`, and `js/components/Blocks/`. For each component extract:
+Read the primary `.js` entry file for each component folder under `js/components/Primitives/`, `js/components/Compounds/`, and `js/components/Blocks/`. Each component lives in its own subfolder (e.g. `MpiButton/MpiButton.js`); read only the main entry file, not sub-utilities. For each component extract:
 - **Props:** from `template(props)` param destructuring or `js/components/types.js` JSDoc
 - **Emits:** every `emit(` call — capture event name and payload shape
 - **Listens:** every `Events.on(` call — capture event name
@@ -23,9 +23,19 @@ Read these files:
 - `js/components/Blocks/MpiPromptBox/PromptBoxControls.js` — extract each control's `nodeTitle`, `getInjectionParams()` return shape
 - `js/data/commandRegistry.js` — extract each operation ID and its `components[]` array (which controls it uses)
 
+## Step 3b — Read existing rule files (for diff reporting)
+
+Before overwriting, read the current content of each of these files if they exist:
+- `.claude/rules/component-mounts.md`
+- `.claude/rules/component-events.md`
+- `.claude/rules/component-state.md`
+- `.claude/rules/component-comfy.md`
+
+Store the component names listed in each file. This baseline is used in Step 5 to report what changed.
+
 ## Step 4 — Rewrite the 4 rule files
 
-Write all 4 files using ONLY the terse formats below. No prose. Tables and structured lists only. Preserve the `## Sub-Agent Briefing` header in each file.
+Overwrite all 4 files using ONLY the terse formats below. No prose. Tables and structured lists only. Preserve the `## Sub-Agent Briefing` header in each file. The `## PromptBoxControls Registry` section in `component-comfy.md` is static — copy it verbatim from this template, do not regenerate it from source files.
 
 ### `.claude/rules/component-mounts.md` format:
 
@@ -39,9 +49,6 @@ Write all 4 files using ONLY the terse formats below. No prose. Tables and struc
 
 ## groupHistory.js
 - ComponentName   props: { prop1 }   slot: description
-...
-
-## shell.js (if any)
 ...
 ```
 
@@ -71,6 +78,7 @@ Only include components that emit or listen to at least one event.
 
 | state key          | type        | readers                                    | writers                        |
 |--------------------|-------------|--------------------------------------------|--------------------------------|
+*(replace all rows below with live data from state.js)*
 | currentProject     | Project|null| gallery, groupHistory, MpiModelSettings    | gallery, groupHistory          |
 | s_selectedModelId  | string|null | MpiPromptBox, gallery, groupHistory        | MpiPromptBox                   |
 ...
@@ -85,6 +93,7 @@ Only include components that emit or listen to at least one event.
 ## Injection Points
 | Control ID    | Component        | nodeTitle(s)         | Params injected               | Operations (from commandRegistry) |
 |---------------|------------------|----------------------|-------------------------------|-----------------------------------|
+| *(replace all rows below with live data from PromptBoxControls.js and commandRegistry.js)* | | | | |
 | ratio         | MpiRatioSelector | Width / Height       | { Width: number, Height: number } | t2i, i2i, upscale, video      |
 | mask          | MpiCanvas        | Input_Mask           | { maskDataUrl: string }        | detail, inpaint                   |
 ...
@@ -95,7 +104,7 @@ MpiPromptBox 'run' event → commandExecutor.runCommand(command, { operation, po
   → ComfyUIController.runWorkflow(workflowFile, params, onProgress)
   → nodes targeted by _meta.title (case-insensitive)
 
-## PromptBoxControls Registry
+## PromptBoxControls Registry  ← static, do not regenerate
 Location: js/components/Blocks/MpiPromptBox/PromptBoxControls.js
 Adding a new control: (1) create component, (2) add entry to PROMPT_BOX_CONTROLS with nodeTitle + getInjectionParams(), (3) add control ID to operation's components[] in commandRegistry.js
 ```
@@ -106,4 +115,4 @@ After rewriting all 4 files, print a short report:
 - How many components documented
 - Any new components found since last run (compare against previous file content)
 - Any components removed
-- Any components flagged for non-standard patterns (missing Events.on cleanup, no emit calls despite being interactive, etc.)
+- Any components flagged for non-standard patterns: e.g. an `Events.on(` call with no stored unsubscribe reference used in a `destroy` callback or `MutationObserver` cleanup; or a component with interactive UI (buttons, inputs) but no `emit(` calls.
