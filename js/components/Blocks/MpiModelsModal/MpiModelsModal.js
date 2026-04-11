@@ -108,7 +108,8 @@ export const MpiModelsModal = ComponentFactory.create({
                 await reSyncInstalledModels();
                 renderList();
 
-                if (state.s_installedModelIds.length > 0) {
+                const hasRealModel = state.s_installedModelIds.some(id => !id.startsWith('universal:'));
+                if (hasRealModel) {
                     Events.emit('models:all-installed');
                 }
             } catch (err) {

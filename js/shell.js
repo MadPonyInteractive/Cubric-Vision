@@ -126,18 +126,14 @@ async function _bootApp() {
 }
 
 async function _initDataRegistries() {
-  try {
-    const synced = await syncModelInstalled();
-    if (synced) {
-      // models:checked event fires inside syncModelInstalled() — state.s_installedModelIds
-      // gets updated via the state:changed subscription below
-    }
-  } catch (err) {
-    console.error('[shell] background registry failed:', err);
-  }
-
-  // Subscribe to models:checked — keep state.s_installedModelIds in sync
+  // Subscribe BEFORE syncing so the first emission is never missed
   Events.on('models:checked', ({ installedModelIds: ids }) => {
     state.s_installedModelIds = ids;
   });
+
+  try {
+    await syncModelInstalled();
+  } catch (err) {
+    console.error('[shell] background registry failed:', err);
+  }
 }

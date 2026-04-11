@@ -355,12 +355,18 @@ export function mount(container) {
     });
     _modelsModal.el.hide(); // hidden until zero installed
 
-    // Show when zero models installed
-    const _onZeroInstalled = ({ key, value }) => {
+    // True if at least one image model is installed on disk
+    const _hasInstalledImageModels = () => getModelsByType('image').some(m => m.installed === true);
+
+    // Show when zero image models installed
+    const _onZeroInstalled = ({ key }) => {
         if (key !== 's_installedModelIds') return;
-        if (value.length === 0) _modelsModal.el.show();
+        if (!_hasInstalledImageModels()) _modelsModal.el.show();
     };
     Events.on('state:changed', _onZeroInstalled);
+
+    // Immediate check — installedImageModels was computed at mount time from already-synced MODELS
+    if (installedImageModels.length === 0) _modelsModal.el.show();
 
     // Close when all models installed
     Events.on('models:all-installed', () => _modelsModal.el.hide());

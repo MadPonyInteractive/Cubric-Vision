@@ -999,12 +999,18 @@ export function mount(container, params = {}) {
     });
     _modelsModal.el.hide();
 
-    const _onZeroInstalled = ({ key, value }) => {
+    // True if at least one image model is installed on disk
+    const _hasInstalledImageModels = () => getModelsByType('image').some(m => m.installed === true);
+
+    const _onZeroInstalled = ({ key }) => {
         if (key !== 's_installedModelIds') return;
-        if (value.length === 0) _modelsModal.el.show();
+        if (!_hasInstalledImageModels()) _modelsModal.el.show();
     };
     Events.on('state:changed', _onZeroInstalled);
     Events.on('models:all-installed', () => _modelsModal.el.hide());
+
+    // Immediate check — MODELS already patched in place by syncModelInstalled
+    if (!_hasInstalledImageModels()) _modelsModal.el.show();
 
     // ── Cleanup ────────────────────────────────────────────────────────────────
 

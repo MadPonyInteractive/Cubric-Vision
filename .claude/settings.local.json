@@ -70,7 +70,9 @@
       "Bash(ls *.js)",
       "Bash(playwright-cli click:*)",
       "Bash(curl -s http://127.0.0.1:3000/js/data/modelConstants/models.js)",
-      "Bash(playwright-cli console:*)"
+      "Bash(playwright-cli console:*)",
+      "Skill(taches-cc-resources:debug)",
+      "Skill(taches-cc-resources:debug:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
