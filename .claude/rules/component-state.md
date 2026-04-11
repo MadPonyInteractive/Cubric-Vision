@@ -24,11 +24,3 @@ All keys below live in `js/state.js` as a reactive Proxy. Writing any key automa
 | `g_abortControllers`   | `Object`                    | llmService.js (legacy)                                                                  | llmService.js (legacy)                                                             |
 | `currentLoadedModel`   | `string\|null`              | llmService.js (legacy)                                                                  | llmService.js (legacy)                                                             |
 
----
-
-## Notes
-
-- `currentProject` is the most-mutated key. It is an object replaced wholesale (immutable update pattern from `projectModel.js` helpers). Do NOT mutate sub-fields directly — always use the helper functions and reassign `state.currentProject`.
-- `s_selectedModelId` is the canonical cross-workspace model sync key. Both gallery and groupHistory read it on mount and write it when the user changes the model selector.
-- `upscaleModels` and `availableLoras` are populated lazily by `loadAll()` in `assetService.js`. `MpiModelSettings.open()` calls `loadAll()` if they are empty.
-- `allComfyWorkflows` is not read by any UI component — it is used only by `comfyController.js` for workflow id → file resolution.

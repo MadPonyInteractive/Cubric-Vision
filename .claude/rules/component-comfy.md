@@ -19,7 +19,7 @@
 
 ## Standard Node Title → Field Mapping (from comfy_injection rules)
 
-These are additional params injected by `_buildParams()` in `commandExecutor.js` / `comfyController.js`, not from PromptBoxControls:
+<!-- Injected by `_buildParams()` in `commandExecutor.js` / `comfyController.js`, not from PromptBoxControls -->
 
 | Param key         | ComfyUI node title  | Field              |
 |-------------------|---------------------|--------------------|
@@ -49,8 +49,6 @@ MpiPromptBox 'run' event
       → "Detected" node (auto-mask only) captures segmentation preview URLs
 ```
 
-`injectionParams` flows: `PromptBoxControls.getInjectionParamsFromControls(_activeControls)` → merged into `run` event payload → passed through to `runCommand` → merged into final workflow params.
-
 ---
 
 ## PromptBoxControls Registry — static, do not regenerate
@@ -76,21 +74,21 @@ MpiPromptBox 'run' event
 
 ## Operations and their controls[] (from commandRegistry.js)
 
-| Operation key     | Label              | mediaType | requiresImages | requiresVideo | requiresMask | components          |
-|-------------------|--------------------|-----------|----------------|---------------|--------------|---------------------|
-| `t2i`             | Text to Image      | image     | 0              | —             | —            | `['ratio']`         |
-| `i2i`             | Image to Image     | image     | 1              | —             | —            | `['ratio']`         |
-| `upscale`         | Upscale            | image     | 1              | —             | —            | `['']`              |
-| `edit`            | Edit               | image     | 1              | —             | —            | `['']`              |
-| `detail`          | Detail             | image     | 1              | —             | true         | `[]`                |
-| `change`          | Change             | image     | 1              | —             | true         | `[]`                |
-| `remove`          | Remove             | image     | 1              | —             | true         | `[]`                |
-| `t2v`             | Text to Video      | video     | 0              | —             | —            | `['ratio']`         |
-| `i2v`             | Image to Video     | video     | 1              | —             | —            | `['ratio']`         |
-| `extend`          | Extend             | video     | 0              | 1             | —            | `[]`                |
-| `interpolate`     | Interpolate        | video     | 0              | —             | —            | `[]` (universal, stub) |
-| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | `[]` (universal, stub) |
-| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | `[]` (universal)    |
+| Operation key     | Label              | mediaType | requiresImages | requiresVideo | requiresMask | promptRequired | components          |
+|-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|
+| `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio']`         |
+| `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio']`         |
+| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | `['']`              |
+| `edit`            | Edit               | image     | 1              | —             | —            | yes            | `['']`              |
+| `detail`          | Detail             | image     | 1              | —             | true         | yes            | `[]`                |
+| `change`          | Change             | image     | 1              | —             | true         | yes            | `[]`                |
+| `remove`          | Remove             | image     | 1              | —             | true         | yes            | `[]`                |
+| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         |
+| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         |
+| `extend`          | Extend             | video     | 0              | 1             | —            | no             | `[]`                |
+| `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | `[]` (universal)    |
+| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | `[]` (universal)    |
+| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | `[]` (universal)    |
 
 > `universal: true` operations are NOT shown in the PromptBox dropdown — they are wired to toolbar buttons in groupHistory workspace.
 > `stub: true` operations are registered but disabled in UI.
