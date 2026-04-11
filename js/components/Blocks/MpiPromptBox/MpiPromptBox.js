@@ -5,7 +5,7 @@ import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getCommandComponent } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponent } from '../../../data/commandRegistry.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -74,7 +74,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
             <div class="mpi-prompt-box__bottom">
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--left"    id="bottom-left-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--center"  id="bottom-center-slot"></div>
+                <div class="mpi-prompt-box__area mpi-prompt-box__area--center"  id="bottom-center-slot">
+                    <div id="op-dropdown-slot"></div>
+                </div>
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--right"   id="bottom-right-slot"></div>
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--bottom"  id="bottom-bottom-slot"></div>
             </div>
@@ -250,35 +252,29 @@ export const MpiPromptBox = ComponentFactory.create({
         _observer.observe(document.body, { childList: true, subtree: true });
 
         // ── Operation dropdown ─────────────────────────────────────────────────
-        // The Block owns the operation dropdown internally (right slot)
-        const opDropdownContainer = el.querySelector('#bottom-right-slot');
-
         let runBtn = null;
 
         function _refreshOpDropdown() {
-            if (!opDropdownContainer || !model) return;
+            if (!model) return;
 
-            // Get available ops from model
-            const availableOps = (model.supportedOps || [])
-                .filter(key => commands[key] && !commands[key].stub)
-                .map(key => ({ value: key, label: commands[key].label }));
+            const opSlot = el.querySelector('#op-dropdown-slot');
+            if (!opSlot) return;
 
-            if (availableOps.length <= 1) return;
+            // Use getAvailableCommands for context-aware filtering
+            const availableCmds = getAvailableCommands(model.mediaType, model, _context);
+            const availableOps = availableCmds
+                .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
 
-            // Remove existing dropdown if present
-            const existing = opDropdownContainer.querySelector('.mpi-dropdown');
-            if (existing) existing.remove();
+            if (availableOps.length <= 1) {
+                opSlot.innerHTML = '';
+                return;
+            }
 
-            // Remove existing op dropdown label if present
-            const existingLabel = opDropdownContainer.querySelector('.mpi-prompt-box__op-label');
-            if (existingLabel) existingLabel.remove();
-
-            // Insert label before the run button slot
+            // Insert label
             const labelEl = document.createElement('span');
             labelEl.className = 'mpi-prompt-box__op-label';
             labelEl.textContent = 'Op:';
             labelEl.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-right:0.25rem;';
-            opDropdownContainer.insertBefore(labelEl, opDropdownContainer.lastElementChild);
 
             const opDropdown = MpiDropdown.mount(document.createElement('div'), {
                 options: availableOps,
@@ -287,7 +283,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 direction: 'up',
             });
             opDropdown.on('change', ({ value }) => el.setOperation(value));
-            opDropdownContainer.insertBefore(opDropdown.el, opDropdownContainer.lastElementChild);
+
+            opSlot.innerHTML = '';
+            opSlot.appendChild(labelEl);
+            opSlot.appendChild(opDropdown.el);
         }
 
         function _refreshOpSlot() {
