@@ -72,20 +72,19 @@ Only include components that emit or listen to at least one event.
 
 ### `.claude/rules/component-state.md` format:
 
+> Note: table rows shown below are examples only — replace ALL rows with live data from state.js.
 ```
 ## Sub-Agent Briefing
 > Use this file when you need to know which state keys a component reads or writes.
 
 | state key          | type        | readers                                    | writers                        |
 |--------------------|-------------|--------------------------------------------|--------------------------------|
-*(replace all rows below with live data from state.js)*
-| currentProject     | Project|null| gallery, groupHistory, MpiModelSettings    | gallery, groupHistory          |
-| s_selectedModelId  | string|null | MpiPromptBox, gallery, groupHistory        | MpiPromptBox                   |
 ...
 ```
 
 ### `.claude/rules/component-comfy.md` format:
 
+> Note: Injection Points table rows shown below are examples only — replace ALL rows with live data from PromptBoxControls.js and commandRegistry.js.
 ```
 ## Sub-Agent Briefing
 > Use this file when you need to know what gets injected into ComfyUI workflows and from which component.
@@ -93,9 +92,6 @@ Only include components that emit or listen to at least one event.
 ## Injection Points
 | Control ID    | Component        | nodeTitle(s)         | Params injected               | Operations (from commandRegistry) |
 |---------------|------------------|----------------------|-------------------------------|-----------------------------------|
-| *(replace all rows below with live data from PromptBoxControls.js and commandRegistry.js)* | | | | |
-| ratio         | MpiRatioSelector | Width / Height       | { Width: number, Height: number } | t2i, i2i, upscale, video      |
-| mask          | MpiCanvas        | Input_Mask           | { maskDataUrl: string }        | detail, inpaint                   |
 ...
 
 ## Execution Flow
