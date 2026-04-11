@@ -30,6 +30,9 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {boolean}         [promptRequired] - Whether a text prompt is mandatory
  * @property {boolean}         [universal]    - Not model-tied; uses universalWorkflows in modelRegistry
  * @property {boolean}         [stub]         - Not yet implemented; registered but disabled in UI
+ * @property {string}          [component]    - Optional key for an operation-specific sub-control
+ *                                              injected into MpiPromptBox's operation slot.
+ *                                              Values: 'upscale' | 'motion' | 'maskStrength' | null
  */
 
 /**
@@ -65,6 +68,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: false,
+        component: 'upscale',
     },
     edit: {
         label: 'Edit',
@@ -78,6 +82,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
+        component: 'maskStrength',
     },
     change: {
         label: 'Change',
@@ -85,6 +90,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
+        component: 'maskStrength',
     },
     remove: {
         label: 'Remove',
@@ -92,6 +98,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
+        component: 'maskStrength',
     },
 
     // ── Video — Model Operations ──────────────────────────────────────────────
@@ -107,6 +114,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         promptRequired: false,
+        component: 'motion',
     },
     extend: {
         label: 'Extend',
@@ -213,4 +221,14 @@ export function getToolCommands(mediaType) {
  */
 export function getCommand(key) {
     return commands[key] ?? null;
+}
+
+/**
+ * Returns the component key for an operation-specific sub-control injected
+ * into MpiPromptBox's operation slot.
+ * @param {string} key
+ * @returns {'upscale'|'motion'|'maskStrength'|null}
+ */
+export function getCommandComponent(key) {
+    return commands[key]?.component ?? null;
 }
