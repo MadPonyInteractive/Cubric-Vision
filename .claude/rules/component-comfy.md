@@ -55,15 +55,15 @@ MpiPromptBox 'run' event
 | `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio']`         | active      |
 | `upscale`         | Upscale            | image     | 1              | —             | —            | no             | (none)              | active      |
 | `edit`            | Edit               | image     | 1              | —             | —            | yes            | (none)              | active      |
-| `detail`          | Detail             | image     | 1              | —             | true         | yes            | `[]`                | active      |
-| `change`          | Change             | image     | 1              | —             | true         | yes            | `[]`                | active      |
-| `remove`          | Remove             | image     | 1              | —             | true         | yes            | `[]`                | active      |
+| `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
+| `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |
+| `remove`          | Remove             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         | active      |
 | `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         | active      |
-| `extend`          | Extend             | video     | 0              | 1             | —            | no             | `[]`                | active      |
-| `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | `[]`                | universal   |
-| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | `[]`                | universal   |
-| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | `[]`                | universal   |
+| `extend`          | Extend             | video     | 0              | 1             | —            | no             | (none)              | active      |
+| `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | (none)              | universal   |
+| `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | (none)              | universal   |
+| `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | (none)              | universal   |
 
 > `status: active` — operation has a workflow file and is working.
 > `status: stub` — operation is defined but not yet implemented (`stub: true` in commandRegistry).
