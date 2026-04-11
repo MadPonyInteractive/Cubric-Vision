@@ -23,7 +23,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(node -c js/state.js)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(python -c ':*)",
+      "Bash(node -e ':*)"
     ]
   }
 }

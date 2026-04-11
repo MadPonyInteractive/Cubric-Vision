@@ -39,6 +39,12 @@
 
 ---
 
+## Documentation Lookup
+
+> **Before searching for anything in the codebase,** check `docs/PROJECT.md` first — it is the orientation hub that points to all subsystem docs. Most answers about structure, architecture, and data shapes are already documented there.
+
+---
+
 ## Context Router
 
 If you are asked to perform a task in any of the following categories, you MUST use the `Read` tool to ingest the respective rule file first.

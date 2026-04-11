@@ -3,16 +3,18 @@
 > **AI INSTRUCTION:** This file contains the active sprint and backlog. 
 > 🔴 **CRITICAL RULE:** Do NOT make assumptions about how to implement these items. If a bullet point lacks detailed technical context, you MUST stop and ask the user, "Can you explain in detail how we should approach [Task]?" before writing any code.
 
-## 🚕 In Progress: MpiPromptBox Internal Model Swap
 
-> **Priority:** Highest — unblock thin-workspace architecture. `groupHistory` cannot be fully thin until the Block handles model swaps internally.
-> **Required sub-skill:** `superpowers:subagent-driven-development`
+## ✅ Completed: MpiPromptBox Internal Model Swap
+
+> **Plan:** `docs/superpowers/plans/2026-04-11-mpi-prompt-box-internal-model-swap.md`
 >
-> **Problem:** Currently the Block accepts `model` and `modelList` as props and renders the model dropdown internally, but when the user selects a different model it only emits `model-change` — it does NOT internally swap the dropdown's selected value. The workspace must handle the swap by remounting the entire Block (expensive, causes UI flash).
->
-> **Solution:** The Block should expose `el.setModel(model)` — a public method that updates the internal model dropdown's selected value, refreshes the operation dropdown, and fires `model-change`. This lets the workspace stay thin: it receives `model-change`, updates `state.s_selectedModelId`, and calls `el.setModel(newModel)` to sync the Block's UI. **No remount needed.**
->
-> **This also enables removing the `activeModel` local variable from both workspaces** — the Block is the single source of truth for which model is active.
+> All tasks complete. `el.setModel(model)` and `el.setModelList(list)` added to Block. Workspaces use setModel() sync — no remount. `activeModel` local variables replaced by `activeModelId` strings derived from `state.s_selectedModelId`. `injectionParams` now flows from PromptBox controls → `run` event → `runCommand()` → `_buildParams()` → ComfyUI workflow.
+
+---
+
+## ✅ Completed: PromptBoxControls — Control Injection Architecture
+
+> **New infrastructure.** `js/components/Blocks/MpiPromptBox/PromptBoxControls.js` is the control registry. Each entry maps a control ID to a component + `nodeTitle` (ComfyUI injection target) + `getInjectionParams()`. Controls are mounted dynamically into `#bottom-bottom-slot` when operation changes, driven by the `components[]` array in `commandRegistry.js`. Only `ratio` is wired currently (MpiRatioSelector → Width/Height injection). The architecture supports multiple controls per operation.
 
 ---
 
@@ -28,10 +30,6 @@
 
 **Model UI & Installation State**
 - [ ] Zero-installed state: Show `MpiModelsModal` overlay (using `MpiInstalledDisplay` inside it) when no models are installed — displays installed models, available models, disk space specs, and install options. **Do this after the MpiPromptBox Block is done** (the Block is needed for clean zero-installed state handling).
-- [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
-- [ ] Build Model Installer UI (browse, download, progress bar).
-- [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).
-- [ ] **Zero-installed state:** Show `MpiModelsModal` overlay (using `MpiInstalledDisplay` inside it) when no models are installed — displays installed models, available models, disk space specs, and install options.
 - [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
 - [ ] Build Model Installer UI (browse, download, progress bar).
 - [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).

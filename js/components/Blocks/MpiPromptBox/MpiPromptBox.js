@@ -98,8 +98,10 @@ export const MpiPromptBox = ComponentFactory.create({
         /** @type {Map<string, Object>} */
         const _activeControls = new Map();
 
-        // ── Derive accepted drop types from the model's supported ops ──────────
-        const model = props.model || null;
+        // Mutable model state — updated via setModel() / setModelList()
+        let model = props.model || null;
+        let modelList = props.modelList || [];
+        let _modelDropdown = null;
         const acceptsImage = model
             ? model.supportedOps.some(op => (commands[op]?.requiresImages ?? 0) >= 1)
             : false;
@@ -242,6 +244,39 @@ export const MpiPromptBox = ComponentFactory.create({
             runBtn.el.classList.toggle('is-active', active);
         };
 
+        /**
+         * Sync internal model state to a new model.
+         * Updates the closure variable, syncs the dropdown selection,
+         * and refreshes the operation dropdown and op slot.
+         */
+        el.setModel = (newModel) => {
+            model = newModel;
+            if (_modelDropdown) {
+                _modelDropdown.el.setOptions(
+                    modelList.map(m => ({ value: m.id, label: m.name })),
+                    newModel.id
+                );
+            }
+            _refreshOpDropdown();
+            _refreshOpSlot();
+        };
+
+        /**
+         * Update the available models list.
+         * Refreshes dropdown options and operation availability.
+         */
+        el.setModelList = (newModelList) => {
+            modelList = newModelList;
+            if (_modelDropdown) {
+                _modelDropdown.el.setOptions(
+                    modelList.map(m => ({ value: m.id, label: m.name })),
+                    model?.id ?? null
+                );
+            }
+            _refreshOpDropdown();
+            _refreshOpSlot();
+        };
+
         // ── Radial menu → operation sync ───────────────────────────────────────
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
         Events.on('workspace:set-operation', _onSetOperation);
@@ -366,21 +401,20 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Model selector + gear button (left slot) ──────────────────────────
         if (model) {
-            const modelList = props.modelList || [];
-            const leftSlot  = el.querySelector('#bottom-left-slot');
+            const leftSlot = el.querySelector('#bottom-left-slot');
 
             if (modelList.length > 1) {
-                const modelDropdown = MpiDropdown.mount(document.createElement('div'), {
+                _modelDropdown = MpiDropdown.mount(document.createElement('div'), {
                     options:   modelList.map(m => ({ value: m.id, label: m.name })),
                     value:     model.id,
                     info:      'Active model',
                     direction: 'up',
                 });
-                modelDropdown.on('change', ({ value }) => {
+                _modelDropdown.on('change', ({ value }) => {
                     const selected = modelList.find(m => m.id === value);
                     if (selected) emit('model-change', { model: selected });
                 });
-                leftSlot.appendChild(modelDropdown.el);
+                leftSlot.appendChild(_modelDropdown.el);
             }
 
             if (props.showSettings !== false) {

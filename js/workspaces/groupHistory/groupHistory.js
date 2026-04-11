@@ -731,12 +731,18 @@ export function mount(container, params = {}) {
     const isVideo = _group.type === 'video';
     const installedModels = getModelsByType(isVideo ? 'video' : 'image').filter(m => m.installed);
 
-    let activeModel = state.s_selectedModelId
-        ? (installedModels.find(m => m.id === state.s_selectedModelId) || installedModels[0] || null)
+    // Derive activeModelId from state (canonical) with fallback to first installed
+    let activeModelId = state.s_selectedModelId
+        ? (installedModels.find(m => m.id === state.s_selectedModelId)?.id ?? installedModels[0]?.id ?? null)
+        : (installedModels[0]?.id ?? null);
+
+    // activeModel is derived from activeModelId and kept in sync via setModel()
+    let activeModel = activeModelId
+        ? (installedModels.find(m => m.id === activeModelId) || installedModels[0] || null)
         : (installedModels[0] || null);
 
     // Ensure state is in sync on mount
-    if (activeModel) state.s_selectedModelId = activeModel.id;
+    if (activeModelId) state.s_selectedModelId = activeModelId;
 
     // In groupHistory there is always at least one existing image/video available
     // as input, so imageCount/videoCount start at 1.
@@ -779,18 +785,10 @@ export function mount(container, params = {}) {
     const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
     /**
-     * Mount (or remount) the MpiPromptBox Block with the current activeModel.
-     * Called on initial mount and when the model changes externally.
+     * Mount the MpiPromptBox Block.
+     * Called once on initial mount. Model changes use setModel() instead of remount.
      */
-    function _mountPromptBox() {
-        if (!activeModel) return;
-
-        // Unmount previous instance
-        if (_promptBox) {
-            _promptBox.el.remove();
-            _promptBox = null;
-        }
-
+    if (activeModel) {
         _promptBox = MpiPromptBox.mount(bottom, {
             model:           activeModel,
             modelList:       installedModels,
@@ -804,8 +802,10 @@ export function mount(container, params = {}) {
 
         _promptBox.on('model-change', ({ model }) => {
             state.s_selectedModelId = model.id;
-            activeModel = model;
-            _mountPromptBox();
+            activeModelId = model.id;
+            activeModel  = model;
+            _promptBox.el.setModel(model);
+            _refreshOpOptions();
         });
 
         _promptBox.on('operation-change', ({ operation }) => {
@@ -813,9 +813,9 @@ export function mount(container, params = {}) {
             _refreshOpOptions();
         });
 
-        _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
+        _promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
             const maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null;
-            _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl });
+            _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams });
         });
 
         _promptBox.on('cancel', () => {
@@ -823,10 +823,6 @@ export function mount(container, params = {}) {
             _activeExec = null;
             StatusBar.progress.cancel();
         });
-    }
-
-    if (activeModel) {
-        _mountPromptBox();
     }
 
     // Radial menu operation sync
@@ -844,18 +840,20 @@ export function mount(container, params = {}) {
     // Subscribe to external model changes (e.g., from gallery switching models)
     const _onStateModelChange = ({ key, value }) => {
         if (key !== 's_selectedModelId') return;
-        if (!value) return;
+        if (!value || value === activeModelId) return;
         const newModel = installedModels.find(m => m.id === value);
         if (newModel && newModel !== activeModel) {
-            activeModel = newModel;
-            _mountPromptBox();
+            activeModelId = value;
+            activeModel  = newModel;
+            _promptBox.el.setModel(newModel);
+            _refreshOpOptions();
         }
     };
     Events.on('state:changed', _onStateModelChange);
 
     // ── Generation ─────────────────────────────────────────────────────────────
 
-    function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null }) {
+    function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null, injectionParams = {} }) {
         if (!activeModel) return;
 
         Events.emit('tool:running', { tool: 'groupHistory', type: operation });
@@ -879,6 +877,7 @@ export function mount(container, params = {}) {
             negative,
             mediaItems: resolvedMedia,
             maskDataUrl,
+            injectionParams,
         });
         const exec = _activeExec;
 

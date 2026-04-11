@@ -216,6 +216,8 @@
  *   clearMedia()
  *   setOperation(key)
  *   setGenerating(bool)
+ *   setModel(model)       — sync internal model dropdown to a new model (no remount)
+ *   setModelList(list)    — update the available models list in the dropdown
  *   updateContext({ imageCount, videoCount, hasMask })
  *
  * Emits:

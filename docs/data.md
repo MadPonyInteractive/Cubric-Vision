@@ -17,9 +17,12 @@ Three core data files. All are plain JS objects — no ORM, no database.
 
 **Defines what operations are available for a given model+media context.**
 
-- `CommandDef`: `{ key, name, mediaType, supportedOps, inputRequirements }`
-- `getAvailableCommands(mediaType, model, ctx)`: Filters commands by model's `supportedOps` and input availability.
-- `getToolCommands(mediaType)`: Returns universal-only commands (interpolate, videoUpscale, autoMaskImg) — these do not require a model.
+- `CommandDef`: `{ key, label, mediaType, requiresImages, requiresVideo?, requiresMask?, promptRequired?, universal?, stub?, components[] }`
+  - `components[]`: Array of control IDs that `MpiPromptBox` mounts into its operation slot when this command is active. e.g. `['ratio', 'steps', 'seed']`. Each ID maps to an entry in `PromptBoxControls.js`.
+  - `universal`: If `true`, the command is not model-tied — it uses a separate workflow from `modelRegistry.universalWorkflows`. Toolbar-driven (e.g. interpolate, videoUpscale, autoMaskImg).
+- `getAvailableCommands(mediaType, model, ctx)`: Filters commands by model's `supportedOps` and input availability. Returns `{ key, available, ...CommandDef }` including `components[]` for each command.
+- `getToolCommands(mediaType)`: Returns universal-only commands — these do not require a model and use their own layouts.
+- `getCommandComponents(key)`: Returns the `components[]` array for a given command key.
 - Commands: t2i, i2i, upscale, edit, detail, change, remove, t2v, i2v, extend, interpolate, videoUpscale, autoMaskImg, createGroupFromSelection (stub), promoteToNewGroup (stub).
 
 ## projectModel (`js/data/projectModel.js`)

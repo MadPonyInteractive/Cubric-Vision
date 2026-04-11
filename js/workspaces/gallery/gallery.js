@@ -162,13 +162,18 @@ export function mount(container) {
 
     const installedImageModels = getModelsByType('image').filter(m => m.installed);
 
-    // Derive activeModel from state (canonical) with fallback to first installed
-    let activeModel = state.s_selectedModelId
-        ? (installedImageModels.find(m => m.id === state.s_selectedModelId) || installedImageModels[0] || null)
+    // Derive activeModelId from state (canonical) with fallback to first installed
+    let activeModelId = state.s_selectedModelId
+        ? (installedImageModels.find(m => m.id === state.s_selectedModelId)?.id ?? installedImageModels[0]?.id ?? null)
+        : (installedImageModels[0]?.id ?? null);
+
+    // activeModel is derived from activeModelId and kept in sync via setModel()
+    let activeModel = activeModelId
+        ? (installedImageModels.find(m => m.id === activeModelId) || installedImageModels[0] || null)
         : (installedImageModels[0] || null);
 
     // Ensure state is in sync on mount
-    if (activeModel) state.s_selectedModelId = activeModel.id;
+    if (activeModelId) state.s_selectedModelId = activeModelId;
 
     let activeOperation = 't2i';
     let imageCount      = 0;
@@ -197,154 +202,11 @@ export function mount(container) {
 
             promptBox.on('model-change', ({ model }) => {
                 state.s_selectedModelId = model.id;
+                activeModelId     = model.id;
                 activeModel       = model;
-                activeOperation   = 't2i';
-
-                // ── Remount after model change ───────────────────────────
-                {
-                    promptSlot.innerHTML = '';
-                    promptBox    = null;
-                    imageCount   = 0;
-                    videoCount   = 0;
-
-                    if (activeModel) {
-                        promptBox = MpiPromptBox.mount(promptSlot, {
-                            model:           activeModel,
-                            modelList:       installedImageModels,
-                            operation:       activeOperation,
-                            includeNegative: true,
-                        });
-
-                        promptBox.on('model-change', ({ model: m }) => {
-                            state.s_selectedModelId = m.id;
-                            activeModel       = m;
-                            activeOperation   = 't2i';
-                        });
-
-                        promptBox.on('operation-change', ({ operation }) => {
-                            activeOperation = operation;
-                        });
-
-                        promptBox.on('settings', () => {
-                            _settingsOverlay.el.open({ modelId: activeModel.id });
-                        });
-
-                        promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
-                            imageCount = ic;
-                            videoCount = vc;
-                            promptBox.el.updateContext({ imageCount, videoCount, hasMask: false });
-                            refreshRadial({ imageCount, videoCount });
-                        });
-
-                        let _activeExec = null;
-
-                        promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
-                            if (!activeModel) return;
-
-                            const tempId = crypto.randomUUID();
-                            const cardType = activeModel.mediaType; // 'image' | 'video'
-
-                            grid.el.addGeneratingCard(tempId, cardType);
-                            StatusBar.progress.start('Generating...');
-
-                            _activeExec = runCommand({
-                                operation,
-                                modelId:   activeModel.id,
-                                positive,
-                                negative,
-                                mediaItems,
-                            });
-                            const exec = _activeExec;
-
-                            exec.onPreview = (url) => {
-                                grid.el.updatePreview(tempId, url);
-                            };
-
-                            exec.onProgress = (value) => {
-                                StatusBar.progress.update(value);
-                            };
-
-                            exec.onComplete = async (urls) => {
-                                _activeExec = null;
-                                promptBox.el.setGenerating(false);
-
-                                if (!urls.length) {
-                                    clientLogger.warn('gallery', 'Generation completed but no Output node images returned.');
-                                    StatusBar.progress.cancel();
-                                    grid.el.removeGeneratingCard(tempId);
-                                    return;
-                                }
-
-                                let filePath = urls[0];
-                                let displayName = operation;
-
-                                if (state.currentProject?.folderPath) {
-                                    try {
-                                        const res = await fetch('/project/save-generation', {
-                                            method:  'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body:    JSON.stringify({
-                                                folderPath:   state.currentProject.folderPath,
-                                                comfyViewUrl: urls[0],
-                                                operation,
-                                                meta: {
-                                                    prompt:         positive,
-                                                    negativePrompt: negative,
-                                                    modelId:        activeModel.id,
-                                                },
-                                            }),
-                                        });
-                                        if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
-                                        const data = await res.json();
-                                        if (data.success) {
-                                            filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                                            displayName = data.filename.replace(/\.[^.]+$/, '');
-                                        }
-                                    } catch (err) {
-                                        clientLogger.warn('gallery', 'save-generation failed, using comfy URL:', err);
-                                    }
-                                }
-
-                                const cardName = displayName.length > 28
-                                    ? displayName.slice(0, 27) + '…'
-                                    : displayName;
-
-                                const item = createImageItem({
-                                    filePath,
-                                    modelId:        activeModel.id,
-                                    operation,
-                                    prompt:         positive,
-                                    negativePrompt: negative,
-                                });
-
-                                let group = createItemGroup(cardType, { name: cardName });
-                                group = appendToHistory(group, item);
-
-                                if (state.currentProject) {
-                                    state.currentProject = addGroupToProject(state.currentProject, group);
-                                    _persistGroups();
-                                }
-
-                                StatusBar.progress.complete('Image generated!');
-                                grid.el.finalizeCard(tempId, group);
-                            };
-
-                            exec.onError = (err) => {
-                                _activeExec = null;
-                                clientLogger.error('gallery', 'Generation error:', err);
-                                promptBox.el.setGenerating(false);
-                                StatusBar.progress.cancel();
-                                grid.el.removeGeneratingCard(tempId);
-                            };
-                        });
-
-                        promptBox.on('cancel', () => {
-                            _activeExec?.cancel();
-                            _activeExec = null;
-                            StatusBar.progress.cancel();
-                        });
-                    }
-                }
+                activeOperation   = model.supportedOps[0];
+                promptBox.el.setModel(model);
+                promptBox.el.setOperation(model.supportedOps[0]);
             });
 
             promptBox.on('operation-change', ({ operation }) => {
@@ -364,7 +226,7 @@ export function mount(container) {
 
             let _activeExec = null;
 
-            promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
+            promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                 if (!activeModel) return;
 
                 const tempId = crypto.randomUUID();
@@ -379,6 +241,7 @@ export function mount(container) {
                     positive,
                     negative,
                     mediaItems,
+                    injectionParams,
                 });
                 const exec = _activeExec;
 

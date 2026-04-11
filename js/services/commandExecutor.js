@@ -35,6 +35,7 @@ import { DEPS } from '../data/modelConstants/dependencies.js';
  * @property {string}   positive     - Positive prompt text
  * @property {string}   [negative]   - Negative prompt text
  * @property {number}   [seed]       - Explicit seed; randomised if omitted
+ * @property {Object}   [injectionParams] - Additional params from PromptBox controls (e.g. Width, Height, Steps, Denoise)
  * @property {Array<{url:string, mediaType:'image'|'video', source:string}>} [mediaItems]
  */
 
@@ -103,7 +104,7 @@ function _resolveWorkflowFile(modelId, operation) {
  * @returns {Record<string, any>}
  */
 function _buildParams(payload) {
-    const { positive, negative, seed, mediaItems = [] } = payload;
+    const { positive, negative, seed, mediaItems = [], injectionParams = {} } = payload;
     const resolvedSeed = seed ?? ComfyUIController.generateRandomSeed();
 
     const params = {
@@ -111,6 +112,9 @@ function _buildParams(payload) {
         Negative: negative || '',
         Seed:     resolvedSeed,
     };
+
+    // Merge operation-specific control params (ratio, steps, denoise, etc.)
+    Object.assign(params, injectionParams);
 
     // Map dropped media to standard injection titles
     const imageItem = mediaItems.find(m => m.mediaType === 'image');

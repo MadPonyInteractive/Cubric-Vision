@@ -16,11 +16,11 @@ Singleton that manages the ComfyUI server lifecycle and workflow execution.
 
 Orchestrates a full generation request.
 
-- `runCommand(commandKey, modelId, params, ctx, onProgress?)`: Resolves workflow file, builds title-keyed param map, runs via comfyController, captures Output node.
+- `runCommand(payload)`: Single argument — a `RunPayload` object `{ operation, modelId, positive, negative, seed?, injectionParams?, mediaItems?, maskDataUrl? }`. Resolves workflow file, builds title-keyed param map (including `injectionParams` for PromptBox controls), runs via comfyController, captures Output node.
 - `runAutoMask(imageData, modelId, params, onProgress?)`: Runs auto-mask workflow, captures both `Detected` and `Output` nodes.
 - `_depFilename(depId)`: Maps dep ID to filename.
-- `_resolveWorkflowFile(commandKey, modelId)`: Returns workflow JSON path.
-- `_buildParams(commandKey, params, ctx)`: Builds the title→value map for injection.
+- `_resolveWorkflowFile(operation, modelId)`: Returns workflow JSON path.
+- `_buildParams(payload)`: Builds the title→value map for injection. Merges `payload.injectionParams` (from PromptBox controls) into the params object alongside standard fields (Positive, Negative, Seed, media slots).
 
 ## Workflow Injection Pattern
 
