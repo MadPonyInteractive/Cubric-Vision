@@ -18,8 +18,13 @@ const _state = {
     upscaleModels: [],          // Available upscale model filenames from ComfyUI backend
     availableLoras: [],         // Available LoRA filenames from ComfyUI backend
 
+    // ── Canonical selected model ───────────────────────────────────────────────
+    s_selectedModelId: null,    // Canonical selected model ID — written by any workspace
+                               // that hosts a model selector. Read by other workspaces to
+                               // sync the dropdown when switching pages.
+
     // ── Legacy — keep until LLM re-implementation ─────────────────────────────
-    g_selectedModel: null,      // Used by navigation.js and gallery.js
+    g_selectedModel: null,     // LEGACY — replaced by s_selectedModelId; remove in Task 6
     g_abortControllers: {},     // Used by llmService.js
     currentLoadedModel: null,   // Used by llmService.js
 };

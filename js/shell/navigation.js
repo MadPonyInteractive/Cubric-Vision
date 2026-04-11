@@ -18,6 +18,7 @@ import { initShaderBackground, stopShaderBackground } from '../components/shader
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
 import { getAvailableCommands } from '../data/commandRegistry.js';
+import { getModelById } from '../data/modelRegistry.js';
 import { Overlays } from '../managers/overlayManager.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ const OP_ICONS = {
  * @returns {Array<{action:string, label:string, icon:string}>}
  */
 function _buildGalleryItems(ctx = {}) {
-    const model = state.g_selectedModel;
+    const model = getModelById(state.s_selectedModelId);
     if (!model) return [];
     return getAvailableCommands(model.mediaType, model, ctx)
         .filter(cmd => cmd.available)
