@@ -2,10 +2,10 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponent } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
+import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -41,7 +41,7 @@ import { commands, getAvailableCommands, getCommandComponent } from '../../../da
  *   'copy'         { text }
  *   'mode-change'  { mode }
  *   'media-change' { imageCount, videoCount, items }
- *   'run'          { operation, positive, negative, mediaItems }
+ *   'run'          { operation, positive, negative, mediaItems, injectionParams }
  *   'cancel'       {}
  *   'model-change' { model }   - fired when the internal model dropdown changes
  *   'operation-change' { operation } - fired when operation changes
@@ -93,6 +93,10 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // Runtime context for filtering available commands
         let _context = props.context || {};
+
+        // Active sub-controls — mounted/unmounted as operation changes
+        /** @type {Map<string, Object>} */
+        const _activeControls = new Map();
 
         // ── Derive accepted drop types from the model's supported ops ──────────
         const model = props.model || null;
@@ -293,17 +297,21 @@ export const MpiPromptBox = ComponentFactory.create({
             const bottomSlot = el.querySelector('#bottom-bottom-slot');
             if (!bottomSlot) return;
             bottomSlot.innerHTML = '';
+            _activeControls.clear();
 
-            const componentKey = getCommandComponent(activeOperation);
+            const componentIds = getCommandComponents(activeOperation);
 
-            if (componentKey === 'upscale') {
-                MpiRatioSelector.mount(bottomSlot, {
-                    modelType: model?.id?.includes('sdxl') ? 'sdxl' : 'flux',
-                    initialOrientation: 'portrait',
-                    value: '1:1',
-                });
+            for (const componentId of componentIds) {
+                const ctrl = PROMPT_BOX_CONTROLS[componentId];
+                if (!ctrl) continue;
+
+                const ctrlEl = document.createElement('div');
+                ctrlEl.style.display = 'contents';
+                bottomSlot.appendChild(ctrlEl);
+
+                ctrl.mount(ctrlEl, { modelId: model?.id });
+                _activeControls.set(componentId, ctrl);
             }
-            // Other component keys (motion, maskStrength) can be added here
         }
 
         // ── Textarea ───────────────────────────────────────────────────────────
@@ -417,11 +425,13 @@ export const MpiPromptBox = ComponentFactory.create({
             if (data.active) {
                 // Switched to active = generating started
                 isGenerating = true;
+                const injectionParams = getInjectionParamsFromControls(_activeControls);
                 emit('run', {
                     operation:  activeOperation,
                     positive:   positiveValue,
                     negative:   negativeValue,
                     mediaItems: el.getMediaItems(),
+                    injectionParams,
                 });
             } else if (isGenerating) {
                 // Only emit cancel if we were actually generating (not a reset from setGenerating)

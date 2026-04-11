@@ -30,9 +30,10 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {boolean}         [promptRequired] - Whether a text prompt is mandatory
  * @property {boolean}         [universal]    - Not model-tied; uses universalWorkflows in modelRegistry
  * @property {boolean}         [stub]         - Not yet implemented; registered but disabled in UI
- * @property {string}          [component]    - Optional key for an operation-specific sub-control
- *                                              injected into MpiPromptBox's operation slot.
- *                                              Values: 'upscale' | 'motion' | 'maskStrength' | null
+ * @property {string[]}        [components]   - IDs of operation-specific sub-controls injected
+ *                                              into MpiPromptBox's operation slot.
+ *                                              Each ID maps to a component in js/components/.
+ *                                              e.g. ['upscale'] or ['maskStrength'] or [] (none)
  */
 
 /**
@@ -56,25 +57,28 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
+        components: ['ratio'],
     },
     i2i: {
         label: 'Image to Image',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: true,
+        components: ['ratio'],
     },
     upscale: {
         label: 'Upscale',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: false,
-        component: 'upscale',
+        components: [''],
     },
     edit: {
         label: 'Edit',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: true,
+        components: [''],
     },
     detail: {
         label: 'Detail',
@@ -82,7 +86,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
-        component: 'maskStrength',
+        components: [],
     },
     change: {
         label: 'Change',
@@ -90,7 +94,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
-        component: 'maskStrength',
+        components: [],
     },
     remove: {
         label: 'Remove',
@@ -98,7 +102,7 @@ export const commands = {
         requiresImages: 1,
         requiresMask: true,
         promptRequired: true,
-        component: 'maskStrength',
+        components: [],
     },
 
     // ── Video — Model Operations ──────────────────────────────────────────────
@@ -108,13 +112,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
+        components: ['ratio'],
     },
     i2v: {
         label: 'Image to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         promptRequired: false,
-        component: 'motion',
+        components: ['ratio'],
     },
     extend: {
         label: 'Extend',
@@ -122,6 +127,7 @@ export const commands = {
         requiresImages: 0,
         requiresVideo: 1,
         promptRequired: false,
+        components: [],
     },
 
     // ── Universal Workflows (not model-tied) ──────────────────────────
@@ -224,11 +230,11 @@ export function getCommand(key) {
 }
 
 /**
- * Returns the component key for an operation-specific sub-control injected
- * into MpiPromptBox's operation slot.
+ * Returns the component IDs for an operation's sub-controls injected into
+ * MpiPromptBox's operation slot.
  * @param {string} key
- * @returns {'upscale'|'motion'|'maskStrength'|null}
+ * @returns {string[]}
  */
-export function getCommandComponent(key) {
-    return commands[key]?.component ?? null;
+export function getCommandComponents(key) {
+    return commands[key]?.components ?? [];
 }

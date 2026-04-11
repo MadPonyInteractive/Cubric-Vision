@@ -222,7 +222,7 @@
  *   'model-change'      { model }
  *   'operation-change'  { operation }
  *   'media-change'      { imageCount, videoCount, items }
- *   'run'               { operation, positive, negative, mediaItems }
+ *   'run'               { operation, positive, negative, mediaItems, injectionParams }
  *   'cancel'            {}
  *   'settings'          { model }
  */

@@ -3,19 +3,35 @@
 > **AI INSTRUCTION:** This file contains the active sprint and backlog. 
 > 🔴 **CRITICAL RULE:** Do NOT make assumptions about how to implement these items. If a bullet point lacks detailed technical context, you MUST stop and ask the user, "Can you explain in detail how we should approach [Task]?" before writing any code.
 
-## 🚀 Active To-Dos (Highest Priority)
+## 🚕 In Progress: MpiPromptBox Internal Model Swap
 
-**~~State Architecture Overhaul~~** ✅ Complete — `state.js` cleaned, two-track settings live on the project object, helpers and `saveProjectSettings()` in place. See `docs/superpowers/plans/2026-04-10-state-architecture-overhaul.md`.
-
-**~~Model Settings Overlay~~** ✅ Complete — `assetService.js`, `MpiModelSettings.css`, `MpiModelSettings.js` created; CSS registered, typedef added. Navigation stale-stash bug fixed via `Overlays.reset()` in `overlayManager.js` and `navigation.js`. See `docs/superpowers/plans/2026-04-10-model-settings-overlay.md`.
+> **Priority:** Highest — unblock thin-workspace architecture. `groupHistory` cannot be fully thin until the Block handles model swaps internally.
+> **Required sub-skill:** `superpowers:subagent-driven-development`
+>
+> **Problem:** Currently the Block accepts `model` and `modelList` as props and renders the model dropdown internally, but when the user selects a different model it only emits `model-change` — it does NOT internally swap the dropdown's selected value. The workspace must handle the swap by remounting the entire Block (expensive, causes UI flash).
+>
+> **Solution:** The Block should expose `el.setModel(model)` — a public method that updates the internal model dropdown's selected value, refreshes the operation dropdown, and fires `model-change`. This lets the workspace stay thin: it receives `model-change`, updates `state.s_selectedModelId`, and calls `el.setModel(newModel)` to sync the Block's UI. **No remount needed.**
+>
+> **This also enables removing the `activeModel` local variable from both workspaces** — the Block is the single source of truth for which model is active.
 
 ---
 
-## 📅 Other To-Dos (Medium Priority)
+## ✅ Completed: MpiPromptBox Block + State Architecture
+
+> **Plan:** `docs/superpowers/plans/2026-04-11-mpi-prompt-box-block.md`
+>
+> All tasks complete. `s_selectedModelId` is the canonical model ID. `MpiPromptBox` is a Block. Old Compound deleted.
+
+---
+
+## 📅 To-Dos (Medium Priority)
 
 **Model UI & Installation State**
-- [ ] Filter model dropdowns so only `installed === true` models are visible.
-- [ ] **Zero-installed state:** If no models exist, hide the prompt box and display an install prompt.
+- [ ] Zero-installed state: Show `MpiModelsModal` overlay (using `MpiInstalledDisplay` inside it) when no models are installed — displays installed models, available models, disk space specs, and install options. **Do this after the MpiPromptBox Block is done** (the Block is needed for clean zero-installed state handling).
+- [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
+- [ ] Build Model Installer UI (browse, download, progress bar).
+- [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).
+- [ ] **Zero-installed state:** Show `MpiModelsModal` overlay (using `MpiInstalledDisplay` inside it) when no models are installed — displays installed models, available models, disk space specs, and install options.
 - [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
 - [ ] Build Model Installer UI (browse, download, progress bar).
 - [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).
