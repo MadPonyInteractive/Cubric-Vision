@@ -24,7 +24,6 @@ const _state = {
                                // sync the dropdown when switching pages.
 
     // ── Legacy — keep until LLM re-implementation ─────────────────────────────
-    g_selectedModel: null,     // LEGACY — replaced by s_selectedModelId; remove in Task 6
     g_abortControllers: {},     // Used by llmService.js
     currentLoadedModel: null,   // Used by llmService.js
 };
