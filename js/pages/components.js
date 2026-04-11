@@ -29,7 +29,7 @@ import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialM
 import { StatusBar } from '../shell/statusBar.js';
 
 // Compounds
-import { MpiPromptBox } from '../components/Compounds/MpiPromptBox/MpiPromptBox.js';
+import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
@@ -685,8 +685,6 @@ function mountAll() {
 
         MpiPromptBox.mount(slot('preview-promptbox-expanded'), {
             value: 'A girl reading a book in a library, soft sunlight through windows',
-            LeftA: [badgeL1, badgeL2],
-            rightA: [iconR1, iconR2]
         });
     });
 

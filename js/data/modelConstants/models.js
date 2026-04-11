@@ -18,7 +18,7 @@ export const MODELS = [
         name: 'SDXL Realistic',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
-        installed: false,
+        installed: true,
         image: 'Lustify7.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
