@@ -26,7 +26,13 @@
       "Bash(claude mcp:*)",
       "Bash(python3 -c ':*)",
       "Bash(python -c ':*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(node --check \"c:/AI/Mpi/MpiAiSuite/js/workspaces/gallery/gallery.js\")",
+      "Bash(node --check \"c:/AI/Mpi/MpiAiSuite/js/components/Blocks/MpiPromptBox/MpiPromptBox.js\")",
+      "WebFetch(domain:minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "Skill(playwright-cli)",
+      "Skill(playwright-cli:*)"
     ]
   }
 }

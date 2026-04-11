@@ -246,6 +246,7 @@ export function mount(container, params = {}) {
                 _canvas.clearMask();
                 _hasMask = false;
             }
+            _promptBox?.el.updateContext({ ..._baseCtx, hasMask: _hasMask });
             _refreshOpOptions();
         });
 
@@ -451,10 +452,10 @@ export function mount(container, params = {}) {
     maskActionBar.on('action', ({ key, active }) => {
         if (key === 'brush') { _canvas.setBrushType('brush'); }
         if (key === 'eraser') { _canvas.setBrushType('eraser'); }
-        if (key === 'clear') { _canvas.clearMask(); _hasMask = false; _refreshOpOptions(); }
+        if (key === 'clear') { _canvas.clearMask(); _hasMask = false; _promptBox?.el.updateContext({ ..._baseCtx, hasMask: _hasMask }); _refreshOpOptions(); }
         if (key === 'invert') { _canvas.flipMaskColor(); }
-        if (key === 'cancel') { _canvas.clearMask(); _hasMask = false; _exitMaskMode(); _refreshOpOptions(); }
-        if (key === 'apply') { _hasMask = true; _exitMaskMode(); _refreshOpOptions(); }
+        if (key === 'cancel') { _canvas.clearMask(); _hasMask = false; _promptBox?.el.updateContext({ ..._baseCtx, hasMask: _hasMask }); _exitMaskMode(); _refreshOpOptions(); }
+        if (key === 'apply') { _hasMask = true; _promptBox?.el.updateContext({ ..._baseCtx, hasMask: _hasMask }); _exitMaskMode(); _refreshOpOptions(); }
     });
 
     // ── Auto-mask action bar ───────────────────────────────────────────────────
@@ -729,7 +730,7 @@ export function mount(container, params = {}) {
     }
 
     const isVideo = _group.type === 'video';
-    const installedModels = getModelsByType(isVideo ? 'video' : 'image').filter(m => m.installed);
+    const installedModels = getModelsByType(isVideo ? 'video' : 'image').filter(m => m.installed !== false);
 
     // Derive activeModelId from state (canonical) with fallback to first installed
     let activeModelId = state.s_selectedModelId
@@ -763,14 +764,16 @@ export function mount(container, params = {}) {
     function _refreshOpOptions() {
         if (!_promptBox) return;
         const opts = _opOptions();
+        // Sync full context with current hasMask state and filterNoInputOps flag
+        _promptBox.el.updateContext({ ..._baseCtx, hasMask: _hasMask, filterNoInputOps: true });
         // If the current operation just became disabled, switch to first available
         const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
         if (!currentStillOk) {
             const fallback = opts.find(o => !o.disabled);
             if (fallback) {
                 activeOperation = fallback.value;
-                _promptBox.el.setOperation(activeOperation);
             }
+            _promptBox.el.setOperation(activeOperation);
         }
     }
 
@@ -795,6 +798,9 @@ export function mount(container, params = {}) {
             operation:       activeOperation,
             includeNegative: true,
         });
+
+        // Set initial context so dropdown renders correctly
+        _promptBox.el.updateContext({ ..._baseCtx, hasMask: _hasMask, filterNoInputOps: true });
 
         _promptBox.on('settings', () => {
             _settingsOverlay.el.open({ modelId: activeModel.id });

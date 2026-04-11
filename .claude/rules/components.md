@@ -19,7 +19,7 @@
 1. **Preload CSS:** You MUST add the `.css` path to `js/shell/preloadStyles.js` when creating a component.
 2. **JSDocs:** You MUST document the component's `props` in `js/components/types.js`.
 3. **CSS Source of Truth:** ALWAYS use `styles/01_base.css` variables, do not hardcode colors.
-4. **Gallery Demo:** You MUST ask the user if the new component should be added to the gallery (`js/pages/components.js`) before finishing the task.
+4. **Gallery Demo:** You MUST ask the user if the component should be added to the gallery (`js/pages/components.js`) before finishing the task.
 5. **DOM Utilities:** ALWAYS use `js/utils/dom.js` shorthands instead of raw DOM API where possible.
 6. **ComponentFactory:** NEVER modify `js/components/factory.js`. The factory is locked. If a component isn't working, you must fix your component implementation; do not alter the factory pattern.
 
@@ -30,6 +30,8 @@ You MUST follow Atomic Design principles. **NEVER "import up".**
 * **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything).
 * **Tier 2 (Compounds):** Cards, forms, modals. (Can only import Primitives).
 * **Tier 3 (Blocks):** Sidebars, grids. (Can import Primitives & Compounds).
+
+> **Note on complexity:** Blocks like `MpiPromptBox` are substantially more complex than Primitives and most Compounds. They own multiple mount points, conditional sub-component rendering, and dynamic operation switching. Approach debugging and modifications to Blocks carefully — trace all mount targets before making changes.
 
 ---
 
@@ -48,6 +50,75 @@ export const MyComponent = ComponentFactory.create({
     }
 });
 ```
+
+---
+
+## ComponentFactory.mount() — DOM Behavior
+
+> **CRITICAL:** `ComponentFactory.mount(container, props)` does `container.innerHTML = html` before mounting. This **replaces all existing children** of the mount target container.
+
+```javascript
+// WRONG — replaces the entire innerHTML of #my-slot, destroying any existing children
+MpiButton.mount(el.querySelector('#my-slot'), { icon: 'play' });
+
+// CORRECT — create a fresh div as mount target, then append to the slot
+const btn = MpiButton.mount(document.createElement('div'), { icon: 'play' });
+el.querySelector('#my-slot').appendChild(btn.el);
+```
+
+This applies to ALL components created via `ComponentFactory.mount()`.
+
+---
+
+## Mount Target Isolation
+
+**Each mount target must be dedicated to exactly one mount call.** Never mount into a container that already has children (whether from the template or from a previous mount).
+
+### Pattern: Create fresh mount targets
+
+```javascript
+// Template defines empty slots
+template: () => `
+    <div class="my-block">
+        <div id="left-slot"></div>
+        <div id="right-slot"></div>
+    </div>
+`,
+
+setup: (el, props, emit) => {
+    // CORRECT: mount into a fresh div, then append to the slot
+    const leftBtn = MpiButton.mount(document.createElement('div'), { icon: 'settings' });
+    el.querySelector('#left-slot').appendChild(leftBtn.el);
+
+    // CORRECT: slot itself is the container for a single mount
+    const rightBtn = MpiButton.mount(el.querySelector('#right-slot'), { icon: 'play' });
+    // The slot starts empty, so this is safe.
+}
+```
+
+### Anti-pattern: Nested overlapping mounts
+
+```javascript
+// TEMPLATE: slot contains a child element
+template: () => `
+    <div id="center-slot">
+        <div id="op-dropdown-slot"></div>
+    </div>
+`,
+
+setup: (el, props, emit) => {
+    // WRONG: #center-slot already contains #op-dropdown-slot
+    // This REPLACES the entire #center-slot innerHTML, destroying #op-dropdown-slot
+    MpiButton.mount(el.querySelector('#center-slot'), { icon: 'check' });
+}
+```
+
+### Debugging mount conflicts
+
+When sub-components aren't rendering:
+1. Check if two mounts target the same container (or nested containers)
+2. Log `container.innerHTML` before and after the mount call to confirm replacement
+3. List all IDs within the component: `el.querySelectorAll('[id]').forEach(e => console.log(e.id))`
 
 ---
 
@@ -84,3 +155,20 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 ```
+
+---
+
+## Debugging Component Issues
+
+When a component isn't working as expected, follow this checklist:
+
+1. **Verify the component mounted:** Check `el.className` or `el.tagName` exists
+2. **List all IDs in the component tree:** `el.querySelectorAll('[id]').forEach(e => console.log(e.id))`
+3. **Check mount target isolation:** No two mounts target the same container
+4. **For Block components:** Trace every slot and which component mounts into it
+5. **Log the mount container before mount:** `console.log('before:', slot.innerHTML)`
+
+Common issues:
+- Mount target has existing children that get replaced (see Mount Target Isolation above)
+- Slot ID is misspelled or doesn't match between template and setup
+- Mount call order matters when components share slots

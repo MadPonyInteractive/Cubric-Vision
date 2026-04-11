@@ -77,6 +77,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--center"  id="bottom-center-slot">
                     <div id="op-dropdown-slot"></div>
                 </div>
+                <div class="mpi-prompt-box__area mpi-prompt-box__area--neg"    id="bottom-neg-slot"></div>
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--right"   id="bottom-right-slot"></div>
                 <div class="mpi-prompt-box__area mpi-prompt-box__area--bottom"  id="bottom-bottom-slot"></div>
             </div>
@@ -235,7 +236,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // updateContext — update context and refresh op dropdown options
         el.updateContext = (ctx) => {
-            _context = ctx;
+            _context = { ..._context, ...ctx };
             _refreshOpDropdown();
         };
 
@@ -301,10 +302,14 @@ export const MpiPromptBox = ComponentFactory.create({
 
             // Use getAvailableCommands for context-aware filtering
             const availableCmds = getAvailableCommands(model.mediaType, model, _context);
-            const availableOps = availableCmds
+            // Filter out operations that don't require images/video when context requests it
+            const filteredCmds = _context.filterNoInputOps
+                ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
+                : availableCmds;
+            const availableOps = filteredCmds
                 .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
 
-            if (availableOps.length <= 1) {
+            if (availableOps.length === 0) {
                 opSlot.innerHTML = '';
                 return;
             }
@@ -403,7 +408,7 @@ export const MpiPromptBox = ComponentFactory.create({
         if (model) {
             const leftSlot = el.querySelector('#bottom-left-slot');
 
-            if (modelList.length > 1) {
+            if (modelList.length >= 1) {
                 _modelDropdown = MpiDropdown.mount(document.createElement('div'), {
                     options:   modelList.map(m => ({ value: m.id, label: m.name })),
                     value:     model.id,
@@ -431,7 +436,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Negative mode toggle ───────────────────────────────────────────────
         if (props.includeNegative) {
-            MpiButton.mount(el.querySelector('#bottom-center-slot'), {
+            MpiButton.mount(el.querySelector('#bottom-neg-slot'), {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
                 size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode

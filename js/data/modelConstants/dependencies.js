@@ -107,7 +107,7 @@ export const DEPS = {
         name: 'Wan22-4steps-lora-HIGH',
         type: 'lora',
         filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
-        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
+        url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
         size: '600MB',
     },
     'Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16': {
@@ -115,7 +115,7 @@ export const DEPS = {
         name: 'Wan22-4steps-lora-LOW',
         type: 'lora',
         filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
-        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
+        url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
         size: '600MB',
     },
     // VAE

@@ -10,7 +10,7 @@
  * @typedef {Object} UniversalWorkflowDef
  * @property {string}   workflow     - Workflow filename in comfy_workflows/
  * @property {string[]} dependencies - Dep ids from DEPS (no checkpoints/loras)
- * @property {boolean}  installed    - Resolved at runtime; always false here
+ * @property {boolean}  installed    - Resolved at runtime by syncModelInstalled(); not set here
  */
 
 /** @type {Record<string, UniversalWorkflowDef>} */
@@ -18,12 +18,10 @@ export const UNIVERSAL_WORKFLOWS = {
     interpolate: {
         workflow: 'video_interpolate.json',
         dependencies: [],   // TODO: add interpolation model dep when workflow is ready
-        installed: false,
     },
     videoUpscale: {
         workflow: 'video_upscale.json',
         dependencies: [],   // TODO: add video upscale model dep when workflow is ready
-        installed: false,
     },
     autoMaskImg: {
         workflow: 'img_auto_mask.json',
@@ -35,6 +33,5 @@ export const UNIVERSAL_WORKFLOWS = {
             'person-yolov8n-seg',
             'sam-vit-b',
         ],
-        installed: false,
     },
 };

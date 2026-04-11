@@ -1,6 +1,6 @@
 # Developer Backlog & What's Next
 
-> **AI INSTRUCTION:** This file contains the active sprint and backlog. 
+> **AI INSTRUCTION:** This file contains the active sprint and backlog.
 > 🔴 **CRITICAL RULE:** Do NOT make assumptions about how to implement these items. If a bullet point lacks detailed technical context, you MUST stop and ask the user, "Can you explain in detail how we should approach [Task]?" before writing any code.
 
 
@@ -23,6 +23,34 @@
 > **Plan:** `docs/superpowers/plans/2026-04-11-mpi-prompt-box-block.md`
 >
 > All tasks complete. `s_selectedModelId` is the canonical model ID. `MpiPromptBox` is a Block. Old Compound deleted.
+
+---
+
+## ✅ Fixed: MpiPromptBox — model dropdown and operation dropdown not visible
+
+**Root cause:** Two issues found and fixed:
+1. **Mount target isolation bug:** `MpiButton.mount(el.querySelector('#bottom-center-slot'), ...)` for the negative toggle replaced the entire innerHTML of `#bottom-center-slot`, destroying the `#op-dropdown-slot` div inside it. Fixed by adding a dedicated `#bottom-neg-slot` for the negative toggle.
+2. **Filter condition:** Changed `availableOps.length <= 1` to `=== 0` (show dropdown with 1+ ops) and `modelList.length > 1` to `>= 1` (show dropdown with 1+ models).
+
+**Files changed:** `MpiPromptBox.js`, `MpiPromptBox.css`
+
+---
+
+## ✅ Fixed: GroupHistory — operations dropdown not showing correct operations
+
+**Symptoms:** In groupHistory workspace, `t2i` appeared in the dropdown when it shouldn't (groupHistory always has an input image). `upscale` was grayed out when it should be available. Operations requiring a mask (`detail`) remained disabled even after applying a mask.
+
+**Root cause:** Three issues found and fixed:
+1. **`imageCount` not passed to MpiPromptBox context**: `_baseCtx` (`imageCount: 1, videoCount: 0`) was not spread into `updateContext`, so `upscale` appeared disabled (default `imageCount = 0`).
+2. **`hasMask` not passed to MpiPromptBox context**: When `_hasMask` changed, the new value wasn't passed to `_context`, so `detail` remained disabled after applying mask.
+3. **`t2i` appearing in dropdown**: MpiPromptBox showed ALL available operations without filtering. Added `filterNoInputOps` context flag to exclude ops with `requiresImages === 0 && requiresVideo === 0`.
+
+**Fixes:**
+- `updateContext` in MpiPromptBox now merges context (`_context = { ..._context, ...ctx }`) instead of replacing
+- Added `filterNoInputOps` context flag: when true, filters out operations that don't require images/video
+- groupHistory spreads `_baseCtx` in all `updateContext` calls: `{ ..._baseCtx, hasMask, filterNoInputOps: true }`
+
+**Files changed:** `MpiPromptBox.js`, `groupHistory.js`
 
 ---
 

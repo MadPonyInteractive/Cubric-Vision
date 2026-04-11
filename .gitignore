@@ -15,7 +15,10 @@ resources/
 /data/
 
 # agents
-/.agent
+.agent
+.agents
+.claude
+.playwright
 
 # Temporary files
 media-for-testing/
@@ -29,7 +32,7 @@ Thumbs.db
 desktop.ini
 
 # Editor
-.vscode/settings.json
+.vscode
 *.code-workspace
 
 # Secrets / local config (if any added later)

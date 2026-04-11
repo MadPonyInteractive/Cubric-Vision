@@ -8,7 +8,7 @@
  * @property {string[]} supportedOps - Operation keys from commandRegistry.js
  * @property {Record<string,string>} workflows - op key → workflow filename
  * @property {string[]} dependencies - Dep ids from DEPS above
- * @property {boolean}  installed    - Resolved at runtime; always false here
+ * @property {boolean}  installed    - Resolved at runtime by syncModelInstalled(); not set here
  */
 
 /** @type {ModelDef[]} */
@@ -18,7 +18,6 @@ export const MODELS = [
         name: 'SDXL Realistic',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
-        installed: true,
         image: 'Lustify7.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
@@ -43,7 +42,6 @@ export const MODELS = [
         name: 'ILL Anime Beauty',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        installed: false,
         image: 'AlchemyMix176.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
@@ -68,7 +66,6 @@ export const MODELS = [
         name: 'ILL Anime',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        installed: false,
         image: 'AnimeMixV80.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
@@ -93,7 +90,6 @@ export const MODELS = [
         name: 'PONY Mix',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        installed: false,
         image: 'AnimerJeiV30.png',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
@@ -118,7 +114,6 @@ export const MODELS = [
         id: 'wan-22',
         name: 'Wan 2.2 Smooth',
         mediaType: 'video',
-        installed: false,
         type: 'wan',
         supportedOps: ['t2v', 'i2v'],
         gen_speed: 'fast',

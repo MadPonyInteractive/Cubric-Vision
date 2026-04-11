@@ -160,7 +160,7 @@ export function mount(container) {
 
     // ── PromptBox + operation dropdown ─────────────────────────────────────
 
-    const installedImageModels = getModelsByType('image').filter(m => m.installed);
+    const installedImageModels = getModelsByType('image').filter(m => m.installed !== false);
 
     // Derive activeModelId from state (canonical) with fallback to first installed
     let activeModelId = state.s_selectedModelId
