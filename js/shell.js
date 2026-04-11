@@ -93,7 +93,7 @@ export async function initShell() {
   });
 
   // 7. Data Pre-fetching (Non-blocking)
-  _initDataRegistries();
+  _initDataRegistries().catch(err => console.error('[shell] registry failed:', err));
 
   // 8. Boot/Restore Logic
   _bootApp();
@@ -127,8 +127,17 @@ async function _bootApp() {
 
 async function _initDataRegistries() {
   try {
-    await syncModelInstalled();
+    const synced = await syncModelInstalled();
+    if (synced) {
+      // models:checked event fires inside syncModelInstalled() — state.s_installedModelIds
+      // gets updated via the state:changed subscription below
+    }
   } catch (err) {
     console.error('[shell] background registry failed:', err);
   }
+
+  // Subscribe to models:checked — keep state.s_installedModelIds in sync
+  Events.on('models:checked', ({ installedModelIds: ids }) => {
+    state.s_installedModelIds = ids;
+  });
 }

@@ -57,7 +57,46 @@
 ## 📅 To-Dos (Medium Priority)
 
 **Model UI & Installation State**
-- [ ] Zero-installed state: Show `MpiModelsModal` overlay (using `MpiInstalledDisplay` inside it) when no models are installed — displays installed models, available models, disk space specs, and install options. **Do this after the MpiPromptBox Block is done** (the Block is needed for clean zero-installed state handling).
+
+## ✅ Completed: Zero-Installed State
+
+> **Spec:** `docs/superpowers/specs/2026-04-11-zero-installed-state-design.md`
+> **Plan:** `.claude/plans/quirky-orbiting-newell.md`
+
+**Implementation approach changed during fix:** `MpiModelsModal` was promoted to a Block (not a Compound) to properly own its `MpiInstalledDisplay` card list internally — avoiding external `appendToContainer()` calls that broke the compound encapsulation pattern.
+
+**Files changed:**
+- `js/state.js` — added `s_installedModelIds: []`
+- `js/data/modelRegistry.js` — `syncModelInstalled()` now emits `models:checked`; exported `reSyncInstalledModels()`; added `export { MODELS }` so the Block can import it
+- `js/components/Compounds/MpiInstalledDisplay/` — added `image` prop, image slot, replaced raw DOM with `ce()`
+- `js/components/Blocks/MpiModelsModal/` — **New Block** — self-contained overlay that renders model cards internally via `MpiInstalledDisplay`; owns Refresh + Install flow; delegates to `MpiOverlay`
+- `js/components/Blocks/MpiInstallModelsList/` — **Deleted** — merged into `MpiModelsModal` Block
+- `js/components/Compounds/MpiModelsModal/` — **Deleted** — superseded by Block version
+- `js/workspaces/gallery/gallery.js` — mounts `MpiModelsModal` Block; subscribes to `state:changed` (show on zero) and `models:all-installed` (hide)
+- `js/workspaces/groupHistory/groupHistory.js` — same as gallery.js
+- `js/shell.js` — no longer mounts `MpiModelsModal` or `InstallModelsList`; event subscriptions drive `state.s_installedModelIds` only
+- `js/shell/preloadStyles.js` — registered `MpiModelsModal.css`; removed stale `InstallModelsList.css`
+- `js/components/types.js` — `MpiModelsModalProps` updated to Block; removed `InstallModelsListProps`
+- `.claude/rules/component-mounts.md` — documented `MpiModelsModal` in gallery.js and groupHistory.js
+
+---
+
+## 🔴 High Priority: Test Zero-Installed State
+
+The zero-installed state feature is implemented. **Bugs found and fixed during testing:**
+- `js/data/modelRegistry.js:22` — wrong import path `../../events.js` → fixed to `../events.js`
+- `js/data/modelRegistry.js` — `MODELS` not exported → added `export { MODELS }`
+- `js/shell/preloadStyles.js` — stale `InstallModelsList.css` reference → removed
+
+**Manual verification still required:**
+
+1. **First-run (zero installed):** Boot app with no models → `MpiModelsModal` should appear immediately with "Install Models" header and scrollable list of all uninstalled models
+2. **Refresh button:** With modal open, manually delete a model file from filesystem → click Refresh → list reflects deletion
+3. **Install a model:** Click Install → download completes → `reSyncInstalledModels()` fires → if all models now installed, modal auto-closes
+4. **All installed:** When all models are installed, list shows "No models available"
+5. **Escape key:** Pressing Escape closes `MpiModelsModal` via `MpiOverlay` stash pattern
+6. **Stash pattern:** Open `MpiModelsModal`, then trigger another overlay → both overlay correctly; closing restores properly
+7. **Error dialog:** Trigger a missing-model workflow → `MpiErrorDialog` shows title `"Missing model"` with model-specific message (not generic)
 - [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
 - [ ] Build Model Installer UI (browse, download, progress bar).
 - [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).

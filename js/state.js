@@ -23,6 +23,10 @@ const _state = {
                                // that hosts a model selector. Read by other workspaces to
                                // sync the dropdown when switching pages.
 
+    // ── Installed model list (populated after syncModelInstalled) ──────────────
+    s_installedModelIds: [],    // Array of model IDs where model.installed === true.
+                               // Updated by the 'models:checked' event from modelRegistry.
+
     // ── Legacy — keep until LLM re-implementation ─────────────────────────────
     g_abortControllers: {},     // Used by llmService.js
     currentLoadedModel: null,   // Used by llmService.js

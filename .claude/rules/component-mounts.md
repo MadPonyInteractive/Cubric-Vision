@@ -13,6 +13,7 @@
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
+- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — singleton zero-installed overlay; shown when `state.s_installedModelIds.length === 0`; owns its own model card list via internal `MpiInstalledDisplay` mounts
 
 ---
 
@@ -31,6 +32,7 @@
 - `MpiSelectionBar`   props: `{ count: 0 }`   slot: `_selBarSlot` inside `cropBar`; shown when history selection mode active
 - `MpiPromptBox`   props: `{ model: activeModel, modelList: installedModels, operation: activeOperation, includeNegative: true }`   slot: `bottom` div; only mounted when `activeModel` is non-null; initial context set via `updateContext({ ..._baseCtx, hasMask: false, filterNoInputOps: true })`
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
+- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — singleton zero-installed overlay; shown when `state.s_installedModelIds.length === 0`; owns its own model card list via internal `MpiInstalledDisplay` mounts
 
 ---
 

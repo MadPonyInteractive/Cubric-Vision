@@ -29,6 +29,7 @@ import { MpiAutoMaskThumbs } from '../../components/Compounds/MpiAutoMaskThumbs/
 import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiRadioGroup } from '../../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiModelsModal } from '../../components/Blocks/MpiModelsModal/MpiModelsModal.js';
 import { getModelsByType, getModelById } from '../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS } from '../../utils/ratios.js';
@@ -988,12 +989,30 @@ export function mount(container, params = {}) {
     _buildHistoryCards();
     _showEntry(_group.history[_selectedIdx]);
 
+    // ── Zero-installed state modal ─────────────────────────────────────────
+    const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
+        icon: 'download',
+        title: 'Model Manager',
+        text: 'Select a model pack to install. Required files will be fetched automatically.',
+        footer: 'Models are stored locally and never shared.',
+        closable: true,
+    });
+    _modelsModal.el.hide();
+
+    const _onZeroInstalled = ({ key, value }) => {
+        if (key !== 's_installedModelIds') return;
+        if (value.length === 0) _modelsModal.el.show();
+    };
+    Events.on('state:changed', _onZeroInstalled);
+    Events.on('models:all-installed', () => _modelsModal.el.hide());
+
     // ── Cleanup ────────────────────────────────────────────────────────────────
 
     const _observer = new MutationObserver(() => {
         if (!document.contains(container)) {
             Events.off('workspace:set-operation', _onSetOp);
             Events.off('state:changed', _onStateModelChange);
+            Events.off('state:changed', _onZeroInstalled);
             _canvas.destroy();
             _observer.disconnect();
         }

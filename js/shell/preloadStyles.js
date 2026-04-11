@@ -40,7 +40,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiProjectName/MpiProjectName.css',
   'js/components/Compounds/MpiProjectCard/MpiProjectCard.css',
   'js/components/Compounds/MpiNewProject/MpiNewProject.css',
-  'js/components/Compounds/MpiModelsModal/MpiModelsModal.css',
+  'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',
   'js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css',
   'js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css',
   'js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css',
@@ -55,6 +55,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Blocks/MpiPromptBox/MpiPromptBox.css',
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
   'js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.css',
+
 ];
 
 /**

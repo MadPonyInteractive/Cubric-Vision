@@ -479,18 +479,21 @@
  */
 
 /**
- * @typedef {Object} MpiModelsModalProps (Compound — js/components/Compounds/MpiModelsModal)
- * @property {string}   [icon='info']                    - MpiIcon registry key shown at top centre
+ * @typedef {Object} MpiModelsModalProps (Block — js/components/Blocks/MpiModelsModal)
+ * @property {string}   [icon='download']               - MpiIcon registry key shown at top centre
  * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='xl'] - Icon size
- * @property {string}   [title='']                       - Large title text
- * @property {string}   [text='']                        - Descriptive text above the content slot
- * @property {string}   [footer='']                      - Small text below the content slot
- * @property {boolean}  [closable=true]                  - Show the X close button
+ * @property {string}   [title='Install Models']     - Large title text
+ * @property {string}   [text='']                    - Descriptive text above the content slot
+ * @property {string}   [footer='']                   - Small text below the content slot
+ * @property {boolean}  [closable=true]              - Show the X close button
+ *
+ * Self-owns a scrollable list of uninstalled models as MpiInstalledDisplay cards.
+ * Install button per card triggers download + reSyncInstalledModels().
+ * Shows automatically when state.s_installedModelIds.length === 0.
  *
  * Instance methods (on instance.el):
- *   show()                      — delegates to MpiOverlay; injects into #tool-container
- *   hide()                      — delegates to MpiOverlay; restores prior content
- *   appendToContainer(el: HTMLElement) — append a child into the content slot
+ *   show()  — delegates to MpiOverlay; shows the overlay
+ *   hide()  — delegates to MpiOverlay; hides the overlay
  *
  * Emits:
  * 'close' {} — X button clicked (forwarded from MpiOverlay)
@@ -528,6 +531,8 @@
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
  * @property {string} [text='']           - Descriptive body text
+ * @property {string} [image='']          - Preview PNG filename from modelConstants (e.g. 'Lustify7.png').
+ *                                          Renders <img> from 'comfy_workflows/display/{image}'.
  * @property {string} [icon='info']       - MpiIcon registry key for the info row
  * @property {string} [iconText='']       - Text shown next to the icon
  * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Info icon size
@@ -738,7 +743,5 @@
  *   'saved' {} — user confirmed changes; already persisted to disk
  *   'close' {} — overlay dismissed without saving
  */
-
-
 
 

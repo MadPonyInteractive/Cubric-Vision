@@ -41,6 +41,19 @@
     line-height: 1.5;
 }
 
+/* ── Image preview ───────────────────────────────────────────────────────── */
+.mpi-installed-display__image {
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.mpi-installed-display__image-img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+}
+
 /* ── Info row: icon + text ───────────────────────────────────────────────── */
 .mpi-installed-display__info-row {
     display: flex;

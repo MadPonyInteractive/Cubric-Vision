@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, ce } from '../../../utils/dom.js';
 
 /**
  * MpiInstalledDisplay — Installed Item Info Compound
@@ -14,6 +14,8 @@ import { qs } from '../../../utils/dom.js';
  * @param {string} [title='']          - Title text displayed on the top-left
  * @param {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
  * @param {string} [text='']           - Descriptive text body
+ * @param {string} [image='']          - Preview PNG filename from modelConstants (e.g. 'Lustify7.png').
+ *                                        Renders an <img> from 'comfy_workflows/display/{image}'.
  * @param {string} [icon='info']       - MpiIcon registry key for the info row icon
  * @param {string} [iconText='']       - Text shown alongside the icon in the info row
  * @param {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Size of the info row icon
@@ -38,6 +40,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 <span class="mpi-installed-display__meta" id="idmeta-slot"></span>
             </div>
             <div class="mpi-installed-display__text" id="idtext-slot"></div>
+            <div class="mpi-installed-display__image" id="idimage-slot"></div>
             <div class="mpi-installed-display__info-row" id="idinfo-slot"></div>
             <div class="mpi-installed-display__badge-row" id="idbadge-slot"></div>
             <div class="mpi-installed-display__actions" id="idactions-slot"></div>
@@ -57,14 +60,25 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const textSlot = qs('#idtext-slot', el);
         if (props.text) textSlot.textContent = props.text;
 
+        // Image preview
+        const imageSlot = qs('#idimage-slot', el);
+        if (props.image) {
+            const img = ce('img', {
+                src: `comfy_workflows/display/${props.image}`,
+                className: 'mpi-installed-display__image-img',
+            });
+            imageSlot.appendChild(img);
+        } else {
+            imageSlot.style.display = 'none';
+        }
+
         // Icon + text row
         const infoSlot = qs('#idinfo-slot', el);
         if (props.icon || props.iconText) {
-            const iconWrap = document.createElement('div');
-            iconWrap.className = 'mpi-installed-display__info-inner';
+            const iconWrap = ce('div', { className: 'mpi-installed-display__info-inner' });
 
             if (props.icon) {
-                const iconInst = MpiIcon.mount(document.createElement('div'), {
+                const iconInst = MpiIcon.mount(ce('div'), {
                     name: props.icon,
                     size: props.iconSize || 'sm',
                     color: props.iconColor || 'danger'
@@ -73,9 +87,10 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             }
 
             if (props.iconText) {
-                const iconTextEl = document.createElement('span');
-                iconTextEl.className = 'mpi-installed-display__icon-text';
-                iconTextEl.textContent = props.iconText;
+                const iconTextEl = ce('span', {
+                    className: 'mpi-installed-display__icon-text',
+                    textContent: props.iconText,
+                });
                 iconWrap.appendChild(iconTextEl);
             }
 
@@ -86,7 +101,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
         // INSTALLED badge
         const badgeSlot = qs('#idbadge-slot', el);
-        const badge = MpiBadge.mount(document.createElement('div'), {
+        const badge = MpiBadge.mount(ce('div'), {
             label: 'INSTALLED',
             variant: 'success'
         });
@@ -97,7 +112,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
         // Optional Delete Models toggle button (left side)
         if (props.showDeleteModels) {
-            const delModels = MpiButton.mount(document.createElement('div'), {
+            const delModels = MpiButton.mount(ce('div'), {
                 icon: 'trash',
                 label: 'Delete Models',
                 labelPosition: 'right',
@@ -113,12 +128,11 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         }
 
         // Spacer pushes Uninstall to the right
-        const spacer = document.createElement('div');
-        spacer.className = 'mpi-installed-display__spacer';
+        const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
         actionsSlot.appendChild(spacer);
 
         // Uninstall / Delete button (right side)
-        const deleteBtn = MpiButton.mount(document.createElement('div'), {
+        const deleteBtn = MpiButton.mount(ce('div'), {
             text: props.deleteLabel || 'Uninstall',
             variant: 'secondary',
             size: 'md'

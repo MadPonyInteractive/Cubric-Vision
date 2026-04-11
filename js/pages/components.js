@@ -44,7 +44,7 @@ import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMe
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
-import { MpiModelsModal } from '../components/Compounds/MpiModelsModal/MpiModelsModal.js';
+import { MpiModelsModal } from '../components/Blocks/MpiModelsModal/MpiModelsModal.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
@@ -1003,7 +1003,7 @@ function mountAll() {
         });
     });
 
-    // ── MpiModelsModal (Compound) ─────────────────────────────────────────────
+    // ── MpiModelsModal (Block) ─────────────────────────────────────────────
     mount('preview-models-modal-default', () => {
         const slotEl = slot('preview-models-modal-default');
 
@@ -1023,10 +1023,6 @@ function mountAll() {
             footer: 'Models are stored locally and never shared.',
             closable: true
         });
-
-        const badgeWrap = document.createElement('div');
-        modal.el.appendToContainer(badgeWrap);
-        MpiBadge.mount(badgeWrap, { label: 'Installed', variant: 'success', pill: true });
 
         btn.on('click', () => modal.el.show());
         modal.on('close', () => console.log('[gallery] MpiModelsModal closed'));

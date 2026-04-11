@@ -262,6 +262,38 @@ export function runAutoMask(payload) {
  * @param {RunPayload} payload
  * @returns {Execution}
  */
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Formats a workflow error into a user-friendly title and message.
+ * Detects model-not-found errors and returns specific copy.
+ * @param {string} errMessage
+ * @param {string} modelId
+ * @returns {{ title: string, message: string }}
+ */
+function _formatWorkflowError(errMessage, modelId) {
+    const msg = errMessage || '';
+    const modelName = modelId ? getModelById(modelId)?.name || modelId : '';
+
+    // Detect ComfyUI "model not found" errors (various forms)
+    const isModelError = /model not found|checkpoint not found|lora not found|vae not found|upscale not found|failed to find|missing model|model missing|\(model\) not|no model specified|cannot load model|model not load/i.test(msg);
+
+    if (isModelError) {
+        return {
+            title: 'Missing model',
+            message: modelName
+                ? `"${modelName}" is not installed. Please install it from the model manager.`
+                : `A required model is not installed. Please install it from the model manager.`,
+        };
+    }
+
+    return {
+        title: 'Generation failed',
+        message: msg,
+    };
+}
+
 export function runCommand(payload) {
     const exec = {
         onPreview:  null,
@@ -341,7 +373,8 @@ export function runCommand(payload) {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
         } catch (err) {
             clientLogger.error('comfy', `Workflow failed: ${payload.operation} / ${payload.modelId}`, err);
-            Events.emit('ui:error', { title: 'Generation failed', message: err.message });
+            const { title, message } = _formatWorkflowError(err.message, payload.modelId);
+            Events.emit('ui:error', { title, message });
             exec.onError?.(err);
         }
     })();

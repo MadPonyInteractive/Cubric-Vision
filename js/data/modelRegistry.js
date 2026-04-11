@@ -18,7 +18,9 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
+export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
+import { Events } from '../events.js';
 
 // ── Path Config ───────────────────────────────────────────────────────────────
 
@@ -81,11 +83,28 @@ export async function syncModelInstalled() {
             }
         }
 
+        // Emit installed model IDs for reactive listeners
+        const installedModelIds = Object.entries(results)
+            .filter(([, installed]) => installed)
+            .map(([id]) => id);
+        Events.emit('models:checked', { installedModelIds });
+
         return true;
     } catch (err) {
         console.error('[modelRegistry] syncModelInstalled failed:', err);
         return false;
     }
+}
+
+/**
+ * Re-syncs installed model state on demand (e.g., when MpiModelsModal opens).
+ * Rebuilds the payload from current MODELS + DEPS, POSTs to /comfy/models/check,
+ * patches MODELS[].installed in-place, and emits 'models:checked'.
+ *
+ * @returns {Promise<boolean>} true if the sync succeeded
+ */
+export async function reSyncInstalledModels() {
+    return syncModelInstalled();
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────

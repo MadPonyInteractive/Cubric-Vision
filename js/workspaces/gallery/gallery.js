@@ -22,6 +22,7 @@ import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, g
 import { MpiCompareOverlay } from '../../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiModelsModal } from '../../components/Blocks/MpiModelsModal/MpiModelsModal.js';
 import { clientLogger } from '../../services/clientLogger.js';
 
 /**
@@ -344,10 +345,31 @@ export function mount(container) {
     };
     Events.on('workspace:set-operation', _onSetOperation);
 
+    // ── Zero-installed state modal ─────────────────────────────────────────
+    const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
+        icon: 'download',
+        title: 'Model Manager',
+        text: 'Select a model pack to install. Required files will be fetched automatically.',
+        footer: 'Models are stored locally and never shared.',
+        closable: true,
+    });
+    _modelsModal.el.hide(); // hidden until zero installed
+
+    // Show when zero models installed
+    const _onZeroInstalled = ({ key, value }) => {
+        if (key !== 's_installedModelIds') return;
+        if (value.length === 0) _modelsModal.el.show();
+    };
+    Events.on('state:changed', _onZeroInstalled);
+
+    // Close when all models installed
+    Events.on('models:all-installed', () => _modelsModal.el.hide());
+
     // Cleanup when workspace is replaced
     const _observer = new MutationObserver(() => {
         if (!document.contains(container)) {
             Events.off('workspace:set-operation', _onSetOperation);
+            Events.off('state:changed', _onZeroInstalled);
             _observer.disconnect();
         }
     });
