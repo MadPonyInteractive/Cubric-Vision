@@ -10,8 +10,10 @@
    - A new route category or workspace was introduced
    - An architectural pattern was modified or replaced
    - A new dependency or backend service was added
+   - A component's events, props, state connections, or ComfyUI injection changed
 
    If any of the above is true, you MUST ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (However, you ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks).
+   Additionally, if component wiring changed, run `/update-component-map` to regenerate the component map rule files.
 
 ---
 
@@ -77,9 +79,30 @@ If you are sending tasks to ComfyUI, compiling JSON workflows, or dealing with i
 If you are adding models to the registry, managing downloads, or dealing with the python server:
 **->** **MUST READ:** `.claude/rules/comfy_engine.md`
 
+### Component Mount Map
+If you need to know who mounts a component, what props it receives, or where it appears in the UI:
+**->** **MUST READ:** `.claude/rules/component-mounts.md`
+
+### Component Event Wiring
+If you need to know what events a component emits or listens to (without building or modifying components):
+**->** **MUST READ:** `.claude/rules/component-events.md`
+
+### Component State Connections
+If you need to know which state keys a component reads or writes:
+**->** **MUST READ:** `.claude/rules/component-state.md`
+
+### Component ComfyUI Injection
+If you need to know what gets injected into ComfyUI workflows, which component injects it, and for which operations:
+**->** **MUST READ:** `.claude/rules/component-comfy.md`
+
 ### Debugging & Errors
 If you are trying to fix a bug, a server crash, or an issue with the python engine:
 **->** **MUST DO:** Read the last 50-100 lines of `logs/app.log` using the `Read` tool with an `offset`. Do NOT parse the entire file. This log is the master terminal output and contains runtime telemetry.
+
+### Browser Automation (playwright-cli)
+If you need to run browser automation or test web interfaces:
+**->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`)
+**->** **Important:** When opening a visible browser, always use the `--headed` flag so the user can see the browser window and interactions. Omit `--headed` only when running headless (e.g., in CI or when no visual feedback is needed).
 
 ---
 
@@ -98,6 +121,10 @@ If you are trying to fix a bug, a server crash, or an issue with the python engi
 | ComfyUI engine / backend | `.claude/rules/comfy_engine.md` | `## Sub-Agent Briefing` |
 | Workspace / routing | `.claude/rules/workspaces.md` | `## Sub-Agent Briefing` |
 | Debugging | `logs/app.log` (last 100 lines via `Read` with offset) | No briefing section — paste log tail directly |
+| Component mount locations | `.claude/rules/component-mounts.md` | `## Sub-Agent Briefing` |
+| Component event wiring | `.claude/rules/component-events.md` | `## Sub-Agent Briefing` |
+| Component state connections | `.claude/rules/component-state.md` | `## Sub-Agent Briefing` |
+| Component ComfyUI injection | `.claude/rules/component-comfy.md` | `## Sub-Agent Briefing` |
 
 ---
 
