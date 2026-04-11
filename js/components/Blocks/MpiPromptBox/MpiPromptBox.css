@@ -127,6 +127,13 @@
     justify-content: flex-end;
 }
 
+/* Operation dropdown slot — ensure label + dropdown render horizontally */
+.mpi-prompt-box__area #op-dropdown-slot {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 /* ── Media drop zone ──────────────────────────────────────────────────────── */
 
 .mpi-prompt-box__media-zone {
