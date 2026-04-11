@@ -238,15 +238,17 @@ export function refreshRadial(ctx = {}) {
 // ── Lazy view imports ───────────────────────────────────────────────────────
 
 /**
- * Lazy-imports a view module by name.
- * Each tool/page exports a `mount(container)` function.
+ * Lazy-imports a view Block by route name.
+ * Returns an object with a `mount(container, params)` method.
  * @param {string} view
- * @returns {Promise<{mount: function}>}
+ * @returns {Promise<{mount: function}>|null}
  */
 async function _importView(view) {
     switch (view) {
-        case PAGE_GALLERY:
-            return import('../workspaces/gallery/gallery.js');
+        case PAGE_GALLERY: {
+            const { MpiGalleryBlock } = await import('../components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js');
+            return { mount: (container, params) => MpiGalleryBlock.mount(container, params) };
+        }
         case PAGE_GROUP_HISTORY:
             return import('../workspaces/groupHistory/groupHistory.js');
         default:

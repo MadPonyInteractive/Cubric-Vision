@@ -15,6 +15,9 @@ import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMem
 import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
+import { MpiModelsModal } from './components/Blocks/MpiModelsModal/MpiModelsModal.js';
+import { PromptBoxService } from './shell/promptBoxService.js';
+import { getModelsByType } from './data/modelRegistry.js';
 
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
@@ -30,6 +33,13 @@ let _projectNameInstance = null;
 // ── Global dialog singletons ──────────────────────────────────────────────────
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
 const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
+const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
+    icon: 'download',
+    title: 'Model Manager',
+    text: 'Select a model pack to install. Required files will be fetched automatically.',
+    footer: 'Models are stored locally and never shared.',
+    closable: true,
+});
 
 /**
  * Show a user-facing error dialog with an optional log download button.
@@ -55,6 +65,8 @@ export async function initShell() {
   const radialMount = document.getElementById('radial-mount');
   const monitorMount = document.getElementById('memory-monitor-mount');
   const projectNameMount = document.getElementById('project-name-mount');
+  const promptBoxMount = document.getElementById('prompt-box-mount');
+  PromptBoxService.init(promptBoxMount);
 
   // 3. Mount Global HUD Components
   _projectNameInstance = MpiProjectName.mount(projectNameMount, {
@@ -117,6 +129,15 @@ async function _bootApp() {
   Events.on('comfy:ready',    () => { _startingComfy.el.hide(); loadAssets(); });
   Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
+
+  // Show model manager when zero image models are installed
+  Events.on('models:open', () => _modelsModal.el.show());
+  Events.on('models:all-installed', () => _modelsModal.el.hide());
+  Events.on('state:changed', ({ key }) => {
+      if (key !== 's_installedModelIds') return;
+      const hasImageModels = getModelsByType('image').some(m => m.installed === true);
+      if (!hasImageModels) _modelsModal.el.show();
+  });
 
   // ComfyUI Auto-start (optional)
   if (localStorage.getItem('mpi_auto_start_comfy') === 'true') {

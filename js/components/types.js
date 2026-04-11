@@ -613,6 +613,14 @@
  */
 
 /**
+ * @typedef {Object} MpiGalleryBlockProps
+ * — No props. Reads state.currentProject directly.
+ *
+ * Emits: (none — uses Events bus and PromptBoxService)
+ * Uses: state.currentProject, state.s_selectedModelId, PromptBoxService
+ */
+
+/**
  * @typedef {Object} MpiRadialMenuProps (Primitive — js/components/Primitives/MpiRadialMenu)
  * @property {'root'|'image'|'video'|'audio'} [context='root'] - Active context that determines which items are shown
  * @property {boolean} [open=false] - Force the menu open on mount (used for first-run/workspace entry)

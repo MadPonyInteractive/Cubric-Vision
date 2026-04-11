@@ -55,6 +55,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Blocks/MpiPromptBox/MpiPromptBox.css',
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
   'js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.css',
+  'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css',
 
 ];
 

@@ -44,7 +44,6 @@
     border-radius: var(--radius-xl);
 }
 
-.mpi-gallery-grid__promptbox-slot,
 .mpi-gallery-grid__selectionbar-slot {
     width: 100%;
 }

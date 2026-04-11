@@ -34,6 +34,8 @@ import { removeHistoryEntry } from '../../../data/projectModel.js';
  *   'download'    { groups: [...] }      — download selected groups
  *   'gc-group'    { group }              — group was mutated by GC (missing file); persist to disk
  *   'gc-remove'   { groupId }            — all history entries missing; group removed from grid
+ *   'selection-start' {}                  — selection mode activated (hide PromptBox)
+ *   'selection-end'   {}                  — selection mode exited (show PromptBox)
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -46,7 +48,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
             </div>
             <div class="mpi-gallery-grid__grid"></div>
             <div class="mpi-gallery-grid__footer">
-                <div class="mpi-gallery-grid__promptbox-slot"></div>
                 <div class="mpi-gallery-grid__selectionbar-slot" style="display:none"></div>
             </div>
         </div>
@@ -66,7 +67,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const grid = el.querySelector('.mpi-gallery-grid__grid');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
-        const promptSlot = el.querySelector('.mpi-gallery-grid__promptbox-slot');
         const selectionSlot = el.querySelector('.mpi-gallery-grid__selectionbar-slot');
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
@@ -113,7 +113,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (_selectionMode) return;
             _selectionMode = true;
             _cardMap.forEach(({ card }) => card.el.setSelectionMode(true));
-            promptSlot.style.display = 'none';
+            emit('selection-start');
             selectionSlot.style.display = '';
             el.classList.add('mpi-gallery-grid--selecting');
         }
@@ -126,7 +126,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 card.el.setSelected(false);
             });
             selectionBar.el.setCount(0);
-            promptSlot.style.display = '';
+            emit('selection-end');
             selectionSlot.style.display = 'none';
             el.classList.remove('mpi-gallery-grid--selecting');
         }
@@ -276,11 +276,5 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (_selectedIds.size === 0 && _selectionMode) _exitSelectionMode();
             else selectionBar.el.setCount(_selectedIds.size);
         };
-
-        /**
-         * Expose the PromptBox slot so the gallery workspace can mount MpiPromptBox into it.
-         * @returns {HTMLElement}
-         */
-        el.getPromptSlot = () => promptSlot;
     }
 });
