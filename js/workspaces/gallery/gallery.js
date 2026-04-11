@@ -12,8 +12,7 @@ import { state } from '../../state.js';
 import { Events } from '../../events.js';
 import { navigate, PAGE_GROUP_HISTORY } from '../../router.js';
 import { MpiGalleryGrid } from '../../components/Blocks/MpiGalleryGrid/MpiGalleryGrid.js';
-import { MpiPromptBox } from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
-import { MpiDropdown } from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiPromptBox } from '../../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { getModelsByType } from '../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../data/commandRegistry.js';
 import { refreshRadial } from '../../shell/navigation.js';
@@ -23,6 +22,7 @@ import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, g
 import { MpiCompareOverlay } from '../../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
+import { clientLogger } from '../../services/clientLogger.js';
 
 /**
  * Mounts the gallery workspace into the given container.
@@ -58,7 +58,7 @@ export function mount(container) {
                 folderPath: state.currentProject.folderPath,
                 updates:    { itemGroups: state.currentProject.itemGroups },
             }),
-        }).catch(err => console.warn('[gallery] update-project failed:', err));
+        }).catch(err => clientLogger.warn('gallery', 'update-project failed:', err));
     }
 
     grid.on('gc-group', ({ group }) => {
@@ -135,7 +135,7 @@ export function mount(container) {
                 if (!filename) continue;
                 fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
                     method: 'DELETE',
-                }).catch(err => console.warn('[gallery] delete file failed:', err));
+                }).catch(err => clientLogger.warn('gallery', 'delete file failed:', err));
             }
         }
 
@@ -160,80 +160,50 @@ export function mount(container) {
 
     // ── PromptBox + operation dropdown ─────────────────────────────────────
 
-    const imageModels    = getModelsByType('image');
-    let activeModel      = imageModels[0] || null;
-    state.g_selectedModel = activeModel;
-    let activeOperation  = 't2i';
-    let imageCount       = 0;
-    let videoCount       = 0;
+    const installedImageModels = getModelsByType('image').filter(m => m.installed);
+
+    // Derive activeModel from state (canonical) with fallback to first installed
+    let activeModel = state.s_selectedModelId
+        ? (installedImageModels.find(m => m.id === state.s_selectedModelId) || installedImageModels[0] || null)
+        : (installedImageModels[0] || null);
+
+    // Ensure state is in sync on mount
+    if (activeModel) state.s_selectedModelId = activeModel.id;
+
+    let activeOperation = 't2i';
+    let imageCount      = 0;
+    let videoCount      = 0;
 
     const promptSlot = grid.el.getPromptSlot();
-    let opDropdown   = null;
     let promptBox    = null;
 
     // Model settings overlay — single instance, reused across model changes
     const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-    /** Build { value, label, disabled } options from getAvailableCommands */
-    function _opOptions() {
-        if (!activeModel) return [];
-        return getAvailableCommands(activeModel.mediaType, activeModel, { imageCount, videoCount })
-            .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
-    }
-
-    /** Rebuild the options list and current value on the existing op dropdown */
-    function _syncOpDropdown() {
-        if (!opDropdown) return;
-        const opts = _opOptions();
-        // If active operation is no longer available, fall back to first available
-        const stillAvailable = opts.find(o => o.value === activeOperation && !o.disabled);
-        if (!stillAvailable) {
-            const first = opts.find(o => !o.disabled);
-            if (first) {
-                activeOperation = first.value;
-                promptBox?.el.setOperation(activeOperation);
-            }
-        }
-        // Re-render dropdown options in place
-        opDropdown.el.setOptions(opts, activeOperation);
-    }
-
     function _mountPromptBox() {
         promptSlot.innerHTML = '';
-        opDropdown  = null;
-        promptBox   = null;
-        imageCount  = 0;
-        videoCount  = 0;
+        promptBox    = null;
+        imageCount   = 0;
+        videoCount   = 0;
 
         if (!activeModel) return;
 
-        // Operation dropdown (right side of PromptBox)
-        opDropdown = MpiDropdown.mount(document.createElement('div'), {
-            options:     _opOptions(),
-            value:       activeOperation,
-            info:        'Generation operation',
-            direction:   'up',
-        });
-
-        opDropdown.on('change', ({ value }) => {
-            activeOperation = value;
-            promptBox?.el.setOperation(activeOperation);
-            Events.emit('workspace:set-operation', { operation: activeOperation });
-        });
-
         promptBox = MpiPromptBox.mount(promptSlot, {
             model:           activeModel,
-            modelList:       imageModels,
+            modelList:       installedImageModels,
             operation:       activeOperation,
             includeNegative: true,
-            rightA:          opDropdown,
         });
 
         promptBox.on('model-change', ({ model }) => {
-            activeModel           = model;
-            state.g_selectedModel = activeModel;
-            activeOperation       = 't2i';
+            state.s_selectedModelId = model.id;
+            activeModel       = model;
+            activeOperation   = 't2i';
             _mountPromptBox();
+        });
+
+        promptBox.on('operation-change', ({ operation }) => {
+            activeOperation = operation;
         });
 
         promptBox.on('settings', () => {
@@ -243,7 +213,7 @@ export function mount(container) {
         promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
             imageCount = ic;
             videoCount = vc;
-            _syncOpDropdown();
+            promptBox.el.updateContext({ imageCount, videoCount, hasMask: false });
             refreshRadial({ imageCount, videoCount });
         });
 
@@ -280,15 +250,14 @@ export function mount(container) {
                 promptBox.el.setGenerating(false);
 
                 if (!urls.length) {
-                    console.warn('[gallery] Generation completed but no Output node images returned.');
+                    clientLogger.warn('gallery', 'Generation completed but no Output node images returned.');
                     StatusBar.progress.cancel();
                     grid.el.removeGeneratingCard(tempId);
                     return;
                 }
 
-                // Persist to disk and get a stable filename
-                let filePath = urls[0]; // fallback: comfy view URL (ephemeral)
-                let displayName = operation; // fallback card name
+                let filePath = urls[0];
+                let displayName = operation;
 
                 if (state.currentProject?.folderPath) {
                     try {
@@ -309,21 +278,18 @@ export function mount(container) {
                         if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
                         const data = await res.json();
                         if (data.success) {
-                            // Serve the saved file through project-file API
                             filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                            displayName = data.filename.replace(/\.[^.]+$/, ''); // no extension
+                            displayName = data.filename.replace(/\.[^.]+$/, '');
                         }
                     } catch (err) {
-                        console.warn('[gallery] save-generation failed, using comfy URL:', err);
+                        clientLogger.warn('gallery', 'save-generation failed, using comfy URL:', err);
                     }
                 }
 
-                // Truncate display name to 28 chars max
                 const cardName = displayName.length > 28
                     ? displayName.slice(0, 27) + '…'
                     : displayName;
 
-                // Build the MediaItem and ItemGroup
                 const item = createImageItem({
                     filePath,
                     modelId:        activeModel.id,
@@ -335,7 +301,6 @@ export function mount(container) {
                 let group = createItemGroup(cardType, { name: cardName });
                 group = appendToHistory(group, item);
 
-                // Persist itemGroups to project.json
                 if (state.currentProject) {
                     state.currentProject = addGroupToProject(state.currentProject, group);
                     _persistGroups();
@@ -347,7 +312,7 @@ export function mount(container) {
 
             exec.onError = (err) => {
                 _activeExec = null;
-                console.error('[gallery] Generation error:', err);
+                clientLogger.error('gallery', 'Generation error:', err);
                 promptBox.el.setGenerating(false);
                 StatusBar.progress.cancel();
                 grid.el.removeGeneratingCard(tempId);
@@ -366,14 +331,9 @@ export function mount(container) {
     // ── Radial menu → op dropdown sync ────────────────────────────────────
     // When the radial fires an operation change, update the dropdown to match.
     const _onSetOperation = ({ operation }) => {
-        if (!opDropdown) return;
-        const opts = _opOptions();
-        const match = opts.find(o => o.value === operation);
-        if (match && !match.disabled) {
-            activeOperation = operation;
-            opDropdown.el.setOptions(opts, activeOperation);
-            promptBox?.el.setOperation(activeOperation);
-        }
+        if (!promptBox) return;
+        activeOperation = operation;
+        promptBox.el.setOperation(activeOperation);
     };
     Events.on('workspace:set-operation', _onSetOperation);
 
