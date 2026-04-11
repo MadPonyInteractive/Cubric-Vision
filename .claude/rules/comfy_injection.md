@@ -3,21 +3,19 @@
 > **AI INSTRUCTION:** Injection works via node `_meta.title` — never hardcode node IDs. Use `filter` (not `find`) when locating nodes — multiple nodes can share a title. Never call ComfyUI directly from UI components; always go through `ComfyUIController`.
 
 ## Sub-Agent Briefing
-> Copy this section verbatim into any sub-agent prompt that involves building or modifying ComfyUI workflow execution.
+> Copy this section verbatim into any sub-agent prompt that involves ComfyUI workflow execution.
 
-- **Never hardcode node IDs.** Target nodes exclusively by `_meta.title`.
-- **Use `filter` not `find`** when locating nodes — multiple nodes can share a title.
-- **Never call ComfyUI directly from UI components.** All workflow calls go through `ComfyUIController.runWorkflow(...)`.
-- **Standard title map (key titles → input field):**
-  - `"Positive"` / `"Negative"` → `inputs.value`
-  - `"Seed"` → `inputs.int` / `inputs.value`
-  - `"Checkpoint"` / `"Model"` → `inputs.ckpt_name` / `unet_name` / `model_name`
-  - `"Lora_1"` … `"Lora_6"` → `{ lora_name, strength_model, strength_clip }`
-  - `"Input_Image"` / `"Input_Mask"` → auto-uploaded by controller (pass Data URI, blob URL, or local path)
-  - `"Upscale_Model"` → `inputs.upscale_model`, `"Upscale_Factor"` → `inputs.float` / `inputs.value`
-  - `"Output"` — required read-only result capture node
-- **Use static filenames** for uploaded images (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
-- **New params:** use a capitalized title (e.g. `"Input_Video"`) and add it to the Standard Node Title Map in this file.
+**Title-based injection:** Target nodes exclusively by `_meta.title` (case-insensitive). Never hardcode node IDs. Use `filter` not `find` when locating nodes — multiple nodes can share a title.
+
+**Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
+
+**Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node.
+
+**Upload images/masks:** Pass Data URIs, blob URLs, http URLs, or local paths to `Input_Image` / `Input_Mask` — the controller uploads automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
+
+**Standard title map:** `"Positive"`/`"Negative"` → `inputs.value`, `"Seed"` → `inputs.int`, `"Checkpoint"` → `inputs.ckpt_name`, `"Lora_1"`…`"Lora_6"` → `{ lora_name, strength_model, strength_clip }`, `"Input_Image"`/`"Input_Mask"` → auto-uploaded. Full table in `docs/comfy.md`.
+
+See `docs/comfy.md` for the full injection pattern and example.
 
 ## Standard Node Title Map
 

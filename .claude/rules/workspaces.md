@@ -3,11 +3,15 @@
 > **AI INSTRUCTION:** This file maps out the high-level routing and workspace areas of the application.
 
 ## Sub-Agent Briefing
-> Copy this section verbatim into any sub-agent prompt that involves routing, navigation, or workspace-level layout.
+> Copy this section verbatim into any sub-agent prompt that involves routing, navigation, or workspace layout.
 
-- **Three primary workspaces:** Landing (project select/create) → Gallery (default project view, all media) → Card History (single card detail, history, params).
-- **Dev Components Page** (`js/pages/components.js`): hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Used to preview UI components in isolation — ask the user before adding a new component here.
-- When building new routes or pages, understand which workspace tier they belong to before wiring up navigation.
+**Three workspaces:** Landing (project select/create) → Gallery (default project view, all media) → Card History (single card detail, history, params). See `docs/workspaces.md` for details.
+
+**Routing:** Use `js/router.js` (`navigate()` / `back()`) — never `window.location`.
+**Gallery:** `js/workspaces/gallery/gallery.js`. Contains PromptBox for model-tied commands.
+**Group History:** `js/workspaces/groupHistory/groupHistory.js`. Toolbar runs model-tied + universal commands. Universal commands (interpolate, videoUpscale, autoMaskImg) do not require a model.
+
+**Dev Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.
 
 ## 🗺️ Application Flow
 The application is currently divided into **Four Primary Workspaces**, plus one hidden developer area.

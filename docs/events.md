@@ -1,0 +1,46 @@
+# Events
+
+Cross-component and cross-layer communication. Not just UI — events span the entire application.
+
+## EventBus (`js/events.js`)
+
+- `Events.on(event, handler)`: Subscribe. Returns an unsubscribe function — **always store and call it on cleanup.**
+- `Events.emit(event, data)`: Broadcast an event.
+- `Events.once(event, handler)`: One-time subscription.
+- `Events.channel(namespace)`: Returns a namespaced bus (`bus.emit('subevent')` → `'namespace:subevent'` globally).
+
+## Key Rule
+
+**Never tight-couple components.** Do not directly call methods on other components. Emit an event instead.
+
+## Canonical Event Map
+
+Defined in `js/events.js` as `MpiEventMap`. Key events:
+
+| Event | When it fires |
+|---|---|
+| `ui:error` | Request the shell to show an error dialog |
+| `ui:close-all-popups` | Signal to close all floating UIs |
+| `state:changed` | Global reactive state mutation (auto-fired by state Proxy) |
+| `project:changed` | User switched active project |
+| `comfy:starting` | ComfyUI engine is starting |
+| `comfy:ready` | ComfyUI engine is ready |
+| `comfy:error` | ComfyUI engine error |
+| `tool:running` | A tool is actively running |
+| `tool:idle` | All tools are idle |
+| `nav:tool` | Navigation tool was activated |
+
+## Cleanup Pattern (mandatory)
+
+```javascript
+setup: (el, props, emit) => {
+    const unsub = Events.on('state:changed', handleStateChange);
+    el.destroy = () => unsub(); // Always call unsubscribe
+}
+```
+
+## State vs Events
+
+- `state:changed` is auto-fired by the state Proxy. **Never manually call `Events.emit('state:changed', ...)`** — it fires twice if you do.
+- `project:changed` is dispatched as a native `CustomEvent` in `projectManager.js` (known bug). Use `Events.on('project:changed', ...)` to subscribe.
+- Other events (`comfy:*`, `tool:*`, `nav:*`) are emitted by their respective services/managers.

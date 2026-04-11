@@ -3,13 +3,17 @@
 > **AI INSTRUCTION:** All global, persistent data must flow through `js/state.js`. Do not go rogue and create isolated data silos.
 
 ## Sub-Agent Briefing
-> Copy this section verbatim into any sub-agent prompt that involves reading or writing persistent application data.
+> Copy this section verbatim into any sub-agent prompt that involves persistent application data.
 
-- **`js/state.js` is the single source of truth for all persistent data** — selected models, current projects, generated images, etc.
-- **`state` is a Proxy.** Simply mutate it: `state.myKey = value`. This automatically fires `state:changed` on the event bus.
-- **NEVER manually call `Events.emit('state:changed', ...)`** — the Proxy does it for you. Doing it manually causes double-fire.
-- **Local UI state** (e.g. dropdown open/closed) MAY stay inside the component. Only data that must survive a component unmount goes in `state.js`.
-- **To react to changes:** `Events.on('state:changed', ({ key, value }) => { ... })` — always unsubscribe on cleanup.
+**Source of truth:** `js/state.js` is the single source for all persistent data — selected models, current projects, generated images.
+
+**The state object is a Proxy.** Mutate it with `state.myKey = value`. This automatically fires `state:changed` on the event bus. **Never manually call `Events.emit('state:changed', ...)`** — doing so causes double-fire.
+
+**To react:** `Events.on('state:changed', ({ key, value }) => { ... })`. Always unsubscribe on cleanup.
+
+**Local UI state** (dropdown open/closed, toggle state) MAY stay inside the component. Only data that must survive component unmount goes in `state.js`.
+
+See `docs/data.md` for the state keys and their meaning.
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **No Rogue States:** NEVER declare global arrays, objects, or variables outside of a component's lifecycle instance to act as "state". If data needs to persist across tool switches or component mounts, it MUST go in `js/state.js`.
