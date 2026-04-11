@@ -49,6 +49,8 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css',
   'js/components/Compounds/MpiToolActionBar/MpiToolActionBar.css',
   'js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css',
+  'js/components/Compounds/MpiHistoryList/MpiHistoryList.css',
+  'js/components/Compounds/MpiCanvasViewer/MpiCanvasViewer.css',
 
   // Blocks
   'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',
@@ -56,6 +58,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css',
   'js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.css',
   'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css',
+  'js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css',
 
 ];
 

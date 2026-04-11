@@ -54,11 +54,26 @@ export const PromptBoxService = {
     },
 
     /**
-     * Direct access to the mounted PromptBox element API.
+     * Direct access to the mounted PromptBox component instance API.
+     * The component instance has updateContext(), setGenerating(), setOperation(),
+     * setModel(), setModelList(), getMediaItems(), etc. attached directly to the
+     * DOM element by MpiPromptBox.setup().
+     *
      * Returns null if no PromptBox is currently mounted.
      * @returns {HTMLElement|null}
      */
-    get el() {
+    get component() {
         return _instance?.el ?? null;
+    },
+
+    /**
+     * Alias for component — for callers that expect a DOM element.
+     * @deprecated Use .component instead. This returns the same value but the
+     * name is misleading since the component instance API (updateContext,
+     * setGenerating, etc.) is attached to it, not a plain DOM element.
+     * @returns {HTMLElement|null}
+     */
+    get el() {
+        return this.component;
     },
 };

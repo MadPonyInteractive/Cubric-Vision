@@ -1,0 +1,79 @@
+/* ── MpiHistoryList — history card panel ─────────────────────────────────── */
+
+.mpi-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem;
+}
+
+.mpi-history-list__card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    background: var(--surface-3);
+}
+
+.mpi-history-list__card:hover {
+    filter: brightness(1.1);
+}
+
+.mpi-history-list__card--active {
+    border-color: var(--neon-electric);
+}
+
+.mpi-history-list__card--selected {
+    border-color: var(--neon-warm, #f90);
+}
+
+/* Always-visible checkbox */
+.mpi-history-list__cb-wrap {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.mpi-history-list__cb {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    accent-color: var(--neon-warm, #f90);
+    flex-shrink: 0;
+}
+
+.mpi-history-list__thumb {
+    width: 3rem;
+    height: 3rem;
+    object-fit: cover;
+    border-radius: var(--radius-xs, 3px);
+    flex-shrink: 0;
+    background: var(--surface-1);
+}
+
+.mpi-history-list__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow: hidden;
+    flex: 1;
+}
+
+.mpi-history-list__label {
+    font-size: var(--font-xs);
+    color: var(--text-primary);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mpi-history-list__date {
+    font-size: var(--font-xxs, 0.6rem);
+    color: var(--text-muted);
+}

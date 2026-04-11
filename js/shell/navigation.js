@@ -170,7 +170,6 @@ async function _loadView(page, params = {}) {
     // ── Page content ────────────────────────────────────────────────────────
     Overlays.reset();
     _toolContainer.innerHTML = '';
-    _toolContainer.classList.remove('gh-workspace');
     _toolContainer.style.position = 'relative';
 
     if (params.view === 'components') {
@@ -249,8 +248,10 @@ async function _importView(view) {
             const { MpiGalleryBlock } = await import('../components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js');
             return { mount: (container, params) => MpiGalleryBlock.mount(container, params) };
         }
-        case PAGE_GROUP_HISTORY:
-            return import('../workspaces/groupHistory/groupHistory.js');
+        case PAGE_GROUP_HISTORY: {
+            const { MpiGroupHistoryBlock } = await import('../components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js');
+            return { mount: (container, params) => MpiGroupHistoryBlock.mount(container, params) };
+        }
         default:
             console.warn(`[navigation] Unknown view: "${view}"`);
             return null;

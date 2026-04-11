@@ -1,0 +1,79 @@
+/* ── MpiGroupHistoryBlock — group history workspace layout ─────────────────── */
+
+.mpi-group-history-block {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr 14rem;
+    grid-template-rows: 0px 1fr;
+    grid-template-areas:
+        "header header header"
+        "left   centre right";
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface-1);
+}
+
+/* ── Header spacer — reserves room for the floating titlebar/nav UI ──────── */
+.mpi-group-history-block__header {
+    grid-area: header;
+}
+
+/* ── Left toolbar ─────────────────────────────────────────────────────────── */
+.mpi-group-history-block__left {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.25rem;
+    background: var(--surface-2);
+    border-right: 1px solid var(--border);
+    z-index: 1;
+}
+
+/* ── Centre viewer ────────────────────────────────────────────────────────── */
+.mpi-group-history-block__centre {
+    grid-area: centre;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-1);
+}
+
+/* ── Right history panel ──────────────────────────────────────────────────── */
+.mpi-group-history-block__right {
+    grid-area: right;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: var(--surface-2);
+    border-left: 1px solid var(--border);
+}
+
+/* ── Bottom: floating PromptBox — shell-managed, hidden during selection ──── */
+.mpi-group-history-block__bottom {
+    /* Spans all 3 columns so it floats over the full width */
+    position: fixed;
+    bottom: 30px;
+    min-width: 600px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-glass);
+    border-radius: var(--radius-xl);
+    z-index: 10;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.mpi-group-history-block__bottom--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ── Error state ─────────────────────────────────────────────────────────── */
+.mpi-group-history-block__error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+}

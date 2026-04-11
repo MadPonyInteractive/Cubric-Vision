@@ -621,6 +621,55 @@
  */
 
 /**
+ * @typedef {Object} MpiHistoryListProps (Compound — js/components/Compounds/MpiHistoryList)
+ * @property {import('./data/projectModel.js').HistoryItem[]} [history=[]] - Initial history array
+ * @property {number} [selectedIndex=0] - Initially active entry index
+ *
+ * Instance methods (on instance.el):
+ *   setActiveIndex(idx)          — highlight active card (no events)
+ *   setGroups(history)           — replace history array and rebuild cards
+ *   appendEntry(item)            — add a new entry card at the end
+ *   removeEntries(indices)       — remove cards at given sorted-descending indices
+ *   exitSelectMode()             — programmatically exit select mode
+ *
+ * Emits:
+ *   'entry-selected'    { idx, item }    — card clicked (not in select mode)
+ *   'selection-changed' { indices }       — selection updated
+ *   'selection-exited'  {}               — select mode ended
+ *   'compare-requested' { idxA, idxB }  — two items ready to compare
+ *   'delete-requested'  { indices }     — deletion confirmed
+ */
+
+/**
+ * @typedef {Object} MpiCanvasViewerProps (Compound — js/components/Compounds/MpiCanvasViewer)
+ * @property {string} [initialImageUrl=''] - URL of the first image to load
+ * @property {number} [initialIdx=0]       - History index of the initial image
+ *
+ * Instance methods (on instance.el):
+ *   loadEntry(item, idx)           — save current mask, load item's image, restore idx's mask
+ *   loadCompare(itemA, itemB)     — load two images in compare mode
+ *   enterMode(mode)               — enter 'crop'|'mask'|'automask' (or 'none' to exit all)
+ *   exitMode()                    — exit any active tool mode
+ *   getCurrentMaskDataURL()        — returns current mask as data URL, or null
+ *   hasMask()                     — returns boolean
+ *   setGenerating(bool)            — show/hide generating spinner
+ *
+ * Emits:
+ *   'mode-changed'  { mode }      — tool mode changed (from any source)
+ *   'crop-applied'  { item }      — crop completed; item is the new HistoryItem
+ *   'mask-ready'    { hasMask }   — mask painted or cleared
+ *   'entry-loaded'  { idx, hasMask } — image loaded for index
+ */
+
+/**
+ * @typedef {Object} MpiGroupHistoryBlockProps (Block — js/components/Blocks/MpiGroupHistoryBlock)
+ * @property {string} groupId - ID of the ItemGroup to display (from router params)
+ *
+ * Emits: (none — uses Events bus and PromptBoxService)
+ * Uses: state.currentProject, state.s_selectedModelId, PromptBoxService
+ */
+
+/**
  * @typedef {Object} MpiRadialMenuProps (Primitive — js/components/Primitives/MpiRadialMenu)
  * @property {'root'|'image'|'video'|'audio'} [context='root'] - Active context that determines which items are shown
  * @property {boolean} [open=false] - Force the menu open on mount (used for first-run/workspace entry)

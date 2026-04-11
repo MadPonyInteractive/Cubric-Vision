@@ -206,7 +206,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
                 imageCount = ic;
                 videoCount = vc;
-                PromptBoxService.el?.updateContext({ imageCount, videoCount, hasMask: false });
+                PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
                 refreshRadial({ imageCount, videoCount });
             });
 
@@ -234,7 +234,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                 exec.onComplete = async (urls) => {
                     _activeExec = null;
-                    PromptBoxService.el?.setGenerating(false);
+                    PromptBoxService.component?.setGenerating(false);
 
                     if (!urls.length) {
                         clientLogger.warn('MpiGalleryBlock', 'Generation completed but no Output node images returned.');
@@ -300,7 +300,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 exec.onError = (err) => {
                     _activeExec = null;
                     clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
-                    PromptBoxService.el?.setGenerating(false);
+                    PromptBoxService.component?.setGenerating(false);
                     StatusBar.progress.cancel();
                     grid.el.removeGeneratingCard(tempId);
                 };
@@ -320,7 +320,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Radial → operation sync ─────────────────────────────────────────────
         const _unsubSetOp = Events.on('workspace:set-operation', ({ operation }) => {
             activeOperation = operation;
-            PromptBoxService.el?.setOperation(activeOperation);
+            PromptBoxService.component?.setOperation(activeOperation);
         });
 
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
