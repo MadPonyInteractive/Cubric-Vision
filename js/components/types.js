@@ -198,12 +198,33 @@
 
 
 /**
- * @typedef {Object} MpiPromptBoxProps (Compound — js/components/Compounds/MpiPromptBox)
- * @property {string} [value=''] - Initial positive prompt value
- * @property {string} [negativeValue=''] - Initial negative prompt value
- * @property {boolean} [includeNegative=false] - Whether to show the negative prompt toggle
- * @property {any|any[]} [LeftA] - Components for the left container (ordered left-to-right)
- * @property {any|any[]} [rightA] - Components for the right container (ordered right-to-left)
+ * @typedef {Object} MpiPromptBoxProps (Block — js/components/Blocks/MpiPromptBox)
+ * @property {import('./data/modelRegistry.js').ModelDef|null} [model=null]
+ * @property {import('./data/modelRegistry.js').ModelDef[]} [modelList=[]]
+ * @property {string} [operation='t2i']
+ * @property {string} [value='']
+ * @property {string} [negativeValue='']
+ * @property {boolean} [includeNegative=false]
+ * @property {boolean} [showSettings=true]
+ * @property {boolean} [generating=false]
+ * @property {Object} [context={}]
+ *
+ * Instance methods (on instance.el):
+ *   imageCount    {number}
+ *   videoCount    {number}
+ *   getMediaItems()
+ *   clearMedia()
+ *   setOperation(key)
+ *   setGenerating(bool)
+ *   updateContext({ imageCount, videoCount, hasMask })
+ *
+ * Emits:
+ *   'model-change'      { model }
+ *   'operation-change'  { operation }
+ *   'media-change'      { imageCount, videoCount, items }
+ *   'run'               { operation, positive, negative, mediaItems }
+ *   'cancel'            {}
+ *   'settings'          { model }
  */
 
 

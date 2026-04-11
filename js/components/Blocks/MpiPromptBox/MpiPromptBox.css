@@ -1,0 +1,231 @@
+/* BEM Block naming — mpi-prompt-box */
+.mpi-prompt-box {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background: var(--surface-glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    transition: all var(--transition);
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.mpi-prompt-box:hover {
+    border-color: var(--neon-border);
+    box-shadow: 0 0 20px var(--neon-glow-sm);
+}
+
+.mpi-prompt-box__prompts {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+/* Expansion lock button - top center, sitting on border */
+.mpi-prompt-box__lock-container {
+    position: absolute;
+    top: -12px;
+    /* Pull it halfway over the border */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.mpi-prompt-box__lock-btn {
+    transition: all 0.2s ease;
+}
+
+/* Textarea styling overrides */
+.mpi-prompt-box .mpi-input__field--textarea {
+    resize: none;
+    min-height: 3.5rem;
+    /* ~2 lines */
+    max-height: 14rem;
+    /* ~8 lines */
+    padding-right: 3rem;
+    /* Room for copy button */
+    overflow-y: auto;
+    /* background: transparent !important; */
+    background: var(--bg-recessed);
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.mpi-prompt-box .mpi-input__field--textarea::placeholder {
+    color: var(--text-3) !important;
+    opacity: 0.6;
+}
+
+.mpi-prompt-box .mpi-input__field--textarea--locked {
+    height: 3.5rem !important;
+    /* Fixed at ~2 lines */
+    max-height: 3.5rem !important;
+}
+
+/* Copy button position */
+.mpi-prompt-box__copy-wrapper {
+    position: absolute;
+    right: 0.25rem;
+    bottom: 0.25rem;
+    z-index: 5;
+}
+
+/* Negative label/header (kept for CSS naming consistency if used) */
+.mpi-prompt-box__label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: -0.5rem;
+    margin-left: 0.25rem;
+}
+
+/* Bottom section & Separator */
+.mpi-prompt-box__separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-soft) 20%, var(--border-soft) 80%, transparent);
+    margin: 0.3rem 0;
+    width: 100%;
+}
+
+.mpi-prompt-box__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    /* min-height: 2.5rem; */
+}
+
+.mpi-prompt-box__area {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.mpi-prompt-box__area--left {
+    justify-content: flex-start;
+}
+
+.mpi-prompt-box__area--center {
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.mpi-prompt-box__area--right {
+    justify-content: flex-end;
+}
+
+/* ── Media drop zone ──────────────────────────────────────────────────────── */
+
+.mpi-prompt-box__media-zone {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    /* padding: 0.25rem 0; */
+    border-bottom: 1px dashed var(--border-soft);
+    margin-bottom: 0.5rem;
+    transition: border-color var(--transition), background var(--transition);
+    flex-wrap: wrap;
+}
+
+.mpi-prompt-box__media-zone--drag-over {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+    border-radius: var(--radius);
+}
+
+/* .mpi-prompt-box__media-zone--has-media {
+    border-style: solid;
+} */
+
+/* Drop hint (shown when zone is empty) */
+.mpi-prompt-box__drop-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+    font-size: 0.8rem;
+    opacity: 0.6;
+    pointer-events: none;
+    user-select: none;
+}
+
+.mpi-prompt-box__drop-hint-icon {
+    display: flex;
+    align-items: center;
+}
+
+/* Media chips */
+.mpi-prompt-box__media-chips {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.mpi-prompt-box__media-chip {
+    position: relative;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius);
+    overflow: visible;
+    border: 1px solid var(--border-soft);
+    flex-shrink: 0;
+}
+
+.mpi-prompt-box__chip-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius);
+    display: block;
+}
+
+.mpi-prompt-box__chip-video-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    color: var(--text-2);
+}
+
+.mpi-prompt-box__chip-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background var(--transition), border-color var(--transition);
+    padding: 0;
+    z-index: 5;
+}
+
+.mpi-prompt-box__chip-remove:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+}
