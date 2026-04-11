@@ -2,6 +2,19 @@
 
 > **AI INSTRUCTION:** You MUST use the Event Bus for cross-component and cross-file communication. Do not pass deep callbacks or directly import one component into another to trigger actions.
 
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves cross-component communication or event handling.
+
+- **Always use `Events.on()` / `Events.emit()` for cross-component communication.** Never directly call methods on other components.
+- **`Events.on()` returns an unsubscribe function — always store it and call it on cleanup.** Not doing so causes memory leaks.
+- **Always check `js/events.js` (`MpiEventMap`) for canonical event names** before inventing new ones. Common ones: `ui:error`, `ui:close-all-popups`, `state:changed`, `project:changed`, `comfy:ready`, `comfy:error`.
+- **Cleanup pattern (mandatory inside `setup()`):**
+  ```js
+  const unsub = Events.on('state:changed', handler);
+  el.destroy = () => unsub();
+  ```
+- **For tools with many internal events,** use `Events.channel('myTool')` to namespace them (e.g. `myTool:result`).
+
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **Unsubscribe to Prevent Leaks:** `Events.on()` returns an unsubscribe function. You MUST always store it and call it when your component is destroyed or removed from the DOM.
 2. **Never Tight-Couple:** Do not directly call methods on other components. Emit an event instead.

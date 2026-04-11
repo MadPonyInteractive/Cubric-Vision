@@ -20,10 +20,13 @@
 'use strict';
 
 import { ComfyUIController } from './comfyController.js';
-import { getWorkflowFile, getUniversalWorkflow } from '../data/modelRegistry.js';
+import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
 import { getCommand } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
+import { state } from '../state.js';
+import { getModelSettings, getToolSettings } from '../data/projectModel.js';
+import { DEPS } from '../data/modelConstants/dependencies.js';
 
 /**
  * @typedef {Object} RunPayload
@@ -59,6 +62,18 @@ import { clientLogger } from './clientLogger.js';
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running generation
  */
+
+/**
+ * Resolves just the filename portion of a dep's path (strips folder prefix).
+ * e.g. "upscale_models/4x_NMKD-Siax_200k.pth" → "4x_NMKD-Siax_200k.pth"
+ * @param {string} depId
+ * @returns {string|null}
+ */
+function _depFilename(depId) {
+    const dep = DEPS[depId];
+    if (!dep?.filename) return null;
+    return dep.filename.split('/').pop();
+}
 
 /**
  * Resolves the workflow filename for a given operation + model.
@@ -105,6 +120,35 @@ function _buildParams(payload) {
     if (videoItem) params['Input_Image'] = videoItem.url; // video ops use same slot
 
     if (payload.maskDataUrl) params['Input_Mask'] = payload.maskDataUrl;
+
+    // ── Model / Tool Settings injection ───────────────────────────────────────
+    const project = state.currentProject;
+    if (project) {
+        if (payload.modelId) {
+            // Model context: inject LoRA slots + upscale model
+            const settings = getModelSettings(project, payload.modelId);
+
+            // LoRA slots — only inject non-null entries
+            settings.loras.forEach((slot, i) => {
+                if (!slot.name) return;
+                params[`Lora_${i + 1}`] = {
+                    lora_name:      slot.name,
+                    strength_model: slot.strengthModel ?? 1.0,
+                    strength_clip:  slot.strengthClip  ?? 1.0,
+                };
+            });
+
+            // Upscale model — user selection takes priority, else model default
+            const upscaleFilename = settings.upscaleModel
+                || _depFilename(getModelById(payload.modelId)?.defaultUpscale);
+            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
+
+        } else if (payload.operation) {
+            // Tool/universal context: inject upscale model only
+            const settings = getToolSettings(project, payload.operation);
+            if (settings.upscaleModel) params['Upscale_Model'] = settings.upscaleModel;
+        }
+    }
 
     return params;
 }

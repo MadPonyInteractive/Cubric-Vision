@@ -5,19 +5,9 @@
 
 ## 🚀 Active To-Dos (Highest Priority)
 
-**State Architecture Overhaul (`js/state.js`, `js/data/projectModel.js`, `js/managers/projectManager.js`)**
-- [ ] **Audit & strip legacy state:** `state.js` contains dead properties from a previous app version (e.g. `g_currentGuide`, `g_promptEN`, `g_wizardStep`, `g_images`, `g_imageContext`, tool-specific flat keys like `detailerInputImage`, `upscalerAutoGrid`, etc.). Confirm each is unused before removing. Ask user before deleting anything.
-- [ ] **Design two-track settings state:**
-  - **Model settings** (keyed by model id, persisted per-project): selected user LoRAs (up to 6 slots with strength values) + selected upscale model. Shape: `project.modelSettings[modelId] = { loras: [...], upscaleModel: '...' }`.
-  - **Tool settings** (keyed by tool name, persisted per-project): for tools that are not model-based (e.g. Video Upscaler in history workspace). Shape: `project.toolSettings[toolName] = { upscaleModel: '...' }`.
-- [ ] **Update `projectModel.js`:** Add `modelSettings` and `toolSettings` to the `Project` typedef and `createProject()` factory defaults.
-- [ ] **Update `projectManager.js`:** Replace the current `toolComfySettings` save/restore logic with the new two-track structure. Ensure migration handles old `toolComfySettings` / `comfySettings` keys gracefully.
-- [ ] **Update `state.js`:** Replace `defaultComfySettings` / `toolComfySettings` with clean equivalents that reflect the new structure. Remove confirmed legacy keys.
+**~~State Architecture Overhaul~~** ✅ Complete — `state.js` cleaned, two-track settings live on the project object, helpers and `saveProjectSettings()` in place. See `docs/superpowers/plans/2026-04-10-state-architecture-overhaul.md`.
 
-**Model Settings Overlay (new component)**
-- [ ] Build a reusable overlay component that shows LoRA slots and upscale model selector for the currently active model. Context-aware: shows only upscale selector when invoked from a non-model tool (e.g. Video Upscaler). Selections are persisted into the two-track state above and injected into workflows at run time via `Lora_1`…`Lora_6` and `Upscale_Model` node titles.
-- [ ] Add `defaultUpscale` field to each model entry in `js/data/modelConstants/models.js` so a sensible default is pre-selected when no user preference exists.
-- [ ] Backend route: scan ComfyUI `loras/` and `upscale_models/` folders and return available filenames (for populating the overlay dropdowns at runtime).
+**~~Model Settings Overlay~~** ✅ Complete — `assetService.js`, `MpiModelSettings.css`, `MpiModelSettings.js` created; CSS registered, typedef added. Navigation stale-stash bug fixed via `Overlays.reset()` in `overlayManager.js` and `navigation.js`. See `docs/superpowers/plans/2026-04-10-model-settings-overlay.md`.
 
 ---
 
@@ -47,6 +37,7 @@
 - [ ] **Model Sizes:** Calculate install size dynamically from each model's dependencies.
 - [ ] **VRAM Requirements:** Calculate VRAM footprint dynamically from each model's dependencies.
 - [ ] **Event Bus Cleanup:** `groupHistory.js` imports `StatusBar` directly — refactor to use the event bus once `tool:running`/`tool:idle` subscription architecture is finalized.
+- [ ] **Event Bus Cleanup:** `openProject()` in `projectManager.js` dispatches `project:changed` via `document.dispatchEvent(new CustomEvent(...))` instead of `Events.emit()`. Pre-existing bug — any subscriber using `Events.on('project:changed', ...)` will not receive it.
 - [ ] **Router Cleanup:** Remove `PAGE_WORKSPACE` alias from `router.js` when confirmed unused.
 - [ ] **Component Gallery:** Add `MpiSelectionBar` to the Dev Components Gallery (`js/pages/components.js`).
 

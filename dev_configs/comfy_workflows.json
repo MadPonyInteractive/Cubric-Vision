@@ -6,7 +6,7 @@
       "file": "sdxl_t2i_nsfw.json",
       "model_type": "sdxl",
       "type": "image_generation",
-      "installed": true,
+      "installed": false,
       "description": "A NSFW SDXL-based workflow using the Lustify V7 for fast generations and the official SDXL Refiner for higher quality images.",
       "dependencies": [
         {
@@ -63,7 +63,7 @@
       "file": "sdxl_detailer.json",
       "model_type": "sdxl",
       "type": "detailer",
-      "installed": true,
+      "installed": false,
       "description": "A fast SDXL detailer workflow.",
       "dependencies": [
         {
@@ -153,7 +153,7 @@
       "file": "sdxl_upscaler.json",
       "model_type": "sdxl",
       "type": "upscaler",
-      "installed": true,
+      "installed": false,
       "description": "A fast SDXL upscaler workflow.",
       "dependencies": [
         {

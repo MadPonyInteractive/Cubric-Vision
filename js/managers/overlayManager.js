@@ -74,6 +74,17 @@ class OverlayManager {
     }
 
     /**
+     * Force-clears all overlay state without calling hide().
+     * Call this before navigation tears down #tool-container so the queue
+     * doesn't get stuck thinking an overlay is still active.
+     */
+    reset() {
+        Events.emit('ui:close-all-popups');
+        this._active = null;
+        this._queue = [];
+    }
+
+    /**
      * Attempts to close the current active overlay (triggered by Escape or global logic).
      * @returns {boolean} - True if an overlay was closed
      */

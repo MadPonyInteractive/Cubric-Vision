@@ -2,6 +2,16 @@
 
 > **AI INSTRUCTION:** This file contains rules for interacting with the raw python process, managing model dependencies, and route architecture.
 
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves the ComfyUI backend, model registry, or Python engine.
+
+- **`js/data/modelRegistry.js` is the single source of truth** for all generative models. Add new checkpoints, LoRAs, and custom nodes to `MODELS` or `DEPS` here only.
+- **Never hardcode `installed: true`** in the registry. Install status is resolved at runtime via `GET /comfy/models/check`.
+- **Never spawn Python or run `pip` manually.** All engine management is handled exclusively by `routes/comfy.js` and `routes/shared.js`.
+- **When adding a new model**, check `DEPS` in `modelConstants/dependencies.js` first and provide a `dependencies[]` array.
+- **Do not add arbitrary CLI args** to the ComfyUI spawn command — they may break portable installs.
+- **New routes talking to ComfyUI's internal API** must account for both deep and shallow memory cleaning modes.
+
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **Source of Truth:** `js/data/modelRegistry.js` is the single source of truth for ALL generative models. If you need to add a checkpoint, LoRA, or custom node, you add it to the `MODELS` or `DEPS` dictionary here.
 2. **Never Hardcode Install Status:** Never hardcode `installed: true` in the registry. Model presence is dynamically resolved at runtime by the backend `GET /comfy/models/check`.

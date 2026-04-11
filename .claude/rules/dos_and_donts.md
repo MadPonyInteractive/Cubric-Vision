@@ -2,6 +2,17 @@
 
 > **AI INSTRUCTION:** Before writing any new logic or styles, you MUST verify if a utility or CSS variable already exists. Reinventing the wheel is strictly forbidden in this codebase.
 
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves DOM work, CSS, utilities, or icons.
+
+- **Never hardcode colors.** CSS variables only — from `styles/01_base.css`. No hex codes, no named colors.
+- **Never paste raw SVG.** Import from `js/utils/icons.js`. If the icon is missing, add it there first.
+- **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
+- **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
+- **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `string.js`, `seed.js`, `ratios.js`, `promptOptions.js` may already do what you need.
+- **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
+- **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
+
 ## 🧰 The Utilities Folder (`js/utils/`)
 
 Whenever you need generic functionality, ALWAYS check the `js/utils/` directory first. If a pattern is repeated across components, abstract it into a utility file here.

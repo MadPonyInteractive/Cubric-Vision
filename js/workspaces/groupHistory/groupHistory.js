@@ -28,6 +28,7 @@ import { MpiToolActionBar } from '../../components/Compounds/MpiToolActionBar/Mp
 import { MpiAutoMaskThumbs } from '../../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiRadioGroup } from '../../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
 import { getModelsByType } from '../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS } from '../../utils/ratios.js';
@@ -769,6 +770,9 @@ export function mount(container, params = {}) {
     let _promptBox = null;
     let _activeExec = null;
 
+    // Model settings overlay — single instance for this workspace
+    const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
+
     if (activeModel) {
         _opDropdown = MpiDropdown.mount(ce('div'), {
             options: _opOptions(),
@@ -783,10 +787,15 @@ export function mount(container, params = {}) {
         });
 
         _promptBox = MpiPromptBox.mount(bottom, {
-            model: activeModel,
-            operation: activeOperation,
+            model:           activeModel,
+            modelList:       models,
+            operation:       activeOperation,
             includeNegative: true,
-            rightA: _opDropdown,
+            rightA:          _opDropdown,
+        });
+
+        _promptBox.on('settings', () => {
+            _settingsOverlay.el.open({ modelId: activeModel.id });
         });
 
         _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {

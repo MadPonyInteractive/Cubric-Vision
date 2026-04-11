@@ -2,6 +2,19 @@
 
 > **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in MpiAiSuite.
 
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves creating or modifying components.
+
+- **All components MUST use `ComponentFactory.create()`** — never build a component by hand.
+- **NEVER modify `js/components/factory.js`** — it is locked. Fix your component, not the factory.
+- **3-Tier hierarchy (never import up):** Primitives → Compounds → Blocks. Primitives import nothing. Compounds import Primitives only. Blocks import both.
+- **Every new component checklist:** (1) register `.css` in `js/shell/preloadStyles.js`, (2) document props in `js/components/types.js`, (3) ask user about gallery addition.
+- **Use `js/utils/dom.js`** shorthands — never raw `document.querySelector`.
+- **Blocking UI (modals/overlays):** call `Overlays.request(...)` to show, `Overlays.release(el)` to hide. Portal to `document.body`. Self-close on `ui:close-all-popups`.
+- **Floating UI (dropdowns/popups):** No Overlays registration. Self-close on `ui:close-all-popups`. Use `MutationObserver` to clean up body portals when anchor is removed.
+- **Hotkeys:** `Hotkeys.register(key, fn)` to bind, `Hotkeys.unregister(key, fn)` on destroy/hide. Never use raw `window.addEventListener('keydown')`.
+- **All state management, hotkeys, and overlay mounting MUST happen inside `setup()`.** Callers must never import `overlayManager`, `hotkeyManager`, or `Events` to manage a component.
+
 ## CRITICAL "NEVER FORGET" RULES
 1. **Preload CSS:** You MUST add the `.css` path to `js/shell/preloadStyles.js` when creating a component.
 2. **JSDocs:** You MUST document the component's `props` in `js/components/types.js`.

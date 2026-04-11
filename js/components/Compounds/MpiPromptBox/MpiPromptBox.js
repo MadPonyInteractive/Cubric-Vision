@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands } from '../../../data/commandRegistry.js';
@@ -12,11 +13,15 @@ import { commands } from '../../../data/commandRegistry.js';
  * @param {string}  [value='']              - Initial positive prompt value
  * @param {string}  [negativeValue='']      - Initial negative prompt value
  * @param {boolean} [includeNegative=false] - Whether to show the negative prompt toggle
- * @param {any|any[]} [LeftA]               - Component instances for the left bottom area
+ * @param {any|any[]} [LeftA]               - Component instances for the left bottom area (after model selector)
  * @param {any|any[]} [rightA]              - Component instances for the right bottom area
  * @param {import('../../../data/modelRegistry.js').ModelDef|null} [model=null]
  *   Active model — determines which media types the drop zone accepts.
  *   If null, no media drop zone is rendered.
+ * @param {import('../../../data/modelRegistry.js').ModelDef[]} [modelList=[]]
+ *   Full list of selectable models. When provided and length > 1, a model
+ *   dropdown is rendered in the left slot. Requires `model` to be set.
+ * @param {boolean} [showSettings=true]     - Show gear button next to model selector (only when model is set)
  * @param {string}  [operation='t2i']       - Initial active operation key
  *
  * Instance API (on instance.el):
@@ -38,6 +43,8 @@ import { commands } from '../../../data/commandRegistry.js';
  *   'media-change' { imageCount, videoCount, items }
  *   'run'          { operation, positive, negative, mediaItems }
  *   'cancel'       {}
+ *   'model-change' { model }   - fired when the internal model dropdown changes
+ *   'settings'     { model }   - fired when the gear button is clicked
  */
 export const MpiPromptBox = ComponentFactory.create({
     name: 'MpiPromptBox',
@@ -275,6 +282,34 @@ export const MpiPromptBox = ComponentFactory.create({
                 else if (typeof item === 'string') container.innerHTML += item;
             });
         };
+
+        // ── Model selector + gear button (left slot, first) ────────────────────
+        if (model) {
+            const modelList = props.modelList || [];
+            const leftSlot  = el.querySelector('#bottom-left-slot');
+
+            if (modelList.length > 1) {
+                const modelDropdown = MpiDropdown.mount(document.createElement('div'), {
+                    options:   modelList.map(m => ({ value: m.id, label: m.name })),
+                    value:     model.id,
+                    info:      'Active model',
+                    direction: 'up',
+                });
+                modelDropdown.on('change', ({ value }) => {
+                    const selected = modelList.find(m => m.id === value);
+                    if (selected) emit('model-change', { model: selected });
+                });
+                leftSlot.appendChild(modelDropdown.el);
+            }
+
+            if (props.showSettings !== false) {
+                const gearBtn = MpiButton.mount(document.createElement('div'), {
+                    icon: 'settings', variant: 'ghost', size: 'sm', info: 'Model Settings',
+                });
+                gearBtn.on('click', () => emit('settings', { model }));
+                leftSlot.appendChild(gearBtn.el);
+            }
+        }
 
         mountArea('bottom-left-slot',  props.LeftA);
         mountArea('bottom-right-slot', props.rightA);

@@ -22,6 +22,7 @@ import { StatusBar } from '../../shell/statusBar.js';
 import { createImageItem, createItemGroup, appendToHistory, addGroupToProject, getSelectedItem, removeGroupFromProject, updateGroupInProject } from '../../data/projectModel.js';
 import { MpiCompareOverlay } from '../../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../components/Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
 
 /**
  * Mounts the gallery workspace into the given container.
@@ -170,6 +171,9 @@ export function mount(container) {
     let opDropdown   = null;
     let promptBox    = null;
 
+    // Model settings overlay — single instance, reused across model changes
+    const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
+
     /** Build { value, label, disabled } options from getAvailableCommands */
     function _opOptions() {
         if (!activeModel) return [];
@@ -217,31 +221,23 @@ export function mount(container) {
             Events.emit('workspace:set-operation', { operation: activeOperation });
         });
 
-        // Model picker (left side) — only shown when more than one model available
-        const modelDropdown = imageModels.length > 1
-            ? MpiDropdown.mount(document.createElement('div'), {
-                options:   imageModels.map(m => ({ value: m.id, label: m.name })),
-                value:     activeModel.id,
-                info:      'Active model',
-                direction: 'up',
-              })
-            : null;
-
-        if (modelDropdown) {
-            modelDropdown.on('change', ({ value }) => {
-                activeModel           = imageModels.find(m => m.id === value) || activeModel;
-                state.g_selectedModel = activeModel;
-                activeOperation       = 't2i';
-                _mountPromptBox();
-            });
-        }
-
         promptBox = MpiPromptBox.mount(promptSlot, {
             model:           activeModel,
+            modelList:       imageModels,
             operation:       activeOperation,
             includeNegative: true,
-            LeftA:           modelDropdown,
             rightA:          opDropdown,
+        });
+
+        promptBox.on('model-change', ({ model }) => {
+            activeModel           = model;
+            state.g_selectedModel = activeModel;
+            activeOperation       = 't2i';
+            _mountPromptBox();
+        });
+
+        promptBox.on('settings', () => {
+            _settingsOverlay.el.open({ modelId: activeModel.id });
         });
 
         promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {

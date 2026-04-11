@@ -18,6 +18,7 @@ import { initShaderBackground, stopShaderBackground } from '../components/shader
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
 import { getAvailableCommands } from '../data/commandRegistry.js';
+import { Overlays } from '../managers/overlayManager.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ export function initNavigation(refs) {
 export function handleNavigation(page, params = {}) {
     if (page === PAGE_LANDING) {
         clearHistory();
+        Overlays.reset();
         // Tear down radial so the next project entry re-mounts fresh,
         // correctly re-evaluating tutorialSeen for the new project.
         if (_radialInstance) {
@@ -165,6 +167,7 @@ async function _loadView(page, params = {}) {
     _syncRadial(page);
 
     // ── Page content ────────────────────────────────────────────────────────
+    Overlays.reset();
     _toolContainer.innerHTML = '';
     _toolContainer.classList.remove('gh-workspace');
     _toolContainer.style.position = 'relative';

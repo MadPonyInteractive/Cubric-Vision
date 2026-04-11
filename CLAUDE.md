@@ -15,6 +15,24 @@
 
 ---
 
+## Critical Rules Snapshot (Applies to ALL agents, always)
+
+> These rules apply unconditionally. No file read required — follow them immediately.
+
+- **Never hardcode colors.** Use CSS variables from `styles/01_base.css` only.
+- **Never paste raw SVG.** All icons come from `js/utils/icons.js`. Add missing icons there first.
+- **Never use raw `document.querySelector`.** Use shorthands from `js/utils/dom.js`.
+- **Never create global state outside `js/state.js`.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
+- **Never use raw `window.addEventListener('keydown')`.** Use `Hotkeys.register` / `Hotkeys.unregister`.
+- **BEM is mandatory.** Format: `.mpi-block__element--modifier`. No exceptions.
+- **All components MUST use `ComponentFactory.create()`.** Never bypass the factory pattern.
+- **NEVER modify `js/components/factory.js`.** The factory is locked.
+- **Every new component MUST:** register its `.css` in `js/shell/preloadStyles.js` AND document its props in `js/components/types.js`.
+- **Use `Events.on()` / `Events.emit()` for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
+- **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
+
+---
+
 ## Baseline Rule (ALWAYS APPLIES)
 
 **Before writing any code**, you MUST read `.claude/rules/dos_and_donts.md`. It contains universal CSS, icon, and utility rules that apply to every task regardless of category.
@@ -56,6 +74,24 @@ If you are adding models to the registry, managing downloads, or dealing with th
 ### Debugging & Errors
 If you are trying to fix a bug, a server crash, or an issue with the python engine:
 **->** **MUST DO:** Read the last 50-100 lines of `logs/app.log` using the `Read` tool with an `offset`. Do NOT parse the entire file. This log is the master terminal output and contains runtime telemetry.
+
+---
+
+## Sub-Agent Rule Injection Map
+
+> **FOR THE MAIN AGENT:** When dispatching a sub-agent via the `Agent` tool, sub-agents start cold — they have no CLAUDE.md context. You MUST copy the relevant briefing text from the rule file's `## Sub-Agent Briefing` section directly into the sub-agent's prompt. Always include the Critical Rules Snapshot above in every sub-agent prompt.
+
+| Task type | Rule file | Briefing location |
+|---|---|---|
+| Any code at all | *(inline above)* | Critical Rules Snapshot — always include |
+| Components / UI | `.claude/rules/components.md` | `## Sub-Agent Briefing` |
+| DOM / CSS / Utilities | `.claude/rules/dos_and_donts.md` | `## Sub-Agent Briefing` |
+| Events & communication | `.claude/rules/events.md` | `## Sub-Agent Briefing` |
+| Application state | `.claude/rules/state.md` | `## Sub-Agent Briefing` |
+| ComfyUI workflow injection | `.claude/rules/comfy_injection.md` | `## Sub-Agent Briefing` |
+| ComfyUI engine / backend | `.claude/rules/comfy_engine.md` | `## Sub-Agent Briefing` |
+| Workspace / routing | `.claude/rules/workspaces.md` | `## Sub-Agent Briefing` |
+| Debugging | `logs/app.log` (last 100 lines via `Read` with offset) | No briefing section — paste log tail directly |
 
 ---
 

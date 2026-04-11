@@ -1,6 +1,13 @@
 # Workspace Architecture
 
-> **AI INSTRUCTION:** This file maps out the high-level routing and workspace areas of the application. 
+> **AI INSTRUCTION:** This file maps out the high-level routing and workspace areas of the application.
+
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves routing, navigation, or workspace-level layout.
+
+- **Three primary workspaces:** Landing (project select/create) → Gallery (default project view, all media) → Card History (single card detail, history, params).
+- **Dev Components Page** (`js/pages/components.js`): hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Used to preview UI components in isolation — ask the user before adding a new component here.
+- When building new routes or pages, understand which workspace tier they belong to before wiring up navigation.
 
 ## 🗺️ Application Flow
 The application is currently divided into **Four Primary Workspaces**, plus one hidden developer area.

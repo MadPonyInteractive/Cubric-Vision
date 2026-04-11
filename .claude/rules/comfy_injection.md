@@ -2,6 +2,23 @@
 
 > **AI INSTRUCTION:** Injection works via node `_meta.title` — never hardcode node IDs. Use `filter` (not `find`) when locating nodes — multiple nodes can share a title. Never call ComfyUI directly from UI components; always go through `ComfyUIController`.
 
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves building or modifying ComfyUI workflow execution.
+
+- **Never hardcode node IDs.** Target nodes exclusively by `_meta.title`.
+- **Use `filter` not `find`** when locating nodes — multiple nodes can share a title.
+- **Never call ComfyUI directly from UI components.** All workflow calls go through `ComfyUIController.runWorkflow(...)`.
+- **Standard title map (key titles → input field):**
+  - `"Positive"` / `"Negative"` → `inputs.value`
+  - `"Seed"` → `inputs.int` / `inputs.value`
+  - `"Checkpoint"` / `"Model"` → `inputs.ckpt_name` / `unet_name` / `model_name`
+  - `"Lora_1"` … `"Lora_6"` → `{ lora_name, strength_model, strength_clip }`
+  - `"Input_Image"` / `"Input_Mask"` → auto-uploaded by controller (pass Data URI, blob URL, or local path)
+  - `"Upscale_Model"` → `inputs.upscale_model`, `"Upscale_Factor"` → `inputs.float` / `inputs.value`
+  - `"Output"` — required read-only result capture node
+- **Use static filenames** for uploaded images (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
+- **New params:** use a capitalized title (e.g. `"Input_Video"`) and add it to the Standard Node Title Map in this file.
+
 ## Standard Node Title Map
 
 | Title | Input field | Notes |

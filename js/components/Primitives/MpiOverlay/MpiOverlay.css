@@ -4,16 +4,21 @@
    Sidebar, titlebar, and status bar remain untouched.
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Root: fills tool-container as a scrollable page ────────── */
+/* ── Root: fills the entire main-area including the topbar ────── */
 .mpi-overlay {
-    position: relative;
-    width: 100%;
-    min-height: 100%;
+    position: fixed;
+    top: var(--titlebar-h, 32px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 3rem 2rem 5rem;
     gap: 1.5rem;
+    z-index: 200;
+    background: var(--bg);
     animation: mpi-overlay-fadein 0.3s ease-out both;
 }
 

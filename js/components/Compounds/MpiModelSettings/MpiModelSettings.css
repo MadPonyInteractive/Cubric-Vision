@@ -39,7 +39,7 @@
 
 .mpi-model-settings__lora-slot {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
@@ -59,25 +59,8 @@
     gap: 6px;
 }
 
-.mpi-model-settings__lora-strengths label {
+.mpi-model-settings__strength-label {
     font-size: 0.7rem;
     color: var(--text-3);
     white-space: nowrap;
-}
-
-.mpi-model-settings__strength-input {
-    width: 52px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    font-size: 0.75rem;
-    text-align: center;
-    padding: 2px 0;
-    outline: none;
-    transition: border-color var(--transition);
-}
-
-.mpi-model-settings__strength-input:focus {
-    border-color: var(--primary);
 }

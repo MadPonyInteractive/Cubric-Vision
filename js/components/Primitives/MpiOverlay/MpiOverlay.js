@@ -47,10 +47,19 @@ export const MpiOverlay = ComponentFactory.create({
     setup: (el, props, emit) => {
         let _stash = null;
         let _toolContainer = null;
+        let _stashedClasses = [];
+        let _stashedStyle = '';
 
         const _doShow = () => {
             _toolContainer = document.getElementById('tool-container');
             if (!_toolContainer) return;
+
+            // Snapshot and reset any workspace-specific classes/styles that
+            // would break the overlay's flex/scroll layout (e.g. gh-workspace grid)
+            _stashedClasses = [..._toolContainer.classList].filter(c => c !== 'tool-container');
+            _stashedStyle = _toolContainer.getAttribute('style') || '';
+            _stashedClasses.forEach(c => _toolContainer.classList.remove(c));
+            _toolContainer.removeAttribute('style');
 
             _stash = document.createElement('div');
             _stash.style.display = 'none';
@@ -77,6 +86,14 @@ export const MpiOverlay = ComponentFactory.create({
                 _stash = null;
             }
 
+            // Restore workspace classes and inline styles
+            _stashedClasses.forEach(c => _toolContainer.classList.add(c));
+            if (_stashedStyle) _toolContainer.setAttribute('style', _stashedStyle);
+            _stashedClasses = [];
+            _stashedStyle = '';
+
+            _toolContainer = null;
+            emit('close', {});
             Overlays.release(el);
         };
 
@@ -87,7 +104,7 @@ export const MpiOverlay = ComponentFactory.create({
 
         const closeBtn = el.querySelector('.mpi-overlay__close');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => { emit('close', {}); el.hide(); });
+            closeBtn.addEventListener('click', () => el.hide());
         }
 
         // Safety release: if removed from DOM unexpectedly, free the overlay queue

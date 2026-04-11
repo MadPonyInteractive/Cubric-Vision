@@ -26,6 +26,7 @@
 import { ComponentFactory }   from '../../factory.js';
 import { MpiOverlay }         from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown }        from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiInput }           from '../../Primitives/MpiInput/MpiInput.js';
 import { qs }                 from '../../../utils/dom.js';
 import { Events }             from '../../../events.js';
 import { state }              from '../../../state.js';
@@ -76,14 +77,11 @@ export const MpiModelSettings = ComponentFactory.create({
         // ── MpiOverlay base ───────────────────────────────────────────────────
         const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
         overlay.el.appendToContainer(el);
-        overlay.on('close', () => { _isOpen = false; emit('close', {}); });
+        overlay.on('close', () => emit('close', {}));
 
         // ── Internal state ────────────────────────────────────────────────────
         /** @type {{ modelId?: string, toolKey?: string } | null} */
         let _context = null;
-
-        /** Whether the overlay is currently visible */
-        let _isOpen = false;
 
         /** Per-slot LoRA tracking (mutated by input events) */
         let _loraSlots = [];
@@ -166,36 +164,53 @@ export const MpiModelSettings = ComponentFactory.create({
 
                 const strengthsEl = document.createElement('div');
                 strengthsEl.className = 'mpi-model-settings__lora-strengths';
-                strengthsEl.innerHTML = `
-                    <label>Model</label>
-                    <input class="mpi-model-settings__strength-input"
-                           type="number" step="0.05" min="0" max="2"
-                           value="${parseFloat(slot.strengthModel) || 1.0}"
-                           data-strength="model" />
-                    <label>Clip</label>
-                    <input class="mpi-model-settings__strength-input"
-                           type="number" step="0.05" min="0" max="2"
-                           value="${parseFloat(slot.strengthClip) || 1.0}"
-                           data-strength="clip" />
-                `;
+
+                const modelLabel = document.createElement('label');
+                modelLabel.className = 'mpi-model-settings__strength-label';
+                modelLabel.textContent = 'Model';
+
+                const modelInput = MpiInput.mount(document.createElement('div'), {
+                    type:     'number',
+                    size:     'sm',
+                    value:    slot.strengthModel,
+                    min:      -2,
+                    max:      2,
+                    step:     0.05,
+                    decimals: 2,
+                });
+
+                const clipLabel = document.createElement('label');
+                clipLabel.className = 'mpi-model-settings__strength-label';
+                clipLabel.textContent = 'Clip';
+
+                const clipInput = MpiInput.mount(document.createElement('div'), {
+                    type:     'number',
+                    size:     'sm',
+                    value:    slot.strengthClip,
+                    min:      -2,
+                    max:      2,
+                    step:     0.05,
+                    decimals: 2,
+                });
+
+                modelInput.on('change', ({ value }) => {
+                    _loraSlots[i].strengthModel = value;
+                    _autoSave();
+                });
+
+                clipInput.on('change', ({ value }) => {
+                    _loraSlots[i].strengthClip = value;
+                    _autoSave();
+                });
+
+                strengthsEl.appendChild(modelLabel);
+                strengthsEl.appendChild(modelInput.el);
+                strengthsEl.appendChild(clipLabel);
+                strengthsEl.appendChild(clipInput.el);
 
                 slotEl.appendChild(dropHost);
                 slotEl.appendChild(strengthsEl);
                 list.appendChild(slotEl);
-
-                // Strength inputs — save on blur (not every keystroke)
-                strengthsEl.querySelectorAll('input').forEach(input => {
-                    input.addEventListener('input', () => {
-                        const v = parseFloat(input.value);
-                        if (isNaN(v)) return;
-                        if (input.dataset.strength === 'model') {
-                            _loraSlots[i].strengthModel = v;
-                        } else {
-                            _loraSlots[i].strengthClip = v;
-                        }
-                    });
-                    input.addEventListener('change', () => _autoSave());
-                });
 
                 const dd = MpiDropdown.mount(dropHost, {
                     options: loraOpts,
@@ -244,18 +259,9 @@ export const MpiModelSettings = ComponentFactory.create({
             }
 
             overlay.el.show();
-            _isOpen = true;
         };
-
-        // ── ui:close-all-popups ───────────────────────────────────────────────
-        const _unsubCloseAll = Events.on('ui:close-all-popups', () => {
-            if (!_isOpen) return;
-            overlay.el.hide();
-        });
 
         // ── Cleanup ───────────────────────────────────────────────────────────
-        el.destroy = () => {
-            _unsubCloseAll();
-        };
+        el.destroy = () => {};
     },
 });
