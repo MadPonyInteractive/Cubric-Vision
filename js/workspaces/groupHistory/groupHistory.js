@@ -18,7 +18,7 @@ import { state } from '../../state.js';
 import { Events } from '../../events.js';
 import { navigate, PAGE_GALLERY } from '../../router.js';
 import { ce } from '../../utils/dom.js';
-import { MpiPromptBox } from '../../components/Compounds/MpiPromptBox/MpiPromptBox.js';
+import { MpiPromptBox } from '../../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiDropdown } from '../../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiSpinner } from '../../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiRatioSelector } from '../../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
@@ -29,10 +29,11 @@ import { MpiAutoMaskThumbs } from '../../components/Compounds/MpiAutoMaskThumbs/
 import { MpiSelectionBar } from '../../components/Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiRadioGroup } from '../../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiModelSettings } from '../../components/Compounds/MpiModelSettings/MpiModelSettings.js';
-import { getModelsByType } from '../../data/modelRegistry.js';
+import { getModelsByType, getModelById } from '../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../data/commandRegistry.js';
 import { SOCIAL_RATIOS } from '../../utils/ratios.js';
 import { runCommand, runAutoMask } from '../../services/commandExecutor.js';
+import { clientLogger } from '../../services/clientLogger.js';
 import { StatusBar } from '../../shell/statusBar.js';
 import {
     promoteHistoryEntry,
@@ -728,8 +729,14 @@ export function mount(container, params = {}) {
     }
 
     const isVideo = _group.type === 'video';
-    const models = getModelsByType(isVideo ? 'video' : 'image');
-    let activeModel = models[0] || null;
+    const installedModels = getModelsByType(isVideo ? 'video' : 'image').filter(m => m.installed);
+
+    let activeModel = state.s_selectedModelId
+        ? (installedModels.find(m => m.id === state.s_selectedModelId) || installedModels[0] || null)
+        : (installedModels[0] || null);
+
+    // Ensure state is in sync on mount
+    if (activeModel) state.s_selectedModelId = activeModel.id;
 
     // In groupHistory there is always at least one existing image/video available
     // as input, so imageCount/videoCount start at 1.
@@ -746,9 +753,9 @@ export function mount(container, params = {}) {
             .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
     }
 
-    /** Re-evaluate which operations are available and push to the dropdown. */
+    /** Re-evaluate which operations are available and sync the Block's operation dropdown. */
     function _refreshOpOptions() {
-        if (!_opDropdown) return;
+        if (!_promptBox) return;
         const opts = _opOptions();
         // If the current operation just became disabled, switch to first available
         const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
@@ -756,50 +763,57 @@ export function mount(container, params = {}) {
             const fallback = opts.find(o => !o.disabled);
             if (fallback) {
                 activeOperation = fallback.value;
-                _promptBox?.el.setOperation(activeOperation);
+                _promptBox.el.setOperation(activeOperation);
             }
         }
-        _opDropdown.el.setOptions(opts, activeOperation);
     }
 
     // Default to first available operation (not t2i — groupHistory always has an input image)
     const _firstAvailable = _opOptions().find(o => !o.disabled);
     let activeOperation = isVideo ? 't2v' : (_firstAvailable?.value ?? 'upscale');
 
-    let _opDropdown = null;
     let _promptBox = null;
     let _activeExec = null;
 
     // Model settings overlay — single instance for this workspace
     const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-    if (activeModel) {
-        _opDropdown = MpiDropdown.mount(ce('div'), {
-            options: _opOptions(),
-            value: activeOperation,
-            info: 'Generation operation',
-            direction: 'up',
-        });
-        _opDropdown.on('change', ({ value }) => {
-            activeOperation = value;
-            _promptBox?.el.setOperation(activeOperation);
-            Events.emit('workspace:set-operation', { operation: activeOperation });
-        });
+    /**
+     * Mount (or remount) the MpiPromptBox Block with the current activeModel.
+     * Called on initial mount and when the model changes externally.
+     */
+    function _mountPromptBox() {
+        if (!activeModel) return;
+
+        // Unmount previous instance
+        if (_promptBox) {
+            _promptBox.el.remove();
+            _promptBox = null;
+        }
 
         _promptBox = MpiPromptBox.mount(bottom, {
             model:           activeModel,
-            modelList:       models,
+            modelList:       installedModels,
             operation:       activeOperation,
             includeNegative: true,
-            rightA:          _opDropdown,
         });
 
         _promptBox.on('settings', () => {
             _settingsOverlay.el.open({ modelId: activeModel.id });
         });
 
+        _promptBox.on('model-change', ({ model }) => {
+            state.s_selectedModelId = model.id;
+            activeModel = model;
+            _mountPromptBox();
+        });
+
+        _promptBox.on('operation-change', ({ operation }) => {
+            activeOperation = operation;
+            _refreshOpOptions();
+        });
+
         _promptBox.on('run', ({ operation, positive, negative, mediaItems }) => {
-            // ComfyUI LoadImage mask convention: white = masked (processed), black = background
             const maskDataUrl = _hasMask ? _canvas.getMaskDataURL('black', 'white') : null;
             _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl });
         });
@@ -811,18 +825,33 @@ export function mount(container, params = {}) {
         });
     }
 
+    if (activeModel) {
+        _mountPromptBox();
+    }
+
     // Radial menu operation sync
     const _onSetOp = ({ operation }) => {
-        if (!_opDropdown) return;
+        if (!_promptBox) return;
         const opts = _opOptions();
-        const match = opts.find(o => o.value === operation);
-        if (match && !match.disabled) {
+        const match = opts.find(o => o.value === operation && !o.disabled);
+        if (match) {
             activeOperation = operation;
-            _opDropdown.el.setOptions(opts, activeOperation);
-            _promptBox?.el.setOperation(activeOperation);
+            _promptBox.el.setOperation(activeOperation);
         }
     };
     Events.on('workspace:set-operation', _onSetOp);
+
+    // Subscribe to external model changes (e.g., from gallery switching models)
+    const _onStateModelChange = ({ key, value }) => {
+        if (key !== 's_selectedModelId') return;
+        if (!value) return;
+        const newModel = installedModels.find(m => m.id === value);
+        if (newModel && newModel !== activeModel) {
+            activeModel = newModel;
+            _mountPromptBox();
+        }
+    };
+    Events.on('state:changed', _onStateModelChange);
 
     // ── Generation ─────────────────────────────────────────────────────────────
 
@@ -867,7 +896,7 @@ export function mount(container, params = {}) {
             _setGeneratingSpinner(false);
 
             if (!urls.length) {
-                console.warn('[groupHistory] Generation completed but no output returned.');
+                clientLogger.warn('groupHistory', 'Generation completed but no output returned.');
                 StatusBar.progress.cancel();
                 _showEntry(_group.history[_selectedIdx]);
                 return;
@@ -895,7 +924,7 @@ export function mount(container, params = {}) {
                         displayName = data.filename.replace(/\.[^.]+$/, '');
                     }
                 } catch (err) {
-                    console.warn('[groupHistory] save-generation failed, using comfy URL:', err);
+                    clientLogger.warn('groupHistory', 'save-generation failed, using comfy URL:', err);
                 }
             }
 
@@ -929,7 +958,7 @@ export function mount(container, params = {}) {
             Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
             StatusBar.progress.cancel();
             _showEntry(_group.history[_selectedIdx]);
-            console.error('[groupHistory] Generation error:', err);
+            clientLogger.error('groupHistory', 'Generation error:', err);
         };
     }
 
@@ -959,6 +988,7 @@ export function mount(container, params = {}) {
     const _observer = new MutationObserver(() => {
         if (!document.contains(container)) {
             Events.off('workspace:set-operation', _onSetOp);
+            Events.off('state:changed', _onStateModelChange);
             _canvas.destroy();
             _observer.disconnect();
         }
