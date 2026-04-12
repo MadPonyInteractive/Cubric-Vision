@@ -431,6 +431,13 @@ export const MpiPromptBox = ComponentFactory.create({
             }
         }
 
+        // ── Download Manager button (always visible in left slot) ─────────────
+        const downloadManagerBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'download', variant: 'ghost', size: 'sm', info: 'Open Download Manager',
+        });
+        downloadManagerBtn.on('click', () => Events.emit('models:open', {}));
+        el.querySelector('#bottom-left-slot').appendChild(downloadManagerBtn.el);
+
         mountArea('bottom-left-slot',  props.LeftA);
         mountArea('bottom-right-slot', props.rightA);
 
