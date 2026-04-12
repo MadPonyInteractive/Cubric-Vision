@@ -8,6 +8,7 @@
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
+import { ce } from '../utils/dom.js';
 
 const downloadService = {
     _eventSource: null,
@@ -31,6 +32,7 @@ const downloadService = {
             job.error = err.error;
             state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? job : j);
             Events.emit('download:failed', { modelId, error: err.error });
+            Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
             return;
         }
 
@@ -38,19 +40,27 @@ const downloadService = {
     },
 
     async pause(modelId) {
-        await fetch('/comfy/models/download/pause', {
+        const res = await fetch('/comfy/models/download/pause', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
         });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Failed to pause download' }));
+            Events.emit('ui:error', { title: 'Pause Failed', message: err.error });
+        }
     },
 
     async resume(modelId) {
-        await fetch('/comfy/models/download/resume', {
+        const res = await fetch('/comfy/models/download/resume', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
         });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Failed to resume download' }));
+            Events.emit('ui:error', { title: 'Resume Failed', message: err.error });
+        }
     },
 
     async cancel(modelId) {
@@ -123,13 +133,14 @@ const downloadService = {
             if (data.modelId) {
                 const modelJob = state.downloadJobs.find(j => j.modelId === data.modelId);
                 const modelName = modelJob?.modelId || data.modelId;
-                const toastWrap = document.createElement('div');
+                const toastWrap = ce('div');
                 document.body.appendChild(toastWrap);
-                MpiToast.mount(toastWrap, {
+                const toastInstance = MpiToast.mount(toastWrap, {
                     message: `${modelName} downloaded successfully`,
                     variant: 'success',
                     duration: 4000,
                 });
+                toastInstance.on('close', () => toastWrap.remove());
             }
 
             Events.emit('download:complete', data);
@@ -142,6 +153,17 @@ const downloadService = {
                 job.status = 'failed';
                 job.error = data.error;
                 state.downloadJobs = [...state.downloadJobs];
+                
+                const modelName = job.modelId || data.modelId;
+                Events.emit('ui:error', {
+                    title: 'Download Failed',
+                    message: `Failed to download ${modelName}: ${data.error}`
+                });
+            } else {
+                Events.emit('ui:error', {
+                    title: 'Download Failed',
+                    message: data.error
+                });
             }
             Events.emit('download:failed', data);
         });

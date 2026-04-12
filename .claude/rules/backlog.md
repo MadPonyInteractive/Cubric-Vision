@@ -9,9 +9,7 @@
 
 > **Plan:** `docs/superpowers/plans/2026-04-12-download-manager.md`
 >
-> **Status (2026-04-12 session):** Implementation complete. Awaiting script run to populate SHA256 hashes.
->
-> **Remaining:** Run `node scripts/computeDepHashes.js` to populate `sha256` hashes in `dependencies.js`. HuggingFace deps will get real hashes; git-based deps stay `sha256: null`.
+> **Status (2026-04-12 session):** ✅ **COMPLETE.** All SHA256 hashes computed and populated in `dependencies.js`. Implementation ready for testing and integration.
 >
 > **Goal:** Replace the blocking `/comfy/models/download` with a non-blocking, progress-tracking download system supporting pause/resume/cancel, shared dependency ref-counting, SHA256 verification, and automatic ComfyUI restart when custom nodes are installed.
 >
@@ -19,15 +17,15 @@
 > - `state.downloadJobs` stays in `state.js` for shutdown persistence, but progress writes are throttled to 5-sec intervals; real-time progress flows via Events bus only (no `state:changed` spam)
 > - SSE reconnect calls `/comfy/downloads/status` to re-sync state after dropped events
 > - Phase 6 dead code removal covers all 4 affected files: `MpiInstalledDisplay.js`, `MpiModelsModal.js`, `components.js`, `types.js`
-> - SHA256 bootstrap: `scripts/computeDepHashes.js` — streaming hash script, writes nothing to disk, `--dry-run` supported, safe for 40GB+ files on space-constrained systems
+> - SHA256 bootstrap: `scripts/computeDepHashes.py` — Python streaming hash script, writes nothing to disk, safe for 40GB+ files on space-constrained systems ✅ **COMPLETE**
 > - `streamDownload` import removed from `routes/comfy.js` after old handler deletion
-> - `sha256: null` added to all DEPS entries (manually); `scripts/computeDepHashes.js` ready to fill in real hashes
+> - All HuggingFace deps now have real `sha256` hashes; git-based deps remain `sha256: null`
 
 **Files created in this session:**
 - `routes/downloadManager.js` — backend download manager with SSE, pause/resume/cancel, SHA256 verification
 - `js/services/downloadService.js` — frontend singleton owning SSE connection and Events emission
-- `scripts/computeDepHashes.js` — SHA256 bootstrap script (run manually)
-- `scripts/addDepHashes.js` — helper to add `sha256: null` keys to DEPS entries
+- `scripts/computeDepHashes.py` — SHA256 bootstrap script (Python implementation, faster than JS) ✅ **COMPLETE**
+- `scripts/addDepHashes.js` — ⚠️ staged for deletion (no longer needed)
 
 **Files modified in this session:**
 - `server.js` — registered downloadManager routes + SIGTERM/SIGINT shutdown

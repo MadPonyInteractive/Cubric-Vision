@@ -122,7 +122,7 @@ class ResumableDownloader {
 
                 response.on('end', async () => {
                     if (this._aborted) return reject(new Error('Aborted'));
-                    writer.end();
+                    await new Promise((res, rej) => { writer.end(); writer.once('finish', res); writer.once('error', rej); });
                     try {
                         await _verifySha256(partialPath, this.depJob.sha256Expected);
                         await fs.rename(partialPath, this.localPath);

@@ -27,7 +27,6 @@ import { qs, ce } from '../../../utils/dom.js';
  * @param {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'} [downloadState='idle']
  * @param {number} [progress=0]          - Download progress 0–1
  * @param {string} [speed='']            - Download speed string e.g. "12.3 MB/s"
- * @param {boolean} [canResume=false]    - Whether resume button should be shown
  *
  * Emits:
  * 'delete'  {}   — Action button clicked (Install when idle)

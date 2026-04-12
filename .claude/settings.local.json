@@ -104,7 +104,9 @@
       "Bash(node --check routes/comfy.js)",
       "Bash(node --check routes/shared.js)",
       "Bash(node --check server.js)",
-      "Bash(sort -t: -f1,2)"
+      "Bash(sort -t: -f1,2)",
+      "Bash(grep -n \"hardcoded\\\\|#[0-9a-fA-F]\\\\{3,6\\\\}\\\\|rgb\\(\\\\|rgba\\(\\\\|color:\" /c/AI/Mpi/MpiAiSuite/js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css)",
+      "Bash(xxd)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

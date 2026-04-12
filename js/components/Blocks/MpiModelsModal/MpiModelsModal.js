@@ -198,6 +198,13 @@ export const MpiModelsModal = ComponentFactory.create({
                         card.on('pause', () => downloadService.pause(model.id));
                         card.on('resume', () => downloadService.resume(model.id));
                         card.on('cancel', () => downloadService.cancel(model.id));
+                    } else {
+                        card.on('delete', () => {
+                            Events.emit('ui:error', {
+                                title: 'Not implemented',
+                                message: 'Model uninstallation is not yet available.',
+                            });
+                        });
                     }
                 });
             }
