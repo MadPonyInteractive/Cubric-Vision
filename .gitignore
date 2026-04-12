@@ -19,6 +19,8 @@ resources/
 .agents
 .claude
 .playwright
+.playwright-cli
+docs/superpowers/
 
 # Temporary files
 media-for-testing/

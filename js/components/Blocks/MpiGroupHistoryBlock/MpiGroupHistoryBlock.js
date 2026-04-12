@@ -108,11 +108,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
+        let _canvasHasMask = false;
+
         // Default to first available operation (not t2i — groupHistory always has an input)
         const _firstAvailable = _opOptions().find(o => !o.disabled);
         let activeOperation = isVideo ? 't2v' : (_firstAvailable?.value ?? 'upscale');
-
-        let _canvasHasMask = false;
         let _currentIdx = _group.selectedIndex ?? 0;
 
         // ── Persist helper ───────────────────────────────────────────────────

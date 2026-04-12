@@ -133,6 +133,15 @@ async function _bootApp() {
   // Show model manager when zero image models are installed
   Events.on('models:open', () => _modelsModal.el.show());
   Events.on('models:all-installed', () => _modelsModal.el.hide());
+  Events.on('models:closed', () => {
+      _modelsModal.el.hide();
+      // Defer show() to next tick so overlay removal + stash restore
+      // settle first (avoids race where overlay is still in DOM when
+      // show() runs and immediate hide() from MpiGalleryBlock overrides it)
+      requestAnimationFrame(() => {
+          if (PromptBoxService.component) PromptBoxService.show();
+      });
+  });
   Events.on('state:changed', ({ key }) => {
       if (key !== 's_installedModelIds') return;
       const hasImageModels = getModelsByType('image').some(m => m.installed === true);

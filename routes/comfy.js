@@ -2,16 +2,17 @@
  * routes/comfy.js — ComfyUI process management and workflow/model routes.
  *
  * Routes exposed:
- *   GET  /comfy/status
- *   POST /comfy/start
- *   POST /comfy/stop
- *   POST /comfy/unload
- *   POST /comfy/set-path
- *   GET  /comfy/list-files
- *   GET  /comfy/workflows
- *   POST /comfy/model/download
- *   POST /comfy/workflow/delete
- *   POST /comfy/workflow/install-complete
+ *   GET  /comfy/status              — is ComfyUI running + ready?
+ *   POST /comfy/start               — launch ComfyUI in background
+ *   POST /comfy/stop                — stop ComfyUI process
+ *   POST /comfy/unload              — unload models / free memory
+ *   POST /comfy/set-path            — set custom models root path
+ *   GET  /comfy/list-files          — list model files in a subdirectory
+ *   GET  /comfy/workflows           — list all workflows with install status
+ *   POST /comfy/models/check        — check which models are installed on disk
+ *   POST /comfy/models/download     — download model dependencies
+ *   POST /comfy/workflow/delete     — delete a workflow and optionally its files
+ *   POST /comfy/workflow/install-complete — mark a workflow as installed
  */
 
 'use strict';
@@ -56,6 +57,11 @@ function setAxios(ax) { _axios = ax; }
 
 // ── Process Management ────────────────────────────────────────────────────────
 
+/**
+ * GET /comfy/status
+ * Returns whether ComfyUI process is running and ready.
+ * Response: { running: boolean, ready?: boolean }
+ */
 router.get('/comfy/status', async (req, res) => {
     try {
         if (!processState.activeComfyProcess) return res.json({ running: false });
@@ -69,6 +75,10 @@ router.get('/comfy/status', async (req, res) => {
     }
 });
 
+/**
+ * POST /comfy/start
+ * Launches ComfyUI in the background. Idempotent — returns success if already running.
+ */
 router.post('/comfy/start', async (req, res) => {
     try {
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
@@ -104,11 +114,21 @@ router.post('/comfy/start', async (req, res) => {
     }
 });
 
+/**
+ * POST /comfy/stop
+ * Stops the ComfyUI background process.
+ */
 router.post('/comfy/stop', (req, res) => {
     stopComfyUI();
     res.json({ success: true });
 });
 
+/**
+ * POST /comfy/unload
+ * Body: { deep?: boolean }
+ * Calls ComfyUI /free API to unload models and optionally free memory.
+ * Also calls ComfyUI-Manager's unload endpoint when deep=true.
+ */
 router.post('/comfy/unload', async (req, res) => {
     const { deep } = req.body;
     try {
@@ -134,6 +154,12 @@ router.post('/comfy/unload', async (req, res) => {
     }
 });
 
+/**
+ * POST /comfy/set-path
+ * Body: { path?: string }
+ * Sets the custom models root path by writing extra_model_paths.yaml.
+ * Without a path argument, removes the config file (reverts to default paths).
+ */
 router.post('/comfy/set-path', async (req, res) => {
     const { path: customPath } = req.body;
     try {
@@ -186,16 +212,9 @@ comfyui:
 
 /**
  * POST /comfy/models/check
- *
- * Body: { models: ModelDef[] }  — the full MODELS array from modelRegistry.js,
- *       each entry having { id, dependencies: string[] } where dependencies are
- *       dep ids, and { deps: Record<id, { type, filename }> } for resolution.
- *
- * Actually simpler: client sends pre-resolved dep filenames per model:
- *   { models: [{ id, deps: [{ type: 'checkpoint'|'custom_nodes'|..., filename: string }] }] }
- *
- * Returns: { results: { [modelId]: boolean } }
- * A model is installed if every dep exists on disk.
+ * Body: { models: [{ id, deps: [{ type, filename }] }] }
+ * Checks which models have all their dependency files present on disk.
+ * Returns: { success: true, results: { [modelId]: boolean } }
  */
 router.post('/comfy/models/check', async (req, res) => {
     const { models } = req.body;
@@ -264,6 +283,11 @@ async function _findFile(dir, filename) {
 
 // ── Model / Workflow Management ───────────────────────────────────────────────
 
+/**
+ * GET /comfy/list-files?subDir=<path>
+ * Lists all model files (.safetensors, .ckpt, .pt, .bin, .pth) in a subdirectory.
+ * Returns: { success: true, files: string[] }
+ */
 router.get('/comfy/list-files', async (req, res) => {
     const { subDir } = req.query;
     if (!subDir) return res.status(400).json({ success: false, error: 'subDir required' });
@@ -309,6 +333,11 @@ router.get('/comfy/list-files', async (req, res) => {
     }
 });
 
+/**
+ * GET /comfy/workflows
+ * Returns all workflows from COMFY_WORKFLOWS_PATH with install status and dep metadata.
+ * Returns: { success: true, workflows: Workflow[] }
+ */
 router.get('/comfy/workflows', async (req, res) => {
     try {
         if (!(await fs.pathExists(COMFY_WORKFLOWS_PATH))) return res.json({ success: true, workflows: [] });
@@ -355,59 +384,97 @@ router.get('/comfy/workflows', async (req, res) => {
     }
 });
 
-router.post('/comfy/model/download', async (req, res) => {
-    const { modelId } = req.body;
+// ── Model / Workflow Management ───────────────────────────────────────────────
+
+/**
+ * POST /comfy/models/download
+ * Body: { modelId: string, dependencies: Dep[] }
+ * Downloads all dependency files not yet on disk. Custom nodes trigger ComfyUI stop/restart.
+ * Returns: { success: true, installed: string[], skipped: string[] }
+ */
+router.post('/comfy/models/download', async (req, res) => {
+    const { modelId, dependencies } = req.body;
+    if (!Array.isArray(dependencies)) {
+        return res.status(400).json({ error: 'dependencies array required' });
+    }
+
     try {
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-        let model = null;
-        for (const wf of config.workflows) {
-            model = wf.dependencies.find(d => d.id === modelId);
-            if (model) break;
-        }
-        if (!model) return res.status(404).json({ error: 'Model not found in workflow configs' });
-
         const customRoot = await getCustomRoot();
-        const { localPath, isCustomNode } = await resolveComfyPath(model, customRoot, config);
-        await fs.ensureDir(path.dirname(localPath));
+        const installed = [];
+        const skipped = [];
 
-        if (isCustomNode) {
-            stopComfyUI();
-            logger.info('comfy', `Cloning custom node ${model.name} from ${model.url}...`);
-            if (await fs.pathExists(localPath)) await fs.remove(localPath);
+        for (const dep of dependencies) {
+            let localPath;
+            const isCustomNode = dep.type === 'custom_nodes';
 
-            try {
-                await new Promise((resolve, reject) => {
-                    exec(`git clone ${model.url} "${localPath}"`, (err, stdout, stderr) => {
-                        if (err) return reject(new Error('Git clone failed: ' + stderr));
-                        resolve();
-                    });
-                });
-                logger.info('comfy', `Successfully cloned ${model.name}`);
-
-                if (model.install_requirements) {
-                    const reqPath = path.join(localPath, 'requirements.txt');
-                    if (await fs.pathExists(reqPath)) {
-                        logger.info('comfy', `Installing requirements for ${model.name}...`);
-                        await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
-                    }
-                }
-                res.json({ success: true, path: localPath });
-            } catch (err) {
-                logger.error('comfy', 'Custom node setup failed', err);
-                res.status(500).json({ success: false, error: err.message });
+            if (customRoot) {
+                const { localPath: lp } = await resolveComfyPath(
+                    { type: dep.type, filename: dep.filename }, customRoot, {}
+                );
+                localPath = lp;
+            } else {
+                const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+                const base = isCustomNode
+                    ? path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes')
+                    : path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+                localPath = path.join(base, dep.filename);
             }
-            return;
+
+            if (await fs.pathExists(localPath)) {
+                skipped.push(dep.id);
+                continue;
+            }
+
+            await fs.ensureDir(path.dirname(localPath));
+
+            if (isCustomNode) {
+                stopComfyUI();
+                logger.info('comfy', `Cloning custom node ${dep.name} from ${dep.url}...`);
+                if (await fs.pathExists(localPath)) await fs.remove(localPath);
+                try {
+                    await new Promise((resolve, reject) => {
+                        exec(`git clone ${dep.url} "${localPath}"`, (err, _stdout, stderr) => {
+                            if (err) return reject(new Error('Git clone failed: ' + stderr));
+                            resolve();
+                        });
+                    });
+                    if (dep.install_requirements) {
+                        const reqPath = path.join(localPath, 'requirements.txt');
+                        if (await fs.pathExists(reqPath)) {
+                            logger.info('comfy', `Installing requirements for ${dep.name}...`);
+                            await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
+                        }
+                    }
+                    installed.push(dep.id);
+                } catch (err) {
+                    logger.error('comfy', `Custom node setup failed for ${dep.id}`, err);
+                    skipped.push(dep.id);
+                }
+            } else {
+                try {
+                    logger.info('comfy', `Downloading ${dep.name} (${dep.size})...`);
+                    await streamDownload(dep.url, localPath);
+                    installed.push(dep.id);
+                } catch (err) {
+                    logger.error('comfy', `Download failed for ${dep.id}`, err);
+                    skipped.push(dep.id);
+                }
+            }
         }
 
-        logger.info('comfy', `Starting download for ComfyUI model ${model.name}...`);
-        await streamDownload(model.url, localPath);
-        res.json({ success: true, path: localPath });
+        res.json({ success: true, installed, skipped });
     } catch (err) {
-        logger.error('comfy', 'Asset download failed', err);
+        logger.error('comfy', 'models/download failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
+/**
+ * POST /comfy/workflow/delete
+ * Body: { id: string, deleteModels?: boolean }
+ * Deletes a workflow and optionally its model files. Skips files still used by other installed workflows.
+ * Returns: { success: true, deleted: string[], skipped: string[] }
+ */
 router.post('/comfy/workflow/delete', async (req, res) => {
     const { id, deleteModels } = req.body;
     try {
@@ -484,6 +551,12 @@ router.post('/comfy/workflow/delete', async (req, res) => {
     }
 });
 
+/**
+ * POST /comfy/workflow/install-complete
+ * Body: { id: string }
+ * Marks a workflow as installed in COMFY_WORKFLOWS_PATH.
+ * Returns: { success: true }
+ */
 router.post('/comfy/workflow/install-complete', async (req, res) => {
     const { id } = req.body;
     try {

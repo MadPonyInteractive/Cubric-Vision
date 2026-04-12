@@ -21,6 +21,7 @@ import { qs, ce } from '../../../utils/dom.js';
  * @param {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Size of the info row icon
  * @param {'muted'|'accent'|'primary'|'danger'|'success'} [iconColor='danger']
  *   - Color modifier for the info row icon
+ * @param {boolean} [installed=false]     - Whether this item is installed; controls badge label/variant
  * @param {boolean} [showDeleteModels=false] - Whether to show the Delete Models toggle button
  * @param {boolean} [deleteModelsActive=false] - Initial toggle state for Delete Models
  * @param {string} [deleteLabel='Uninstall']    - Label for the primary action button
@@ -99,13 +100,15 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             infoSlot.style.display = 'none';
         }
 
-        // INSTALLED badge
+        // INSTALLED badge — conditional based on installed prop
         const badgeSlot = qs('#idbadge-slot', el);
-        const badge = MpiBadge.mount(ce('div'), {
-            label: 'INSTALLED',
-            variant: 'success'
-        });
-        badgeSlot.appendChild(badge.el);
+        if (props.installed) {
+            const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
+            badgeSlot.appendChild(badge.el);
+        } else {
+            const badge = MpiBadge.mount(ce('div'), { label: 'NOT INSTALLED', variant: 'danger' });
+            badgeSlot.appendChild(badge.el);
+        }
 
         // Actions row
         const actionsSlot = qs('#idactions-slot', el);

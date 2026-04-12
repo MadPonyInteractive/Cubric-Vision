@@ -539,6 +539,7 @@
  * @property {'muted'|'accent'|'primary'|'danger'|'success'} [iconColor='danger'] - Info icon color
  * @property {boolean} [showDeleteModels=false]  - Show the optional Delete Models toggle button
  * @property {boolean} [deleteModelsActive=false] - Initial active state of Delete Models toggle
+ * @property {boolean} [installed=false] - Whether this item is installed; controls badge label/variant
  * @property {string} [deleteLabel='Uninstall']  - Label for the right action button
  *
  * Emits:

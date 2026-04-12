@@ -3,6 +3,43 @@
 > **AI INSTRUCTION:** This file contains the active sprint and backlog.
 > 🔴 **CRITICAL RULE:** Do NOT make assumptions about how to implement these items. If a bullet point lacks detailed technical context, you MUST stop and ask the user, "Can you explain in detail how we should approach [Task]?" before writing any code.
 
+---
+
+## 🔴 HIGHEST PRIORITY: Download Manager — Non-Blocking Implementation
+
+> **Plan:** `docs/superpowers/plans/2026-04-12-download-manager.md`
+>
+> **Tools** Use superpowers execute plan skill
+>
+> **Goal:** Replace the blocking `/comfy/models/download` with a non-blocking, progress-tracking download system supporting pause/resume/cancel, shared dependency ref-counting, SHA256 verification, and automatic ComfyUI restart when custom nodes are installed.
+>
+> **Key decisions (2026-04-12 session):**
+> - `state.downloadJobs` stays in `state.js` for shutdown persistence, but progress writes are throttled to 5-sec intervals; real-time progress flows via Events bus only (no `state:changed` spam)
+> - SSE reconnect calls `/comfy/downloads/status` to re-sync state after dropped events
+> - Phase 6 dead code removal covers all 4 affected files: `MpiInstalledDisplay.js`, `MpiModelsModal.js`, `components.js`, `types.js`
+> - SHA256 phase includes batch automation note for bulk deps
+> - `streamDownload` import removed from `routes/comfy.js` after old handler deletion
+
+---
+
+## 🔴 HIGH PRIORITY: Architecture Refactor
+
+> These two plans must be executed in order. Only one plan should be executed per session. If you do plan one, you should leave the testing for another session. If you are doing the testing, you should leave the following plan for another session. And so on.
+
+### Plan 1 — Shell Global Layer + MpiGalleryBlock
+**✅ COMPLETE** — Committed `ba1bca8`
+
+Establishes the shell-level PromptBox singleton (via `PromptBoxService`), moves `MpiModelsModal` to a shell singleton, and replaces `gallery.js` with `MpiGalleryBlock` (a proper `ComponentFactory` Block). After this plan, the gallery works end-to-end with zero PromptBox/ModelsModal duplication.
+
+### Plan 2 — GroupHistory Decomposition
+**✅ COMPLETE** — Committed `3981dfb`
+
+Decomposes `groupHistory.js` (1027 lines, 35+ state variables) into three focused components: `MpiHistoryList` (Compound), `MpiCanvasViewer` (Compound), and `MpiGroupHistoryBlock` (Block coordinator). Requires Plan 1 to be complete first.
+
+**🔴 FIXED in this session** — Temporal Dead Zone (TDZ): `_canvasHasMask` declared with `let` on line 115 but first referenced in `_opOptions()` on line 112. Moved declaration to line 111.
+
+---
+
 
 ## ✅ Completed: MpiPromptBox Internal Model Swap
 
@@ -81,25 +118,39 @@
 
 ---
 
-## 🔴 High Priority: Test Zero-Installed State
+## 🔴 High Priority: Model Manager Bugfixes
 
-The zero-installed state feature is implemented. **Bugs found and fixed during testing:**
-- `js/data/modelRegistry.js:22` — wrong import path `../../events.js` → fixed to `../events.js`
-- `js/data/modelRegistry.js` — `MODELS` not exported → added `export { MODELS }`
-- `js/shell/preloadStyles.js` — stale `InstallModelsList.css` reference → removed
+> **Plan:** `docs/superpowers/plans/2026-04-11-model-manager-bugfixes.md`
+>
+> Fix five bugs in MpiModelsModal:
+> 1. **Installed models disappear** — `renderList()` filters to uninstalled only; needs split into Installed + Available sections
+> 2. **Wrong badge/button** — "INSTALLED" badge always shown regardless of state; button always "Install"; needs `installed` prop on MpiInstalledDisplay
+> 3. **404 on Install click** — `/comfy/model/download` searches wrong ID namespace; new `POST /comfy/models/download` route receives pre-resolved dep objects from frontend
+> 4. **No size/VRAM shown** — `_vramText()` is a TODO stub; replace with `_computeModelStats()` using real DEPS data
+> 5. **PromptBox not shown after modal close** — `models:closed` event not handled; add shell listener to re-show PromptBox
+>
+> **Execution:** Subagent-driven (Tasks 2+3 parallel, then 1, then 4, then 5)
 
-**Manual verification still required:**
+### Status (2026-04-12)
 
-1. **First-run (zero installed):** Boot app with no models → `MpiModelsModal` should appear immediately with "Install Models" header and scrollable list of all uninstalled models
-2. **Refresh button:** With modal open, manually delete a model file from filesystem → click Refresh → list reflects deletion
-3. **Install a model:** Click Install → download completes → `reSyncInstalledModels()` fires → if all models now installed, modal auto-closes
-4. **All installed:** When all models are installed, list shows "No models available"
-5. **Escape key:** Pressing Escape closes `MpiModelsModal` via `MpiOverlay` stash pattern
-6. **Stash pattern:** Open `MpiModelsModal`, then trigger another overlay → both overlay correctly; closing restores properly
-7. **Error dialog:** Trigger a missing-model workflow → `MpiErrorDialog` shows title `"Missing model"` with model-specific message (not generic)
-- [ ] Add a visual badge to gallery cards if their associated model was uninstalled.
-- [ ] Build Model Installer UI (browse, download, progress bar).
-- [ ] Build a route/UI for Model uninstallation and Garbage Collection (GC).
+**FIXED ✅:**
+- Bug 1 — `renderList()` now splits into Installed + Available sections
+- Bug 2 — Conditional badge: "INSTALLED" (green/success) vs "NOT INSTALLED" (red/danger); `installed` prop added to `MpiInstalledDisplay`
+- Bug 4 — Size (`X.XGB`) and VRAM (`XGB VRAM`) now computed from `DEPS` data and shown on cards
+- Bug 5 (modal side) — `models:closed` event now emitted when overlay is closed
+
+**STILL BROKEN 🔴:**
+- Bug 5 (shell side) — `models:closed` listener added to `shell.js` but PromptBox does not re-appear on modal close. PromptBox reappears after visiting history tab and returning — suggests workspace navigation resets PromptBox visibility.
+  - **Fix applied:** Wrapped `PromptBoxService.show()` in `requestAnimationFrame()` to defer until overlay removal and stash restore settle. Awaiting user test.
+  - All 5 bugs are now fixed (Bug 3 and t2i workflow filename mismatch resolved by user).
+
+**Files changed (committed unstaged):**
+- `js/components/Blocks/MpiModelsModal/MpiModelsModal.js`
+- `js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js`
+- `js/components/types.js`
+- `routes/comfy.js`
+- `js/shell.js`
+- `js/data/modelConstants/models.js` (workflow filename fix)
 
 **Media Import (Immediate Upload)**
 - [ ] Modify media import flow: when a user adds an image/video from the filesystem, upload it to the ComfyUI backend immediately (do not wait for workflow execution).
@@ -112,11 +163,15 @@ The zero-installed state feature is implemented. **Bugs found and fixed during t
 - [ ] Update `commandExecutor.js` and `comfyController.js` to listen for `nodeOutput.gifs` (VHS_VideoCombine output key) alongside `nodeOutput.images`.
 - [ ] Populate `dependencies[]` in `UNIVERSAL_WORKFLOWS` for video operations once `.json` files are ready.
 
+**Bug Reports 🔴**
+- [ ] **Download Manager auto-show for missing deps:** When deps for the current model are missing (but some other models are installed, so zero-installed state doesn't trigger), the Download Manager doesn't appear. User must manually navigate to download it. Will be addressed by the Download Manager implementation above — the new system surfaces progress UI automatically when a model install is initiated.
+- [x] **Download Manager close requires double-click:** Root cause was `_isHiding` re-entrancy guard missing in MpiOverlay. First click set `_toolContainer = null`, second click early-returned with no visible effect. Fixed by adding `_isHiding` flag to `MpiOverlay.hide()` and `_isShowing`/`_isHiding` guards to `MpiModelsModal` show/hide wrappers. Files: `MpiOverlay.js`, `MpiModelsModal.js`.
+
 ---
 
 ## 📅 Other To-Dos (Low Priority)
-- [ ] **Model Sizes:** Calculate install size dynamically from each model's dependencies.
-- [ ] **VRAM Requirements:** Calculate VRAM footprint dynamically from each model's dependencies.
+- [X] **Model Sizes:** Calculate install size dynamically from each model's dependencies.
+- [X] **VRAM Requirements:** Calculate VRAM footprint dynamically from each model's dependencies.
 - [ ] **Event Bus Cleanup:** `groupHistory.js` imports `StatusBar` directly — refactor to use the event bus once `tool:running`/`tool:idle` subscription architecture is finalized.
 - [ ] **Event Bus Cleanup:** `openProject()` in `projectManager.js` dispatches `project:changed` via `document.dispatchEvent(new CustomEvent(...))` instead of `Events.emit()`. Pre-existing bug — any subscriber using `Events.on('project:changed', ...)` will not receive it.
 - [ ] **Router Cleanup:** Remove `PAGE_WORKSPACE` alias from `router.js` when confirmed unused.

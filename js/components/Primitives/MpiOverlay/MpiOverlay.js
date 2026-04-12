@@ -49,6 +49,7 @@ export const MpiOverlay = ComponentFactory.create({
         let _toolContainer = null;
         let _stashedClasses = [];
         let _stashedStyle = '';
+        let _isHiding = false; // Guard against double-call of hide()
 
         const _doShow = () => {
             _toolContainer = document.getElementById('tool-container');
@@ -76,7 +77,10 @@ export const MpiOverlay = ComponentFactory.create({
         el.show = () => Overlays.request({ show: _doShow, hide: el.hide, id: el });
 
         el.hide = () => {
-            if (!_toolContainer) return;
+            // Guard against double-call (e.g. close button + Escape key both firing)
+            if (_isHiding) return;
+            _isHiding = true;
+            if (!_toolContainer) { _isHiding = false; return; }
 
             if (el.parentNode === _toolContainer) _toolContainer.removeChild(el);
 
@@ -95,6 +99,7 @@ export const MpiOverlay = ComponentFactory.create({
             _toolContainer = null;
             emit('close', {});
             Overlays.release(el);
+            _isHiding = false;
         };
 
         el.appendToContainer = (childEl) => {

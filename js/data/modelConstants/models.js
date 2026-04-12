@@ -48,9 +48,9 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
-            t2i: 't2i__ill_anime_beauty.json',
-            upscale: 'upscaler__ill_anime_beauty.json',
-            detail: 'detailer__ill_anime_beauty.json',
+            t2i: 't2i_ill_anime_beauty.json',
+            upscale: 'upscaler_ill_anime_beauty.json',
+            detail: 'detailer_ill_anime_beauty.json',
         },
         dependencies: [
             'ill-anime-beauty',

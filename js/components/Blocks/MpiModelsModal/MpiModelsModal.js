@@ -8,13 +8,14 @@ import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
 import { MODELS } from '../../../data/modelRegistry.js';
 import { reSyncInstalledModels } from '../../../data/modelRegistry.js';
+import { DEPS } from '../../../data/modelConstants/dependencies.js';
 import { qs, qsa, ce, on } from '../../../utils/dom.js';
 
 /**
  * MpiModelsModal — Block: Zero-Installed State Overlay
  *
- * Self-contained overlay that displays all uninstalled models as
- * MpiInstalledDisplay cards with Install buttons. Refreshes in place.
+ * Self-contained overlay that displays all available models as
+ * MpiInstalledDisplay cards with Install/Remove buttons. Refreshes in place.
  * Owns all model-list logic internally — no external appendToContainer.
  *
  * Props:
@@ -32,15 +33,15 @@ export const MpiModelsModal = ComponentFactory.create({
     css: ['js/components/Blocks/MpiModelsModal/MpiModelsModal.css'],
 
     template: (props) => {
-        const icon     = props.icon     || 'download';
+        const icon = props.icon || 'download';
         const iconSize = props.iconSize || 'xl';
-        const title    = props.title    || 'Install Models';
-        const text     = props.text     || '';
-        const footer   = props.footer  || '';
+        const title = props.title || 'Install Models';
+        const text = props.text || '';
+        const footer = props.footer || '';
 
-        const titleHtml   = title   ? `<h2 class="mpi-models-modal__title">${title}</h2>`   : '';
-        const textHtml    = text    ? `<p class="mpi-models-modal__text">${text}</p>`        : '';
-        const footerHtml = footer  ? `<p class="mpi-models-modal__footer">${footer}</p>`    : '';
+        const titleHtml = title ? `<h2 class="mpi-models-modal__title">${title}</h2>` : '';
+        const textHtml = text ? `<p class="mpi-models-modal__text">${text}</p>` : '';
+        const footerHtml = footer ? `<p class="mpi-models-modal__footer">${footer}</p>` : '';
 
         return `
             <div class="mpi-models-modal">
@@ -62,15 +63,18 @@ export const MpiModelsModal = ComponentFactory.create({
             closable: props.closable !== false,
         });
         overlay.on('close', () => emit('close', {}));
+        overlay.on('close', () => Events.emit('models:closed', {}));
 
         // Mount el (the template root) INTO the overlay
         overlay.el.appendToContainer(el);
 
-        el.show = () => overlay.el.show();
-        el.hide = () => overlay.el.hide();
+        el.show = () => { if (_isShowing) return; _isShowing = true; overlay.el.show(); _isShowing = false; };
+        el.hide = () => { if (_isHiding) return; _isHiding = true; overlay.el.hide(); _isHiding = false; };
+        let _isShowing = false;
+        let _isHiding = false;
 
         // ── DOM refs ──────────────────────────────────────────────────────────
-        const bodySlot    = qs('#body-slot', el);
+        const bodySlot = qs('#body-slot', el);
         const refreshSlot = qs('.mpi-models-modal__refresh-btn', el);
 
         const _unsubs = [];
@@ -90,10 +94,17 @@ export const MpiModelsModal = ComponentFactory.create({
         // ── Install a model ──────────────────────────────────────────────────
         async function _installModel(model) {
             try {
-                const res = await fetch('/comfy/model/download', {
+                refreshBtn.el.setAttribute('loading', 'true');
+
+                // Resolve full dep objects from dep ids
+                const dependencies = model.dependencies
+                    .map(depId => DEPS[depId])
+                    .filter(Boolean);
+
+                const res = await fetch('/comfy/models/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ modelId: model.id }),
+                    body: JSON.stringify({ modelId: model.id, dependencies }),
                 });
 
                 if (!res.ok) {
@@ -102,6 +113,7 @@ export const MpiModelsModal = ComponentFactory.create({
                         title: 'Download failed',
                         message: `Could not download model "${model.name}". ${err.error || 'Check your connection and try again.'}`,
                     });
+                    refreshBtn.el.removeAttribute('loading');
                     return;
                 }
 
@@ -117,6 +129,8 @@ export const MpiModelsModal = ComponentFactory.create({
                     title: 'Download failed',
                     message: `Could not download model "${model.name}". Check your connection and try again.`,
                 });
+            } finally {
+                refreshBtn.el.removeAttribute('loading');
             }
         }
 
@@ -128,37 +142,121 @@ export const MpiModelsModal = ComponentFactory.create({
             refreshBtn.el.removeAttribute('loading');
         }
 
+        // ── Compute size + VRAM stats from deps ─────────────────────────────
+        function _computeModelStats(model) {
+            if (!model.dependencies || model.dependencies.length === 0) {
+                return { sizeText: '', vramText: '' };
+            }
+
+            let totalBytes = 0;
+            let maxVram = 0;
+
+            for (const depId of model.dependencies) {
+                const dep = DEPS[depId];
+                if (!dep) continue;
+                totalBytes += _parseSizeToBytes(dep.size);
+                const vramNum = parseInt(dep.vram) || 0;
+                if (vramNum > maxVram) maxVram = vramNum;
+            }
+
+            return {
+                sizeText: totalBytes > 0 ? _formatBytes(totalBytes) : '',
+                vramText: maxVram > 0 ? `${maxVram}GB VRAM` : '',
+            };
+        }
+
+        function _parseSizeToBytes(sizeStr) {
+            if (!sizeStr) return 0;
+            const match = sizeStr.match(/^([\d\.]+)\s*(GB|MB|KB|B)$/i);
+            if (!match) return 0;
+            return parseFloat(match[1]) * { GB: 1024 ** 3, MB: 1024 ** 2, KB: 1024, B: 1 }[match[2].toUpperCase()] || 0;
+        }
+
+        function _formatBytes(bytes) {
+            if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)}GB`;
+            if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)}MB`;
+            if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+            return `${bytes}B`;
+        }
+
+        // ── Uninstall stub ──────────────────────────────────────────────────
+        async function _uninstallModel(model) {
+            Events.emit('ui:error', {
+                title: 'Not implemented',
+                message: 'Model uninstallation is not yet available.',
+            });
+        }
+
         // ── Render card list ───────────────────────────────────────────────
         function renderList() {
             qsa('.mpi-models-modal__card', bodySlot).forEach(c => c.remove());
+            qsa('.mpi-models-modal__section-header', bodySlot).forEach(h => h.remove());
+            qsa('.mpi-models-modal__empty', bodySlot).forEach(e => e.remove());
 
+            const installed = MODELS.filter(m => m.installed === true);
             const uninstalled = MODELS.filter(m => m.installed !== true);
 
-            if (uninstalled.length === 0) {
-                const emptyEl = ce('div', { className: 'mpi-models-modal__empty' }, [
-                    ce('span', { textContent: 'No models available to install' }),
-                ]);
+            // Installed section
+            if (installed.length > 0) {
+                const header = ce('div', { className: 'mpi-models-modal__section-header' },
+                    [document.createTextNode('Installed Models')]);
+                bodySlot.appendChild(header);
+
+                installed.forEach(model => {
+                    const stats = _computeModelStats(model);
+                    const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
+                    bodySlot.appendChild(cardWrap);
+
+                    const card = MpiInstalledDisplay.mount(cardWrap, {
+                        title: model.name,
+                        meta: stats.sizeText,
+                        text: model.description || '',
+                        image: model.image || '',
+                        icon: 'info',
+                        iconText: stats.vramText,
+                        installed: true,
+                        deleteLabel: 'Uninstall',
+                        showDeleteModels: true,
+                    });
+
+                    card.on('deleteModels', async ({ active }) => {
+                        if (active) await _uninstallModel(model);
+                    });
+                });
+            }
+
+            // Available section
+            if (uninstalled.length === 0 && installed.length > 0) {
+                const emptyEl = ce('div', { className: 'mpi-models-modal__empty' },
+                    [ce('span', { textContent: 'No models available to install' })]);
+                bodySlot.appendChild(emptyEl);
+                return;
+            }
+
+            if (uninstalled.length === 0 && installed.length === 0) {
+                const emptyEl = ce('div', { className: 'mpi-models-modal__empty' },
+                    [ce('span', { textContent: 'No models available' })]);
                 bodySlot.appendChild(emptyEl);
                 return;
             }
 
             uninstalled.forEach(model => {
+                const stats = _computeModelStats(model);
                 const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
                 bodySlot.appendChild(cardWrap);
 
                 const card = MpiInstalledDisplay.mount(cardWrap, {
                     title: model.name,
-                    meta: model.gen_speed || '',
+                    meta: stats.sizeText,
                     text: model.description || '',
                     image: model.image || '',
                     icon: 'warning',
-                    iconText: _vramText(model),
+                    iconText: stats.vramText,
+                    installed: false,
                     deleteLabel: 'Install',
                 });
 
-                card.on('delete', async () => {
-                    await _installModel(model);
-                });
+                card.on('delete', async () => { await _installModel(model); });
             });
         }
 
@@ -176,10 +274,3 @@ export const MpiModelsModal = ComponentFactory.create({
         };
     },
 });
-
-// ── Helper ─────────────────────────────────────────────────────────────────
-
-function _vramText(model) {
-    // TODO: compute VRAM text from model dependencies
-    return '';
-}
