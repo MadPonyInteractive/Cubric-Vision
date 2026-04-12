@@ -10,7 +10,6 @@
  *   GET  /comfy/list-files          — list model files in a subdirectory
  *   GET  /comfy/workflows           — list all workflows with install status
  *   POST /comfy/models/check        — check which models are installed on disk
- *   POST /comfy/models/download     — download model dependencies
  *   POST /comfy/workflow/delete     — delete a workflow and optionally its files
  *   POST /comfy/workflow/install-complete — mark a workflow as installed
  */
@@ -29,7 +28,6 @@ const {
     processState,
     stopLlamaServer,
     stopComfyUI,
-    streamDownload,
     runPipCommand,
     isPackageRequiredElsewhere,
     resolveComfyPath,
@@ -81,6 +79,9 @@ router.get('/comfy/status', async (req, res) => {
  */
 router.post('/comfy/start', async (req, res) => {
     try {
+        const isUserRestart = req.body && req.body.isUserRestart;
+        if (isUserRestart) processState.comfyNeedsRestart = false;
+
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
 
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
@@ -121,6 +122,16 @@ router.post('/comfy/start', async (req, res) => {
 router.post('/comfy/stop', (req, res) => {
     stopComfyUI();
     res.json({ success: true });
+});
+
+/**
+ * POST /comfy/needs-restart
+ * Body: { value?: boolean }
+ * Sets or queries the comfyNeedsRestart flag (set after custom node installs).
+ */
+router.post('/comfy/needs-restart', (req, res) => {
+    processState.comfyNeedsRestart = req.body.value ?? true;
+    res.json({ success: true, comfyNeedsRestart: processState.comfyNeedsRestart });
 });
 
 /**
@@ -385,89 +396,6 @@ router.get('/comfy/workflows', async (req, res) => {
 });
 
 // ── Model / Workflow Management ───────────────────────────────────────────────
-
-/**
- * POST /comfy/models/download
- * Body: { modelId: string, dependencies: Dep[] }
- * Downloads all dependency files not yet on disk. Custom nodes trigger ComfyUI stop/restart.
- * Returns: { success: true, installed: string[], skipped: string[] }
- */
-router.post('/comfy/models/download', async (req, res) => {
-    const { modelId, dependencies } = req.body;
-    if (!Array.isArray(dependencies)) {
-        return res.status(400).json({ error: 'dependencies array required' });
-    }
-
-    try {
-        const customRoot = await getCustomRoot();
-        const installed = [];
-        const skipped = [];
-
-        for (const dep of dependencies) {
-            let localPath;
-            const isCustomNode = dep.type === 'custom_nodes';
-
-            if (customRoot) {
-                const { localPath: lp } = await resolveComfyPath(
-                    { type: dep.type, filename: dep.filename }, customRoot, {}
-                );
-                localPath = lp;
-            } else {
-                const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-                const base = isCustomNode
-                    ? path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes')
-                    : path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
-                localPath = path.join(base, dep.filename);
-            }
-
-            if (await fs.pathExists(localPath)) {
-                skipped.push(dep.id);
-                continue;
-            }
-
-            await fs.ensureDir(path.dirname(localPath));
-
-            if (isCustomNode) {
-                stopComfyUI();
-                logger.info('comfy', `Cloning custom node ${dep.name} from ${dep.url}...`);
-                if (await fs.pathExists(localPath)) await fs.remove(localPath);
-                try {
-                    await new Promise((resolve, reject) => {
-                        exec(`git clone ${dep.url} "${localPath}"`, (err, _stdout, stderr) => {
-                            if (err) return reject(new Error('Git clone failed: ' + stderr));
-                            resolve();
-                        });
-                    });
-                    if (dep.install_requirements) {
-                        const reqPath = path.join(localPath, 'requirements.txt');
-                        if (await fs.pathExists(reqPath)) {
-                            logger.info('comfy', `Installing requirements for ${dep.name}...`);
-                            await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
-                        }
-                    }
-                    installed.push(dep.id);
-                } catch (err) {
-                    logger.error('comfy', `Custom node setup failed for ${dep.id}`, err);
-                    skipped.push(dep.id);
-                }
-            } else {
-                try {
-                    logger.info('comfy', `Downloading ${dep.name} (${dep.size})...`);
-                    await streamDownload(dep.url, localPath);
-                    installed.push(dep.id);
-                } catch (err) {
-                    logger.error('comfy', `Download failed for ${dep.id}`, err);
-                    skipped.push(dep.id);
-                }
-            }
-        }
-
-        res.json({ success: true, installed, skipped });
-    } catch (err) {
-        logger.error('comfy', 'models/download failed', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 /**
  * POST /comfy/workflow/delete

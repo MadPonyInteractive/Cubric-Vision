@@ -12,6 +12,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
+        sha256: null
     },
     'ill-anime': {
         id: 'ill-anime',
@@ -22,6 +23,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime.safetensors',
         size: '6.8GB',
         vram: '8GB',
+        sha256: null
     },
     'ill-anime-beauty': {
         id: 'ill-anime-beauty',
@@ -32,6 +34,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime_Beauty.safetensors',
         size: '6.8GB',
         vram: '8GB',
+        sha256: null
     },
     'pony-mix': {
         id: 'pony-mix',
@@ -42,6 +45,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/PONY_Mix.safetensors',
         size: '6.8GB',
         vram: '8GB',
+        sha256: null
     },
     // Video Models
     'wan-22-t2v-high': {
@@ -53,6 +57,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_High.safetensors',
         size: '21GB',
         vram: '12GB',
+        sha256: null
     },
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
@@ -63,6 +68,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_Low.safetensors',
         size: '21GB',
         vram: '12GB',
+        sha256: null
     },
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
@@ -73,6 +79,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_High.safetensors',
         size: '15GB',
         vram: '12GB',
+        sha256: null
     },
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
@@ -83,6 +90,7 @@ export const DEPS = {
         url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_Low.safetensors',
         size: '15GB',
         vram: '12GB',
+        sha256: null
     },
     // Loras
     'spo-sdxl-lora': {
@@ -92,6 +100,7 @@ export const DEPS = {
         filename: 'loras/SDXL/spo_sdxl_10ep_4k-data_lora_webui.safetensors',
         url: 'https://huggingface.co/LyliaEngine/spo_sdxl_10ep_4k-data_lora_webui/resolve/main/spo_sdxl_10ep_4k-data_lora_webui.safetensors',
         size: '364MB',
+        sha256: null
     },
     'dmd2_sdxl_4step_lora': {
         id: 'dmd2_sdxl_4step_lora',
@@ -100,6 +109,7 @@ export const DEPS = {
         filename: 'loras/SDXL/dmd2_sdxl_4step_lora.safetensors',
         url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
         size: '787MB',
+        sha256: null
     },
     // video loras
     'Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16': {
@@ -109,6 +119,7 @@ export const DEPS = {
         filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
         url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
         size: '600MB',
+        sha256: null
     },
     'Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16': {
         id: 'Wan22-4steps-lora-LOW',
@@ -117,6 +128,7 @@ export const DEPS = {
         filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
         url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
         size: '600MB',
+        sha256: null
     },
     // VAE
     'wan_2.1_vae': {
@@ -126,6 +138,7 @@ export const DEPS = {
         filename: 'vae/wan_2.1_vae.safetensors',
         url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors',
         size: '254MB',
+        sha256: null
     },
     // CLIP
     'umt5_xxl_fp8_e4m3fn_scaled': {
@@ -135,6 +148,7 @@ export const DEPS = {
         filename: 'vae/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         size: '6.27GB',
+        sha256: null
     },
     // Upscale Models
     '4x-NMKD-Siax': {
@@ -144,6 +158,7 @@ export const DEPS = {
         filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
         url: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
         size: '67MB',
+        sha256: null
     },
     '4x-AnimeSharp': {
         id: '4x-AnimeSharp',
@@ -152,6 +167,7 @@ export const DEPS = {
         filename: 'upscale_models/4x-AnimeSharp.pth',
         url: 'https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth',
         size: '65MB',
+        sha256: null
     },
     // Nodes
     'ComfyUI-MpiNodes': {
@@ -162,6 +178,7 @@ export const DEPS = {
         url: 'https://github.com/MadPonyInteractive/ComfyUi-MpiNodes',
         installRequirements: false,
         size: '1.76MB',
+        sha256: null
     },
     'ComfyUI-PainterI2Vadvanced': {
         id: 'ComfyUI-PainterI2Vadvanced',
@@ -171,6 +188,7 @@ export const DEPS = {
         url: 'https://github.com/princepainter/ComfyUI-PainterI2Vadvanced',
         installRequirements: false,
         size: '144KB',
+        sha256: null
     },
     'ComfyUI-VideoHelperSuite': {
         id: 'ComfyUI-VideoHelperSuite',
@@ -180,6 +198,7 @@ export const DEPS = {
         url: 'https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite',
         installRequirements: false,
         size: '806KB',
+        sha256: null
     },
     'ComfyUI-Impact-Pack': {
         id: 'ComfyUI-Impact-Pack',
@@ -189,6 +208,7 @@ export const DEPS = {
         url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack',
         installRequirements: true,
         size: '5MB',
+        sha256: null
     },
     'comfyui-kjnodes': {
         id: 'comfyui-kjnodes',
@@ -198,6 +218,7 @@ export const DEPS = {
         url: 'https://github.com/kijai/ComfyUI-KJNodes',
         installRequirements: true,
         size: '28MB',
+        sha256: null
     },
     'ComfyUI-UltimateSDUpscale': {
         id: 'ComfyUI-UltimateSDUpscale',
@@ -207,6 +228,7 @@ export const DEPS = {
         url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale',
         installRequirements: false,
         size: '940KB',
+        sha256: null
     },
     // Auto Masking — nodes and detection models used by img_auto_mask workflow
     'ComfyUI-Impact-Subpack': {
@@ -217,6 +239,7 @@ export const DEPS = {
         url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack',
         installRequirements: true,
         size: '172KB',
+        sha256: null
     },
     'face-yolov8n': {
         id: 'face-yolov8n',
@@ -225,6 +248,7 @@ export const DEPS = {
         filename: 'ultralytics/bbox/face_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt',
         size: '5.9MB',
+        sha256: null
     },
     'hand-yolov8n': {
         id: 'hand-yolov8n',
@@ -233,6 +257,7 @@ export const DEPS = {
         filename: 'ultralytics/bbox/hand_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt',
         size: '5.9MB',
+        sha256: null
     },
     'person-yolov8n-seg': {
         id: 'person-yolov8n-seg',
@@ -241,6 +266,7 @@ export const DEPS = {
         filename: 'ultralytics/bbox/person_yolov8n-seg.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt',
         size: '6.9MB',
+        sha256: null
     },
     'sam-vit-b': {
         id: 'sam-vit-b',
@@ -249,5 +275,6 @@ export const DEPS = {
         filename: 'sams/sam_vit_b_01ec64.pth',
         url: 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/sams/sam_vit_b_01ec64.pth',
         size: '367MB',
+        sha256: null
     },
 };

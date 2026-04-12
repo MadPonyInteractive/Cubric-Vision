@@ -101,3 +101,26 @@
 .mpi-installed-display__spacer {
     flex: 1;
 }
+
+/* ── Progress / Installing states ─────────────────────────────────────────── */
+.mpi-installed-display__progress-slot {
+    width: 100%;
+}
+
+.mpi-installed-display__progress-label {
+    font-size: 12px;
+    color: var(--mpi-color-muted, #888);
+    margin-top: 2px;
+}
+
+.mpi-installed-display__installing-label {
+    font-size: 14px;
+    color: var(--mpi-color-primary, #7c5cff);
+    padding: 4px 0;
+    animation: mpi-installing-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mpi-installing-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}

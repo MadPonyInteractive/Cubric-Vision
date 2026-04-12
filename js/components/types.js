@@ -537,14 +537,18 @@
  * @property {string} [iconText='']       - Text shown next to the icon
  * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Info icon size
  * @property {'muted'|'accent'|'primary'|'danger'|'success'} [iconColor='danger'] - Info icon color
- * @property {boolean} [showDeleteModels=false]  - Show the optional Delete Models toggle button
- * @property {boolean} [deleteModelsActive=false] - Initial active state of Delete Models toggle
  * @property {boolean} [installed=false] - Whether this item is installed; controls badge label/variant
- * @property {string} [deleteLabel='Uninstall']  - Label for the right action button
+ * @property {string} [deleteLabel='Install']  - Label for the action button when not downloading
+ * @property {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'} [downloadState='idle'] - Download state
+ * @property {number} [progress=0]        - Download progress 0–1
+ * @property {string} [speed='']          - Download speed string e.g. "12.3 MB/s"
+ * @property {boolean} [canResume=false]  - Whether resume button should be shown
  *
  * Emits:
- * 'delete'       {}                  — Uninstall/Delete button clicked
- * 'deleteModels' { active: boolean } — Delete Models toggle changed
+ * 'delete' {}     — Action button clicked (Install when idle; context-dependent)
+ * 'pause' {}      — Pause button clicked (during download)
+ * 'resume' {}     — Resume button clicked (when paused)
+ * 'cancel' {}    — Cancel button clicked
  */
 
 /**

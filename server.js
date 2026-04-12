@@ -38,12 +38,17 @@ const projectRoutes = require('./routes/projects');
 const llmRoutes     = require('./routes/llm');
 const engineRoutes  = require('./routes/engine');
 const comfyRoutes   = require('./routes/comfy');
+const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
 
 app.use(systemRoutes);
 app.use(projectRoutes);
 app.use(llmRoutes);
 app.use(engineRoutes);
 app.use(comfyRoutes);
+app.use(downloadManagerRoutes);
+
+process.on('SIGTERM', () => { cancelAllDownloads(); process.exit(0); });
+process.on('SIGINT', () => { cancelAllDownloads(); process.exit(0); });
 
 // ── Startup ────────────────────────────────────────────────────────────────────
 

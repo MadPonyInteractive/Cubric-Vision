@@ -9,6 +9,7 @@ import { state } from '../../../state.js';
 import { MODELS } from '../../../data/modelRegistry.js';
 import { reSyncInstalledModels } from '../../../data/modelRegistry.js';
 import { DEPS } from '../../../data/modelConstants/dependencies.js';
+import { downloadService } from '../../../services/downloadService.js';
 import { qs, qsa, ce, on } from '../../../utils/dom.js';
 
 /**
@@ -91,47 +92,14 @@ export const MpiModelsModal = ComponentFactory.create({
             awaitReSync();
         }));
 
-        // ── Install a model ──────────────────────────────────────────────────
+        // ── Install a model (non-blocking via downloadService) ───────────────
         async function _installModel(model) {
-            try {
-                refreshBtn.el.setAttribute('loading', 'true');
-
-                // Resolve full dep objects from dep ids
-                const dependencies = model.dependencies
-                    .map(depId => DEPS[depId])
-                    .filter(Boolean);
-
-                const res = await fetch('/comfy/models/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ modelId: model.id, dependencies }),
-                });
-
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({ error: 'Download failed' }));
-                    Events.emit('ui:error', {
-                        title: 'Download failed',
-                        message: `Could not download model "${model.name}". ${err.error || 'Check your connection and try again.'}`,
-                    });
-                    refreshBtn.el.removeAttribute('loading');
-                    return;
-                }
-
-                await reSyncInstalledModels();
-                renderList();
-
-                const hasRealModel = state.s_installedModelIds.some(id => !id.startsWith('universal:'));
-                if (hasRealModel) {
-                    Events.emit('models:all-installed');
-                }
-            } catch (err) {
-                Events.emit('ui:error', {
-                    title: 'Download failed',
-                    message: `Could not download model "${model.name}". Check your connection and try again.`,
-                });
-            } finally {
-                refreshBtn.el.removeAttribute('loading');
-            }
+            const dependencies = model.dependencies
+                .map(depId => DEPS[depId])
+                .filter(Boolean);
+            if (!dependencies.length) return;
+            await downloadService.start(model.id, dependencies);
+            renderList();
         }
 
         // ── Re-sync wrapper ────────────────────────────────────────────────
@@ -207,6 +175,11 @@ export const MpiModelsModal = ComponentFactory.create({
                     const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
                     bodySlot.appendChild(cardWrap);
 
+                    const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
+                    const downloadState = downloadJob ? downloadJob.status : 'idle';
+                    const progress = downloadJob ? downloadJob.progress : 0;
+                    const speed = downloadJob ? downloadJob.speed : '';
+
                     const card = MpiInstalledDisplay.mount(cardWrap, {
                         title: model.name,
                         meta: stats.sizeText,
@@ -216,12 +189,16 @@ export const MpiModelsModal = ComponentFactory.create({
                         iconText: stats.vramText,
                         installed: true,
                         deleteLabel: 'Uninstall',
-                        showDeleteModels: true,
+                        downloadState,
+                        progress,
+                        speed,
                     });
 
-                    card.on('deleteModels', async ({ active }) => {
-                        if (active) await _uninstallModel(model);
-                    });
+                    if (downloadState !== 'idle') {
+                        card.on('pause', () => downloadService.pause(model.id));
+                        card.on('resume', () => downloadService.resume(model.id));
+                        card.on('cancel', () => downloadService.cancel(model.id));
+                    }
                 });
             }
 
@@ -245,6 +222,11 @@ export const MpiModelsModal = ComponentFactory.create({
                 const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
                 bodySlot.appendChild(cardWrap);
 
+                const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
+                const downloadState = downloadJob ? downloadJob.status : 'idle';
+                const progress = downloadJob ? downloadJob.progress : 0;
+                const speed = downloadJob ? downloadJob.speed : '';
+
                 const card = MpiInstalledDisplay.mount(cardWrap, {
                     title: model.name,
                     meta: stats.sizeText,
@@ -254,15 +236,42 @@ export const MpiModelsModal = ComponentFactory.create({
                     iconText: stats.vramText,
                     installed: false,
                     deleteLabel: 'Install',
+                    downloadState,
+                    progress,
+                    speed,
                 });
 
-                card.on('delete', async () => { await _installModel(model); });
+                if (downloadState !== 'idle') {
+                    card.on('pause', () => downloadService.pause(model.id));
+                    card.on('resume', () => downloadService.resume(model.id));
+                    card.on('cancel', () => downloadService.cancel(model.id));
+                } else {
+                    card.on('delete', async () => { await _installModel(model); });
+                }
             });
         }
 
         // ── Subscribe to state changes ───────────────────────────────────
         _unsubs.push(Events.on('state:changed', ({ key, value }) => {
-            if (key === 's_installedModelIds') renderList();
+            if (key === 's_installedModelIds' || key === 'downloadJobs') renderList();
+        }));
+
+        // ── Download event subscriptions ─────────────────────────────────
+        _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
+            awaitReSync();
+            renderList();
+        }));
+
+        _unsubs.push(Events.on('download:failed', ({ modelId, error }) => {
+            Events.emit('ui:error', {
+                title: 'Download failed',
+                message: error || 'Download failed. Please try again.',
+            });
+            renderList();
+        }));
+
+        _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
+            renderList();
         }));
 
         // ── Initial render ─────────────────────────────────────────────────

@@ -30,6 +30,11 @@ const _state = {
     // ── Legacy — keep until LLM re-implementation ─────────────────────────────
     g_abortControllers: {},     // Used by llmService.js
     currentLoadedModel: null,   // Used by llmService.js
+
+    // ── Download Manager ───────────────────────────────────────────────────────
+    downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
+    downloadQueueActive: false, // true when any download is in progress
+    comfyNeedsRestart: false,   // true after custom node install
 };
 
 /**

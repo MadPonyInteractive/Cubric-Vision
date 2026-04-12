@@ -951,12 +951,9 @@ function mountAll() {
             icon: 'info',
             iconText: '8GB VRAM REQUIRED',
             iconColor: 'danger',
-            showDeleteModels: true,
-            deleteModelsActive: false,
             deleteLabel: 'Uninstall'
         });
         inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay delete clicked'));
-        inst.on('deleteModels', ({ active }) => console.log('[gallery] MpiInstalledDisplay deleteModels:', active));
     });
 
     mount('preview-installed-display-simple', () => {
@@ -971,7 +968,6 @@ function mountAll() {
             icon: 'info',
             iconText: '16GB VRAM REQUIRED',
             iconColor: 'danger',
-            showDeleteModels: false,
             deleteLabel: 'Uninstall'
         });
         inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay simple delete clicked'));

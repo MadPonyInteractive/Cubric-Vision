@@ -36,6 +36,7 @@ const processState = {
     activeLlamaProcess: null,
     activeComfyProcess: null,
     activeModelId: null,
+    comfyNeedsRestart: false,
 };
 
 function stopLlamaServer() {
