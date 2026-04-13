@@ -95,6 +95,10 @@ If you need to know which state keys a component reads or writes:
 If you need to know what gets injected into ComfyUI workflows, which component injects it, and for which operations:
 **->** **MUST READ:** `.claude/rules/component-comfy.md`
 
+### Shell Services & Managers
+If you are working with shell-level services (e.g., PromptBoxService) or managers (Overlays, Hotkeys, StatusBar):
+**->** **MUST READ:** `docs/shell.md` for service documentation AND `.claude/rules/components.md` section "Service Ownership & Reactive Behavior"
+
 ### Debugging & Errors
 If you are trying to fix a bug, a server crash, or an issue with the python engine:
 **->** **MUST DO:** Read the last 50-100 lines of `logs/app.log` using the `Read` tool with an `offset`. Do NOT parse the entire file. This log is the master terminal output and contains runtime telemetry.

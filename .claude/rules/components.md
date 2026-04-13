@@ -35,6 +35,24 @@ You MUST follow Atomic Design principles. **NEVER "import up".**
 
 ---
 
+## Service Ownership & Reactive Behavior
+
+Some components (particularly Blocks) are managed by shell-level services rather than mounted directly by other components. Examples: `PromptBoxService` (manages `MpiPromptBox`).
+
+**Key rule: If a service owns a component, the service (not individual consumer blocks) should handle state-driven updates to that component.**
+
+**Why:** When multiple blocks consume a shared component, and they all duplicate the logic to respond to state changes, bugs must be fixed in multiple places. The service owns the component lifecycle, so it should own the reactive behavior too.
+
+**Pattern:**
+1. Service tracks relevant context (e.g., model type for PromptBoxService)
+2. Service subscribes to the appropriate state change internally
+3. Service calls the component's update method (e.g., `setModelList()`)
+4. Service cleans up subscriptions when remounting
+
+**For blocks consuming these components:** Do NOT re-implement state-change subscriptions that the service already handles. Check the service documentation (`docs/shell.md`) to understand what updates the service owns, and use only what you need to use directly.
+
+---
+
 ## The Skeleton Pattern
 Every component MUST use the `ComponentFactory`:
 
