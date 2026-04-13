@@ -13,7 +13,7 @@
    - A component's events, props, state connections, or ComfyUI injection changed
 
    If any of the above is true, you MUST ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (However, you ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks).
-   Additionally, if component wiring changed, run `/update-component-map` to regenerate the component map rule files.
+   Additionally, if component wiring changed, update `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, and `.claude/rules/component-state.md` manually to reflect the new structure.
 
 ---
 

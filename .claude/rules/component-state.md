@@ -6,7 +6,7 @@
 
 | state key              | type                        | readers                                                                                 | writers                                                                            |
 |------------------------|-----------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| `currentProject`       | `Object\|null`              | gallery.js, groupHistory.js, MpiModelSettings, MpiRadialMenu (via `updateProject`)      | gallery.js (`state.currentProject = addGroupToProject(...)` etc.), groupHistory.js, MpiModelSettings (`state.currentProject = setModelSettings(...)`) |
+| `currentProject`       | `Object\|null`              | MpiGalleryBlock, MpiGroupHistoryBlock, MpiModelSettings, MpiRadialMenu (via `updateProject`)      | MpiGalleryBlock (`state.currentProject = addGroupToProject(...)` etc.), MpiGroupHistoryBlock, MpiModelSettings (`state.currentProject = setModelSettings(...)`) |
 | `currentPage`          | `'landing'\|'gallery'\|'groupHistory'` | router.js (read at routing time)                                               | router.js (`navigate()` writes this)                                               |
 | `currentParams`        | `Object`                    | router.js                                                                               | router.js                                                                          |
 | `previousPage`         | `string\|null`              | router.js                                                                               | router.js                                                                          |
@@ -15,7 +15,10 @@
 | `allComfyWorkflows`    | `Array`                     | comfyController.js                                                                      | comfyController.js (populated at startup)                                          |
 | `upscaleModels`        | `string[]`                  | MpiModelSettings (`_mountUpscaleDropdown`)                                              | assetService.js (`loadAll()` at runtime — backend sync)                            |
 | `availableLoras`       | `string[]`                  | MpiModelSettings (`_mountLoraSlots`)                                                    | assetService.js (`loadAll()` at runtime — backend sync)                            |
-| `s_selectedModelId`    | `string\|null`              | gallery.js (derives `activeModel` on mount), groupHistory.js (derives `activeModel` on mount), groupHistory.js `_onStateModelChange` handler | gallery.js (on model-change event from promptBox), groupHistory.js (on model-change + on mount sync) |
+| `s_selectedModelId`    | `string\|null`              | MpiGalleryBlock (derives `activeModel` on mount), MpiGroupHistoryBlock (derives `activeModel` on mount) | MpiGalleryBlock (on model-change event from promptBox), MpiGroupHistoryBlock (on model-change + on mount sync) |
 | `g_abortControllers`   | `Object`                    | llmService.js (legacy)                                                                  | llmService.js (legacy)                                                             |
 | `currentLoadedModel`   | `string\|null`              | llmService.js (legacy)                                                                  | llmService.js (legacy)                                                             |
+| `downloadJobs[]`      | `DownloadJob[]`                        | MpiModelsModal, downloadService.js | downloadService.js |
+| `downloadQueueActive`| `boolean`                              | (read by components polling state) | downloadService.js |
+| `comfyNeedsRestart`  | `boolean`                              | comfyController.js (ensureServerRunning guard) | downloadService.js (set on `comfy:needs-restart` SSE event) |
 

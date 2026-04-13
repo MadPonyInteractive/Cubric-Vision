@@ -68,3 +68,14 @@ myToolBus.emit('result', { imgUrl });
 * `state:changed` - Global reactive state mutation
 * `project:changed` - User switched active project
 * `comfy:ready` / `comfy:error` - Engine status updates
+
+| `download:started` | A download job was enqueued |
+| `download:progress` | Per-job progress update (throttled via Events, not state) |
+| `download:complete` | Download succeeded |
+| `download:failed` | Download failed |
+| `download:paused` | Download paused |
+| `download:resumed` | Download resumed |
+| `download:cancelled` | Download cancelled |
+| `download:uninstalled` | Model uninstalled |
+| `download:installing` | Custom node install in progress |
+| `comfy:needs-restart` | ComfyUI restart required after custom node install |

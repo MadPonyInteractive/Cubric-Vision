@@ -5,38 +5,45 @@
 
 ---
 
-## gallery.js
+## MpiGalleryBlock
 
-- `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container; provides `getPromptSlot()` for PromptBox
-- `MpiPromptBox`     props: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   slot: `grid.el.getPromptSlot()` — only mounted when `activeModel` is non-null
-  - `updateContext`: called on `media-change` event only — `{ imageCount, videoCount, hasMask: false }`; not called at initial mount (initial props are final)
+- `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
+- `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
+  - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — singleton zero-installed overlay; shown when `state.s_installedModelIds.length === 0`; owns its own model card list via internal `MpiInstalledDisplay` mounts
+
+> **Note:** `MpiModelsModal` is NOT mounted here — it is a shell-level singleton in `shell.js`. `MpiGalleryBlock` emits `Events.emit('models:open')` to trigger it.
 
 ---
 
-## groupHistory.js
+## MpiGroupHistoryBlock
 
-- `MpiCanvas`   props: `{ onBrushTypeChange: fn }`   slot: `canvasWrap` div inside centre column
-- `MpiSpinner`   props: `{ size: 'lg', variant: 'primary' }`   slot: `spinnerWrap` div inside centre column; shown during generation
-- `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — includes crop, mask, plus universal tool commands from commandRegistry   slot: `leftBar` div
-- `MpiRatioSelector`   props: `{ modelType: 'social', value: SOCIAL_RATIOS[0].label }`   slot: `ce('div')` — passed as `leftSlot` to `cropActionBar`
-- `MpiToolActionBar` (cropActionBar)   props: `{ leftSlot: ratioSel, actions: [apply, cancel] }`   slot: `_cropBarSlot` inside `cropBar`; shown when crop mode active
-- `MpiToolActionBar` (maskActionBar)   props: `{ actions: [brush, eraser, clear, invert, cancel, apply] }`   slot: `_maskBarSlot` inside `cropBar`; shown when mask mode active
-- `MpiAutoMaskThumbs`   props: none   slot: `document.createElement('div')` — passed as `topSlot` to `autoMaskBar`
-- `MpiDropdown` (autoMaskModelDropdown)   props: `{ options: DETECTION_MODELS, value: _autoMaskModel, info, direction: 'up' }`   slot: `document.createElement('div')` — composed into `_autoMaskLeftSlot`
-- `MpiRadioGroup` (autoMaskModeRadio)   props: `{ options: [{Box,box},{Segment,segment}], value: 'box', name, info }`   slot: `document.createElement('div')` — composed into `_autoMaskLeftSlot`
-- `MpiToolActionBar` (autoMaskBar)   props: `{ topSlot: autoMaskThumbs, leftSlot: _autoMaskLeftSlotInst, actions: [detect, apply, cancel] }`   slot: `_autoMaskBarSlot` inside `cropBar`; shown when autoMask mode active
-- `MpiSelectionBar`   props: `{ count: 0 }`   slot: `_selBarSlot` inside `cropBar`; shown when history selection mode active
-- `MpiPromptBox`   props: `{ model: activeModel, modelList: installedModels, operation: activeOperation, includeNegative: true }`   slot: `bottom` div; only mounted when `activeModel` is non-null; initial context set via `updateContext({ ..._baseCtx, hasMask: false, filterNoInputOps: true })`
+- `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — includes crop, mask, plus universal tool commands (autoMaskImg, interpolate, videoUpscale)   slot: `#left-slot`
+- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask/compare tool modes internally
+- `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
+- `PromptBoxService.mount()`   config: `{ model, modelList: installedModels, operation: activeOperation, includeNegative: true }`   — shell-level PromptBox; only called when `activeModel` is non-null
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — singleton zero-installed overlay; shown when `state.s_installedModelIds.length === 0`; owns its own model card list via internal `MpiInstalledDisplay` mounts
+- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero image models installed (separate instance from shell's modal; emits `models:all-installed` to hide)
+
+---
+
+## shell.js (global singletons — mounted once at startup)
+
+- `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event
+- `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
+- `MpiModelsModal`     props: `{ icon, title, text, footer, closable: true }`   slot: `document.createElement('div')` — shown on `models:open` event or when zero image models installed
+- `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
+- `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
+- `PromptBoxService`   initialized against `#prompt-box-mount` — workspaces claim via `PromptBoxService.mount(config)`
+
+> **Rule:** Never mount any of the above singletons inside workspace Blocks. Use Events to trigger them.
 
 ---
 
 ## MpiGalleryGrid.js (internal mounts)
+
 
 - `MpiProgressBar` (size slider)   props: `{ min:1, max:5, step:1, value:3, interactive:true, wheel:true, info:'Size: {value}' }`   slot: `.mpi-gallery-grid__slider-wrap`
 - `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` — shown when selection mode active; hidden otherwise

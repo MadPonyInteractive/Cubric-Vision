@@ -43,3 +43,33 @@ Known titles: "Positive", "Negative", "Seed", "Checkpoint", "Lora_1"…"Lora_6",
 ## assetService (`js/services/assetService.js`)
 
 Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. Called lazily on ModelSettings open.
+
+## Download Manager
+
+### Frontend — `js/services/downloadService.js`
+Singleton that owns the frontend download queue.
+
+- `start(modelId, dependencies)`: Enqueue a model for download via backend SSE.
+- `pause(modelId)` / `resume(modelId)` / `cancel(modelId)`: Control an active download.
+- `uninstall(modelId, dependencies)`: Remove model files via backend.
+- SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
+- Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
+
+### Backend — `routes/downloadManager.js`
+Non-blocking download router using `node-downloader-helper` with pause/resume support.
+
+**Endpoints:**
+- `POST /comfy/models/download/start` — enqueue a model's dependencies
+- `POST /comfy/models/download/pause` / `resume` / `cancel`
+- `GET /comfy/downloads/status` — full queue snapshot
+- `GET /comfy/downloads/stream` — SSE broadcast channel
+- `POST /comfy/models/uninstall` — uninstall a model
+
+### State Keys
+In `js/state.js`:
+- `downloadJobs[]` — `DownloadJob[]` array, persisted for shutdown recovery
+- `downloadQueueActive` — `boolean`, true when any download is in progress
+- `comfyNeedsRestart` — `boolean`, true after custom node install; triggers auto-restart in `ensureServerRunning()`
+
+### ComfyUI Auto-Restart
+When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js` stops ComfyUI, starts it again with `{ isUserRestart: true }`, and polls until ready before any generation proceeds.

@@ -110,8 +110,11 @@ EMITS:   `activate`   `{ mode: string }`
 LISTENS: (none — callers call `el.syncMode(mode)` imperatively)
 
 ### MpiInstalledDisplay
-EMITS:   `delete`       `{}`
-         `deleteModels` `{ active: boolean }`
+EMITS:   `delete`      `{}`     — Action button clicked (Install when idle)
+         `pause`       `{}`     — Pause button clicked (during download)
+         `resume`      `{}`     — Resume button clicked (when paused/partial)
+         `cancel`      `{}`     — Cancel button clicked
+         `uninstall`   `{}`     — Uninstall button clicked (when installed)
 LISTENS: (none)
 
 ### MpiLightingConfig
@@ -232,13 +235,13 @@ LISTENS: (none)
 
 ## Workspaces (cross-cutting event usage)
 
-### gallery.js
-LISTENS: `workspace:set-operation` `{ operation: string }` — syncs promptBox operation dropdown
-EMITS:   `tool:running` — NOT emitted here; emitted by groupHistory
+### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
+LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation dropdown
+EMITS:   `tool:running` — NOT emitted here; emitted by MpiGroupHistoryBlock
 NOTE:    Reads `state.s_selectedModelId`; writes `state.s_selectedModelId` and `state.currentProject`
 
-### groupHistory.js
-LISTENS: `workspace:set-operation` `{ operation: string }` — syncs promptBox if op available
-LISTENS: `state:changed` `{ key, value }` — watches `s_selectedModelId` for cross-workspace sync
+### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
+Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.
+LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
 EMITS:   `tool:running` `{ tool: 'groupHistory', type: string }` — fired on generation start
-NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes `state.s_selectedModelId`, `state.currentProject`
+NOTE:    Reads `state.currentProject`; writes `state.currentProject`

@@ -5,33 +5,49 @@
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves routing, navigation, or workspace layout.
 
-**Three workspaces:** Landing (project select/create) → Gallery (default project view, all media) → Card History (single card detail, history, params). See `docs/workspaces.md` for details.
+**Three workspaces:** Landing (project select/create) → Gallery (default project view) → Group History (single card detail). See `docs/workspaces.md` for details.
 
 **Routing:** Use `js/router.js` (`navigate()` / `back()`) — never `window.location`.
-**Gallery:** `js/workspaces/gallery/gallery.js`. Contains PromptBox for model-tied commands.
-**Group History:** `js/workspaces/groupHistory/groupHistory.js`. Toolbar runs model-tied + universal commands. Universal commands (interpolate, videoUpscale, autoMaskImg) do not require a model.
+**Gallery Block:** `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` — lazy-loaded by `navigation.js`.
+**Group History Block:** `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` — lazy-loaded by `navigation.js`.
 
-**Dev Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.
+**PromptBox:** NOT mounted directly by workspaces. Always use `PromptBoxService.mount(config)` to claim the shell-level PromptBox. Shell owns the `#prompt-box-mount` container.
+
+**Dev Components Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.
+
+---
 
 ## 🗺️ Application Flow
-The application is currently divided into **Four Primary Workspaces**, plus one hidden developer area.
 
-1. **The Landing Page:** 
-   - Handles project selection and creation.
-   - Entry point: User selects an existing project or initializes a new one.
-   
-2. **The Gallery Workspace (Initial Project View):**
-   - The default workspace loaded immediately upon entering a project.
-   - Displays all media inside the project.
+```
+Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History (MpiGroupHistoryBlock)
+[projectUI.js handles UI]      [lazy import by navigation.js]   [lazy import by navigation.js]
+```
 
-3. **The Card History Workspace:**
-   - Triggered when the user clicks/selects a specific card from the gallery.
-   - Used for viewing generation history, modifying prompts, and reviewing parameter data.
+1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, and Landing overlay pages (`MpiSettings`, `MpiHelp`, `MpiAbout`).
+
+2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid`. Drives shell PromptBox via `PromptBoxService`. Navigate to group history on card open.
+
+3. **Group History Workspace** — `MpiGroupHistoryBlock`. Mounts `MpiHistoryTools` (left), `MpiCanvasViewer` (centre), `MpiHistoryList` (right). Drives shell PromptBox via `PromptBoxService`.
+
+---
+
+## 🛠️ Shell-Level Singletons (Always Active)
+
+Mounted once in `js/shell.js` — never re-mount these in workspace code:
+
+| Singleton | Trigger |
+|---|---|
+| `MpiErrorDialog` | `ui:error` event |
+| `MpiStartingComfy` | `comfy:starting` / `comfy:ready` events |
+| `MpiModelsModal` | `models:open` event / zero installed models |
+| `PromptBoxService` | initialized in `shell.js`, claimed by each workspace |
 
 ---
 
 ## 🛠️ The Dev Components Page (Hidden)
-We have a dedicated testing gallery for all UI components. 
-- **Access Rule:** This page is not available to standard users. It is gated by the `test_styles: true` flag located in `dev_configs/app_config.js`.
+
+A dedicated testing gallery for UI components.
+- **Access Rule:** Gated by `test_styles: true` in `dev_configs/app_config.js`.
 - **Location:** `js/pages/components.js`.
-- **Constraint:** If you build a new `MpiCompound` or UI element, ask the user if they want it added to this test page so they can preview it in isolation.
+- **Constraint:** If you build a new `MpiCompound` or UI element, ask the user if they want it added to this test page.

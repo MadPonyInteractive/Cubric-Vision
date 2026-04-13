@@ -43,3 +43,8 @@ When adding a new model to the application, it requires a dependency array. Chec
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.
 - Any new routes that communicate with ComfyUI's internal API (`/manager/unload_models`, etc.) must account for deep vs. shallow memory cleaning.
+
+### Download Manager Router
+- `routes/downloadManager.js` — Backend download queue with resume support. Endpoints: `POST /comfy/models/download/start|pause|resume|cancel`, `GET /comfy/downloads/status|stream`.
+- `js/services/downloadService.js` — Frontend singleton. Manages SSE subscription and emits Events for UI consumption.
+- `routes/comfy.js` holds `comfyNeedsRestart` flag; `ensureServerRunning()` in `comfyController.js` auto-restarts ComfyUI when this flag is set.

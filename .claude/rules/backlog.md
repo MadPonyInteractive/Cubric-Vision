@@ -41,13 +41,6 @@
 - [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
 
 ### New bugs found (2026-04-13)
-- [] Running an upscale operation fails to display a pop-up of "Generation Failed" and outputs the following errors in the console:
-:8188/prompt:1  Failed to load resource: the server responded with a status of 400 (Bad Request)Understand this error
-clientLogger.js:22 [comfy] Workflow failed: upscale / pony-mix Error: Node 'Mpi Expo Float' not found. The custom node may not be installed.
-    at comfyController.js:342:27
-_send @ clientLogger.js:22Understand this error
-clientLogger.js:22 [MpiGalleryBlock] Generation error: Error: Node 'Mpi Expo Float' not found. The custom node may not be installed.
-    at comfyController.js:342:27
 - [] After installing the model, the new model is not available in the prompt box model selector drop-down. 
 - [] When the user installs a new model and ComfyUi is not running in the background, running a generation Displays a popup warning that ComfyUi is restarting because new models have been installed. It should just show the starting engine pop-up. 
 - [] Compound Component `../../js/components/Compounds/MpiGroupCard/MpiGroupCard.js` needs an heart toggleable icon on the top left for favorites Implementation. 
@@ -75,18 +68,6 @@ clientLogger.js:22 [MpiGalleryBlock] Generation error: Error: Node 'Mpi Expo Flo
 - `js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js` — bytes display in progress label, `downloadedBytes`/`totalBytes` props
 - `js/components/Blocks/MpiModelsModal/MpiModelsModal.js` — passes `downloadedBytes`/`totalBytes` props
 - `package.json` — `node-downloader-helper: ^2.1.11`
-
-### Verification (from plan Phase 7)
-- [x] **Step 1:** Large download starts, speed bar + bytes text visible ✅
-- [x] **Step 2:** Two concurrent downloads with shared dep fill independently ✅
-- [x] **Step 3:** Pause → Resume → continues from where it was (partial file grows) ✅
-- [x] **Step 4:** Cancel one of two concurrent downloads — other continues ✅
-- [x] **Step 5:** Close modal, navigate away, come back — download still correct ✅
-- [ ] **Step 6:** After download completes (custom nodes) — "Installing" label animates dots
-- [ ] **Step 7:** Model with custom node deps → auto-restart ComfyUI before generation
-- [ ] **Step 8:** Shared dep progress visible on Model B card even before Model B starts
-- [ ] **Step 9:** No `showDeleteModels` / `deleteModels` references in codebase
-- [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
 
 ---
 

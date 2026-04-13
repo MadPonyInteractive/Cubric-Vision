@@ -22,7 +22,7 @@
 ```
 MpiPromptBox 'run' event
   → { operation, positive, negative, mediaItems, injectionParams }
-  → gallery.js / groupHistory.js runCommand() call
+  → MpiGalleryBlock / MpiGroupHistoryBlock runCommand() call
   → commandExecutor.runCommand({ operation, modelId, positive, negative, mediaItems, maskDataUrl, injectionParams })
     → _buildParams() merges injectionParams + model settings (loras, upscale, checkpoint)
     → ComfyUIController.runWorkflow(workflowFile, params, onProgress)

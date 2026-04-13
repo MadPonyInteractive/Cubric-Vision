@@ -29,6 +29,16 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `tool:running` | A tool is actively running |
 | `tool:idle` | All tools are idle |
 | `nav:tool` | Navigation tool was activated |
+| `download:started` | A download job was enqueued and started |
+| `download:progress` | Download bytes/speed updated (throttled, 1/sec via Events) |
+| `download:complete` | Download job finished successfully |
+| `download:failed` | Download job failed |
+| `download:paused` | Download job was paused |
+| `download:resumed` | Download job was resumed |
+| `download:cancelled` | Download job was cancelled |
+| `download:uninstalled` | Model was uninstalled |
+| `download:installing` | Custom node install phase started |
+| `comfy:needs-restart` | ComfyUI auto-restart needed after custom node install |
 
 ## Cleanup Pattern (mandatory)
 
