@@ -576,6 +576,7 @@
  * @property {import('./data/projectModel.js').ItemGroup} group - The item group to display
  * @property {boolean} [selectionMode=false] - When true, clicks toggle selection instead of opening
  * @property {boolean} [selected=false]      - Whether this card is currently selected
+ * @property {boolean} [favourite=false]    - Whether this group is marked as a favourite
  *
  * Instance methods (on instance.el):
  *   setGenerating(previewUrl)  — switch to generating state with optional latent preview
@@ -583,10 +584,12 @@
  *   setDone(group)             — generation complete, update group and return to normal state
  *   setSelected(bool)          — toggle selection highlight externally
  *   setSelectionMode(bool)     — switch between open-on-click and select-on-click
+ *   setFavourite(bool)         — set favourite state externally without emitting
  *
  * Emits:
  *   'open'   { group }             — card clicked in normal mode
  *   'select' { group, selected }   — checkbox toggled or card clicked in selection mode
+ *   'favourite' { group, favourite } — heart button toggled; group.favourite is updated
  */
 
 /**

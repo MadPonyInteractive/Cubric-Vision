@@ -41,10 +41,15 @@
 - [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
 
 ### New bugs found (2026-04-13)
-- [] After installing the model, the new model is not available in the prompt box model selector drop-down. 
-- [] When the user installs a new model and ComfyUi is not running in the background, running a generation Displays a popup warning that ComfyUi is restarting because new models have been installed. It should just show the starting engine pop-up. 
-- [] Compound Component `../../js/components/Compounds/MpiGroupCard/MpiGroupCard.js` needs an heart toggleable icon on the top left for favorites Implementation. 
-- [] The block component `../../js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` Needs buttons on the top left So the user can organize the gallery by oldest, newest, images, video, favourites and later on when audio is implemented, audio. 
+- [x] After installing a model, the new model is not available in the prompt box model selector drop-down, The user needs to leave the project and enter a project in order for it to update.  
+- [x] After installing a model, The MpiToast component displays the ID of the model instead of the name fetched from `../../js/data/modelConstants/models.js`
+- [x] When the user installs a new model and ComfyUi is not running in the background, running a generation Displays a popup warning that ComfyUi is restarting because new models have been installed. It should just show the starting engine pop-up. 
+- [x] Compound Component `../../js/components/Compounds/MpiGroupCard/MpiGroupCard.js` needs an heart toggleable icon on the top left for favorites Implementation, use the MpiButton as it has toggeable functionality. 
+- [] The block component `../../js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` Needs buttons/tabs on the top left So the user can organize the gallery by oldest, newest, images, video, favourites and later on when audio is implemented, audio. (default should be newest to oldest)
+- [] brainstorm how the galery cards display information and execute the changes
+- [] Change the galery grid to respect image ratios
+- [] When multiple models are installed as a consequence of having the same dependencies as the model that the user installed, the Mpi Toast displays only the model that was installed. It would be good to display all the models that were installed as a consequence of having installed that one model. (open to discussion -> possibility to change the mpitoast behaviour to a multiple toast with a max of 3 toasts stacked) 
+- [] The comapre tool toolbar in the group history display is injected into the history pannel instead of showing in place of the MpiPromptBox like it does on the main gallery. 
 - [x] **Progress bar denominator wrong:** Backend `modelJob.totalBytes` only sums MISSING deps, not ALL deps. Fix: pre-sum totalBytes from ALL deps, mark installed deps as `complete`.
 - [x] **Uninstall button not rendered:** `MpiInstalledDisplay` has no Uninstall button branch — only Install, Pause/Resume/Cancel. Fix: add Uninstall button branch emitting `'uninstall'` event.
 - [x] **No progress bar for partially installed models:** When deps are missing but no active download, no progress bar shows. Fix: enhance `/comfy/models/check` to return per-dep status; use for partial progress bar. `MpiModelsModal` computes partial progress for BOTH installed and uninstalled models; `hasPartialProgress` prop decouples progress-bar visibility from button logic.

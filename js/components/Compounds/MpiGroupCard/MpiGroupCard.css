@@ -101,6 +101,21 @@
     accent-color: var(--neon-electric);
 }
 
+/* ── Favourite button ────────────────────────────────────────────────────── */
+
+.mpi-group-card__fav-wrap {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.mpi-group-card:hover .mpi-group-card__fav-wrap,
+.mpi-group-card--favourited .mpi-group-card__fav-wrap {
+    opacity: 1;
+}
+
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 
 .mpi-group-card__footer {

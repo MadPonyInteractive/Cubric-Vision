@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { ce } from '/js/utils/dom.js';
 
 /**
@@ -41,6 +42,7 @@ export const MpiGroupCard = ComponentFactory.create({
                     <img class="mpi-group-card__preview-img" alt="">
                 </div>
             </div>
+            <div class="mpi-group-card__fav-wrap"></div>
             <div class="mpi-group-card__select-wrap">
                 <input type="checkbox" class="mpi-group-card__checkbox" aria-label="Select group">
             </div>
@@ -65,6 +67,27 @@ export const MpiGroupCard = ComponentFactory.create({
         const nameEl      = el.querySelector('.mpi-group-card__name');
         const typeEl      = el.querySelector('.mpi-group-card__type');
         const card        = el; // el IS the .mpi-group-card root element
+        const favWrap     = el.querySelector('.mpi-group-card__fav-wrap');
+        let _favourite    = props.group?.favourite || false;
+
+        const _favBtn = MpiButton.mount(favWrap, {
+            icon:       'heartOutline',
+            iconActive: 'heart',
+            toggleable: true,
+            active:     _favourite,
+            size:       'sm',
+            variant:    'ghost',
+            info:       'Favourite',
+        });
+
+        _favBtn.on('toggle', ({ active }) => {
+            _favourite = active;
+            if (_group) {
+                _group.favourite = active;
+                emit('favourite', { group: _group, favourite: active });
+            }
+            card.classList.toggle('mpi-group-card--favourited', active);
+        });
 
         // ── Render from group data ──────────────────────────────────────────────
 
@@ -100,6 +123,9 @@ export const MpiGroupCard = ComponentFactory.create({
             });
 
             _applySelected(_selected);
+            _favourite = _group?.favourite || false;
+            _favBtn.el.setActive(_favourite);
+            card.classList.toggle('mpi-group-card--favourited', _favourite);
         }
 
         // ── Selection state ─────────────────────────────────────────────────────
@@ -125,6 +151,8 @@ export const MpiGroupCard = ComponentFactory.create({
             if (_generating) return;
             // Checkbox click is handled separately
             if (e.target === checkbox) return;
+            // Favourite button handles its own events
+            if (favWrap.contains(e.target)) return;
 
             if (_selectionMode) {
                 _applySelected(!_selected);
@@ -185,6 +213,16 @@ export const MpiGroupCard = ComponentFactory.create({
         el.setSelectionMode = (val) => {
             _selectionMode = val;
             card.classList.toggle('mpi-group-card--selection-mode', val);
+        };
+
+        /**
+         * Set favourite state externally without emitting.
+         * @param {boolean} val
+         */
+        el.setFavourite = (val) => {
+            _favourite = val;
+            _favBtn.el.setActive(val);
+            card.classList.toggle('mpi-group-card--favourited', val);
         };
 
         // ── Init ────────────────────────────────────────────────────────────────

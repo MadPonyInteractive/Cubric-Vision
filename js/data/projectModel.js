@@ -114,6 +114,7 @@ export function createVideoItem(overrides = {}) {
  * @property {number}         selectedIndex - Index into `history` of the current selected entry
  * @property {MediaItem[]}    history      - Append-only stack, index 0 = oldest
  * @property {boolean}        open         - Whether the group is expanded in the gallery (UI hint)
+ * @property {boolean}        [favourite=false] - Whether this group is marked as a favourite
  */
 
 /**
@@ -131,6 +132,7 @@ export function createItemGroup(type, overrides = {}) {
         selectedIndex: 0,
         history:       [],
         open:          false,
+        favourite:     false,
         ...overrides,
     };
 }

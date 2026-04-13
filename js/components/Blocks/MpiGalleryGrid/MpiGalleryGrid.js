@@ -179,6 +179,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
             });
 
+            card.on('favourite', ({ group: g, favourite }) => {
+                const idx = _groups.findIndex(x => x.id === g.id);
+                if (idx !== -1) {
+                    _groups[idx] = { ..._groups[idx], favourite };
+                    emit('favourite', { group: _groups[idx] });
+                }
+            });
+
             return { card, wrapper };
         }
 

@@ -81,6 +81,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
             state.currentProject = removeGroupFromProject(state.currentProject, groupId);
             _persistGroups();
         });
+        grid.on('favourite', ({ group }) => {
+            if (!state.currentProject) return;
+            state.currentProject = updateGroupInProject(state.currentProject, group);
+            _persistGroups();
+        });
 
         // ── Download ────────────────────────────────────────────────────────────
         grid.on('download', ({ groups: g }) => {

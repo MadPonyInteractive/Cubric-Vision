@@ -110,6 +110,21 @@ If you need to run browser automation or test web interfaces:
 
 ---
 
+## MPI Skills (global — `C:/Users/Fabio/.claude/skills/mpi/`)
+
+Four skills manage a human-in-the-loop execution system:
+
+| Command | Skill | Purpose |
+|---|---|---|
+| `/mpi-brainstorm` | mpi-brainstorm | Explore an idea collaboratively, write a spec, ask if you want a plan |
+| `/mpi-quick-plan` | mpi-quick-plan | Create empty plan scaffold for manual to-do entry |
+| `/mpi-write-plan` | mpi-write-plan | Decompose complex goals with parallel sub-agents into to-dos |
+| `/mpi-execute-next` | mpi-execute-next | Execute next `[ ]` to-do — briefs before code, waits for "go" |
+
+**Core principle:** Parallel sub-agents only in planning. Execution is always sequential, one to-do at a time, with mandatory brief gate before any code is written.
+
+---
+
 ## Sub-Agent Rule Injection Map
 
 > **FOR THE MAIN AGENT:** When dispatching a sub-agent via the `Agent` tool, sub-agents start cold — they have no CLAUDE.md context. You MUST copy the relevant briefing text from the rule file's `## Sub-Agent Briefing` section directly into the sub-agent's prompt. Always include the Critical Rules Snapshot above in every sub-agent prompt.
