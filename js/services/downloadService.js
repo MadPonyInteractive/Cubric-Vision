@@ -9,6 +9,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
+import { reSyncInstalledModels } from '../data/modelRegistry.js';
 
 const downloadService = {
     _eventSource: null,
@@ -159,6 +160,7 @@ const downloadService = {
                 toastInstance.on('close', () => toastWrap.remove());
             }
 
+            reSyncInstalledModels().catch(err => console.error('[downloadService] re-sync failed:', err));
             Events.emit('download:complete', data);
         });
 
