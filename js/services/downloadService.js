@@ -9,7 +9,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
-import { reSyncInstalledModels } from '../data/modelRegistry.js';
+import { reSyncInstalledModels, getModelById } from '../data/modelRegistry.js';
 
 const downloadService = {
     _eventSource: null,
@@ -148,12 +148,12 @@ const downloadService = {
             state.downloadQueueActive = state.downloadJobs.some(j => j.status === 'downloading');
 
             if (data.modelId) {
-                const modelJob = state.downloadJobs.find(j => j.modelId === data.modelId);
-                const modelName = modelJob?.modelId || data.modelId;
+                const model = getModelById(data.modelId);
+                const modelName = model?.name || data.modelId;
                 const toastWrap = ce('div');
                 document.body.appendChild(toastWrap);
                 const toastInstance = MpiToast.mount(toastWrap, {
-                    message: `${modelName} downloaded successfully`,
+                    message: `${modelName} installed.`,
                     variant: 'success',
                     duration: 4000,
                 });
@@ -171,8 +171,9 @@ const downloadService = {
                 job.status = 'failed';
                 job.error = data.error;
                 state.downloadJobs = [...state.downloadJobs];
-                
-                const modelName = job.modelId || data.modelId;
+
+                const model = getModelById(data.modelId);
+                const modelName = model?.name || data.modelId;
                 Events.emit('ui:error', {
                     title: 'Download Failed',
                     message: `Failed to download ${modelName}: ${data.error}`
