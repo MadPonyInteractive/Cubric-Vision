@@ -19,13 +19,13 @@ const path = require('path');
 const crypto = require('crypto');
 const logger = require('./logger');
 const { runPipCommand, resolveComfyPath, getCustomRoot } = require('./shared');
-const https = require('https');
-const http = require('http');
+const { DownloaderHelper } = require('node-downloader-helper');
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
-const _activeDownloaders = new Map(); // depId → ResumableDownloader
+const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
+const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
 
 function _createDepJob(dep) {
     return {
@@ -38,7 +38,6 @@ function _createDepJob(dep) {
         refCount: 0,
         error: null,
         sha256Expected: dep.sha256 || null,
-        partialPath: null,
     };
 }
 
@@ -56,126 +55,100 @@ function _createModelJob(modelId, deps) {
     };
 }
 
-// ── ResumableDownloader ───────────────────────────────────────────────────────
+// ── ResumableDownloader (node-downloader-helper wrapper) ─────────────────────
 
 class ResumableDownloader {
     constructor(depJob, localPath) {
         this.depJob = depJob;
         this.localPath = localPath;
-        this._aborted = false;
+        this._downloader = null;
         this.onProgress = null;
+        this._eventsBound = false;
     }
 
-    async download() {
-        await fs.ensureDir(path.dirname(this.localPath));
+    _bindEvents() {
+        if (this._eventsBound) return;
+        this._eventsBound = true;
 
-        const partialPath = this.localPath + '.partial';
-        let startByte = 0;
-        if (await fs.pathExists(partialPath)) {
-            const meta = await _readPartialMeta(partialPath);
-            startByte = meta.downloadedBytes || 0;
-            this.depJob.partialPath = partialPath;
-        }
+        // Progress — forwarded to our onProgress callback
+        this._downloader.on('progress', (stats) => {
+            const speed = stats.speed || 0;
+            this.depJob.downloadedBytes = stats.downloaded;
+            this.depJob.totalBytes = stats.total;
+            this.depJob.speed = _formatSpeed(speed);
+            if (this.onProgress) {
+                this.onProgress(stats.downloaded, stats.total, this.depJob.speed);
+            }
+        });
 
-        return new Promise((resolve, reject) => {
-            const protocol = this.depJob.url.startsWith('https') ? https : http;
-            const reqOptions = {
-                headers: {
-                    'User-Agent': 'MpiAiSuite/1.0',
-                    ...(startByte > 0 ? { 'Range': `bytes=${startByte}-` } : {}),
-                }
-            };
-
-            const req = protocol.get(this.depJob.url, reqOptions, (response) => {
-                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-                    this.depJob.url = new URL(response.headers.location, this.depJob.url).href;
-                    this.download().then(resolve).catch(reject);
-                    return;
-                }
-                if (response.statusCode !== 200 && response.statusCode !== 206) {
-                    return reject(new Error(`HTTP ${response.statusCode}`));
-                }
-
-                this.depJob.totalBytes = parseInt(response.headers['content-length'] || '0');
-                const writer = fs.createWriteStream(partialPath, { flags: startByte > 0 ? 'a' : 'w' });
-                let lastLoggedAt = Date.now();
-                let bytesSinceLastLog = 0;
-
-                response.on('data', (chunk) => {
-                    if (this._aborted) { response.destroy(); return; }
-                    writer.write(chunk);
-                    this.depJob.downloadedBytes += chunk.length;
-                    bytesSinceLastLog += chunk.length;
-                    const now = Date.now();
-                    const elapsed = (now - lastLoggedAt) / 1000;
-                    if (elapsed >= 1) {
-                        const speed = bytesSinceLastLog / elapsed;
-                        this.depJob.speed = _formatSpeed(speed);
-                        if (this.onProgress) {
-                            this.onProgress(this.depJob.downloadedBytes, this.depJob.totalBytes, this.depJob.speed);
-                        }
-                        bytesSinceLastLog = 0;
-                        lastLoggedAt = now;
-                        _savePartialMeta(partialPath, this.depJob.downloadedBytes);
-                    }
-                });
-
-                response.on('end', async () => {
-                    if (this._aborted) return reject(new Error('Aborted'));
-                    await new Promise((res, rej) => { writer.end(); writer.once('finish', res); writer.once('error', rej); });
-                    try {
-                        await _verifySha256(partialPath, this.depJob.sha256Expected);
-                        await fs.rename(partialPath, this.localPath);
-                        this.depJob.status = 'complete';
-                        _activeDownloaders.delete(this.depJob.id);
-                        resolve(this.localPath);
-                    } catch (err) {
-                        await fs.remove(partialPath).catch(() => {});
-                        this.depJob.status = 'failed';
-                        this.depJob.error = err.message;
-                        _activeDownloaders.delete(this.depJob.id);
-                        reject(err);
-                    }
-                });
-
-                response.on('error', (err) => {
-                    this.depJob.status = 'failed';
-                    this.depJob.error = err.message;
-                    _activeDownloaders.delete(this.depJob.id);
-                    reject(err);
-                });
-
-                this._response = response;
-            });
-
-            req.on('error', (err) => {
+        // Download finished successfully
+        this._downloader.on('end', async () => {
+            _activeDownloaders.delete(this.depJob.id);
+            try {
+                await _verifySha256(this.localPath, this.depJob.sha256Expected);
+                this.depJob.status = 'complete';
+                _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
+                _checkModelJobsComplete();
+            } catch (err) {
+                // SHA256 mismatch — clean up and mark failed
+                await fs.remove(this.localPath).catch(() => {});
                 this.depJob.status = 'failed';
                 this.depJob.error = err.message;
-                _activeDownloaders.delete(this.depJob.id);
-                reject(err);
-            });
+                _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
+                _checkModelJobsComplete();
+            }
+        });
 
-            this._req = req;
+        // Error occurred
+        this._downloader.on('error', (err) => {
+            _activeDownloaders.delete(this.depJob.id);
+            if (this.depJob.status === 'paused' || this.depJob.status === 'cancelled') return;
+            this.depJob.status = 'failed';
+            this.depJob.error = err.message;
+            _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
+            _checkModelJobsComplete();
         });
     }
 
+    async _ensureDownloader() {
+        if (this._downloader) return;
+        await fs.ensureDir(path.dirname(this.localPath));
+
+        const fileName = path.basename(this.localPath);
+        const destDir = path.dirname(this.localPath);
+
+        this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
+            fileName: fileName,
+            override: true,
+            resume: true,
+        });
+
+        this._bindEvents();
+    }
+
+    async download() {
+        await this._ensureDownloader();
+        this._downloader.start();
+    }
+
     abort() {
-        this._aborted = true;
-        this._req?.destroy();
+        if (this._downloader) {
+            this._downloader.pause().catch(() => {});
+        }
+    }
+
+    resume() {
+        if (!this._downloader) return;
+        const state = this._downloader.getResumeState();
+        this._downloader.resumeFromFile(state.filePath, {
+            downloaded: state.downloaded,
+            total: state.total,
+            fileName: state.fileName,
+        }).catch(() => {});
     }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function _readPartialMeta(partialPath) {
-    const metaPath = partialPath + '.meta';
-    if (await fs.pathExists(metaPath)) return await fs.readJson(metaPath);
-    return { downloadedBytes: 0 };
-}
-
-async function _savePartialMeta(partialPath, downloadedBytes) {
-    await fs.writeJson(partialPath + '.meta', { downloadedBytes }, { spaces: 0 });
-}
 
 async function _verifySha256(filePath, expected) {
     if (!expected) return;
@@ -312,49 +285,51 @@ router.post('/comfy/models/download/start', async (req, res) => {
 async function _startPendingDeps() {
     const pending = Array.from(_depJobs.values()).filter(d => d.status === 'queued' && d.refCount > 0);
     for (const depJob of pending) {
-        if (_activeDownloaders.has(depJob.id)) continue;
+        // Resume a paused downloader (same instance — node-downloader-helper picks up from .part file)
+        if (_pausedDownloaders.has(depJob.id)) {
+            const downloader = _pausedDownloaders.get(depJob.id);
+            _pausedDownloaders.delete(depJob.id);
+            _activeDownloaders.set(depJob.id, downloader);
+            depJob.status = 'downloading';
+            // Re-wire progress in case the same dep is shared across model jobs
+            _wireProgress(depJob, downloader);
+            downloader.resume();
+            continue;
+        }
+
+        if (_activeDownloaders.has(depJob.id)) {
+            continue;
+        }
 
         depJob.status = 'downloading';
         const downloader = new ResumableDownloader(depJob, depJob.localPath);
         _activeDownloaders.set(depJob.id, downloader);
 
-        downloader.onProgress = (downloadedBytes, totalBytes, speed) => {
-            for (const modelJob of _modelJobs.values()) {
-                const myDep = modelJob.deps.find(d => d.id === depJob.id);
-                if (!myDep) continue;
-                myDep.downloadedBytes = downloadedBytes;
-                myDep.totalBytes = totalBytes;
-                modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
-                modelJob.speed = speed;
-                modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
-                _broadcast('download:progress', {
-                    modelId: modelJob.modelId,
-                    depId: depJob.id,
-                    downloadedBytes,
-                    totalBytes,
-                    speed,
-                    progress: modelJob.progress,
-                });
-            }
-        };
-
-        try {
-            await downloader.download();
-            for (const modelJob of _modelJobs.values()) {
-                const myDep = modelJob.deps.find(d => d.id === depJob.id);
-                if (myDep) myDep.status = 'complete';
-            }
-            _broadcast('download:complete', { depId: depJob.id, modelId: null });
-            _checkModelJobsComplete();
-        } catch (err) {
-            if (depJob.status !== 'cancelled') {
-                depJob.status = 'failed';
-                depJob.error = err.message;
-            }
-            _broadcast('download:failed', { depId: depJob.id, error: err.message });
-            _checkModelJobsComplete();
-        }
+        _wireProgress(depJob, downloader);
+        downloader.download().catch(() => {});
     }
+}
+
+function _wireProgress(depJob, downloader) {
+    downloader.onProgress = (downloadedBytes, totalBytes, speed) => {
+        for (const modelJob of _modelJobs.values()) {
+            const myDep = modelJob.deps.find(d => d.id === depJob.id);
+            if (!myDep) continue;
+            myDep.downloadedBytes = downloadedBytes;
+            myDep.totalBytes = totalBytes;
+            modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+            modelJob.speed = speed;
+            modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _broadcast('download:progress', {
+                modelId: modelJob.modelId,
+                depId: depJob.id,
+                downloadedBytes,
+                totalBytes,
+                speed,
+                progress: modelJob.progress,
+            });
+        }
+    };
 }
 
 // ── Model Job Completion ──────────────────────────────────────────────────────
@@ -414,7 +389,12 @@ router.post('/comfy/models/download/pause', (req, res) => {
     job.deps.forEach(d => {
         if (d.status === 'downloading') {
             const dl = _activeDownloaders.get(d.id);
-            if (dl) dl.abort();
+            if (dl) {
+                dl.abort();
+                _activeDownloaders.delete(d.id);
+                // Keep the instance so resume can call .download() on the same object
+                _pausedDownloaders.set(d.id, dl);
+            }
             d.status = 'paused';
         }
     });
@@ -441,8 +421,12 @@ router.post('/comfy/models/download/cancel', (req, res) => {
     for (const dep of job.deps) {
         dep.refCount -= 1;
         if (dep.refCount <= 0) {
-            const dl = _activeDownloaders.get(dep.id);
-            if (dl) dl.abort();
+            const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
+            if (dl) {
+                dl.abort();
+                _activeDownloaders.delete(dep.id);
+                _pausedDownloaders.delete(dep.id);
+            }
             dep.status = 'cancelled';
             _depJobs.delete(dep.id);
         }
@@ -459,13 +443,17 @@ function cancelAllDownloads() {
     for (const [, downloader] of _activeDownloaders) {
         downloader.abort();
     }
+    for (const [, downloader] of _pausedDownloaders) {
+        downloader.abort();
+    }
+    _activeDownloaders.clear();
+    _pausedDownloaders.clear();
     for (const [, job] of _modelJobs) {
         job.deps.forEach(d => { d.status = 'cancelled'; });
         job.status = 'cancelled';
     }
     _modelJobs.clear();
     _depJobs.clear();
-    _activeDownloaders.clear();
     _broadcast('download:cancelled', { all: true });
 }
 

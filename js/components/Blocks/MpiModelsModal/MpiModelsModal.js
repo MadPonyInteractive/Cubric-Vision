@@ -179,6 +179,8 @@ export const MpiModelsModal = ComponentFactory.create({
                     const downloadState = downloadJob ? downloadJob.status : 'idle';
                     const progress = downloadJob ? downloadJob.progress : 0;
                     const speed = downloadJob ? downloadJob.speed : '';
+                    const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
+                    const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
 
                     const card = MpiInstalledDisplay.mount(cardWrap, {
                         title: model.name,
@@ -192,6 +194,8 @@ export const MpiModelsModal = ComponentFactory.create({
                         downloadState,
                         progress,
                         speed,
+                        downloadedBytes,
+                        totalBytes,
                     });
 
                     if (downloadState !== 'idle') {
@@ -233,6 +237,8 @@ export const MpiModelsModal = ComponentFactory.create({
                 const downloadState = downloadJob ? downloadJob.status : 'idle';
                 const progress = downloadJob ? downloadJob.progress : 0;
                 const speed = downloadJob ? downloadJob.speed : '';
+                const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
+                const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
 
                 const card = MpiInstalledDisplay.mount(cardWrap, {
                     title: model.name,
@@ -246,6 +252,8 @@ export const MpiModelsModal = ComponentFactory.create({
                     downloadState,
                     progress,
                     speed,
+                    downloadedBytes,
+                    totalBytes,
                 });
 
                 if (downloadState !== 'idle') {

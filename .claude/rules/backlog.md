@@ -5,7 +5,50 @@
 
 ---
 
-## 🔴 HIGHEST PRIORITY: Download Manager — Non-Blocking Implementation
+## ✅ HIGHEST PRIORITY: Replace ResumableDownloader with node-downloader-helper
+
+> **Status:** ✅ **COMPLETE — RESUME NOW WORKS.** `node-downloader-helper` v2.1.11 is installed and fully integrated. The `ResumableDownloader` class was refactored to use the library's native events (`progress`, `end`, `error`, `pause`, `resume`) rather than wrapping promises. `resumeFromFile()` is used instead of the broken `resume()` method (which had a bug: called `start()` internally after pause, losing the Range header and truncating the file).
+
+> **Library note:** `node-downloader-helper` is unmaintained (author notice on npm) but still functional. `resume()` has a confirmed bug — always use `resumeFromFile()` for resume.
+
+### Implementation summary
+
+**`ResumableDownloader` class (event-driven):**
+- `_bindEvents()` — registers `progress`, `end`, `error` handlers on the `DownloaderHelper` instance once; events own completion/failure broadcasting
+- `download()` — calls `_ensureDownloader()` then `_downloader.start()`; no try/catch
+- `resume()` — calls `resumeFromFile()` with `getResumeState()`; no promise chain
+- `_startPendingDeps()` — events handle all completion/error paths; no manual `.then()` / `.catch()`
+
+**Bugs fixed during this session:**
+- `resume()` was calling broken `downloader's.resume()` → fixed to use `resumeFromFile()`
+- Completion (`download:complete` + `_checkModelJobsComplete()`) only called on error path → fixed: `end` event now handles it
+- Unused code removed: `https`/`http` imports, `_readPartialMeta`/`_savePartialMeta` helpers, `partialPath` field, `_completed` flag
+
+**UI improvements:**
+- `MpiInstalledDisplay` now shows bytes downloaded: `"2.3GB / 6.9GB — 12.5 MB/s"`
+- `MpiModelsModal` passes `downloadedBytes` and `totalBytes` from `downloadJob` to `MpiInstalledDisplay`
+
+### Files changed
+- `routes/downloadManager.js` — event-driven `ResumableDownloader`, `resumeFromFile()` resume, SHA256 in `end` event
+- `js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js` — bytes display in progress label, `downloadedBytes`/`totalBytes` props
+- `js/components/Blocks/MpiModelsModal/MpiModelsModal.js` — passes `downloadedBytes`/`totalBytes` props
+- `package.json` — `node-downloader-helper: ^2.1.11`
+
+### Verification (from plan Phase 7)
+- [x] **Step 1:** Large download starts, speed bar + bytes text visible ✅
+- [x] **Step 2:** Two concurrent downloads with shared dep fill independently ✅
+- [x] **Step 3:** Pause → Resume → continues from where it was (partial file grows) ✅
+- [x] **Step 4:** Cancel one of two concurrent downloads — other continues ✅
+- [x] **Step 5:** Close modal, navigate away, come back — download still correct ✅
+- [ ] **Step 6:** After download completes (custom nodes) — "Installing..." then "INSTALLED" badge
+- [ ] **Step 7:** Model with custom node deps → auto-restart ComfyUI before generation
+- [ ] **Step 8:** Shared dep progress visible on Model B card even before Model B starts
+- [ ] **Step 9:** No `showDeleteModels` / `deleteModels` references in codebase
+- [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
+
+---
+
+## ✅ PREVIOUSLY HIGHEST PRIORITY: Download Manager — Non-Blocking Implementation
 
 > **Plan:** `docs/superpowers/plans/2026-04-12-download-manager.md`
 >

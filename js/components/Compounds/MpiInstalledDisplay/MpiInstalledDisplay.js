@@ -27,6 +27,8 @@ import { qs, ce } from '../../../utils/dom.js';
  * @param {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'} [downloadState='idle']
  * @param {number} [progress=0]          - Download progress 0–1
  * @param {string} [speed='']            - Download speed string e.g. "12.3 MB/s"
+ * @param {number} [downloadedBytes=0]   - Bytes downloaded so far
+ * @param {number} [totalBytes=0]        - Total bytes to download
  *
  * Emits:
  * 'delete'  {}   — Action button clicked (Install when idle)
@@ -53,6 +55,13 @@ export const MpiInstalledDisplay = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
+        function _formatBytes(bytes) {
+            if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)}GB`;
+            if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)}MB`;
+            if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+            return `${bytes}B`;
+        }
+
         // Title
         const titleSlot = qs('#idtitle-slot', el);
         if (props.title) titleSlot.textContent = props.title;
@@ -110,38 +119,6 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const isInstalling = props.downloadState === 'installing';
         const isComplete = props.downloadState === 'complete' || props.installed;
 
-        if (isDownloading) {
-            const progressSlot = ce('div', { className: 'mpi-installed-display__progress-slot' });
-
-            const barWrap = ce('div', { style: 'padding: 4px 0;' });
-            const progressBar = MpiProgressBar.mount(barWrap, {
-                value: Math.round((props.progress || 0) * 100),
-                min: 0,
-                max: 100,
-                variant: props.downloadState === 'paused' ? 'secondary' : 'primary',
-                interactive: false,
-            });
-            progressSlot.appendChild(barWrap);
-
-            const label = ce('div', { className: 'mpi-installed-display__progress-label' });
-            if (props.downloadState === 'paused') {
-                label.textContent = `Paused${props.speed ? ' — ' + props.speed : ''}`;
-            } else if (props.downloadState === 'partial') {
-                label.textContent = `Needs remaining files${props.speed ? ' — ' + props.speed : ''}`;
-            } else {
-                label.textContent = props.speed || '';
-            }
-            progressSlot.appendChild(label);
-
-            qs('#idactions-slot', el).prepend(progressSlot);
-        }
-
-        if (isInstalling) {
-            const label = ce('div', { className: 'mpi-installed-display__installing-label' });
-            label.textContent = 'Installing...';
-            qs('#idactions-slot', el).prepend(label);
-        }
-
         // Badge row — conditional based on installed prop and download state
         const badgeSlot = qs('#idbadge-slot', el);
         badgeSlot.innerHTML = '';
@@ -156,6 +133,40 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         // Actions row — driven by downloadState
         const actionsSlot = qs('#idactions-slot', el);
         actionsSlot.innerHTML = '';
+
+        if (isDownloading) {
+            const progressSlot = ce('div', { className: 'mpi-installed-display__progress-slot' });
+
+            const barWrap = ce('div', { style: 'padding: 4px 0;' });
+            MpiProgressBar.mount(barWrap, {
+                value: Math.round((props.progress || 0) * 100),
+                min: 0,
+                max: 100,
+                variant: props.downloadState === 'paused' ? 'secondary' : 'primary',
+                interactive: false,
+            });
+            progressSlot.appendChild(barWrap);
+
+            const label = ce('div', { className: 'mpi-installed-display__progress-label' });
+            if (props.downloadState === 'paused') {
+                label.textContent = `Paused${props.speed ? ' — ' + props.speed : ''}`;
+            } else if (props.downloadState === 'partial') {
+                label.textContent = `Needs remaining files${props.speed ? ' — ' + props.speed : ''}`;
+            } else {
+                const downloadedText = props.totalBytes ? `${_formatBytes(props.downloadedBytes)} / ${_formatBytes(props.totalBytes)}` : '';
+                const speedText = props.speed || '';
+                label.textContent = downloadedText ? (speedText ? `${downloadedText} — ${speedText}` : downloadedText) : speedText;
+            }
+            progressSlot.appendChild(label);
+
+            actionsSlot.appendChild(progressSlot);
+        }
+
+        if (isInstalling) {
+            const label = ce('div', { className: 'mpi-installed-display__installing-label' });
+            label.textContent = 'Installing...';
+            actionsSlot.appendChild(label);
+        }
 
         if (props.downloadState === 'downloading') {
             const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
