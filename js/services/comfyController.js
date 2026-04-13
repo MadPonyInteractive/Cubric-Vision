@@ -34,43 +34,49 @@ export const ComfyUIController = {
      * @returns {Promise<boolean>}
      */
     async ensureServerRunning() {
-        // ── Auto-restart if custom nodes were installed ─────────────────────────────
-        if (state.comfyNeedsRestart) {
-            clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
-            Events.emit('ui:error', {
-                title: 'Restarting ComfyUI',
-                message: 'New custom nodes were installed. Restarting automatically...',
-            });
-
-            await fetch('/comfy/stop', { method: 'POST' });
-            await new Promise(r => setTimeout(r, 2000));
-
-            await fetch('/comfy/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isUserRestart: true }),
-            });
-
-            // Poll until ready
-            let retries = 60;
-            while (retries-- > 0) {
-                await new Promise(r => setTimeout(r, 1000));
-                try {
-                    const check = await fetch('/comfy/status').then(r => r.json());
-                    if (check.ready) {
-                        state.comfyNeedsRestart = false;
-                        Events.emit('comfy:ready');
-                        return true;
-                    }
-                } catch (e) { /* keep polling */ }
-            }
-            throw new Error('ComfyUI auto-restart failed to become ready.');
-        }
-
         try {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
             if (status.running && status.ready) return true;
+
+            // ── Auto-restart if custom nodes were installed (and ComfyUI was running) ─
+            if (state.comfyNeedsRestart && status.running) {
+                clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
+                Events.emit('ui:error', {
+                    title: 'Restarting ComfyUI',
+                    message: 'New custom nodes were installed. Restarting automatically...',
+                });
+
+                await fetch('/comfy/stop', { method: 'POST' });
+                await new Promise(r => setTimeout(r, 2000));
+
+                await fetch('/comfy/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isUserRestart: true }),
+                });
+
+                // Poll until ready
+                let retries = 60;
+                while (retries-- > 0) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    try {
+                        const check = await fetch('/comfy/status').then(r => r.json());
+                        if (check.ready) {
+                            state.comfyNeedsRestart = false;
+                            Events.emit('comfy:ready');
+                            return true;
+                        }
+                    } catch (e) { /* keep polling */ }
+                }
+                throw new Error('ComfyUI auto-restart failed to become ready.');
+            }
+
+            // If ComfyUI is not running and needs restart flag is set, just clear it
+            // (ComfyUI will start fresh, no need for restart message)
+            if (state.comfyNeedsRestart && !status.running) {
+                state.comfyNeedsRestart = false;
+            }
 
             Events.emit('comfy:starting');
 
