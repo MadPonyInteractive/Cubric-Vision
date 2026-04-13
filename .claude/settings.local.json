@@ -111,7 +111,9 @@
       "Bash(npm install:*)",
       "mcp__plugin_context7_context7__resolve-library-id",
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(node -e \"require\\('./routes/downloadManager.js'\\)\")",
+      "Bash(node -e \"require\\('./routes/comfy.js'\\)\")"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

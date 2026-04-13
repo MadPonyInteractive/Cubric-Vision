@@ -29,12 +29,17 @@ import { qs, ce } from '../../../utils/dom.js';
  * @param {string} [speed='']            - Download speed string e.g. "12.3 MB/s"
  * @param {number} [downloadedBytes=0]   - Bytes downloaded so far
  * @param {number} [totalBytes=0]        - Total bytes to download
+ * @param {boolean} [canUninstall=false] - Show Uninstall button when true and installed
+ * @param {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
+ *   (e.g. some deps are on disk but missing others). Use with downloadState='idle' to show
+ *   a progress bar while keeping the Install button.
  *
  * Emits:
- * 'delete'  {}   — Action button clicked (Install when idle)
- * 'pause'   {}   — Pause button clicked (during download)
- * 'resume'  {}   — Resume button clicked (when paused)
- * 'cancel'  {}   — Cancel button clicked
+ * 'delete'    {} — Action button clicked (Install when idle)
+ * 'pause'     {} — Pause button clicked (during download)
+ * 'resume'    {} — Resume button clicked (when paused)
+ * 'cancel'    {} — Cancel button clicked
+ * 'uninstall' {} — Uninstall button clicked (when installed and canUninstall)
  */
 export const MpiInstalledDisplay = ComponentFactory.create({
     name: 'MpiInstalledDisplay',
@@ -118,6 +123,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const isDownloading = ['downloading', 'paused', 'partial'].includes(props.downloadState);
         const isInstalling = props.downloadState === 'installing';
         const isComplete = props.downloadState === 'complete' || props.installed;
+        const showProgress = isDownloading || props.hasPartialProgress;
 
         // Badge row — conditional based on installed prop and download state
         const badgeSlot = qs('#idbadge-slot', el);
@@ -125,16 +131,20 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         if (isComplete) {
             const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
             badgeSlot.appendChild(badge.el);
-        } else if (!isDownloading && !isInstalling) {
+        } else if (props.hasPartialProgress && !props.installed) {
+            const badge = MpiBadge.mount(ce('div'), { label: 'PARTIALLY INSTALLED', variant: 'warning' });
+            badgeSlot.appendChild(badge.el);
+        } else if (!showProgress && !isInstalling) {
             const badge = MpiBadge.mount(ce('div'), { label: 'NOT INSTALLED', variant: 'danger' });
             badgeSlot.appendChild(badge.el);
         }
 
-        // Actions row — driven by downloadState
+        // Actions row — driven by downloadState (NOT hasPartialProgress — that only affects the progress bar)
         const actionsSlot = qs('#idactions-slot', el);
         actionsSlot.innerHTML = '';
 
-        if (isDownloading) {
+        // Progress bar — shown for active downloads OR partial progress (hasPartialProgress)
+        if (showProgress) {
             const progressSlot = ce('div', { className: 'mpi-installed-display__progress-slot' });
 
             const barWrap = ce('div', { style: 'padding: 4px 0;' });
@@ -150,8 +160,9 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             const label = ce('div', { className: 'mpi-installed-display__progress-label' });
             if (props.downloadState === 'paused') {
                 label.textContent = `Paused${props.speed ? ' — ' + props.speed : ''}`;
-            } else if (props.downloadState === 'partial') {
-                label.textContent = `Needs remaining files${props.speed ? ' — ' + props.speed : ''}`;
+            } else if (props.hasPartialProgress) {
+                const downloadedText = props.totalBytes ? `${_formatBytes(props.downloadedBytes)} / ${_formatBytes(props.totalBytes)}` : '';
+                label.textContent = downloadedText || 'Partially installed';
             } else {
                 const downloadedText = props.totalBytes ? `${_formatBytes(props.downloadedBytes)} / ${_formatBytes(props.totalBytes)}` : '';
                 const speedText = props.speed || '';
@@ -164,7 +175,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
         if (isInstalling) {
             const label = ce('div', { className: 'mpi-installed-display__installing-label' });
-            label.textContent = 'Installing...';
+            label.textContent = 'Installing';
             actionsSlot.appendChild(label);
         }
 
@@ -193,6 +204,17 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             });
             actionBtn.on('click', () => emit('delete', {}));
             actionsSlot.appendChild(actionBtn.el);
+        } else if (props.installed && props.canUninstall) {
+            // Uninstall button — shown for fully installed models
+            const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
+            actionsSlot.appendChild(spacer);
+            const uninstallBtn = MpiButton.mount(ce('div'), {
+                text: 'Uninstall',
+                variant: 'ghost',
+                size: 'md',
+            });
+            uninstallBtn.on('click', () => emit('uninstall', {}));
+            actionsSlot.appendChild(uninstallBtn.el);
         }
     }
 });

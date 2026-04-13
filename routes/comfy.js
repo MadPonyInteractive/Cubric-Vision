@@ -223,9 +223,10 @@ comfyui:
 
 /**
  * POST /comfy/models/check
- * Body: { models: [{ id, deps: [{ type, filename }] }] }
+ * Body: { models: [{ id, deps: [{ type, filename, size?, id? }] }] }
  * Checks which models have all their dependency files present on disk.
- * Returns: { success: true, results: { [modelId]: boolean } }
+ * Returns per-dep installation status for partial-progress computation.
+ * Returns: { success: true, results: { [modelId]: { installed: boolean, deps: [{ id, installed: boolean }] } } }
  */
 router.post('/comfy/models/check', async (req, res) => {
     const { models } = req.body;
@@ -240,16 +241,17 @@ router.post('/comfy/models/check', async (req, res) => {
         const results = {};
 
         for (const model of models) {
-            if (!model.id || !Array.isArray(model.deps)) { results[model.id] = false; continue; }
+            if (!model.id || !Array.isArray(model.deps)) { results[model.id] = { installed: false, deps: [] }; continue; }
 
             let allPresent = true;
+            const depResults = [];
+
             for (const dep of model.deps) {
-                if (!dep.filename) continue;
+                if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
                 let depPath;
                 if (dep.type === 'custom_nodes') {
                     depPath = path.join(defaultCustomNodesRoot, dep.filename);
                 } else if (customRoot) {
-                    // Custom root — strip sub-type prefix from filename if present, search flexibly
                     const baseFilename = path.basename(dep.filename);
                     const subDir = path.dirname(dep.filename);
                     const directPath = path.join(customRoot, dep.filename);
@@ -263,10 +265,12 @@ router.post('/comfy/models/check', async (req, res) => {
                     depPath = path.join(defaultModelsRoot, dep.filename);
                 }
 
-                if (!(await fs.pathExists(depPath))) { allPresent = false; break; }
+                const isInstalled = await fs.pathExists(depPath);
+                if (!isInstalled) allPresent = false;
+                depResults.push({ id: dep.id || null, installed: isInstalled });
             }
 
-            results[model.id] = allPresent;
+            results[model.id] = { installed: allPresent, deps: depResults };
         }
 
         res.json({ success: true, results });

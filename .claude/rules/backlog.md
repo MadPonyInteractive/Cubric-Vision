@@ -28,6 +28,48 @@
 - `MpiInstalledDisplay` now shows bytes downloaded: `"2.3GB / 6.9GB — 12.5 MB/s"`
 - `MpiModelsModal` passes `downloadedBytes` and `totalBytes` from `downloadJob` to `MpiInstalledDisplay`
 
+### Verification steps remaining
+- [X] **Step 1:** Start ComfyUI. Open MpiModelsModal. Start a large model download (SDXL base ~6.9GB). Observe progress bar fill with speed text.
+- [X] **Step 2:** While downloading, install a second model that shares a dep — verify both progress bars fill independently.
+- [X] **Step 3:** Pause a download — bar freezes, Resume button appears. Resume — continues from where it was.
+- [X] **Step 4:** Cancel one of two concurrent downloads — other download continues uninterrupted.
+- [X] **Step 5:** Close the modal, navigate away (e.g. to history), come back — download still in progress with correct bar position.
+- [ ] **Step 6:** After download completes (custom nodes) — "Installing" label animates dots
+- [ ] **Step 7:** Model with custom node deps → auto-restart ComfyUI before generation
+- [ ] **Step 8:** Shared dep progress visible on Model B card even before Model B starts
+- [ ] **Step 9:** No `showDeleteModels` / `deleteModels` references in codebase
+- [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
+
+### New bugs found (2026-04-13)
+- [] Running an upscale operation fails to display a pop-up of "Generation Failed" and outputs the following errors in the console:
+:8188/prompt:1  Failed to load resource: the server responded with a status of 400 (Bad Request)Understand this error
+clientLogger.js:22 [comfy] Workflow failed: upscale / pony-mix Error: Node 'Mpi Expo Float' not found. The custom node may not be installed.
+    at comfyController.js:342:27
+_send @ clientLogger.js:22Understand this error
+clientLogger.js:22 [MpiGalleryBlock] Generation error: Error: Node 'Mpi Expo Float' not found. The custom node may not be installed.
+    at comfyController.js:342:27
+- [] After installing the model, the new model is not available in the prompt box model selector drop-down. 
+- [] When the user installs a new model and ComfyUi is not running in the background, running a generation Displays a popup warning that ComfyUi is restarting because new models have been installed. It should just show the starting engine pop-up. 
+- [] Compound Component `../../js/components/Compounds/MpiGroupCard/MpiGroupCard.js` needs an heart toggleable icon on the top left for favorites Implementation. 
+- [] The block component `../../js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` Needs buttons on the top left So the user can organize the gallery by oldest, newest, images, video, favourites and later on when audio is implemented, audio. 
+- [x] **Progress bar denominator wrong:** Backend `modelJob.totalBytes` only sums MISSING deps, not ALL deps. Fix: pre-sum totalBytes from ALL deps, mark installed deps as `complete`.
+- [x] **Uninstall button not rendered:** `MpiInstalledDisplay` has no Uninstall button branch — only Install, Pause/Resume/Cancel. Fix: add Uninstall button branch emitting `'uninstall'` event.
+- [x] **No progress bar for partially installed models:** When deps are missing but no active download, no progress bar shows. Fix: enhance `/comfy/models/check` to return per-dep status; use for partial progress bar. `MpiModelsModal` computes partial progress for BOTH installed and uninstalled models; `hasPartialProgress` prop decouples progress-bar visibility from button logic.
+- [x] **Uninstall not implemented:** Backend lacks `POST /comfy/models/uninstall` endpoint. Fix: add endpoint, wire from `downloadService.uninstall()`.
+- [x] **Partial progress cache key bug:** Frontend payload to `/comfy/models/check` was missing the `id` (depId) field, causing `_modelDepStatusCache` to store all deps under `null` key — losing all but the last. Fix: include `id: depId` in the payload.
+- [x] **No PARTIALLY INSTALLED badge:** Uninstalled models with some deps on disk had a progress bar but no badge. Fix: added `'PARTIALLY INSTALLED'` warning badge branch when `hasPartialProgress && !installed`.
+- [x] **Installing label not animated:** "Installing..." label had no animated ellipsis. Fix: CSS `::after` pseudo-element drives cycling dots via `mpi-installing-dots` keyframes; JS now sets text to `'Installing'` (dots handled by CSS).
+
+> **2026-04-13 session changes:**
+> - `MpiInstalledDisplay.js` — PARTIALLY INSTALLED badge, "Installing" label text (CSS animates dots)
+> - `MpiInstalledDisplay.css` — `@keyframes mpi-installing-dots` ellipsis animation
+> - `types.js` — updated `MpiInstalledDisplayProps` JSDoc with missing props and `uninstall` event
+
+> ⚠️ **Regressions introduced (2026-04-13):**
+> - `MpiInstalledDisplay.js` — CRASH on mount: refactor accidentally removed `const actionsSlot = qs('#idactions-slot', el)`. **Fixed** by restoring the declaration before the action rendering code.
+
+> **Plan:** `C:\Users\Fabio\.claude\plans\reactive-petting-token.md` — Use `superpowers:systematic-debugging` when executing.
+
 ### Files changed
 - `routes/downloadManager.js` — event-driven `ResumableDownloader`, `resumeFromFile()` resume, SHA256 in `end` event
 - `js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js` — bytes display in progress label, `downloadedBytes`/`totalBytes` props
@@ -40,7 +82,7 @@
 - [x] **Step 3:** Pause → Resume → continues from where it was (partial file grows) ✅
 - [x] **Step 4:** Cancel one of two concurrent downloads — other continues ✅
 - [x] **Step 5:** Close modal, navigate away, come back — download still correct ✅
-- [ ] **Step 6:** After download completes (custom nodes) — "Installing..." then "INSTALLED" badge
+- [ ] **Step 6:** After download completes (custom nodes) — "Installing" label animates dots
 - [ ] **Step 7:** Model with custom node deps → auto-restart ComfyUI before generation
 - [ ] **Step 8:** Shared dep progress visible on Model B card even before Model B starts
 - [ ] **Step 9:** No `showDeleteModels` / `deleteModels` references in codebase

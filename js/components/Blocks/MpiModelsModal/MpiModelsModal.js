@@ -6,8 +6,7 @@ import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
-import { MODELS } from '../../../data/modelRegistry.js';
-import { reSyncInstalledModels } from '../../../data/modelRegistry.js';
+import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../data/modelRegistry.js';
 import { DEPS } from '../../../data/modelConstants/dependencies.js';
 import { downloadService } from '../../../services/downloadService.js';
 import { qs, qsa, ce, on } from '../../../utils/dom.js';
@@ -147,14 +146,6 @@ export const MpiModelsModal = ComponentFactory.create({
             return `${bytes}B`;
         }
 
-        // ── Uninstall stub ──────────────────────────────────────────────────
-        async function _uninstallModel(model) {
-            Events.emit('ui:error', {
-                title: 'Not implemented',
-                message: 'Model uninstallation is not yet available.',
-            });
-        }
-
         // ── Render card list ───────────────────────────────────────────────
         function renderList() {
             qsa('.mpi-models-modal__card', bodySlot).forEach(c => c.remove());
@@ -182,6 +173,37 @@ export const MpiModelsModal = ComponentFactory.create({
                     const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
                     const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
 
+                    // Partial progress for installed model with missing deps (no active download)
+                    let partialProgress = 0;
+                    let partialDownloadedBytes = 0;
+                    let partialTotalBytes = 0;
+                    let hasPartialProgress = false;
+                    if (downloadState === 'idle') {
+                        const depStatus = getModelDepStatus(model.id);
+                        if (depStatus) {
+                            const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                            for (const dep of deps) {
+                                const depInstalled = depStatus.get(dep.id);
+                                if (depInstalled === true) {
+                                    partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                                }
+                                partialTotalBytes += _parseSizeToBytes(dep.size);
+                            }
+                            if (partialTotalBytes > 0 && partialDownloadedBytes < partialTotalBytes) {
+                                hasPartialProgress = true;
+                                partialProgress = partialDownloadedBytes / partialTotalBytes;
+                            }
+                        }
+                    }
+
+                    const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                    // For installed model with partial: show progress bar + Resume/Cancel
+                    // For fully installed model (no active download, no partial): Uninstall button
+                    const displayDownloadState = hasPartialProgress ? 'partial' : downloadState;
+                    const displayProgress = hasPartialProgress ? partialProgress : progress;
+                    const displayDownloadedBytes = hasPartialProgress ? partialDownloadedBytes : downloadedBytes;
+                    const displayTotalBytes = hasPartialProgress ? partialTotalBytes : totalBytes;
+
                     const card = MpiInstalledDisplay.mount(cardWrap, {
                         title: model.name,
                         meta: stats.sizeText,
@@ -190,12 +212,13 @@ export const MpiModelsModal = ComponentFactory.create({
                         icon: 'info',
                         iconText: stats.vramText,
                         installed: true,
-                        deleteLabel: 'Uninstall',
-                        downloadState,
-                        progress,
+                        canUninstall: true,
+                        downloadState: displayDownloadState,
+                        progress: displayProgress,
+                        hasPartialProgress,
                         speed,
-                        downloadedBytes,
-                        totalBytes,
+                        downloadedBytes: displayDownloadedBytes,
+                        totalBytes: displayTotalBytes,
                     });
 
                     if (downloadState !== 'idle') {
@@ -203,11 +226,9 @@ export const MpiModelsModal = ComponentFactory.create({
                         card.on('resume', () => downloadService.resume(model.id));
                         card.on('cancel', () => downloadService.cancel(model.id));
                     } else {
-                        card.on('delete', () => {
-                            Events.emit('ui:error', {
-                                title: 'Not implemented',
-                                message: 'Model uninstallation is not yet available.',
-                            });
+                        card.on('uninstall', async () => {
+                            await downloadService.uninstall(model.id, deps);
+                            await reSyncInstalledModels();
                         });
                     }
                 });
@@ -240,6 +261,34 @@ export const MpiModelsModal = ComponentFactory.create({
                 const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
                 const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
 
+                // Partial progress for uninstalled model with some deps already on disk
+                let partialProgress = 0;
+                let partialDownloadedBytes = 0;
+                let partialTotalBytes = 0;
+                let hasPartialProgress = false;
+                if (downloadState === 'idle') {
+                    const depStatus = getModelDepStatus(model.id);
+                    if (depStatus) {
+                        const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                        for (const dep of deps) {
+                            const depInstalled = depStatus.get(dep.id);
+                            if (depInstalled === true) {
+                                partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                            }
+                            partialTotalBytes += _parseSizeToBytes(dep.size);
+                        }
+                        if (partialTotalBytes > 0 && partialDownloadedBytes < partialTotalBytes) {
+                            hasPartialProgress = true;
+                            partialProgress = partialDownloadedBytes / partialTotalBytes;
+                        }
+                    }
+                }
+
+                // Keep downloadState='idle' so Install button shows (not Resume/Cancel)
+                const displayProgress = hasPartialProgress ? partialProgress : progress;
+                const displayDownloadedBytes = hasPartialProgress ? partialDownloadedBytes : downloadedBytes;
+                const displayTotalBytes = hasPartialProgress ? partialTotalBytes : totalBytes;
+
                 const card = MpiInstalledDisplay.mount(cardWrap, {
                     title: model.name,
                     meta: stats.sizeText,
@@ -250,10 +299,11 @@ export const MpiModelsModal = ComponentFactory.create({
                     installed: false,
                     deleteLabel: 'Install',
                     downloadState,
-                    progress,
+                    progress: displayProgress,
+                    hasPartialProgress,
                     speed,
-                    downloadedBytes,
-                    totalBytes,
+                    downloadedBytes: displayDownloadedBytes,
+                    totalBytes: displayTotalBytes,
                 });
 
                 if (downloadState !== 'idle') {

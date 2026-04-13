@@ -542,12 +542,17 @@
  * @property {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'} [downloadState='idle'] - Download state
  * @property {number} [progress=0]        - Download progress 0–1
  * @property {string} [speed='']          - Download speed string e.g. "12.3 MB/s"
+ * @property {number} [downloadedBytes=0]   - Bytes downloaded so far
+ * @property {number} [totalBytes=0]        - Total bytes to download
+ * @property {boolean} [canUninstall=false] - Show Uninstall button when true and installed
+ * @property {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
  *
  * Emits:
  * 'delete' {}     — Action button clicked (Install when idle; context-dependent)
  * 'pause' {}      — Pause button clicked (during download)
  * 'resume' {}     — Resume button clicked (when paused)
- * 'cancel' {}    — Cancel button clicked
+ * 'cancel' {}     — Cancel button clicked
+ * 'uninstall' {}  — Uninstall button clicked (when installed and canUninstall)
  */
 
 /**

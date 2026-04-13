@@ -22,6 +22,10 @@ export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
 
+// ── Per-dep status cache (populated by syncModelInstalled) ────────────────────
+// Map of modelId → Map of depId → installed: boolean
+const _modelDepStatusCache = new Map();
+
 // ── Path Config ───────────────────────────────────────────────────────────────
 
 export const PATHS = Object.freeze({
@@ -48,7 +52,7 @@ export async function syncModelInstalled() {
             id: model.id,
             deps: model.dependencies.map(depId => {
                 const dep = DEPS[depId];
-                return dep ? { type: dep.type, filename: dep.filename } : null;
+                return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
             }).filter(Boolean),
         }));
 
@@ -72,20 +76,26 @@ export async function syncModelInstalled() {
 
         for (const model of MODELS) {
             if (Object.prototype.hasOwnProperty.call(results, model.id)) {
-                model.installed = results[model.id];
+                model.installed = results[model.id].installed;
+                // Cache per-dep status for partial-progress display
+                const depMap = new Map();
+                for (const depResult of results[model.id].deps) {
+                    if (depResult.id) depMap.set(depResult.id, depResult.installed);
+                }
+                _modelDepStatusCache.set(model.id, depMap);
             }
         }
 
         for (const [key, uw] of Object.entries(UNIVERSAL_WORKFLOWS)) {
             const resultKey = `universal:${key}`;
             if (Object.prototype.hasOwnProperty.call(results, resultKey)) {
-                uw.installed = results[resultKey];
+                uw.installed = results[resultKey].installed;
             }
         }
 
         // Emit installed model IDs for reactive listeners
         const installedModelIds = Object.entries(results)
-            .filter(([, installed]) => installed)
+            .filter(([, result]) => result.installed)
             .map(([id]) => id);
         Events.emit('models:checked', { installedModelIds });
 
@@ -167,4 +177,14 @@ export function getModelDependencies(modelId) {
     const model = getModelById(modelId);
     if (!model) return [];
     return model.dependencies.map(id => DEPS[id]).filter(Boolean);
+}
+
+/**
+ * Returns a Map of depId → installed for a given model, based on the last
+ * /comfy/models/check response. Used to show partial progress on installed cards.
+ * @param {string} modelId
+ * @returns {Map<string, boolean>|null}
+ */
+export function getModelDepStatus(modelId) {
+    return _modelDepStatusCache.get(modelId) ?? null;
 }

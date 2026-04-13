@@ -17,7 +17,7 @@ resources/
 # agents
 .agent
 .agents
-.claude
+# .claude
 .playwright
 .playwright-cli
 docs/superpowers/

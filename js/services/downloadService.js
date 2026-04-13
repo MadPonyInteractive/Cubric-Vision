@@ -73,6 +73,22 @@ const downloadService = {
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
+    async uninstall(modelId, dependencies) {
+        const res = await fetch('/comfy/models/uninstall', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelId, dependencies }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Uninstall failed' }));
+            Events.emit('ui:error', { title: 'Uninstall Failed', message: err.error });
+            return;
+        }
+        state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+        if (!state.downloadJobs.length) state.downloadQueueActive = false;
+        Events.emit('download:uninstalled', { modelId });
+    },
+
     _ensureSSE() {
         if (this._eventSource) return;
         this._connectSSE();
@@ -173,6 +189,13 @@ const downloadService = {
             state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
             Events.emit('download:cancelled', data);
+        });
+
+        this._eventSource.addEventListener('download:uninstalled', (e) => {
+            const data = JSON.parse(e.data);
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
+            if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            Events.emit('download:uninstalled', data);
         });
 
         this._eventSource.addEventListener('download:paused', (e) => {

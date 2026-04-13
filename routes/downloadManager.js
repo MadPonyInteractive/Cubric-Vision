@@ -245,6 +245,10 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
     const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
 
+    // Pre-sum totalBytes from ALL deps (including already-installed ones)
+    const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
+    modelJob.totalBytes += allDepsSize;
+
     for (const dep of dependencies) {
         let localPath;
         if (dep.type === 'custom_nodes') {
@@ -256,7 +260,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
             localPath = path.join(defaultModelsRoot, dep.filename);
         }
 
-        if (await fs.pathExists(localPath)) continue;
+        const isInstalled = await fs.pathExists(localPath);
 
         let depJob = _depJobs.get(dep.id);
         if (!depJob) {
@@ -268,7 +272,13 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
         if (!modelJob.deps.find(d => d.id === dep.id)) {
             modelJob.deps.push(depJob);
-            modelJob.totalBytes += _parseSizeToBytes(dep.size);
+        }
+
+        // Mark installed deps as complete immediately (they contribute to progress but not to active downloads)
+        if (isInstalled) {
+            depJob.status = 'complete';
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
         }
     }
 
@@ -323,8 +333,8 @@ function _wireProgress(depJob, downloader) {
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId: depJob.id,
-                downloadedBytes,
-                totalBytes,
+                downloadedBytes: modelJob.downloadedBytes,
+                totalBytes: modelJob.totalBytes,
                 speed,
                 progress: modelJob.progress,
             });
@@ -434,6 +444,47 @@ router.post('/comfy/models/download/cancel', (req, res) => {
 
     _modelJobs.delete(modelId);
     _broadcast('download:cancelled', { modelId });
+    res.json({ success: true });
+});
+
+// ── Uninstall ─────────────────────────────────────────────────────────────────
+
+router.post('/comfy/models/uninstall', async (req, res) => {
+    const { modelId, dependencies } = req.body;
+    if (!modelId || !Array.isArray(dependencies)) {
+        return res.status(400).json({ error: 'modelId + dependencies required' });
+    }
+
+    const customRoot = await getCustomRoot();
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+
+    for (const dep of dependencies) {
+        let localPath;
+        if (dep.type === 'custom_nodes') {
+            localPath = path.join(defaultCustomNodesRoot, dep.filename);
+        } else if (customRoot) {
+            const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
+            localPath = lp;
+        } else {
+            localPath = path.join(defaultModelsRoot, dep.filename);
+        }
+
+        try {
+            if (dep.type === 'custom_nodes') {
+                await fs.remove(localPath);
+            } else {
+                await fs.remove(localPath);
+            }
+        } catch (err) {
+            logger.error('download', `uninstall: failed to remove ${localPath}`, err);
+        }
+    }
+
+    // Remove the model job from tracking
+    _modelJobs.delete(modelId);
+    _broadcast('download:uninstalled', { modelId });
     res.json({ success: true });
 });
 
