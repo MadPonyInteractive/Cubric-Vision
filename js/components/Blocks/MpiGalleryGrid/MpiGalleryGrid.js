@@ -4,6 +4,8 @@ import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { ce, qs } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
+import { state } from '../../../state.js';
+import { Events } from '../../../events.js';
 
 /**
  * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
@@ -43,6 +45,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-gallery-grid">
+            <div class="mpi-gallery-grid__tabs">
+                <div class="mpi-gallery-grid__tab-group">
+                    <button class="mpi-gallery-grid__tab mpi-gallery-grid__tab--active" data-order="newest">Newest</button>
+                    <button class="mpi-gallery-grid__tab" data-order="oldest">Oldest</button>
+                </div>
+                <div class="mpi-gallery-grid__tab-sep"></div>
+                <div class="mpi-gallery-grid__tab-group">
+                    <button class="mpi-gallery-grid__tab mpi-gallery-grid__tab--active" data-filter="all">All</button>
+                    <button class="mpi-gallery-grid__tab" data-filter="images">Images</button>
+                    <button class="mpi-gallery-grid__tab" data-filter="videos">Videos</button>
+                    <button class="mpi-gallery-grid__tab" data-filter="favorites">Favorites</button>
+                </div>
+            </div>
             <div class="mpi-gallery-grid__controls">
                 <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
@@ -87,6 +102,65 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // Set initial size
         grid.style.setProperty('--gallery-col-size', SIZE_MAP[3]);
+
+        // ── Gallery organize tabs ───────────────────────────────────────────────
+
+        const tabsEl = el.querySelector('.mpi-gallery-grid__tabs');
+
+        function _applySortFilter() {
+            const { order, filter } = state.gallerySort;
+
+            // Update active tab styling
+            tabsEl.querySelectorAll('[data-order]').forEach(btn => {
+                btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.order === order);
+            });
+            tabsEl.querySelectorAll('[data-filter]').forEach(btn => {
+                btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
+            });
+
+            // Filter
+            let display = _groups.filter(g => {
+                if (filter === 'images')   return g.type === 'image';
+                if (filter === 'videos')   return g.type === 'video';
+                if (filter === 'favorites') return g.favourite === true;
+                return true; // 'all'
+            });
+
+            // Sort
+            display.sort((a, b) => {
+                const ta = new Date(a.createdAt).getTime();
+                const tb = new Date(b.createdAt).getTime();
+                return order === 'newest' ? tb - ta : ta - tb;
+            });
+
+            // Re-render with filtered/sorted list
+            grid.innerHTML = '';
+            _cardMap.clear();
+            display.forEach(group => {
+                const { card, wrapper } = _makeCard(group);
+                _cardMap.set(group.id, { card, el: wrapper });
+                grid.appendChild(wrapper);
+            });
+        }
+
+        // Sync initial state
+        _applySortFilter();
+
+        // Subscribe to state.gallerySort changes
+        const _unsubSort = Events.on('state:changed', ({ key }) => {
+            if (key === 'gallerySort') _applySortFilter();
+        });
+
+        // Tab click delegation
+        tabsEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-order], [data-filter]');
+            if (!btn) return;
+            if (btn.dataset.order) {
+                state.gallerySort = { ...state.gallerySort, order: btn.dataset.order };
+            } else if (btn.dataset.filter) {
+                state.gallerySort = { ...state.gallerySort, filter: btn.dataset.filter };
+            }
+        });
 
         // ── Selection bar ───────────────────────────────────────────────────────
 
@@ -203,7 +277,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             });
         }
 
-        _render();
+        // (initial render is handled by _applySortFilter called above)
 
         // ── Public API ──────────────────────────────────────────────────────────
 
@@ -214,7 +288,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.setGroups = (groups) => {
             _groups = groups;
             _exitSelectionMode();
-            _render();
+            _applySortFilter();
         };
 
         /**

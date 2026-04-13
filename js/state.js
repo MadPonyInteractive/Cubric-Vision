@@ -35,6 +35,9 @@ const _state = {
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
     downloadQueueActive: false, // true when any download is in progress
     comfyNeedsRestart: false,   // true after custom node install
+
+    // ── Gallery organization ───────────────────────────────────────────────────
+    gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'favorites'
 };
 
 /**

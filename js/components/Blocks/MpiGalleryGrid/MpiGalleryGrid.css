@@ -20,6 +20,55 @@
     width: 8rem;
 } */
 
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid__tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface-1);
+}
+
+.mpi-gallery-grid__tab-sep {
+    width: 1px;
+    height: 1.2rem;
+    background: var(--border-soft);
+    margin: 0 0.25rem;
+}
+
+.mpi-gallery-grid__tab-group {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+}
+
+.mpi-gallery-grid__tab {
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.mpi-gallery-grid__tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-2);
+}
+
+.mpi-gallery-grid__tab--active {
+    color: var(--text-primary);
+    background: var(--surface-3);
+    border-color: var(--border-soft);
+}
+
 /* ── Adaptive grid ───────────────────────────────────────────────────────── */
 
 .mpi-gallery-grid__grid {
