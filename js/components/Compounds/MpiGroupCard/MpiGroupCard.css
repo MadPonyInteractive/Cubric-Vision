@@ -1,6 +1,5 @@
 .mpi-group-card {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
     background: var(--surface-2);
     cursor: pointer;
@@ -10,7 +9,7 @@
 
 .mpi-group-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Media area ──────────────────────────────────────────────────────────── */
@@ -63,14 +62,16 @@
     z-index: 2;
     width: 2rem;
     height: 2rem;
-    border: 3px solid rgba(255,255,255,0.15);
+    border: 3px solid rgba(255, 255, 255, 0.15);
     border-top-color: var(--neon-electric, #7df);
     border-radius: 50%;
     animation: mpi-card-spin 0.75s linear infinite;
 }
 
 @keyframes mpi-card-spin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
 
 
@@ -129,7 +130,7 @@
 
 .mpi-group-card__name {
     font-size: var(--font-xs);
-    color: var(--text-primary);
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -160,4 +161,3 @@
 .mpi-group-card--selected .mpi-group-card__type {
     color: var(--surface-1, #000);
 }
-
