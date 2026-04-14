@@ -58,6 +58,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
     setup: (el, props, emit) => {
         const initialImageUrl = props.initialImageUrl || '';
         const initialIdx = props.initialIdx ?? 0;
+        const barContainer = props.barContainer ?? el.querySelector('#crop-bar');
 
         // ── State ─────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         const cropBarSlot = document.createElement('div');
         cropBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        el.querySelector('#crop-bar').appendChild(cropBarSlot);
+        barContainer.appendChild(cropBarSlot);
 
         const cropBar = MpiToolActionBar.mount(cropBarSlot, {
             leftSlot: ratioSel,
@@ -142,7 +143,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         const maskBarSlot = document.createElement('div');
         maskBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        el.querySelector('#crop-bar').appendChild(maskBarSlot);
+        barContainer.appendChild(maskBarSlot);
 
         const maskBar = MpiToolActionBar.mount(maskBarSlot, {
             actions: [
@@ -237,7 +238,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         const autoMaskBarSlot = document.createElement('div');
         autoMaskBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        el.querySelector('#crop-bar').appendChild(autoMaskBarSlot);
+        barContainer.appendChild(autoMaskBarSlot);
 
         const autoMaskBar = MpiToolActionBar.mount(autoMaskBarSlot, {
             topSlot: autoMaskThumbs,
@@ -477,9 +478,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
             await _showCompare(itemA, itemB);
         };
 
+        el.clearCompare = () => {
+            canvas.isComparisonMode = false;
+            _comparingActive = false;
+        };
+
         el.enterMode = (mode) => {
-            if (mode === 'none') { _exitMode(); return; }
-            _enterMode(mode);
+            const canonical = mode === 'autoMaskImg' ? 'automask' : mode;
+            if (canonical === 'none') { _exitMode(); return; }
+            _enterMode(canonical);
         };
 
         el.exitMode = () => _exitMode();

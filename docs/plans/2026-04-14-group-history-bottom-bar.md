@@ -31,7 +31,7 @@
 
 ---
 
-- [ ] 2. **`MpiCanvasViewer.js` — Add `el.clearCompare()` + fix `autoMaskImg` mode alias**
+- [x] 2. **`MpiCanvasViewer.js` — Add `el.clearCompare()` + fix `autoMaskImg` mode alias**
 
   Add `el.clearCompare()` public method:
   ```js
@@ -54,7 +54,7 @@
 
 ---
 
-- [ ] 3. **`MpiCanvasViewer.js` + `MpiGroupHistoryBlock.js` — Structural setup: mount bar in `#bottom-slot`, wire `barContainer`, implement `_setBottomBar()`**
+- [x] 3. **`MpiCanvasViewer.js` + `MpiGroupHistoryBlock.js` — Structural setup: mount bar in `#bottom-slot`, wire `barContainer`, implement `_setBottomBar()`**
 
   **In `MpiCanvasViewer.js`:** Accept optional `barContainer` prop. At top of `setup`: `const barContainer = props.barContainer ?? el.querySelector('#crop-bar')`. Replace all three `el.querySelector('#crop-bar').appendChild(...)` calls (for `cropBarSlot`, `maskBarSlot`, `autoMaskBarSlot`) with `barContainer.appendChild(...)`.
 
@@ -92,7 +92,7 @@
 
 ---
 
-- [ ] 4. **`MpiGroupHistoryBlock.js` — Wire all selection bar events**
+- [x] 4. **`MpiGroupHistoryBlock.js` — Wire all selection bar events**
 
   Add `let _currentSelectionIndices = [];` near the top of `setup`.
 
@@ -181,7 +181,7 @@
 
 ---
 
-- [ ] 5. **`MpiGroupHistoryBlock.js` — Wire canvas tool flow via `_setBottomBar`**
+- [x] 5. **`MpiGroupHistoryBlock.js` — Wire canvas tool flow via `_setBottomBar`**
 
   Replace the `canvasViewer.on('mode-changed')` handler — remove the `bottomSlot.classList` toggling and call `_setBottomBar` instead:
   ```js

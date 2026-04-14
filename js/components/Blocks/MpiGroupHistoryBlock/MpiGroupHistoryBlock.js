@@ -10,6 +10,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiCanvasViewer } from '../../Compounds/MpiCanvasViewer/MpiCanvasViewer.js';
+import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
@@ -114,6 +115,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _firstAvailable = _opOptions().find(o => !o.disabled);
         let activeOperation = isVideo ? 't2v' : (_firstAvailable?.value ?? 'upscale');
         let _currentIdx = _group.selectedIndex ?? 0;
+        let _currentSelectionIndices = [];
 
         // ── Persist helper ───────────────────────────────────────────────────
 
@@ -131,7 +133,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }).catch(err => console.warn('[MpiGroupHistoryBlock] update-project failed:', err));
         }
 
+        // ── Bottom bar state coordinator ──────────────────────────────────────
+
+        function _setBottomBar(barState) {
+            if (barState === 'promptbox') {
+                PromptBoxService.show();
+                selectionBar.el.style.display = 'none';
+            } else if (barState === 'selection') {
+                PromptBoxService.hide();
+                selectionBar.el.style.display = '';
+            } else if (barState === 'canvas-tool') {
+                PromptBoxService.hide();
+                selectionBar.el.style.display = 'none';
+            }
+        }
+
         // ── Mount sub-components ──────────────────────────────────────────────
+
+        const bottomSlot = el.querySelector('#bottom-slot');
 
         const _universalToolIcons = {
             autoMaskImg: { icon: 'enhance', info: 'Auto Mask' },
@@ -155,9 +174,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             ],
         });
 
+        const selectionBar = MpiSelectionBar.mount(bottomSlot, { count: 0 });
+
         const canvasViewer = MpiCanvasViewer.mount(el.querySelector('#centre-slot'), {
             initialImageUrl: _resolveUrl(_group.history[_currentIdx]?.filePath),
             initialIdx: _currentIdx,
+            barContainer: bottomSlot,
         });
 
         const historyList = MpiHistoryList.mount(el.querySelector('#right-slot'), {
@@ -166,8 +188,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         });
 
         // ── PromptBox via PromptBoxService ────────────────────────────────────
-
-        const bottomSlot = el.querySelector('#bottom-slot');
 
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
@@ -215,6 +235,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     _activeExec = null;
                     StatusBar.progress.cancel();
                 });
+
+                // Initialize bottom bar to show prompt box
+                _setBottomBar('promptbox');
             }
         }
 
@@ -331,6 +354,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Wire sub-component events ─────────────────────────────────────────
 
         historyTools.on('activate', ({ mode }) => {
+            // Exit selection mode when a tool is activated
+            if (_currentSelectionIndices.length > 0) {
+                historyList.el.exitSelectMode();
+            }
             canvasViewer.el.enterMode(mode);
         });
         historyTools.on('deactivate', ({ mode }) => {
@@ -344,37 +371,75 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _persistGroup();
         });
 
-        historyList.on('compare-requested', ({ idxA, idxB }) => {
-            canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
-        });
-
-        historyList.on('selection-changed', () => {
-            PromptBoxService.hide();
+        historyList.on('selection-changed', ({ indices }) => {
+            _currentSelectionIndices = indices;
+            canvasViewer.el.exitMode();
+            selectionBar.el.setCount(indices.length);
+            _setBottomBar('selection');
         });
 
         historyList.on('selection-exited', () => {
-            PromptBoxService.show();
+            canvasViewer.el.clearCompare();
+            _setBottomBar('promptbox');
         });
 
-        historyList.on('delete-requested', ({ indices }) => {
-            const sorted = [...indices].sort((a, b) => b - a);
+        selectionBar.on('compare', () => {
+            if (_currentSelectionIndices.length !== 2) return;
+            const [idxA, idxB] = _currentSelectionIndices;
+            canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
+        });
+
+        selectionBar.on('download', () => {
+            const project = state.currentProject;
+            if (!project) return;
+            for (const idx of _currentSelectionIndices) {
+                const item = _group.history[idx];
+                if (!item?.filePath) continue;
+                let filename = null;
+                try {
+                    const match = item.filePath.match(/[?&]path=([^&]+)/);
+                    if (match) filename = decodeURIComponent(match[1]).replace(/\\/g, '/').split('/').pop();
+                } catch (_) { continue; }
+                if (!filename) continue;
+                const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+
+        selectionBar.on('cancel', () => {
+            historyList.el.exitSelectMode();
+            canvasViewer.el.clearCompare();
+            _setBottomBar('promptbox');
+        });
+
+        selectionBar.on('delete', () => {
+            if (!_currentSelectionIndices.length) return;
+            historyList.el.exitSelectMode();
+            const sorted = [..._currentSelectionIndices].sort((a, b) => b - a);
             for (const idx of sorted) {
                 _group = removeHistoryEntry(_group, idx);
             }
             _currentIdx = _group.selectedIndex;
             _persistGroup();
-            historyList.el.removeEntries(indices);
+            historyList.el.removeEntries(_currentSelectionIndices);
             if (_group.history[_currentIdx]) {
                 canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
             }
         });
 
         canvasViewer.on('mode-changed', ({ mode }) => {
-            historyTools.el.syncMode(mode);
+            // Map canonical 'automask' back to 'autoMaskImg' for historyTools
+            const toolMode = mode === 'automask' ? 'autoMaskImg' : mode;
+            historyTools.el.syncMode(toolMode);
             if (mode === 'none') {
-                bottomSlot.classList.remove('mpi-group-history-block__bottom--hidden');
+                _setBottomBar('promptbox');
             } else {
-                bottomSlot.classList.add('mpi-group-history-block__bottom--hidden');
+                _setBottomBar('canvas-tool');
             }
         });
 
