@@ -11,6 +11,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiCanvasViewer } from '../../Compounds/MpiCanvasViewer/MpiCanvasViewer.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
+import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -163,6 +164,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const historyList = MpiHistoryList.mount(el.querySelector('#right-slot'), {
             history: _group.history,
             selectedIndex: _currentIdx,
+            suppressInternalBar: true,
         });
 
         // ── PromptBox via PromptBoxService ────────────────────────────────────
@@ -348,25 +350,51 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
         });
 
-        historyList.on('selection-changed', () => {
+        let _selBarInst = null;
+
+        historyList.on('selection-changed', ({ indices }) => {
             PromptBoxService.hide();
+
+            // Mount selection bar in #bottom-slot (where PromptBox lives) instead of in the history panel
+            if (_selBarInst) {
+                _selBarInst.el.innerHTML = '';
+            }
+            _selBarInst = MpiSelectionBar.mount(bottomSlot, { count: indices.length });
+
+            _selBarInst.on('compare', () => {
+                if (indices.length === 2) {
+                    const [idxA, idxB] = indices;
+                    canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
+                }
+            });
+
+            _selBarInst.on('delete', () => {
+                // Exit selection mode first
+                historyList.el.exitSelectMode();
+                // Inline delete logic (same as delete-requested handler below)
+                const sorted = [...indices].sort((a, b) => b - a);
+                for (const idx of sorted) {
+                    _group = removeHistoryEntry(_group, idx);
+                }
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.removeEntries(indices);
+                if (_group.history[_currentIdx]) {
+                    canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
+                }
+            });
+
+            _selBarInst.on('cancel', () => {
+                historyList.el.exitSelectMode();
+            });
         });
 
         historyList.on('selection-exited', () => {
+            if (_selBarInst) {
+                _selBarInst.el.innerHTML = '';
+                _selBarInst = null;
+            }
             PromptBoxService.show();
-        });
-
-        historyList.on('delete-requested', ({ indices }) => {
-            const sorted = [...indices].sort((a, b) => b - a);
-            for (const idx of sorted) {
-                _group = removeHistoryEntry(_group, idx);
-            }
-            _currentIdx = _group.selectedIndex;
-            _persistGroup();
-            historyList.el.removeEntries(indices);
-            if (_group.history[_currentIdx]) {
-                canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
-            }
         });
 
         canvasViewer.on('mode-changed', ({ mode }) => {

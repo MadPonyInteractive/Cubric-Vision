@@ -131,7 +131,10 @@
       "Read(//c/Users/Fabio/.claude/**)",
       "Bash(mkdir -p C:/Users/Fabio/.claude/commands)",
       "Bash(wc -l CLAUDE.md .claude/rules/*.md)",
-      "Bash(wc -l \"c:/AI/Mpi/MpiAiSuite/CLAUDE.md\" \"c:/AI/Mpi/MpiAiSuite/.claude/rules\"/*.md \"c:/AI/Mpi/MpiAiSuite/.claude/skills\"/*/SKILL.md)"
+      "Bash(wc -l \"c:/AI/Mpi/MpiAiSuite/CLAUDE.md\" \"c:/AI/Mpi/MpiAiSuite/.claude/rules\"/*.md \"c:/AI/Mpi/MpiAiSuite/.claude/skills\"/*/SKILL.md)",
+      "Bash(node --check js/components/Compounds/MpiHistoryList/MpiHistoryList.js)",
+      "Bash(node --check js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)",
+      "Bash(taskkill /F /IM node.exe)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
