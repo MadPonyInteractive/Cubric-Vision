@@ -301,7 +301,18 @@ export const ComfyUIController = {
                 return title.toLowerCase() === key.toLowerCase();
             });
             for (const id of nodeIds) {
-                _inject(id, val);
+                // Special handling for LoRA objects (Lora_1 through Lora_6)
+                if (/^Lora_\d+$/i.test(key) && typeof val === 'object' && val !== null &&
+                    'lora_name' in val && 'strength_model' in val && 'strength_clip' in val) {
+                    const node = workflow[id];
+                    if (node && node.inputs) {
+                        if ('lora_name' in node.inputs) node.inputs.lora_name = val.lora_name;
+                        if ('strength_model' in node.inputs) node.inputs.strength_model = parseFloat(val.strength_model);
+                        if ('strength_clip' in node.inputs) node.inputs.strength_clip = parseFloat(val.strength_clip);
+                    }
+                } else {
+                    _inject(id, val);
+                }
             }
         }
 
