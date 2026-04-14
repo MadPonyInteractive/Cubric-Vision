@@ -436,6 +436,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Map canonical 'automask' back to 'autoMaskImg' for historyTools
             const toolMode = mode === 'automask' ? 'autoMaskImg' : mode;
             historyTools.el.syncMode(toolMode);
+
+            // Don't change bottom bar state if in comparison mode — comparison
+            // is an overlay that shouldn't affect selection bar visibility
+            if (canvasViewer.el.canvas?.isComparisonMode) return;
+
             if (mode === 'none') {
                 _setBottomBar('promptbox');
             } else {

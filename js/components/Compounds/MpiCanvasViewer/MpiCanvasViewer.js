@@ -500,6 +500,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         el.setGenerating = (on) => _setGeneratingSpinner(on);
 
+        // Expose canvas for checking comparison mode from parent block
+        el.canvas = canvas;
+
         // ── Init: load initial image ─────────────────────────────────────────
 
         if (initialImageUrl) {

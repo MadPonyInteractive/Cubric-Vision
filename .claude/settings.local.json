@@ -134,7 +134,9 @@
       "Bash(wc -l \"c:/AI/Mpi/MpiAiSuite/CLAUDE.md\" \"c:/AI/Mpi/MpiAiSuite/.claude/rules\"/*.md \"c:/AI/Mpi/MpiAiSuite/.claude/skills\"/*/SKILL.md)",
       "Bash(node --check js/components/Compounds/MpiHistoryList/MpiHistoryList.js)",
       "Bash(node --check js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)",
-      "Bash(taskkill /F /IM node.exe)"
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(grep \"el.canvas\\\\|^\\\\\\\\s*this.canvas\" c:/AI/Mpi/MpiAiSuite/js/components/Compounds/MpiCanvasViewer/MpiCanvasViewer.js)",
+      "Bash(grep \"^\\\\\\\\s*el\\\\\\\\.\" c:/AI/Mpi/MpiAiSuite/js/components/Compounds/MpiCanvasViewer/MpiCanvasViewer.js)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
