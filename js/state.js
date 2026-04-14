@@ -38,6 +38,7 @@ const _state = {
 
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'favorites'
+    galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
 };
 
 /**

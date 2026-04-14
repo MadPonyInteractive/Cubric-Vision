@@ -282,10 +282,21 @@ export const MpiPromptBox = ComponentFactory.create({
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
         Events.on('workspace:set-operation', _onSetOperation);
 
+        // ── Prompt injection (from gallery reuse button) ──────────────────────
+        el.injectPrompts = ({ positive, negative }) => {
+            positiveValue = positive ?? positiveValue;
+            negativeValue = negative ?? negativeValue;
+            if (!isNegativeMode) textareaEl.value = positiveValue;
+            updateHeight();
+        };
+        const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
+        Events.on('workspace:inject-prompts', _onInjectPrompts);
+
         // Cleanup listener when element leaves the DOM
         const _observer = new MutationObserver(() => {
             if (!document.contains(el)) {
                 Events.off('workspace:set-operation', _onSetOperation);
+                Events.off('workspace:inject-prompts', _onInjectPrompts);
                 _observer.disconnect();
             }
         });

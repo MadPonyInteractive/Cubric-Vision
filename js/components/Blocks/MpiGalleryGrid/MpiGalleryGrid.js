@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { ce, qs } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { state } from '../../../state.js';
@@ -56,6 +57,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <button class="mpi-gallery-grid__tab" data-filter="images">Images</button>
                     <button class="mpi-gallery-grid__tab" data-filter="videos">Videos</button>
                     <button class="mpi-gallery-grid__tab" data-filter="favorites">Favorites</button>
+                    <div class="mpi-gallery-grid__info-btn-slot"></div>
                 </div>
             </div>
             <div class="mpi-gallery-grid__controls">
@@ -103,6 +105,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Set initial size
         grid.style.setProperty('--gallery-col-size', SIZE_MAP[3]);
 
+        // ── Info toggle button ──────────────────────────────────────────────────
+        const infoBtnSlot = el.querySelector('.mpi-gallery-grid__info-btn-slot');
+        const infoBtn = MpiButton.mount(infoBtnSlot, {
+            icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
+            active: state.galleryShowInfo,
+            info: 'Show card info',
+        });
+        infoBtn.on('click', () => { state.galleryShowInfo = !state.galleryShowInfo; });
+        // Sync active state and propagate to all cards when galleryShowInfo changes
+        const _unsubInfoBtn = Events.on('state:changed', ({ key }) => {
+            if (key === 'galleryShowInfo') {
+                infoBtn.el.classList.toggle('mpi-btn--active', state.galleryShowInfo);
+                _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
+            }
+        });
+
         // ── Gallery organize tabs ───────────────────────────────────────────────
 
         const tabsEl = el.querySelector('.mpi-gallery-grid__tabs');
@@ -145,10 +163,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // Sync initial state
         _applySortFilter();
+        // Initialize cards with current state on mount (state may already be true from localStorage)
+        _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
 
         // Subscribe to state.gallerySort changes
         const _unsubSort = Events.on('state:changed', ({ key }) => {
-            if (key === 'gallerySort') _applySortFilter();
+            if (key === 'gallerySort') {
+                _applySortFilter();
+                _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
+            }
         });
 
         // Tab click delegation
@@ -186,6 +209,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         function _enterSelectionMode() {
             if (_selectionMode) return;
             _selectionMode = true;
+            state.galleryShowInfo = true;
             _cardMap.forEach(({ card }) => card.el.setSelectionMode(true));
             emit('selection-start');
             selectionSlot.style.display = '';
@@ -251,6 +275,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     card.el.setDone(pruned);
                     emit('gc-group', { group: pruned });
                 }
+            });
+
+            card.on('reuse', ({ positive, negative }) => {
+                Events.emit('workspace:inject-prompts', { positive, negative });
             });
 
             card.on('favourite', ({ group: g, favourite }) => {

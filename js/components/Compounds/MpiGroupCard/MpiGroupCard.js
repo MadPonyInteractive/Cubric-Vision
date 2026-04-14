@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { ce } from '/js/utils/dom.js';
+import { getModelById } from '../../../data/modelRegistry.js';
 
 /**
  * MpiGroupCard — Compound: displays a single ItemGroup in the gallery grid.
@@ -43,41 +44,46 @@ export const MpiGroupCard = ComponentFactory.create({
                 </div>
             </div>
             <div class="mpi-group-card__fav-wrap"></div>
+            <div class="mpi-group-card__reuse-wrap"></div>
             <div class="mpi-group-card__select-wrap">
                 <input type="checkbox" class="mpi-group-card__checkbox" aria-label="Select group">
             </div>
             <div class="mpi-group-card__footer">
                 <span class="mpi-group-card__name"></span>
+                <span class="mpi-group-card__badge"></span>
                 <span class="mpi-group-card__type"></span>
             </div>
         </div>
     `,
 
     setup: (el, props, emit) => {
-        let _group        = props.group || null;
+        let _group = props.group || null;
         let _selectionMode = props.selectionMode || false;
-        let _selected     = props.selected || false;
-        let _generating   = false;
+        let _selected = props.selected || false;
+        let _generating = false;
+        let _showInfo = false;
 
-        const thumb       = el.querySelector('.mpi-group-card__thumb');
-        const preview     = el.querySelector('.mpi-group-card__preview');
-        const spinner     = el.querySelector('.mpi-group-card__spinner');
-        const previewImg  = el.querySelector('.mpi-group-card__preview-img');
-        const checkbox    = el.querySelector('.mpi-group-card__checkbox');
-        const nameEl      = el.querySelector('.mpi-group-card__name');
-        const typeEl      = el.querySelector('.mpi-group-card__type');
-        const card        = el; // el IS the .mpi-group-card root element
-        const favWrap     = el.querySelector('.mpi-group-card__fav-wrap');
-        let _favourite    = props.group?.favourite || false;
+        const thumb = el.querySelector('.mpi-group-card__thumb');
+        const preview = el.querySelector('.mpi-group-card__preview');
+        const spinner = el.querySelector('.mpi-group-card__spinner');
+        const previewImg = el.querySelector('.mpi-group-card__preview-img');
+        const checkbox = el.querySelector('.mpi-group-card__checkbox');
+        const nameEl = el.querySelector('.mpi-group-card__name');
+        const badgeEl = el.querySelector('.mpi-group-card__badge');
+        const typeEl = el.querySelector('.mpi-group-card__type');
+        const card = el; // el IS the .mpi-group-card root element
+        const favWrap = el.querySelector('.mpi-group-card__fav-wrap');
+        const reuseWrap = el.querySelector('.mpi-group-card__reuse-wrap');
+        let _favourite = props.group?.favourite || false;
 
         const _favBtn = MpiButton.mount(favWrap, {
-            icon:       'heartOutline',
+            icon: 'heartOutline',
             iconActive: 'heart',
             toggleable: true,
-            active:     _favourite,
-            size:       'sm',
-            variant:    'ghost',
-            info:       'Favourite',
+            active: _favourite,
+            size: 'sm',
+            variant: 'ghost',
+            info: 'Favourite',
         });
 
         _favBtn.on('toggle', ({ active }) => {
@@ -89,6 +95,22 @@ export const MpiGroupCard = ComponentFactory.create({
             card.classList.toggle('mpi-group-card--favourited', active);
         });
 
+        // ── Reuse button (hidden during selection mode) ─────────────────────────
+        const _reuseBtn = MpiButton.mount(reuseWrap, {
+            icon: 'refresh_stroke', size: 'sm', variant: 'ghost',
+            info: 'Reuse Prompt',
+        });
+        _reuseBtn.on('click', (e) => {
+            e.originalEvent.stopPropagation();
+            if (_selectionMode) return;
+            const selected = _group?.history[_group.selectedIndex];
+            if (!selected) return;
+            emit('reuse', {
+                positive: selected.prompt || '',
+                negative: selected.negativePrompt || '',
+            });
+        });
+
         // ── Render from group data ──────────────────────────────────────────────
 
         function _render() {
@@ -98,27 +120,29 @@ export const MpiGroupCard = ComponentFactory.create({
             const src = selected?.filePath || '';
 
             if (src) {
-                thumb.onload  = () => card.classList.remove('mpi-group-card--missing');
+                thumb.onload = () => card.classList.remove('mpi-group-card--missing');
                 thumb.onerror = () => {
                     card.classList.add('mpi-group-card--missing');
                     emit('media-missing', { group: _group, itemId: selected?.id });
                 };
                 thumb.src = src;
             } else {
-                thumb.onload  = null;
+                thumb.onload = null;
                 thumb.onerror = null;
                 thumb.removeAttribute('src');
             }
             nameEl.textContent = selected?.operation || _group.name;
+            const model = getModelById(selected?.modelId);
+            badgeEl.textContent = model?.name || '';
             typeEl.textContent = _group.type.toUpperCase();
 
             // Drag the selected media item to PromptBox for i2i / i2v
             thumb.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('application/mpi-media', JSON.stringify({
                     groupId: _group.id,
-                    itemId:  selected?.id,
+                    itemId: selected?.id,
                     filePath: selected?.filePath,
-                    type:    _group.type,
+                    type: _group.type,
                 }));
             });
 
@@ -153,6 +177,8 @@ export const MpiGroupCard = ComponentFactory.create({
             if (e.target === checkbox) return;
             // Favourite button handles its own events
             if (favWrap.contains(e.target)) return;
+            // Reuse button handles its own events
+            if (reuseWrap.contains(e.target)) return;
 
             if (_selectionMode) {
                 _applySelected(!_selected);
@@ -223,6 +249,15 @@ export const MpiGroupCard = ComponentFactory.create({
             _favourite = val;
             _favBtn.el.setActive(val);
             card.classList.toggle('mpi-group-card--favourited', val);
+        };
+
+        /**
+         * Toggle info display (model badge, type badge) after mount.
+         * @param {boolean} val
+         */
+        el.setShowInfo = (val) => {
+            _showInfo = val;
+            card.classList.toggle('mpi-group-card--show-info', val);
         };
 
         // ── Init ────────────────────────────────────────────────────────────────

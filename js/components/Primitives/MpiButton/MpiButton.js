@@ -34,14 +34,14 @@ export const MpiButton = ComponentFactory.create({
 
         if (!isIconMode) {
             // ── Plain text button ──────────────────────────────────────────────
-            const variant      = props.variant  || 'primary';
-            const size         = props.size     || 'md';
-            const type         = props.type     || 'button';
-            const isDisabled   = props.disabled || props.loading ? 'disabled' : '';
-            const isLoading    = props.loading  ? 'mpi-btn--loading' : '';
+            const variant = props.variant || 'primary';
+            const size = props.size || 'md';
+            const type = props.type || 'button';
+            const isDisabled = props.disabled || props.loading ? 'disabled' : '';
+            const isLoading = props.loading ? 'mpi-btn--loading' : '';
             const extraClasses = props.extraClasses || '';
-            const dataAttrs    = props.info ? `data-info="${props.info}"` : '';
-            const textHtml     = props.text ? `<span class="mpi-btn__text">${props.text}</span>` : '';
+            const dataAttrs = props.info ? `data-info="${props.info}"` : '';
+            const textHtml = props.text ? `<span class="mpi-btn__text">${props.text}</span>` : '';
 
             return `
                 <button type="${props.type || 'button'}"
@@ -53,18 +53,18 @@ export const MpiButton = ComponentFactory.create({
         }
 
         // ── Icon button mode ───────────────────────────────────────────────────
-        const icon          = props.icon;
-        const iconActive    = props.iconActive || null;
-        const label         = props.label || '';
+        const icon = props.icon;
+        const iconActive = props.iconActive || null;
+        const label = props.label || '';
         const labelPosition = props.labelPosition || 'right';
-        const size          = props.size || 'md';
-        const variant       = props.variant || 'primary';
-        const info          = props.info || label || '';
-        const isStroke      = props.stroke === true;
-        const isToggleable  = props.toggleable || !!iconActive;
-        const isActive      = props.active || false;
-        const isLoading     = variant === 'loading';
-        const isDisabled    = variant === 'disabled' || props.disabled;
+        const size = props.size || 'md';
+        const variant = props.variant || 'primary';
+        const info = props.info || label || '';
+        const isStroke = props.stroke === true;
+        const isToggleable = props.toggleable || !!iconActive;
+        const isActive = props.active || false;
+        const isLoading = variant === 'loading';
+        const isDisabled = variant === 'disabled' || props.disabled;
 
         // Map variant — danger stays danger, everything else → secondary (glass)
         const btnVariant = variant === 'danger' ? 'danger' : 'secondary';
@@ -79,7 +79,7 @@ export const MpiButton = ComponentFactory.create({
             props.extraClasses || '',
         ].filter(Boolean).join(' ');
 
-        const iconHtml       = renderIcon(icon, size, { stroke: isStroke });
+        const iconHtml = renderIcon(icon, size, { stroke: isStroke });
         const iconActiveHtml = iconActive ? renderIcon(iconActive, size, { stroke: isStroke }) : '';
 
         const iconContainer = iconActiveHtml
@@ -95,7 +95,7 @@ export const MpiButton = ComponentFactory.create({
                 : `${iconContainer}${labelHtml}`;
 
         const disabledAttr = isDisabled || isLoading ? 'disabled' : '';
-        const dataAttrs    = info ? `data-info="${info}"` : '';
+        const dataAttrs = info ? `data-info="${info}"` : '';
 
         return `
             <button type="button"
@@ -106,7 +106,7 @@ export const MpiButton = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const MIN_PRESS_MS  = 150;
+        const MIN_PRESS_MS = 150;
         let pressStart = 0;
         let pressTimer = null;
 
@@ -126,8 +126,8 @@ export const MpiButton = ComponentFactory.create({
             }
         };
 
-        el.addEventListener('pointerup',     releasePress);
-        el.addEventListener('pointerleave',  releasePress);
+        el.addEventListener('pointerup', releasePress);
+        el.addEventListener('pointerleave', releasePress);
         el.addEventListener('pointercancel', releasePress);
 
         el.addEventListener('click', (e) => {

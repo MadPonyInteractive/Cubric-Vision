@@ -94,6 +94,16 @@ export const PromptBoxService = {
     },
 
     /**
+     * Convenience wrapper to inject prompts into the mounted PromptBox.
+     * @param {Object} opts
+     * @param {string} [opts.positive] - Positive prompt text
+     * @param {string} [opts.negative] - Negative prompt text
+     */
+    injectPrompts({ positive, negative } = {}) {
+        _instance?.el?.injectPrompts?.({ positive, negative });
+    },
+
+    /**
      * Direct access to the mounted PromptBox component instance API.
      * The component instance has updateContext(), setGenerating(), setOperation(),
      * setModel(), setModelList(), getMediaItems(), etc. attached directly to the
