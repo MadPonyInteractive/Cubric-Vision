@@ -274,7 +274,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             exec.onPreview = async (url) => {
                 canvasViewer.el.setGenerating(false);
                 canvasViewer.el.isComparisonMode = false;
-                try { await canvasViewer.el.loadEntry({ filePath: url }, _currentIdx); } catch (_) { }
+                // Detect if this is a latent preview (blob URL) vs final result
+                const isPreview = url?.startsWith('blob:');
+                // Hide mask BEFORE loading preview (different dimensions cause misalignment)
+                if (isPreview) {
+                    canvasViewer.el.setMaskHidden(true);
+                }
+                try {
+                    await canvasViewer.el.loadEntry({ filePath: url }, _currentIdx);
+                } catch (_) { }
             };
 
             exec.onProgress = (value) => StatusBar.progress.update(value);
@@ -336,6 +344,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _persistGroup();
                 historyList.el.appendEntry(newItem);
                 canvasViewer.el.loadEntry(newItem, _currentIdx);
+                // Unhide mask after loading final result (preview was hidden with blob URLs)
+                canvasViewer.el.setMaskHidden(false);
 
                 Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
                 StatusBar.progress.complete('Done!');
@@ -366,6 +376,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         historyList.on('entry-selected', ({ idx, item }) => {
             canvasViewer.el.loadEntry(item, idx);
+            canvasViewer.el.setMaskHidden(false);
             _currentIdx = idx;
             _group = promoteHistoryEntry(_group, idx);
             _persistGroup();
@@ -387,6 +398,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (_currentSelectionIndices.length !== 2) return;
             const [idxA, idxB] = _currentSelectionIndices;
             canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
+            canvasViewer.el.setMaskHidden(false);
         });
 
         selectionBar.on('download', () => {
@@ -454,6 +466,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _persistGroup();
             historyList.el.appendEntry(item);
             canvasViewer.el.loadEntry(item, _currentIdx);
+            canvasViewer.el.setMaskHidden(false);
         });
 
         canvasViewer.on('entry-loaded', ({ idx, hasMask }) => {
@@ -467,12 +480,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         });
 
         canvasViewer.on('mask-ready', ({ hasMask }) => {
-            _canvasHasMask = hasMask;
-            PromptBoxService.component?.updateContext({
-                ..._baseCtx,
-                hasMask: _canvasHasMask,
-                filterNoInputOps: true,
-            });
+            _canvasHasMask = true;
+            _refreshOpOptions();
+        });
+
+        canvasViewer.on('mask-clear', () => {
+            _canvasHasMask = false;
+            _refreshOpOptions();
         });
 
         // ── Radial → operation sync ───────────────────────────────────────────

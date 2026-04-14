@@ -31,6 +31,7 @@ import { MpiAutoMaskThumbs } from '../MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
+import { hasMaskContent } from '../../../utils/maskUtils.js';
 import { runAutoMask } from '../../../services/commandExecutor.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
@@ -167,19 +168,25 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (key === 'clear') {
                 canvas.clearMask();
                 _hasMask = false;
-                emit('mask-ready', { hasMask: false });
+                emit('mask-clear', {});
             }
             if (key === 'invert') { canvas.flipMaskColor(); }
             if (key === 'cancel') {
                 canvas.clearMask();
                 _hasMask = false;
                 _exitMode();
-                emit('mask-ready', { hasMask: false });
+                emit('mask-clear', {});
             }
             if (key === 'apply') {
-                _hasMask = true;
+                // Only mark as ready if mask has actual painted content
+                const hasContent = hasMaskContent(canvas.maskCanvas);
+                _hasMask = hasContent;
                 _exitMode();
-                emit('mask-ready', { hasMask: true });
+                if (hasContent) {
+                    emit('mask-ready', { hasMask: true });
+                } else {
+                    emit('mask-clear', {});
+                }
             }
         });
 
@@ -200,7 +207,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
         const autoMaskThumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
         autoMaskThumbs.on('change', ({ picks }) => {
             _autoMaskPicks = picks;
-            _runAutoMaskWorkflow(false);
+            // If no entries selected, clear mask immediately
+            if (picks.size === 0) {
+                canvas.clearMask();
+                _hasMask = false;
+            } else {
+                // Otherwise run workflow to generate combined mask
+                _runAutoMaskWorkflow(false);
+            }
         });
 
         const autoMaskModelDropdown = MpiDropdown.mount(document.createElement('div'), {
@@ -336,6 +350,17 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (!apply) {
                 canvas.clearMask();
                 _hasMask = false;
+                emit('mask-clear', {});
+            } else {
+                // Only mark as ready if there are actual selections
+                const hasSelections = _autoMaskPicks.size > 0;
+                if (hasSelections) {
+                    _hasMask = true;
+                    emit('mask-ready', { hasMask: true });
+                } else {
+                    _hasMask = false;
+                    emit('mask-clear', {});
+                }
             }
 
             autoMaskThumbs.el.clear();
@@ -511,6 +536,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.hasMask = () => _hasMask;
 
         el.setGenerating = (on) => _setGeneratingSpinner(on);
+
+        el.setMaskHidden = (hidden) => { canvas.maskHidden = hidden; };
 
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;

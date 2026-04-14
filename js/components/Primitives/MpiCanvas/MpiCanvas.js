@@ -63,6 +63,7 @@ class _CanvasCore {
         this.crop       = new CropManager();
         this._activeMode = 'none';
         this._onModeChange = onModeChange;
+        this._maskHidden = false;
 
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
@@ -135,6 +136,8 @@ class _CanvasCore {
     set isComparisonMode(v) { this.activeMode = v ? 'compare' : 'none'; }
     get sliderPos()      { return this.comparison.sliderPos; }
     set sliderPos(v)     { this.comparison.sliderPos = v; }
+    get maskHidden()     { return this._maskHidden; }
+    set maskHidden(v)    { this._maskHidden = v; this.draw(); }
 
     destroy() {
         if (this.resizeObserver) this.resizeObserver.disconnect();
@@ -241,10 +244,12 @@ class _CanvasCore {
             this._drawComparisonLayer(scale, offsetX);
         }
 
-        // 3. Mask Layer
-        this.ctx.globalAlpha = this.mask.maskOpacity;
-        this.ctx.drawImage(this.mask.maskCanvas, 0, 0);
-        this.ctx.globalAlpha = 1;
+        // 3. Mask Layer (skip if hidden, e.g. during latent previews)
+        if (!this._maskHidden) {
+            this.ctx.globalAlpha = this.mask.maskOpacity;
+            this.ctx.drawImage(this.mask.maskCanvas, 0, 0);
+            this.ctx.globalAlpha = 1;
+        }
 
         // 4. Crop Overlay
         this.crop.draw(this.ctx, this.img.width, this.img.height, scale);
@@ -398,7 +403,7 @@ export const MpiCanvas = ComponentFactory.create({
         const _proxy = [
             'scale','offsetX','offsetY','isManagedView',
             'maskCanvas','maskCtx','brushSize','brushType',
-            'maskOpacity','maskColor','isMaskingMode','isCroppingMode',
+            'maskOpacity','maskColor','maskHidden','isMaskingMode','isCroppingMode',
             'imgAfter','isComparisonMode','sliderPos',
             'gridH','gridV','img'
         ];
