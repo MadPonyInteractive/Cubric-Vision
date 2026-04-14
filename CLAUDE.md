@@ -4,16 +4,8 @@
 
 ## THE CARDINAL RULES
 1. **NEVER assume architectural patterns.** Check the rules below.
-2. **NEVER go rogue.** If a utility or system exists, use it.
-3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, you MUST review whether any of the following changed:
-   - A new utility was added to `js/utils/`
-   - A new route category or workspace was introduced
-   - An architectural pattern was modified or replaced
-   - A new dependency or backend service was added
-   - A component's events, props, state connections, or ComfyUI injection changed
-
-   If any of the above is true, you MUST ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (However, you ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks).
-   Additionally, if component wiring changed, update `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, and `.claude/rules/component-state.md` manually to reflect the new structure.
+2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
+3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (You ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks.)
 
 ---
 

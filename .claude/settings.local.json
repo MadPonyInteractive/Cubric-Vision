@@ -129,7 +129,9 @@
       "Bash(cp C:/Users/Fabio/.claude/skills/mpi/commands/mpi-write-plan.md C:/Users/Fabio/.claude/commands/mpi-write-plan.md)",
       "Bash(cp C:/Users/Fabio/.claude/skills/mpi/commands/mpi-execute-next.md C:/Users/Fabio/.claude/commands/mpi-execute-next.md)",
       "Read(//c/Users/Fabio/.claude/**)",
-      "Bash(mkdir -p C:/Users/Fabio/.claude/commands)"
+      "Bash(mkdir -p C:/Users/Fabio/.claude/commands)",
+      "Bash(wc -l CLAUDE.md .claude/rules/*.md)",
+      "Bash(wc -l \"c:/AI/Mpi/MpiAiSuite/CLAUDE.md\" \"c:/AI/Mpi/MpiAiSuite/.claude/rules\"/*.md \"c:/AI/Mpi/MpiAiSuite/.claude/skills\"/*/SKILL.md)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
