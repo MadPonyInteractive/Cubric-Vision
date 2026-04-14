@@ -23,13 +23,13 @@
  *   'close' {} — overlay dismissed
  */
 
-import { ComponentFactory }   from '../../factory.js';
-import { MpiOverlay }         from '../../Primitives/MpiOverlay/MpiOverlay.js';
-import { MpiDropdown }        from '../../Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiInput }           from '../../Primitives/MpiInput/MpiInput.js';
-import { qs }                 from '../../../utils/dom.js';
-import { Events }             from '../../../events.js';
-import { state }              from '../../../state.js';
+import { ComponentFactory } from '../../factory.js';
+import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
+import { qs } from '../../../utils/dom.js';
+import { Events } from '../../../events.js';
+import { state } from '../../../state.js';
 import {
     getModelSettings,
     setModelSettings,
@@ -38,7 +38,7 @@ import {
 } from '../../../data/projectModel.js';
 import { saveProjectSettings } from '../../../managers/projectManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
-import { clientLogger }       from '../../../services/clientLogger.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 const LORA_COUNT = 6;
 
@@ -62,6 +62,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-model-settings">
+        
             <div class="mpi-model-settings__upscale">
                 <p class="mpi-model-settings__section-title">Upscale Model</p>
                 <div class="mpi-model-settings__upscale-slot"></div>
@@ -124,7 +125,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
             const dd = MpiDropdown.mount(slot, {
                 options: _upscaleOptions(state.upscaleModels),
-                value:   _upscaleValue,
+                value: _upscaleValue,
                 placeholder: '— Default —',
             });
 
@@ -144,9 +145,9 @@ export const MpiModelSettings = ComponentFactory.create({
             _loraSlots = Array.from({ length: LORA_COUNT }, (_, i) => {
                 const s = slots[i] ?? {};
                 return {
-                    name:          s.name || null,
+                    name: s.name || null,
                     strengthModel: s.strengthModel ?? 1.0,
-                    strengthClip:  s.strengthClip  ?? 1.0,
+                    strengthClip: s.strengthClip ?? 1.0,
                 };
             });
 
@@ -170,12 +171,12 @@ export const MpiModelSettings = ComponentFactory.create({
                 modelLabel.textContent = 'Model';
 
                 const modelInput = MpiInput.mount(document.createElement('div'), {
-                    type:     'number',
-                    size:     'sm',
-                    value:    slot.strengthModel,
-                    min:      -2,
-                    max:      2,
-                    step:     0.05,
+                    type: 'number',
+                    size: 'sm',
+                    value: slot.strengthModel,
+                    min: -2,
+                    max: 2,
+                    step: 0.05,
                     decimals: 2,
                 });
 
@@ -184,12 +185,12 @@ export const MpiModelSettings = ComponentFactory.create({
                 clipLabel.textContent = 'Clip';
 
                 const clipInput = MpiInput.mount(document.createElement('div'), {
-                    type:     'number',
-                    size:     'sm',
-                    value:    slot.strengthClip,
-                    min:      -2,
-                    max:      2,
-                    step:     0.05,
+                    type: 'number',
+                    size: 'sm',
+                    value: slot.strengthClip,
+                    min: -2,
+                    max: 2,
+                    step: 0.05,
                     decimals: 2,
                 });
 
@@ -214,7 +215,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
                 const dd = MpiDropdown.mount(dropHost, {
                     options: loraOpts,
-                    value:   slot.name || '',
+                    value: slot.name || '',
                     placeholder: `Slot ${i + 1} — None`,
                 });
 
@@ -262,6 +263,6 @@ export const MpiModelSettings = ComponentFactory.create({
         };
 
         // ── Cleanup ───────────────────────────────────────────────────────────
-        el.destroy = () => {};
+        el.destroy = () => { };
     },
 });

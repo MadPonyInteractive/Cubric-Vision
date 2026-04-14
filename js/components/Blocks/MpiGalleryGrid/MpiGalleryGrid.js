@@ -63,8 +63,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <button class="mpi-gallery-grid__tab" data-filter="favorites">Favorites</button>
                     <div class="mpi-gallery-grid__info-btn-slot"></div>
                 </div>
-            </div>
-            <div class="mpi-gallery-grid__controls">
                 <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
             <div class="mpi-gallery-grid__generating-slot"></div>

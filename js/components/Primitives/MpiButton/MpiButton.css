@@ -1,8 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    MpiButton — Primitive Button Component
    BEM block: .mpi-btn
-   Mirrors the app's canonical .btn (03_forms.css) using the same design tokens.
-   Differences: BEM modifier classes instead of chained classes, icon slot.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -44,8 +42,6 @@
 .mpi-btn--primary {
     background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
     color: #fff;
-    box-shadow: 0 4px 15px var(--neon-glow-sm);
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mpi-btn--primary:hover:not(:disabled),
@@ -54,7 +50,6 @@
     color: #fff;
     box-shadow: 0 8px 25px var(--neon-glow);
     transform: translateY(-2px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* secondary — glass surface, matches .btn.secondary */
@@ -62,16 +57,12 @@
     background: var(--surface);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-soft);
-    box-shadow: var(--border-glass), 0 4px 12px rgba(0, 0, 0, 0.2);
     color: var(--text);
 }
 
 .mpi-btn--secondary:hover:not(:disabled),
 .mpi-btn--secondary.is-pressed:not(:disabled) {
     background: var(--surface-2);
-    border-color: var(--border);
-    box-shadow: var(--border-glass), 0 6px 16px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
 }
 
@@ -84,7 +75,6 @@
 .mpi-btn--danger:hover:not(:disabled),
 .mpi-btn--danger.is-pressed:not(:disabled) {
     background: #f87171;
-    box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
     transform: translateY(-1px);
 }
 
@@ -122,11 +112,7 @@
     transform: none !important;
 }
 
-/* No focus ring — matches app's .btn:focus */
-.mpi-btn:focus {
-    outline: none !important;
-    box-shadow: none !important;
-}
+/* No focus ring — removed: buttons retain their default look unconditionally */
 
 /* Loading — matches .btn.loading + .btn.loading::after */
 .mpi-btn--loading {
