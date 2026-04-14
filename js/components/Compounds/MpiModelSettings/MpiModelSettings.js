@@ -27,6 +27,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
+import { renderIcon } from '../../../utils/icons.js';
 import { qs } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
@@ -62,7 +63,12 @@ export const MpiModelSettings = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-model-settings">
-        
+            <div class="mpi-model-settings__header">
+                <div class="mpi-model-settings__icon">${renderIcon('settings', 'xl')}</div>
+                <h2 class="mpi-model-settings__title">Model Settings</h2>
+                <p class="mpi-model-settings__text">Setup your custom upscale model and loras here.</p>
+            </div>
+            <div class="mpi-model-settings__separator"></div>
             <div class="mpi-model-settings__upscale">
                 <p class="mpi-model-settings__section-title">Upscale Model</p>
                 <div class="mpi-model-settings__upscale-slot"></div>
