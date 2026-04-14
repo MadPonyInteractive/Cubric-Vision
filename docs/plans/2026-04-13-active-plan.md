@@ -10,7 +10,7 @@ Fix small bugs left behind or add features that are missing due to misinterpreta
 
 ## To-Dos
 - [x] The block component `../../js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` Needs buttons/tabs on the top left So the user can organize the gallery by oldest, newest, images, video, favourites and later on when audio is implemented, audio. (default should be newest to oldest)
-- [] Change the galery grid to respect image ratios
+- [x] Change the galery grid to respect image ratios
 - [] When multiple models are installed as a consequence of having the same dependencies as the model that the user installed, the Mpi Toast displays only the model that was installed. It would be good to display all the models that were installed as a consequence of having installed that one model. (open to discussion -> possibility to change the mpitoast behaviour to a multiple toast with a max of 3 toasts stacked) 
 - [] The comapre tool toolbar in the group history display is injected into the history pannel instead of showing in place of the MpiPromptBox like it does on the main gallery. 
 

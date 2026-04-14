@@ -7,14 +7,18 @@ import { ce, qs } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
+import { packItemsIntoRows, resizeRowImages } from '../../../utils/justifiedLayout.js';
 
 /**
  * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
  * selection mode, and a generation preview slot.
  *
- * The grid has 5 size levels driven by MpiProgressBar (the existing slider component).
- * Level maps to a CSS custom property --gallery-col-size that the grid uses for
- * column sizing.
+ * Uses a justified layout (like Google Photos) where rows have uniform height
+ * and image widths scale to fill the container. Cards are not forced to square
+ * aspect ratios — images display in their true ratios with object-fit: contain.
+ *
+ * The grid has 5 size levels driven by MpiProgressBar. Level maps to a target
+ * card width in pixels (160/224/288/384/512).
  *
  * Selection mode activates when the user checks any card. In selection mode:
  *   - Clicking a card toggles selection instead of opening the group
@@ -63,6 +67,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             <div class="mpi-gallery-grid__controls">
                 <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
+            <div class="mpi-gallery-grid__generating-slot"></div>
             <div class="mpi-gallery-grid__grid"></div>
             <div class="mpi-gallery-grid__footer">
                 <div class="mpi-gallery-grid__selectionbar-slot" style="display:none"></div>
@@ -83,6 +88,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         let _selectionMode = false;
 
         const grid = el.querySelector('.mpi-gallery-grid__grid');
+        const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
         const selectionSlot = el.querySelector('.mpi-gallery-grid__selectionbar-slot');
 
@@ -95,15 +101,94 @@ export const MpiGalleryGrid = ComponentFactory.create({
             info: 'Size: {value}',
         });
 
-        // Level → CSS column min-width
-        const SIZE_MAP = { 1: '10rem', 2: '14rem', 3: '18rem', 4: '24rem', 5: '32rem' };
+        // Level → target card width (px)
+        const SIZE_MAP = { 1: 160, 2: 224, 3: 288, 4: 384, 5: 512 };
+        let _cardWidth = SIZE_MAP[3];
 
         slider.on('input', ({ value }) => {
-            grid.style.setProperty('--gallery-col-size', SIZE_MAP[value] || '18rem');
+            _cardWidth = SIZE_MAP[value] || 288;
+            _rerenderJustified();
         });
 
-        // Set initial size
-        grid.style.setProperty('--gallery-col-size', SIZE_MAP[3]);
+        // Set initial card width
+        _cardWidth = SIZE_MAP[3];
+
+        // ── Justified Layout helpers ─────────────────────────────────────────
+
+        const GAP = 12; // px, matches CSS gap
+
+        /**
+         * Re-render the grid using the justified layout algorithm.
+         * Cards are rendered immediately with natural image heights (CSS flex),
+         * then resized proportionally after images load so rows fill the container.
+         */
+        let _renderTimeout = null;
+
+        async function _rerenderJustified() {
+            // Debounce rapid calls
+            if (_renderTimeout) clearTimeout(_renderTimeout);
+            _renderTimeout = setTimeout(async () => {
+                const { order, filter } = state.gallerySort;
+
+                // Filter
+                let display = _groups.filter(g => {
+                    if (filter === 'images')   return g.type === 'image';
+                    if (filter === 'videos')    return g.type === 'video';
+                    if (filter === 'favorites') return g.favourite === true;
+                    return true;
+                });
+
+                // Sort
+                display.sort((a, b) => {
+                    const ta = new Date(a.createdAt).getTime();
+                    const tb = new Date(b.createdAt).getTime();
+                    return order === 'newest' ? tb - ta : ta - tb;
+                });
+
+                // Update active tab styling
+                tabsEl.querySelectorAll('[data-order]').forEach(btn => {
+                    btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.order === order);
+                });
+                tabsEl.querySelectorAll('[data-filter]').forEach(btn => {
+                    btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
+                });
+
+                // Get container width
+                const containerWidth = grid.clientWidth - 2 * 16; // 16px padding each side
+
+                // Clear and rebuild with plain flex rows (images drive their own height initially)
+                grid.innerHTML = '';
+                _cardMap.clear();
+
+                // Pack into rows using justified layout utility
+                const targetCardWidth = _cardWidth;
+                const items = display.map(group => ({
+                    id: group.id,
+                    targetWidth: targetCardWidth,
+                }));
+                const rows = packItemsIntoRows(items, containerWidth, GAP, targetCardWidth);
+
+                rows.forEach(({ items: rowItems }) => {
+                    const rowEl = ce('div', { className: 'mpi-gallery-grid__row' });
+                    rowEl.style.height = '200px';
+
+                    rowItems.forEach(({ id, targetWidth }) => {
+                        const group = display.find(g => g.id === id);
+                        const { card, wrapper } = _makeCard(group);
+                        wrapper.className = 'mpi-gallery-grid__row-wrap';
+                        wrapper.style.width = `${targetWidth}px`;
+                        rowEl.appendChild(wrapper);
+                        _cardMap.set(id, { card, el: wrapper });
+                    });
+
+                    grid.appendChild(rowEl);
+                    resizeRowImages(rowEl, '.mpi-gallery-grid__row-wrap', '.mpi-group-card__thumb', GAP, containerWidth);
+                });
+
+                // Sync info state to all cards
+                _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
+            }, 16); // ~60fps debounce
+        }
 
         // ── Info toggle button ──────────────────────────────────────────────────
         const infoBtnSlot = el.querySelector('.mpi-gallery-grid__info-btn-slot');
@@ -125,53 +210,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const tabsEl = el.querySelector('.mpi-gallery-grid__tabs');
 
-        function _applySortFilter() {
-            const { order, filter } = state.gallerySort;
-
-            // Update active tab styling
-            tabsEl.querySelectorAll('[data-order]').forEach(btn => {
-                btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.order === order);
-            });
-            tabsEl.querySelectorAll('[data-filter]').forEach(btn => {
-                btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
-            });
-
-            // Filter
-            let display = _groups.filter(g => {
-                if (filter === 'images')   return g.type === 'image';
-                if (filter === 'videos')   return g.type === 'video';
-                if (filter === 'favorites') return g.favourite === true;
-                return true; // 'all'
-            });
-
-            // Sort
-            display.sort((a, b) => {
-                const ta = new Date(a.createdAt).getTime();
-                const tb = new Date(b.createdAt).getTime();
-                return order === 'newest' ? tb - ta : ta - tb;
-            });
-
-            // Re-render with filtered/sorted list
-            grid.innerHTML = '';
-            _cardMap.clear();
-            display.forEach(group => {
-                const { card, wrapper } = _makeCard(group);
-                _cardMap.set(group.id, { card, el: wrapper });
-                grid.appendChild(wrapper);
-            });
-        }
-
-        // Sync initial state
-        _applySortFilter();
-        // Initialize cards with current state on mount (state may already be true from localStorage)
-        _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
-
         // Subscribe to state.gallerySort changes
         const _unsubSort = Events.on('state:changed', ({ key }) => {
-            if (key === 'gallerySort') {
-                _applySortFilter();
-                _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
-            }
+            if (key === 'gallerySort') _rerenderJustified();
         });
 
         // Tab click delegation
@@ -293,19 +334,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         // ── Render all groups ───────────────────────────────────────────────────
+        // (removed — replaced by _rerenderJustified for justified layout)
 
-        function _render() {
-            grid.innerHTML = '';
-            _cardMap.clear();
-
-            _groups.forEach(group => {
-                const { card, wrapper } = _makeCard(group);
-                _cardMap.set(group.id, { card, el: wrapper });
-                grid.appendChild(wrapper);
-            });
-        }
-
-        // (initial render is handled by _applySortFilter called above)
+        // Initial justified layout render
+        _rerenderJustified();
 
         // ── Public API ──────────────────────────────────────────────────────────
 
@@ -316,7 +348,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.setGroups = (groups) => {
             _groups = groups;
             _exitSelectionMode();
-            _applySortFilter();
+            _rerenderJustified();
         };
 
         /**
@@ -330,7 +362,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const placeholderGroup = { id: tempId, type, name: 'Generating...', history: [], selectedIndex: 0 };
             const { card, wrapper } = _makeCard(placeholderGroup);
             _cardMap.set(tempId, { card, el: wrapper });
-            grid.prepend(wrapper); // new generations appear at the top
+            generatingSlot.prepend(wrapper); // new generations appear at the top
             card.el.setGenerating(null);
             return card;
         };
@@ -363,13 +395,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.finalizeCard = (tempId, group) => {
             const entry = _cardMap.get(tempId);
             if (!entry) return;
-            // Replace in groups array
+            // Remove generating card element
+            entry.el.remove();
+            _cardMap.delete(tempId);
+            // Add group to front of groups array and re-run justified layout
             _groups = _groups.filter(g => g.id !== tempId);
             _groups.unshift(group);
-            // Update the existing card in-place rather than re-rendering everything
-            _cardMap.delete(tempId);
-            _cardMap.set(group.id, entry);
-            entry.card.el.setDone(group);
+            _rerenderJustified();
         };
 
         /**
