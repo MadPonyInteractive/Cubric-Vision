@@ -98,16 +98,21 @@ export const MpiCanvasViewer = ComponentFactory.create({
             }
         }
 
+        let _loadingComparison = false;
+
         async function _showCompare(itemA, itemB) {
             if (!itemA?.filePath || !itemB?.filePath) return;
             try {
+                _loadingComparison = true;
                 _comparingActive = true;
                 await canvas.loadImage(_resolveUrl(itemA.filePath));
                 await canvas.loadComparisonImage(_resolveUrl(itemB.filePath));
+                // After comparison is fully loaded, emit the final mode-changed event
+                emit('mode-changed', { mode: _currentMode });
             } catch (err) {
                 console.warn('[MpiCanvasViewer] Failed to load compare images:', err);
             } finally {
-                _comparingActive = false;
+                _loadingComparison = false;
             }
         }
 
@@ -398,6 +403,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (mode !== 'compare' && _comparingActive) {
                 _comparingActive = false;
             }
+
+            // Don't emit mode-changed while loading comparison — the intermediate
+            // mode changes (back to 'none' from loadImage) shouldn't affect bottom bar
+            if (_loadingComparison) {
+                return;
+            }
+
             emit('mode-changed', { mode: _currentMode });
         });
 
