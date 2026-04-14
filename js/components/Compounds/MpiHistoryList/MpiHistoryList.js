@@ -17,12 +17,9 @@
  *   'entry-selected'   { idx, item }  — card clicked (not in select mode)
  *   'selection-changed' { indices }  — selection updated
  *   'selection-exited'  {}           — select mode ended
- *   'compare-requested' { idxA, idxB } — two items ready to compare
- *   'delete-requested'  { indices }  — deletion confirmed
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiSelectionBar } from '../MpiSelectionBar/MpiSelectionBar.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
 function _resolveUrl(filePath) {
@@ -39,7 +36,6 @@ export const MpiHistoryList = ComponentFactory.create({
     template: () => `
         <div class="mpi-history-list">
             <div class="mpi-history-list__cards" id="cards-slot"></div>
-            <div class="mpi-history-list__selbar-slot hide" id="selbar-slot"></div>
         </div>
     `,
 
@@ -55,25 +51,6 @@ export const MpiHistoryList = ComponentFactory.create({
         const _historyCards = [];
 
         // ── URL resolver (same logic as groupHistory.js) ───────────────────────
-
-        // ── Selection bar ────────────────────────────────────────────────────
-
-        const selectionBar = MpiSelectionBar.mount(el.querySelector('#selbar-slot'), { count: 0 });
-
-        selectionBar.on('compare', () => {
-            if (_selection.size !== 2) return;
-            const [idxA, idxB] = [..._selection];
-            emit('compare-requested', { idxA, idxB });
-        });
-
-        selectionBar.on('delete', () => {
-            emit('delete-requested', { indices: [..._selection] });
-        });
-
-        selectionBar.on('cancel', () => {
-            _exitSelectMode();
-            emit('selection-exited');
-        });
 
         // ── Card building ─────────────────────────────────────────────────────
 
@@ -162,23 +139,21 @@ export const MpiHistoryList = ComponentFactory.create({
                 _enterSelectMode();
             } else if (_selection.size === 0 && _selectMode) {
                 _exitSelectMode();
+                emit('selection-exited', {});
                 return;
             }
 
             _applyCardStates();
-            selectionBar.el.setCount(_selection.size);
             emit('selection-changed', { indices: [..._selection] });
         }
 
         function _enterSelectMode() {
             _selectMode = true;
-            el.querySelector('#selbar-slot').classList.remove('hide');
         }
 
         function _exitSelectMode() {
             _selectMode = false;
             _selection.clear();
-            el.querySelector('#selbar-slot').classList.add('hide');
             _applyCardStates();
         }
 

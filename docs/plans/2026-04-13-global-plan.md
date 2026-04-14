@@ -1,5 +1,5 @@
 ---
-name: active-plan
+name: global-plan
 created: 2026-04-13
 owner: human
 status: in_progress
