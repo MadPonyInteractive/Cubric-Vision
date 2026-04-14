@@ -44,11 +44,6 @@ export const MpiHistoryList = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        const _suppressBar = props.suppressInternalBar ?? false;
-        if (_suppressBar) {
-            const slot = el.querySelector('.mpi-history-list__selbar-slot');
-            if (slot) slot.remove();
-        }
         /** @type {import('../../../data/projectModel.js').HistoryItem[]} */
         let _history = props.history || [];
         let _selectedIdx = props.selectedIndex ?? 0;
@@ -63,19 +58,19 @@ export const MpiHistoryList = ComponentFactory.create({
 
         // ── Selection bar ────────────────────────────────────────────────────
 
-        const _selectionBarInst = _suppressBar ? null : MpiSelectionBar.mount(el.querySelector('#selbar-slot'), { count: 0 });
+        const selectionBar = MpiSelectionBar.mount(el.querySelector('#selbar-slot'), { count: 0 });
 
-        _selectionBarInst?.on('compare', () => {
+        selectionBar.on('compare', () => {
             if (_selection.size !== 2) return;
             const [idxA, idxB] = [..._selection];
             emit('compare-requested', { idxA, idxB });
         });
 
-        _selectionBarInst?.on('delete', () => {
+        selectionBar.on('delete', () => {
             emit('delete-requested', { indices: [..._selection] });
         });
 
-        _selectionBarInst?.on('cancel', () => {
+        selectionBar.on('cancel', () => {
             _exitSelectMode();
             emit('selection-exited');
         });
@@ -171,19 +166,19 @@ export const MpiHistoryList = ComponentFactory.create({
             }
 
             _applyCardStates();
-            _selectionBarInst?.el.setCount(_selection.size);
+            selectionBar.el.setCount(_selection.size);
             emit('selection-changed', { indices: [..._selection] });
         }
 
         function _enterSelectMode() {
             _selectMode = true;
-            if (!_suppressBar) el.querySelector('#selbar-slot')?.classList.remove('hide');
+            el.querySelector('#selbar-slot').classList.remove('hide');
         }
 
         function _exitSelectMode() {
             _selectMode = false;
             _selection.clear();
-            if (!_suppressBar) el.querySelector('#selbar-slot')?.classList.add('hide');
+            el.querySelector('#selbar-slot').classList.add('hide');
             _applyCardStates();
         }
 

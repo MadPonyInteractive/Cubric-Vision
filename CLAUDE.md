@@ -6,7 +6,7 @@
 1. **NEVER assume architectural patterns.** Check the rules below.
 2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
 3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (You ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks.)
-
+4. **Suggest improvements in the architecture** If you find that areas in the code that you're working on, could use improvements or a different design pattern that could help the project be more efficient, simple and scalable, you should suggest them to the user. 
 ---
 
 ## Critical Rules Snapshot (Applies to ALL agents, always)
