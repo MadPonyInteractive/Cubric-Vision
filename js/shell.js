@@ -78,6 +78,7 @@ export async function initShell() {
   // 4. Bind Interactions
   initProjectUI();
   StatusBar.init();
+  StatusBar.listen();
   bindWindowControls();
   bindMemoryHotkeys(memMonitor);
 

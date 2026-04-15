@@ -6,6 +6,8 @@ import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
+import { state } from '../../../state.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -165,6 +167,62 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, items: [..._mediaItems] });
         }
 
+        /**
+         * Uploads a file to the project media folder and returns the stable URL.
+         * @param {File} file
+         * @param {'image'|'video'} mediaType
+         * @returns {Promise<{filePath: string, filename: string}|null>}
+         */
+        async function _uploadToProjectMedia(file, mediaType) {
+            const project = state.currentProject;
+            if (!project?.folderPath) {
+                clientLogger.warn('MpiPromptBox', 'No current project — cannot save media');
+                return null;
+            }
+            try {
+                const ext = file.name.split('.').pop() || (mediaType === 'image' ? 'png' : 'mp4');
+                const filename = `mpi_${Date.now()}.${ext}`;
+
+                // Convert file to base64 for the upload endpoint
+                const base64 = await _fileToBase64(file);
+
+                const res = await fetch(
+                    `/project-media/${project.id}/upload?folderPath=${encodeURIComponent(project.folderPath)}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename,
+                            base64Data: base64,
+                        }),
+                    }
+                );
+                if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'upload failed');
+                // Construct the project-file URL (same format as test 5): /project-file?path=<url-encoded absolute path>
+                const filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                return { filePath, filename: data.filename };
+            } catch (e) {
+                clientLogger.warn('MpiPromptBox', 'Media save failed:', e);
+                return null;
+            }
+        }
+
+        /**
+         * Converts a File/blob to a base64 data URL string.
+         * @param {File} file
+         * @returns {Promise<string>}
+         */
+        function _fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(/** @type {string} */ (reader.result));
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         function _tryAddMedia({ url, file, mediaType, source }) {
             // Max 1 per type — replace existing rather than stack
             const existing = _mediaItems.find(m => m.mediaType === mediaType);
@@ -190,10 +248,11 @@ export const MpiPromptBox = ComponentFactory.create({
                     mediaZone.classList.remove('mpi-prompt-box__media-zone--drag-over');
             });
 
-            el.addEventListener('drop', (e) => {
+            el.addEventListener('drop', async (e) => {
                 mediaZone.classList.remove('mpi-prompt-box__media-zone--drag-over');
 
-                // App-internal drag from MpiGroupCard
+                // App-internal drag from MpiGroupCard — re-use existing media in prompt
+                // box, no history card (the card already exists in the gallery).
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
@@ -205,7 +264,7 @@ export const MpiPromptBox = ComponentFactory.create({
                     return;
                 }
 
-                // Native file drop
+                // Native file drop — upload to project media folder immediately
                 const file = e.dataTransfer.files[0];
                 if (!file) return;
                 const mediaType = file.type.startsWith('image/') ? 'image'
@@ -215,7 +274,21 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (mediaType === 'image' && !acceptsImage) return;
                 if (mediaType === 'video' && !acceptsVideo) return;
 
-                _tryAddMedia({ url: URL.createObjectURL(file), file, mediaType, source: 'file' });
+                // Upload to project folder and create history card immediately
+                const uploaded = await _uploadToProjectMedia(file, mediaType);
+                const fileUrl = uploaded
+                    ? uploaded.filePath
+                    : URL.createObjectURL(file); // fallback: keep blob URL
+
+                _tryAddMedia({ url: fileUrl, file, mediaType, source: 'file' });
+
+                // Notify parent to create a history card for this imported media
+                if (uploaded) {
+                    emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, mediaType, source: 'file' });
+                    // Also emit via the Event Bus so any listener (e.g. MpiGalleryBlock) can
+                    // subscribe without needing a direct reference to the promptBox instance.
+                    Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, mediaType });
+                }
             });
 
             _syncDropHint();

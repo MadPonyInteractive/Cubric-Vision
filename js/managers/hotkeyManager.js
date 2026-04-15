@@ -3,8 +3,6 @@
  *
  * TODO:
  * - [ ] Implement F5 / Ctrl+F5 for VRAM/Model Unloading
- *
- * - [ ] Implement Enter for Modal Confirmation (Global)
  * - [ ] Implement M, B, E for Masking Mode (Tool Specific)
  * - [ ] Implement Ctrl+Enter for main tool execution (Global)
  */
@@ -23,7 +21,7 @@ try {
 
 class HotkeyManager {
     constructor() {
-        /** @type {Map<string, Set<Function>>} */
+        /** @type {Map<string, Function|null>} single handler per key; null = removed but prev was registered */
         this._handlers = new Map();
         this._init();
         console.log('[Hotkeys] Initialized Manager');
@@ -58,26 +56,30 @@ class HotkeyManager {
     }
 
     /**
-     * Register a new hotkey callback.
+     * Register a new hotkey callback, replacing any existing handler for this key.
+     * Returns an unsubscribe function that restores the previous handler.
      * @param {string} keyString - Example: 'escape', 'control+enter', 'control+shift+i'
      * @param {Function} callback - The function to execute on match
      */
     register(keyString, callback) {
         const key = keyString.toLowerCase();
-        if (!this._handlers.has(key)) {
-            this._handlers.set(key, new Set());
-        }
-        this._handlers.get(key).add(callback);
+        const prev = this._handlers.get(key) ?? null;
+        this._handlers.set(key, callback);
+        return () => {
+            this._handlers.set(key, prev);
+        };
     }
 
     /**
-     * Unregister a hotkey callback.
-     * @param {string} keyString 
-     * @param {Function} callback 
+     * Unregister a hotkey callback. Only removes if it matches the currently registered handler.
+     * @param {string} keyString
+     * @param {Function} callback
      */
     unregister(keyString, callback) {
         const key = keyString.toLowerCase();
-        this._handlers.get(key)?.delete(callback);
+        if (this._handlers.get(key) === callback) {
+            this._handlers.delete(key);
+        }
     }
 
     /**
@@ -90,17 +92,13 @@ class HotkeyManager {
 
         // Check for exact matches in the registry
         if (this._handlers.has(key)) {
-            const callbacks = this._handlers.get(key);
-            if (callbacks.size > 0) {
+            const handler = this._handlers.get(key);
+            if (handler) {
                 // Prevent defaults if we have registered handlers
-                // Note: Some system keys like Escape should usually close the top-most layer
                 e.preventDefault();
                 e.stopPropagation();
-
-                // Execute all registered handlers (most recent first if we want ordering, but Set is insertion order)
-                callbacks.forEach(cb => {
-                    try { cb(e); } catch (err) { console.error(`[Hotkeys] Error in "${key}" handler:`, err); }
-                });
+                try { handler(e); }
+                catch (err) { console.error(`[Hotkeys] Error in "${key}" handler:`, err); }
             }
         }
 

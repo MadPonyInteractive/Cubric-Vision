@@ -5,8 +5,9 @@
 ## THE CARDINAL RULES
 1. **NEVER assume architectural patterns.** Check the rules below.
 2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
-3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** (You ARE allowed to update `.claude/rules/backlog.md` autonomously to cross off completed tasks.)
+3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update **`.claude/rules/`** to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** 
 4. **Suggest improvements in the architecture** If you find that areas in the code that you're working on, could use improvements or a different design pattern that could help the project be more efficient, simple and scalable, you should suggest them to the user. 
+5. the backlog.md file is under revision by the user, please ignore it for now.
 ---
 
 ## Critical Rules Snapshot (Applies to ALL agents, always)
@@ -15,14 +16,14 @@
 
 - **Never hardcode colors.** Use CSS variables from `styles/01_base.css` only.
 - **Never paste raw SVG.** All icons come from `js/utils/icons.js`. Add missing icons there first.
-- **Never use raw `document.querySelector`.** Use shorthands from `js/utils/dom.js`.
-- **Never create global state outside `js/state.js`.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
-- **Never use raw `window.addEventListener('keydown')`.** Use `Hotkeys.register` / `Hotkeys.unregister`.
+- **Never use raw ****`document.querySelector`****.** Use shorthands from `js/utils/dom.js`.
+- **Never create global state outside ****`js/state.js`****.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
+- **Never use raw ****`window.addEventListener('keydown')`****.** Use `Hotkeys.register` / `Hotkeys.unregister`.
 - **BEM is mandatory.** Format: `.mpi-block__element--modifier`. No exceptions.
-- **All components MUST use `ComponentFactory.create()`.** Never bypass the factory pattern.
-- **NEVER modify `js/components/factory.js`.** The factory is locked.
+- **All components MUST use ****`ComponentFactory.create()`****.** Never bypass the factory pattern.
+- **NEVER modify ****`js/components/factory.js`****.** The factory is locked.
 - **Every new component MUST:** register its `.css` in `js/shell/preloadStyles.js` AND document its props in `js/components/types.js`.
-- **Use `Events.on()` / `Events.emit()` for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
+- **Use ****`Events.on()`**** / ****`Events.emit()`**** for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
 
 ---
@@ -107,7 +108,7 @@ If you need to run browser automation or test web interfaces:
 Four skills manage a human-in-the-loop execution system:
 
 | Command | Skill | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `/mpi-brainstorm` | mpi-brainstorm | Explore an idea collaboratively, write a spec, ask if you want a plan |
 | `/mpi-quick-plan` | mpi-quick-plan | Create empty plan scaffold for manual to-do entry |
 | `/mpi-write-plan` | mpi-write-plan | Decompose complex goals with parallel sub-agents into to-dos |
@@ -122,7 +123,7 @@ Four skills manage a human-in-the-loop execution system:
 > **FOR THE MAIN AGENT:** When dispatching a sub-agent via the `Agent` tool, sub-agents start cold — they have no CLAUDE.md context. You MUST copy the relevant briefing text from the rule file's `## Sub-Agent Briefing` section directly into the sub-agent's prompt. Always include the Critical Rules Snapshot above in every sub-agent prompt.
 
 | Task type | Rule file | Briefing location |
-|---|---|---|
+| --- | --- | --- |
 | Any code at all | *(inline above)* | Critical Rules Snapshot — always include |
 | Components / UI | `.claude/rules/components.md` | `## Sub-Agent Briefing` |
 | DOM / CSS / Utilities | `.claude/rules/dos_and_donts.md` | `## Sub-Agent Briefing` |
@@ -138,9 +139,3 @@ Four skills manage a human-in-the-loop execution system:
 | Component ComfyUI injection | `.claude/rules/component-comfy.md` | `## Sub-Agent Briefing` |
 
 ---
-
-## Current Backlog & To-Dos
-If you need to know what to work on next, or if you want to find bug fixes:
-**->** **MUST READ:** `.claude/rules/backlog.md`
-
-> **CRITICAL:** Backlog items that lack detailed technical context are NOT self-explanatory. If an item is unclear, you MUST stop and ask the user: *"Can you explain in detail how we should approach [Task]?"* before writing any code.

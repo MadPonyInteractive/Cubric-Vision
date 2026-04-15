@@ -139,7 +139,20 @@
       "Bash(grep \"^\\\\\\\\s*el\\\\\\\\.\" c:/AI/Mpi/MpiAiSuite/js/components/Compounds/MpiCanvasViewer/MpiCanvasViewer.js)",
       "Write",
       "Edit",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "mcp__nimbalyst-mcp__tracker_list",
+      "mcp__nimbalyst-mcp__tracker_get",
+      "mcp__nimbalyst-mcp__AskUserQuestion",
+      "mcp__nimbalyst-mcp__tracker_update",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(node:*)",
+      "Bash(playwright-cli:*)",
+      "Skill",
+      "Bash(ls:*)",
+      "Bash(npx playwright-cli:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
@@ -153,6 +166,6 @@
     ]
   },
   "claudeMdExcludes": [
-    "c:/AI/Mpi/MpiAiSuite/.claude/rules/*.md"
+    "**/.claude/**"
   ]
 }

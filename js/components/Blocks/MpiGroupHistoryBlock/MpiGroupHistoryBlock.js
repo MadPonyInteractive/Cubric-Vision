@@ -233,7 +233,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 promptBox.on('cancel', () => {
                     _activeExec?.cancel();
                     _activeExec = null;
-                    StatusBar.progress.cancel();
+                    Events.emit('tool:cancelled', { tool: 'groupHistory' });
                 });
 
                 // Initialize bottom bar to show prompt box
@@ -249,7 +249,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!activeModel) return;
 
             Events.emit('tool:running', { tool: 'groupHistory', type: operation });
-            StatusBar.progress.start('Generating...');
             canvasViewer.el.setGenerating(true);
 
             // Always inject current selected history entry as input image
@@ -294,7 +293,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
                 if (!urls.length) {
                     clientLogger.warn('MpiGroupHistoryBlock', 'Generation completed but no output returned.');
-                    StatusBar.progress.cancel();
+                    Events.emit('tool:cancelled', { tool: 'groupHistory' });
                     return;
                 }
 
@@ -348,15 +347,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 canvasViewer.el.setMaskHidden(false);
 
                 Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
-                StatusBar.progress.complete('Done!');
             };
 
             exec.onError = (err) => {
                 _activeExec = null;
                 PromptBoxService.component?.setGenerating(false);
                 canvasViewer.el.setGenerating(false);
-                Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
-                StatusBar.progress.cancel();
+                Events.emit('tool:cancelled', { tool: 'groupHistory' });
                 clientLogger.error('MpiGroupHistoryBlock', 'Generation error:', err);
             };
         }

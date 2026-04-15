@@ -154,11 +154,9 @@ export function updateTitlebarProject() {
 async function _loadView(page, params = {}) {
     // ── Breadcrumb ──────────────────────────────────────────────────────────
     if (page === PAGE_GALLERY) {
-        // At gallery root: show project name only, no second segment
         _projectNameInst.el.setGalleryLabel('');
         _projectNameInst.el.setGroupLabel('');
     } else if (page === PAGE_GROUP_HISTORY) {
-        // Inside a group: show "Gallery" as up-link + group name
         const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
         _projectNameInst.el.setGalleryLabel('Gallery');
         _projectNameInst.el.setGroupLabel(group?.name || 'Group');
@@ -204,10 +202,6 @@ function _syncRadial(page) {
 
         _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
         _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, GROUP_HISTORY_ITEMS);
-
-        if (!state.currentProject?.tutorialSeen) {
-            _radialInstance.el.show();
-        }
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {

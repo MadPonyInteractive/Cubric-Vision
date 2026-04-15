@@ -354,13 +354,27 @@ export const MpiGalleryGrid = ComponentFactory.create({
          * caller can push latent preview updates to it.
          * @param {string} tempId  - Temporary id (e.g. crypto.randomUUID())
          * @param {'image'|'video'} type
+         * @param {{ width?: number, height?: number }} [overrides] - Optional pixel dimensions.
+         *   When provided, sets the wrapper's CSS width/height so the card is visible
+         *   before any image loads (uses injectionParams Width/Height from PromptBox).
          * @returns {object} card instance
          */
-        el.addGeneratingCard = (tempId, type) => {
+        el.addGeneratingCard = (tempId, type, overrides = {}) => {
             const placeholderGroup = { id: tempId, type, name: 'Generating...', history: [], selectedIndex: 0 };
             const { card, wrapper } = _makeCard(placeholderGroup);
             _cardMap.set(tempId, { card, el: wrapper });
-            generatingSlot.prepend(wrapper); // new generations appear at the top
+
+            // Display at thumbnail size (288px wide) with proportional height.
+            // Use actual output dimensions to derive correct aspect ratio.
+            const displayW = _cardWidth; // 288px default thumbnail width
+            const displayH = overrides.width && overrides.height
+                ? Math.round(_cardWidth * (overrides.height / overrides.width))
+                : (overrides.height || _cardWidth);
+
+            wrapper.style.width  = `${displayW}px`;
+            wrapper.style.height = `${displayH}px`;
+
+            grid.prepend(wrapper); // inside .mpi-gallery-grid__grid — new generations at top
             card.el.setGenerating(null);
             return card;
         };
@@ -393,10 +407,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.finalizeCard = (tempId, group) => {
             const entry = _cardMap.get(tempId);
             if (!entry) return;
-            // Remove generating card element
             entry.el.remove();
             _cardMap.delete(tempId);
-            // Add group to front of groups array and re-run justified layout
             _groups = _groups.filter(g => g.id !== tempId);
             _groups.unshift(group);
             _rerenderJustified();

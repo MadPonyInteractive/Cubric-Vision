@@ -91,7 +91,8 @@ export const Events = new EventBus();
  * 'ui:error'         { title: string, message: string } — show error dialog (shell listens)
  * 'media:updated'    { projectId: string }           — any tool saving to library
  * 'tool:running'     { tool: string, type: string }  — tool started a run
- * 'tool:idle'        { tool: string, type: string }  — tool run finished/cancelled
+ * 'tool:idle'        { tool: string, type: string }  — tool run finished (success)
+ * 'tool:cancelled'   { tool: string }                — tool was cancelled by user or error
  * 'project:changed'  { project: Object }             — user switched active project
  * 'state:changed'    { key: string, value: any }     — reactive state mutation
  * 'comfy:starting'   —                               — ComfyUI server is starting up

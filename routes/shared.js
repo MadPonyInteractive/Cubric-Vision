@@ -305,6 +305,21 @@ async function getCustomRoot() {
     return null;
 }
 
+/**
+ * Empties ComfyUI's input/ and output/ temp folders.
+ */
+async function cleanComfyUITempFiles() {
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const inputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'input');
+    const outputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'output');
+    for (const dir of [inputDir, outputDir]) {
+        if (await fs.pathExists(dir)) {
+            await fs.emptyDir(dir);
+            logger.info('comfy', `Cleaned temp folder: ${dir}`);
+        }
+    }
+}
+
 module.exports = {
     DEFAULT_PROJECTS_ROOT,
     MODELS_ROOT,
@@ -326,4 +341,5 @@ module.exports = {
     isWorkflowInstalled,
     syncWorkflowStates,
     getCustomRoot,
+    cleanComfyUITempFiles,
 };

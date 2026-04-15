@@ -50,6 +50,7 @@ export const MpiOverlay = ComponentFactory.create({
         let _stashedClasses = [];
         let _stashedStyle = '';
         let _isHiding = false; // Guard against double-call of hide()
+        let _isShown = false;   // Guard against re-entrant show() during Overlays.request
 
         const _doShow = () => {
             _toolContainer = document.getElementById('tool-container');
@@ -74,7 +75,11 @@ export const MpiOverlay = ComponentFactory.create({
             _toolContainer.appendChild(el);
         };
 
-        el.show = () => Overlays.request({ show: _doShow, hide: el.hide, id: el });
+        el.show = () => {
+            if (_isShown) return;     // already visible — skip (idempotent)
+            _isShown = true;           // guard active during Overlays.request so re-entrant calls are blocked
+            Overlays.request({ show: _doShow, hide: el.hide, id: el });
+        };
 
         el.hide = () => {
             // Guard against double-call (e.g. close button + Escape key both firing)
@@ -97,6 +102,7 @@ export const MpiOverlay = ComponentFactory.create({
             _stashedStyle = '';
 
             _toolContainer = null;
+            _isShown = false;
             emit('close', {});
             Overlays.release(el);
             _isHiding = false;

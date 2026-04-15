@@ -110,6 +110,14 @@ export const MpiNewProject = ComponentFactory.create({
         });
         actionsSlot.appendChild(cancelBtn.el);
 
+        // ── Enter key to create (via MpiModal's confirm event) ─────────────
+        modal.on('confirm', () => {
+            const name     = nameInput.el.querySelector('input')?.value?.trim() || '';
+            const location = locationInput.el.querySelector('input')?.value?.trim() || '';
+            emit('create', { name, location: location || null });
+            el.hide();
+        });
+
         // ── Create button ────────────────────────────────────────────────────
         const createBtn = MpiButton.mount(document.createElement('div'), {
             text: '+ Create Project',

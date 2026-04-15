@@ -17,6 +17,7 @@
  */
 
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
+import { Events } from '../events.js';
 
 // ── DOM refs (populated by init) ──────────────────────────────────────────────
 let _left    = null;  // #shell-info-left
@@ -191,5 +192,21 @@ export const StatusBar = {
             _hideProcess();
             _setText('Ready');
         }
-    }
+    },
+
+    /**
+     * Subscribe to tool lifecycle events emitted on the global event bus.
+     * Called once by shell.js after init().
+     */
+    listen() {
+        Events.on('tool:running', ({ tool }) => {
+            if (tool === 'groupHistory') this.progress.start('Generating...');
+        });
+        Events.on('tool:cancelled', ({ tool }) => {
+            if (tool === 'groupHistory') this.progress.cancel();
+        });
+        Events.on('tool:idle', ({ tool }) => {
+            if (tool === 'groupHistory') this.progress.complete('Done!');
+        });
+    },
 };

@@ -12,9 +12,6 @@ export const PAGE_LANDING       = 'landing';
 export const PAGE_GALLERY       = 'gallery';        // Main project gallery (item groups grid)
 export const PAGE_GROUP_HISTORY = 'group-history';  // Single item group history view
 
-/** @deprecated use PAGE_GALLERY */
-export const PAGE_WORKSPACE = 'gallery';
-
 let _onNavigateCallback = null;
 
 /** @type {Array<{page: string, params: Object}>} */

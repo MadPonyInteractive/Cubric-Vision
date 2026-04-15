@@ -56,6 +56,15 @@ export const MpiOkCancel = ComponentFactory.create({
         el.show = () => modal.el.show();
         el.hide = () => modal.el.hide();
 
+        // ── Enter key to confirm (via MpiModal's confirm event) ────────────
+        modal.on('confirm', () => {
+            const inputValue = inputComponent
+                ? inputComponent.el.querySelector('input')?.value
+                : undefined;
+            emit('ok', { inputValue });
+            el.hide();
+        });
+
         // ── Content: Title ───────────────────────────────────────────────────
         const titleSlot = qs('#title-slot', el);
         if (props.title) titleSlot.textContent = props.title;

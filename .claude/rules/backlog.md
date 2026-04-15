@@ -18,26 +18,20 @@
 - [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
 
 **Media Import (Immediate Upload)**
-- [ ] Modify media import flow: when a user adds an image/video from the filesystem, upload it to the ComfyUI backend immediately (do not wait for workflow execution).
-- [ ] **Images:** Upload via `POST /upload/image` using a static filename for caching.
-- [ ] **Videos:** Save directly to the project media folder; inject the absolute local path into the `VHS_LoadVideoPath` node via `"Input_Video"` title mapping.
+- [ ] When a user adds an image/video from the filesystem to the prompt box, upload it to the project media folder and create a history card group immediately (without waiting for workflow execution).
 
 **Video Workflows**
-- [ ] Activate `interpolate` and `videoUpscale` handlers inside `groupHistory.js` (currently stubs).
-- [ ] Add video support to the `groupHistory` workspace (swap out the canvas for a video player).
+- [ ] Activate `interpolate` and `videoUpscale` handlers inside `MpiGroupHistoryBlock.js` (currently stubs).
+- [ ] Add video support to the `MpiGroupHistoryBlock` workspace (swap out the canvas for a video player).
 - [ ] Update `commandExecutor.js` and `comfyController.js` to listen for `nodeOutput.gifs` (VHS_VideoCombine output key) alongside `nodeOutput.images`.
 - [ ] Populate `dependencies[]` in `UNIVERSAL_WORKFLOWS` for video operations once `.json` files are ready.
-
-**Bug Reports**
-- [ ] **Download Manager auto-show for missing deps:** When deps for the current model are missing (but some other models are installed, so zero-installed state doesn't trigger), the Download Manager doesn't appear. User must manually navigate to download it. Will be addressed by the Download Manager implementation above — the new system surfaces progress UI automatically when a model install is initiated.
 
 ---
 
 ## 📅 Other To-Dos (Low Priority)
-- [ ] **Event Bus Cleanup:** `groupHistory.js` imports `StatusBar` directly — refactor to use the event bus once `tool:running`/`tool:idle` subscription architecture is finalized.
-- [ ] **Event Bus Cleanup:** `openProject()` in `projectManager.js` dispatches `project:changed` via `document.dispatchEvent(new CustomEvent(...))` instead of `Events.emit()`. Pre-existing bug — any subscriber using `Events.on('project:changed', ...)` will not receive it.
-- [ ] **Router Cleanup:** Remove `PAGE_WORKSPACE` alias from `router.js` when confirmed unused.
-- [ ] **Component Gallery:** Add `MpiSelectionBar` to the Dev Components Gallery (`js/pages/components.js`).
+<!-- - [ ] **Event Bus Cleanup:** `MpiGroupHistoryBlock.js` imports `StatusBar` directly — refactor to use the event bus once `tool:running`/`tool:idle` subscription architecture is finalized.
+- [x] **Event Bus Cleanup:** `openProject()` in `projectManager.js` dispatches `project:changed` via `document.dispatchEvent(new CustomEvent(...))` instead of `Events.emit()`. Pre-existing bug — any subscriber using `Events.on('project:changed', ...)` will not receive it.**~~Event Bus Cleanup:~~**~~ \~~~~`openProject()`~~\~\~ in \~~~~`projectManager.js`~~\~\~ dispatches \~~~~`project:changed`~~\~\~ via \~~~~`document.dispatchEvent(new CustomEvent(...))`~~\~\~ instead of \~~~~`Events.emit()`~~\~\~. Pre-existing bug — any subscriber using \~~~~`Events.on('project:changed', ...)`~~\~\~ will not receive it.~~
+- [x] **Router Cleanup:** Remove `PAGE_WORKSPACE` alias from `router.js` when confirmed unused. --> ✓ done
 
 ---
 
@@ -45,7 +39,7 @@
 
 - Integrate ComfyUI `seed.js` utility generator into workflows.
 
-**LLM Tool Integration (****`routes/llm.js`**** & ****`js/services/llmService.js`****)**
+**LLM Tool Integration (****`routes/llm.js`**** & \****`js/services/llmService.js`**\*\*)**
 - [ ] Wire up frontend tools that require Local LLM inference.
 - [ ] Connect `llmService.js` to the Event Bus (replace legacy `showError` TODOs with `Events.emit('ui:error', ...)`).
 - [ ] Manage installation and UI loading states for LLM models (llama-server booting, VRAM allocation failures).

@@ -4,6 +4,7 @@
  */
 
 import { state } from '../state.js';
+import { Events } from '../events.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY } from '../router.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ export function openProject(project) {
     localStorage.setItem('mpi_extra_project_paths', JSON.stringify(extras));
   }
   localStorage.setItem('mpi_last_project', project.folderPath);
-  document.dispatchEvent(new CustomEvent('project:changed', { detail: { project } }));
+  Events.emit('project:changed', { project });
   navigate(PAGE_GALLERY);
 }
 

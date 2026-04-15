@@ -68,10 +68,8 @@ export const MpiModelsModal = ComponentFactory.create({
         // Mount el (the template root) INTO the overlay
         overlay.el.appendToContainer(el);
 
-        el.show = () => { if (_isShowing) return; _isShowing = true; overlay.el.show(); _isShowing = false; };
-        el.hide = () => { if (_isHiding) return; _isHiding = true; overlay.el.hide(); _isHiding = false; };
-        let _isShowing = false;
-        let _isHiding = false;
+        el.show = () => overlay.el.show();
+        el.hide = () => overlay.el.hide();
 
         // ── DOM refs ──────────────────────────────────────────────────────────
         const bodySlot = qs('#body-slot', el);

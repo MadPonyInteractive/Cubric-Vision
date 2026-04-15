@@ -243,5 +243,8 @@ NOTE:    Reads `state.s_selectedModelId`; writes `state.s_selectedModelId` and `
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
-EMITS:   `tool:running` `{ tool: 'groupHistory', type: string }` — fired on generation start
+EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
+         `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
+         `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
+         StatusBar is driven exclusively via these events (except `StatusBar.progress.update()` which remains a direct call — no `tool:progress` event exists)

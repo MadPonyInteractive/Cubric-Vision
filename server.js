@@ -39,6 +39,7 @@ const llmRoutes     = require('./routes/llm');
 const engineRoutes  = require('./routes/engine');
 const comfyRoutes   = require('./routes/comfy');
 const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
+const { cleanComfyUITempFiles } = require('./routes/shared');
 
 app.use(systemRoutes);
 app.use(projectRoutes);
@@ -47,8 +48,8 @@ app.use(engineRoutes);
 app.use(comfyRoutes);
 app.use(downloadManagerRoutes);
 
-process.on('SIGTERM', () => { cancelAllDownloads(); process.exit(0); });
-process.on('SIGINT', () => { cancelAllDownloads(); process.exit(0); });
+process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
+process.on('SIGINT', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 
 // ── Startup ────────────────────────────────────────────────────────────────────
 

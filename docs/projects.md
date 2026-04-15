@@ -74,4 +74,4 @@ Projects are self-contained folders. The `folderPath` field points to the projec
 - `saveProjectSettings()`: Persists modelSettings + toolSettings to the open project.
 - `deleteProject(id)`: Deletes project folder.
 
-**Known bug:** `openProject()` fires `project:changed` as a native `CustomEvent`, not via `Events.emit()`. Subscribers using `Events.on('project:changed', ...)` will miss it.
+`openProject()` fires `project:changed` via `Events.emit()`.

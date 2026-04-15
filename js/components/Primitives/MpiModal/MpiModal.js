@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { Overlays } from '../../../managers/overlayManager.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { Events } from '../../../events.js';
 
 /**
@@ -37,9 +38,15 @@ export const MpiModal = ComponentFactory.create({
 
     template: () => `<div class="mpi-modal"></div>`,
 
-    setup: (el, props, _emit) => {
+    setup: (el, props, emit) => {
         let _backdrop = null;
         let _wrapper  = null;
+        let _unregisterEnter = null;
+        let _isShown = false;  // guard against duplicate show() calls
+
+        const _handleEnter = () => {
+            emit('confirm', {});
+        };
 
         const _doShow = () => {
             _backdrop = document.createElement('div');
@@ -55,16 +62,22 @@ export const MpiModal = ComponentFactory.create({
             _wrapper.appendChild(el);
             document.body.appendChild(_wrapper);
 
+            _isShown = true;
             props.onShow?.();
         };
 
         el.show = () => {
+            if (_isShown) return;  // already visible — skip (idempotent)
+            _isShown = true;        // guard stays active during Overlays.request so re-entrant calls are blocked
             Overlays.request({ show: _doShow, hide: el.hide, id: el });
+            _unregisterEnter = Hotkeys.register('enter', _handleEnter);
         };
 
         el.hide = () => {
+            if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
             _backdrop?.remove(); _backdrop = null;
             _wrapper?.remove();  _wrapper  = null;
+            _isShown = false;
             Overlays.release(el);
         };
 
@@ -74,6 +87,7 @@ export const MpiModal = ComponentFactory.create({
 
         const _observer = new MutationObserver(() => {
             if (!document.contains(el) && !_wrapper) {
+                if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
                 _unsubClose();
                 _observer.disconnect();
             }

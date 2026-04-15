@@ -52,5 +52,5 @@ setup: (el, props, emit) => {
 ## State vs Events
 
 - `state:changed` is auto-fired by the state Proxy. **Never manually call `Events.emit('state:changed', ...)`** — it fires twice if you do.
-- `project:changed` is dispatched as a native `CustomEvent` in `projectManager.js` (known bug). Use `Events.on('project:changed', ...)` to subscribe.
+- `project:changed` is emitted via `Events.emit('project:changed', { project })` in `projectManager.js openProject()`. Use `Events.on('project:changed', ...)` to subscribe.
 - Other events (`comfy:*`, `tool:*`, `nav:*`) are emitted by their respective services/managers.

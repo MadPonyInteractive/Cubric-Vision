@@ -329,7 +329,10 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const filePath = path.join(mediaDir, finalFileName);
         await fs.writeFile(filePath, buffer);
 
-        const metaPath = filePath + '.json';
+        // Metadata lives in Media/.meta/ not alongside the file
+        const metaDir = path.join(mediaDir, '.meta');
+        await fs.ensureDir(metaDir);
+        const metaPath = path.join(metaDir, finalFileName + '.json');
         const meta = {
             promptContext: promptContext || '',
             negativePrompt: req.body.negativePrompt || '',

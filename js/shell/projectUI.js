@@ -19,6 +19,12 @@ let projectGrid = null;
 /** Lazily created MpiNewProject dialog instance (reused across opens). */
 let _newProjectDialog = null;
 
+/** Lazily created delete-confirm dialog instance (reused across opens). */
+let _deleteConfirmDialog = null;
+
+/** Unsubscribe fn for the current ok listener (replaced each call). */
+let _deleteConfirmUnsub = null;
+
 /** Lazily created landing-action overlay instances (reused across opens). */
 let _settingsOverlay = null;
 let _helpOverlay     = null;
@@ -120,14 +126,18 @@ export async function loadProjectGrid() {
  * @param {Function} onConfirm - Called only when user confirms.
  */
 function _showDeleteConfirm(projectName, onConfirm) {
-  const dialog = MpiOkCancel.mount(document.createElement('div'), {
-    title: 'Delete Project',
-    text: `Are you sure you want to delete "${projectName}"? This cannot be undone.`,
-    okLabel: 'Delete',
-    cancelLabel: 'Keep it',
-  });
-  dialog.on('ok', () => onConfirm());
-  dialog.el.show();
+  if (!_deleteConfirmDialog) {
+    _deleteConfirmDialog = MpiOkCancel.mount(document.createElement('div'), {
+      title: 'Delete Project',
+      text: `Are you sure you want to delete this project? This cannot be undone.`,
+      okLabel: 'Delete',
+      cancelLabel: 'Keep it',
+    });
+  }
+  // Replace the ok listener with the fresh onConfirm
+  if (_deleteConfirmUnsub) { _deleteConfirmUnsub(); _deleteConfirmUnsub = null; }
+  _deleteConfirmUnsub = _deleteConfirmDialog.on('ok', () => onConfirm());
+  _deleteConfirmDialog.el.show();
 }
 
 /**

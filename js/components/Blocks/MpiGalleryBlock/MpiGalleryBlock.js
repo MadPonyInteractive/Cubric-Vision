@@ -18,7 +18,7 @@ import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSetti
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
-import { navigate, PAGE_GROUP_HISTORY } from '../../../router.js';
+import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
@@ -27,6 +27,7 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import {
     createImageItem,
+    createVideoItem,
     createItemGroup,
     appendToHistory,
     addGroupToProject,
@@ -215,13 +216,60 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 refreshRadial({ imageCount, videoCount });
             });
 
+            // ── media:imported listener (declared outer-scope so both observers can clean it up)
+            let _unsubMediaImported = null;
+
+            // When media is dropped into the prompt box it is immediately uploaded
+            // to the project folder and a history card is created — no need to wait
+            // for the generate button.
+            _unsubMediaImported = Events.on('media:imported', ({ url, filename, mediaType }) => {
+                if (!state.currentProject) return;
+
+                const isVideo = mediaType === 'video';
+                // Derive display name from filename or use a default
+                const displayName = filename
+                    ? filename.replace(/\.[^.]+$/, '')
+                    : (isVideo ? 'Imported Video' : 'Imported Image');
+
+                const item = isVideo
+                    ? createVideoItem({ filePath: url, uploaded: true, operation: 'imported' })
+                    : createImageItem({ filePath: url, uploaded: true, operation: 'imported' });
+
+                const group = createItemGroup(mediaType, { name: displayName });
+                const finalGroup = appendToHistory(group, item);
+
+                const currentGroups = state.currentProject?.itemGroups || [];
+                state.currentProject = addGroupToProject(state.currentProject, finalGroup);
+                _persistGroups();
+
+                // Prepend the new group to the visible grid and re-render.
+                // Note: currentGroups is captured BEFORE addGroupToProject so it does
+                // NOT contain finalGroup — only [old..., old] which is correct.
+                grid.el.setGroups([finalGroup, ...currentGroups]);
+            });
+
+            // Clean up the Events subscription when this block leaves the DOM.
+            // NOTE: MutationObserver on document.body does NOT fire for
+            // _toolContainer.innerHTML = '' because _toolContainer is not a direct
+            // child of document.body (grandchild). Using state:changed as the
+            // reliable cleanup trigger instead.
+            const _unsubPageChange = Events.on('state:changed', ({ key, value }) => {
+                if (key === 'currentPage' && value !== PAGE_GALLERY) {
+                    _unsubMediaImported?.();
+                    _unsubPageChange();
+                }
+            });
+
             promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                 if (!activeModel) return;
 
                 const tempId   = crypto.randomUUID();
                 const cardType = activeModel.mediaType;
 
-                grid.el.addGeneratingCard(tempId, cardType);
+                grid.el.addGeneratingCard(tempId, cardType, {
+                    width:  injectionParams.Width,
+                    height: injectionParams.Height,
+                });
                 StatusBar.progress.start('Generating...');
 
                 _activeExec = runCommand({
@@ -337,14 +385,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!hasImageModels) Events.emit('models:open');
         });
 
-        // ── Cleanup when block is removed from DOM ──────────────────────────────
-        const _observer = new MutationObserver(() => {
-            if (!document.contains(el)) {
-                _unsubSetOp();
-                _unsubZeroInstalled();
-                _observer.disconnect();
+        // ── Cleanup when block leaves the gallery workspace ────────────────────
+        // Using state:changed instead of MutationObserver because the observer
+        // does not fire for _toolContainer.innerHTML = '' (grandchild mutation).
+        const _unsubPageChange2 = Events.on('state:changed', ({ key, value }) => {
+            if (key === 'currentPage' && value !== PAGE_GALLERY) {
+                _unsubSetOp?.();
+                _unsubZeroInstalled?.();
+                _unsubPageChange2();
             }
         });
-        _observer.observe(document.body, { childList: true, subtree: true });
     },
 });

@@ -34,7 +34,7 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 1. **Never hardcode colors** — CSS variables from `styles/01_base.css` only.
 2. **Never modify `js/components/factory.js`** — it is locked.
 3. **Never emit `state:changed` manually** — the state Proxy fires it automatically.
-4. **Never emit `project:changed` via `Events.emit`** — use native `CustomEvent` dispatch (known bug).
+4. **`project:changed`** — fired via `Events.emit('project:changed', { project })` in `projectManager.js openProject()`.
 5. **Title-based workflow injection** — target nodes by `_meta.title`, not ID.
 6. **Output node** is the canonical result capture point.
 7. **All blocking UI uses `Overlays.request/release`** — never bypass.

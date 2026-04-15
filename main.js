@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, Menu, MenuItem, ipcMain } = require('electr
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
+const logger = require('./routes/logger');
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
 
@@ -34,7 +35,7 @@ function saveWindowState() {
     windowState.isFullScreen = mainWindow.isFullScreen();
     fs.writeFileSync(STATE_FILE, JSON.stringify(windowState));
   } catch (err) {
-    console.error('Failed to save window state:', err);
+    // Window may be destroyed by the time the debounced save fires — ignore
   }
 }
 
@@ -297,6 +298,22 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// Clean ComfyUI temp folders on quit (cross-platform, synchronous)
+app.on('before-quit', () => {
+  const ENGINE_ROOT = path.join(__dirname, 'engine');
+  const inputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'input');
+  const outputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'output');
+  for (const dir of [inputDir, outputDir]) {
+    if (fs.existsSync(dir)) {
+      // Empty the directory contents without removing the directory itself
+      for (const entry of fs.readdirSync(dir)) {
+        fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+      }
+      logger.info('comfy', `Cleaned temp folder: ${dir}`);
+    }
   }
 });
 
