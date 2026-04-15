@@ -6,11 +6,11 @@
 ## 📅 Active To-Dos
 
 ### Verification steps remaining
-- [X] **Step 1:** Start ComfyUI. Open MpiModelsModal. Start a large model download (SDXL base ~6.9GB). Observe progress bar fill with speed text.
-- [X] **Step 2:** While downloading, install a second model that shares a dep — verify both progress bars fill independently.
-- [X] **Step 3:** Pause a download — bar freezes, Resume button appears. Resume — continues from where it was.
-- [X] **Step 4:** Cancel one of two concurrent downloads — other download continues uninterrupted.
-- [X] **Step 5:** Close the modal, navigate away (e.g. to history), come back — download still in progress with correct bar position.
+- [ ] **Step 1:** Start ComfyUI. Open MpiModelsModal. Start a large model download (SDXL base ~6.9GB). Observe progress bar fill with speed text.
+- [ ] **Step 2:** While downloading, install a second model that shares a dep — verify both progress bars fill independently.
+- [ ] **Step 3:** Pause a download — bar freezes, Resume button appears. Resume — continues from where it was.
+- [ ] **Step 4:** Cancel one of two concurrent downloads — other download continues uninterrupted.
+- [ ] **Step 5:** Close the modal, navigate away (e.g. to history), come back — download still in progress with correct bar position.
 - [ ] **Step 6:** After download completes (custom nodes) — "Installing" label animates dots
 - [ ] **Step 7:** Model with custom node deps → auto-restart ComfyUI before generation
 - [ ] **Step 8:** Shared dep progress visible on Model B card even before Model B starts
@@ -45,7 +45,7 @@
 
 - Integrate ComfyUI `seed.js` utility generator into workflows.
 
-**LLM Tool Integration (`routes/llm.js` & `js/services/llmService.js`)**
+**LLM Tool Integration (****`routes/llm.js`**** & ****`js/services/llmService.js`****)**
 - [ ] Wire up frontend tools that require Local LLM inference.
 - [ ] Connect `llmService.js` to the Event Bus (replace legacy `showError` TODOs with `Events.emit('ui:error', ...)`).
 - [ ] Manage installation and UI loading states for LLM models (llama-server booting, VRAM allocation failures).
