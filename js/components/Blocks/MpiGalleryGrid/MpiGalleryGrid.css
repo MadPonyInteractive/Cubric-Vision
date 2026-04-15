@@ -68,6 +68,25 @@
 
 } */
 
+/* ── Generating card slot ───────────────────────────────────────────────── */
+
+.mpi-gallery-grid__generating-slot {
+    display: none;
+    padding: 1rem;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-soft);
+    background: color-mix(in srgb, var(--surface-1) 98%, var(--neon-electric) 2%);
+    flex-shrink: 0;
+}
+
+.mpi-gallery-grid__generating-slot--visible {
+    display: flex;
+}
+
+.mpi-gallery-grid__generating-slot .mpi-gallery-grid__card-wrap {
+    flex-shrink: 0;
+}
+
 /* ── Adaptive grid ───────────────────────────────────────────────────────── */
 
 .mpi-gallery-grid__grid {

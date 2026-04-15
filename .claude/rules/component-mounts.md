@@ -8,6 +8,7 @@
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
+- `MpiGroupCard`   props: `{ group: placeholderGroup, selectionMode: false, selected: false }`   slot: `.mpi-gallery-grid__generating-slot`; created during image generation via `grid.el.setGeneratingCard()`; removed on completion/error via `grid.el.clearGeneratingCard()`
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
@@ -44,10 +45,14 @@
 
 ## MpiGalleryGrid.js (internal mounts)
 
-
 - `MpiProgressBar` (size slider)   props: `{ min:1, max:5, step:1, value:3, interactive:true, wheel:true, info:'Size: {value}' }`   slot: `.mpi-gallery-grid__slider-wrap`
 - `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` — shown when selection mode active; hidden otherwise
-- `MpiGroupCard`   props: `{ group, selectionMode, selected }`   slot: per-card wrapper div appended to `.mpi-gallery-grid__grid`; one per ItemGroup
+- `MpiGroupCard`   props: `{ group, selectionMode, selected }`   slot: per-card wrapper div appended to `.mpi-gallery-grid__grid`; one per ItemGroup (gallery display)
+
+**Generating Card Slot** (via public API `setGeneratingCard()`):
+- Parent (MpiGalleryBlock) mounts pre-created MpiGroupCard in `.mpi-gallery-grid__generating-slot` during generation
+- Isolated from justified layout; always visible above normal grid
+- Removed via `clearGeneratingCard()` on completion or error
 
 ---
 

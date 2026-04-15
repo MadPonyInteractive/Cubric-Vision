@@ -152,7 +152,12 @@
       "Bash(playwright-cli:*)",
       "Skill",
       "Bash(ls:*)",
-      "Bash(npx playwright-cli:*)"
+      "Bash(npx playwright-cli:*)",
+      "mcp__nimbalyst-session-context__update_session_board",
+      "Bash(cd:*)",
+      "Bash(then:*)",
+      "Bash(fi:*)",
+      "Bash(else:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

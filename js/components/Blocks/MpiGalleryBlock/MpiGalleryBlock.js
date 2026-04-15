@@ -12,12 +12,15 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiGalleryGrid } from '../MpiGalleryGrid/MpiGalleryGrid.js';
+import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
+import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
+import { ce } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
@@ -87,6 +90,96 @@ export const MpiGalleryBlock = ComponentFactory.create({
             state.currentProject = updateGroupInProject(state.currentProject, group);
             _persistGroups();
         });
+
+        // ── Card and Selection Management ───────────────────────────────────────
+
+        /** @type {Map<string, {card: object, el: HTMLElement}>} */
+        const _cardMap = new Map();
+
+        /** @type {Set<string>} */
+        const _selectedIds = new Set();
+
+        let _selectionMode = false;
+
+        // Generating card state
+        let _generatingCardId = null;
+        let _generatingCardElement = null;
+
+        // Selection bar (mounted in the grid's footer slot)
+        // Note: selection bar will be mounted/updated by grid, but we manage its event handlers here
+        let _selectionBar = null;
+
+        function _getSelectedGroups() {
+            return state.currentProject?.itemGroups?.filter(g => _selectedIds.has(g.id)) || [];
+        }
+
+        function _enterSelectionMode() {
+            if (_selectionMode) return;
+            _selectionMode = true;
+            grid.el.enterSelectionMode?.();
+            grid.el.dispatchEvent(new CustomEvent('selection-start'));
+        }
+
+        function _exitSelectionMode() {
+            _selectionMode = false;
+            _selectedIds.clear();
+            selectionBar?.el.setCount(0);
+            grid.el.exitSelectionMode?.();
+            grid.el.dispatchEvent(new CustomEvent('selection-end'));
+        }
+
+        /**
+         * Create and mount a card wrapper with event listeners.
+         * Extracted from MpiGalleryGrid._makeCard()
+         */
+        function _makeCard(group) {
+            const wrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
+            const card = MpiGroupCard.mount(wrapper, {
+                group,
+                selectionMode: _selectionMode,
+                selected: _selectedIds.has(group.id),
+            });
+
+            card.on('open', ({ group: g }) => {
+                navigate(PAGE_GROUP_HISTORY, { groupId: g.id });
+            });
+
+            card.on('select', ({ group: g, selected }) => {
+                if (selected) {
+                    _selectedIds.add(g.id);
+                    if (!_selectionMode) _enterSelectionMode();
+                } else {
+                    _selectedIds.delete(g.id);
+                    if (_selectedIds.size === 0) _exitSelectionMode();
+                }
+                selectionBar?.el.setCount(_selectedIds.size);
+            });
+
+            card.on('media-missing', ({ group: g, itemId }) => {
+                const missingIdx = g.history.findIndex(item => item.id === itemId);
+                if (missingIdx === -1) return;
+
+                if (g.history.length <= 1) {
+                    grid.el.removeCard?.(g.id);
+                } else {
+                    const pruned = removeHistoryEntry(g, missingIdx);
+                    const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
+                    if (idx !== -1) state.currentProject.itemGroups[idx] = pruned;
+                    card.el.setDone(pruned);
+                }
+            });
+
+            card.on('reuse', ({ positive, negative }) => {
+                Events.emit('workspace:inject-prompts', { positive, negative });
+            });
+
+            card.on('favourite', ({ group: g, favourite }) => {
+                const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
+                if (idx !== -1) state.currentProject.itemGroups[idx] = { ...state.currentProject.itemGroups[idx], favourite };
+            });
+
+            return { card, wrapper };
+        }
 
         // ── Download ────────────────────────────────────────────────────────────
         grid.on('download', ({ groups: g }) => {
@@ -266,10 +359,36 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const tempId   = crypto.randomUUID();
                 const cardType = activeModel.mediaType;
 
-                grid.el.addGeneratingCard(tempId, cardType, {
-                    width:  injectionParams.Width,
-                    height: injectionParams.Height,
+                // Capture current groups BEFORE adding the generating card
+                const currentGroups = state.currentProject?.itemGroups || [];
+
+                // Create placeholder group for generating state
+                const placeholderGroup = {
+                    id: tempId,
+                    type: cardType,
+                    name: 'Generating...',
+                    history: [],
+                    selectedIndex: 0,
+                    width:  injectionParams.Width  || 288,
+                    height: injectionParams.Height || 288,
+                };
+
+                // Create and mount generating card directly (don't include in grid groups)
+                const generatingCardWrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
+                const generatingCard = MpiGroupCard.mount(generatingCardWrapper, {
+                    group: placeholderGroup,
+                    selectionMode: false,
+                    selected: false,
                 });
+                generatingCard.el.setGenerating(null);
+                _generatingCardElement = generatingCard;
+                _generatingCardId = tempId;
+
+                // Tell grid to show this card in the generating area
+                grid.el.setGeneratingCard(generatingCardWrapper, placeholderGroup.width, placeholderGroup.height);
+
+                // Update grid with normal groups (no placeholder)
+                grid.el.setGroups(currentGroups);
                 StatusBar.progress.start('Generating...');
 
                 _activeExec = runCommand({
@@ -282,17 +401,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 const exec = _activeExec;
 
-                exec.onPreview  = (url) => grid.el.updatePreview(tempId, url);
+                exec.onPreview  = (url) => _generatingCardElement?.el.updatePreview(url);
                 exec.onProgress = (value) => StatusBar.progress.update(value);
 
                 exec.onComplete = async (urls) => {
                     _activeExec = null;
                     PromptBoxService.component?.setGenerating(false);
 
+                    // Remove generating card
+                    grid.el.clearGeneratingCard();
+                    _generatingCardElement = null;
+                    _generatingCardId = null;
+
                     if (!urls.length) {
-                        clientLogger.warn('MpiGalleryBlock', 'Generation completed but no Output node images returned.');
                         StatusBar.progress.cancel();
-                        grid.el.removeGeneratingCard(tempId);
                         return;
                     }
 
@@ -347,7 +469,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     }
 
                     StatusBar.progress.complete('Image generated!');
-                    grid.el.finalizeCard(tempId, group);
+                    // Add final card and re-render
+                    grid.el.setGroups([group, ...currentGroups]);
                 };
 
                 exec.onError = (err) => {
@@ -355,7 +478,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
                     PromptBoxService.component?.setGenerating(false);
                     StatusBar.progress.cancel();
-                    grid.el.removeGeneratingCard(tempId);
+
+                    // Remove generating card
+                    grid.el.clearGeneratingCard();
+                    _generatingCardElement = null;
+                    _generatingCardId = null;
                 };
             });
 

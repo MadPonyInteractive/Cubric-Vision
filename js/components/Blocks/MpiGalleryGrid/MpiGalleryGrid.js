@@ -29,9 +29,6 @@ import { packItemsIntoRows, resizeRowImages } from '../../../utils/justifiedLayo
  *
  * Instance methods (on instance.el):
  *   setGroups(groups)                    — replace all groups and re-render
- *   addGeneratingCard(tempId, type)      — adds a generating placeholder card, returns card el
- *   removeGeneratingCard(tempId)         — removes a generating card on error/empty result
- *   finalizeCard(tempId, group)          — replaces generating card with real group data
  *   updatePreview(tempId, previewUrl)    — push latent preview url to generating card
  *
  * Emits:
@@ -86,7 +83,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
         let _selectionMode = false;
 
         const grid = el.querySelector('.mpi-gallery-grid__grid');
-        const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
         const selectionSlot = el.querySelector('.mpi-gallery-grid__selectionbar-slot');
 
@@ -282,6 +278,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 selected: _selectedIds.has(group.id),
             });
 
+            // Automatically enter generating state for placeholder groups created during
+            // a generation run (they have 'Generating...' name and empty history).
+            if (group.name === 'Generating...' && group.history?.length === 0) {
+                // Apply explicit dimensions so the wrapper has height before setGenerating
+                // hides the thumb — otherwise the media area collapses and the spinner is invisible.
+                const displayW = group.width  || _cardWidth;
+                const displayH = group.height || _cardWidth;
+                wrapper.style.width  = `${displayW}px`;
+                wrapper.style.height = `${displayH}px`;
+                card.el.setGenerating(null);
+            }
+
             card.on('open', ({ group: g }) => {
                 emit('open-group', { group: g });
             });
@@ -350,68 +358,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         };
 
         /**
-         * Add a generating placeholder card. Returns the card instance so the
-         * caller can push latent preview updates to it.
-         * @param {string} tempId  - Temporary id (e.g. crypto.randomUUID())
-         * @param {'image'|'video'} type
-         * @param {{ width?: number, height?: number }} [overrides] - Optional pixel dimensions.
-         *   When provided, sets the wrapper's CSS width/height so the card is visible
-         *   before any image loads (uses injectionParams Width/Height from PromptBox).
-         * @returns {object} card instance
-         */
-        el.addGeneratingCard = (tempId, type, overrides = {}) => {
-            const placeholderGroup = { id: tempId, type, name: 'Generating...', history: [], selectedIndex: 0 };
-            const { card, wrapper } = _makeCard(placeholderGroup);
-            _cardMap.set(tempId, { card, el: wrapper });
-
-            // Display at thumbnail size (288px wide) with proportional height.
-            // Use actual output dimensions to derive correct aspect ratio.
-            const displayW = _cardWidth; // 288px default thumbnail width
-            const displayH = overrides.width && overrides.height
-                ? Math.round(_cardWidth * (overrides.height / overrides.width))
-                : (overrides.height || _cardWidth);
-
-            wrapper.style.width  = `${displayW}px`;
-            wrapper.style.height = `${displayH}px`;
-
-            grid.prepend(wrapper); // inside .mpi-gallery-grid__grid — new generations at top
-            card.el.setGenerating(null);
-            return card;
-        };
-
-        /**
          * Push a latent preview image to a generating card.
          * @param {string} tempId
          * @param {string} previewUrl
          */
         el.updatePreview = (tempId, previewUrl) => {
             _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
-        };
-
-        /**
-         * Remove a generating card without replacing it (on error or empty result).
-         * @param {string} tempId
-         */
-        el.removeGeneratingCard = (tempId) => {
-            const entry = _cardMap.get(tempId);
-            if (!entry) return;
-            entry.el.remove();
-            _cardMap.delete(tempId);
-        };
-
-        /**
-         * Replace a generating card with the completed group data.
-         * @param {string} tempId
-         * @param {import('../../../data/projectModel.js').ItemGroup} group
-         */
-        el.finalizeCard = (tempId, group) => {
-            const entry = _cardMap.get(tempId);
-            if (!entry) return;
-            entry.el.remove();
-            _cardMap.delete(tempId);
-            _groups = _groups.filter(g => g.id !== tempId);
-            _groups.unshift(group);
-            _rerenderJustified();
         };
 
         /**
@@ -427,6 +379,34 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _selectedIds.delete(groupId);
             if (_selectedIds.size === 0 && _selectionMode) _exitSelectionMode();
             else selectionBar.el.setCount(_selectedIds.size);
+        };
+
+        /**
+         * Display a generating card in a dedicated area above the normal grid.
+         * @param {HTMLElement} wrapper - pre-mounted card wrapper
+         * @param {number} width - card width in px
+         * @param {number} height - card height in px
+         */
+        el.setGeneratingCard = (wrapper, width, height) => {
+            const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
+            if (!generatingSlot) return;
+
+            wrapper.style.width = `${width}px`;
+            wrapper.style.height = `${height}px`;
+            generatingSlot.innerHTML = '';
+            generatingSlot.appendChild(wrapper);
+            generatingSlot.classList.add('mpi-gallery-grid__generating-slot--visible');
+        };
+
+        /**
+         * Remove the generating card and restore normal grid.
+         */
+        el.clearGeneratingCard = () => {
+            const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
+            if (generatingSlot) {
+                generatingSlot.innerHTML = '';
+                generatingSlot.classList.remove('mpi-gallery-grid__generating-slot--visible');
+            }
         };
     }
 });
