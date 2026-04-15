@@ -4,7 +4,9 @@
 
 .mpi-toast {
     position: fixed;
-    top: 20px;
+    --toast-stack-offset: 70px;
+    --toast-stack-index: 0;
+    top: calc(20px + var(--toast-stack-index) * var(--toast-stack-offset));
     right: 20px;
     display: flex;
     align-items: center;
@@ -56,6 +58,9 @@
 .mpi-toast__msg {
     font-size: 0.95rem;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .mpi-toast__close {
