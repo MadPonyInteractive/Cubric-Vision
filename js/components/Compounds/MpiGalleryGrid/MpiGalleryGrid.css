@@ -1,0 +1,369 @@
+.mpi-gallery-grid {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid__tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface-1);
+    overflow: hidden;
+}
+
+.mpi-gallery-grid__tab-group {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-shrink: 0;
+}
+
+.mpi-gallery-grid__slider-wrap {
+    flex-shrink: 0;
+    width: 8rem;
+    margin-left: auto;
+    margin-right: 30px;
+}
+
+.mpi-gallery-grid__tab-sep {
+    width: 1px;
+    height: 1.2rem;
+    background: var(--border-soft);
+    margin: 0 0.25rem;
+    flex-shrink: 0;
+}
+
+.mpi-gallery-grid__tab {
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.mpi-gallery-grid__tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-2);
+}
+
+.mpi-gallery-grid__tab--active {
+    color: var(--text-primary);
+    background: var(--surface-3);
+    border-color: var(--border-soft);
+}
+
+/* .mpi-gallery-grid__info-btn-slot {
+
+} */
+
+/* ── Generating card slot ───────────────────────────────────────────────── */
+
+.mpi-gallery-grid__generating-slot {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1rem;
+    gap: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.mpi-gallery-grid__generating-slot--visible {
+    pointer-events: none;
+    opacity: 1;
+}
+
+.mpi-gallery-grid__generating-slot .mpi-gallery-grid__card-wrap {
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--surface-1) 98%, var(--neon-electric) 2%);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 0.5rem;
+}
+
+/* ── Adaptive grid ───────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid__grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ── Row (justified layout row) ─────────────────────────────────────────── */
+
+.mpi-gallery-grid__row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.mpi-gallery-grid__row-wrap {
+    /* wrapper per card within a row — width set by JS */
+    flex-shrink: 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid__footer {
+    position: fixed;
+    bottom: 30px;
+    min-width: 600px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-glass);
+    border-radius: var(--radius-xl);
+}
+
+.mpi-gallery-grid__selectionbar-slot {
+    width: 100%;
+}
+
+/* ── Selection mode ──────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid--selecting .mpi-gallery-grid__grid {
+    /* Subtle tint to signal selection mode is active */
+    background: color-mix(in srgb, var(--surface-1) 97%, var(--neon-electric) 3%);
+}
+
+/* ── Card wrapper ────────────────────────────────────────────────────────── */
+
+.mpi-gallery-grid__card-wrap {
+    min-width: 0;
+    /* prevent grid blowout */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ── MpiGroupCard Styles (merged from MpiGroupCard.css) ──────────────────
+   ═════════════════════════════════════════════════════════════════════════ */
+
+.mpi-group-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+}
+
+.mpi-group-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Media area ──────────────────────────────────────────────────────────── */
+
+.mpi-group-card__media {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface-3);
+}
+
+.mpi-group-card__thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.2s ease;
+}
+
+/* ── Generating state ────────────────────────────────────────────────────── */
+
+.mpi-group-card__preview {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.mpi-group-card__preview--visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mpi-group-card__preview-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Spinner — centered, visible until the first latent preview image arrives */
+.mpi-group-card__spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: var(--neon-electric, #7df);
+    border-radius: 50%;
+    animation: mpi-card-spin 0.75s linear infinite;
+}
+
+@keyframes mpi-card-spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.mpi-group-card--generating .mpi-group-card__thumb {
+    visibility: hidden;
+}
+
+/* ── Select checkbox ─────────────────────────────────────────────────────── */
+
+.mpi-group-card__select-wrap {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.mpi-group-card:hover .mpi-group-card__select-wrap,
+.mpi-group-card--selected .mpi-group-card__select-wrap,
+.mpi-group-card--selection-mode .mpi-group-card__select-wrap {
+    opacity: 1;
+}
+
+.mpi-group-card__checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    accent-color: var(--neon-electric);
+}
+
+/* ── Favourite button ────────────────────────────────────────────────────── */
+
+.mpi-group-card__fav-wrap {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.mpi-group-card:hover .mpi-group-card__fav-wrap,
+.mpi-group-card--favourited .mpi-group-card__fav-wrap {
+    opacity: 1;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.mpi-group-card__footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.5rem;
+    gap: 0.5rem;
+    background: var(--bg-modal);
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mpi-group-card:hover .mpi-group-card__footer,
+.mpi-group-card--selected .mpi-group-card__footer,
+.mpi-group-card--show-info .mpi-group-card__footer {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.mpi-group-card__name {
+    font-size: var(--font-xs);
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-group-card__type {
+    font-size: var(--font-xxs, 0.6rem);
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.mpi-group-card__badge {
+    display: none;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+    background: var(--surface-3);
+    color: var(--neon-electric);
+    font-size: var(--font-xxs, 0.6rem);
+    flex-shrink: 0;
+}
+
+.mpi-group-card--show-info .mpi-group-card__badge {
+    display: block;
+    background: var(--bg-elevated);
+}
+
+/* ── Reuse button ───────────────────────────────────────────────────────── */
+
+.mpi-group-card__reuse-wrap {
+    position: absolute;
+    top: calc(0.4rem + 1.9rem);
+    left: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.mpi-group-card:hover .mpi-group-card__reuse-wrap {
+    opacity: 1;
+}
+
+/* ── Missing media state ─────────────────────────────────────────────────── */
+
+.mpi-group-card--missing .mpi-group-card__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--surface-3);
+}
+
+/* ── Selected state ──────────────────────────────────────────────────────── */
+
+.mpi-group-card--selected .mpi-group-card__footer {
+    background: var(--neon-electric);
+}
+
+.mpi-group-card--selected .mpi-group-card__name,
+.mpi-group-card--selected .mpi-group-card__type {
+    color: var(--surface-1, #000);
+}

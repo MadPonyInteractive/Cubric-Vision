@@ -11,8 +11,7 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiGalleryGrid } from '../MpiGalleryGrid/MpiGalleryGrid.js';
-import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
+import { MpiGalleryGrid } from '../../Compounds/MpiGalleryGrid/MpiGalleryGrid.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
@@ -48,6 +47,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
     setup: (el, props, emit) => {
         const groups = state.currentProject?.itemGroups || [];
         const grid   = MpiGalleryGrid.mount(el, { groups });
+
+        // ── Selection bar (mounted in grid's footer slot) ────────────────────────
+        const selectionSlot = grid.el.querySelector('.mpi-gallery-grid__selectionbar-slot');
+        const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
 
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
@@ -91,95 +94,110 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _persistGroups();
         });
 
-        // ── Card and Selection Management ───────────────────────────────────────
+        // ── Selection mode ──────────────────────────────────────────────────────
 
-        /** @type {Map<string, {card: object, el: HTMLElement}>} */
-        const _cardMap = new Map();
-
-        /** @type {Set<string>} */
         const _selectedIds = new Set();
-
         let _selectionMode = false;
+
+        grid.on('select', ({ group: g, selected }) => {
+            if (selected) {
+                _selectedIds.add(g.id);
+                if (!_selectionMode) {
+                    _selectionMode = true;
+                    grid.el.setSelectionMode(true);
+                    selectionSlot.style.display = '';
+                    PromptBoxService.hide();
+                }
+            } else {
+                _selectedIds.delete(g.id);
+                if (_selectedIds.size === 0) {
+                    _selectionMode = false;
+                    grid.el.setSelectionMode(false);
+                    selectionSlot.style.display = 'none';
+                    PromptBoxService.show();
+                }
+            }
+            selectionBar.el.setCount(_selectedIds.size);
+        });
+
+        // Selection bar event handlers
+        selectionBar.on('cancel', () => {
+            _selectedIds.clear();
+            _selectionMode = false;
+            grid.el.setSelectionMode(false);
+            selectionSlot.style.display = 'none';
+            PromptBoxService.show();
+            grid.el.setGroups(state.currentProject?.itemGroups || []);
+        });
+
+        selectionBar.on('compare', () => {
+            const selected = Array.from(_selectedIds)
+                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
+                .filter(Boolean);
+            if (selected.length === 2) {
+                const itemA = getSelectedItem(selected[0]);
+                const itemB = getSelectedItem(selected[1]);
+                if (itemA && itemB) _compareOverlay.el.open(itemA, itemB);
+            }
+        });
+
+        selectionBar.on('download', () => {
+            const selected = Array.from(_selectedIds)
+                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
+                .filter(Boolean);
+            const project = state.currentProject;
+            if (!project) return;
+            for (const group of selected) {
+                const item = getSelectedItem(group);
+                if (!item?.filePath) continue;
+                let filename = null;
+                try {
+                    const match = item.filePath.match(/[?&]path=([^&]+)/);
+                    if (match) {
+                        const absPath = decodeURIComponent(match[1]);
+                        filename = absPath.replace(/\\/g, '/').split('/').pop();
+                    }
+                } catch (_) { continue; }
+                if (!filename) continue;
+                const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+
+        selectionBar.on('delete', () => {
+            const selected = Array.from(_selectedIds)
+                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
+                .filter(Boolean);
+            _pendingDeleteGroups = selected;
+            _deleteDialog.el.show();
+        });
+
+        // ── Reuse prompt ────────────────────────────────────────────────────────
+        grid.on('reuse', ({ positive, negative }) => {
+            Events.emit('workspace:inject-prompts', { positive, negative });
+        });
+
+        // ── Media missing (garbage collection) ───────────────────────────────────
+        grid.on('media-missing', ({ group: g, itemId }) => {
+            const missingIdx = g.history.findIndex(item => item.id === itemId);
+            if (missingIdx === -1) return;
+
+            if (g.history.length <= 1) {
+                grid.el.removeCard(g.id);
+            } else {
+                const pruned = removeHistoryEntry(g, missingIdx);
+                const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
+                if (idx !== -1) state.currentProject.itemGroups[idx] = pruned;
+            }
+        });
 
         // Generating card state
         let _generatingCardId = null;
-        let _generatingCardElement = null;
-
-        // Selection bar (mounted in the grid's footer slot)
-        // Note: selection bar will be mounted/updated by grid, but we manage its event handlers here
-        let _selectionBar = null;
-
-        function _getSelectedGroups() {
-            return state.currentProject?.itemGroups?.filter(g => _selectedIds.has(g.id)) || [];
-        }
-
-        function _enterSelectionMode() {
-            if (_selectionMode) return;
-            _selectionMode = true;
-            grid.el.enterSelectionMode?.();
-            grid.el.dispatchEvent(new CustomEvent('selection-start'));
-        }
-
-        function _exitSelectionMode() {
-            _selectionMode = false;
-            _selectedIds.clear();
-            selectionBar?.el.setCount(0);
-            grid.el.exitSelectionMode?.();
-            grid.el.dispatchEvent(new CustomEvent('selection-end'));
-        }
-
-        /**
-         * Create and mount a card wrapper with event listeners.
-         * Extracted from MpiGalleryGrid._makeCard()
-         */
-        function _makeCard(group) {
-            const wrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
-            const card = MpiGroupCard.mount(wrapper, {
-                group,
-                selectionMode: _selectionMode,
-                selected: _selectedIds.has(group.id),
-            });
-
-            card.on('open', ({ group: g }) => {
-                navigate(PAGE_GROUP_HISTORY, { groupId: g.id });
-            });
-
-            card.on('select', ({ group: g, selected }) => {
-                if (selected) {
-                    _selectedIds.add(g.id);
-                    if (!_selectionMode) _enterSelectionMode();
-                } else {
-                    _selectedIds.delete(g.id);
-                    if (_selectedIds.size === 0) _exitSelectionMode();
-                }
-                selectionBar?.el.setCount(_selectedIds.size);
-            });
-
-            card.on('media-missing', ({ group: g, itemId }) => {
-                const missingIdx = g.history.findIndex(item => item.id === itemId);
-                if (missingIdx === -1) return;
-
-                if (g.history.length <= 1) {
-                    grid.el.removeCard?.(g.id);
-                } else {
-                    const pruned = removeHistoryEntry(g, missingIdx);
-                    const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
-                    if (idx !== -1) state.currentProject.itemGroups[idx] = pruned;
-                    card.el.setDone(pruned);
-                }
-            });
-
-            card.on('reuse', ({ positive, negative }) => {
-                Events.emit('workspace:inject-prompts', { positive, negative });
-            });
-
-            card.on('favourite', ({ group: g, favourite }) => {
-                const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
-                if (idx !== -1) state.currentProject.itemGroups[idx] = { ...state.currentProject.itemGroups[idx], favourite };
-            });
-
-            return { card, wrapper };
-        }
 
         // ── Download ────────────────────────────────────────────────────────────
         grid.on('download', ({ groups: g }) => {
@@ -287,6 +305,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
             : null;
 
         if (promptBox) {
+            // Ensure PromptBox is visible when block is created
+            PromptBoxService.show();
+
             promptBox.on('model-change', ({ model }) => {
                 state.s_selectedModelId = model.id;
                 activeModelId   = model.id;
@@ -359,38 +380,31 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const tempId   = crypto.randomUUID();
                 const cardType = activeModel.mediaType;
 
-                // Capture current groups BEFORE adding the generating card
+                // Capture current groups BEFORE creating placeholder
                 const currentGroups = state.currentProject?.itemGroups || [];
 
-                // Create placeholder group for generating state
+                // Create placeholder group with isGenerating flag
+                // Use actual generation dimensions from ComfyUI injection
+                // Grid scales these proportionally based on _cardWidth (slider)
                 const placeholderGroup = {
                     id: tempId,
                     type: cardType,
                     name: 'Generating...',
                     history: [],
                     selectedIndex: 0,
-                    width:  injectionParams.Width  || 288,
-                    height: injectionParams.Height || 288,
+                    width: injectionParams.Width || 1024,
+                    height: injectionParams.Height || 1024,
+                    isGenerating: true,  // ← FLAG for grid to detect
                 };
 
-                // Create and mount generating card directly (don't include in grid groups)
-                const generatingCardWrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
-                const generatingCard = MpiGroupCard.mount(generatingCardWrapper, {
-                    group: placeholderGroup,
-                    selectionMode: false,
-                    selected: false,
-                });
-                generatingCard.el.setGenerating(null);
-                _generatingCardElement = generatingCard;
+                // Tell grid: display this group + all current groups
+                grid.el.setGroups([placeholderGroup, ...currentGroups]);
+
+                // Track generating card state
                 _generatingCardId = tempId;
-
-                // Tell grid to show this card in the generating area
-                grid.el.setGeneratingCard(generatingCardWrapper, placeholderGroup.width, placeholderGroup.height);
-
-                // Update grid with normal groups (no placeholder)
-                grid.el.setGroups(currentGroups);
                 StatusBar.progress.start('Generating...');
 
+                // ... rest of generation logic (unchanged)
                 _activeExec = runCommand({
                     operation,
                     modelId:  activeModel.id,
@@ -401,20 +415,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 const exec = _activeExec;
 
-                exec.onPreview  = (url) => _generatingCardElement?.el.updatePreview(url);
+                exec.onPreview = (url) => grid.el.updatePreview(tempId, url);
                 exec.onProgress = (value) => StatusBar.progress.update(value);
 
                 exec.onComplete = async (urls) => {
                     _activeExec = null;
                     PromptBoxService.component?.setGenerating(false);
 
-                    // Remove generating card
-                    grid.el.clearGeneratingCard();
-                    _generatingCardElement = null;
-                    _generatingCardId = null;
-
                     if (!urls.length) {
                         StatusBar.progress.cancel();
+                        grid.el.setGroups(currentGroups);  // Remove placeholder
                         return;
                     }
 
@@ -469,8 +479,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     }
 
                     StatusBar.progress.complete('Image generated!');
-                    // Add final card and re-render
-                    grid.el.setGroups([group, ...currentGroups]);
+                    grid.el.setGroups([group, ...currentGroups]);  // Replace placeholder with final
                 };
 
                 exec.onError = (err) => {
@@ -478,11 +487,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
                     PromptBoxService.component?.setGenerating(false);
                     StatusBar.progress.cancel();
-
-                    // Remove generating card
-                    grid.el.clearGeneratingCard();
-                    _generatingCardElement = null;
-                    _generatingCardId = null;
+                    grid.el.setGroups(currentGroups);  // Remove placeholder
                 };
             });
 

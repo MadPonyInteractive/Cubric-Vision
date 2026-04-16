@@ -1,10 +1,9 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiGroupCard } from '../../Compounds/MpiGroupCard/MpiGroupCard.js';
-import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { ce, qs } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
+import { getModelById } from '../../../data/modelRegistry.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { packItemsIntoRows, resizeRowImages } from '../../../utils/justifiedLayout.js';
@@ -43,7 +42,7 @@ import { packItemsIntoRows, resizeRowImages } from '../../../utils/justifiedLayo
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
-    css: ['js/components/Blocks/MpiGalleryGrid/MpiGalleryGrid.css'],
+    css: ['js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css'],
 
     template: () => `
         <div class="mpi-gallery-grid">
@@ -62,7 +61,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 </div>
                 <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
-            <div class="mpi-gallery-grid__generating-slot"></div>
             <div class="mpi-gallery-grid__grid"></div>
             <div class="mpi-gallery-grid__footer">
                 <div class="mpi-gallery-grid__selectionbar-slot" style="display:none"></div>
@@ -77,14 +75,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {Map<string, {card: object, el: HTMLElement}>} */
         const _cardMap = new Map(); // groupId or tempId → { card instance, wrapper el }
 
-        /** @type {Set<string>} */
-        const _selectedIds = new Set();
-
-        let _selectionMode = false;
-
         const grid = el.querySelector('.mpi-gallery-grid__grid');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
-        const selectionSlot = el.querySelector('.mpi-gallery-grid__selectionbar-slot');
+
+        // Selection state (managed externally by parent block, but grid applies it to cards)
+        let _selectedIds = new Set();
+        let _selectionMode = false;
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
 
@@ -106,6 +102,204 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // Set initial card width
         _cardWidth = SIZE_MAP[3];
+
+        // ── Card rendering helper (merged from MpiGroupCard) ──────────────────
+
+        function _makeCard(group) {
+            const wrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
+            const cardEl = ce('div', { className: 'mpi-group-card' });
+
+            // Build card DOM from merged MpiGroupCard template
+            cardEl.innerHTML = `
+                <div class="mpi-group-card__media">
+                    <img class="mpi-group-card__thumb" alt="" draggable="true">
+                    <div class="mpi-group-card__preview">
+                        <div class="mpi-group-card__spinner"></div>
+                        <img class="mpi-group-card__preview-img" alt="">
+                    </div>
+                </div>
+                <div class="mpi-group-card__fav-wrap"></div>
+                <div class="mpi-group-card__reuse-wrap"></div>
+                <div class="mpi-group-card__select-wrap">
+                    <input type="checkbox" class="mpi-group-card__checkbox" aria-label="Select group">
+                </div>
+                <div class="mpi-group-card__footer">
+                    <span class="mpi-group-card__name"></span>
+                    <span class="mpi-group-card__badge"></span>
+                    <span class="mpi-group-card__type"></span>
+                </div>
+            `;
+
+            wrapper.appendChild(cardEl);
+
+            // References to elements
+            const thumb = cardEl.querySelector('.mpi-group-card__thumb');
+            const preview = cardEl.querySelector('.mpi-group-card__preview');
+            const spinner = cardEl.querySelector('.mpi-group-card__spinner');
+            const previewImg = cardEl.querySelector('.mpi-group-card__preview-img');
+            const checkbox = cardEl.querySelector('.mpi-group-card__checkbox');
+            const nameEl = cardEl.querySelector('.mpi-group-card__name');
+            const badgeEl = cardEl.querySelector('.mpi-group-card__badge');
+            const typeEl = cardEl.querySelector('.mpi-group-card__type');
+            const favWrap = cardEl.querySelector('.mpi-group-card__fav-wrap');
+            const reuseWrap = cardEl.querySelector('.mpi-group-card__reuse-wrap');
+
+            // State
+            let _generating = false;
+            let _showInfo = false;
+            let _favourite = group?.favourite || false;
+
+            // Mount favorite button
+            const _favBtn = MpiButton.mount(favWrap, {
+                icon: 'heartOutline',
+                iconActive: 'heart',
+                toggleable: true,
+                active: _favourite,
+                size: 'sm',
+                variant: 'ghost',
+                info: 'Favourite',
+            });
+
+            _favBtn.on('toggle', ({ active }) => {
+                _favourite = active;
+                if (group) {
+                    group.favourite = active;
+                    emit('favourite', { group, favourite: active });
+                }
+                cardEl.classList.toggle('mpi-group-card--favourited', active);
+            });
+
+            // Mount reuse button
+            const _reuseBtn = MpiButton.mount(reuseWrap, {
+                icon: 'refresh_stroke',
+                size: 'sm',
+                variant: 'ghost',
+                info: 'Reuse Prompt',
+            });
+
+            _reuseBtn.on('click', (e) => {
+                e.originalEvent?.stopPropagation();
+                const selected = group?.history?.[group.selectedIndex];
+                if (!selected) return;
+                emit('reuse', {
+                    positive: selected.prompt || '',
+                    negative: selected.negativePrompt || '',
+                });
+            });
+
+            // Render card from group data
+            function _render() {
+                if (!group) return;
+
+                const selected = group.history?.[group.selectedIndex];
+                const src = selected?.filePath || '';
+
+                if (src) {
+                    thumb.onload = () => cardEl.classList.remove('mpi-group-card--missing');
+                    thumb.onerror = () => {
+                        cardEl.classList.add('mpi-group-card--missing');
+                        emit('media-missing', { group, itemId: selected?.id });
+                    };
+                    thumb.src = src;
+                } else {
+                    thumb.onload = null;
+                    thumb.onerror = null;
+                    thumb.removeAttribute('src');
+                }
+
+                nameEl.textContent = selected?.operation || group.name;
+                const model = getModelById(selected?.modelId);
+                badgeEl.textContent = model?.name || '';
+                typeEl.textContent = group.type.toUpperCase();
+
+                // Drag support
+                thumb.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('application/mpi-media', JSON.stringify({
+                        groupId: group.id,
+                        itemId: selected?.id,
+                        filePath: selected?.filePath,
+                        type: group.type,
+                    }));
+                });
+
+                _favourite = group?.favourite || false;
+                _favBtn.el.setActive(_favourite);
+                cardEl.classList.toggle('mpi-group-card--favourited', _favourite);
+            }
+
+            // Selection state management
+            let _selected = false;
+
+            cardEl.setSelected = (val) => {
+                _selected = val;
+                checkbox.checked = val;
+                cardEl.classList.toggle('mpi-group-card--selected', val);
+            };
+
+            // Click handling
+            cardEl.addEventListener('click', (e) => {
+                if (_generating) return;
+                if (e.target === checkbox) return;
+                if (favWrap.contains(e.target)) return;
+                if (reuseWrap.contains(e.target)) return;
+
+                if (_selectionMode) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    emit('open-group', { group });
+                }
+            });
+
+            checkbox.addEventListener('change', () => {
+                _selected = checkbox.checked;
+                cardEl.classList.toggle('mpi-group-card--selected', _selected);
+                if (_selected) {
+                    _selectedIds.add(group.id);
+                } else {
+                    _selectedIds.delete(group.id);
+                }
+                emit('select', { group, selected: _selected });
+            });
+
+            // Apply initial selection state
+            if (_selectedIds.has(group.id)) {
+                cardEl.setSelected(true);
+            }
+
+            // Public methods
+            cardEl.setGenerating = (previewUrl = null) => {
+                _generating = true;
+                cardEl.classList.add('mpi-group-card--generating');
+                preview.classList.add('mpi-group-card__preview--visible');
+                spinner.style.display = '';
+                if (previewUrl) previewImg.src = previewUrl;
+            };
+
+            cardEl.updatePreview = (previewUrl) => {
+                if (!_generating) return;
+                previewImg.src = previewUrl;
+                spinner.style.display = 'none';
+            };
+
+            cardEl.setDone = (newGroup) => {
+                group = newGroup;
+                _generating = false;
+                cardEl.classList.remove('mpi-group-card--generating');
+                preview.classList.remove('mpi-group-card__preview--visible');
+                _render();
+            };
+
+            cardEl.setShowInfo = (val) => {
+                _showInfo = val;
+                cardEl.classList.toggle('mpi-group-card--show-info', val);
+            };
+
+            // Initial render
+            _render();
+
+            return { card: { el: cardEl }, wrapper };
+        }
 
         // ── Justified Layout helpers ─────────────────────────────────────────
 
@@ -150,33 +344,73 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // Get container width
                 const containerWidth = grid.clientWidth - 2 * 16; // 16px padding each side
 
-                // Clear and rebuild with plain flex rows (images drive their own height initially)
-                grid.innerHTML = '';
-                _cardMap.clear();
+                // ── Render grid with justified layout (generating card as first item if present) ──
+                // Clear all rows
+                grid.querySelectorAll('.mpi-gallery-grid__row').forEach(row => row.remove());
 
-                // Pack into rows using justified layout utility
+                // Separate generating groups from normal groups
+                const generatingGroups = display.filter(g => g.isGenerating);
+                const normalGroups = display.filter(g => !g.isGenerating);
+
+                // Pack all groups into rows (generating card will be first if present)
                 const targetCardWidth = _cardWidth;
-                const items = display.map(group => ({
+                const allGroups = [...generatingGroups, ...normalGroups];
+                const items = allGroups.map(group => ({
                     id: group.id,
+                    // Generating cards: use slider size (targetCardWidth), maintain aspect ratio via height calc
+                    // Normal cards: use slider size
                     targetWidth: targetCardWidth,
                 }));
                 const rows = packItemsIntoRows(items, containerWidth, GAP, targetCardWidth);
 
-                rows.forEach(({ items: rowItems }) => {
+                rows.forEach(({ items: rowItems, rowWidth }, rowIndex) => {
                     const rowEl = ce('div', { className: 'mpi-gallery-grid__row' });
-                    rowEl.style.height = '200px';
+                    let maxHeight = 0; // Track maximum item height in this row
 
                     rowItems.forEach(({ id, targetWidth }) => {
-                        const group = display.find(g => g.id === id);
+                        const group = allGroups.find(g => g.id === id);
                         const { card, wrapper } = _makeCard(group);
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
-                        wrapper.style.width = `${targetWidth}px`;
+
+                        // Size calculation: slider controls width, injection dimensions control aspect ratio
+                        let width = targetWidth;
+                        let height = targetWidth; // Default square for normal cards
+
+                        if (group.isGenerating && group.width && group.height) {
+                            // Generating card: use slider-controlled width, scale height by aspect ratio
+                            width = targetWidth;
+                            const aspectRatio = group.width / group.height;
+                            height = Math.round(targetWidth / aspectRatio);
+                            // Store aspect dimensions so resizeRowImages can access them
+                            wrapper.dataset.aspectWidth = group.width;
+                            wrapper.dataset.aspectHeight = group.height;
+                        }
+
+                        wrapper.style.width = `${width}px`;
+                        wrapper.style.height = `${height}px`;
                         rowEl.appendChild(wrapper);
+
+                        // Track the maximum height to set row height correctly
+                        maxHeight = Math.max(maxHeight, height);
+
+                        // Mark as generating if needed
+                        if (group.isGenerating) {
+                            card.el.setGenerating();
+                        }
+
                         _cardMap.set(id, { card, el: wrapper });
                     });
 
+                    // Set row height to accommodate the tallest item
+                    rowEl.style.height = `${maxHeight}px`;
+
                     grid.appendChild(rowEl);
-                    resizeRowImages(rowEl, '.mpi-gallery-grid__row-wrap', '.mpi-group-card__thumb', GAP, containerWidth);
+                    // For last row: skip resizing (keep natural layout, left-aligned)
+                    // For other rows: stretch to containerWidth (justified)
+                    const isLastRow = rowIndex === rows.length - 1;
+                    if (!isLastRow) {
+                        resizeRowImages(rowEl, '.mpi-gallery-grid__row-wrap', '.mpi-group-card__thumb', GAP, containerWidth);
+                    }
                 });
 
                 // Sync info state to all cards
@@ -220,124 +454,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
         });
 
-        // ── Selection bar ───────────────────────────────────────────────────────
-
-        const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
-
-        selectionBar.on('cancel', () => _exitSelectionMode());
-
-        selectionBar.on('compare', () => {
-            const selected = _getSelectedGroups();
-            if (selected.length === 2) emit('compare', { groups: selected });
-        });
-
-        selectionBar.on('download', () => {
-            emit('download', { groups: _getSelectedGroups() });
-        });
-
-        selectionBar.on('delete', () => {
-            emit('delete', { groups: _getSelectedGroups() });
-        });
-
-        // ── Selection mode ──────────────────────────────────────────────────────
-
-        function _enterSelectionMode() {
-            if (_selectionMode) return;
-            _selectionMode = true;
-            state.galleryShowInfo = true;
-            _cardMap.forEach(({ card }) => card.el.setSelectionMode(true));
-            emit('selection-start');
-            selectionSlot.style.display = '';
-            el.classList.add('mpi-gallery-grid--selecting');
-        }
-
-        function _exitSelectionMode() {
-            _selectionMode = false;
-            _selectedIds.clear();
-            _cardMap.forEach(({ card }) => {
-                card.el.setSelectionMode(false);
-                card.el.setSelected(false);
-            });
-            selectionBar.el.setCount(0);
-            emit('selection-end');
-            selectionSlot.style.display = 'none';
-            el.classList.remove('mpi-gallery-grid--selecting');
-        }
-
-        function _getSelectedGroups() {
-            return _groups.filter(g => _selectedIds.has(g.id));
-        }
-
-        // ── Card factory ────────────────────────────────────────────────────────
-
-        function _makeCard(group) {
-            const wrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
-            const card = MpiGroupCard.mount(wrapper, {
-                group,
-                selectionMode: _selectionMode,
-                selected: _selectedIds.has(group.id),
-            });
-
-            // Automatically enter generating state for placeholder groups created during
-            // a generation run (they have 'Generating...' name and empty history).
-            if (group.name === 'Generating...' && group.history?.length === 0) {
-                // Apply explicit dimensions so the wrapper has height before setGenerating
-                // hides the thumb — otherwise the media area collapses and the spinner is invisible.
-                const displayW = group.width  || _cardWidth;
-                const displayH = group.height || _cardWidth;
-                wrapper.style.width  = `${displayW}px`;
-                wrapper.style.height = `${displayH}px`;
-                card.el.setGenerating(null);
-            }
-
-            card.on('open', ({ group: g }) => {
-                emit('open-group', { group: g });
-            });
-
-            card.on('select', ({ group: g, selected }) => {
-                if (selected) {
-                    _selectedIds.add(g.id);
-                    if (!_selectionMode) _enterSelectionMode();
-                } else {
-                    _selectedIds.delete(g.id);
-                    if (_selectedIds.size === 0) _exitSelectionMode();
-                }
-                selectionBar.el.setCount(_selectedIds.size);
-            });
-
-            card.on('media-missing', ({ group: g, itemId }) => {
-                // Find the missing entry index
-                const missingIdx = g.history.findIndex(item => item.id === itemId);
-                if (missingIdx === -1) return;
-
-                if (g.history.length <= 1) {
-                    // Last entry is missing — remove the card entirely
-                    el.removeCard(g.id);
-                    emit('gc-remove', { groupId: g.id });
-                } else {
-                    // Prune the missing entry and promote the next best
-                    const pruned = removeHistoryEntry(g, missingIdx);
-                    const idx = _groups.findIndex(x => x.id === g.id);
-                    if (idx !== -1) _groups[idx] = pruned;
-                    card.el.setDone(pruned);
-                    emit('gc-group', { group: pruned });
-                }
-            });
-
-            card.on('reuse', ({ positive, negative }) => {
-                Events.emit('workspace:inject-prompts', { positive, negative });
-            });
-
-            card.on('favourite', ({ group: g, favourite }) => {
-                const idx = _groups.findIndex(x => x.id === g.id);
-                if (idx !== -1) {
-                    _groups[idx] = { ..._groups[idx], favourite };
-                    emit('favourite', { group: _groups[idx] });
-                }
-            });
-
-            return { card, wrapper };
-        }
 
         // ── Render all groups ───────────────────────────────────────────────────
         // (removed — replaced by _rerenderJustified for justified layout)
@@ -353,7 +469,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
          */
         el.setGroups = (groups) => {
             _groups = groups;
-            _exitSelectionMode();
+            _selectedIds.clear();
             _rerenderJustified();
         };
 
@@ -376,9 +492,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
             entry.el.remove();
             _cardMap.delete(groupId);
             _groups = _groups.filter(g => g.id !== groupId);
-            _selectedIds.delete(groupId);
-            if (_selectedIds.size === 0 && _selectionMode) _exitSelectionMode();
-            else selectionBar.el.setCount(_selectedIds.size);
+        };
+
+        /**
+         * Set selection mode state (affects click behavior on cards).
+         * @param {boolean} val
+         */
+        el.setSelectionMode = (val) => {
+            _selectionMode = val;
+            el.classList.toggle('mpi-gallery-grid--selecting', val);
         };
 
         /**

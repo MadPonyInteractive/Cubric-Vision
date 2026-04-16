@@ -607,21 +607,24 @@
  */
 
 /**
- * @typedef {Object} MpiGalleryGridProps (Block — js/components/Blocks/MpiGalleryGrid)
+ * @typedef {Object} MpiGalleryGridProps (Compound — js/components/Compounds/MpiGalleryGrid)
  * @property {import('./data/projectModel.js').ItemGroup[]} [groups=[]] - Initial groups to render
  *
  * Instance methods (on instance.el):
- *   setGroups(groups)                 — replace all groups and re-render
- *   addGeneratingCard(tempId, type)   — add a generating placeholder, returns card instance
- *   updatePreview(tempId, previewUrl) — push latent preview to a generating card
- *   finalizeCard(tempId, group)       — replace generating card with completed group data
- *   getPromptSlot()                   — returns the HTMLElement slot for mounting MpiPromptBox
+ *   setGroups(groups)                 — replace all groups and re-render; detects isGenerating flag
+ *   updatePreview(tempId, previewUrl) — push latent preview to a generating card during generation
  *
  * Emits:
- *   'open-group' { group }         — user clicked a card in normal mode
- *   'compare'    { groups }        — compare 2 selected groups
- *   'download'   { groups }        — download selected groups
- *   'delete'     { groups }        — delete selected groups
+ *   'open-group'  { group }       — user clicked a card (navigate to group history)
+ *   'select'      { group, selected }  — checkbox toggled; selection mode managed by parent
+ *   'reuse'       { positive, negative } — reuse prompt button clicked
+ *   'favourite'   { group, favourite } — favourite button toggled
+ *   'media-missing' { group, itemId } — image file missing (404); parent handles GC
+ *   'compare'     { groups }      — compare 2 selected groups
+ *   'download'    { groups }      — download selected groups
+ *   'delete'      { groups }      — delete selected groups
+ *   'gc-group'    { group }       — group mutated by garbage collection
+ *   'gc-remove'   { groupId }     — all history entries missing; group removed
  */
 
 /**

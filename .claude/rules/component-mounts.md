@@ -8,7 +8,6 @@
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
-- `MpiGroupCard`   props: `{ group: placeholderGroup, selectionMode: false, selected: false }`   slot: `.mpi-gallery-grid__generating-slot`; created during image generation via `grid.el.setGeneratingCard()`; removed on completion/error via `grid.el.clearGeneratingCard()`
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
@@ -43,16 +42,23 @@
 
 ---
 
-## MpiGalleryGrid.js (internal mounts)
+## MpiGalleryGrid.js (Compound: grid layout + card rendering)
 
+MpiGalleryGrid is now a Compound that handles both justified layout and card display (logic merged from deleted MpiGroupCard).
+
+**Primitives mounted:**
 - `MpiProgressBar` (size slider)   props: `{ min:1, max:5, step:1, value:3, interactive:true, wheel:true, info:'Size: {value}' }`   slot: `.mpi-gallery-grid__slider-wrap`
-- `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` — shown when selection mode active; hidden otherwise
-- `MpiGroupCard`   props: `{ group, selectionMode, selected }`   slot: per-card wrapper div appended to `.mpi-gallery-grid__grid`; one per ItemGroup (gallery display)
+- `MpiButton` (info toggle)   props: `{ icon:'info', size:'sm', variant:'ghost', toggleable:true, active, info }`   slot: `.mpi-gallery-grid__info-btn-slot`
 
-**Generating Card Slot** (via public API `setGeneratingCard()`):
-- Parent (MpiGalleryBlock) mounts pre-created MpiGroupCard in `.mpi-gallery-grid__generating-slot` during generation
-- Isolated from justified layout; always visible above normal grid
-- Removed via `clearGeneratingCard()` on completion or error
+**Card rendering:**
+- Cards are now rendered as DOM elements (not components)
+- Card logic (generating state, preview, drag) integrated directly
+- One card per ItemGroup in `.mpi-gallery-grid__grid` with justified layout
+- Generating cards detected by `isGenerating` flag and rendered in `.mpi-gallery-grid__generating-slot`
+
+**Public API:**
+- `setGroups(groups)` — replace all groups and re-render; generating cards flow through `isGenerating` flag
+- `updatePreview(tempId, url)` — push latent preview to generating card during image generation
 
 ---
 

@@ -61,15 +61,25 @@ export function resizeRowImages(rowEl, itemSelector, imgSelector, gap, rowWidth)
     const loaders = Array.from(items).map(wrapper => {
         return new Promise(resolve => {
             const img = wrapper.querySelector(imgSelector);
-            if (!img || !img.src) {
-                resolve({ wrapper, width: 1, height: 1 });
-                return;
-            }
-            if (img.complete && img.naturalWidth > 0) {
-                resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
+
+            // Try to get dimensions from the image element
+            if (img && img.src) {
+                if (img.complete && img.naturalWidth > 0) {
+                    resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
+                } else {
+                    img.onload = () => resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
+                    img.onerror = () => resolve({ wrapper, width: 1, height: 1 });
+                }
             } else {
-                img.onload = () => resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
-                img.onerror = () => resolve({ wrapper, width: 1, height: 1 });
+                // For items without images (like generating cards), try to get dimensions from wrapper's stored data
+                const storedWidth = wrapper.dataset.aspectWidth;
+                const storedHeight = wrapper.dataset.aspectHeight;
+                if (storedWidth && storedHeight) {
+                    resolve({ wrapper, width: parseInt(storedWidth), height: parseInt(storedHeight) });
+                } else {
+                    // Fallback to 1:1 ratio
+                    resolve({ wrapper, width: 1, height: 1 });
+                }
             }
         });
     });

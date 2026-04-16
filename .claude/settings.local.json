@@ -157,7 +157,14 @@
       "Bash(cd:*)",
       "Bash(then:*)",
       "Bash(fi:*)",
-      "Bash(else:*)"
+      "Bash(else:*)",
+      "Bash(git checkout:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(sleep:*)",
+      "Bash(cat:*)",
+      "Bash(EOF:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
