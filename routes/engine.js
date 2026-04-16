@@ -15,6 +15,7 @@ const path = require('path');
 const { SYS_DEPS_PATH } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload } = require('./downloadManager');
+const { COMFY_VERSION } = require('../js/core/appVersion.js');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -255,8 +256,7 @@ router.get('/engine/version-check', async (req, res) => {
     try {
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const versionFile = path.join(ENGINE_ROOT, '.mpi_engine_version');
-        const config = await fs.readJson(SYS_DEPS_PATH);
-        const requiredVersion = config.engine.version; // from system_dependencies.json
+        const requiredVersion = COMFY_VERSION; // canonical version from js/core/appVersion.js
 
         const installedVersion = (await fs.pathExists(versionFile))
             ? (await fs.readFile(versionFile, 'utf8')).trim()

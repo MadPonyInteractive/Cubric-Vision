@@ -169,7 +169,9 @@
       "Bash(uipro:*)",
       "Bash(python3:*)",
       "Bash(which:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Bash(where:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
