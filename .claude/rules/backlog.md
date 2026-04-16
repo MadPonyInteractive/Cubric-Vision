@@ -17,8 +17,6 @@
 - [ ] **Step 9:** No `showDeleteModels` / `deleteModels` references in codebase
 - [ ] **Step 10:** Close app mid-download — partial files cleaned up on shutdown
 
-**Media Import (Immediate Upload)**
-- [ ] When a user adds an image/video from the filesystem to the prompt box, upload it to the project media folder and create a history card group immediately (without waiting for workflow execution).
 
 **Video Workflows**
 - [ ] Activate `interpolate` and `videoUpscale` handlers inside `MpiGroupHistoryBlock.js` (currently stubs).
