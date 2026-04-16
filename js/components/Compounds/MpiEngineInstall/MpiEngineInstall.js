@@ -38,7 +38,8 @@ export const MpiEngineInstall = ComponentFactory.create({
             <!-- Phase 1: Setup (path picker) -->
             <div class="mpi-engine-install__phase" data-phase="setup">
                 <div class="mpi-engine-install__content">
-                    <h2 class="mpi-engine-install__title">Welcome — Let's Set Up ComfyUI</h2>
+                    <h2 class="mpi-engine-install__title">Welcome</h2>
+                    <h2 class="mpi-engine-install__title">Let's Set Up ComfyUI</h2>
                     <p class="mpi-engine-install__subtitle">Choose where to store your AI models</p>
 
                     <div class="mpi-engine-install__form">
