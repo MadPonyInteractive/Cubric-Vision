@@ -3,8 +3,8 @@
  *
  * Routes exposed:
  *   GET  /system/stats   — RAM + VRAM usage
- *   POST /choose-folder  — Native Windows folder-picker dialog
- *   POST /open-folder    — Open folder in Windows Explorer
+ *   POST /choose-folder  — Native cross-platform folder-picker dialog (via Electron IPC)
+ *   POST /open-folder    — Open folder in system file explorer
  */
 
 'use strict';
@@ -57,26 +57,13 @@ router.get('/system/stats', async (req, res) => {
 });
 
 router.post('/choose-folder', (req, res) => {
-    const ps = `
-Add-Type -AssemblyName System.Windows.Forms;
-$form = New-Object System.Windows.Forms.Form;
-$form.TopMost = $true;
-$form.ShowInTaskbar = $false;
-$form.WindowState = 'Minimized';
-$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;
-$dialog.Description = 'Choose a folder for your project';
-$dialog.ShowNewFolderButton = $true;
-$result = $dialog.ShowDialog($form);
-if ($result -eq 'OK') { Write-Output $dialog.SelectedPath }
-`;
-    exec(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Sta -WindowStyle Hidden -Command "${ps.replace(/\n/g, ' ')}"`, (err, stdout) => {
-        if (err) {
-            logger.error('system', 'Folder picker error', err);
-            return res.json({ cancelled: true, path: null, error: err.message });
-        }
-        if (!stdout.trim()) return res.json({ cancelled: true, path: null });
-        res.json({ cancelled: false, path: stdout.trim() });
-    });
+    // This route is now handled via IPC in Electron's main process
+    // We keep this route for API consistency, but the actual dialog is shown
+    // by the Electron main process using native APIs (works on Windows, macOS, Linux)
+    //
+    // The frontend (MpiEngineInstall.js) will call window.electronAPI.chooseFolder()
+    // which triggers the IPC handler in main.js, which uses Electron's dialog API
+    res.json({ success: true, status: 'use_ipc' });
 });
 
 router.post('/open-folder', (req, res) => {

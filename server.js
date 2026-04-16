@@ -41,6 +41,9 @@ const comfyRoutes   = require('./routes/comfy');
 const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
 const { cleanComfyUITempFiles } = require('./routes/shared');
 
+console.log('[server.js] App initialization started');
+logger.info('system', 'Server initialization started');
+
 app.use(systemRoutes);
 app.use(projectRoutes);
 app.use(llmRoutes);

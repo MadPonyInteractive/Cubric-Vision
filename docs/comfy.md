@@ -46,6 +46,19 @@ Loads available LoRA and upscale model filenames from `GET /comfy/list-files` in
 
 ## Download Manager
 
+### Architecture Overview
+
+The download manager is a **frontend + backend IPC system** with **resumable downloads**. Communication flows:
+
+```
+js/services/downloadService.js  ←→  REST/POST  →  routes/downloadManager.js
+       ↑ SSE /comfy/downloads/stream  ←  SSE broadcast ←┘
+       ↓ Events.emit(...)
+   Components subscribe
+```
+
+The backend uses `node-downloader-helper` under the hood, which writes `.part` files to enable resume after pause/cancel.
+
 ### Frontend — `js/services/downloadService.js`
 Singleton that owns the frontend download queue.
 
@@ -54,6 +67,7 @@ Singleton that owns the frontend download queue.
 - `uninstall(modelId, dependencies)`: Remove model files via backend.
 - SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
 - Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
+- On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and repopulate `state.downloadJobs`.
 
 ### Backend — `routes/downloadManager.js`
 Non-blocking download router using `node-downloader-helper` with pause/resume support.
@@ -64,12 +78,46 @@ Non-blocking download router using `node-downloader-helper` with pause/resume su
 - `GET /comfy/downloads/status` — full queue snapshot
 - `GET /comfy/downloads/stream` — SSE broadcast channel
 - `POST /comfy/models/uninstall` — uninstall a model
+- `POST /engine/pause` / `engine/resume` — pause/resume active engine downloads
+
+**ResumableDownloader class** (`routes/downloadManager.js`):
+A wrapper around `node-downloader-helper` that adds SHA256 verification and SSE progress broadcasting.
+- `_downloader`: `DownloaderHelper` instance with `{ resume: true }`
+- `.download()`: starts fresh or resumes from `.part` file
+- `.abort()`: pauses and retains instance for later resume
+- `.resume()`: resumes from the stored `.part` file using `getResumeState()`
+- On completion: verifies `sha256Expected` against downloaded file, then marks dep `complete`
+- On SHA256 mismatch: deletes the file and marks dep `failed`
+
+**Job storage:**
+- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, refCount, sha256)
+- `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])
+- `_activeDownloaders Map<depId, ResumableDownloader>` — actively downloading
+- `_pausedDownloaders Map<depId, ResumableDownloader>` — paused but kept for resume
+- `_sseClients Set<res>` — SSE subscribers
+
+**RefCount:** Each `depId` can be shared across multiple model jobs. `refCount` tracks how many model jobs reference it. A dep is only cancelled/aborted when `refCount` reaches 0.
 
 ### State Keys
 In `js/state.js`:
 - `downloadJobs[]` — `DownloadJob[]` array, persisted for shutdown recovery
 - `downloadQueueActive` — `boolean`, true when any download is in progress
 - `comfyNeedsRestart` — `boolean`, true after custom node install; triggers auto-restart in `ensureServerRunning()`
+
+### Download Events (Lifecycle)
+
+| Event | Direction | When |
+| --- | --- | --- |
+| `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
+| `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
+| `download:complete` | Backend→SSE→Frontend | All deps verified SHA256 and complete |
+| `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error |
+| `download:paused` | Backend→SSE→Frontend | User paused or pause/resume cycle |
+| `download:resumed` | Backend→SSE→Frontend | User resumed |
+| `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
+| `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
+| `download:installing` | Backend→SSE→Frontend | Custom node `requirements.txt` pip install in progress |
+| `comfy:needs-restart` | Backend→SSE→Frontend | Custom node install done; ComfyUI needs auto-restart |
 
 ### ComfyUI Auto-Restart
 When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js` stops ComfyUI, starts it again with `{ isUserRestart: true }`, and polls until ready before any generation proceeds.

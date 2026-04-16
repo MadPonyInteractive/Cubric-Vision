@@ -37,6 +37,7 @@
     flex-direction: column;
     align-items: center;
     gap: 14px;
+    width: 100%;
 }
 
 .mpi-engine-install__content--error {
@@ -94,82 +95,15 @@
     align-items: stretch;
 }
 
-.mpi-engine-install__path-input {
+.mpi-engine-install__folder-input-row > div:first-child {
     flex: 1;
-    padding: 10px 12px;
-    font-size: 0.85rem;
-    font-family: 'Courier New', monospace;
-    color: var(--text);
-    background: var(--bg-recessed);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-sm);
-    transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-.mpi-engine-install__path-input:focus {
-    outline: none;
-    border-color: var(--neon-border);
-    box-shadow: 0 0 0 2px var(--neon-glow-sm);
-}
-
-.mpi-engine-install__browse-btn {
-    padding: 10px 16px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text);
-    background: var(--surface-3);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: border-color var(--transition), background var(--transition), color var(--transition);
-}
-
-.mpi-engine-install__browse-btn:hover {
-    border-color: var(--neon-border);
-    color: var(--neon-accent);
-}
-
-.mpi-engine-install__browse-btn:active {
-    background: var(--bg-recessed);
-}
-
-/* ── Hint ────────────────────────────────────────────────────────────────── */
 .mpi-engine-install__hint {
     margin: 2px 0 0 0;
     font-size: 0.75rem;
     color: var(--text-3);
     line-height: 1.4;
-}
-
-/* ── Primary action buttons ──────────────────────────────────────────────── */
-.mpi-engine-install__install-btn,
-.mpi-engine-install__retry-btn {
-    margin-top: 8px;
-    padding: 11px 28px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text);
-    background: linear-gradient(135deg, var(--neon-accent) 0%, var(--neon-electric) 100%);
-    border: 1px solid var(--neon-border);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 12px var(--neon-glow-sm);
-    transition: transform var(--transition), box-shadow var(--transition);
-}
-
-.mpi-engine-install__install-btn:hover,
-.mpi-engine-install__retry-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px var(--neon-glow);
-}
-
-.mpi-engine-install__install-btn:active,
-.mpi-engine-install__retry-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 6px var(--neon-glow-sm);
 }
 
 /* ── Progress section ────────────────────────────────────────────────────── */
@@ -182,6 +116,7 @@
     background: var(--bg-recessed);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md);
+    overflow: hidden;
 }
 
 .mpi-engine-install__progress-info {
@@ -190,6 +125,10 @@
     color: var(--text-muted);
     line-height: 1.4;
     text-align: center;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    max-width: 100%;
 }
 
 /* ── Upgrade message ─────────────────────────────────────────────────────── */
@@ -218,4 +157,13 @@
     border: 1px solid rgba(215, 110, 173, 0.3);
     border-radius: var(--radius-sm);
     line-height: 1.5;
+}
+
+/* ── Button group (pause/resume) ─────────────────────────────────────────── */
+.mpi-engine-install__button-group {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 4px;
 }

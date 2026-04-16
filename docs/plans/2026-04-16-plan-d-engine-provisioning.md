@@ -23,7 +23,7 @@ This plan fixes both problems:
 ## Critical Files to Read Before Implementing
 
 | File | Role | Key lines |
-|---|---|---|
+| --- | --- | --- |
 | `js/shell.js` | Boot sequence (`_bootApp`) + singleton modal mounts | 34–42, 118–157 |
 | `routes/engine.js` | `GET /engine/status`, `POST /engine/download` | Full file |
 | `routes/comfy.js` | `POST /comfy/set-path` — writes extra_model_paths.yaml | 168–219 |
@@ -227,7 +227,7 @@ New Compound. Follows `MpiStartingComfy` pattern — direct portal to `document.
 - Speed and size info (e.g. "1.2 GB / 3.4 GB — 15 MB/s")
 - No cancel button — download must complete
 
-**For upgrades (`mode: 'upgrading'`):** Skip Phase 1 (path already set), go straight to progress. Show note: "Your models are safe — only the ComfyUI engine is being updated."
+**For upgrades (****`mode: 'upgrading'`****):** Skip Phase 1 (path already set), go straight to progress. Show note: "Your models are safe — only the ComfyUI engine is being updated."
 
 **States:**
 - `setup` — Phase 1: path picker + install button (first install only)
@@ -346,8 +346,8 @@ function _continueBootAfterEngine() {
 ## Verification
 
 1. **Fresh install (no engine):** Start app → engine install modal appears immediately, landing page is blocked → download begins → progress bar updates → "Extracting..." → "Finalizing..." → modal hides → app continues boot normally
-2. **`engine/mpi_models/` created:** After install, `engine/mpi_models/` exists and `extra_model_paths.yaml` points to it
-3. **`.mpi_engine_version` written:** `engine/.mpi_engine_version` contains correct version string after install
+2. **`engine/mpi_models/`**** created:** After install, `engine/mpi_models/` exists and `extra_model_paths.yaml` points to it
+3. **`.mpi_engine_version`**** written:** `engine/.mpi_engine_version` contains correct version string after install
 4. **Engine already installed (current version):** App boots normally, no install modal shown
 5. **Upgrade needed:** Change `.mpi_engine_version` to a different string → restart app → upgrade modal shown → old engine wiped → new engine installed → version file updated → app continues
 6. **Model safety during upgrade:** Create dummy files in `engine/ComfyUI_windows_portable/ComfyUI/models/` → trigger upgrade → verify files moved to `engine/mpi_models/` and not deleted
@@ -361,3 +361,29 @@ function _continueBootAfterEngine() {
 - The upgrade wipes `ComfyUI_windows_portable/` — this is destructive. Confirm model move succeeded before wipe
 - Custom nodes live inside `custom_nodes/` in the engine. After upgrade, the user must reinstall them via the model manager. Plan D does not auto-reinstall custom nodes (that is a follow-up in Plan C tooling)
 - `extra_model_paths.yaml` must survive upgrades — it lives inside `ComfyUI_windows_portable/ComfyUI/` which gets wiped. The upgrade route must re-write it after reinstall (Step 3 handles this)
+
+---
+
+## Implementation Notes (2026-04-16)
+
+### Deviations from Plan
+
+**1. Resumable Downloads**
+The plan described using `streamDownload()` from `routes/shared.js` for the engine download. However, this function does not support resumable downloads. Instead, we used the existing `ResumableDownloader` class from `downloadManager.js`, which wraps `node-downloader-helper` and supports:
+- Automatic resume on app restart (partial file detection)
+- `abort()` and `resume()` methods
+- Progress callbacks with speed calculation
+
+Implementation:
+- `downloadManager.js` exports `registerEngineDownload(downloader, downloadId)` and `clearEngineDownload()` for tracking active engine downloads
+- `downloadManager.js` adds `/engine/pause` and `/engine/resume` routes that use the stored downloader instance
+- `engine.js` creates a `ResumableDownloader` instance and registers it via `registerEngineDownload()`
+
+**2. localStorage for Models Path**
+The plan specified the models folder path picker but did not address persistence. Added localStorage so the user's chosen path is remembered across sessions:
+- Key: `'mpi_comfy_root_path'`
+- Default: `'engine/mpi_models/'`
+- Saved on: Browse button click, Install button click
+- Loaded on: Component mount
+
+**Note:** A single source of truth for localStorage keys should be established in a future plan before dependent plans (e.g., Plan A) are implemented.

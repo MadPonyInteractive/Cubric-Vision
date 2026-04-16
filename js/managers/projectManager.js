@@ -6,6 +6,7 @@
 import { state } from '../state.js';
 import { Events } from '../events.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY } from '../router.js';
+import { Storage } from '../core/storage.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ export async function createProject(name, folderPath = null) {
  * Fetch all projects from disk (most-recent first).
  */
 export async function listProjects() {
-  const extraPaths = JSON.parse(localStorage.getItem('mpi_extra_project_paths') || '[]');
+  const extraPaths = Storage.getExtraProjectPaths();
   const result = await post('/list-projects', { extraPaths });
   if (!result.success) throw new Error(result.error);
   return result.projects;
@@ -62,13 +63,13 @@ export function openProject(project) {
   // No separate restore step needed.
 
   // Store the folder path so future sessions can find it
-  const extras = JSON.parse(localStorage.getItem('mpi_extra_project_paths') || '[]');
+  const extras = Storage.getExtraProjectPaths();
   const parentDir = project.folderPath.split(/[\\/]/).slice(0, -1).join('/');
   if (!extras.includes(parentDir)) {
     extras.push(parentDir);
-    localStorage.setItem('mpi_extra_project_paths', JSON.stringify(extras));
+    Storage.setExtraProjectPaths(extras);
   }
-  localStorage.setItem('mpi_last_project', project.folderPath);
+  Storage.setLastProject(project.folderPath);
   Events.emit('project:changed', { project });
   navigate(PAGE_GALLERY);
 }

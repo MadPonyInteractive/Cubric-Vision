@@ -118,4 +118,26 @@
 @keyframes mpi-progress-warn-pulse {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.7; }
+}
+
+/* Loading/indeterminate state — animated shimmer */
+@keyframes mpi-progress-loading {
+    0% {
+        background-position: -100% 0;
+    }
+    100% {
+        background-position: 100% 0;
+    }
+}
+
+.mpi-progress--loading .mpi-progress__track-fill {
+    background: linear-gradient(90deg,
+        rgba(59, 130, 246, 0.3) 0%,
+        rgba(59, 130, 246, 0.6) 20%,
+        rgba(59, 130, 246, 0.3) 40%,
+        rgba(59, 130, 246, 0.3) 100%
+    );
+    background-size: 200% 100%;
+    animation: mpi-progress-loading 1.5s ease-in-out infinite;
+    width: 100% !important;
 }

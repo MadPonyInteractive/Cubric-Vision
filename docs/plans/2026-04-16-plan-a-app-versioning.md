@@ -56,7 +56,7 @@ export const SCHEMA_VERSION = 1;
 
 New file. Adds versioning metadata on top of existing `commandRegistry.js` (which handles UI) and `modelRegistry.js` (which handles workflow resolution). Does NOT replace either.
 
-**All 13 current operations from ****`commandRegistry.js`**** must appear here.**
+**All 13 current operations from \****`commandRegistry.js`**\*\* must appear here.**
 
 ```javascript
 // js/core/operationRegistry.js
@@ -200,3 +200,28 @@ console.assert(compareSemVer('1.0.0', '1.0.0') === 0);
 ```
 
 No existing functionality is changed — this plan adds three new files only.
+
+---
+
+## Notes (2026-04-16)
+
+### localStorage Source of Truth — IMPLEMENTED (2026-04-17)
+
+**Status:** Complete. The prerequisite has been fulfilled.
+
+A centralized storage key system has been established:
+- `js/core/storageKeys.js` — single source of truth for all localStorage/sessionStorage key constants (`STORAGE_KEYS.COMFY_ROOT_PATH` etc.)
+- `js/core/storage.js` — typed `Storage` and `Session` helpers wrapping localStorage/sessionStorage with JSON defaults and error handling
+
+All raw `localStorage.getItem/setItem/removeItem('mpi_...')` and `sessionStorage.getItem/setItem('mpi_...')` calls have been replaced across:
+- `js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js`
+- `js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js`
+- `js/managers/projectManager.js`
+- `js/shell.js`
+- `js/pages/components.js`
+
+Plan A may now safely reference `STORAGE_KEYS.COMFY_ROOT_PATH` from `js/core/storageKeys.js` without any inline string literals.
+
+### Resumable Downloads
+
+Plan D also uses `ResumableDownloader` from `downloadManager.js` for engine downloads. This system is working and verified. See Plan D implementation notes for details.

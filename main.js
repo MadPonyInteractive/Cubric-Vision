@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
@@ -193,8 +193,10 @@ function createWindow() {
 
 // Start the Express server
 function startServer() {
+  const userDataPath = app.getPath('userData');
+  console.log('[main] APP_USER_DATA set to:', userDataPath);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
-    env: { ...process.env, APP_USER_DATA: app.getPath('userData') }
+    env: { ...process.env, APP_USER_DATA: userDataPath }
   });
 
   serverProcess.on('error', (err) => {
@@ -291,6 +293,23 @@ app.on('ready', () => {
     } else {
       // Linux: use xdotool if available, silent fail if not installed
       execFile('xdotool', ['mousemove', '--', String(px), String(py)], () => {});
+    }
+  });
+
+  // Cross-platform folder picker using Electron's native dialog
+  ipcMain.handle('choose-folder', async () => {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Choose a folder for your project',
+      });
+      if (result.canceled) {
+        return { cancelled: true, path: null };
+      }
+      return { cancelled: false, path: result.filePaths[0] };
+    } catch (err) {
+      logger.error('system', 'Folder picker error', err);
+      return { cancelled: true, path: null, error: err.message };
     }
   });
 });

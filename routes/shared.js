@@ -70,8 +70,11 @@ function stopComfyUI() {
 /**
  * Memory-efficient streaming download with redirect support.
  * Bypasses native fetch/undici buffering to ensure near-zero RAM footprint.
+ *
+ * NOTE: For downloads that need resumable support, use ResumableDownloader
+ * from downloadManager.js instead. This is for simple one-shot downloads.
  */
-function streamDownload(url, localPath) {
+function streamDownload(url, localPath, onProgress) {
     const request = (targetUrl) => {
         return new Promise((resolve, reject) => {
             const protocol = targetUrl.startsWith('https') ? https : http;
@@ -85,6 +88,33 @@ function streamDownload(url, localPath) {
                     return reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
                 }
                 try {
+                    const totalBytes = parseInt(response.headers['content-length'], 10) || 0;
+                    let downloadedBytes = 0;
+                    let lastReportTime = Date.now();
+                    let lastReportedBytes = 0;
+
+                    // Track progress if callback provided
+                    if (onProgress) {
+                        response.on('data', (chunk) => {
+                            downloadedBytes += chunk.length;
+                            const progress = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+
+                            // Calculate speed every 500ms to avoid excessive updates
+                            const now = Date.now();
+                            const timeDeltaMs = now - lastReportTime;
+                            if (timeDeltaMs >= 500) {
+                                const bytesDelta = downloadedBytes - lastReportedBytes;
+                                const speedBytesPerSec = (bytesDelta / timeDeltaMs) * 1000;
+                                const speed = _formatSpeed(speedBytesPerSec);
+
+                                lastReportTime = now;
+                                lastReportedBytes = downloadedBytes;
+
+                                onProgress({ progress, downloadedBytes, totalBytes, speed });
+                            }
+                        });
+                    }
+
                     const writer = fs.createWriteStream(localPath);
                     await pipeline(response, writer);
                     resolve(localPath);
@@ -99,6 +129,17 @@ function streamDownload(url, localPath) {
         });
     };
     return request(url);
+}
+
+// Format bytes/second to human-readable speed (e.g., "2.5 MB/s")
+function _formatSpeed(bytesPerSec) {
+    if (bytesPerSec < 1024) {
+        return `${Math.round(bytesPerSec)} B/s`;
+    } else if (bytesPerSec < 1024 * 1024) {
+        return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+    } else {
+        return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+    }
 }
 
 // ── ComfyUI Helpers ───────────────────────────────────────────────────────────

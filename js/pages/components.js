@@ -8,6 +8,7 @@
 
 import { state } from '../state.js';
 import { Events } from '../events.js';
+import { Storage } from '../core/storage.js';
 
 // Primitives
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
@@ -60,7 +61,7 @@ export async function initComponentsPage() {
     const searchInput = document.getElementById('comp-search');
 
     // Restore debug state
-    if (localStorage.getItem('mpi_comp_debug') === 'true') {
+    if (Storage.getCompDebug()) {
         debugToggle.checked = true;
         document.body.classList.add('comp-debug');
     }
@@ -68,7 +69,7 @@ export async function initComponentsPage() {
 
     debugToggle.addEventListener('change', (e) => {
         document.body.classList.toggle('comp-debug', e.target.checked);
-        localStorage.setItem('mpi_comp_debug', e.target.checked);
+        Storage.setCompDebug(e.target.checked);
     });
 
     searchInput.addEventListener('input', (e) => filterComponents(e.target.value.toLowerCase().trim()));

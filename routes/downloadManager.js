@@ -516,4 +516,37 @@ function broadcastEngineEvent(event, data) {
     }
 }
 
-module.exports = { router, cancelAllDownloads, broadcastEngineEvent };
+// ── Engine Download Pause/Resume ───────────────────────────────────────────────
+
+let _activeEngineDownloader = null;
+let _activeEngineDownloadId = null;
+
+function registerEngineDownload(downloader, downloadId) {
+    _activeEngineDownloader = downloader;
+    _activeEngineDownloadId = downloadId;
+}
+
+function clearEngineDownload() {
+    _activeEngineDownloader = null;
+    _activeEngineDownloadId = null;
+}
+
+router.post('/engine/pause', (req, res) => {
+    if (!_activeEngineDownloader) {
+        return res.status(404).json({ error: 'No active engine download to pause' });
+    }
+    _activeEngineDownloader.abort();
+    logger.info('engine', `Engine download paused: ${_activeEngineDownloadId}`);
+    res.json({ success: true });
+});
+
+router.post('/engine/resume', (req, res) => {
+    if (!_activeEngineDownloader) {
+        return res.status(404).json({ error: 'No paused engine download to resume' });
+    }
+    _activeEngineDownloader.resume();
+    logger.info('engine', `Engine download resumed: ${_activeEngineDownloadId}`);
+    res.json({ success: true });
+});
+
+module.exports = { router, cancelAllDownloads, broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload };

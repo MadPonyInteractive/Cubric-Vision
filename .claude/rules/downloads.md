@@ -1,0 +1,108 @@
+# Download Manager Rules
+
+> **AI INSTRUCTION:** All model downloads, uninstalls, and engine download pause/resume must go through the download manager. Never bypass it with raw `fetch` or shell `curl`.
+
+## Sub-Agent Briefing
+> Copy this section verbatim into any sub-agent prompt that involves model downloads, uninstalls, or engine downloads.
+
+**Frontend entry point:** `js/services/downloadService.js` — a singleton. Always use `downloadService.start/pause/resume/cancel/uninstall()`, never raw `fetch` directly.
+
+**Backend router:** `routes/downloadManager.js` — manages `ResumableDownloader` instances, job maps, and SSE broadcast. The `.part` file pattern is used for resume — never delete these manually.
+
+**SHA256 verification is automatic.** Each dep can declare a `sha256` in the registry. The backend verifies on completion and marks `failed` on mismatch. Do not bypass or override this.
+
+**`comfyNeedsRestart`****:** Backend sets this flag after custom node `requirements.txt` pip install. `ensureServerRunning()` in `comfyController.js` polls and restarts ComfyUI when this is true — do not skip this check.
+
+**State keys:** `state.downloadJobs[]` and `state.downloadQueueActive`. Components should read these, not duplicate them.
+
+**Events:** All download state transitions are broadcast via SSE to `downloadService._connectSSE()` and then re-emitted as `Events` (`download:started`, `download:progress`, `download:complete`, `download:failed`, `download:paused`, `download:resumed`, `download:cancelled`, `download:uninstalled`, `download:installing`). Components subscribe via `Events.on()`.
+
+**Shutdown:** `cancelAllDownloads()` is exported from `routes/downloadManager.js` and called on app shutdown to abort active downloads gracefully.
+
+## 🔴 CRITICAL "NEVER FORGET" RULES
+1. **Never Raw Fetch for Downloads:** Always use `downloadService.start/pause/resume/cancel/uninstall()`. Raw `fetch` bypasses the SSE sync and state management.
+2. **Never Delete \****`.part`**\*\* Files:** The resume mechanism depends on `.part` files written by `node-downloader-helper`. Deleting them breaks resume.
+3. **Never Skip \****`comfyNeedsRestart`**\*\*:** After custom node install, ComfyUI must be restarted. `ensureServerRunning()` handles this automatically — do not suppress or bypass it.
+4. **Always Use Events for Download UI:** Components must subscribe to `download:*` events via `Events.on()`, not poll `state.downloadJobs` directly. Store the unsubscribe function and call it on cleanup.
+
+---
+
+## 🛠️ Implementation Patterns
+
+### Starting a Download (Frontend)
+```javascript
+import { downloadService } from '../../services/downloadService.js';
+import { Events } from '../../events.js';
+
+setup: () => {
+    const unsub = Events.on('download:complete', ({ modelId }) => {
+        // reSyncInstalledModels() is called automatically by downloadService
+    });
+    el.destroy = () => unsub();
+    // ...
+    await downloadService.start(modelId, dependencies);
+}
+```
+
+### Pause / Resume / Cancel
+```javascript
+await downloadService.pause(modelId);
+await downloadService.resume(modelId);
+await downloadService.cancel(modelId);
+```
+
+### Monitoring Progress
+```javascript
+const unsub = Events.on('download:progress', ({ modelId, progress, speed }) => {
+    // progress is 0..1, speed is formatted string e.g. "2.5 MB/s"
+});
+```
+
+### Uninstalling
+```javascript
+await downloadService.uninstall(modelId, dependencies);
+// Emits download:uninstalled after backend confirms file removal
+```
+
+---
+
+## Job Data Shapes
+
+```typescript
+// DepJob (backend internal)
+interface DepJob {
+    id: string;
+    url: string;
+    localPath: string | null;
+    status: 'queued' | 'downloading' | 'complete' | 'failed' | 'paused' | 'cancelled';
+    downloadedBytes: number;
+    totalBytes: number;
+    refCount: number;
+    error: string | null;
+    sha256Expected: string | null;
+}
+
+// DownloadJob (state.downloadJobs[])
+interface DownloadJob {
+    id: string;
+    modelId: string;
+    status: 'queued' | 'downloading' | 'paused' | 'complete' | 'failed' | 'installing';
+    totalBytes: number;
+    downloadedBytes: number;
+    speed: string;       // formatted e.g. "2.5 MB/s"
+    progress: number;     // 0..1
+    deps: DepJob[];
+    installCustomNodes: boolean;
+    error?: string;
+}
+```
+
+---
+
+## Engine Download Pause/Resume
+
+The backend also exposes pause/resume for **engine** downloads (distinct from model downloads):
+- `POST /engine/pause` — pause active engine download
+- `POST /engine/resume` — resume paused engine download
+
+Managed via `registerEngineDownload()` / `clearEngineDownload()` and `_activeEngineDownloader` in `routes/downloadManager.js`.

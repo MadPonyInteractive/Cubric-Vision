@@ -12,9 +12,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, streamDownload } = require('./shared');
+const { SYS_DEPS_PATH } = require('./shared');
 const logger = require('./logger');
-const { broadcastEngineEvent } = require('./downloadManager');
+const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload } = require('./downloadManager');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -53,8 +53,11 @@ router.get('/engine/status', async (req, res) => {
  * @param {string} type - 'comfy' or 'llama' (default: 'comfy')
  */
 async function _runEngineDownload(type) {
+    logger.info('engine', `_runEngineDownload started for type: ${type}`);
     try {
+        logger.info('engine', `Reading system dependencies from ${SYS_DEPS_PATH}`);
         const config = await fs.readJson(SYS_DEPS_PATH);
+        logger.info('engine', `System dependencies loaded successfully`);
 
         let engineInfo, targetDir;
         if (type === 'llama') {
@@ -67,7 +70,7 @@ async function _runEngineDownload(type) {
 
         if (!engineInfo) throw new Error('Engine info not found in configs');
 
-        // ── 1. Download ────────────────────────────────────────────────────────
+        // ── 1. Download using ResumableDownloader ──────────────────────────────
         broadcastEngineEvent('engine:downloading', {
             progress: 0,
             downloadedBytes: 0,
@@ -78,12 +81,57 @@ async function _runEngineDownload(type) {
         const archivePath = path.join(targetDir, engineInfo.filename);
 
         logger.info('system', `Downloading engine: ${engineInfo.url}`);
-        if (!(await fs.pathExists(archivePath)) || (await fs.stat(archivePath)).size === 0) {
-            await streamDownload(engineInfo.url, archivePath);
-        }
+
+        // Use consistent downloadId for universal pause/resume endpoints
+        const downloadId = `engine-${type}`;
+
+        // Create a dep job for the ResumableDownloader
+        const depJob = {
+            id: downloadId,
+            url: engineInfo.url,
+            localPath: archivePath,
+            status: 'downloading',
+            downloadedBytes: 0,
+            totalBytes: 0,
+            refCount: 1,
+            error: null,
+            sha256Expected: null
+        };
+
+        // Use ResumableDownloader for resumable downloads
+        const downloader = new ResumableDownloader(depJob, archivePath);
+
+        downloader.onProgress = (downloaded, total, speed) => {
+            const progress = total > 0 ? Math.round((downloaded / total) * 100) : 0;
+            broadcastEngineEvent('engine:downloading', {
+                progress,
+                downloadedBytes: downloaded,
+                totalBytes: total,
+                speed
+            });
+        };
+
+        // Ensure downloader is initialized and bind events
+        await downloader._ensureDownloader();
+
+        // Register downloader with downloadManager for pause/resume support
+        registerEngineDownload(downloader, downloadId);
+
+        // Wait for download to complete
+        await new Promise((resolve, reject) => {
+            downloader._downloader.on('end', () => {
+                clearEngineDownload();
+                resolve();
+            });
+            downloader._downloader.on('error', (err) => {
+                clearEngineDownload();
+                reject(err);
+            });
+            downloader._downloader.start();
+        });
 
         // ── 2. Extract ─────────────────────────────────────────────────────────
-        broadcastEngineEvent('engine:extracting', { status: 'extracting' });
+        broadcastEngineEvent('engine:extracting', { status: 'extracting', progress: 0 });
         logger.info('system', 'Extracting engine archive...');
 
         const sevenBin = require('7zip-bin');
@@ -91,6 +139,16 @@ async function _runEngineDownload(type) {
         const myStream = extractFull(archivePath, targetDir, { $bin: sevenBin.path7za });
 
         await new Promise((resolve, reject) => {
+            myStream.on('data', (data) => {
+                // Emit extraction progress events
+                if (data && data.status) {
+                    broadcastEngineEvent('engine:extracting', {
+                        status: 'extracting',
+                        file: data.file || '',
+                        progress: 0
+                    });
+                }
+            });
             myStream.on('end', resolve);
             myStream.on('error', reject);
         });
@@ -181,9 +239,13 @@ async function _runEngineDownload(type) {
 }
 
 router.post('/engine/download', async (req, res) => {
+    const engineType = req.query.type || 'comfy';
+    logger.info('engine', `Download request received for type: ${engineType}`);
+
     res.json({ success: true, status: 'started' }); // respond immediately — NEVER block
 
-    _runEngineDownload(req.query.type || 'comfy').catch(e => {
+    logger.info('engine', `Starting async engine download for type: ${engineType}`);
+    _runEngineDownload(engineType).catch(e => {
         logger.error('engine', 'Engine download failed', e);
         broadcastEngineEvent('engine:error', { error: e.message });
     });

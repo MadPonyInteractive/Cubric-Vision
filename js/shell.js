@@ -9,6 +9,7 @@ import { onNavigate, PAGE_LANDING } from './router.js';
 import { syncModelInstalled } from './data/modelRegistry.js';
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
+import { Storage, Session } from './core/storage.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -101,8 +102,8 @@ export async function initShell() {
   onNavigate((page, params) => {
     // Dev Mode Persistence
     if (APP_CONFIG.test_styles) {
-      sessionStorage.setItem('mpi_dev_page', page);
-      sessionStorage.setItem('mpi_dev_params', JSON.stringify(params || {}));
+      Session.setDevPage(page);
+      Session.setDevParams(params || {});
     }
     handleNavigation(page, params);
   });
@@ -128,15 +129,13 @@ async function _bootApp() {
     const versionData = await versionRes.json();
 
     if (versionData.needsInstall) {
-      // Block app — show install UI, trigger download
+      // Block app — show install UI
+      // Component will trigger download when user clicks Install button
       _engineInstall.el.show('installing');
-      await fetch('/engine/download', { method: 'POST' });
-      // Component listens on SSE for completion, emits engine:ready when done
     } else if (versionData.needsUpgrade) {
-      // Block app — show upgrade UI, trigger upgrade
+      // Block app — show upgrade UI
+      // Component will trigger upgrade when shown
       _engineInstall.el.show('upgrading');
-      await fetch('/engine/upgrade', { method: 'POST' });
-      // Component listens on SSE for completion, emits engine:ready when done
     }
 
     // Wire engine:ready to hide install modal and continue boot
@@ -160,8 +159,8 @@ async function _bootApp() {
 
   // 3. Restore dev state if applicable (after engine check is done)
   if (APP_CONFIG.test_styles) {
-    const savedPage = sessionStorage.getItem('mpi_dev_page');
-    const savedParams = JSON.parse(sessionStorage.getItem('mpi_dev_params') || '{}');
+    const savedPage = Session.getDevPage();
+    const savedParams = Session.getDevParams() || {};
     handleNavigation(savedPage || PAGE_LANDING, savedParams);
   }
 
@@ -191,7 +190,7 @@ async function _bootApp() {
   });
 
   // ComfyUI Auto-start (optional)
-  if (localStorage.getItem('mpi_auto_start_comfy') === 'true') {
+  if (Storage.getAutoStartComfy()) {
     const { ComfyUIController } = await import('./services/comfyController.js');
     ComfyUIController.ensureServerRunning();
   }

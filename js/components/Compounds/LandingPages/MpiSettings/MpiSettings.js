@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
 import { state } from '../../../../state.js';
+import { Storage } from '../../../../core/storage.js';
 
 /**
  * MpiSettings — Settings overlay compound for the landing page.
@@ -80,38 +81,38 @@ export const MpiSettings = ComponentFactory.create({
         function _initFields(root) {
             const ollamaUrl = root.querySelector('#mpiSettingsOllamaUrl');
             if (ollamaUrl) {
-                ollamaUrl.value = localStorage.getItem('mpi_ollama_url') || 'http://localhost:8080';
+                ollamaUrl.value = Storage.getOllamaUrl() || 'http://localhost:8080';
                 ollamaUrl.addEventListener('change', () =>
-                    localStorage.setItem('mpi_ollama_url', ollamaUrl.value));
+                    Storage.setOllamaUrl(ollamaUrl.value));
             }
 
             const comfyUrl = root.querySelector('#mpiSettingsComfyUrl');
             if (comfyUrl) {
-                comfyUrl.value = localStorage.getItem('mpi_comfy_url') || 'http://localhost:8188';
+                comfyUrl.value = Storage.getComfyUrl() || 'http://localhost:8188';
                 comfyUrl.addEventListener('change', () =>
-                    localStorage.setItem('mpi_comfy_url', comfyUrl.value));
+                    Storage.setComfyUrl(comfyUrl.value));
             }
 
             const autoStart = root.querySelector('#mpiSettingsAutoStartComfy');
             if (autoStart) {
-                autoStart.checked = localStorage.getItem('mpi_auto_start_comfy') === 'true';
+                autoStart.checked = Storage.getAutoStartComfy();
                 autoStart.addEventListener('change', () =>
-                    localStorage.setItem('mpi_auto_start_comfy', autoStart.checked));
+                    Storage.setAutoStartComfy(autoStart.checked));
             }
 
             const comfyPath = root.querySelector('#mpiSettingsComfyRootPath');
             if (comfyPath) {
-                const saved = localStorage.getItem('mpi_comfy_root_path') || '';
+                const saved = Storage.getComfyRootPath() || '';
                 // Clear temp paths (legacy guard)
                 if (saved.toLowerCase().includes('temp') || saved.toLowerCase().includes('tmp')) {
-                    localStorage.removeItem('mpi_comfy_root_path');
+                    Storage.removeComfyRootPath();
                     comfyPath.value = '';
                     _setComfyPath('');
                 } else {
                     comfyPath.value = saved;
                 }
                 const sync = () => {
-                    if (comfyPath.value !== localStorage.getItem('mpi_comfy_root_path')) {
+                    if (comfyPath.value !== Storage.getComfyRootPath()) {
                         _setComfyPath(comfyPath.value);
                     }
                 };
@@ -138,7 +139,7 @@ export const MpiSettings = ComponentFactory.create({
         }
 
         async function _setComfyPath(path) {
-            localStorage.setItem('mpi_comfy_root_path', path);
+            Storage.setComfyRootPath(path);
             state.comfyRootPath = path;
             try {
                 const res = await fetch('/comfy/set-path', {

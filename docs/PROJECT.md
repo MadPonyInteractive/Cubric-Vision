@@ -22,7 +22,8 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 |---|---|---|
 | Workspaces | [workspaces.md](workspaces.md) | Landing, Gallery, Group History, routing |
 | Data Layer | [data.md](data.md) | modelRegistry, commandRegistry, projectModel |
-| ComfyUI Integration | [comfy.md](comfy.md) | comfyController, commandExecutor, workflow injection |
+| ComfyUI Integration | [comfy.md](comfy.md) | comfyController, commandExecutor, download manager, workflow injection |
+| Downloads | [comfy.md#download-manager](comfy.md#download-manager) | Resumable downloads, IPC/SSE, resume/pause/cancel, SHA256 verification |
 | Components | [components.md](components.md) | ComponentFactory, 3-tier hierarchy, overlay/hotkey rules |
 | Projects | [projects.md](projects.md) | Project JSON shape, media folder, portability |
 | Shell | [shell.md](shell.md) | navigation, overlayManager, hotkeyManager, shell.js |
