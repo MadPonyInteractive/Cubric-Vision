@@ -1,6 +1,6 @@
 # Master Plan: App Versioning, Project Integrity & Developer Tooling
 
-**Status:** Complete — 3 implementation plans written, ready for execution in separate sessions
+**Status:** Complete — 4 implementation plans written, ready for execution in separate sessions
 **Created:** 2026-04-16
 **Session goal:** Produce Plan A, Plan B, Plan C as separate, executable plan files
 
@@ -12,7 +12,8 @@ Three interconnected systems, implemented in order:
 
 | Plan | System | Depends On |
 |---|---|---|
-| **Plan A** | App Versioning (version constants + operation registry) | Nothing |
+| **Plan D** | Engine Provisioning (first-run install modal + version upgrade + model safety) | Nothing — implement first |
+| **Plan A** | App Versioning (version constants + operation registry) | Plan D (engine must exist) |
 | **Plan B** | Project Integrity (schema migration + file reconciliation + `.meta/` as source of truth) | Plan A (SCHEMA_VERSION) |
 | **Plan C** | Developer Tooling pre-plan (version bump agent/command + pre-release tests) | Plans A + B complete |
 
@@ -84,12 +85,12 @@ Three interconnected systems, implemented in order:
 
 ---
 
-## Plan Files
+## Plan Files (execution order)
 
-1. `docs/plans/2026-04-16-plan-a-app-versioning.md` ← 3 new files, nothing modified
-2. `docs/plans/2026-04-16-plan-b-project-integrity.md` ← core structural change
-3. `docs/plans/2026-04-16-plan-c-developer-tooling-preplan.md` ← scaffold only, deferred
-4. `docs/plans/2026-04-16-plan-d-engine-provisioning.md` ← engine install + upgrade ← TO BE WRITTEN
+1. `docs/plans/2026-04-16-plan-d-engine-provisioning.md` ← implement FIRST
+2. `docs/plans/2026-04-16-plan-a-app-versioning.md` ← 3 new files, nothing modified
+3. `docs/plans/2026-04-16-plan-b-project-integrity.md` ← core structural change
+4. `docs/plans/2026-04-16-plan-c-developer-tooling-preplan.md` ← scaffold only, deferred
 
 Each is a standalone, executable plan with: context, exact file changes, code signatures, implementation steps, and verification.
 

@@ -294,6 +294,33 @@
  */
 
 /**
+ * @typedef {Object} MpiEngineInstallProps (Compound — js/components/Compounds/MpiEngineInstall)
+ * No props required — all state is managed imperatively and via SSE.
+ *
+ * Instance methods (on instance.el):
+ *   show(mode)              — 'installing' | 'upgrading' — portals and shows appropriate phase
+ *   hide()                  — removes portal, clears state
+ *   setProgress(data)       — { progress: 0–100, speed, downloadedBytes, totalBytes }
+ *   setStatus(text)         — update status message (e.g. 'Extracting...')
+ *   setError(message)       — show error message + retry button
+ *   destroy()               — cleanup SSE connection and portal
+ *
+ * Two-phase UI for first install:
+ *   Phase 1 (setup):        Models path picker + Browse button + Install button
+ *   Phase 2 (progress):     Progress bar + status text + speed/size info
+ *
+ * For upgrades:
+ *   Skips Phase 1, goes straight to Phase 2 with "models are safe" messaging
+ *
+ * SSE integration:
+ *   Connects to existing /comfy/downloads/stream and filters for engine:* events
+ *   Events: engine:downloading, engine:extracting, engine:patching, engine:complete, engine:error, engine:upgrade-status
+ *
+ * Emits (via Events bus):
+ *   'engine:ready' — when download/extract/patch complete (triggers shell.js boot continuation)
+ */
+
+/**
  * @typedef {Object} MpiInputProps
  * @property {'text'|'email'|'password'|'number'|'textarea'} [type='text'] - Input type
  * @property {string} [placeholder=''] - Placeholder text

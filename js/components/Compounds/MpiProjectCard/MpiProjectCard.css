@@ -37,12 +37,17 @@
     height: 100%;
     object-fit: cover;
     opacity: 0.4;
-    transition: opacity var(--transition), transform 0.5s ease;
+    transform: scale(1.15) translateZ(0);
+    transform-origin: center center;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+    image-rendering: -webkit-optimize-contrast;
+    transition: opacity var(--transition), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mpi-project-card:hover .mpi-project-card__media {
     opacity: 0.7;
-    transform: scale(1.05);
+    transform: scale(1) translateZ(0);
 }
 
 .mpi-project-card__icon-wrap {
@@ -58,17 +63,10 @@
     box-shadow: 0 0 30px var(--bg-recessed);
     backdrop-filter: blur(8px);
     border: 1px solid var(--border);
-    transition: transform var(--transition), background var(--transition);
-}
-
-.mpi-project-card:hover .mpi-project-card__icon-wrap {
-    transform: scale(1.1);
-    background: var(--bg-recessed);
 }
 
 .mpi-project-card__icon-wrap .mpi-icon {
-    color: #ffb700;
-    /* Folder Yellow vibrancy */
+    color: var(--text-2);
     filter: drop-shadow(0 2px 4px var(--bg-recessed));
 }
 
@@ -88,9 +86,14 @@
 }
 
 .mpi-project-card__footer {
-    padding: 7px 11px;
-    background: var(--surface-2);
-    border-top: 1px solid var(--border-soft);
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    padding: 28px 11px 9px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.7) 45%, rgba(0, 0, 0, 0) 100%);
+    pointer-events: none;
 }
 
 .mpi-project-card__title {
@@ -105,4 +108,15 @@
     font-size: 0.85rem;
     color: var(--text-3);
     font-weight: 500;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-4px);
+    transition: max-height var(--transition), opacity var(--transition), transform var(--transition);
+}
+
+.mpi-project-card:hover .mpi-project-card__date {
+    max-height: 1.4rem;
+    opacity: 1;
+    transform: translateY(0);
 }

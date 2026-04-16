@@ -46,6 +46,7 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiModelsModal } from '../components/Blocks/MpiModelsModal/MpiModelsModal.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
+import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
@@ -1090,6 +1091,45 @@ function mountAll() {
             setTimeout(() => {
                 modal.el.hide();
             }, 3000);
+        });
+    });
+
+    // ── MpiEngineInstall (Compound) ────────────────────────────────────────────
+    mount('preview-engine-install-install', () => {
+        const slotEl = slot('preview-engine-install-install');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'download',
+            label: 'Show Install',
+            variant: 'primary',
+            info: 'Click to test the engine install modal'
+        });
+
+        const modal = MpiEngineInstall.mount(document.createElement('div'));
+
+        btn.on('click', () => {
+            modal.el.show('installing');
+        });
+    });
+
+    mount('preview-engine-install-upgrade', () => {
+        const slotEl = slot('preview-engine-install-upgrade');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'refresh',
+            label: 'Show Upgrade',
+            variant: 'secondary',
+            info: 'Click to test the engine upgrade modal'
+        });
+
+        const modal = MpiEngineInstall.mount(document.createElement('div'));
+
+        btn.on('click', () => {
+            modal.el.show('upgrading');
         });
     });
 
