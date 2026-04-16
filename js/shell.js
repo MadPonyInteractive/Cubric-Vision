@@ -15,6 +15,7 @@ import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMem
 import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
+import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiModelsModal } from './components/Blocks/MpiModelsModal/MpiModelsModal.js';
 import { PromptBoxService } from './shell/promptBoxService.js';
 import { getModelsByType } from './data/modelRegistry.js';
@@ -33,6 +34,7 @@ let _projectNameInstance = null;
 // ── Global dialog singletons ──────────────────────────────────────────────────
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
 const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
+const _engineInstall = MpiEngineInstall.mount(document.createElement('div'));
 const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
     icon: 'download',
     title: 'Model Manager',
@@ -114,14 +116,53 @@ export async function initShell() {
 
 /**
  * Restores session state in dev_mode or defaults to landing.
+ * Also checks engine provisioning status before allowing app to boot.
  */
 async function _bootApp() {
+  // 1. Navigate to landing immediately (will be blocked if engine install needed)
+  handleNavigation(PAGE_LANDING);
+
+  // 2. Check engine version before anything else
+  try {
+    const versionRes = await fetch('/engine/version-check');
+    const versionData = await versionRes.json();
+
+    if (versionData.needsInstall) {
+      // Block app — show install UI, trigger download
+      _engineInstall.el.show('installing');
+      await fetch('/engine/download', { method: 'POST' });
+      // Component listens on SSE for completion, emits engine:ready when done
+    } else if (versionData.needsUpgrade) {
+      // Block app — show upgrade UI, trigger upgrade
+      _engineInstall.el.show('upgrading');
+      await fetch('/engine/upgrade', { method: 'POST' });
+      // Component listens on SSE for completion, emits engine:ready when done
+    }
+
+    // Wire engine:ready to hide install modal and continue boot
+    await new Promise((resolve) => {
+      const handler = () => {
+        _engineInstall.el.hide();
+        Events.off('engine:ready', handler);
+        resolve();
+      };
+      Events.on('engine:ready', handler);
+
+      // If engine already current, resolve immediately
+      if (!versionData.needsInstall && !versionData.needsUpgrade) {
+        resolve();
+      }
+    });
+  } catch (err) {
+    console.error('[shell] Engine version check failed:', err);
+    // Proceed anyway — if engine is truly missing, comfy startup will fail
+  }
+
+  // 3. Restore dev state if applicable (after engine check is done)
   if (APP_CONFIG.test_styles) {
     const savedPage = sessionStorage.getItem('mpi_dev_page');
     const savedParams = JSON.parse(sessionStorage.getItem('mpi_dev_params') || '{}');
     handleNavigation(savedPage || PAGE_LANDING, savedParams);
-  } else {
-    handleNavigation(PAGE_LANDING);
   }
 
   // Wire startup modal to comfy engine events.

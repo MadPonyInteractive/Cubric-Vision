@@ -1,6 +1,7 @@
 {
   "engine": {
     "name": "ComfyUI Portable",
+    "version": "0.18.0",
     "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.18.0/ComfyUI_windows_portable_nvidia_cu126.7z",
     "filename": "ComfyUI_windows_portable.7z",
     "extractDir": "engine"

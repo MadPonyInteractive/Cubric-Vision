@@ -508,4 +508,12 @@ function cancelAllDownloads() {
     _broadcast('download:cancelled', { all: true });
 }
 
-module.exports = { router, cancelAllDownloads };
+// Named export for engine to broadcast on shared SSE
+function broadcastEngineEvent(event, data) {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    for (const res of _sseClients) {
+        try { res.write(payload); } catch { _sseClients.delete(res); }
+    }
+}
+
+module.exports = { router, cancelAllDownloads, broadcastEngineEvent };

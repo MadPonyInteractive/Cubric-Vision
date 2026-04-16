@@ -2,8 +2,8 @@
 
 **Status:** Ready for implementation
 **Created:** 2026-04-16
-**Depends on:** Nothing — implement first
-**Required by:** Plan B (needs SCHEMA_VERSION), Plan C (needs OPERATION_REGISTRY)
+**Depends on:** Plan D (engine must be installed and version file established first)
+**Required by:** Plan B (needs SCHEMA_VERSION), Plan C (needs OPERATION_REGISTRY), Plan D (routes/engine.js imports COMFY_VERSION once this exists)
 
 ---
 
@@ -73,21 +73,21 @@ New file. Adds versioning metadata on top of existing `commandRegistry.js` (whic
  */
 export const OPERATION_REGISTRY = {
   // Image operations
-  t2i:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  i2i:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  upscale:      { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  edit:         { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  detail:       { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  change:       { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  remove:       { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
+  t2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  i2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  upscale:      { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  edit:         { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
   // Video operations
-  t2v:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  i2v:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  extend:       { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
+  t2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  i2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  extend:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
   // Universal operations (not model-tied)
-  interpolate:  { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  videoUpscale: { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
-  autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
+  interpolate:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  videoUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+  autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
 };
 
 /**
@@ -171,11 +171,12 @@ export function getOperationsIntroducedIn(appVersion) {
 
 ## Implementation Steps
 
-- [ ] Confirm actual bundled ComfyUI version (ask Fabio before writing the file)
+- [ ] Confirm `COMFY_VERSION` matches the `version` field in `dev_configs/system_dependencies.json` (set by Plan D) — they must be identical
 - [ ] Create `js/core/appVersion.js` with confirmed COMFY_VERSION
 - [ ] Create `js/core/operationRegistry.js` — verify operation keys against `commandRegistry.js` (must match exactly)
 - [ ] Create `js/managers/versioningManager.js`
 - [ ] Cross-check: every key in `commandRegistry.js` (non-stub operations) must appear in `OPERATION_REGISTRY`
+- [ ] Update `routes/engine.js` (Plan D file) — replace `config.engine.version` read from `system_dependencies.json` with import of `COMFY_VERSION` from `js/core/appVersion.js`. The JSON field remains for the Python pre-release test script (Plan C) which can't import ES modules.
 
 ---
 
@@ -188,7 +189,7 @@ import { isOperationKnown, getOperationMeta } from './js/core/operationRegistry.
 import { compareSemVer } from './js/managers/versioningManager.js';
 
 // Should all pass:
-console.assert(APP_VERSION === '1.0.0');
+console.assert(APP_VERSION === '0.0.1');
 console.assert(SCHEMA_VERSION === 1);
 console.assert(isOperationKnown('t2i') === true);
 console.assert(isOperationKnown('fakeOp') === false);
