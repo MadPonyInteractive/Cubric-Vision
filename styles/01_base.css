@@ -3,6 +3,32 @@
    Design tokens · Reset · Utilities · Animations
 ═══════════════════════════════════════════════════════════════ */
 
+/* ── Local Fonts ──────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Fira Code';
+  src: url('../assets/fonts/FiraCode-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Fira Code';
+  src: url('../assets/fonts/FiraCode-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    Mpi AI Suite — styles.css
    Design system + App shell + Landing page + All tool/component styles
@@ -65,8 +91,8 @@
   --radius-lg: 10px;
   --radius-xl: 16px;
 
-  --font-main: 'Inter', sans-serif;
-  --font-display: 'Inter', sans-serif;
+  --font-main: 'JetBrains Mono', monospace;
+  --font-display: 'Fira Code', monospace;
 
   --bg-recessed: rgba(20, 20, 20, 0.2);
   --bg-modal: rgb(19 15 20 / 91%);

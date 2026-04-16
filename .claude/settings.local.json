@@ -164,7 +164,12 @@
       "Bash(cp:*)",
       "Bash(sleep:*)",
       "Bash(cat:*)",
-      "Bash(EOF:*)"
+      "Bash(EOF:*)",
+      "Bash(grep:*)",
+      "Bash(uipro:*)",
+      "Bash(python3:*)",
+      "Bash(which:*)",
+      "Bash(python:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

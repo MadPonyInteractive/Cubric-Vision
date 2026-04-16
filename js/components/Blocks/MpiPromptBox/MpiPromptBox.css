@@ -2,16 +2,18 @@
 .mpi-prompt-box {
     display: flex;
     flex-direction: column;
-    width: 100%;
     background: var(--surface-glass);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border: 1px solid var(--neon-electric);
+    border-radius: var(--radius-xl);
     padding: 1rem;
     transition: all var(--transition);
-    position: relative;
+    position: fixed;
     box-sizing: border-box;
     overflow: hidden;
     backdrop-filter: blur(12px);
+    bottom: 36px;
+    left: 50%;
+    transform: translate(-50%);
     -webkit-backdrop-filter: blur(12px);
 }
 

@@ -18,7 +18,7 @@ This plan creates that foundation: three new files in `js/core/` and `js/manager
 ## Critical Files to Read Before Implementing
 
 | File | Why |
-|---|---|
+| --- | --- |
 | `js/data/commandRegistry.js` | Source of all operation keys — cross-check OPERATION_REGISTRY |
 | `js/data/modelConstants/models.js` | Shows which ops are model-tied |
 | `js/data/modelConstants/universal_workflows.js` | Shows which ops are universal |
@@ -33,10 +33,10 @@ New file. No imports needed. Single source of truth for all release version cons
 // js/core/appVersion.js
 
 /** Semantic version of the MpiAiSuite application. Bump on every release. */
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '0.0.1';
 
 /** ComfyUI commit/tag bundled with this app version. Never changes mid-release. */
-export const COMFY_VERSION = '0.3.7';
+export const COMFY_VERSION = '0.18.0';
 
 /**
  * Project schema version (integer). Increment whenever project.json structure changes
@@ -56,7 +56,7 @@ export const SCHEMA_VERSION = 1;
 
 New file. Adds versioning metadata on top of existing `commandRegistry.js` (which handles UI) and `modelRegistry.js` (which handles workflow resolution). Does NOT replace either.
 
-**All 13 current operations from `commandRegistry.js` must appear here.**
+**All 13 current operations from ****`commandRegistry.js`**** must appear here.**
 
 ```javascript
 // js/core/operationRegistry.js

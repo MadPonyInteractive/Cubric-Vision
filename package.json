@@ -23,6 +23,8 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "electron": "^41.0.3"
+    "electron": "^41.0.3",
+    "firacode": "^6.2.0",
+    "jetbrains-mono": "^1.0.6"
   }
 }

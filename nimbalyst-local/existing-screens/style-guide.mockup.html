@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPI AI Suite — Design System</title>
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           MPI Design System — Style Guide
+           Based on 01_base.css + artist-focused aesthetic
+        ═══════════════════════════════════════════════════════════════ */
+
+        :root {
+            /* Color Palette — Blue + Pink + Accents */
+            --primary: #55b3f1;           /* Cyan Blue */
+            --primary-dim: #7198d1;       /* Muted Blue */
+            --primary-glow: rgba(77, 238, 234, 0.3);
+
+            --accent-pink: #d17ddb;       /* Electric Pink */
+            --accent-pink-soft: #aa8bcd;  /* Muted Purple */
+            --accent-glow: rgba(182, 120, 255, 0.35);
+
+            --accent-cyan: #4deeea;       /* Neon Cyan */
+            --accent-success: #2ef093;    /* Soft Green */
+            --accent-warning: #f0c36b;    /* Golden Yellow */
+
+            /* Dark Background (middle ground) */
+            --bg-dark: #3c2d38;           /* Deep maroon-dark */
+            --bg-elevated: #425462f7;     /* Slate elevated */
+            --bg-glass: rgba(11, 12, 16, 0.2);
+
+            /* Text */
+            --text-primary: #f8f8f2;      /* Light off-white */
+            --text-secondary: #a1a1aa;    /* Muted gray */
+            --text-tertiary: #71717a;     /* Dark gray */
+
+            /* Borders & Glass */
+            --border-light: rgba(255, 255, 255, 0.1);
+            --border-lighter: rgba(255, 255, 255, 0.04);
+
+            /* Typography */
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+            /* Spacing & Sizing */
+            --radius-sm: 4px;
+            --radius: 6px;
+            --radius-lg: 10px;
+            --radius-xl: 16px;
+
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background:
+                radial-gradient(ellipse at 50% -20%, rgba(182, 120, 255, 0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 15% 50%, rgba(77, 238, 234, 0.06) 0%, transparent 40%),
+                var(--bg-dark);
+            background-color: var(--bg-dark);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        /* ─── Typography ─────────────────────────────────────────────────── */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        /* ─── Sections ────────────────────────────────────────────────────── */
+        .section {
+            margin-bottom: 56px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 28px;
+            background: var(--accent-pink);
+            border-radius: var(--radius);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* ─── Color Swatches ─────────────────────────────────────────────── */
+        .color-swatch {
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-light);
+        }
+
+        .swatch {
+            height: 100px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-light);
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        .swatch:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .swatch-primary { background: var(--primary); }
+        .swatch-accent-pink { background: var(--accent-pink); }
+        .swatch-accent-cyan { background: var(--accent-cyan); }
+        .swatch-accent-success { background: var(--accent-success); }
+        .swatch-accent-warning { background: var(--accent-warning); }
+        .swatch-text-primary { background: var(--text-primary); }
+
+        .swatch-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .swatch-value {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            font-family: 'Courier New', monospace;
+            margin-top: 4px;
+        }
+
+        /* ─── Button Styles ──────────────────────────────────────────────── */
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-decoration: none;
+        }
+
+        .button-primary {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .button-primary:hover {
+            background: var(--primary-dim);
+            box-shadow: 0 8px 24px rgba(85, 179, 241, 0.3);
+        }
+
+        .button-accent {
+            background: var(--accent-pink);
+            color: #fff;
+        }
+
+        .button-accent:hover {
+            background: var(--accent-pink-soft);
+            box-shadow: 0 8px 24px rgba(209, 125, 219, 0.3);
+        }
+
+        .button-ghost {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+        }
+
+        .button-ghost:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary);
+        }
+
+        /* ─── Glass Cards ─────────────────────────────────────────────────── */
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: all var(--transition);
+        }
+
+        .glass-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border-color: var(--primary);
+            box-shadow: 0 8px 32px rgba(85, 179, 241, 0.15);
+        }
+
+        .glass-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .glass-card h3 {
+            margin: 0 0 8px 0;
+        }
+
+        .glass-card p {
+            margin: 0;
+        }
+
+        /* ─── Icon Grid ───────────────────────────────────────────────────── */
+        .icon-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            font-size: 32px;
+        }
+
+        /* ─── Component Demo ──────────────────────────────────────────────── */
+        .component-demo {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+        }
+
+        .demo-label {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 12px;
+        }
+
+        /* ─── Responsive ──────────────────────────────────────────────────── */
+        @media (max-width: 1024px) {
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.75rem;
+            }
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 48px;">
+            <h1>MPI AI Suite</h1>
+            <p class="subtitle">Design System & Style Guide</p>
+        </div>
+
+        <!-- Colors Section -->
+        <div class="section">
+            <div class="section-title">
+                <h2 style="margin: 0;">Color Palette</h2>
+            </div>
+
+            <h3>Primary Colors</h3>
+            <div class="grid-2">
+                <div class="color-swatch">
+                    <div class="swatch swatch-primary"></div>
+                    <div class="swatch-label">Primary Blue</div>
+                    <div class="swatch-value">#55b3f1</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="swatch swatch-accent-pink"></div>
+                    <div class="swatch-label">Accent Pink</div>
+                    <div class="swatch-value">#d17ddb</div>
+                </div>
+            </div>
+
+            <h3>Accent Colors</h3>
+            <div class="grid-4">
+                <div class="color-swatch">
+                    <div class="swatch swatch-accent-cyan"></div>
+                    <div class="swatch-label">Cyan</div>
+                    <div class="swatch-value">#4deeea</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="swatch swatch-accent-success"></div>
+                    <div class="swatch-label">Success</div>
+                    <div class="swatch-value">#2ef093</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="swatch swatch-accent-warning"></div>
+                    <div class="swatch-label">Warning</div>
+                    <div class="swatch-value">#f0c36b</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="swatch swatch-text-primary"></div>
+                    <div class="swatch-label">Text Primary</div>
+                    <div class="swatch-value">#f8f8f2</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typography Section -->
+        <div class="section">
+            <div class="section-title">
+                <h2 style="margin: 0;">Typography</h2>
+            </div>
+
+            <div class="glass-card">
+                <h3>Typeface</h3>
+                <p><strong>Family:</strong> Inter (sans-serif)</p>
+                <p><strong>Weights:</strong> 400 (Regular), 600 (Semibold), 700 (Bold)</p>
+                <p><strong>Usage:</strong> All headings and body text</p>
+            </div>
+
+            <div style="margin-top: 24px;">
+                <h3>Heading Scales</h3>
+                <div style="display: grid; gap: 16px;">
+                    <div>
+                        <p style="font-size: 2.5rem; margin: 0; font-weight: 700;">Heading 1 — 2.5rem</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 1.5rem; margin: 0; font-weight: 600;">Heading 2 — 1.5rem</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 1.125rem; margin: 0; font-weight: 600;">Heading 3 — 1.125rem</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 1rem; margin: 0;">Body — 1rem</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Section -->
+        <div class="section">
+            <div class="section-title">
+                <h2 style="margin: 0;">Interactive Elements</h2>
+            </div>
+
+            <h3>Button Variants</h3>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+                <button class="button button-primary">Primary</button>
+                <button class="button button-accent">Accent</button>
+                <button class="button button-ghost">Ghost</button>
+            </div>
+
+            <h3>Component Cards</h3>
+            <div class="grid-3">
+                <div class="component-demo">
+                    <span style="font-size: 24px;">▢</span>
+                    <div class="demo-label">Button</div>
+                </div>
+                <div class="component-demo">
+                    <span style="font-size: 24px;">⚙</span>
+                    <div class="demo-label">Input</div>
+                </div>
+                <div class="component-demo">
+                    <span style="font-size: 24px;">▲</span>
+                    <div class="demo-label">Dropdown</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Glass Components -->
+        <div class="section">
+            <div class="section-title">
+                <h2 style="margin: 0;">Glass Components</h2>
+            </div>
+
+            <div class="grid-2">
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <h3>Project Card</h3>
+                        <span style="color: var(--primary);">→</span>
+                    </div>
+                    <p>Interactive glass cards with hover effects and smooth transitions.</p>
+                </div>
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <h3>Media Display</h3>
+                        <span style="color: var(--accent-pink);">★</span>
+                    </div>
+                    <p>Showcase images and videos with glass overlays and gradient accents.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid System -->
+        <div class="section">
+            <div class="section-title">
+                <h2 style="margin: 0;">Spacing & Radius</h2>
+            </div>
+
+            <div class="glass-card">
+                <h3>Border Radius</h3>
+                <p><code>--radius-sm: 4px</code> • <code>--radius: 6px</code> • <code>--radius-lg: 10px</code> • <code>--radius-xl: 16px</code></p>
+            </div>
+
+            <div class="glass-card" style="margin-top: 16px;">
+                <h3>Transitions</h3>
+                <p><code>--transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1)</code></p>
+                <p style="margin: 0; color: var(--text-tertiary); font-size: 0.875rem;">Apply to color, background, box-shadow, transform for smooth interactions.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
