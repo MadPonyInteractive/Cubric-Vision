@@ -67,12 +67,29 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Persist helper ──────────────────────────────────────────────────────
         function _persistGroups() {
             if (!state.currentProject) return;
+
+            // Serialize history as UUID strings only (per Plan B: history in project.json contains only IDs)
+            // In-memory state.currentProject keeps full objects for components; this function serializes for persistence
+            const toSave = {
+                ...state.currentProject,
+                itemGroups: state.currentProject.itemGroups.map(g => ({
+                    id: g.id,
+                    type: g.type,
+                    name: g.name,
+                    createdAt: g.createdAt,
+                    selectedIndex: g.selectedIndex,
+                    open: g.open,
+                    favourite: g.favourite,
+                    history: g.history.map(item => (typeof item === 'string' ? item : item.id)),
+                })),
+            };
+
             fetch('/update-project', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({
                     folderPath: state.currentProject.folderPath,
-                    updates:    { itemGroups: state.currentProject.itemGroups },
+                    updates:    { itemGroups: toSave.itemGroups },
                 }),
             }).catch(err => clientLogger.warn('MpiGalleryBlock', 'update-project failed:', err));
         }
