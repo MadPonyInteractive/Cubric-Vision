@@ -433,18 +433,21 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                     if (state.currentProject?.folderPath) {
                         try {
+                            const itemId = crypto.randomUUID();
                             const res = await fetch('/project/save-generation', {
                                 method:  'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body:    JSON.stringify({
                                     folderPath:   state.currentProject.folderPath,
                                     comfyViewUrl: urls[0],
+                                    itemId,
                                     operation,
                                     meta: {
                                         prompt:         positive,
                                         negativePrompt: negative,
                                         modelId:        activeModel.id,
                                     },
+                                    pixelDimensions: { w: 0, h: 0 },
                                 }),
                             });
                             if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
