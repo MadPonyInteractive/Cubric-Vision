@@ -171,7 +171,17 @@
       "Bash(which:*)",
       "Bash(python:*)",
       "Bash(pip:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(notebooklm:*)",
+      "Bash(cmd:*)",
+      "Bash(process.exit:*)",
+      "Bash(res.json:*)",
+      "Bash(glob:*)",
+      "Bash(try:*)",
+      "Bash(await:*)",
+      "Bash(res.status:*)",
+      "Bash(source:*)",
+      "Bash(Overlays.request:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
