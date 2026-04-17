@@ -517,10 +517,14 @@ router.post('/project/save-generation', async (req, res) => {
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
 
+        // Normalize path to use backslashes on Windows
+        const normalizedFolderPath = path.normalize(folderPath);
+        logger.info('project', `[save-generation] normalized folderPath: ${normalizedFolderPath} (original: ${folderPath})`);
+
         const id = itemId || uuidv4();
         logger.info('project', `[save-generation] using id: ${id}`);
 
-        const mediaDir = path.join(folderPath, 'Media');
+        const mediaDir = path.join(normalizedFolderPath, 'Media');
         const metaDir  = path.join(mediaDir, '.meta');
         logger.info('project', `[save-generation] ensuring metaDir: ${metaDir}`);
         logger.info('project', `[save-generation] mediaDir exists: ${await fs.pathExists(mediaDir)}`);
@@ -736,7 +740,8 @@ router.get('/load-meta', (req, res) => {
     const { id, folderPath } = req.query;
     if (!id || !folderPath) return res.status(400).json({ error: 'Missing params' });
 
-    const metaPath = path.join(folderPath, 'Media', '.meta', `${id}.json`);
+    const normalizedFolderPath = path.normalize(folderPath);
+    const metaPath = path.join(normalizedFolderPath, 'Media', '.meta', `${id}.json`);
     if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'Not found' });
 
     try {
