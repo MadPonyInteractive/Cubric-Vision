@@ -207,7 +207,6 @@ export function initShaderBackground() {
         canvas.classList.remove('hide');
         startTime = performance.now();
         render(startTime);
-        console.log('[shader] Background started');
     } else {
         // If already running but hidden, just unhide it
         canvas.classList.remove('hide');
@@ -224,6 +223,4 @@ export function stopShaderBackground() {
     }
     const canvas = document.getElementById('shader-background');
     if (canvas) canvas.classList.add('hide');
-    
-    console.log('[shader] Background stopped');
 }

@@ -30,10 +30,6 @@ export function bindWindowControls() {
 
   const isBrowser = !ipcRenderer;
 
-  if (isBrowser) {
-    console.log('[shell/windowControls] Browser Mode: Window buttons disabled.');
-  }
-
   if (btnMin) btnMin.addEventListener('click', () => {
     if (ipcRenderer) ipcRenderer.send('window-minimize');
   });

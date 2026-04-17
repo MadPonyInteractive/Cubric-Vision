@@ -38,6 +38,49 @@ import {
     updateGroupInProject,
 } from '../../../data/projectModel.js';
 
+/**
+ * Hydrate gallery groups: convert UUID strings in history to full item objects.
+ * Fetches meta files for any UUIDs found in group histories.
+ */
+async function _hydrateGalleryGroups(groups, folderPath) {
+    if (!folderPath) return groups;
+
+    const hydratedGroups = [];
+    for (const group of groups) {
+        const hydratedHistory = [];
+        let needsHydration = false;
+
+        for (const item of (group.history || [])) {
+            if (typeof item === 'string') {
+                // It's a UUID, fetch the meta file
+                needsHydration = true;
+                try {
+                    const url = `/load-meta?id=${encodeURIComponent(item)}&folderPath=${encodeURIComponent(folderPath)}`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const meta = await res.json();
+                        hydratedHistory.push(meta);
+                    } else {
+                        hydratedHistory.push(item); // Keep UUID if fetch fails
+                    }
+                } catch {
+                    hydratedHistory.push(item);
+                }
+            } else {
+                // Already a full object
+                hydratedHistory.push(item);
+            }
+        }
+
+        if (needsHydration) {
+            hydratedGroups.push({ ...group, history: hydratedHistory });
+        } else {
+            hydratedGroups.push(group);
+        }
+    }
+    return hydratedGroups;
+}
+
 export const MpiGalleryBlock = ComponentFactory.create({
     name: 'MpiGalleryBlock',
     css: ['js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css'],
@@ -45,12 +88,42 @@ export const MpiGalleryBlock = ComponentFactory.create({
     template: () => `<div class="mpi-gallery-block"></div>`,
 
     setup: (el, props, emit) => {
-        const groups = state.currentProject?.itemGroups || [];
+        let groups = state.currentProject?.itemGroups || [];
+        const folderPath = state.currentProject?.folderPath;
+
+        // Hydrate any UUID strings to full items (async, will update grid when done)
+        if (folderPath && groups.some(g => g.history?.some(item => typeof item === 'string'))) {
+            _hydrateGalleryGroups(groups, folderPath).then(hydratedGroups => {
+                groups = hydratedGroups;
+                grid.el.setGroups(groups);
+            }).catch(() => {
+                // Hydration failed, continue with UUIDs
+            });
+        }
+
         const grid   = MpiGalleryGrid.mount(el, { groups });
 
         // ── Selection bar (mounted in grid's footer slot) ────────────────────────
         const selectionSlot = grid.el.querySelector('.mpi-gallery-grid__selectionbar-slot');
         const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
+
+        // ── Watch for project changes and re-hydrate ────────────────────────────
+        const _unsubProjectChange = Events.on('state:changed', ({ key, value }) => {
+            if (key === 'currentProject' && value?.folderPath) {
+                const newGroups = value.itemGroups || [];
+                const needsHydration = newGroups.some(g => g.history?.some(item => typeof item === 'string'));
+                if (needsHydration) {
+                    _hydrateGalleryGroups(newGroups, value.folderPath).then(hydratedGroups => {
+                        grid.el.setGroups(hydratedGroups);
+                    }).catch(() => {
+                        // Hydration failed, show UUIDs
+                        grid.el.setGroups(newGroups);
+                    });
+                } else {
+                    grid.el.setGroups(newGroups);
+                }
+            }
+        });
 
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
@@ -483,7 +556,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         : displayName;
 
                     // Create full item object for in-memory use (displayed immediately in grid)
-                    // But only the itemId string will be persisted to project.json
+                    // Full items stay in memory; _persistGroups() converts to UUIDs when saving to disk
                     const item = createImageItem({
                         id:             itemId,
                         filePath,
@@ -493,10 +566,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         negativePrompt: negative,
                     });
 
-                    // Append only the itemId string to history for persistence
-                    // Components receive the full item from reconciliation on project load
+                    // Keep full item in memory (UUID conversion happens in _persistGroups)
                     let group = createItemGroup(cardType, { name: cardName });
-                    group = { ...group, history: [...group.history, itemId], selectedIndex: group.history.length };
+                    group = { ...group, history: [...group.history, item], selectedIndex: group.history.length };
 
                     if (state.currentProject) {
                         state.currentProject = addGroupToProject(state.currentProject, group);
@@ -718,6 +790,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // does not fire for _toolContainer.innerHTML = '' (grandchild mutation).
         const _unsubPageChange2 = Events.on('state:changed', ({ key, value }) => {
             if (key === 'currentPage' && value !== PAGE_GALLERY) {
+                _unsubProjectChange?.();
                 _unsubSetOp?.();
                 _unsubZeroInstalled?.();
                 _unsubModelsClosed?.();

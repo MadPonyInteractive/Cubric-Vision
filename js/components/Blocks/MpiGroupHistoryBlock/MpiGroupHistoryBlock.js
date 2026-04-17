@@ -37,6 +37,37 @@ function _resolveUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(p.replace(/\\/g, '/'))}`;
 }
 
+/**
+ * Convert UUID strings in history to full item objects by fetching their meta files.
+ * This handles the case where history is not yet hydrated when navigating to groupHistory.
+ */
+async function _hydrateGroupHistory(group, folderPath) {
+    const needsHydration = group.history.some(item => typeof item === 'string');
+    if (!needsHydration || !folderPath) return group;
+
+    const hydratedHistory = [];
+    for (const item of group.history) {
+        if (typeof item === 'string') {
+            // It's a UUID, fetch the meta file
+            try {
+                const url = `/load-meta?id=${encodeURIComponent(item)}&folderPath=${encodeURIComponent(folderPath)}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const meta = await res.json();
+                    hydratedHistory.push(meta);
+                } else {
+                    hydratedHistory.push(item); // Keep UUID if fetch fails
+                }
+            } catch {
+                hydratedHistory.push(item);
+            }
+        } else {
+            hydratedHistory.push(item);
+        }
+    }
+    return { ...group, history: hydratedHistory };
+}
+
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
     css: ['js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css'],
@@ -198,6 +229,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             history: _group.history,
             selectedIndex: _currentIdx,
         });
+
+        // Hydrate history if needed (async, will update components when done)
+        if (_group.history.some(item => typeof item === 'string') && state.currentProject?.folderPath) {
+            _hydrateGroupHistory(_group, state.currentProject.folderPath).then(hydratedGroup => {
+                _group = hydratedGroup;
+                // Update components with hydrated data
+                historyList.el.setGroups(_group.history);
+                canvasViewer.el.loadEntry(_group.history[_currentIdx] || _group.history[0], _currentIdx);
+            }).catch(() => {
+                // Hydration failed, continue with UUIDs
+            });
+        }
 
         // ── PromptBox via PromptBoxService ────────────────────────────────────
 

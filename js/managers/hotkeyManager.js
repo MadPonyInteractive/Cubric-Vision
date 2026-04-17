@@ -24,7 +24,6 @@ class HotkeyManager {
         /** @type {Map<string, Function|null>} single handler per key; null = removed but prev was registered */
         this._handlers = new Map();
         this._init();
-        console.log('[Hotkeys] Initialized Manager');
     }
 
     /**
@@ -50,7 +49,6 @@ class HotkeyManager {
         this.register('control+shift+i', () => {
             if (APP_CONFIG.dev_mode) {
                 if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
-                else console.log('[Hotkeys] Dev Tools shortcut — not in Electron.');
             }
         });
     }

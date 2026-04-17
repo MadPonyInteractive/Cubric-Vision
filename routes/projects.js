@@ -584,20 +584,47 @@ router.post('/project/save-generation', async (req, res) => {
         logger.info('project', `[save-generation] meta file written successfully to: ${metaPath}`);
         logger.info('project', `[save-generation] meta file exists after write: ${await fs.pathExists(metaPath)}`);
 
-        // Garbage-collect orphaned sidecars (both filename-based and UUID-based)
+        // Garbage-collect orphaned sidecars (skip the one we just wrote)
         try {
             const sidecars = await fs.readdir(metaDir);
             logger.info('project', `[save-generation] files in metaDir after write:`, sidecars);
             for (const sc of sidecars) {
                 if (!sc.endsWith('.json')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
-                // Determine the corresponding media file name
-                let mediaFile = baseName;
-                // UUID-based: the media file path is stored in the meta itself
-                // Filename-based: baseName matches the media filename
-                const mediaPath = path.join(mediaDir, mediaFile);
+
+                // Skip the meta file we just created
+                if (baseName === id) {
+                    logger.info('project', `[save-generation] skipping GC for newly created UUID: ${id}`);
+                    continue;
+                }
+
+                const metaFilePath = path.join(metaDir, sc);
+                let mediaPath = null;
+
+                // Try to read the meta file to get the actual media file path
+                try {
+                    const metaContent = await fs.readJson(metaFilePath);
+                    if (metaContent.filePath) {
+                        // filePath is like `/project-file?path=${encodeURIComponent(filePath)}`
+                        // Extract the actual file path
+                        const match = metaContent.filePath.match(/path=(.+)$/);
+                        if (match) {
+                            mediaPath = decodeURIComponent(match[1]);
+                        }
+                    }
+                } catch (_) {
+                    // If we can't read the meta file, treat it as orphaned
+                }
+
+                // If we couldn't determine the media path from meta, assume filename-based
+                if (!mediaPath) {
+                    mediaPath = path.join(mediaDir, baseName);
+                }
+
+                // Only delete if the referenced media file doesn't exist
                 if (!(await fs.pathExists(mediaPath))) {
-                    await fs.remove(path.join(metaDir, sc));
+                    logger.info('project', `[save-generation] GC: removing orphaned sidecar ${sc}`);
+                    await fs.remove(metaFilePath);
                 }
             }
         } catch (_) { /* GC failure is non-fatal */ }

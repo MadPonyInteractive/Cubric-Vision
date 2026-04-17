@@ -33,8 +33,6 @@ class OverlayManager {
 
         // Attach global Escape key listener via HotkeyManager
         Hotkeys.register('escape', () => this.tryCloseActive());
-        
-        console.log('[Overlays] Initialized Manager');
     }
 
     /**
@@ -47,12 +45,9 @@ class OverlayManager {
             return;
         }
 
-        console.log('[Overlays] request() called. _active exists?', !!this._active, 'Queue length:', this._queue.length);
         if (this._active && this._active !== instance) {
-            console.log('[Overlays] Adding to queue (active overlay exists)');
             this._queue.push(instance);
         } else {
-            console.log('[Overlays] Setting as active immediately');
             this._setActive(instance);
         }
     }
@@ -90,7 +85,6 @@ class OverlayManager {
      */
     tryCloseActive() {
         if (this._active) {
-            console.log('[Overlays] Closing active overlay via Hotkey');
             // Check if the component allows immediate closure
             // We follow the user request to "close immediately"
             if (typeof this._active.hide === 'function') {
@@ -125,10 +119,8 @@ class OverlayManager {
         Events.emit('ui:close-all-popups');
 
         try {
-            console.log('[Overlays] _setActive calling instance.show()');
             if (typeof instance.show === 'function') {
                 instance.show();
-                console.log('[Overlays] _setActive show() completed');
             }
         } catch (err) {
             console.error('[Overlays] Error showing overlay:', err);
