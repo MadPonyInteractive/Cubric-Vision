@@ -84,20 +84,34 @@ Make all targeted edits. Show summary. Offer to run scripts/pre_release_test.py.
 
 ## Tool 2: `scripts/pre_release_test.py`
 
-Python script — reads registry files, submits workflows to ComfyUI, compares output hashes against baselines. Does not edit any code.
+Python script — reads registry files, submits workflows to ComfyUI with injected parameters, compares output hashes against baselines. Does not edit any code.
 
 ### What it does:
 
-1. Reads `js/core/operationRegistry.js` to get all known operations
+1. Reads `operation_registry.json` to get all known operations
 2. Reads `js/data/modelConstants/models.js` to get workflow filenames per model/operation
-3. For each operation × model combination:
+3. **Injects resolution parameter** into all workflows:
+   - Image workflows: `--width 288 --height 288` (low quality, fast)
+   - Video workflows: `--width 256 --height 144 --num_frames 2` (extreme low quality, ~5 sec)
+   - Universal ops: same resolution override applied
+4. For each operation × model combination:
    - Loads the workflow JSON from `comfy_workflows/`
+   - **Injects resolution parameters** into sampler/output nodes
    - Submits to local ComfyUI (`http://localhost:8188`)
    - Waits for completion
-   - Hashes the output image (SHA-256)
+   - Hashes the output image/video (SHA-256)
    - Compares against `docs/workflows/baselines.json`
-4. Reports: PASS / FAIL / NEW (no baseline yet)
-5. Prompts developer: save new baselines? (y/n)
+5. Reports: PASS / FAIL / NEW (no baseline yet)
+6. Prompts developer: save new baselines? (y/n)
+
+### Workflow parameter injection:
+
+All ComfyUI workflows are treated identically — the test suite injects resolution parameters targeting standard node properties:
+- Sampler nodes: `steps`, `width`, `height`
+- Video output nodes: `num_frames`, `width`, `height`
+- Parameters are injected by node index or `_meta.title` match (consistent with app's strategy in `comfy_injection.md`)
+
+**Why this approach:** Validates operation correctness without waiting minutes for full-res video generation. Hashes are deterministic; if output changes, developer sees immediately.
 
 ### File structure:
 
@@ -110,6 +124,31 @@ docs/
     baselines.json        ← { "t2i:sdxl-realistic": { hash, appVersion, comfyVersion, date } }
 ```
 
+### `operation_registry.json` schema (new):
+
+Parallel JSON file kept in sync by the version-bump skill. Pre-release test reads this instead of parsing JS.
+
+```json
+{
+  "t2i": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "i2i": { ... },
+  "upscale": { ... },
+  "interpolate": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "autoMaskImg": { ... }
+}
+```
+
+**Sync rule:** Every time the version-bump skill edits `operationRegistry.js`, it must also update `operation_registry.json` to match.
+
+---
+
 ### `baselines.json` schema:
 
 ```json
@@ -118,11 +157,22 @@ docs/
     "hash": "sha256:abc123...",
     "appVersion": "1.0.0",
     "comfyVersion": "0.3.7",
-    "lastValidated": "2026-04-16T10:30:00Z"
+    "lastValidated": "2026-04-16T10:30:00Z",
+    "resolution": "144p"
   },
-  "upscale:sdxl-realistic": { ... }
+  "upscale:sdxl-realistic": { ... },
+  "interpolate": {
+    "hash": "sha256:def456...",
+    "appVersion": "1.0.0",
+    "comfyVersion": "0.3.7",
+    "lastValidated": "2026-04-16T10:30:00Z",
+    "resolution": "144p",
+    "universal": true
+  }
 }
 ```
+
+**Key field: `resolution`** — documents what resolution was used during baseline generation. Helps developers understand if a baseline needs re-validation after output quality changes.
 
 ---
 
@@ -145,6 +195,7 @@ Once the versioning and project integrity systems are live, create documentation
 - The in-memory vs on-disk distinction (full objects in state, UUID strings on disk)
 - How deletion works (app-side vs filesystem-side)
 - How uploaded items (no generation metadata) are handled
+- **Important:** In-memory state keeps **full item objects** with `filePath`. Only disk persistence uses UUID strings. `_persistGroups()` handles the conversion.
 
 ### CLAUDE.md additions (add to the Documentation Lookup section):
 
@@ -162,20 +213,78 @@ If you need to understand how project.json, .meta/ files, project load/reconcili
 
 ## Implementation Order (When Ready)
 
-1. Plans A + B are shipped and verified
-2. Create `docs/versioning.md`
-3. Create `docs/project-integrity.md`
-4. Add pointers to `CLAUDE.md`
-5. Write `scripts/comfy_client.py` — ComfyUI API wrapper
-6. Write `scripts/pre_release_test.py` — test runner
-7. Create `docs/workflows/baselines.json` (start with `{}`)
-8. Run against all current operations to populate baselines
-9. Write `.claude/skills/mpi/mpi-version-bump.md` skill file
+Plans A + B are **DONE** (2026-04-17). Ready to proceed.
+
+1. Create `docs/versioning.md`
+2. Create `docs/project-integrity.md`
+3. Add pointers to `CLAUDE.md`
+4. Create `operation_registry.json` (derivative of operationRegistry.js, kept in sync by version-bump skill)
+5. Create test fixtures directory: `tests/fixtures/` with sample images + video
+6. Write `scripts/comfy_client.py` — ComfyUI API wrapper (queue, poll, retrieve output)
+7. Write `scripts/pre_release_test.py` — test runner with resolution injection
+8. Create `docs/workflows/baselines.json` (start with `{}`)
+9. Run pre_release_test.py against all 13 current operations to populate baselines
+10. Write `.claude/skills/mpi/mpi-version-bump.md` skill file
 
 ---
 
-## Open Questions (Resolve When Plans A+B Are Done)
+## Implementation Notes (from Plan B)
 
-- How does `pre_release_test.py` read `OPERATION_REGISTRY` without a JS runtime? Options: (a) maintain a parallel `operation_registry.json` that the version bump skill keeps in sync, (b) call a small `node -e` snippet to serialize it, (c) parse the JS file with regex (workable for this flat structure)
-- Universal operations (no model) — need test fixtures (a sample image, a prompt). Define per operation type.
-- Video operations (`t2v`, `i2v`, `extend`) — generation is much slower. Skip by default, require `--include-video` flag?
+### Key Lesson: In-Memory State = Full Objects, Disk = UUIDs
+
+During Plan B implementation, a critical architectural insight emerged:
+
+- **In memory**: `state.currentProject.itemGroups` keeps **full item objects** (with `filePath`, `prompt`, etc.)
+- **On disk**: `project.json` stores only **UUID strings** in history arrays
+- **Conversion point**: `_persistGroups()` serializes to UUIDs when writing to disk
+
+**Do NOT** try to hydrate UUIDs to full items on navigation or state change. This creates complex, bug-prone code. Keep full items in memory always.
+
+The only exceptions:
+1. On project load: `reconcileAndHydrate()` populates full items from `.meta/` files
+2. Edge case in groupHistory: `_hydrateGroupHistory()` handles premature navigation before reconcile completes
+
+### Path Normalization
+
+Windows uses backslashes, client sends forward slashes. Always use `path.normalize()` on incoming folder paths in routes.
+
+### GC for UUID-Based Sidecars
+
+When garbage collecting orphaned sidecars, read the meta file to get the actual `filePath`, don't assume the UUID is the media filename.
+
+---
+
+## Open Questions — RESOLVED
+
+### Q1: How does `pre_release_test.py` read `OPERATION_REGISTRY`?
+**Decision: Option A — Maintain parallel `operation_registry.json`**
+- The version bump skill always keeps it in sync when edits are made
+- Python script reads the JSON (simpler, no Node runtime needed)
+- Single source of truth remains `operationRegistry.js`; JSON is derivative
+
+### Q2: Universal operations testing
+**Decision: ComfyUI-dependent for all; input fixtures per operation type**
+- **interpolate:** Requires a list of images (2+ frames) to interpolate between
+  - Test fixture: 2-frame placeholder sequence (very low res, ~16x16)
+- **videoUpscale:** Requires a video
+  - Test fixture: 1-second 24p video at low res (144p)
+- **autoMaskImg:** Requires an image
+  - Test fixture: Simple test image (low res, ~256x256)
+
+All three are ComfyUI workflows, so test approach is identical to model operations.
+
+**App-native tools (crop, etc.):**
+Not registered in `operationRegistry.js` or `commandRegistry.js` — they don't route through ComfyUI at all. These are client-side canvas operations (e.g., cropping, rotating). **Skip pre-release testing for these** — they're deterministic UI logic, not generation. Test them in the unit test suite instead.
+
+### Q3: Video operations timing
+**Decision: Low-resolution injection parameter**
+- Instead of skipping videos, add resolution override to all video workflows
+- Pre-release test uses **144p or 240p** (extreme low res) instead of default
+- Test still validates workflow correctness, just completes in seconds instead of minutes
+- Workflow filenames remain unchanged; resolution is an injected parameter (not a separate test workflow)
+- When developers run full validation, they can test at full resolution with `--full-quality` flag
+
+**Benefits:**
+- Validates all operations in every pre-release run (not skipping)
+- Catches integration bugs early (resolution-agnostic)
+- Still finishes in reasonable time (~2-3 min for all ops)

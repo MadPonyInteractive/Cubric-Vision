@@ -547,3 +547,106 @@ The existing `DELETE /project-media` route (~line 242) deletes `Media/.meta/<fil
 - During persistence, `group.history` in state is an array of full objects; on disk it must be UUID strings only — the serialization step in `_persistGroup()` is the critical conversion point
 - The v0→v1 migration writes `.meta/` files for legacy items. If an item has no meta file and cannot be written (permissions, missing fields), log and skip rather than crash
 - `uploaded: true` items have no generation metadata (prompt, seed, etc.) — their `.meta/` files still get written with whatever fields are available; missing fields default to null
+
+---
+
+## Implementation Deviations & Lessons Learned
+
+### 1. Windows Path Normalization (routes/projects.js)
+
+**Issue:** Client sends `folderPath` with forward slashes (e.g., "C:/AI/..."), but `path.join()` on Windows doesn't normalize these, causing `fs.readdir()` to return empty arrays even when files exist.
+
+**Fix:** Added `path.normalize()` to convert forward slashes to backslashes on Windows:
+
+```javascript
+// routes/projects.js line 521, 743
+const normalizedFolderPath = path.normalize(folderPath);
+```
+
+This ensures consistent path handling across Windows/Linux/macOS.
+
+### 2. Meta File GC Bug — UUID-Based Sidecars Were Being Deleted
+
+**Issue:** Meta files were created successfully but immediately deleted by the garbage collection logic.
+
+**Root Cause:** The GC checked if a file named `<UUID>` existed in the Media directory:
+```javascript
+const mediaPath = path.join(mediaDir, baseName); // UUID as filename!
+if (!(await fs.pathExists(mediaPath))) {
+    await fs.remove(metaFilePath); // Deleted because UUID != actual filename
+}
+```
+
+Since actual media files are named `t2i_001.png`, not the UUID, this check always failed and newly-created meta files were deleted.
+
+**Fix:** GC now reads the meta file to get the actual `filePath` and checks if that file exists:
+```javascript
+const metaContent = await fs.readJson(metaFilePath);
+if (metaContent.filePath) {
+    const match = metaContent.filePath.match(/path=(.+)$/);
+    if (match) mediaPath = decodeURIComponent(match[1]);
+}
+```
+
+Also skip GC for the UUID that was just created in the same request.
+
+### 3. In-Memory State vs Disk Persistence — The Critical Realization
+
+**Issue:** Multiple consecutive generations caused empty cards. Navigating away and back caused empty cards. Hydration patches were tried and didn't work.
+
+**Root Cause:** The architecture mixed in-memory representation with serialized format:
+- `state.currentProject.itemGroups` stored UUID strings (for disk)
+- `grid` display required full items with `filePath`
+- When state changed, full items were lost and only UUIDs remained
+
+**Wrong Approach Tried:** Various hydration patches that tried to convert UUIDs → full items on navigation or state change. This was complex, bug-prone, and fundamentally wrong.
+
+**Correct Fix:** Keep **full item objects** in `state.currentProject.itemGroups` during the session. Only convert to UUIDs when persisting to disk:
+
+```javascript
+// MpiGalleryBlock.js - generation handler
+group = { ...group, history: [...group.history, item] }; // Full item in memory!
+
+// _persistGroups() converts for disk:
+history: g.history.map(item => (typeof item === 'string' ? item : item.id))
+```
+
+This is simple, correct, and requires no hydration anywhere.
+
+### 4. MpiGroupHistoryBlock Async Hydration (for edge case)
+
+**When needed:** If user navigates to groupHistory before `reconcileAndHydrate()` runs on project open.
+
+**Implementation:** Added `_hydrateGroupHistory()` function that fetches meta files for UUID strings:
+
+```javascript
+async function _hydrateGroupHistory(group, folderPath) {
+    // Fetch meta files for UUID strings, return group with full items
+}
+```
+
+Called after component mount, updates components via `setGroups()` and `loadEntry()`.
+
+### 5. Console.log Cleanup
+
+Removed debug `console.log` statements from:
+- `js/managers/hotkeyManager.js`
+- `js/managers/overlayManager.js`
+- `js/components/Blocks/MpiModelsModal/MpiModelsModal.js`
+- `js/shell/windowControls.js`
+- `js/components/shaderBackground.js`
+
+---
+
+## Summary of Changes Made
+
+| File | Change |
+|------|--------|
+| `routes/projects.js` | Added `path.normalize()` for Windows; Fixed GC to read meta file for actual media path |
+| `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` | Keep full items in memory; `_persistGroups()` serializes to UUIDs |
+| `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` | Added `_hydrateGroupHistory()` for async hydration |
+| `js/managers/hotkeyManager.js` | Removed debug console.log |
+| `js/managers/overlayManager.js` | Removed debug console.log |
+| `js/components/Blocks/MpiModelsModal/MpiModelsModal.js` | Removed debug console.log |
+| `js/shell/windowControls.js` | Removed debug console.log |
+| `js/components/shaderBackground.js` | Removed debug console.log |
