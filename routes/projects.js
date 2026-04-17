@@ -513,13 +513,16 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
 router.post('/project/save-generation', async (req, res) => {
     try {
         const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, pixelDimensions } = req.body;
+        logger.info('project', '[save-generation] received request:', { folderPath, comfyViewUrl, itemId, operation });
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
 
         const id = itemId || uuidv4();
+        logger.info('project', '[save-generation] using id:', id);
 
         const mediaDir = path.join(folderPath, 'Media');
         const metaDir  = path.join(mediaDir, '.meta');
+        logger.info('project', '[save-generation] ensuring metaDir:', metaDir);
         await fs.ensureDir(metaDir);
 
         // Derive extension from the comfy URL filename param
@@ -550,7 +553,9 @@ router.post('/project/save-generation', async (req, res) => {
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
+        logger.info('project', '[save-generation] downloading from comfy:', comfyViewUrl);
         await streamDownload(comfyViewUrl, filePath);
+        logger.info('project', '[save-generation] download complete, saved to:', filePath);
 
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
@@ -567,7 +572,10 @@ router.post('/project/save-generation', async (req, res) => {
             uploaded:       false,
             pixelDimensions: pixelDimensions ?? { w: 0, h: 0 },
         };
-        await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
+        const metaPath = path.join(metaDir, `${id}.json`);
+        logger.info('project', '[save-generation] writing meta file to:', metaPath);
+        await fs.writeJson(metaPath, metaContent, { spaces: 2 });
+        logger.info('project', '[save-generation] meta file written successfully');
 
         // Garbage-collect orphaned sidecars (both filename-based and UUID-based)
         try {
