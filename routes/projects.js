@@ -513,21 +513,16 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
 router.post('/project/save-generation', async (req, res) => {
     try {
         const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, pixelDimensions } = req.body;
-        logger.info('project', '[save-generation] received request:', { folderPath, comfyViewUrl, itemId, operation });
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
 
         // Normalize path to use backslashes on Windows
         const normalizedFolderPath = path.normalize(folderPath);
-        logger.info('project', `[save-generation] normalized folderPath: ${normalizedFolderPath} (original: ${folderPath})`);
 
         const id = itemId || uuidv4();
-        logger.info('project', `[save-generation] using id: ${id}`);
 
         const mediaDir = path.join(normalizedFolderPath, 'Media');
         const metaDir  = path.join(mediaDir, '.meta');
-        logger.info('project', `[save-generation] ensuring metaDir: ${metaDir}`);
-        logger.info('project', `[save-generation] mediaDir exists: ${await fs.pathExists(mediaDir)}`);
         await fs.ensureDir(metaDir);
 
         // Derive extension from the comfy URL filename param
@@ -558,9 +553,7 @@ router.post('/project/save-generation', async (req, res) => {
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
-        logger.info('project', `[save-generation] downloading from comfy: ${comfyViewUrl}`);
         await streamDownload(comfyViewUrl, filePath);
-        logger.info('project', `[save-generation] download complete, saved to: ${filePath}`);
 
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
@@ -578,23 +571,17 @@ router.post('/project/save-generation', async (req, res) => {
             pixelDimensions: pixelDimensions ?? { w: 0, h: 0 },
         };
         const metaPath = path.join(metaDir, `${id}.json`);
-        logger.info('project', `[save-generation] writing meta file to: ${metaPath}`);
-        logger.info('project', `[save-generation] metaDir exists before write: ${await fs.pathExists(metaDir)}`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
-        logger.info('project', `[save-generation] meta file written successfully to: ${metaPath}`);
-        logger.info('project', `[save-generation] meta file exists after write: ${await fs.pathExists(metaPath)}`);
 
         // Garbage-collect orphaned sidecars (skip the one we just wrote)
         try {
             const sidecars = await fs.readdir(metaDir);
-            logger.info('project', `[save-generation] files in metaDir after write:`, sidecars);
             for (const sc of sidecars) {
                 if (!sc.endsWith('.json')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
 
                 // Skip the meta file we just created
                 if (baseName === id) {
-                    logger.info('project', `[save-generation] skipping GC for newly created UUID: ${id}`);
                     continue;
                 }
 
@@ -623,7 +610,6 @@ router.post('/project/save-generation', async (req, res) => {
 
                 // Only delete if the referenced media file doesn't exist
                 if (!(await fs.pathExists(mediaPath))) {
-                    logger.info('project', `[save-generation] GC: removing orphaned sidecar ${sc}`);
                     await fs.remove(metaFilePath);
                 }
             }
