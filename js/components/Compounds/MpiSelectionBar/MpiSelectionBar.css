@@ -2,10 +2,12 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--surface-2);
-    border-top: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
+    padding: 0.4rem 0.75rem;
+    background: var(--surface-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--neon-electric, #aa8bcd);
+    border-radius: var(--radius-lg);
 }
 
 .mpi-selection-bar__count {

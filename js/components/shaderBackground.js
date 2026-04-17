@@ -22,19 +22,14 @@ const fragmentShaderSource = `
   uniform vec2 iResolution;
   uniform float iTime;
 
-  const float overallSpeed = 0.35; // Increased for 'energetic' feel
+  const float overallSpeed = 0.35;
   const float gridSmoothWidth = 0.015;
-  const float axisWidth = 0.05;
-  const float majorLineWidth = 0.025;
-  const float minorLineWidth = 0.0125;
-  const float majorLineFrequency = 5.0;
-  const float minorLineFrequency = 1.0;
   const float scale = 5.0;
-  
+
   // Base colors (Primary and Neon Accent)
-  const vec4 color1 = vec4(0.33, 0.70, 0.95, 1.0); // --primary (Baby Blue)
-  const vec4 color2 = vec4(0.82, 0.49, 0.86, 1.0); // --neon-accent (Pink)
-  
+  const vec4 color1 = vec4(0.33, 0.70, 0.95, 1.0);
+  const vec4 color2 = vec4(0.82, 0.49, 0.86, 1.0);
+
   const float minLineWidth = 0.01;
   const float maxLineWidth = 0.2;
   const float lineSpeed = 1.0 * overallSpeed;
@@ -77,9 +72,9 @@ const fragmentShaderSource = `
 
     vec4 lines = vec4(0.0);
 
-    // Background Interp (matches #15151e and #1e1e28 Deep Space Palette)
-    vec4 bgColor1 = vec4(0.08, 0.08, 0.11, 1.0);
-    vec4 bgColor2 = vec4(0.12, 0.12, 0.15, 1.0);
+    // Background gradient #4a4e59 to #352a3b (BRIGHTNESS FIXED: x1.45)
+    vec4 bgColor1 = vec4(0.29 * 1.45, 0.306 * 1.45, 0.349 * 1.45, 1.0);
+    vec4 bgColor2 = vec4(0.208 * 1.45, 0.165 * 1.45, 0.231 * 1.45, 1.0);
 
     for(int l = 0; l < 12; l++) {
       float normalizedLineIndex = float(l) / 12.0;
@@ -96,9 +91,9 @@ const fragmentShaderSource = `
     }
 
     vec4 fragColor = mix(bgColor1, bgColor2, uv.x);
-    fragColor *= verticalFade;
+    fragColor *= (verticalFade * 0.4 + 0.6);  // Lighter vertical fade
     fragColor.a = 1.0;
-    fragColor += lines;
+    fragColor += lines * 0.5;  // Dimmer lines
 
     gl_FragColor = fragColor;
   }
@@ -167,9 +162,9 @@ function resize(canvas) {
 
 function render(time) {
     if (!gl) return;
-    
+
     const elapsedTime = (time - startTime) / 1000;
-    
+
     resize(gl.canvas);
 
     gl.clearColor(0, 0, 0, 1);
@@ -207,6 +202,7 @@ export function initShaderBackground() {
         canvas.classList.remove('hide');
         startTime = performance.now();
         render(startTime);
+        console.log('[shader] Background started');
     } else {
         // If already running but hidden, just unhide it
         canvas.classList.remove('hide');
@@ -223,4 +219,6 @@ export function stopShaderBackground() {
     }
     const canvas = document.getElementById('shader-background');
     if (canvas) canvas.classList.add('hide');
+
+    console.log('[shader] Background stopped');
 }

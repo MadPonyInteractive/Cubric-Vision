@@ -131,11 +131,11 @@
 .mpi-gallery-grid__footer {
     position: fixed;
     bottom: 30px;
-    min-width: 600px;
+    /* min-width: 600px; */
     left: 50%;
     transform: translateX(-50%);
     background: var(--surface-glass);
-    border-radius: var(--radius-xl);
+    /* border-radius: var(--radius-xl); */
 }
 
 .mpi-gallery-grid__selectionbar-slot {

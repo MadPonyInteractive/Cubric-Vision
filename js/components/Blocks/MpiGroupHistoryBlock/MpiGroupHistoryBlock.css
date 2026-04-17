@@ -53,11 +53,11 @@
     /* Spans all 3 columns so it floats over the full width */
     position: fixed;
     bottom: 30px;
-    min-width: 600px;
+    /* min-width: 600px; */
     left: 50%;
     transform: translateX(-50%);
-    background: var(--surface-glass);
-    border-radius: var(--radius-xl);
+    /* background: var(--surface-glass);
+    border-radius: var(--radius-xl); */
     z-index: 10;
     transition: opacity 0.15s ease, visibility 0.15s ease;
 }

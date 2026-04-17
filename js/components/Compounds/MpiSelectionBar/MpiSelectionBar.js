@@ -57,7 +57,7 @@ export const MpiSelectionBar = ComponentFactory.create({
         // ── Render ──────────────────────────────────────────────────────────────
 
         function _render() {
-            countEl.textContent = `${_count} selected`;
+            countEl.textContent = `x${_count}`;
             // Compare only makes sense with exactly 2 items
             compareWrap.style.display = _count === 2 ? '' : 'none';
             // Download and delete require at least 1

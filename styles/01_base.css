@@ -36,32 +36,27 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* High-End Neon Glassmorphism Palette */
+  /* Brand Colors */
   --primary: #55b3f1;
-  /* Cyan/Mint */
   --primary-dim: #7198d1;
-  /* Mint Green */
-  --primary-glow: rgba(77, 238, 234, 0.3);
-  --primary-glow-sm: rgba(77, 238, 234, 0.15);
 
-  --neon-electric: #aa8bcd;
-  /* Ambient Purple/Magenta */
+  --neon-electric: #c68bcde3;
   --neon-glow: rgba(182, 120, 255, 0.35);
   --neon-glow-sm: rgba(182, 120, 255, 0.15);
   --neon-accent: #d17ddb;
-  /* Electric Pink */
   --neon-border: rgba(182, 120, 255, 0.4);
 
-  /* Deep Dark Environment */
-  --bg: #3c2d38;
-  /* True deep navy/black from the image */
+  /* Neutral Dark Background */
+  --bg-light: #4a4e59;
+  --bg-dark: #352a3b;
+  --bg: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-dark) 100%);
   --bg-elevated: #425462f7;
-  /* Slightly elevated layer */
 
-  /* Advanced Glass Surfaces (designed for backdrop-filter) */
-  --surface: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-  --surface-2: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-  --surface-3: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+  /* Glass Surfaces */
+  --surface: rgba(255, 255, 255, 0.05);
+  /* --surface-1: rgba(255, 255, 255, 0.05); */
+  --surface-2: rgba(255, 255, 255, 0.08);
+  --surface-3: rgba(255, 255, 255, 0.12);
 
   /* Sophisticated inner borders and highlights */
   --border: rgba(255, 255, 255, 0.1);
@@ -71,7 +66,7 @@
   --border-glass: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 1px 0 0 rgba(255, 255, 255, 0.05);
 
   --text: #f8f8f2;
-  --text-2: #a1a1aa;
+  --text-2: #ffffff;
   --text-3: #71717a;
   --text-muted: #71717a;
 
@@ -80,7 +75,7 @@
   --warning: #f0c36b;
   --info: #4deeea;
 
-  --surface-glass: rgb(11 12 16 / 20%);
+  --surface-glass: rgb(22 29 34 / 72%);
   /* Frost base */
 
   --titlebar-h: 32px;
@@ -119,12 +114,7 @@ body {
 }
 
 body {
-  /* Ambient studio lighting using multi-layered radial gradients to give the background depth */
-  background:
-    radial-gradient(ellipse at 50% -20%, rgba(182, 120, 255, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 15% 50%, rgba(77, 238, 234, 0.06) 0%, transparent 40%),
-    var(--bg);
-  background-color: var(--bg);
+  background: var(--bg);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-main);
