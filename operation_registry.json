@@ -1,0 +1,58 @@
+{
+  "_comment": "Do not edit manually — maintained by /mpi-version-bump skill. Source of truth: js/core/operationRegistry.js",
+  "t2i": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "i2i": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "upscale": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "edit": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "detail": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "change": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "remove": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "t2v": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "i2v": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "extend": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "interpolate": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "videoUpscale": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "autoMaskImg": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  }
+}
