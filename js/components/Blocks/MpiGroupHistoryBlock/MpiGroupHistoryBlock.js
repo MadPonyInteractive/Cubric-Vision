@@ -230,6 +230,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             selectedIndex: _currentIdx,
         });
 
+        // Load initial entry to ensure _currentItem is set (required for crop, mask, etc.)
+        canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
+
         // Hydrate history if needed (async, will update components when done)
         if (_group.history.some(item => typeof item === 'string') && state.currentProject?.folderPath) {
             _hydrateGroupHistory(_group, state.currentProject.folderPath).then(hydratedGroup => {
