@@ -3,7 +3,7 @@ import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
-import { Storage } from '../../core/storage.js';
+import { Storage } from '../../../core/storage.js';
 import { qs } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 
@@ -195,7 +195,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                 await fetch('/comfy/set-path', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ customRoot: modelPath })
+                    body: JSON.stringify({ path: modelPath })
                 });
 
                 // 2. Move to progress phase and start download

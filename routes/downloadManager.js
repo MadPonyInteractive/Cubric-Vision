@@ -20,6 +20,8 @@ const crypto = require('crypto');
 const logger = require('./logger');
 const { runPipCommand, resolveComfyPath, getCustomRoot } = require('./shared');
 const { DownloaderHelper } = require('node-downloader-helper');
+const { extractFull } = require('node-7z');
+const sevenBin = require('7zip-bin');
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
@@ -28,9 +30,17 @@ const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively
 const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
 
 function _createDepJob(dep) {
+    // GitHub repo URLs can't be downloaded directly by node-downloader-helper.
+    // Convert custom_nodes GitHub URLs to archive URLs before downloading.
+    let url = dep.url;
+    if (dep.type === 'custom_nodes' && _isGitHubUrl(url)) {
+        url = _toGitHubArchiveUrl(url);
+    }
     return {
         id: dep.id,
-        url: dep.url,
+        url,
+        type: dep.type || null,
+        filename: dep.filename || null,
         localPath: null,
         status: 'queued',
         downloadedBytes: 0,
@@ -39,6 +49,16 @@ function _createDepJob(dep) {
         error: null,
         sha256Expected: dep.sha256 || null,
     };
+}
+
+function _isGitHubUrl(url) {
+    return /^https:\/\/github\.com\//.test(url || '');
+}
+
+function _toGitHubArchiveUrl(repoUrl) {
+    // Strip trailing slashes, then append /archive/main.zip
+    const clean = (repoUrl || '').replace(/\/+$/, '');
+    return `${clean}/archive/main.zip`;
 }
 
 function _createModelJob(modelId, deps) {
@@ -252,7 +272,9 @@ router.post('/comfy/models/download/start', async (req, res) => {
     for (const dep of dependencies) {
         let localPath;
         if (dep.type === 'custom_nodes') {
-            localPath = path.join(defaultCustomNodesRoot, dep.filename);
+            // GitHub archives download as .zip
+            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
+            localPath = path.join(defaultCustomNodesRoot, zipName);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;
@@ -361,7 +383,11 @@ function _checkModelJobsComplete() {
             if (modelJob.installCustomNodes) {
                 modelJob.status = 'installing';
                 _broadcast('download:installing', { modelId: modelJob.modelId });
-                _runCustomNodeInstall(modelJob);
+                _runCustomNodeInstall(modelJob).catch(err => {
+                    logger.error('download', `_runCustomNodeInstall crashed: ${err.message}`);
+                    modelJob.status = 'failed';
+                    _broadcast('download:failed', { modelId: modelJob.modelId });
+                });
             } else {
                 modelJob.status = 'complete';
                 _broadcast('download:complete', { modelId: modelJob.modelId });
@@ -372,15 +398,115 @@ function _checkModelJobsComplete() {
 
 async function _runCustomNodeInstall(modelJob) {
     const customDeps = modelJob.deps.filter(d =>
-        d.status === 'complete' && d.localPath && (d.id.includes('custom_nodes') || d.type === 'custom_nodes')
+        d.status === 'complete' && d.localPath != null && d.type === 'custom_nodes'
     );
+    if (!customDeps.length) {
+        logger.info('download', `_runCustomNodeInstall: no custom_nodes deps found for model ${modelJob.modelId}`);
+        modelJob.status = 'complete';
+        _broadcast('download:complete', { modelId: modelJob.modelId });
+        _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
+        return;
+    }
+    logger.info('download', `_runCustomNodeInstall: extracting ${customDeps.length} custom node(s) for model ${modelJob.modelId}`);
     for (const dep of customDeps) {
-        const reqPath = path.join(dep.localPath, 'requirements.txt');
+        // Guard: skip deps without a valid localPath string
+        if (dep.localPath == null || typeof dep.localPath !== 'string') {
+            logger.warn('download', `dep ${dep.id} has invalid localPath (${JSON.stringify(dep.localPath)}), skipping`);
+            continue;
+        }
+        if (!dep.filename || typeof dep.filename !== 'string') {
+            logger.warn('download', `dep ${dep.id} has invalid filename (${JSON.stringify(dep.filename)}), skipping`);
+            continue;
+        }
+        const zipPath = String(dep.localPath); // ensure string
+        const extractDir = path.dirname(zipPath); // custom_nodes/
+        const targetDir = path.join(extractDir, dep.filename); // dep.filename is the source of truth for target name
+
+        // Extract GitHub archive zip (extracts to custom_nodes/owner-repo-main/)
+        // Do this FIRST so we can scan for the extracted folder AFTER it's created
+        try {
+            if (await fs.pathExists(zipPath)) {
+                logger.info('download', `Extracting zip: ${zipPath}`);
+                const stream = extractFull(zipPath, extractDir, { $bin: sevenBin.path7za });
+                await new Promise((resolve, reject) => {
+                    stream.on('end', resolve);
+                    stream.on('error', reject);
+                });
+                await fs.remove(zipPath); // clean up zip after extraction
+                logger.info('download', `Zip extracted and removed: ${zipPath}`);
+            } else {
+                logger.warn('download', `Zip not found at ${zipPath} — skipping extract`);
+                continue;
+            }
+        } catch (err) {
+            logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message}`);
+            continue;
+        }
+
+        // Now scan for the extracted folder — it will be named 'something-main'
+        // GitHub archives preserve repo casing which may differ from dep.filename
+        // e.g. repo is 'ComfyUI_UltimateSDUpscale' but dep.filename is 'comfyui_ultimatesdupscale'
+        let extractedMainDir = null;
+        try {
+            const entries = await fs.readdir(extractDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (!entry.isDirectory()) continue;
+                // Match any '-main' folder whose base name matches dep.filename (case-insensitive)
+                const entryLower = entry.name.toLowerCase();
+                const targetLower = (dep.filename || '').toLowerCase();
+                if (entryLower === targetLower + '-main') {
+                    extractedMainDir = path.join(extractDir, entry.name);
+                    break;
+                }
+            }
+        } catch (err) {
+            logger.error('download', `scan for extracted folder failed for ${dep.id}: ${err.message}`);
+        }
+
+        if (!extractedMainDir) {
+            // Folder not found — try scanning for ANY -main folder that matches dep.id (exact or close match)
+            try {
+                const entries = await fs.readdir(extractDir, { withFileTypes: true });
+                const depIdLower = (dep.id || '').toLowerCase();
+                for (const entry of entries) {
+                    if (!entry.isDirectory()) continue;
+                    const entryLower = entry.name.toLowerCase();
+                    if (entryLower === depIdLower + '-main') {
+                        extractedMainDir = path.join(extractDir, entry.name);
+                        logger.info('download', `Found extracted folder via dep.id fallback: ${extractedMainDir}`);
+                        break;
+                    }
+                }
+            } catch (err) { /* ignore */ }
+        }
+
+        if (!extractedMainDir) {
+            logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir}`);
+            continue;
+        }
+
+        // Rename 'owner-repo-main' → 'owner-repo' (dep.filename)
+        try {
+            if (await fs.pathExists(targetDir)) {
+                // Target already exists — remove the incorrectly-named duplicate
+                await fs.remove(extractedMainDir);
+                logger.warn('download', `Target ${targetDir} already exists, removed duplicate: ${extractedMainDir}`);
+            } else {
+                await fs.move(extractedMainDir, targetDir);
+                logger.info('download', `Renamed ${extractedMainDir} → ${targetDir}`);
+            }
+        } catch (err) {
+            logger.error('download', `folder rename failed for ${dep.id}: ${err.message}`);
+        }
+
+        // Run pip install for requirements.txt if present
+        const reqPath = path.join(targetDir, 'requirements.txt');
         if (await fs.pathExists(reqPath)) {
             try {
                 await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
+                logger.info('download', `pip requirements installed for ${dep.id}`);
             } catch (err) {
-                logger.error('comfy', `pip install failed for ${dep.id}`, err);
+                logger.error('download', `pip install FAILED for ${dep.id}: ${err.message}`);
             }
         }
     }
@@ -463,7 +589,9 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     for (const dep of dependencies) {
         let localPath;
         if (dep.type === 'custom_nodes') {
-            localPath = path.join(defaultCustomNodesRoot, dep.filename);
+            // GitHub archives download as .zip
+            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
+            localPath = path.join(defaultCustomNodesRoot, zipName);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;

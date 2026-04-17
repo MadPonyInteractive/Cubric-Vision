@@ -181,7 +181,9 @@
       "Bash(await:*)",
       "Bash(res.status:*)",
       "Bash(source:*)",
-      "Bash(Overlays.request:*)"
+      "Bash(Overlays.request:*)",
+      "Bash(tail:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

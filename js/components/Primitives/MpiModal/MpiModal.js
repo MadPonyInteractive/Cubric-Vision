@@ -43,6 +43,7 @@ export const MpiModal = ComponentFactory.create({
         let _wrapper  = null;
         let _unregisterEnter = null;
         let _isShown = false;  // guard against duplicate show() calls
+        let _overlayEntry = null; // store the queue entry so hide() can release correctly
 
         const _handleEnter = () => {
             emit('confirm', {});
@@ -68,17 +69,18 @@ export const MpiModal = ComponentFactory.create({
 
         el.show = () => {
             if (_isShown) return;  // already visible — skip (idempotent)
-            _isShown = true;        // guard stays active during Overlays.request so re-entrant calls are blocked
-            Overlays.request({ show: _doShow, hide: el.hide, id: el });
+            _overlayEntry = { show: _doShow, hide: el.hide, id: el };
+            Overlays.request(_overlayEntry);
             _unregisterEnter = Hotkeys.register('enter', _handleEnter);
         };
 
         el.hide = () => {
+            _isShown = false; // reset first — needed for queued modals (hide may be called before _doShow ever ran)
             if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
             _backdrop?.remove(); _backdrop = null;
             _wrapper?.remove();  _wrapper  = null;
-            _isShown = false;
-            Overlays.release(el);
+            Overlays.release(_overlayEntry);
+            _overlayEntry = null;
         };
 
         const _unsubClose = Events.on('ui:close-all-popups', () => {

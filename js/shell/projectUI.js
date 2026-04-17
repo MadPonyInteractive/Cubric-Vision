@@ -5,6 +5,7 @@
  */
 
 import { listProjects, createProject, deleteProject, openProject } from '../managers/projectManager.js';
+import { navigate, PAGE_GALLERY } from '../router.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -83,7 +84,8 @@ export function initProjectUI() {
         _newProjectDialog.on('create', async ({ name, location }) => {
           try {
             const project = await createProject(name || 'Untitled Project', location);
-            openProject(project);
+            await openProject(project);
+            navigate(PAGE_GALLERY);
           } catch (err) {
             console.error('[projectUI] createProject failed:', err);
             alert('Could not create project: ' + err.message);
@@ -159,7 +161,10 @@ function _buildProjectCard(project) {
   const wrapper = document.createElement('div');
   const card = MpiProjectCard.mount(wrapper, props);
 
-  card.on('click', () => openProject(project));
+  card.on('click', async () => {
+    await openProject(project);
+    navigate(PAGE_GALLERY);
+  });
 
   card.on('delete', () => {
     _showDeleteConfirm(project.name, async () => {

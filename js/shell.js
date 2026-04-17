@@ -172,7 +172,10 @@ async function _bootApp() {
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
   // Show model manager when zero image models are installed
-  Events.on('models:open', () => _modelsModal.el.show());
+  Events.on('models:open', () => {
+    console.log('[shell] models:open event received, calling _modelsModal.el.show()');
+    _modelsModal.el.show();
+  });
   Events.on('models:all-installed', () => _modelsModal.el.hide());
   Events.on('models:closed', () => {
       _modelsModal.el.hide();
@@ -182,11 +185,6 @@ async function _bootApp() {
       requestAnimationFrame(() => {
           if (PromptBoxService.component) PromptBoxService.show();
       });
-  });
-  Events.on('state:changed', ({ key }) => {
-      if (key !== 's_installedModelIds') return;
-      const hasImageModels = getModelsByType('image').some(m => m.installed === true);
-      if (!hasImageModels) _modelsModal.el.show();
   });
 
   // ComfyUI Auto-start (optional)

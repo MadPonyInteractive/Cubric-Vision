@@ -452,12 +452,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
             StatusBar.progress.start('Cropping...');
             _exitMode();
 
+            const itemId = crypto.randomUUID();
+
             try {
                 const res = await fetch('/project/crop-media', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         folderPath: state.currentProject.folderPath,
+                        itemId,
                         sourceFilePath: _resolveUrl(_currentItem.filePath),
                         x: rect.x, y: rect.y, w: rect.w, h: rect.h,
                     }),
@@ -466,7 +469,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Crop failed');
 
+                // Use server-returned itemId (matches the .meta/<uuid>.json written by the route)
                 const newItem = createImageItem({
+                    id: data.itemId,
                     filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
                     operation: data.filename.replace(/\.[^.]+$/, ''),
                 });

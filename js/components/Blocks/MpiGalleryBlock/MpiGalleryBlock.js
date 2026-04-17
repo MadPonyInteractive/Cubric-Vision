@@ -517,6 +517,167 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!hasImageModels) Events.emit('models:open');
         });
 
+        // ── Post-install PromptBox remount ─────────────────────────────────────
+        // If models are installed while the modal is open, promptBox will be null.
+        // When the modal closes (models:closed), check if PromptBox needs to be mounted.
+        const _unsubModelsClosed = Events.on('models:closed', () => {
+            const currentModels = getModelsByType('image').filter(m => m.installed !== false);
+            // Remount PromptBox if no component is mounted but models are available
+            if (!PromptBoxService.component && currentModels.length > 0) {
+                const newModel = currentModels[0];
+                const newPromptBox = PromptBoxService.mount({
+                    model: newModel,
+                    modelList: currentModels,
+                    operation: activeOperation,
+                    includeNegative: true,
+                });
+
+                if (newPromptBox) {
+                    // Wire the essential event listeners that were skipped during initial setup
+                    newPromptBox.on('model-change', ({ model }) => {
+                        state.s_selectedModelId = model.id;
+                        activeModelId = model.id;
+                        activeModel = model;
+                        activeOperation = model.supportedOps[0];
+                    });
+
+                    newPromptBox.on('operation-change', ({ operation }) => {
+                        activeOperation = operation;
+                    });
+
+                    newPromptBox.on('settings', () => {
+                        _settingsOverlay.el.open({ modelId: activeModel.id });
+                    });
+
+                    newPromptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
+                        imageCount = ic;
+                        videoCount = vc;
+                        PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
+                        refreshRadial({ imageCount, videoCount });
+                    });
+
+                    // Wire the run handler — this is critical for generation to work
+                    newPromptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
+                        if (!activeModel) return;
+
+                        const tempId   = crypto.randomUUID();
+                        const cardType = activeModel.mediaType;
+                        const currentGroups = state.currentProject?.itemGroups || [];
+
+                        const placeholderGroup = {
+                            id: tempId,
+                            type: cardType,
+                            name: 'Generating...',
+                            history: [],
+                            selectedIndex: 0,
+                            width: injectionParams.Width || 1024,
+                            height: injectionParams.Height || 1024,
+                            isGenerating: true,
+                        };
+
+                        grid.el.setGroups([placeholderGroup, ...currentGroups]);
+                        _generatingCardId = tempId;
+                        StatusBar.progress.start('Generating...');
+
+                        _activeExec = runCommand({
+                            operation,
+                            modelId:  activeModel.id,
+                            positive,
+                            negative,
+                            mediaItems,
+                            injectionParams,
+                        });
+                        const exec = _activeExec;
+
+                        exec.onPreview = (url) => grid.el.updatePreview(tempId, url);
+                        exec.onProgress = (value) => StatusBar.progress.update(value);
+
+                        exec.onComplete = async (urls) => {
+                            _activeExec = null;
+                            PromptBoxService.component?.setGenerating(false);
+
+                            if (!urls.length) {
+                                StatusBar.progress.cancel();
+                                grid.el.setGroups(currentGroups);
+                                return;
+                            }
+
+                            let filePath    = urls[0];
+                            let displayName = operation;
+
+                            if (state.currentProject?.folderPath) {
+                                try {
+                                    const res = await fetch('/project/save-generation', {
+                                        method:  'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body:    JSON.stringify({
+                                            folderPath:   state.currentProject.folderPath,
+                                            comfyViewUrl: urls[0],
+                                            itemId: crypto.randomUUID(),
+                                            operation,
+                                            meta: {
+                                                prompt:         positive,
+                                                negativePrompt: negative,
+                                                modelId:        activeModel.id,
+                                            },
+                                            pixelDimensions: { w: 0, h: 0 },
+                                        }),
+                                    });
+                                    if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                                        displayName = data.filename.replace(/\.[^.]+$/, '');
+                                    }
+                                } catch (err) {
+                                    clientLogger.warn('MpiGalleryBlock', 'save-generation failed, using comfy URL:', err);
+                                }
+                            }
+
+                            const cardName = displayName.length > 28
+                                ? displayName.slice(0, 27) + '…'
+                                : displayName;
+
+                            const item = createImageItem({
+                                filePath,
+                                modelId:        activeModel.id,
+                                operation,
+                                prompt:         positive,
+                                negativePrompt: negative,
+                            });
+
+                            let group = createItemGroup(cardType, { name: cardName });
+                            group = appendToHistory(group, item);
+
+                            if (state.currentProject) {
+                                state.currentProject = addGroupToProject(state.currentProject, group);
+                                _persistGroups();
+                            }
+
+                            StatusBar.progress.complete('Image generated!');
+                            grid.el.setGroups([group, ...currentGroups]);
+                        };
+
+                        exec.onError = (err) => {
+                            _activeExec = null;
+                            clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
+                            PromptBoxService.component?.setGenerating(false);
+                            StatusBar.progress.cancel();
+                            grid.el.setGroups(currentGroups);
+                        };
+                    });
+
+                    newPromptBox.on('cancel', () => {
+                        _activeExec?.cancel();
+                        _activeExec = null;
+                        StatusBar.progress.cancel();
+                    });
+                }
+
+                PromptBoxService.show();
+            }
+        });
+
         // ── Cleanup when block leaves the gallery workspace ────────────────────
         // Using state:changed instead of MutationObserver because the observer
         // does not fire for _toolContainer.innerHTML = '' (grandchild mutation).
@@ -524,6 +685,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (key === 'currentPage' && value !== PAGE_GALLERY) {
                 _unsubSetOp?.();
                 _unsubZeroInstalled?.();
+                _unsubModelsClosed?.();
                 _unsubPageChange2();
             }
         });

@@ -51,9 +51,13 @@ export const MpiOverlay = ComponentFactory.create({
         let _stashedStyle = '';
         let _isHiding = false; // Guard against double-call of hide()
         let _isShown = false;   // Guard against re-entrant show() during Overlays.request
+        let _overlayEntry = null; // store so hide() can release the correct queue entry
+        const _overlayId = Math.random().toString(36).slice(2, 9); // unique ID for this overlay instance
 
         const _doShow = () => {
+            console.log(`[MpiOverlay:${_overlayId}] _doShow called`);
             _toolContainer = document.getElementById('tool-container');
+            console.log(`[MpiOverlay:${_overlayId}] tool-container found?`, !!_toolContainer);
             if (!_toolContainer) return;
 
             // Snapshot and reset any workspace-specific classes/styles that
@@ -73,15 +77,18 @@ export const MpiOverlay = ComponentFactory.create({
 
             _toolContainer.appendChild(_stash);
             _toolContainer.appendChild(el);
+            _isShown = true;
+            console.log(`[MpiOverlay:${_overlayId}] _doShow complete — overlay now in DOM`);
         };
 
         el.show = () => {
-            if (_isShown) return;     // already visible — skip (idempotent)
-            _isShown = true;           // guard active during Overlays.request so re-entrant calls are blocked
-            Overlays.request({ show: _doShow, hide: el.hide, id: el });
+            if (_isShown) return;
+            _overlayEntry = { show: _doShow, hide: el.hide, id: el };
+            Overlays.request(_overlayEntry);
         };
 
         el.hide = () => {
+            _isShown = false; // reset first — needed for queued overlays (hide may be called before _doShow ever ran)
             // Guard against double-call (e.g. close button + Escape key both firing)
             if (_isHiding) return;
             _isHiding = true;
@@ -104,7 +111,8 @@ export const MpiOverlay = ComponentFactory.create({
             _toolContainer = null;
             _isShown = false;
             emit('close', {});
-            Overlays.release(el);
+            Overlays.release(_overlayEntry);
+            _overlayEntry = null;
             _isHiding = false;
         };
 

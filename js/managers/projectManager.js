@@ -7,6 +7,7 @@ import { state } from '../state.js';
 import { Events } from '../events.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY } from '../router.js';
 import { Storage } from '../core/storage.js';
+import { reconcileAndHydrate } from './projectReconciler.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -52,26 +53,54 @@ export async function listProjects() {
 }
 
 /**
- * Load a project into global state and navigate to its last active tool.
- * @param {Object} project - Full project object.
+ * Load a project into global state.
+ * Runs server-side migration then client-side reconciliation before
+ * setting state. Callers must await and then navigate to gallery.
+ *
+ * @param {Object} project - Full project object (from project list or create result).
  */
-export function openProject(project) {
-  state.currentProject = project;
+export async function openProject(project) {
+  // 1. Run server-side migration (schema upgrade + legacy inline → ID conversion)
+  const migratedRes = await fetch('/migrate-project', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folderPath: project.folderPath }),
+  });
+  const migratedResult = await migratedRes.json();
+  if (!migratedResult.success) throw new Error(migratedResult.error);
+  const migrated = migratedResult.project;
 
-  // modelSettings and toolSettings live on the project object itself
-  // and are accessible via state.currentProject.modelSettings / .toolSettings
-  // No separate restore step needed.
+  // 2. Reconcile: load .meta/ files, drop broken entries, hydrate full objects
+  const { project: reconciled, wasModified } = await reconcileAndHydrate(migrated);
 
-  // Store the folder path so future sessions can find it
+  // 3. Persist if reconciliation removed entries (slim down to UUID arrays on disk)
+  if (wasModified) {
+    const toSave = {
+      ...reconciled,
+      itemGroups: reconciled.itemGroups.map(g => ({
+        ...g,
+        history: g.history.map(item => item.id),
+      })),
+    };
+    await post('/update-project', {
+      folderPath: reconciled.folderPath,
+      updates: { itemGroups: toSave.itemGroups },
+    });
+  }
+
+  // 4. Load into state
+  state.currentProject = reconciled;
+
+  // 5. Track parent dir and last opened project
   const extras = Storage.getExtraProjectPaths();
-  const parentDir = project.folderPath.split(/[\\/]/).slice(0, -1).join('/');
+  const parentDir = reconciled.folderPath.split(/[\\/]/).slice(0, -1).join('/');
   if (!extras.includes(parentDir)) {
     extras.push(parentDir);
     Storage.setExtraProjectPaths(extras);
   }
-  Storage.setLastProject(project.folderPath);
-  Events.emit('project:changed', { project });
-  navigate(PAGE_GALLERY);
+  Storage.setLastProject(reconciled.folderPath);
+
+  Events.emit('project:changed', { project: reconciled });
 }
 
 /**

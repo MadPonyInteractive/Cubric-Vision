@@ -123,12 +123,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!state.currentProject) return;
             state.currentProject = updateGroupInProject(state.currentProject, _group);
             Events.emit('media:updated', { projectId: state.currentProject.id });
+
+            // Serialize history as UUID string arrays for project.json
+            // (in-memory _group.history stays as full objects)
+            const toSave = {
+                ...state.currentProject,
+                itemGroups: state.currentProject.itemGroups.map(g =>
+                    g.id === _group.id
+                        ? { ...g, history: g.history.map(item => item.id ?? item) }
+                        : { ...g, history: g.history.map(item => item.id ?? item) }
+                ),
+            };
+
             fetch('/update-project', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     folderPath: state.currentProject.folderPath,
-                    updates: { itemGroups: state.currentProject.itemGroups },
+                    updates: { itemGroups: toSave.itemGroups },
                 }),
             }).catch(err => console.warn('[MpiGroupHistoryBlock] update-project failed:', err));
         }
@@ -297,6 +309,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     return;
                 }
 
+                // Generate UUID before save-generation — will be the item's stable ID
+                const itemId = crypto.randomUUID();
+
                 let filePath = urls[0];
                 let displayName = operation;
 
@@ -308,8 +323,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                             body: JSON.stringify({
                                 folderPath: state.currentProject.folderPath,
                                 comfyViewUrl: urls[0],
+                                itemId,
                                 operation,
                                 meta: { prompt: positive, negativePrompt: negative, modelId: activeModel.id },
+                                pixelDimensions: { w: 0, h: 0 },
                             }),
                         });
                         if (!res.ok) throw new Error(`save-generation ${res.status}`);
@@ -323,14 +340,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     }
                 }
 
+                // Full object for in-memory use (never written to project.json as-is)
                 const newItem = {
-                    id: crypto.randomUUID(),
+                    id: itemId,
+                    type: 'image',
                     filePath,
-                    modelId: activeModel.id,
                     operation: displayName,
                     prompt: positive,
                     negativePrompt: negative,
+                    seed: -1,
+                    modelId: activeModel.id,
                     createdAt: new Date().toISOString(),
+                    name: null,
+                    uploaded: false,
+                    pixelDimensions: { w: 0, h: 0 },
                 };
 
                 // Clear all saved masks — they are stale after generation
@@ -430,6 +453,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!_currentSelectionIndices.length) return;
             historyList.el.exitSelectMode();
             const sorted = [..._currentSelectionIndices].sort((a, b) => b - a);
+
+            // Delete media files and .meta/ sidecars for each selected item
+            const project = state.currentProject;
+            if (project?.folderPath) {
+                for (const idx of sorted) {
+                    const item = _group.history[idx];
+                    if (!item) continue;
+                    let filename = null;
+                    try {
+                        const match = item.filePath?.match(/[?&]path=([^&]+)/);
+                        if (match) filename = decodeURIComponent(match[1]).replace(/\\/g, '/').split('/').pop();
+                    } catch (_) { /* no filename */ }
+                    if (filename) {
+                        fetch(
+                            `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
+                            { method: 'DELETE' }
+                        ).catch(err => clientLogger.warn('MpiGroupHistoryBlock', 'delete media failed:', err));
+                    }
+                }
+            }
+
             for (const idx of sorted) {
                 _group = removeHistoryEntry(_group, idx);
             }

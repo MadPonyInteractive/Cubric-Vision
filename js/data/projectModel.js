@@ -215,6 +215,7 @@ export function createProject(name, folderPath) {
         createdAt:     new Date().toISOString(),
         updatedAt:     new Date().toISOString(),
         thumbnail:     null,
+        schemaVersion: 1,
         itemGroups:    [],
         tutorialSeen:  false,
         modelSettings: {},

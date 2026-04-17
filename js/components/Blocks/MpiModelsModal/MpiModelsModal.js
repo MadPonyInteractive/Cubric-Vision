@@ -62,14 +62,21 @@ export const MpiModelsModal = ComponentFactory.create({
         const overlay = MpiOverlay.mount(document.createElement('div'), {
             closable: props.closable !== false,
         });
+        console.log('[MpiModelsModal] created overlay instance');
         overlay.on('close', () => emit('close', {}));
         overlay.on('close', () => Events.emit('models:closed', {}));
 
         // Mount el (the template root) INTO the overlay
         overlay.el.appendToContainer(el);
 
-        el.show = () => overlay.el.show();
-        el.hide = () => overlay.el.hide();
+        el.show = () => {
+            console.log('[MpiModelsModal] el.show() called, calling overlay.el.show()');
+            overlay.el.show();
+        };
+        el.hide = () => {
+            console.log('[MpiModelsModal] el.hide() called');
+            overlay.el.hide();
+        };
 
         // ── DOM refs ──────────────────────────────────────────────────────────
         const bodySlot = qs('#body-slot', el);
