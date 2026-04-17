@@ -518,11 +518,12 @@ router.post('/project/save-generation', async (req, res) => {
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
 
         const id = itemId || uuidv4();
-        logger.info('project', '[save-generation] using id:', id);
+        logger.info('project', `[save-generation] using id: ${id}`);
 
         const mediaDir = path.join(folderPath, 'Media');
         const metaDir  = path.join(mediaDir, '.meta');
-        logger.info('project', '[save-generation] ensuring metaDir:', metaDir);
+        logger.info('project', `[save-generation] ensuring metaDir: ${metaDir}`);
+        logger.info('project', `[save-generation] mediaDir exists: ${await fs.pathExists(mediaDir)}`);
         await fs.ensureDir(metaDir);
 
         // Derive extension from the comfy URL filename param
@@ -553,9 +554,9 @@ router.post('/project/save-generation', async (req, res) => {
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
-        logger.info('project', '[save-generation] downloading from comfy:', comfyViewUrl);
+        logger.info('project', `[save-generation] downloading from comfy: ${comfyViewUrl}`);
         await streamDownload(comfyViewUrl, filePath);
-        logger.info('project', '[save-generation] download complete, saved to:', filePath);
+        logger.info('project', `[save-generation] download complete, saved to: ${filePath}`);
 
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
@@ -573,9 +574,11 @@ router.post('/project/save-generation', async (req, res) => {
             pixelDimensions: pixelDimensions ?? { w: 0, h: 0 },
         };
         const metaPath = path.join(metaDir, `${id}.json`);
-        logger.info('project', '[save-generation] writing meta file to:', metaPath);
+        logger.info('project', `[save-generation] writing meta file to: ${metaPath}`);
+        logger.info('project', `[save-generation] metaDir exists before write: ${await fs.pathExists(metaDir)}`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
-        logger.info('project', '[save-generation] meta file written successfully');
+        logger.info('project', `[save-generation] meta file written successfully to: ${metaPath}`);
+        logger.info('project', `[save-generation] meta file exists after write: ${await fs.pathExists(metaPath)}`);
 
         // Garbage-collect orphaned sidecars (both filename-based and UUID-based)
         try {
