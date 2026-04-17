@@ -583,6 +583,7 @@ router.post('/project/save-generation', async (req, res) => {
         // Garbage-collect orphaned sidecars (both filename-based and UUID-based)
         try {
             const sidecars = await fs.readdir(metaDir);
+            logger.info('project', `[save-generation] files in metaDir after write:`, sidecars);
             for (const sc of sidecars) {
                 if (!sc.endsWith('.json')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
