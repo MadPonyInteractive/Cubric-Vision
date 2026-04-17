@@ -445,12 +445,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         return;
                     }
 
+                    const itemId = crypto.randomUUID();
                     let filePath    = urls[0];
                     let displayName = operation;
 
                     if (state.currentProject?.folderPath) {
                         try {
-                            const itemId = crypto.randomUUID();
                             const res = await fetch('/project/save-generation', {
                                 method:  'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -482,7 +482,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         ? displayName.slice(0, 27) + '…'
                         : displayName;
 
+                    // Create full item object for in-memory use (displayed immediately in grid)
+                    // But only the itemId string will be persisted to project.json
                     const item = createImageItem({
+                        id:             itemId,
                         filePath,
                         modelId:        activeModel.id,
                         operation,
@@ -490,16 +493,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         negativePrompt: negative,
                     });
 
+                    // Append only the itemId string to history for persistence
+                    // Components receive the full item from reconciliation on project load
                     let group = createItemGroup(cardType, { name: cardName });
-                    group = appendToHistory(group, item);
+                    group = { ...group, history: [...group.history, itemId], selectedIndex: group.history.length };
 
                     if (state.currentProject) {
                         state.currentProject = addGroupToProject(state.currentProject, group);
                         _persistGroups();
                     }
 
+                    // For UI display, show the full item (keep in-memory state consistent)
+                    const displayGroup = { ...group, history: [item], selectedIndex: 0 };
                     StatusBar.progress.complete('Image generated!');
-                    grid.el.setGroups([group, ...currentGroups]);  // Replace placeholder with final
+                    grid.el.setGroups([displayGroup, ...currentGroups]);  // Replace placeholder with final
                 };
 
                 exec.onError = (err) => {
@@ -622,6 +629,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                 return;
                             }
 
+                            const itemId = crypto.randomUUID();
                             let filePath    = urls[0];
                             let displayName = operation;
 
@@ -633,7 +641,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                         body:    JSON.stringify({
                                             folderPath:   state.currentProject.folderPath,
                                             comfyViewUrl: urls[0],
-                                            itemId: crypto.randomUUID(),
+                                            itemId,
                                             operation,
                                             meta: {
                                                 prompt:         positive,
@@ -658,7 +666,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                 ? displayName.slice(0, 27) + '…'
                                 : displayName;
 
+                            // Create full item object for in-memory use (displayed immediately in grid)
+                            // But only the itemId string will be persisted to project.json
                             const item = createImageItem({
+                                id:             itemId,
                                 filePath,
                                 modelId:        activeModel.id,
                                 operation,
@@ -666,16 +677,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                 negativePrompt: negative,
                             });
 
+                            // Append only the itemId string to history for persistence
+                            // Components receive the full item from reconciliation on project load
                             let group = createItemGroup(cardType, { name: cardName });
-                            group = appendToHistory(group, item);
+                            group = { ...group, history: [...group.history, itemId], selectedIndex: group.history.length };
 
                             if (state.currentProject) {
                                 state.currentProject = addGroupToProject(state.currentProject, group);
                                 _persistGroups();
                             }
 
+                            // For UI display, show the full item (keep in-memory state consistent)
+                            const displayGroup = { ...group, history: [item], selectedIndex: 0 };
                             StatusBar.progress.complete('Image generated!');
-                            grid.el.setGroups([group, ...currentGroups]);
+                            grid.el.setGroups([displayGroup, ...currentGroups]);
                         };
 
                         exec.onError = (err) => {
