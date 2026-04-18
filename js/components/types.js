@@ -147,10 +147,16 @@
 
 /**
  * @typedef {Object} MpiRatioSelectorProps (Compound — js/components/Compounds/MpiRatioSelector)
- * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social, etc.) — determines UI mode and ratio set
- * @property {'portrait'|'landscape'} [initialOrientation='portrait'] - Initial orientation (orientation-mode models)
- * @property {'very_low'|'low'|'medium'|'high'|'very_high'} [qualityTier='medium'] - Quality tier (speed-mode models only)
+ * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social) — determines UI mode via RATIO_MODES
+ * @property {'portrait'|'landscape'} [initialOrientation='portrait'] - Initial orientation (image models only)
  * @property {string} [value='1:1'] - Current selected ratio label
+ * @property {'very_low'|'low'|'medium'|'high'|'very_high'} [qualityTier='medium'] - Active quality tier (video/speed-mode only)
+ *
+ * Emits:
+ * 'change' { value, ratio, w, h, orientation }
+ * 'orientation_change' { orientation }
+ * 'quality_change' { qualityTier }
+ * 'popup_toggle' { active }
  */
 
 /**

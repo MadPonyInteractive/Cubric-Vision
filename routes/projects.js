@@ -154,6 +154,19 @@ router.post('/update-project', async (req, res) => {
     }
 });
 
+router.post('/update-project-settings', async (req, res) => {
+    try {
+        const { folderPath, updates } = req.body;
+        const jsonPath = path.join(folderPath, 'project.json');
+        const project = await fs.readJson(jsonPath);
+        const updated = { ...project, ...updates, updatedAt: new Date().toISOString() };
+        await fs.writeJson(jsonPath, updated, { spaces: 2 });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/delete-project', async (req, res) => {
     try {
         const { folderPath } = req.body;

@@ -13,80 +13,75 @@
 
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { state } from '../../../state.js';
-import { setModelSettings, getModelSettings } from '../../../data/projectModel.js';
+import { getModelSettings, setModelSettings } from '../../../data/projectModel.js';
 import { saveProjectSettings } from '../../../managers/projectManager.js';
 
 /** @type {Record<string, ControlDef>} */
 export const PROMPT_BOX_CONTROLS = {
 
     /**
-     * ratio — Aspect ratio picker for image/video generation (t2i, i2i, t2v, i2v, etc.).
+     * ratio — Aspect ratio picker for image generation (t2i, i2i, upscale, video, etc.).
      * Mounts MpiRatioSelector and injects Width/Height into the workflow.
-     * Reads initial state from modelSettings[modelId]; persists on change.
+     * modelType sourced from model.type → determines ratio set and UI mode from ratios.js.
+     * Persists selected ratio/orientation/qualityTier to project.json via modelSettings.
      */
     ratio: {
         nodeTitle: null, // not a single node; Width+Height injected separately
         defaultValue: '1:1',
         mount(el, opts = {}) {
-            const model = opts.model;
-            const modelType = model?.type ?? 'flux';
-            const modelId = model?.id;
+            const model = opts.model || {};
+            const modelType = model.type ?? 'flux';
+            const modelId = model.id;
 
-            // Read saved ratio state from project, or use defaults
-            let initialRatio = this.defaultValue;
-            let initialOrientation = 'portrait';
-            let initialQualityTier = 'medium';
+            // Read persisted settings from project
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const savedRatioSettings = saved.ratioSelector || {};
+            const initialOrientation = savedRatioSettings.orientation || 'portrait';
+            const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
+            const initialQualityTier = savedRatioSettings.qualityTier || 'medium';
 
-            if (modelId && state.currentProject) {
-                const modelSettings = getModelSettings(state.currentProject, modelId);
-                const ratioSettings = modelSettings.ratioSelector || {};
-                if (ratioSettings.selectedRatio) initialRatio = ratioSettings.selectedRatio;
-                if (ratioSettings.orientation) initialOrientation = ratioSettings.orientation;
-                if (ratioSettings.qualityTier) initialQualityTier = ratioSettings.qualityTier;
-            }
-
+            // Mount selector with saved state
             this._instance = MpiRatioSelector.mount(el, {
-                modelType: modelType,
-                initialOrientation: initialOrientation,
+                modelType,
+                initialOrientation,
+                value: initialValue,
                 qualityTier: initialQualityTier,
-                value: initialRatio,
             });
 
-            // On ratio change: save to project (debounced globally via saveProjectSettings)
-            this._instance.on('change', ({ value, w, h }) => {
+            // Ratio selection: update displayed size + save to project
+            this._instance.on('change', ({ value, w, h, orientation }) => {
                 this.value = { label: value, w, h };
-                if (modelId && state.currentProject) {
+                if (state.currentProject && modelId) {
                     const updated = setModelSettings(state.currentProject, modelId, {
-                        ratioSelector: { selectedRatio: value },
+                        ratioSelector: { selectedRatio: value, orientation },
                     });
                     state.currentProject = updated;
                     saveProjectSettings();
                 }
             });
 
-            // On orientation change: save to project (debounced globally via saveProjectSettings)
-            this._instance.on('orientation_change', ({ orientation, value }) => {
-                if (modelId && state.currentProject) {
-                    const updated = setModelSettings(state.currentProject, modelId, {
-                        ratioSelector: { orientation, selectedRatio: value },
-                    });
-                    state.currentProject = updated;
-                    saveProjectSettings();
-                }
+            // Orientation change: save to project
+            this._instance.on('orientation_change', ({ orientation }) => {
+                if (!state.currentProject || !modelId) return;
+                const updated = setModelSettings(state.currentProject, modelId, {
+                    ratioSelector: { orientation },
+                });
+                state.currentProject = updated;
+                saveProjectSettings();
             });
 
-            // On quality tier change: save to project (debounced globally via saveProjectSettings)
+            // Quality tier change: save to project
             this._instance.on('quality_change', ({ qualityTier }) => {
-                if (modelId && state.currentProject) {
-                    const updated = setModelSettings(state.currentProject, modelId, {
-                        ratioSelector: { qualityTier },
-                    });
-                    state.currentProject = updated;
-                    saveProjectSettings();
-                }
+                if (!state.currentProject || !modelId) return;
+                const updated = setModelSettings(state.currentProject, modelId, {
+                    ratioSelector: { qualityTier },
+                });
+                state.currentProject = updated;
+                saveProjectSettings();
             });
 
-            this.value = { label: initialRatio, w: 1024, h: 1024 };
+            // Initialize with persisted value + dimensions
+            this.value = { label: initialValue, w: 1024, h: 1024 };
         },
         getValue() {
             return this.value ?? null;

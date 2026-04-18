@@ -272,11 +272,10 @@ export function removeGroupFromProject(project, groupId) {
 
 // ── Two-Track Settings Helpers ────────────────────────────────────────────────
 
-const _defaultLoraSlots = () => Array.from({ length: 6 }, (_, index) => ({
-    index,
+const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
     name: null,
-    strengthModel: 1, // float (0.0–2.0 range); stored as number, not int
-    strengthClip: 1,  // float (0.0–2.0 range); stored as number, not int
+    strengthModel: 1.0,
+    strengthClip: 1.0,
 }));
 
 /**
@@ -284,26 +283,22 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, (_, index) => ({
  * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} modelId
- * @returns {{ loras: Array, upscaleModel: string|null, ratioSelector: {selectedRatio: string|null, orientation: string|null, qualityTier: string|null} }}
+ * @returns {{ loras: Array, upscaleModel: string|null, ratioSelector: { selectedRatio?: string, orientation?: string, qualityTier?: string } }}
  */
 export function getModelSettings(project, modelId) {
     return (project.modelSettings ?? {})[modelId] ?? {
         loras: _defaultLoraSlots(),
         upscaleModel: null,
-        ratioSelector: {
-            selectedRatio: null,
-            orientation: null,
-            qualityTier: null,
-        },
+        ratioSelector: {},
     };
 }
 
 /**
  * Returns a new project with updated model settings for the given modelId.
- * Does not mutate the original.
+ * Does not mutate the original. Properly deep-merges nested objects like ratioSelector.
  * @param {Project} project
  * @param {string} modelId
- * @param {{ loras?: Array, upscaleModel?: string|null, ratioSelector?: {selectedRatio?: string|null, orientation?: string|null, qualityTier?: string|null} }} updates
+ * @param {{ loras?: Array, upscaleModel?: string|null, ratioSelector?: Object }} updates
  * @returns {Project}
  */
 export function setModelSettings(project, modelId, updates) {
@@ -313,7 +308,11 @@ export function setModelSettings(project, modelId, updates) {
         updatedAt: new Date().toISOString(),
         modelSettings: {
             ...project.modelSettings,
-            [modelId]: { ...current, ...updates, ratioSelector: { ...current.ratioSelector, ...updates.ratioSelector } },
+            [modelId]: {
+                ...current,
+                ...updates,
+                ratioSelector: { ...current.ratioSelector, ...updates.ratioSelector },
+            },
         },
     };
 }
