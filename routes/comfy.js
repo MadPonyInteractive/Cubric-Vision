@@ -333,7 +333,7 @@ router.get('/comfy/list-files', async (req, res) => {
                 } else {
                     const ext = path.extname(file).toLowerCase();
                     if (['.safetensors', '.ckpt', '.pt', '.bin', '.pth'].includes(ext)) {
-                        results.push(path.relative(relativeTo, fullPath).replace(/\\/g, '/'));
+                        results.push(path.relative(relativeTo, fullPath));
                     }
                 }
             }
