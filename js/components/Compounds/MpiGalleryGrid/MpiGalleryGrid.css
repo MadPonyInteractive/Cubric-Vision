@@ -134,7 +134,7 @@
     /* min-width: 600px; */
     left: 50%;
     transform: translateX(-50%);
-    background: var(--surface-glass);
+    /* background: var(--surface-glass); */
     /* border-radius: var(--radius-xl); */
 }
 

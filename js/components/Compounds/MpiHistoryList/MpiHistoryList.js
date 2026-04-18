@@ -222,6 +222,7 @@ export const MpiHistoryList = ComponentFactory.create({
 
             container.appendChild(card);
             _historyCards.push(card);
+            _selectedIdx = idx;
             _applyCardStates();
         };
 

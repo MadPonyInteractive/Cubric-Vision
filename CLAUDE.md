@@ -5,7 +5,7 @@
 ## THE CARDINAL RULES
 1. **NEVER assume architectural patterns.** Check the rules below.
 2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
-3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update ****\*******`.claude/rules/`****\* to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** 
+3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update ****\*\*\*\*\*****\*\*\*\***`.claude/rules/`**\*\*\*\*\*\*\* to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** 
 4. **Suggest improvements in the architecture** If you find that areas in the code that you're working on, could use improvements or a different design pattern that could help the project be more efficient, simple and scalable, you should suggest them to the user. 
 5. the backlog.md file is under revision by the user, please ignore it for now.
 ---
@@ -111,8 +111,10 @@ If you are trying to fix a bug, a server crash, or an issue with the python engi
 ### Browser Automation (playwright-cli)
 If you need to run browser automation or test web interfaces:
 **->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`)
-**->** **Important:** When opening a visible browser, always use the `--headed` flag so the user can see the browser window and interactions. Omit `--headed` only when running headless (e.g., in CI or when no visual feedback is needed).
+**->** **Important:** The app runs on http://127.0.0.1:3000/
 
+### Git and Commits
+NEVER commit to git unless user specifically asks for it
 ---
 
 ## MPI Skills (global — `C:/Users/Fabio/.claude/skills/mpi/`)

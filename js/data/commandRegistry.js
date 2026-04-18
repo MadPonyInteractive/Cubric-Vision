@@ -71,14 +71,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: false,
-        components: [''],
+        components: [],
     },
     edit: {
         label: 'Edit',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: true,
-        components: [''],
+        components: [],
     },
     detail: {
         label: 'Detail',
