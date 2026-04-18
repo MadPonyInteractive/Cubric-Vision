@@ -18,7 +18,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
 const logger = require('./logger');
-const { runPipCommand, resolveComfyPath, getCustomRoot } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot } = require('./shared');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
 const sevenBin = require('7zip-bin');
@@ -499,14 +499,25 @@ async function _runCustomNodeInstall(modelJob) {
             logger.error('download', `folder rename failed for ${dep.id}: ${err.message}`);
         }
 
-        // Run pip install for requirements.txt if present
-        const reqPath = path.join(targetDir, 'requirements.txt');
-        if (await fs.pathExists(reqPath)) {
+        // Install requirements: custom command or pip
+        if (dep.installRequirementsCommand) {
             try {
-                await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
-                logger.info('download', `pip requirements installed for ${dep.id}`);
+                await runCustomCommand(dep.installRequirementsCommand, targetDir);
+                logger.info('download', `Custom install command succeeded for ${dep.id}`);
             } catch (err) {
-                logger.error('download', `pip install FAILED for ${dep.id}: ${err.message}`);
+                logger.error('download', `Custom install command FAILED for ${dep.id}: ${err.message}`);
+                throw err;
+            }
+        } else {
+            const reqPath = path.join(targetDir, 'requirements.txt');
+            if (await fs.pathExists(reqPath)) {
+                try {
+                    await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
+                    logger.info('download', `pip requirements installed for ${dep.id}`);
+                } catch (err) {
+                    logger.error('download', `pip install FAILED for ${dep.id}: ${err.message}`);
+                    throw err;
+                }
             }
         }
     }

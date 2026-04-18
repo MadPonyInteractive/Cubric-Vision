@@ -166,6 +166,28 @@ async function runPipCommand(args) {
 }
 
 /**
+ * Executes a custom command (e.g. `python install.py`) in a specified working directory.
+ * Automatically replaces `python` with the embedded Python path.
+ */
+async function runCustomCommand(commandStr, cwd) {
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
+    const parts = commandStr.split(' ');
+    const exe = parts[0].toLowerCase() === 'python' ? pythonPath : parts[0];
+    const args = parts.slice(1);
+    logger.info('system', `Running custom command: ${commandStr} (cwd: ${cwd})`);
+    return new Promise((resolve, reject) => {
+        const proc = spawn(exe, args, { cwd });
+        proc.stdout.on('data', (d) => logger.info('system', `[custom-cmd] ${d.toString().trim()}`));
+        proc.stderr.on('data', (d) => logger.warn('system', `[custom-cmd-err] ${d.toString().trim()}`));
+        proc.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`Custom command "${commandStr}" failed with exit code ${code}`));
+        });
+    });
+}
+
+/**
  * Checks if a Python package is required by any other installed custom node.
  */
 async function isPackageRequiredElsewhere(packageName, excludedNodePath) {
@@ -375,6 +397,7 @@ module.exports = {
     stopComfyUI,
     streamDownload,
     runPipCommand,
+    runCustomCommand,
     isPackageRequiredElsewhere,
     findFileRecursive,
     resolveComfyPath,
