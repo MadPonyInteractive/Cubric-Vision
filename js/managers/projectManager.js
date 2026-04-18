@@ -20,6 +20,17 @@ async function post(endpoint, body) {
   return res.json();
 }
 
+// Debounce timer for project settings saves (prevents rapid-fire I/O from sliders, mouse wheel, etc.)
+let _saveSettingsTimeout = null;
+function _debouncedSaveProjectSettings() {
+  clearTimeout(_saveSettingsTimeout);
+  _saveSettingsTimeout = setTimeout(async () => {
+    if (!state.currentProject) return;
+    const { modelSettings, toolSettings } = state.currentProject;
+    await updateProject({ modelSettings, toolSettings });
+  }, 500);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -119,12 +130,12 @@ export async function updateProject(updates) {
 
 /**
  * Persist modelSettings and toolSettings for the current project to disk.
- * Call this whenever the user changes LoRA or upscale model selections.
+ * Debounced: waits 500ms of inactivity before writing to disk.
+ * Call this whenever settings change (LoRA strength, ratio, orientation, etc.).
+ * Rapid changes (e.g., mouse wheel on sliders) are coalesced into a single save.
  */
-export async function saveProjectSettings() {
-  if (!state.currentProject) return;
-  const { modelSettings, toolSettings } = state.currentProject;
-  await updateProject({ modelSettings, toolSettings });
+export function saveProjectSettings() {
+  _debouncedSaveProjectSettings();
 }
 
 /**

@@ -147,9 +147,10 @@
 
 /**
  * @typedef {Object} MpiRatioSelectorProps (Compound — js/components/Compounds/MpiRatioSelector)
- * @property {string} [modelType='flux'] - Model to use for default ratios (flux or sdxl)
- * @property {'portrait'|'landscape'} [initialOrientation='portrait'] - Initial orientation
- * @property {string} [value] - Current selected ratio label
+ * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social, etc.) — determines UI mode and ratio set
+ * @property {'portrait'|'landscape'} [initialOrientation='portrait'] - Initial orientation (orientation-mode models)
+ * @property {'very_low'|'low'|'medium'|'high'|'very_high'} [qualityTier='medium'] - Quality tier (speed-mode models only)
+ * @property {string} [value='1:1'] - Current selected ratio label
  */
 
 /**

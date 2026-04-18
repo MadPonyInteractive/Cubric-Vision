@@ -87,6 +87,15 @@ export const SOCIAL_RATIOS = [
     { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" }
 ];
 
+// Maps model.type → which UI mode MpiRatioSelector should use.
+// 'orientation' = portrait/landscape toggle. 'speed' = quality-tier radio.
+export const RATIO_MODES = {
+    flux: 'orientation',
+    sdxl: 'orientation',
+    wan:  'speed',
+    // ltx: 'speed'  ← add one line when LTX model is registered
+};
+
 // ── Derived Icon Mapping ────────────────────────────────────────────────
 
 /**
@@ -105,26 +114,29 @@ export const RATIO_ICONS = Object.keys(ICONS)
 /**
  * Retrieve aspect ratio presets for a given model type and orientation.
  *
- * For generation (t2i / i2i): modelType comes from model.type in modelRegistry.js
+ * For image generation (t2i / i2i): modelType comes from model.type
  *   'flux'   → FLUX_RATIOS[orientation]
  *   'sdxl'   → SDXL_RATIOS[orientation]
- *   others   → falls back to SDXL_RATIOS[orientation]
  *
- * For crop / social export: pass modelType = 'social' — returns SOCIAL_RATIOS (flat, no orientation).
+ * For video generation: modelType = 'wan', qualityTier selects WAN_RATIOS tier
+ *   'wan'    → WAN_RATIOS[qualityTier]
  *
- * TODO: Add WAN_RATIOS when the Wan model is registered (model.type = 'wan').
- * TODO: Add LTX_RATIOS for LTX 2.3 video.
+ * For crop / social export: modelType = 'social' → SOCIAL_RATIOS (flat, no orientation).
+ *
+ * Unknown types fall back to SDXL_RATIOS.
  *
  * @param {string} modelType
  * @param {'portrait'|'landscape'} [orientation]
+ * @param {'very_low'|'low'|'medium'|'high'|'very_high'} [qualityTier='medium'] - for video models
  * @returns {Array}
  */
-export function getModelRatios(modelType, orientation) {
+export function getModelRatios(modelType, orientation, qualityTier = 'medium') {
     switch (modelType?.toLowerCase()) {
-        case 'flux': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
+        case 'flux':   return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
         case 'social': return SOCIAL_RATIOS;
+        case 'wan':    return WAN_RATIOS[qualityTier] ?? WAN_RATIOS.medium;
         case 'sdxl':
-        default: return SDXL_RATIOS[orientation] ?? SDXL_RATIOS.portrait;
+        default:       return SDXL_RATIOS[orientation] ?? SDXL_RATIOS.portrait;
     }
 }
 

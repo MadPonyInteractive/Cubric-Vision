@@ -433,7 +433,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 ctrlEl.style.display = 'contents';
                 bottomSlot.appendChild(ctrlEl);
 
-                ctrl.mount(ctrlEl, { modelId: model?.id });
+                ctrl.mount(ctrlEl, { model });
                 _activeControls.set(componentId, ctrl);
             }
         }

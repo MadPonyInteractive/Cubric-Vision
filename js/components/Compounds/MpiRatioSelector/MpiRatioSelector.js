@@ -3,7 +3,8 @@ import { Events } from '../../../events.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
-import { getModelRatios } from '../../../utils/ratios.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 /**
  * MpiRatioSelector — Block-level Aspect Ratio Picker
@@ -17,16 +18,18 @@ export const MpiRatioSelector = ComponentFactory.create({
     template: (props) => {
         const orientation = props.orientation || props.initialOrientation || 'portrait';
         const modelType = props.modelType || 'flux';
+        const qualityTier = props.qualityTier || 'medium';
         const value = props.value || '1:1';
         const isActive = props.showPopup || false;
 
-        const ratios = getModelRatios(modelType, orientation);
+        const mode = RATIO_MODES[modelType] ?? 'orientation';
+        const ratios = getModelRatios(modelType, orientation, qualityTier);
 
         // Find current ratio icon
         const currentRatio = ratios.find(r => r.label === value) || ratios[0];
         const triggerIcon = currentRatio.icon.replace('rect_', 'ratio_');
 
-        // Orientation icon (swap)
+        // Orientation icon (swap) — used only in orientation mode
         const orientIcon = orientation === 'portrait' ? 'ratio_16_9' : 'ratio_9_16';
 
         // Build ratio buttons group
@@ -48,10 +51,11 @@ export const MpiRatioSelector = ComponentFactory.create({
             </div>`;
         }).join('');
 
-        // The popup content
-        const isFlat = modelType === 'video' || modelType === 'social';
-        const orientContainerStyle = isFlat ? 'display: none;' : '';
-        const headerHtml = isFlat ? '' : `
+        // The popup header — either orientation toggle or speed radio
+        let headerHtml = '';
+        if (mode === 'orientation') {
+            const orientContainerStyle = '';
+            headerHtml = `
             <div class="mpi-ratio-sel__header">
                 ${MpiBadge.template({ label: 'RATIO', variant: 'secondary' })}
                 <div class="mpi-ratio-sel__orient-btn" style="${orientContainerStyle}">
@@ -63,6 +67,16 @@ export const MpiRatioSelector = ComponentFactory.create({
         })}
                 </div>
             </div>`;
+        } else if (mode === 'speed') {
+            const speedOptions = ['very_low', 'low', 'medium', 'high', 'very_high'];
+            headerHtml = `
+            <div class="mpi-ratio-sel__header">
+                ${MpiBadge.template({ label: 'SPEED', variant: 'secondary' })}
+                <div class="mpi-ratio-sel__speed-radio">
+                    ${MpiRadioGroup.template({ options: speedOptions, value: qualityTier, name: 'quality' })}
+                </div>
+            </div>`;
+        }
 
         const popupInnerHtml = `
             ${headerHtml}
@@ -96,6 +110,9 @@ export const MpiRatioSelector = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
+        // Initialize qualityTier if not provided
+        if (!props.qualityTier) props.qualityTier = 'medium';
+
         const trigger = el.querySelector('.mpi-ratio-sel__trigger');
         const popupEl = el.querySelector('.mpi-popup');
         // Capture DOM refs before portaling (they live inside popupEl)
@@ -172,8 +189,10 @@ export const MpiRatioSelector = ComponentFactory.create({
         const updateUI = () => {
             const orientation = props.orientation || props.initialOrientation || 'portrait';
             const modelType = props.modelType || 'flux';
+            const qualityTier = props.qualityTier || 'medium';
             const value = props.value || '1:1';
-            const ratios = getModelRatios(modelType, orientation);
+            const mode = RATIO_MODES[modelType] ?? 'orientation';
+            const ratios = getModelRatios(modelType, orientation, qualityTier);
 
             // 1. Update Grid Icons
             grid.innerHTML = ratios.map(r => {
@@ -187,18 +206,25 @@ export const MpiRatioSelector = ComponentFactory.create({
                 </div>`;
             }).join('');
 
-            // 2. Update Orientation Trigger Icon
+            // 2. Update Header (orientation toggle or speed radio)
             const orientIcon = orientation === 'portrait' ? 'ratio_16_9' : 'ratio_9_16';
-            const isFlat = modelType === 'video' || modelType === 'social';
-            if (!isFlat) {
+            if (mode === 'orientation') {
                 if (orientContainer) {
                     orientContainer.style.display = 'block';
                     orientContainer.innerHTML = MpiButton.template({
                         icon: orientIcon, size: 'sm', stroke: true
                     });
                 }
-            } else {
-                if (orientContainer) orientContainer.style.display = 'none';
+            } else if (mode === 'speed') {
+                const speedOptions = ['very_low', 'low', 'medium', 'high', 'very_high'];
+                const speedRadioContainer = popupEl.querySelector('.mpi-ratio-sel__speed-radio');
+                if (speedRadioContainer) {
+                    speedRadioContainer.innerHTML = MpiRadioGroup.template({
+                        options: speedOptions,
+                        value: qualityTier,
+                        name: 'quality'
+                    });
+                }
             }
 
             // 3. Update Main Trigger Button
@@ -215,9 +241,36 @@ export const MpiRatioSelector = ComponentFactory.create({
             const orientBtn = e.target.closest('.mpi-ratio-sel__orient-btn');
             if (orientBtn) {
                 const currentOrient = props.orientation || props.initialOrientation || 'portrait';
-                props.orientation = currentOrient === 'portrait' ? 'landscape' : 'portrait';
-                emit('orientation_change', { orientation: props.orientation });
+                const newOrient = currentOrient === 'portrait' ? 'landscape' : 'portrait';
+
+                // Find current ratio index in current orientation
+                const modelType = props.modelType || 'flux';
+                const currentRatios = getModelRatios(modelType, currentOrient, props.qualityTier || 'medium');
+                const currentValue = props.value || '1:1';
+                const currentIndex = currentRatios.findIndex(r => r.label === currentValue);
+
+                // Snap to same index in new orientation
+                const newRatios = getModelRatios(modelType, newOrient, props.qualityTier || 'medium');
+                const newRatio = newRatios[Math.min(currentIndex, newRatios.length - 1)] || newRatios[0];
+
+                props.orientation = newOrient;
+                props.value = newRatio.label;
+                emit('orientation_change', { orientation: props.orientation, value: props.value });
                 updateUI();
+            }
+        });
+
+        // Speed/Quality tier change handler (for video models)
+        popupEl.addEventListener('click', (e) => {
+            const radioBtn = e.target.closest('.mpi-radio-group__btn');
+            if (radioBtn) {
+                const modelType = props.modelType || 'flux';
+                const mode = RATIO_MODES[modelType] ?? 'orientation';
+                if (mode === 'speed') {
+                    props.qualityTier = radioBtn.dataset.value;
+                    emit('quality_change', { qualityTier: props.qualityTier });
+                    updateUI();
+                }
             }
         });
 
@@ -228,7 +281,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                 const label = item.dataset.label;
                 props.value = label;
 
-                const ratios = getModelRatios(props.modelType || 'flux', props.orientation || 'portrait');
+                const ratios = getModelRatios(props.modelType || 'flux', props.orientation || 'portrait', props.qualityTier || 'medium');
                 const ratio = ratios.find(r => r.label === label);
 
                 // SOCIAL_RATIOS have only `ratio` (float); generation ratios have `w`/`h`.

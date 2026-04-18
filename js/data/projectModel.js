@@ -272,10 +272,11 @@ export function removeGroupFromProject(project, groupId) {
 
 // ── Two-Track Settings Helpers ────────────────────────────────────────────────
 
-const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
+const _defaultLoraSlots = () => Array.from({ length: 6 }, (_, index) => ({
+    index,
     name: null,
-    strengthModel: 1.0,
-    strengthClip: 1.0,
+    strengthModel: 1, // float (0.0–2.0 range); stored as number, not int
+    strengthClip: 1,  // float (0.0–2.0 range); stored as number, not int
 }));
 
 /**
@@ -283,12 +284,17 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
  * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} modelId
- * @returns {{ loras: Array, upscaleModel: string|null }}
+ * @returns {{ loras: Array, upscaleModel: string|null, ratioSelector: {selectedRatio: string|null, orientation: string|null, qualityTier: string|null} }}
  */
 export function getModelSettings(project, modelId) {
     return (project.modelSettings ?? {})[modelId] ?? {
         loras: _defaultLoraSlots(),
         upscaleModel: null,
+        ratioSelector: {
+            selectedRatio: null,
+            orientation: null,
+            qualityTier: null,
+        },
     };
 }
 
@@ -297,7 +303,7 @@ export function getModelSettings(project, modelId) {
  * Does not mutate the original.
  * @param {Project} project
  * @param {string} modelId
- * @param {{ loras?: Array, upscaleModel?: string|null }} updates
+ * @param {{ loras?: Array, upscaleModel?: string|null, ratioSelector?: {selectedRatio?: string|null, orientation?: string|null, qualityTier?: string|null} }} updates
  * @returns {Project}
  */
 export function setModelSettings(project, modelId, updates) {
@@ -307,7 +313,7 @@ export function setModelSettings(project, modelId, updates) {
         updatedAt: new Date().toISOString(),
         modelSettings: {
             ...project.modelSettings,
-            [modelId]: { ...current, ...updates },
+            [modelId]: { ...current, ...updates, ratioSelector: { ...current.ratioSelector, ...updates.ratioSelector } },
         },
     };
 }
