@@ -136,10 +136,6 @@ async function _bootApp() {
       // Block app — show upgrade UI
       // Component will trigger upgrade when shown
       _engineInstall.el.show('upgrading');
-    } else if (versionData.needsDepsInstall) {
-      // Block app — show repair UI
-      // Component will trigger repair when shown
-      _engineInstall.el.show('repairing');
     }
 
     // Wire engine:ready to hide install modal and continue boot
@@ -151,8 +147,8 @@ async function _bootApp() {
       };
       Events.on('engine:ready', handler);
 
-      // If engine already current and all deps present, resolve immediately
-      if (!versionData.needsInstall && !versionData.needsUpgrade && !versionData.needsDepsInstall) {
+      // If engine already current, resolve immediately
+      if (!versionData.needsInstall && !versionData.needsUpgrade) {
         resolve();
       }
     });
