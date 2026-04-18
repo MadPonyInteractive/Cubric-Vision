@@ -12,9 +12,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus } = require('./shared');
 const logger = require('./logger');
-const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload } = require('./downloadManager');
+const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall } = require('./downloadManager');
 const { COMFY_VERSION } = require('../js/core/appVersion.js');
 
 router.get('/engine/status', async (req, res) => {
@@ -229,7 +229,23 @@ async function _runEngineDownload(type) {
             logger.info('engine', `extra_model_paths.yaml written pointing to ${mpiModelsDir}`);
         }
 
-        // ── 6. Complete ────────────────────────────────────────────────────────
+        // ── 6. Install universal workflow dependencies (ComfyUI only) ───────────
+        if (type === 'comfy') {
+            try {
+                const { missingDeps } = await checkUniversalWorkflowDepsStatus();
+                if (missingDeps.length > 0) {
+                    logger.info('engine', `Installing ${missingDeps.length} missing UW deps...`);
+                    await startUniversalWorkflowInstall(missingDeps, true);
+                } else {
+                    logger.info('engine', 'All universal workflow dependencies already present');
+                }
+            } catch (err) {
+                logger.error('engine', `UW deps install failed: ${err.message}`);
+                throw err; // surface as engine:error
+            }
+        }
+
+        // ── 7. Complete ────────────────────────────────────────────────────────
         broadcastEngineEvent('engine:complete', { success: true });
         logger.info('engine', `Engine provisioning complete for type: ${type}`);
 
@@ -271,6 +287,38 @@ router.get('/engine/version-check', async (req, res) => {
     } catch (e) {
         logger.error('system', 'Version check failed', e);
         res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+router.get('/engine/deps-status', async (req, res) => {
+    try {
+        const result = await checkUniversalWorkflowDepsStatus();
+        res.json({
+            success: true,
+            ...result,
+        });
+    } catch (e) {
+        logger.error('system', 'Deps status check failed', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+router.post('/engine/repair-deps', async (req, res) => {
+    logger.info('engine', 'UW deps repair requested');
+    res.json({ success: true, status: 'repair-started' });
+
+    try {
+        const { missingDeps } = await checkUniversalWorkflowDepsStatus();
+        if (!missingDeps.length) {
+            broadcastEngineEvent('engine:uw-installing', { status: 'All dependencies already present' });
+            broadcastEngineEvent('engine:complete', { success: true });
+            return;
+        }
+        await startUniversalWorkflowInstall(missingDeps, true);
+        broadcastEngineEvent('engine:complete', { success: true });
+    } catch (err) {
+        logger.error('engine', `UW deps repair failed: ${err.message}`);
+        broadcastEngineEvent('engine:error', { error: err.message });
     }
 });
 

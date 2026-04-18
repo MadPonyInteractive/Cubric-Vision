@@ -17,11 +17,14 @@ const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
+const { createRequire } = require('module');
 const logger = require('./logger');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot } = require('./shared');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
 const sevenBin = require('7zip-bin');
+
+const _require = createRequire(__filename);
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
@@ -30,15 +33,9 @@ const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively
 const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
 
 function _createDepJob(dep) {
-    // GitHub repo URLs can't be downloaded directly by node-downloader-helper.
-    // Convert custom_nodes GitHub URLs to archive URLs before downloading.
-    let url = dep.url;
-    if (dep.type === 'custom_nodes' && _isGitHubUrl(url)) {
-        url = _toGitHubArchiveUrl(url);
-    }
     return {
         id: dep.id,
-        url,
+        url: dep.url,
         type: dep.type || null,
         filename: dep.filename || null,
         localPath: null,
@@ -49,16 +46,6 @@ function _createDepJob(dep) {
         error: null,
         sha256Expected: dep.sha256 || null,
     };
-}
-
-function _isGitHubUrl(url) {
-    return /^https:\/\/github\.com\//.test(url || '');
-}
-
-function _toGitHubArchiveUrl(repoUrl) {
-    // Strip trailing slashes, then append /archive/main.zip
-    const clean = (repoUrl || '').replace(/\/+$/, '');
-    return `${clean}/archive/main.zip`;
 }
 
 function _createModelJob(modelId, deps) {
@@ -647,6 +634,134 @@ function cancelAllDownloads() {
     _broadcast('download:cancelled', { all: true });
 }
 
+// ── Universal Workflow Deps Installer ─────────────────────────────────────────
+
+/**
+ * Installs universal workflow dependencies: downloads missing deps and runs
+ * custom node install steps (pip, custom commands) for any custom_nodes.
+ *
+ * Called after engine install completes (new install or upgrade).
+ * Also called by POST /engine/repair-deps for the "repairing" flow.
+ *
+ * @param {string[]} depIds - DEPS ids to install (from checkUniversalWorkflowDepsStatus)
+ * @param {boolean} broadcastProgress - whether to emit engine:uw-installing SSE events
+ */
+async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const customRoot = await getCustomRoot();
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+
+    logger.info('download', `startUniversalWorkflowInstall: customRoot=${customRoot}, ${depIds.length} deps to check`);
+
+    if (broadcastProgress) {
+        broadcastEngineEvent('engine:uw-installing', { status: 'Preparing universal workflow dependencies...' });
+    }
+
+    const modelJob = {
+        modelId: '__universal_workflow__',
+        status: 'downloading',
+        deps: [],
+        totalBytes: 0,
+        downloadedBytes: 0,
+        speed: '',
+        progress: 0,
+    };
+
+    for (const depId of depIds) {
+        const dep = DEPS[depId];
+        if (!dep) {
+            logger.warn('download', `startUniversalWorkflowInstall: unknown dep "${depId}"`);
+            continue;
+        }
+
+        modelJob.totalBytes += _parseSizeToBytes(dep.size);
+
+        let localPath;
+        if (dep.type === 'custom_nodes') {
+            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
+            localPath = path.join(defaultCustomNodesRoot, zipName);
+        } else if (customRoot) {
+            const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
+            localPath = lp;
+        } else {
+            localPath = path.join(defaultModelsRoot, dep.filename);
+        }
+
+        const isInstalled = await fs.pathExists(localPath);
+
+        let depJob = _depJobs.get(depId);
+        if (!depJob) {
+            depJob = _createDepJob(dep);
+            depJob.localPath = localPath;
+            _depJobs.set(depId, depJob);
+        }
+        depJob.refCount += 1;
+
+        if (!modelJob.deps.find(d => d.id === depId)) {
+            modelJob.deps.push(depJob);
+        }
+
+        // Mark already-installed deps as complete without downloading
+        if (isInstalled) {
+            depJob.status = 'complete';
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+            logger.info('download', `startUniversalWorkflowInstall: skipping already installed: ${depId} -> ${localPath}`);
+        }
+    }
+
+    _modelJobs.set(modelJob.modelId, modelJob);
+
+    // Log download URLs before starting so we know which URL fails
+    for (const depJob of modelJob.deps) {
+        if (depJob.status !== 'complete') {
+            logger.info('download', `startUniversalWorkflowInstall: will download ${depJob.id} from ${depJob.url}`);
+        }
+    }
+
+    _startPendingDeps();
+
+    // Wait for all UW deps to reach a terminal state
+    await new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+            const allDone = modelJob.deps.every(d => ['complete', 'failed', 'cancelled'].includes(d.status));
+            const anyFailed = modelJob.deps.some(d => d.status === 'failed');
+
+            if (allDone) {
+                clearInterval(checkInterval);
+                if (anyFailed) {
+                    const failedNames = modelJob.deps.filter(d => d.status === 'failed').map(d => d.id).join(', ');
+                    reject(new Error(`UW deps install failed: ${failedNames}`));
+                } else {
+                    resolve();
+                }
+            }
+        }, 500);
+    });
+
+    // Run custom node install steps for any completed custom_nodes deps
+    const customNodeDeps = modelJob.deps.filter(d =>
+        d.status === 'complete' && d.type === 'custom_nodes' && d.localPath != null
+    );
+
+    if (customNodeDeps.length > 0) {
+        if (broadcastProgress) {
+            broadcastEngineEvent('engine:uw-installing', { status: 'Installing custom node requirements...' });
+        }
+        // Re-use the modelJob-shaped structure that _runCustomNodeInstall expects
+        await _runCustomNodeInstall({
+            modelId: modelJob.modelId,
+            deps: customNodeDeps,
+        });
+    }
+
+    if (broadcastProgress) {
+        broadcastEngineEvent('engine:uw-installing', { status: 'Universal workflow dependencies ready' });
+    }
+}
+
 // Named export for engine to broadcast on shared SSE
 function broadcastEngineEvent(event, data) {
     const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -688,4 +803,13 @@ router.post('/engine/resume', (req, res) => {
     res.json({ success: true });
 });
 
-module.exports = { router, cancelAllDownloads, broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload };
+module.exports = {
+    router,
+    cancelAllDownloads,
+    broadcastEngineEvent,
+    ResumableDownloader,
+    registerEngineDownload,
+    clearEngineDownload,
+    runCustomNodeInstall: _runCustomNodeInstall,
+    startUniversalWorkflowInstall,
+};

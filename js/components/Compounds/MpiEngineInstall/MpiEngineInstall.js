@@ -285,8 +285,8 @@ export const MpiEngineInstall = ComponentFactory.create({
                 upgradeMessage.style.display = 'block';
             } else if (mode === 'repairing') {
                 _showPhase('progress');
-                progressTitle.textContent = 'Repairing Installation';
-                progressSubtitle.textContent = 'Downloading missing dependencies...';
+                progressTitle.textContent = 'Installing Dependencies';
+                progressSubtitle.textContent = 'Setting up...';
                 upgradeMessage.style.display = 'none';
             } else {
                 _showPhase('setup');
@@ -313,6 +313,15 @@ export const MpiEngineInstall = ComponentFactory.create({
                 });
             } else if (mode === 'repairing') {
                 _connectSSE();
+                // Initialize progress bar immediately so user sees feedback
+                _progressBarInst = MpiProgressBar.mount(progressBar, {
+                    min: 0,
+                    max: 100,
+                    value: 0,
+                    interactive: false,
+                    variant: 'primary',
+                    info: 'Preparing...'
+                });
                 fetch('/engine/repair-deps', { method: 'POST' }).catch(err => {
                     _setError(`Repair failed: ${err.message}`);
                 });
@@ -445,11 +454,20 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             _sseConnection.addEventListener('engine:uw-installing', (e) => {
                 const data = JSON.parse(e.data);
-                el.setStatus(data.status || 'Installing workflow dependencies...');
-                progressInfo.textContent = 'Downloading Universal Workflow dependencies...';
+                el.setStatus(data.status || 'Installing dependencies...');
+                if (data.progress !== undefined) {
+                    el.setProgress(data);
+                }
                 el.setLoading(true);
                 pauseButtonMount.style.display = 'none';
                 resumeButtonMount.style.display = 'none';
+            });
+
+            _sseConnection.addEventListener('download:progress', (e) => {
+                const data = JSON.parse(e.data);
+                if (data.modelId === '__universal_workflow__') {
+                    el.setProgress(data);
+                }
             });
 
             _sseConnection.addEventListener('engine:complete', () => {

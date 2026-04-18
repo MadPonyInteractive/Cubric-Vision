@@ -147,9 +147,21 @@ async function _bootApp() {
       };
       Events.on('engine:ready', handler);
 
-      // If engine already current, resolve immediately
+      // If engine already current, check if UW deps need installing
       if (!versionData.needsInstall && !versionData.needsUpgrade) {
-        resolve();
+        // Engine is current — check if universal workflow deps are missing
+        fetch('/engine/deps-status').then(res => res.json()).then(depsData => {
+          if (depsData.needsDepsInstall) {
+            // Show repairing modal and let SSE drive completion
+            _engineInstall.el.show('repairing');
+          } else {
+            // Engine current and deps installed — boot immediately
+            resolve();
+          }
+        }).catch(() => {
+          // Deps check failed — proceed anyway
+          resolve();
+        });
       }
     });
   } catch (err) {

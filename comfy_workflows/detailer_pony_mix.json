@@ -282,35 +282,5 @@
     "_meta": {
       "title": "Lora_6"
     }
-  },
-  "1637": {
-    "inputs": {
-      "rgthree_comparer": {
-        "images": [
-          {
-            "name": "A",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00005_.png&type=temp&subfolder=&rand=0.11153776947167604"
-          },
-          {
-            "name": "B",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_dmcrj_00006_.png&type=temp&subfolder=&rand=0.9529280827630856"
-          }
-        ]
-      },
-      "image_a": [
-        "1534",
-        0
-      ],
-      "image_b": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "Image Comparer (rgthree)",
-    "_meta": {
-      "title": "Image Comparer (rgthree)"
-    }
   }
 }

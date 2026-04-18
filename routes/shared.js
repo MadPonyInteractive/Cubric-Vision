@@ -12,13 +12,14 @@
 
 const fs     = require('fs-extra');
 const path   = require('path');
+const { createRequire } = require('module');
 const logger = require('./logger');
 const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
 const { exec, spawn } = require('child_process');
 
-// ── Shared Constants ──────────────────────────────────────────────────────────
+const _require = createRequire(__filename);
 
 const DEFAULT_PROJECTS_ROOT = path.join(__dirname, '..', 'projects');
 const MODELS_ROOT = path.join(__dirname, '..', 'data', 'models');
@@ -369,6 +370,53 @@ async function getCustomRoot() {
 }
 
 /**
+ * Returns the full flat list of unique DEPS ids required by all universal workflows.
+ * Deduplicated — each dep id appears once even if shared across multiple UWs.
+ */
+function getUniversalWorkflowDepIds() {
+    const { UNIVERSAL_WORKFLOWS } = _require('../js/data/modelConstants/universal_workflows.js');
+    const seen = new Set();
+    const ids = [];
+    for (const wf of Object.values(UNIVERSAL_WORKFLOWS)) {
+        for (const depId of wf.dependencies) {
+            if (!seen.has(depId)) {
+                seen.add(depId);
+                ids.push(depId);
+            }
+        }
+    }
+    return ids;
+}
+
+/**
+ * Checks which universal workflow dependencies are missing from disk.
+ * Returns { needsDepsInstall, missingDeps } where missingDeps is an array of dep ids.
+ *
+ * Uses resolveComfyPath so custom root and type→subdir mapping are respected.
+ */
+async function checkUniversalWorkflowDepsStatus() {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const customRoot = await getCustomRoot();
+    const config = {};
+    const depIds = getUniversalWorkflowDepIds();
+    const missing = [];
+
+    for (const depId of depIds) {
+        const dep = DEPS[depId];
+        if (!dep) {
+            logger.warn('comfy', `checkUniversalWorkflowDepsStatus: unknown dep id "${depId}"`);
+            continue;
+        }
+        const { localPath } = await resolveComfyPath(dep, customRoot, config);
+        if (!(await fs.pathExists(localPath))) {
+            missing.push(depId);
+        }
+    }
+
+    return { needsDepsInstall: missing.length > 0, missingDeps: missing };
+}
+
+/**
  * Empties ComfyUI's input/ and output/ temp folders.
  */
 async function cleanComfyUITempFiles() {
@@ -406,4 +454,6 @@ module.exports = {
     syncWorkflowStates,
     getCustomRoot,
     cleanComfyUITempFiles,
+    getUniversalWorkflowDepIds,
+    checkUniversalWorkflowDepsStatus,
 };
