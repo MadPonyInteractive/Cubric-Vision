@@ -352,8 +352,8 @@ async function startUniversalWorkflowInstall() {
     modelJob.status = 'downloading';
     _startPendingDeps();
 
-    // Poll for job completion
-    return new Promise((resolve, reject) => {
+    // Poll for job completion — always resolves, logs errors as warnings
+    return new Promise((resolve) => {
         const checkInterval = setInterval(() => {
             const job = _modelJobs.get(MODEL_ID);
             if (!job) {
@@ -361,16 +361,16 @@ async function startUniversalWorkflowInstall() {
                 resolve();
                 return;
             }
-            if (job.status === 'complete') {
+            if (job.status === 'complete' || job.status === 'failed') {
                 clearInterval(checkInterval);
+                // Log failures but don't throw — UW deps are non-critical
+                if (job.status === 'failed') {
+                    const failedDeps = job.deps.filter(d => d.status === 'failed');
+                    if (failedDeps.length > 0) {
+                        logger.warn('download', `UW dep install partial failure: ${failedDeps.map(d => `${d.id} (${d.error})`).join(', ')}`);
+                    }
+                }
                 resolve();
-            } else if (job.status === 'failed') {
-                clearInterval(checkInterval);
-                const failedDeps = job.deps.filter(d => d.status === 'failed');
-                const errorMsg = failedDeps.length > 0
-                    ? `Failed to install: ${failedDeps.map(d => `${d.id} (${d.error})`).join(', ')}`
-                    : 'Unknown download failure';
-                reject(new Error(errorMsg));
             }
         }, 500);
     });
