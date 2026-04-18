@@ -355,7 +355,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const group of g) updated = removeGroupFromProject(updated, group.id);
             state.currentProject = updated;
             _persistGroups();
-            for (const group of g) grid.el.removeCard(group.id);
+            for (const group of g) {
+                _selectedIds.delete(group.id);
+                grid.el.removeCard(group.id);
+            }
+
+            if (_selectedIds.size === 0) {
+                _selectionMode = false;
+                grid.el.setSelectionMode(false);
+                selectionSlot.style.display = 'none';
+                PromptBoxService.show();
+            }
         });
 
         grid.on('delete', ({ groups: g }) => {
