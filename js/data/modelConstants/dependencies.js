@@ -95,44 +95,6 @@ export const DEPS = {
         vram: '12GB',
         sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
     },
-    // Loras
-    'spo-sdxl-lora': {
-        id: 'spo-sdxl-lora',
-        name: 'SPO SDXL 10ep Lora',
-        type: 'lora',
-        filename: 'loras/SDXL/spo_sdxl_10ep_4k-data_lora_webui.safetensors',
-        url: 'https://huggingface.co/LyliaEngine/spo_sdxl_10ep_4k-data_lora_webui/resolve/main/spo_sdxl_10ep_4k-data_lora_webui.safetensors',
-        size: '364MB',
-        sha256: 'b6c2c16f3ef579885f10e94468d8f7196d09464002d116c115432207f4b1f8ab'
-    },
-    'dmd2_sdxl_4step_lora': {
-        id: 'dmd2_sdxl_4step_lora',
-        name: 'DMD2 SDXL 4 step Lora',
-        type: 'lora',
-        filename: 'loras/SDXL/dmd2_sdxl_4step_lora.safetensors',
-        url: 'https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors',
-        size: '787MB',
-        sha256: 'a374289e9446d7f14d2037c4b3770756b7b52c292142a691377c3c755010a1bb'
-    },
-    // video loras
-    'Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16': {
-        id: 'Wan22-4steps-lora-HIGH',
-        name: 'Wan22-4steps-lora-HIGH',
-        type: 'lora',
-        filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
-        url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors',
-        size: '600MB',
-        sha256: '216cce62ecb5687d55fdc035b1cdbea01d1a9a8100ee924d2155cf1d64f1050b'
-    },
-    'Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16': {
-        id: 'Wan22-4steps-lora-LOW',
-        name: 'Wan22-4steps-lora-LOW',
-        type: 'lora',
-        filename: 'loras/Wan2.2/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
-        url: 'https://huggingface.co/jrewingwannabe/Wan2.2-Lightning_I2V-A14B-4steps-lora/resolve/main/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors',
-        size: '600MB',
-        sha256: 'a3d474925042ec908c212c6c4c1e338637e27585c3970253f65b9638a9f5874b'
-    },
     // VAE
     'wan_2.1_vae': {
         id: 'wan_2.1_vae',
@@ -227,7 +189,16 @@ export const DEPS = {
         installRequirements: false,
         size: '940KB',
     },
-    // Auto Masking — nodes and detection models used by img_auto_mask workflow
+    'ComfyUI-Frame-Interpolation': {
+        id: 'ComfyUI-Frame-Interpolation',
+        name: 'ComfyUI Impact Subpack',
+        type: 'custom_nodes',
+        filename: 'comfyui-frame-interpolation',
+        url: 'https://github.com/Fannovel16/ComfyUI-Frame-Interpolation',
+        installRequirements: true,
+        installRequirementsCommand: 'python install.py',
+        size: '37.4MB',
+    },
     'ComfyUI-Impact-Subpack': {
         id: 'ComfyUI-Impact-Subpack',
         name: 'ComfyUI Impact Subpack',

@@ -14,7 +14,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { SYS_DEPS_PATH } = require('./shared');
 const logger = require('./logger');
-const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload } = require('./downloadManager');
+const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, checkUniversalWorkflowDepsInstalled } = require('./downloadManager');
 const { COMFY_VERSION } = require('../js/core/appVersion.js');
 
 router.get('/engine/status', async (req, res) => {
@@ -262,16 +262,38 @@ router.get('/engine/version-check', async (req, res) => {
             ? (await fs.readFile(versionFile, 'utf8')).trim()
             : null;
 
+        // Check if all UW deps are present
+        const uwCheck = await checkUniversalWorkflowDepsInstalled();
+
         res.json({
             installed: installedVersion,
             required: requiredVersion,
             needsInstall: installedVersion === null,
             needsUpgrade: installedVersion !== null && installedVersion !== requiredVersion,
+            needsDepsInstall: !uwCheck.allInstalled,
+            missingDeps: uwCheck.missing,
         });
     } catch (e) {
         logger.error('system', 'Version check failed', e);
         res.status(500).json({ success: false, error: e.message });
     }
+});
+
+router.post('/engine/repair-deps', (req, res) => {
+    logger.info('engine', 'Repair-deps request received');
+    res.json({ success: true, status: 'started' });
+
+    // Run in background — don't block the response
+    (async () => {
+        broadcastEngineEvent('engine:uw-installing', { status: 'Installing Universal Workflow dependencies...' });
+        try {
+            await startUniversalWorkflowInstall();
+            logger.info('engine', 'Universal Workflow deps installed successfully');
+        } catch (e) {
+            logger.warn('engine', `UW dep install failed (non-fatal): ${e.message}`);
+        }
+        broadcastEngineEvent('engine:complete', { success: true });
+    })();
 });
 
 router.post('/engine/upgrade', async (req, res) => {

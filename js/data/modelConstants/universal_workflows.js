@@ -17,11 +17,18 @@
 export const UNIVERSAL_WORKFLOWS = {
     interpolate: {
         workflow: 'video_interpolate.json',
-        dependencies: [],   // TODO: add interpolation model dep when workflow is ready
+        dependencies: [
+            'ComfyUI-MpiNodes',
+            'ComfyUI-VideoHelperSuite',            
+            'ComfyUI-Frame-Interpolation'
+        ],
     },
     videoUpscale: {
         workflow: 'video_upscale.json',
-        dependencies: [],   // TODO: add video upscale model dep when workflow is ready
+        dependencies: [
+            'ComfyUI-MpiNodes',
+            'ComfyUI-VideoHelperSuite'
+        ],
     },
     autoMaskImg: {
         workflow: 'img_auto_mask.json',

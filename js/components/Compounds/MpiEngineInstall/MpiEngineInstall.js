@@ -283,6 +283,11 @@ export const MpiEngineInstall = ComponentFactory.create({
                 progressTitle.textContent = 'Updating ComfyUI Engine';
                 progressSubtitle.textContent = 'Installing new version...';
                 upgradeMessage.style.display = 'block';
+            } else if (mode === 'repairing') {
+                _showPhase('progress');
+                progressTitle.textContent = 'Repairing Installation';
+                progressSubtitle.textContent = 'Downloading missing dependencies...';
+                upgradeMessage.style.display = 'none';
             } else {
                 _showPhase('setup');
                 progressTitle.textContent = 'Installing ComfyUI Engine';
@@ -300,11 +305,16 @@ export const MpiEngineInstall = ComponentFactory.create({
             }
             _modal.el.show();
 
-            // If upgrading, start SSE immediately
+            // If upgrading or repairing, start SSE immediately
             if (mode === 'upgrading') {
                 _connectSSE();
                 fetch('/engine/upgrade', { method: 'POST' }).catch(err => {
                     _setError(`Upgrade failed: ${err.message}`);
+                });
+            } else if (mode === 'repairing') {
+                _connectSSE();
+                fetch('/engine/repair-deps', { method: 'POST' }).catch(err => {
+                    _setError(`Repair failed: ${err.message}`);
                 });
             }
         };
@@ -431,6 +441,15 @@ export const MpiEngineInstall = ComponentFactory.create({
             _sseConnection.addEventListener('engine:upgrade-status', (e) => {
                 const data = JSON.parse(e.data);
                 el.setStatus(data.status);
+            });
+
+            _sseConnection.addEventListener('engine:uw-installing', (e) => {
+                const data = JSON.parse(e.data);
+                el.setStatus(data.status || 'Installing workflow dependencies...');
+                progressInfo.textContent = 'Downloading Universal Workflow dependencies...';
+                el.setLoading(true);
+                pauseButtonMount.style.display = 'none';
+                resumeButtonMount.style.display = 'none';
             });
 
             _sseConnection.addEventListener('engine:complete', () => {

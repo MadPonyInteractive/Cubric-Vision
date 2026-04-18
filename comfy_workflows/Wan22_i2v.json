@@ -118,7 +118,7 @@
   "487": {
     "inputs": {
       "model": [
-        "781",
+        "792",
         0
       ],
       "clip": [
@@ -138,7 +138,7 @@
   "488": {
     "inputs": {
       "model": [
-        "782",
+        "798",
         0
       ],
       "clip": [
@@ -220,7 +220,7 @@
   },
   "635": {
     "inputs": {
-      "seconds": 3,
+      "seconds": 2,
       "fps": 16
     },
     "class_type": "MpiWanSeconds",
@@ -859,34 +859,6 @@
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Lora_High_1"
-    }
-  },
-  "781": {
-    "inputs": {
-      "lora_name": "Wan2.2\\Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors",
-      "strength_model": 1,
-      "model": [
-        "792",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
-  "782": {
-    "inputs": {
-      "lora_name": "Wan2.2\\Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
-      "strength_model": 1,
-      "model": [
-        "798",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Load LoRA"
     }
   },
   "788": {

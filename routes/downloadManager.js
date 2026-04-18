@@ -204,6 +204,178 @@ function _parseSizeToBytes(sizeStr) {
     return val * (multipliers[unit] || 0);
 }
 
+async function _findFile(dir, filename) {
+    if (!(await fs.pathExists(dir))) return null;
+    const entries = await fs.readdir(dir);
+    for (const entry of entries) {
+        const full = path.join(dir, entry);
+        const stat = await fs.stat(full);
+        if (stat.isDirectory()) {
+            const found = await _findFile(full, filename);
+            if (found) return found;
+        } else if (entry === filename) {
+            return full;
+        }
+    }
+    return null;
+}
+
+// ── Universal Workflows Dependencies ──────────────────────────────────────────
+// These 8 deps are required for all 3 Universal Workflows (interpolate, videoUpscale, autoMaskImg)
+// Mirrored from js/data/modelConstants/dependencies.js to avoid ESM/CJS interop
+
+const _UW_DEPS = [
+    { id: 'ComfyUI-VideoHelperSuite', type: 'custom_nodes', filename: 'comfyui-videohelpersuite',
+      url: 'https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite', installRequirements: false, size: '806KB' },
+    { id: 'ComfyUI-Frame-Interpolation', type: 'custom_nodes', filename: 'comfyui-frame-interpolation',
+      url: 'https://github.com/Fannovel16/ComfyUI-Frame-Interpolation', installRequirements: true,
+      installRequirementsCommand: 'python install.py', size: '37.4MB' },
+    { id: 'ComfyUI-Impact-Pack', type: 'custom_nodes', filename: 'comfyui-impact-pack',
+      url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack', installRequirements: true, size: '5MB' },
+    { id: 'ComfyUI-Impact-Subpack', type: 'custom_nodes', filename: 'ComfyUI-Impact-Subpack',
+      url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack', installRequirements: true, size: '172KB' },
+    { id: 'face-yolov8n', type: 'ultralytics', filename: 'ultralytics/bbox/face_yolov8n.pt',
+      url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt', size: '5.9MB',
+      sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c' },
+    { id: 'hand-yolov8n', type: 'ultralytics', filename: 'ultralytics/bbox/hand_yolov8n.pt',
+      url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt', size: '5.9MB',
+      sha256: '3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29' },
+    { id: 'person-yolov8n-seg', type: 'ultralytics', filename: 'ultralytics/bbox/person_yolov8n-seg.pt',
+      url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt', size: '6.9MB',
+      sha256: '38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432' },
+    { id: 'sam-vit-b', type: 'sams', filename: 'sams/sam_vit_b_01ec64.pth',
+      url: 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/sams/sam_vit_b_01ec64.pth',
+      size: '367MB', sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912' },
+];
+
+/**
+ * Check which UW deps are already installed on disk.
+ * Returns { allInstalled: boolean, missing: [depIds] }
+ * Used by version-check to determine if repair is needed.
+ */
+async function checkUniversalWorkflowDepsInstalled() {
+    try {
+        const customRoot = await getCustomRoot();
+        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+        const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+        const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+
+        const missing = [];
+
+        for (const dep of _UW_DEPS) {
+            let depPath;
+            if (dep.type === 'custom_nodes') {
+                depPath = path.join(defaultCustomNodesRoot, dep.filename);
+            } else if (customRoot) {
+                const directPath = path.join(customRoot, dep.filename);
+                if (await fs.pathExists(directPath)) {
+                    depPath = directPath;
+                } else {
+                    const baseFilename = path.basename(dep.filename);
+                    const subDir = path.dirname(dep.filename);
+                    const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
+                    depPath = found || directPath;
+                }
+            } else {
+                depPath = path.join(defaultModelsRoot, dep.filename);
+            }
+
+            const isInstalled = await fs.pathExists(depPath);
+            if (!isInstalled) {
+                missing.push(dep.id);
+            }
+        }
+
+        return {
+            allInstalled: missing.length === 0,
+            missing
+        };
+    } catch (err) {
+        logger.error('download', `checkUniversalWorkflowDepsInstalled failed: ${err.message}`);
+        return { allInstalled: false, missing: _UW_DEPS.map(d => d.id) };
+    }
+}
+
+/**
+ * Install all missing Universal Workflow dependencies.
+ * Downloads any missing deps, installs custom node pip requirements, extracts zips, etc.
+ * Returns a Promise that resolves when the job reaches 'complete' or 'failed'.
+ */
+async function startUniversalWorkflowInstall() {
+    const MODEL_ID = 'universal-workflows';
+    const customRoot = await getCustomRoot();
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
+    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+
+    // Pre-sum totalBytes from ALL deps
+    const allDepsSize = _UW_DEPS.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
+
+    let modelJob = _createModelJob(MODEL_ID, _UW_DEPS);
+    modelJob.totalBytes = allDepsSize;
+    _modelJobs.set(MODEL_ID, modelJob);
+
+    for (const dep of _UW_DEPS) {
+        let localPath;
+        if (dep.type === 'custom_nodes') {
+            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
+            localPath = path.join(defaultCustomNodesRoot, zipName);
+        } else if (customRoot) {
+            const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
+            localPath = lp;
+        } else {
+            localPath = path.join(defaultModelsRoot, dep.filename);
+        }
+
+        const isInstalled = await fs.pathExists(localPath);
+
+        let depJob = _depJobs.get(dep.id);
+        if (!depJob) {
+            depJob = _createDepJob(dep);
+            depJob.localPath = localPath;
+            _depJobs.set(dep.id, depJob);
+        }
+        depJob.refCount += 1;
+
+        if (!modelJob.deps.find(d => d.id === dep.id)) {
+            modelJob.deps.push(depJob);
+        }
+
+        // Mark installed deps as complete
+        if (isInstalled) {
+            depJob.status = 'complete';
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+        }
+    }
+
+    modelJob.status = 'downloading';
+    _startPendingDeps();
+
+    // Poll for job completion
+    return new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+            const job = _modelJobs.get(MODEL_ID);
+            if (!job) {
+                clearInterval(checkInterval);
+                resolve();
+                return;
+            }
+            if (job.status === 'complete') {
+                clearInterval(checkInterval);
+                resolve();
+            } else if (job.status === 'failed') {
+                clearInterval(checkInterval);
+                const failedDeps = job.deps.filter(d => d.status === 'failed');
+                const errorMsg = failedDeps.length > 0
+                    ? `Failed to install: ${failedDeps.map(d => `${d.id} (${d.error})`).join(', ')}`
+                    : 'Unknown download failure';
+                reject(new Error(errorMsg));
+            }
+        }, 500);
+    });
+}
+
 // ── SSE Clients ───────────────────────────────────────────────────────────────
 const _sseClients = new Set();
 
@@ -688,4 +860,4 @@ router.post('/engine/resume', (req, res) => {
     res.json({ success: true });
 });
 
-module.exports = { router, cancelAllDownloads, broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload };
+module.exports = { router, cancelAllDownloads, broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, checkUniversalWorkflowDepsInstalled };

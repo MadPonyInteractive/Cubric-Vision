@@ -30,8 +30,6 @@ export const MODELS = [
         },
         dependencies: [
             'sdxl-realistic',
-            'spo-sdxl-lora',
-            'dmd2_sdxl_4step_lora',
             '4x-NMKD-Siax',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
@@ -54,8 +52,6 @@ export const MODELS = [
         },
         dependencies: [
             'ill-anime-beauty',
-            'spo-sdxl-lora',
-            'dmd2_sdxl_4step_lora',
             '4x-AnimeSharp',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
@@ -78,8 +74,6 @@ export const MODELS = [
         },
         dependencies: [
             'ill-anime',
-            'spo-sdxl-lora',
-            'dmd2_sdxl_4step_lora',
             '4x-AnimeSharp',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
@@ -102,8 +96,6 @@ export const MODELS = [
         },
         dependencies: [
             'pony-mix',
-            'spo-sdxl-lora',
-            'dmd2_sdxl_4step_lora',
             '4x-AnimeSharp',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
@@ -127,8 +119,6 @@ export const MODELS = [
             'wan-22-t2v-low',
             'wan-22-i2v-high',
             'wan-22-i2v-low',
-            'Wan22-4steps-lora-HIGH',
-            'Wan22-4steps-lora-LOW',
             'wan_2.1_vae',
             'umt5_xxl_fp8_e4m3fn_scaled',
             'ComfyUI-MpiNodes',
