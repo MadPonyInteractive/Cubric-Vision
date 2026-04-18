@@ -13,6 +13,7 @@ llama_engine/
 projects/
 resources/
 /data/
+comfy_workflows/scripts/
 
 # agents
 .agent
