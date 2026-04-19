@@ -252,6 +252,41 @@ EMITS:   `play`       `{ time: number }`
          `change`     `{ volume: number, muted: boolean }`
 LISTENS: (none)
 
+### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
+Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiPromptBox, and handles generation lifecycle.
+LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
+         `models:closed` — remounts PromptBox if needed
+         `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
+EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
+         `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
+         `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
+         `models:open` — when zero image models installed
+NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
+         commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
+
+---
+
+## Generation Lifecycle (commandExecutor & StatusBar)
+
+**commandExecutor.js**
+- Analyzes workflow JSON to detect loader nodes (CheckpointLoaderSimple, UNETLoader, LoraLoaderModelOnly, etc. by class_type)
+- Emits `tool:loading-model` when a loader node starts executing (VRAM load phase)
+- Emits `tool:sampling-start` on first KSampler progress callback (sampling phase begins)
+- Both events carry `{ tool: 'groupHistory' }` payload
+
+**StatusBar (js/shell/statusBar.js)**
+- Listens to `tool:running` → calls `start('Generating...')` + `setVariant('primary')` (blue badge)
+- Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
+- Listens to `tool:sampling-start` → calls `updateLabel('Generating...')`
+- Listens to `tool:cancelled` → calls `cancel()`
+- Listens to `tool:idle` → calls `complete('Done!')`
+
+**Pattern notes:**
+- Blocks emit `tool:running` at generation start (in promptBox 'run' handler)
+- commandExecutor emits `tool:loading-model` / `tool:sampling-start` based on WS message types
+- StatusBar owns all progress UI logic; blocks don't call StatusBar methods directly (except `progress.update()` for KSampler progress)
+- Generation timing saved to item sidecar: backend receives `generationMs` field in save-generation POST body
+
 ---
 
 ## Workspaces (cross-cutting event usage)
@@ -267,8 +302,9 @@ NOTE:    Reads `state.s_selectedModelId`; writes `state.s_selectedModelId` and `
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
-EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
-         `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
-         `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
+EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
+         `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
+         `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
-         StatusBar is driven exclusively via these events (except `StatusBar.progress.update()` which remains a direct call — no `tool:progress` event exists)
+         StatusBar listens to tool:running, tool:loading-model, tool:sampling-start, tool:idle, tool:cancelled and updates progress label/variant
+         commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)

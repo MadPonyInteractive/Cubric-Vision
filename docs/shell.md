@@ -37,7 +37,13 @@ Queue-based blocking overlay controller.
 ## statusBar.js (`js/shell/statusBar.js`)
 
 Bottom status bar. Shows ComfyUI engine status, active model, generation progress.
-- Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:idle`.
+- Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:cancelled`, `tool:idle`.
+- On `tool:running`: starts progress bar with "Generating..." label (blue variant)
+- On `tool:loading-model`: updates label to "Loading model..." (model VRAM load phase)
+- On `tool:sampling-start`: updates label back to "Generating..." (KSampler steps begin)
+- On `tool:cancelled`: cancels progress bar instantly
+- On `tool:idle`: flashes bar, fires success toast
+- `progress.update(value)`: driven by KSampler step progress (called directly from blocks, not via events)
 
 ## promptBoxService.js (`js/shell/promptBoxService.js`)
 
