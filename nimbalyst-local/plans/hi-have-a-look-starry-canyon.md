@@ -2,109 +2,116 @@
 
 ## Context
 
-After installing model dependencies (including custom nodes) via the Models Manager, clicking "Generate" fails silently — the `MpiStartingComfy` modal never appears, ComfyUI does not start, and generation times out. Closing and reopening the app fixes it.
+After installing model dependencies (via Models Manager), clicking "Generate" sometimes fails silently — the `MpiStartingComfy` modal never appears and the button appears stuck in loading state. Closing and reopening the app fixes it.
 
-This was handed off with a hypothesis about stale state. Root cause investigation confirms a **single-line logic ordering bug** in `ensureServerRunning()`.
-
----
-
-## Root Cause (Confirmed)
-
-**File:** `js/services/comfyController.js`, line 40
-
-```js
-if (status.running && status.ready) return true;   // ← this fires first
-// ↓ this is NEVER reached when ComfyUI is already up:
-if (state.comfyNeedsRestart && status.running) { ... }
-```
-
-**What happens:**
-
-1. User installs custom node deps. `downloadManager.js` broadcasts SSE `comfy:needs-restart`.
-2. `downloadService.js:227` sets `state.comfyNeedsRestart = true`.
-3. ComfyUI process is **not killed** by the install — it stays running with the old custom nodes.
-4. User clicks Generate → `ensureServerRunning()` runs.
-5. `GET /comfy/status` returns `{ running: true, ready: true }` (process is alive).
-6. **Line 40 fires: `return true` immediately.** The `comfyNeedsRestart` check on line 43 is never reached.
-7. Generation proceeds against ComfyUI that does not have the new custom node loaded → fails silently.
-8. App restart → `state.comfyNeedsRestart` resets to `false` (never persisted) → works fine.
-
-The fix: **check `state.comfyNeedsRestart` before the early return**, so a pending restart always takes priority over treating the current process as usable.
+The handoff hypothesized a state synchronization issue. Systematic debugging with logs and code tracing reveals **two concrete bugs**.
 
 ---
 
-## The Fix
+## Root Cause Investigation
 
-**File:** `js/services/comfyController.js`
+### What the logs show
 
-Move the `comfyNeedsRestart && status.running` check to run **before** the `running && ready` early-return guard:
+`app.log` shows multiple `/engine/repair-deps` calls where the zip extract for `ComfyUI-VideoHelperSuite` fails with "Data Error". Despite the failure, `engine:complete` still fires (because `_runCustomNodeInstall` swallows zip errors with `continue` and proceeds to broadcast `comfy:needs-restart` anyway). This is a separate issue from the silent-fail bug.
+
+### The actual silent-fail scenario
+
+**Bug 1: `comfy:needs-restart` fires for pure model-weight installs (no custom nodes)**
+
+In `routes/downloadManager.js`, `_runCustomNodeInstall()` lines 412–417:
+```js
+if (!customDeps.length) {
+    modelJob.status = 'complete';
+    _broadcast('download:complete', { modelId: modelJob.modelId });
+    _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });  // ← always fires
+    return;
+}
+```
+This fires `comfy:needs-restart` even when there are no custom nodes to install — i.e. for a pure model-weight download. There is no reason to restart ComfyUI in this case.
+
+**Bug 2: `ensureServerRunning()` restart branch never shows the modal**
+
+When `state.comfyNeedsRestart = true` AND ComfyUI is `running: true, ready: false` (e.g. still booting from a prior Generate click while the model install completes), `ensureServerRunning()` hits the restart branch at line 43–73. This branch:
+- Stops ComfyUI, waits 2s, starts it again
+- Polls for ready
+- **Never emits `comfy:starting`** — so `MpiStartingComfy` modal never appears
+- If poll succeeds: `comfy:ready` fires, but modal was never shown → `setError()` would target an invisible modal
+- User sees button stuck in loading state with no feedback
+
+The line `Events.emit('comfy:starting')` at line 81 is **only** reached by the fall-through path. The restart branch bypasses it entirely.
+
+---
+
+## The Fixes
+
+### Fix 1: Don't broadcast `comfy:needs-restart` when there are no custom nodes
+
+**File:** `routes/downloadManager.js`, lines 412–417
+
+Remove the `_broadcast('comfy:needs-restart', ...)` from the no-custom-deps early-return path. A restart is only needed when custom nodes are actually installed.
 
 ```js
-async ensureServerRunning() {
-    try {
-        const statusRes = await fetch('/comfy/status');
-        const status = await statusRes.json();
+// BEFORE:
+if (!customDeps.length) {
+    modelJob.status = 'complete';
+    _broadcast('download:complete', { modelId: modelJob.modelId });
+    _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });  // ← remove
+    return;
+}
 
-        // Check restart flag BEFORE the early-return — a pending restart
-        // must take priority over treating the current process as usable.
-        if (state.comfyNeedsRestart && status.running) {
-            clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
-            Events.emit('comfy:starting');   // ← ADD THIS so modal appears
-            Events.emit('ui:error', {
-                title: 'Restarting ComfyUI',
-                message: 'New custom nodes were installed. Restarting automatically...',
-            });
-
-            await fetch('/comfy/stop', { method: 'POST' });
-            await new Promise(r => setTimeout(r, 2000));
-
-            await fetch('/comfy/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isUserRestart: true }),
-            });
-
-            let retries = 60;
-            while (retries-- > 0) {
-                await new Promise(r => setTimeout(r, 1000));
-                try {
-                    const check = await fetch('/comfy/status').then(r => r.json());
-                    if (check.ready) {
-                        state.comfyNeedsRestart = false;
-                        Events.emit('comfy:ready');
-                        return true;
-                    }
-                } catch (e) { /* keep polling */ }
-            }
-            throw new Error('ComfyUI auto-restart failed to become ready.');
-        }
-
-        // Normal fast-path: already running and ready, no restart needed
-        if (status.running && status.ready) return true;
-
-        // ... rest unchanged
+// AFTER:
+if (!customDeps.length) {
+    modelJob.status = 'complete';
+    _broadcast('download:complete', { modelId: modelJob.modelId });
+    return;
+}
 ```
 
-**Two changes in one move:**
-1. Reorder: `comfyNeedsRestart && status.running` block moves above the `running && ready` early-return.
-2. Add `Events.emit('comfy:starting')` at the top of the restart branch, so the `MpiStartingComfy` modal appears (it was previously missing from this branch entirely — `shell.js:181` only shows the modal on `comfy:starting`).
+### Fix 2: Emit `comfy:starting` at the top of the restart branch
+
+**File:** `js/services/comfyController.js`, line 43 (inside the `comfyNeedsRestart && status.running` block)
+
+Add `Events.emit('comfy:starting')` before the stop/start sequence, so the modal always appears when a restart is in progress.
+
+```js
+// BEFORE (line 43):
+if (state.comfyNeedsRestart && status.running) {
+    clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
+    Events.emit('ui:error', {
+        title: 'Restarting ComfyUI',
+        message: 'New custom nodes were installed. Restarting automatically...',
+    });
+    await fetch('/comfy/stop', ...);
+    ...
+
+// AFTER:
+if (state.comfyNeedsRestart && status.running) {
+    clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
+    Events.emit('comfy:starting');   // ← ADD — shows modal before restart begins
+    Events.emit('ui:error', {
+        title: 'Restarting ComfyUI',
+        message: 'New custom nodes were installed. Restarting automatically...',
+    });
+    await fetch('/comfy/stop', ...);
+    ...
+```
 
 ---
 
 ## Files to Modify
 
-- `js/services/comfyController.js` — lines 36–73 (the `ensureServerRunning()` function only)
-
-No other files need changes. The SSE wiring, state management, and modal show/hide logic are all correct.
+1. `routes/downloadManager.js` — remove spurious `comfy:needs-restart` broadcast (lines ~414–416)
+2. `js/services/comfyController.js` — add `Events.emit('comfy:starting')` inside restart branch (line ~45)
 
 ---
 
 ## Verification
 
-1. Start app. Let ComfyUI boot normally (confirm it's `running + ready`).
-2. Open Models Manager. Install a workflow that includes at least one custom node dep.
-3. Wait for `download:complete` SSE — confirm `state.comfyNeedsRestart` is `true` via browser console (`state.comfyNeedsRestart`).
-4. Close Models Manager. Click "Generate" immediately (do NOT restart app).
-5. **Expected:** `MpiStartingComfy` modal appears, ComfyUI restarts, generation succeeds.
-6. **Old behavior:** modal never appeared, generation failed silently.
-7. Check `logs/app.log` for `'Custom nodes installed — triggering auto-restart'` log line to confirm the branch was entered.
+1. Start app fresh. Let ComfyUI boot and become ready (confirm with status bar or modal hide).
+2. Open Models Manager. Install a model that has **only model-weight deps** (no custom nodes).
+3. Close Models Manager. Click Generate immediately.
+4. **Expected:** `state.comfyNeedsRestart` should NOT be set (Fix 1). ComfyUI starts normally, modal appears, generation succeeds.
+5. Now install a model that has custom node deps (e.g. one that requires a custom node zip).
+6. Close Models Manager. Click Generate while ComfyUI is still coming up from a prior start attempt (or stop it manually first via `/comfy/stop`).
+7. **Expected (Fix 2):** `MpiStartingComfy` modal appears during the restart. Generation succeeds after ComfyUI becomes ready.
+8. Confirm in `logs/app.log` that `"Custom nodes installed — triggering auto-restart"` log appears.

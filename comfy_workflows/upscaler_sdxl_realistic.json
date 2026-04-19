@@ -1,7 +1,7 @@
 {
   "28": {
     "inputs": {
-      "ckpt_name": "SDXL\\SDXL_Realistic.safetensors"
+      "ckpt_name": "SDXL_Realistic.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

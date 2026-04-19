@@ -29,7 +29,7 @@
   },
   "28": {
     "inputs": {
-      "ckpt_name": "ILL\\ILL_Anime.safetensors"
+      "ckpt_name": "ILL_Anime.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

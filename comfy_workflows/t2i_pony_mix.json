@@ -21,7 +21,7 @@
   },
   "1462": {
     "inputs": {
-      "ckpt_name": "PONY\\PONY_Mix.safetensors"
+      "ckpt_name": "PONY_Mix.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
