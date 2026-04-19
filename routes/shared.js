@@ -388,22 +388,14 @@ async function getCustomRoot() {
 }
 
 /**
- * Returns the full flat list of unique DEPS ids required by all universal workflows.
- * Deduplicated — each dep id appears once even if shared across multiple UWs.
+ * Returns all DEPS ids marked for installation with the engine (installOnEngine: true).
+ * These cover all universal workflow dependencies — no need to track them per-workflow.
  */
 function getUniversalWorkflowDepIds() {
-    const { UNIVERSAL_WORKFLOWS } = _require('../js/data/modelConstants/universal_workflows.js');
-    const seen = new Set();
-    const ids = [];
-    for (const wf of Object.values(UNIVERSAL_WORKFLOWS)) {
-        for (const depId of wf.dependencies) {
-            if (!seen.has(depId)) {
-                seen.add(depId);
-                ids.push(depId);
-            }
-        }
-    }
-    return ids;
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    return Object.values(DEPS)
+        .filter(dep => dep.installOnEngine === true)
+        .map(dep => dep.id);
 }
 
 /**

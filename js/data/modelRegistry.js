@@ -83,19 +83,10 @@ export async function syncModelInstalled() {
             }).filter(Boolean),
         }));
 
-        // Build payload for universal workflows — namespaced to avoid id collisions
-        const universalPayload = Object.entries(UNIVERSAL_WORKFLOWS).map(([key, uw]) => ({
-            id: `universal:${key}`,
-            deps: uw.dependencies.map(depId => {
-                const dep = DEPS[depId];
-                return dep ? { type: dep.type, filename: dep.filename } : null;
-            }).filter(Boolean),
-        }));
-
         const res = await fetch('/comfy/models/check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ models: [...modelPayload, ...universalPayload] }),
+            body: JSON.stringify({ models: modelPayload }),
         });
 
         if (!res.ok) return false;
@@ -110,13 +101,6 @@ export async function syncModelInstalled() {
                     if (depResult.id) depMap.set(depResult.id, depResult.installed);
                 }
                 _modelDepStatusCache.set(model.id, depMap);
-            }
-        }
-
-        for (const [key, uw] of Object.entries(UNIVERSAL_WORKFLOWS)) {
-            const resultKey = `universal:${key}`;
-            if (Object.prototype.hasOwnProperty.call(results, resultKey)) {
-                uw.installed = results[resultKey].installed;
             }
         }
 

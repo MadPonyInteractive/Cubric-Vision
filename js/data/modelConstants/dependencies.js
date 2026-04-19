@@ -132,7 +132,8 @@ export const DEPS = {
         filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
         url: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
         size: '67MB',
-        sha256: '560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e'
+        sha256: '560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e',
+        installOnEngine: true,
     },
     '4x-AnimeSharp': {
         id: '4x-AnimeSharp',
@@ -141,7 +142,8 @@ export const DEPS = {
         filename: 'upscale_models/4x-AnimeSharp.pth',
         url: 'https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth',
         size: '65MB',
-        sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab'
+        sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
+        installOnEngine: true,
     },
     // Nodes
     'ComfyUI-MpiNodes': {
@@ -153,6 +155,7 @@ export const DEPS = {
         installRequirements: false,
         size: '1.76MB',
         sha256: '4d1fe25b692db4a446d4efe80ff9d3c0f94248619ff6668026098414f8f21f1f',
+        installOnEngine: true,
     },
     'ComfyUI-PainterI2Vadvanced': {
         id: 'ComfyUI-PainterI2Vadvanced',
@@ -173,6 +176,7 @@ export const DEPS = {
         installRequirements: false,
         size: '806KB',
         sha256: 'ca6e1b414dbc07373d4d293d07b2c2cfb947223554a28bc6d92d13d0cf6fc88a',
+        installOnEngine: true,
     },
     'ComfyUI-Impact-Pack': {
         id: 'ComfyUI-Impact-Pack',
@@ -183,6 +187,7 @@ export const DEPS = {
         installRequirements: true,
         size: '5MB',
         sha256: 'c74bc45c9c656157b051a8200d69b3694edb16b2e6d2b6783c41f1a18244e50c',
+        installOnEngine: true,
     },
     'comfyui-kjnodes': {
         id: 'comfyui-kjnodes',
@@ -214,6 +219,7 @@ export const DEPS = {
         installRequirementsCommand: 'python install.py',
         size: '37.4MB',
         sha256: 'de2758d79bee7c50ea8f3c4a25fe0d1320514cf84bcc3e8ceb9875a99ce718e1',
+        installOnEngine: true,
     },
     'ComfyUI-Impact-Subpack': {
         id: 'ComfyUI-Impact-Subpack',
@@ -224,6 +230,7 @@ export const DEPS = {
         installRequirements: true,
         size: '172KB',
         sha256: '0a43a609a72e7b2eda02ca49d8dd7fc921f214e4ac32ab028d3cb8470e8a8091',
+        installOnEngine: true,
     },
     'face-yolov8n': {
         id: 'face-yolov8n',
@@ -232,7 +239,8 @@ export const DEPS = {
         filename: 'ultralytics/bbox/face_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt',
         size: '5.9MB',
-        sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c'
+        sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c',
+        installOnEngine: true,
     },
     'hand-yolov8n': {
         id: 'hand-yolov8n',
@@ -241,7 +249,8 @@ export const DEPS = {
         filename: 'ultralytics/bbox/hand_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt',
         size: '5.9MB',
-        sha256: '3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29'
+        sha256: '3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29',
+        installOnEngine: true,
     },
     'person-yolov8n-seg': {
         id: 'person-yolov8n-seg',
@@ -250,7 +259,8 @@ export const DEPS = {
         filename: 'ultralytics/bbox/person_yolov8n-seg.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt',
         size: '6.9MB',
-        sha256: '38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432'
+        sha256: '38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432',
+        installOnEngine: true,
     },
     'sam-vit-b': {
         id: 'sam-vit-b',
@@ -259,6 +269,7 @@ export const DEPS = {
         filename: 'sams/sam_vit_b_01ec64.pth',
         url: 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/sams/sam_vit_b_01ec64.pth',
         size: '367MB',
-        sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912'
+        sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
+        installOnEngine: true,
     },
 };

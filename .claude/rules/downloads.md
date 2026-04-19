@@ -44,17 +44,17 @@
 
 ---
 
-## Engine Download & UW Deps Parallel Flow
+## Engine Download & Engine-Deps Parallel Flow
 
-**As of this session, engine downloads now run parallel with universal workflow (UW) deps downloads** for better UX:
+**Engine downloads run parallel with engine-level dependency downloads** for better UX. Engine-level deps are identified by `installOnEngine: true` in `dependencies.js` — they cover all universal workflow needs in one place.
 
-1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each dep URL to get exact bytes
+1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each `installOnEngine` dep URL to get exact bytes
 2. **Parallel firing:** `routes/engine.js` fires both engine download AND `startUniversalWorkflowInstall(depIds, true, true)` immediately
 3. **Custom node install delayed:** The third parameter `true` skips custom node pip install until after engine extraction
 4. **Frontend aggregation:** `MpiEngineInstall.js` receives both `engine:downloading` and `download:progress` events and aggregates them into a single unified progress bar
 5. **Custom node finish:** After engine extraction, `finishCustomNodeInstall(modelJob, true)` is called to run pip install with Python now available
 
-**Critical:** Do not modify the `skipCustomNodeInstall` flag behavior without understanding the timing dependency on Python availability.
+**Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. If the new workflow requires a dep not yet marked `installOnEngine: true` in `dependencies.js`, add the flag there — it is automatically included in future engine installs.
 
 ---
 

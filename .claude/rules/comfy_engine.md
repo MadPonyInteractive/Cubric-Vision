@@ -74,19 +74,20 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 
 **Order of operations:**
 1. **GPU Detection** — `resolveDownloadConfig()` detects GPU (NVIDIA/AMD/Intel) and CUDA version to determine correct engine build
-2. Pre-calculate combined size: engine archive (selected variant) + all missing UW deps (models + custom nodes)
+2. Pre-calculate combined size: engine archive (selected variant) + all deps with `installOnEngine: true` in `dependencies.js`
 3. **Start engine download** (of GPU-specific variant; progress fed to frontend)
-4. **Immediately fire UW deps download in parallel** with `skipCustomNodeInstall=true` (progress also fed to frontend)
-5. **Extract engine** (while UW deps continue downloading)
+4. **Immediately fire engine-deps download in parallel** with `skipCustomNodeInstall=true` (progress also fed to frontend)
+5. **Extract engine** (while deps continue downloading)
 6. **Patch engine** and write `extra_model_paths.yaml` (critical: YAML must exist before model checker runs)
-7. **Wait for UW deps downloads to complete**
+7. **Wait for engine-deps downloads to complete**
 8. **Finish custom node installation** via `finishCustomNodeInstall()` (now Python is available)
 9. Emit `engine:complete`
 
 **Key file locations:**
 - Platform engine + GPU detection: `routes/platformEngine.js` (all path and GPU detection logic)
 - Engine download orchestration: `routes/engine.js` `_runEngineDownload()` — calls `resolveDownloadConfig()` first
-- UW deps separation: `routes/downloadManager.js` (`startUniversalWorkflowInstall` with `skipCustomNodeInstall` param)
+- Engine-deps source: `dependencies.js` (`installOnEngine: true` flag) — no per-workflow tracking needed
+- Engine-deps download: `routes/downloadManager.js` (`startUniversalWorkflowInstall` with `skipCustomNodeInstall` param)
 - Custom node finish: `routes/downloadManager.js` (`finishCustomNodeInstall`)
 - Frontend aggregation: `js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js` (`el.setProgress`)
 
