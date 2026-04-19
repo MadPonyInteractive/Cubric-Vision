@@ -320,7 +320,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                     value: 0,
                     interactive: false,
                     variant: 'primary',
-                    info: 'Preparing...'
+                    info: 'Installing additional packages...'
                 });
                 fetch('/engine/repair-deps', { method: 'POST' }).catch(err => {
                     _setError(`Repair failed: ${err.message}`);

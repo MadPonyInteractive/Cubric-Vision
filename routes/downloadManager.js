@@ -126,7 +126,6 @@ class ResumableDownloader {
 
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
-            override: true,
             resume: true,
         });
 
@@ -303,6 +302,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
 async function _startPendingDeps() {
     const pending = Array.from(_depJobs.values()).filter(d => d.status === 'queued' && d.refCount > 0);
+    logger.info('download', `_startPendingDeps: found ${pending.length} queued deps to download`);
     for (const depJob of pending) {
         // Resume a paused downloader (same instance — node-downloader-helper picks up from .part file)
         if (_pausedDownloaders.has(depJob.id)) {
@@ -325,7 +325,10 @@ async function _startPendingDeps() {
         _activeDownloaders.set(depJob.id, downloader);
 
         _wireProgress(depJob, downloader);
-        downloader.download().catch(() => {});
+        logger.info('download', `Starting download for ${depJob.id} from ${depJob.url}`);
+        downloader.download().catch(err => {
+            logger.error('download', `downloader.download() caught error for ${depJob.id}: ${err.message}`);
+        });
     }
 }
 
@@ -656,7 +659,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
     logger.info('download', `startUniversalWorkflowInstall: customRoot=${customRoot}, ${depIds.length} deps to check`);
 
     if (broadcastProgress) {
-        broadcastEngineEvent('engine:uw-installing', { status: 'Preparing universal workflow dependencies...' });
+        broadcastEngineEvent('engine:uw-installing', { status: 'Installing dependencies...' });
     }
 
     const modelJob = {
@@ -690,13 +693,14 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
         }
 
         const isInstalled = await fs.pathExists(localPath);
+        logger.info('download', `startUniversalWorkflowInstall: dep ${depId} resolved to ${localPath}, exists=${isInstalled}`);
 
         let depJob = _depJobs.get(depId);
         if (!depJob) {
             depJob = _createDepJob(dep);
-            depJob.localPath = localPath;
             _depJobs.set(depId, depJob);
         }
+        depJob.localPath = localPath;
         depJob.refCount += 1;
 
         if (!modelJob.deps.find(d => d.id === depId)) {
@@ -723,11 +727,14 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
 
     _startPendingDeps();
 
-    // Wait for all UW deps to reach a terminal state
+    // Wait for all UW deps to reach a terminal state (with 30-minute timeout to prevent infinite hangs)
     await new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const maxWaitMs = 30 * 60 * 1000; // 30 minutes max for slower connections
         const checkInterval = setInterval(() => {
             const allDone = modelJob.deps.every(d => ['complete', 'failed', 'cancelled'].includes(d.status));
             const anyFailed = modelJob.deps.some(d => d.status === 'failed');
+            const elapsedMs = Date.now() - startTime;
 
             if (allDone) {
                 clearInterval(checkInterval);
@@ -737,6 +744,11 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
                 } else {
                     resolve();
                 }
+            } else if (elapsedMs > maxWaitMs) {
+                clearInterval(checkInterval);
+                const stillPending = modelJob.deps.filter(d => !['complete', 'failed', 'cancelled'].includes(d.status)).map(d => d.id).join(', ');
+                logger.error('download', `UW deps install timeout after 30 minutes. Still pending: ${stillPending}`);
+                reject(new Error(`UW deps install timeout — still waiting for: ${stillPending}`));
             }
         }, 500);
     });

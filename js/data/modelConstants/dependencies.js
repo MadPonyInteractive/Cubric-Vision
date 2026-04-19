@@ -12,7 +12,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'lustify_7',
         filename: 'checkpoints/SDXL/SDXL_Realistic.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/SDXL_Realistic.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
         sha256: 'd234c60d67cedfe69433e3934a459707c2cf43b30232d3db2becd10371d2220f'
@@ -23,7 +23,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'animemix_v80',
         filename: 'checkpoints/ILL/ILL_Anime.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime.safetensors',
         size: '6.8GB',
         vram: '8GB',
         sha256: '357f63d2784cf0da28f44f14babaca854ccd8fe2581f196df1fc39cbfa053ac8'
@@ -34,7 +34,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'ramthrustsNSFWPINK_alchemyMix176',
         filename: 'checkpoints/ILL/ILL_Anime_Beauty.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/ILL_Anime_Beauty.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime_Beauty.safetensors',
         size: '6.8GB',
         vram: '8GB',
         sha256: '097cd879e878485c0bff4c82435ec9a06c65294fc8776b31873aacad8ddf21aa'
@@ -45,7 +45,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'animergemeij_v30VAE',
         filename: 'checkpoints/PONY/PONY_Mix.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/PONY_Mix.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/PONY_Mix.safetensors',
         size: '6.8GB',
         vram: '8GB',
         sha256: '8d3ee679f82bcf7918ae7011d123b38ac718afd33a17e246e9b68b717255c3a9'
@@ -57,7 +57,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_t2vHighV30',
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_High.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_High.safetensors',
         size: '21GB',
         vram: '12GB',
         sha256: '1f40184ebd858b179d71fdcfa9c1ebc5cb79fa7ae90474c5ba44ce8abe5e9bc3'
@@ -68,7 +68,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_t2vLowV30',
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_i2v_Low.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_Low.safetensors',
         size: '21GB',
         vram: '12GB',
         sha256: '5de2d526f4349834c36f06972f610997edfcbc896cdc4211362daea6b643b125'
@@ -79,7 +79,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_i2vV20High',
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_High.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_t2v_High.safetensors',
         size: '15GB',
         vram: '12GB',
         sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
@@ -90,7 +90,7 @@ export const DEPS = {
         type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_i2vV20Low',
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
-        url: 'https://huggingface.co/MadPonyInteractive/CubricModels/resolve/main/Wan_22_t2v_Low.safetensors',
+        url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_t2v_Low.safetensors',
         size: '15GB',
         vram: '12GB',
         sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'

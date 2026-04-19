@@ -363,8 +363,16 @@ async function getCustomRoot() {
     const extraConfigPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'extra_model_paths.yaml');
     if (await fs.pathExists(extraConfigPath)) {
         const content = await fs.readFile(extraConfigPath, 'utf8');
-        const match = content.match(/base_path:\s*(.*)/i);
-        if (match) return match[1].trim();
+        // Match both formats: "base_path: value" and "base_path: value" (quoted or unquoted)
+        const match = content.match(/base_path:\s*([^\n]+)/i);
+        if (match) {
+            let value = match[1].trim();
+            // Remove surrounding quotes if present
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+            return value;
+        }
     }
     return null;
 }

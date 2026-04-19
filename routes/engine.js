@@ -211,7 +211,7 @@ async function _runEngineDownload(type) {
         );
         logger.info('engine', `Version stamp written: ${INSTALLED_ENGINE_VERSION}`);
 
-        // ── 5. Post-install: Write extra_model_paths.yaml ──────────────────────
+        // ── 5. Post-install: Write extra_model_paths.yaml (if needed) ────────────
         if (type === 'comfy') {
             const mpiModelsDir = path.join(targetDir, 'mpi_models');
             await fs.ensureDir(mpiModelsDir);
@@ -223,10 +223,17 @@ async function _runEngineDownload(type) {
                 'extra_model_paths.yaml'
             );
 
-            // For now, generate YAML pointing to mpi_models (Plan A will refine this)
-            const yaml = `# MPI AI Suite — Extra Model Paths\nall:\n  base_path: "${mpiModelsDir.replace(/\\/g, '/')}"\n`;
-            await fs.writeFile(extraConfigPath, yaml, 'utf8');
-            logger.info('engine', `extra_model_paths.yaml written pointing to ${mpiModelsDir}`);
+            // Only write YAML on fresh install if it doesn't exist
+            // On repair, preserve the existing YAML
+            if (!(await fs.pathExists(extraConfigPath))) {
+                // Fresh install — write minimal YAML pointing to mpi_models
+                // (User will update it via /comfy/set-path if they want a custom path)
+                const yaml = `# MPI AI Suite — Extra Model Paths\nall:\n  base_path: "${mpiModelsDir.replace(/\\/g, '/')}"\n`;
+                await fs.writeFile(extraConfigPath, yaml, 'utf8');
+                logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
+            } else {
+                logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);
+            }
         }
 
         // ── 6. Install universal workflow dependencies (ComfyUI only) ───────────
@@ -241,7 +248,9 @@ async function _runEngineDownload(type) {
                 }
             } catch (err) {
                 logger.error('engine', `UW deps install failed: ${err.message}`);
-                throw err; // surface as engine:error
+                broadcastEngineEvent('engine:uw-installing', {
+                    status: 'Some dependencies could not be installed. You can repair them later.'
+                });
             }
         }
 
@@ -263,8 +272,7 @@ router.post('/engine/download', async (req, res) => {
 
     logger.info('engine', `Starting async engine download for type: ${engineType}`);
     _runEngineDownload(engineType).catch(e => {
-        logger.error('engine', 'Engine download failed', e);
-        broadcastEngineEvent('engine:error', { error: e.message });
+        logger.error('engine', 'Uncaught engine download error (already handled)', e);
     });
 });
 
@@ -274,9 +282,23 @@ router.get('/engine/version-check', async (req, res) => {
         const versionFile = path.join(ENGINE_ROOT, '.mpi_engine_version');
         const requiredVersion = COMFY_VERSION; // canonical version from js/core/appVersion.js
 
-        const installedVersion = (await fs.pathExists(versionFile))
+        let installedVersion = (await fs.pathExists(versionFile))
             ? (await fs.readFile(versionFile, 'utf8')).trim()
             : null;
+
+        // Verify that engine binaries actually exist, not just the version stamp
+        if (installedVersion !== null) {
+            let pythonPath = path.join(ENGINE_ROOT, 'python_embeded', 'python.exe');
+            if (!(await fs.pathExists(pythonPath))) {
+                pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
+            }
+            const engineExists = await fs.pathExists(pythonPath);
+            if (!engineExists) {
+                logger.warn('engine', 'Version stamp found but engine binaries missing — treating as fresh install');
+                await fs.remove(versionFile).catch(() => {});
+                installedVersion = null;
+            }
+        }
 
         res.json({
             installed: installedVersion,
