@@ -187,7 +187,9 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(git log:*)",
       "mcp__nimbalyst-meta-agent__create_session",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(sed -i \"272s/\\\\$/,/\" \"c:/AI/Mpi/MpiAiSuite/js/data/modelConstants/dependencies.js\")",
+      "Bash(sed -i \"273s/^        installOnEngine/        installOnEngine/\" \"c:/AI/Mpi/MpiAiSuite/js/data/modelConstants/dependencies.js\")"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

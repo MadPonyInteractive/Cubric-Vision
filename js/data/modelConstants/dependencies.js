@@ -3,15 +3,6 @@
 // *********
 // IMPORTANT: If you need to change a URL, you have to set the SHA256 back to null. 
 // *********
-// TODO: Update hashes for following models:
-// TODO: can't be done now as they haven't been re-uploaded with the new URLs
-// 'ill-anime',
-// 'ill-anime-beauty',
-// 'pony-mix',
-// 'wan-22-t2v-high',
-// 'wan-22-t2v-low',
-// 'wan-22-i2v-high',
-// 'wan-22-i2v-low',
 
 export const DEPS = {
     // Models
@@ -35,7 +26,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: '357f63d2784cf0da28f44f14babaca854ccd8fe2581f196df1fc39cbfa053ac8'
+        sha256: 'f548b5b4953c3ba71f9769c98005b95a41a7f8e0b666a509bb938cedf70347fd'
     },
     'ill-anime-beauty': {
         id: 'ill-anime-beauty',
@@ -46,7 +37,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime_Beauty.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: '097cd879e878485c0bff4c82435ec9a06c65294fc8776b31873aacad8ddf21aa'
+        sha256: 'bbebe76d8fcc488b630d6dd74d111bb170b5d5c82a43fca0d99cd8e263766318'
     },
     'pony-mix': {
         id: 'pony-mix',
@@ -57,7 +48,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/PONY_Mix.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: '8d3ee679f82bcf7918ae7011d123b38ac718afd33a17e246e9b68b717255c3a9'
+        sha256: '455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b'
     },
     // Video Models
     'wan-22-t2v-high': {
@@ -69,7 +60,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_High.safetensors',
         size: '21GB',
         vram: '12GB',
-        sha256: '1f40184ebd858b179d71fdcfa9c1ebc5cb79fa7ae90474c5ba44ce8abe5e9bc3'
+        sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
     },
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
@@ -80,7 +71,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_Low.safetensors',
         size: '21GB',
         vram: '12GB',
-        sha256: '5de2d526f4349834c36f06972f610997edfcbc896cdc4211362daea6b643b125'
+        sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
