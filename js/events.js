@@ -91,6 +91,8 @@ export const Events = new EventBus();
  * 'ui:error'         { title: string, message: string } — show error dialog (shell listens)
  * 'media:updated'    { projectId: string }           — any tool saving to library
  * 'tool:running'     { tool: string, type: string }  — tool started a run
+ * 'tool:loading-model' { tool: string }              — model loader node executing (VRAM load phase)
+ * 'tool:sampling-start' { tool: string }             — KSampler about to run (model loaded, sampling begins)
  * 'tool:idle'        { tool: string, type: string }  — tool run finished (success)
  * 'tool:cancelled'   { tool: string }                — tool was cancelled by user or error
  * 'project:changed'  { project: Object }             — user switched active project

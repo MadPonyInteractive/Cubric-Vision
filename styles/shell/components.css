@@ -124,3 +124,11 @@
   0%, 100% { opacity: 1;   transform: scale(1); }
   50%       { opacity: 0.3; transform: scale(0.75); }
 }
+
+.shell-info__dot--primary {
+  background: var(--primary);
+}
+
+.shell-info__process-label--primary {
+  color: var(--primary);
+}

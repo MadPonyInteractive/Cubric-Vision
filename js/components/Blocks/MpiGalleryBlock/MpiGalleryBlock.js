@@ -477,6 +477,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                 if (!activeModel) return;
 
+                const generationStartTime = Date.now();
                 const tempId   = crypto.randomUUID();
                 const cardType = activeModel.mediaType;
 
@@ -502,7 +503,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                 // Track generating card state
                 _generatingCardId = tempId;
-                StatusBar.progress.start('Generating...');
+
+                Events.emit('tool:running', { tool: 'groupHistory', type: operation });
 
                 // ... rest of generation logic (unchanged)
                 _activeExec = runCommand({
@@ -515,7 +517,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 const exec = _activeExec;
 
-                exec.onPreview = (url) => grid.el.updatePreview(tempId, url);
+                exec.onPreview  = (url) => grid.el.updatePreview(tempId, url);
                 exec.onProgress = (value) => StatusBar.progress.update(value);
 
                 exec.onComplete = async (urls) => {
@@ -534,6 +536,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                     if (state.currentProject?.folderPath) {
                         try {
+                            const elapsedMs = Date.now() - generationStartTime;
                             const res = await fetch('/project/save-generation', {
                                 method:  'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -547,6 +550,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                         negativePrompt: negative,
                                         modelId:        activeModel.id,
                                     },
+                                    generationMs: elapsedMs,
                                     pixelDimensions: { w: 0, h: 0 },
                                 }),
                             });
@@ -672,6 +676,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     newPromptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                         if (!activeModel) return;
 
+                        const generationStartTime = Date.now();
                         const tempId   = crypto.randomUUID();
                         const cardType = activeModel.mediaType;
                         const currentGroups = state.currentProject?.itemGroups || [];
@@ -689,7 +694,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                         grid.el.setGroups([placeholderGroup, ...currentGroups]);
                         _generatingCardId = tempId;
-                        StatusBar.progress.start('Generating...');
+
+                        Events.emit('tool:running', { tool: 'groupHistory', type: operation });
 
                         _activeExec = runCommand({
                             operation,
@@ -701,7 +707,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         });
                         const exec = _activeExec;
 
-                        exec.onPreview = (url) => grid.el.updatePreview(tempId, url);
+                        exec.onPreview  = (url) => grid.el.updatePreview(tempId, url);
                         exec.onProgress = (value) => StatusBar.progress.update(value);
 
                         exec.onComplete = async (urls) => {
@@ -720,6 +726,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                             if (state.currentProject?.folderPath) {
                                 try {
+                                    const elapsedMs = Date.now() - generationStartTime;
                                     const res = await fetch('/project/save-generation', {
                                         method:  'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -733,6 +740,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                                                 negativePrompt: negative,
                                                 modelId:        activeModel.id,
                                             },
+                                            generationMs: elapsedMs,
                                             pixelDimensions: { w: 0, h: 0 },
                                         }),
                                     });

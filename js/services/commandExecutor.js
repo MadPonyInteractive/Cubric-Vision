@@ -294,6 +294,16 @@ function _formatWorkflowError(errMessage, modelId) {
     };
 }
 
+const LOADER_CLASS_TYPES = new Set([
+    'CheckpointLoaderSimple', 'CheckpointLoader',
+    'UNETLoader', 'UnetLoaderGGUF',
+    'DiffusionModelLoader',
+    'CLIPLoader', 'DualCLIPLoader',
+    'VAELoader',
+    'LoraLoader', 'LoraLoaderModelOnly',
+    'MpiLoraModelClip',
+]);
+
 export function runCommand(payload) {
     const exec = {
         onPreview:  null,
@@ -334,8 +344,15 @@ export function runCommand(payload) {
             )
         );
 
+        // Map nodeId → class_type for loader detection
+        const nodeClassMap = {};
+        for (const [id, node] of Object.entries(workflow)) {
+            if (node.class_type) nodeClassMap[id] = node.class_type;
+        }
+
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
+        let _samplingStartFired = false;
         const onMessage = (msg) => {
             if (msg.type === 'preview') {
                 exec.onPreview?.(msg.url);
@@ -344,7 +361,19 @@ export function runCommand(payload) {
 
             if (msg.type === 'progress') {
                 const { value, max } = msg.data || {};
+                if (!_samplingStartFired) {
+                    _samplingStartFired = true;
+                    Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                }
                 if (max > 0) exec.onProgress?.(value / max);
+                return;
+            }
+
+            if (msg.type === 'executing' && msg.data?.node !== null) {
+                const nodeId = msg.data?.node;
+                if (LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
+                    Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                }
                 return;
             }
 

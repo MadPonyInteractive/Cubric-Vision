@@ -138,6 +138,25 @@ export const StatusBar = {
         },
 
         /**
+         * Set a CSS variant class on dot and label (e.g. 'primary' applies --primary--* classes).
+         * @param {string} variant  e.g. 'primary'
+         */
+        setVariant(variant) {
+            if (!_dot || !_label) return;
+            _dot.className = `shell-info__dot shell-info__dot--${variant}`;
+            _label.className = `shell-info__process-label shell-info__process-label--${variant}`;
+        },
+
+        /**
+         * Update the label text without resetting progress.
+         * @param {string} label  e.g. 'Generating...'
+         */
+        updateLabel(label) {
+            if (!_label) return;
+            _label.textContent = label;
+        },
+
+        /**
          * Drive the progress fill.
          * @param {number} value  0.0 – 1.0
          */
@@ -200,13 +219,22 @@ export const StatusBar = {
      */
     listen() {
         Events.on('tool:running', ({ tool }) => {
-            if (tool === 'groupHistory') this.progress.start('Generating...');
+            if (tool === 'groupHistory') {
+                StatusBar.progress.start('Generating...');
+                StatusBar.progress.setVariant('primary');
+            }
+        });
+        Events.on('tool:loading-model', ({ tool }) => {
+            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model...');
+        });
+        Events.on('tool:sampling-start', ({ tool }) => {
+            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Generating...');
         });
         Events.on('tool:cancelled', ({ tool }) => {
-            if (tool === 'groupHistory') this.progress.cancel();
+            if (tool === 'groupHistory') StatusBar.progress.cancel();
         });
         Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') this.progress.complete('Done!');
+            if (tool === 'groupHistory') StatusBar.progress.complete('Done!');
         });
     },
 };

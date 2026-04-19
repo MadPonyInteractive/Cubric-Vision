@@ -525,7 +525,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, pixelDimensions } = req.body;
+        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
 
@@ -582,6 +582,7 @@ router.post('/project/save-generation', async (req, res) => {
             name:           null,
             uploaded:       false,
             pixelDimensions: pixelDimensions ?? { w: 0, h: 0 },
+            generationMs:   generationMs      ?? null,
         };
         const metaPath = path.join(metaDir, `${id}.json`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });

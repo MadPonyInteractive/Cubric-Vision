@@ -306,6 +306,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null, injectionParams = {} }) {
             if (!activeModel) return;
 
+            const generationStartTime = Date.now();
+
             Events.emit('tool:running', { tool: 'groupHistory', type: operation });
             canvasViewer.el.setGenerating(true);
 
@@ -363,6 +365,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
                 if (state.currentProject?.folderPath) {
                     try {
+                        const elapsedMs = Date.now() - generationStartTime;
                         const res = await fetch('/project/save-generation', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -372,6 +375,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                                 itemId,
                                 operation,
                                 meta: { prompt: positive, negativePrompt: negative, modelId: activeModel.id },
+                                generationMs: elapsedMs,
                                 pixelDimensions: { w: 0, h: 0 },
                             }),
                         });
