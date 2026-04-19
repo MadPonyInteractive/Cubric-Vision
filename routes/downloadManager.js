@@ -190,6 +190,25 @@ function _parseSizeToBytes(sizeStr) {
     return val * (multipliers[unit] || 0);
 }
 
+async function _getFileSizeFromUrl(url) {
+    return new Promise((resolve, reject) => {
+        const protocol = url.startsWith('https') ? require('https') : require('http');
+        const request = protocol.request(url, { method: 'HEAD' }, (res) => {
+            const size = parseInt(res.headers['content-length'], 10);
+            resolve(isNaN(size) ? 0 : size);
+        });
+        request.on('error', (err) => {
+            logger.warn('downloadManager', `HEAD request failed for ${url}: ${err.message}`);
+            resolve(0);
+        });
+        request.setTimeout(5000, () => {
+            request.abort();
+            resolve(0);
+        });
+        request.end();
+    });
+}
+
 // ── SSE Clients ───────────────────────────────────────────────────────────────
 const _sseClients = new Set();
 
@@ -640,7 +659,7 @@ function cancelAllDownloads() {
 // ── Universal Workflow Deps Installer ─────────────────────────────────────────
 
 /**
- * Installs universal workflow dependencies: downloads missing deps and runs
+ * Installs universal workflow dependencies: downloads missing deps and optionally runs
  * custom node install steps (pip, custom commands) for any custom_nodes.
  *
  * Called after engine install completes (new install or upgrade).
@@ -648,8 +667,9 @@ function cancelAllDownloads() {
  *
  * @param {string[]} depIds - DEPS ids to install (from checkUniversalWorkflowDepsStatus)
  * @param {boolean} broadcastProgress - whether to emit engine:uw-installing SSE events
+ * @param {boolean} skipCustomNodeInstall - if true, download only; don't run custom node pip install
  */
-async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
+async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, skipCustomNodeInstall = false) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const customRoot = await getCustomRoot();
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
@@ -753,7 +773,44 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
         }, 500);
     });
 
-    // Run custom node install steps for any completed custom_nodes deps
+    // Run custom node install steps if not skipped
+    if (!skipCustomNodeInstall) {
+        const customNodeDeps = modelJob.deps.filter(d =>
+            d.status === 'complete' && d.type === 'custom_nodes' && d.localPath != null
+        );
+
+        if (customNodeDeps.length > 0) {
+            if (broadcastProgress) {
+                broadcastEngineEvent('engine:uw-installing', { status: 'Installing custom node requirements...' });
+            }
+            // Re-use the modelJob-shaped structure that _runCustomNodeInstall expects
+            await _runCustomNodeInstall({
+                modelId: modelJob.modelId,
+                deps: customNodeDeps,
+            });
+        }
+
+        if (broadcastProgress) {
+            broadcastEngineEvent('engine:uw-installing', { status: 'Universal workflow dependencies ready' });
+        }
+    } else {
+        logger.info('download', 'Skipping custom node install; will be called after engine extraction');
+        if (broadcastProgress) {
+            broadcastEngineEvent('engine:uw-installing', { status: 'Dependencies downloaded, waiting for engine...' });
+        }
+    }
+
+    return modelJob;
+}
+
+/**
+ * Finishes custom node installation after engine is ready.
+ * Call this after calling startUniversalWorkflowInstall with skipCustomNodeInstall=true.
+ *
+ * @param {Object} modelJob - the modelJob returned by startUniversalWorkflowInstall
+ * @param {boolean} broadcastProgress - whether to emit SSE events
+ */
+async function finishCustomNodeInstall(modelJob, broadcastProgress = true) {
     const customNodeDeps = modelJob.deps.filter(d =>
         d.status === 'complete' && d.type === 'custom_nodes' && d.localPath != null
     );
@@ -762,7 +819,6 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true) {
         if (broadcastProgress) {
             broadcastEngineEvent('engine:uw-installing', { status: 'Installing custom node requirements...' });
         }
-        // Re-use the modelJob-shaped structure that _runCustomNodeInstall expects
         await _runCustomNodeInstall({
             modelId: modelJob.modelId,
             deps: customNodeDeps,
@@ -824,4 +880,5 @@ module.exports = {
     clearEngineDownload,
     runCustomNodeInstall: _runCustomNodeInstall,
     startUniversalWorkflowInstall,
+    finishCustomNodeInstall,
 };

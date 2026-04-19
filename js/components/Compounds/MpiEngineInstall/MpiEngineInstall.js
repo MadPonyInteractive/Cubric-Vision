@@ -335,32 +335,55 @@ export const MpiEngineInstall = ComponentFactory.create({
             }
         };
 
+        // Track combined download progress (engine + UW deps)
+        let _engineDownloadedBytes = 0;
+        let _engineTotalBytes = 0;
+        let _uwDepsDownloadedBytes = 0;
+        let _uwDepsTotalBytes = 0;
+        let _engineSpeed = '0 B/s';
+
         el.setProgress = (data) => {
             if (!_progressBarInst) {
                 _progressBarInst = MpiProgressBar.mount(progressBar, {
                     min: 0,
                     max: 100,
-                    value: data.progress || 0,
+                    value: 0,
                     interactive: false,
                     variant: 'primary',
                     info: '0%'
                 });
             }
 
-            const { progress = 0, speed = '0 B/s', downloadedBytes = 0, totalBytes = 0 } = data;
+            // Determine if this is engine:downloading or download:progress for UW deps
+            const isEngineProgress = data.progress !== undefined && !data.modelId;
+            const isUWProgress = data.modelId === '__universal_workflow__';
+
+            if (isEngineProgress) {
+                _engineDownloadedBytes = data.downloadedBytes || 0;
+                _engineTotalBytes = data.totalBytes || 0;
+                _engineSpeed = data.speed || '0 B/s';
+            } else if (isUWProgress) {
+                _uwDepsDownloadedBytes = data.downloadedBytes || 0;
+                _uwDepsTotalBytes = data.totalBytes || 0;
+            }
+
+            // Calculate combined progress
+            const combinedDownloaded = _engineDownloadedBytes + _uwDepsDownloadedBytes;
+            const combinedTotal = _engineTotalBytes + _uwDepsTotalBytes;
+            const combinedProgress = combinedTotal > 0 ? Math.round((combinedDownloaded / combinedTotal) * 100) : 0;
 
             // Update progress bar
             const input = _progressBarInst.el.querySelector('.mpi-progress__input');
             if (input) {
-                input.value = progress;
+                input.value = combinedProgress;
                 const trackFill = _progressBarInst.el.querySelector('.mpi-progress__track-fill');
-                if (trackFill) trackFill.style.width = `${progress}%`;
+                if (trackFill) trackFill.style.width = `${combinedProgress}%`;
             }
 
             // Update info text
-            const downloadedMB = (downloadedBytes / (1024 * 1024)).toFixed(1);
-            const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
-            progressInfo.textContent = `${downloadedMB} MB / ${totalMB} MB — ${speed}`;
+            const downloadedMB = (combinedDownloaded / (1024 * 1024)).toFixed(1);
+            const totalMB = (combinedTotal / (1024 * 1024)).toFixed(1);
+            progressInfo.textContent = `${downloadedMB} MB / ${totalMB} MB — ${_engineSpeed}`;
         };
 
         el.setStatus = (text) => {
@@ -410,6 +433,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                 // Show pause button, hide resume button during download
                 pauseButtonMount.style.display = 'block';
                 resumeButtonMount.style.display = 'none';
+                el.setLoading(false); // Disable pulsation during actual download
                 el.setProgress(data);
             });
 
@@ -466,6 +490,7 @@ export const MpiEngineInstall = ComponentFactory.create({
             _sseConnection.addEventListener('download:progress', (e) => {
                 const data = JSON.parse(e.data);
                 if (data.modelId === '__universal_workflow__') {
+                    el.setLoading(false); // Disable pulsation during actual download
                     el.setProgress(data);
                 }
             });

@@ -425,6 +425,57 @@ async function checkUniversalWorkflowDepsStatus() {
 }
 
 /**
+ * Calculates total size in bytes for all missing universal workflow dependencies.
+ * Returns the sum of dep file sizes. Falls back to registry size string if HEAD request fails.
+ */
+async function getUniversalWorkflowDepsTotalSize(missingDepIds) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    let totalBytes = 0;
+
+    for (const depId of missingDepIds) {
+        const dep = DEPS[depId];
+        if (!dep) continue;
+
+        // Try to get exact size from Content-Length header
+        let depBytes = 0;
+        try {
+            const http = require('http');
+            const https = require('https');
+            const protocol = dep.url.startsWith('https') ? https : http;
+            depBytes = await new Promise((resolve) => {
+                const request = protocol.request(dep.url, { method: 'HEAD' }, (res) => {
+                    const size = parseInt(res.headers['content-length'], 10);
+                    resolve(isNaN(size) ? 0 : size);
+                });
+                request.on('error', () => resolve(0));
+                request.setTimeout(5000, () => {
+                    request.abort();
+                    resolve(0);
+                });
+                request.end();
+            });
+        } catch (err) {
+            logger.warn('comfy', `Failed to get size for ${depId}: ${err.message}`);
+        }
+
+        // Fall back to registry size string if HEAD request failed
+        if (depBytes === 0 && dep.size) {
+            const match = dep.size.match(/^([\d\.]+)\s*(GB|MB|KB|B)$/i);
+            if (match) {
+                const val = parseFloat(match[1]);
+                const unit = match[2].toUpperCase();
+                const multipliers = { 'GB': 1024 ** 3, 'MB': 1024 ** 2, 'KB': 1024, 'B': 1 };
+                depBytes = val * (multipliers[unit] || 0);
+            }
+        }
+
+        totalBytes += depBytes;
+    }
+
+    return totalBytes;
+}
+
+/**
  * Empties ComfyUI's input/ and output/ temp folders.
  */
 async function cleanComfyUITempFiles() {
@@ -464,4 +515,5 @@ module.exports = {
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,
     checkUniversalWorkflowDepsStatus,
+    getUniversalWorkflowDepsTotalSize,
 };

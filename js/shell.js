@@ -207,11 +207,23 @@ async function _bootApp() {
 }
 
 async function _initDataRegistries() {
-  // Subscribe BEFORE syncing so the first emission is never missed
+  // Subscribe to models:checked event to update state
   Events.on('models:checked', ({ installedModelIds: ids }) => {
     state.s_installedModelIds = ids;
   });
 
+  // Subscribe to engine:ready event — check models only after engine is set up
+  // This ensures extra_model_paths.yaml exists before we try to read it
+  Events.on('engine:ready', async () => {
+    try {
+      await syncModelInstalled();
+    } catch (err) {
+      console.error('[shell] model registry sync failed:', err);
+    }
+  });
+
+  // Also do an initial check in case engine was already ready before this listener was registered
+  // (e.g., fresh start with no engine install needed)
   try {
     await syncModelInstalled();
   } catch (err) {

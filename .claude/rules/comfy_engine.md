@@ -44,5 +44,36 @@ The Node.js backend tracks the active python process in memory (`processState.ac
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.
 - Any new routes that communicate with ComfyUI's internal API (`/manager/unload_models`, etc.) must account for deep vs. shallow memory cleaning.
 
-### Download Manager Router
+### 3. Engine Installation Flow (Fresh Install)
+
+The engine installation is now **parallel-optimized** with aggregated progress reporting:
+
+**Order of operations:**
+1. Pre-calculate combined size: engine archive + all missing UW deps (models + custom nodes)
+2. **Start engine download** (progress fed to frontend)
+3. **Immediately fire UW deps download in parallel** with `skipCustomNodeInstall=true` (progress also fed to frontend)
+4. **Extract engine** (while UW deps continue downloading)
+5. **Patch engine** and write `extra_model_paths.yaml` (critical: YAML must exist before model checker runs)
+6. **Wait for UW deps downloads to complete**
+7. **Finish custom node installation** via `finishCustomNodeInstall()` (now Python is available)
+8. Emit `engine:complete`
+
+**Key file locations:**
+- Engine download orchestration: `routes/engine.js` lines 56–280 (`_runEngineDownload`)
+- UW deps separation: `routes/downloadManager.js` lines 671–693 (`startUniversalWorkflowInstall` with `skipCustomNodeInstall` param)
+- Custom node finish: `routes/downloadManager.js` lines 816–834 (`finishCustomNodeInstall`)
+- Frontend aggregation: `js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js` lines 338–380 (`el.setProgress`)
+
+**Important:** UW deps custom nodes must NOT run their pip install until **after** engine extraction completes and Python is available. The `skipCustomNodeInstall` flag delays this until `finishCustomNodeInstall()` is called in step 7.
+
+**Progress bar behavior:** Aggregates both engine and UW deps download progress into a single unified bar showing combined bytes downloaded / combined total bytes.
+
+### 4. Model Registry Timing Issue
+
+**Model detection now waits for engine:ready event** (shell.js `_initDataRegistries`):
+- On fresh install, the app checks for installed models **after** the engine:ready signal, not before
+- This ensures `extra_model_paths.yaml` exists and has been parsed by the time model detection runs
+- Without this timing fix, models would show "0 MB / total MB" on first boot, then correct themselves after app restart
+
+### 5. Download Manager Router
 See `.claude/rules/downloads.md` for full download system rules (IPC/SSE, ResumableDownloader, job shapes, event lifecycle, engine pause/resume).

@@ -12,9 +12,9 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize } = require('./shared');
 const logger = require('./logger');
-const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall } = require('./downloadManager');
+const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_VERSION } = require('../js/core/appVersion.js');
 
 router.get('/engine/status', async (req, res) => {
@@ -71,7 +71,22 @@ async function _runEngineDownload(type) {
 
         if (!engineInfo) throw new Error('Engine info not found in configs');
 
-        // ── 1. Download using ResumableDownloader ──────────────────────────────
+        // ── 1. Pre-calculate combined size (engine + UW deps) ────────────────────
+        let uwDepsTotalBytes = 0;
+        let missingDepIds = [];
+
+        if (type === 'comfy') {
+            const { missingDeps } = await checkUniversalWorkflowDepsStatus();
+            missingDepIds = missingDeps;
+            if (missingDeps.length > 0) {
+                logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
+                uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
+                logger.info('engine', `UW deps total size: ${(uwDepsTotalBytes / 1024 / 1024 / 1024).toFixed(2)} GB`);
+            }
+        }
+
+        // ── 2. Download engine using ResumableDownloader ────────────────────────
+        let engineArchiveSize = 0;
         broadcastEngineEvent('engine:downloading', {
             progress: 0,
             downloadedBytes: 0,
@@ -83,10 +98,7 @@ async function _runEngineDownload(type) {
 
         logger.info('system', `Downloading engine: ${engineInfo.url}`);
 
-        // Use consistent downloadId for universal pause/resume endpoints
         const downloadId = `engine-${type}`;
-
-        // Create a dep job for the ResumableDownloader
         const depJob = {
             id: downloadId,
             url: engineInfo.url,
@@ -99,10 +111,10 @@ async function _runEngineDownload(type) {
             sha256Expected: null
         };
 
-        // Use ResumableDownloader for resumable downloads
         const downloader = new ResumableDownloader(depJob, archivePath);
 
         downloader.onProgress = (downloaded, total, speed) => {
+            engineArchiveSize = total;
             const progress = total > 0 ? Math.round((downloaded / total) * 100) : 0;
             broadcastEngineEvent('engine:downloading', {
                 progress,
@@ -112,13 +124,27 @@ async function _runEngineDownload(type) {
             });
         };
 
-        // Ensure downloader is initialized and bind events
         await downloader._ensureDownloader();
-
-        // Register downloader with downloadManager for pause/resume support
         registerEngineDownload(downloader, downloadId);
 
-        // Wait for download to complete
+        // Fire UW deps download immediately (parallel with engine download, skip custom node install for now)
+        let uwModelJob = null;
+        let uwDepsPromise = Promise.resolve();
+        if (type === 'comfy' && missingDepIds.length > 0) {
+            logger.info('engine', `Firing ${missingDepIds.length} UW deps downloads (parallel)...`);
+            uwDepsPromise = startUniversalWorkflowInstall(missingDepIds, true, true)  // true = skip custom node install
+                .then(modelJob => {
+                    uwModelJob = modelJob;
+                    return modelJob;
+                })
+                .catch(err => {
+                    logger.error('engine', `UW deps download error: ${err.message}`);
+                    broadcastEngineEvent('engine:uw-installing', {
+                        status: 'Some dependencies could not be installed. You can repair them later.'
+                    });
+                });
+        }
+
         await new Promise((resolve, reject) => {
             downloader._downloader.on('end', () => {
                 clearEngineDownload();
@@ -131,7 +157,7 @@ async function _runEngineDownload(type) {
             downloader._downloader.start();
         });
 
-        // ── 2. Extract ─────────────────────────────────────────────────────────
+        // ── 3. Extract ─────────────────────────────────────────────────────────
         broadcastEngineEvent('engine:extracting', { status: 'extracting', progress: 0 });
         logger.info('system', 'Extracting engine archive...');
 
@@ -141,7 +167,6 @@ async function _runEngineDownload(type) {
 
         await new Promise((resolve, reject) => {
             myStream.on('data', (data) => {
-                // Emit extraction progress events
                 if (data && data.status) {
                     broadcastEngineEvent('engine:extracting', {
                         status: 'extracting',
@@ -156,7 +181,18 @@ async function _runEngineDownload(type) {
 
         await fs.remove(archivePath);
 
-        // ── 3. Patch ───────────────────────────────────────────────────────────
+        // ── Wait for UW deps downloads, then finish custom node install ─────────
+        logger.info('engine', 'Waiting for UW deps downloads to complete...');
+        await uwDepsPromise;
+
+        if (type === 'comfy' && uwModelJob) {
+            logger.info('engine', 'Engine ready, finishing custom node installation...');
+            await finishCustomNodeInstall(uwModelJob, true).catch(err => {
+                logger.error('engine', `Custom node install error: ${err.message}`);
+            });
+        }
+
+        // ── 4. Patch ───────────────────────────────────────────────────────────
         broadcastEngineEvent('engine:patching', { status: 'patching' });
         logger.info('system', 'Patching engine...');
 
@@ -202,7 +238,7 @@ async function _runEngineDownload(type) {
             }
         }
 
-        // ── 4. Post-install: Write version stamp ───────────────────────────────
+        // ── 5. Post-install: Write version stamp ───────────────────────────────
         const INSTALLED_ENGINE_VERSION = engineInfo.version;
         await fs.writeFile(
             path.join(targetDir, '.mpi_engine_version'),
@@ -211,7 +247,7 @@ async function _runEngineDownload(type) {
         );
         logger.info('engine', `Version stamp written: ${INSTALLED_ENGINE_VERSION}`);
 
-        // ── 5. Post-install: Write extra_model_paths.yaml (if needed) ────────────
+        // ── 6. Post-install: Write extra_model_paths.yaml (if needed) ────────────
         if (type === 'comfy') {
             const mpiModelsDir = path.join(targetDir, 'mpi_models');
             await fs.ensureDir(mpiModelsDir);
@@ -223,11 +259,7 @@ async function _runEngineDownload(type) {
                 'extra_model_paths.yaml'
             );
 
-            // Only write YAML on fresh install if it doesn't exist
-            // On repair, preserve the existing YAML
             if (!(await fs.pathExists(extraConfigPath))) {
-                // Fresh install — write minimal YAML pointing to mpi_models
-                // (User will update it via /comfy/set-path if they want a custom path)
                 const yaml = `# MPI AI Suite — Extra Model Paths\nall:\n  base_path: "${mpiModelsDir.replace(/\\/g, '/')}"\n`;
                 await fs.writeFile(extraConfigPath, yaml, 'utf8');
                 logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
@@ -236,25 +268,7 @@ async function _runEngineDownload(type) {
             }
         }
 
-        // ── 6. Install universal workflow dependencies (ComfyUI only) ───────────
-        if (type === 'comfy') {
-            try {
-                const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-                if (missingDeps.length > 0) {
-                    logger.info('engine', `Installing ${missingDeps.length} missing UW deps...`);
-                    await startUniversalWorkflowInstall(missingDeps, true);
-                } else {
-                    logger.info('engine', 'All universal workflow dependencies already present');
-                }
-            } catch (err) {
-                logger.error('engine', `UW deps install failed: ${err.message}`);
-                broadcastEngineEvent('engine:uw-installing', {
-                    status: 'Some dependencies could not be installed. You can repair them later.'
-                });
-            }
-        }
-
-        // ── 7. Complete ────────────────────────────────────────────────────────
+        // ── 7. Complete engine (UW deps fully done) ─────────────────────────────
         broadcastEngineEvent('engine:complete', { success: true });
         logger.info('engine', `Engine provisioning complete for type: ${type}`);
 
