@@ -3,6 +3,15 @@
 // *********
 // IMPORTANT: If you need to change a URL, you have to set the SHA256 back to null. 
 // *********
+// TODO: Update hashes for following models:
+// TODO: can't be done now as they haven't been re-uploaded with the new URLs
+// 'ill-anime',
+// 'ill-anime-beauty',
+// 'pony-mix',
+// 'wan-22-t2v-high',
+// 'wan-22-t2v-low',
+// 'wan-22-i2v-high',
+// 'wan-22-i2v-low',
 
 export const DEPS = {
     // Models
@@ -15,7 +24,7 @@ export const DEPS = {
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
-        sha256: 'd234c60d67cedfe69433e3934a459707c2cf43b30232d3db2becd10371d2220f'
+        sha256: '4073cbe470446d0f1806e82d560d14af5b813ec1091b26ad7a69f8162f4a7ac1'
     },
     'ill-anime': {
         id: 'ill-anime',
