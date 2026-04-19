@@ -310,6 +310,10 @@ router.post('/comfy/models/download/start', async (req, res) => {
         }
     }
 
+    // Recalculate progress from completed deps before broadcasting (bug fix)
+    modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+    modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+
     modelJob.status = 'downloading';
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 

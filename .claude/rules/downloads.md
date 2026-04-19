@@ -13,6 +13,8 @@
 
 **`comfyNeedsRestart`****:** Backend sets this flag after custom node `requirements.txt` pip install. `ensureServerRunning()` in `comfyController.js` polls and restarts ComfyUI when this is true — do not skip this check.
 
+**custom_nodes path:** The `extra_model_paths.yaml` does NOT remap the `custom_nodes` type. All custom node deps (ComfyUI-MpiNodes, ComfyUI-UltimateSDUpscale, etc.) use the engine default path `{engine}/custom_nodes/`, regardless of `customRoot`. Do not attempt to redirect custom_nodes downloads to `customRoot/custom_nodes/` — the YAML doesn't support this mapping, and the engine's Python needs to find custom nodes in its own `custom_nodes` folder.
+
 **State keys:** `state.downloadJobs[]` and `state.downloadQueueActive`. Components should read these, not duplicate them.
 
 **Events:** All download state transitions are broadcast via SSE to `downloadService._connectSSE()` and then re-emitted as `Events` (`download:started`, `download:progress`, `download:complete`, `download:failed`, `download:paused`, `download:resumed`, `download:cancelled`, `download:uninstalled`, `download:installing`). Components subscribe via `Events.on()`.

@@ -250,6 +250,7 @@ router.post('/comfy/models/check', async (req, res) => {
                 if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
                 let depPath;
                 if (dep.type === 'custom_nodes') {
+                    // custom_nodes: YAML does not remap this type — always use engine default
                     depPath = path.join(defaultCustomNodesRoot, dep.filename);
                 } else if (customRoot) {
                     const baseFilename = path.basename(dep.filename);

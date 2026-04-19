@@ -89,6 +89,11 @@ export const MpiModelsModal = ComponentFactory.create({
         //   Map<modelId, { wrapper: HTMLElement, display: MpiInstalledDisplayInstance }>
         const _cardInstances = new Map();
 
+        // Track callbacks for pause/resume/cancel so we can remove stale listeners
+        // when setDownloadState('downloading') rebuilds buttons (Bug 3 fix).
+        //   Map<modelId, { pause: Function, resume: Function, cancel: Function }>
+        const _cardHandlers = new Map();
+
         // ── Refresh button ───────────────────────────────────────────────────
         const refreshBtn = MpiButton.mount(refreshSlot, {
             icon: 'refresh',
@@ -237,9 +242,13 @@ export const MpiModelsModal = ComponentFactory.create({
                     });
 
                     if (downloadState !== 'idle') {
-                        card.on('pause', () => downloadService.pause(model.id));
-                        card.on('resume', () => downloadService.resume(model.id));
-                        card.on('cancel', () => downloadService.cancel(model.id));
+                        const pauseCb = () => downloadService.pause(model.id);
+                        const resumeCb = () => downloadService.resume(model.id);
+                        const cancelCb = () => downloadService.cancel(model.id);
+                        card.on('pause', pauseCb);
+                        card.on('resume', resumeCb);
+                        card.on('cancel', cancelCb);
+                        _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
                     } else {
                         card.on('uninstall', async () => {
                             await downloadService.uninstall(model.id, deps);
@@ -324,9 +333,13 @@ export const MpiModelsModal = ComponentFactory.create({
                 });
 
                 if (downloadState !== 'idle') {
-                    card.on('pause', () => downloadService.pause(model.id));
-                    card.on('resume', () => downloadService.resume(model.id));
-                    card.on('cancel', () => downloadService.cancel(model.id));
+                    const pauseCb = () => downloadService.pause(model.id);
+                    const resumeCb = () => downloadService.resume(model.id);
+                    const cancelCb = () => downloadService.cancel(model.id);
+                    card.on('pause', pauseCb);
+                    card.on('resume', resumeCb);
+                    card.on('cancel', cancelCb);
+                    _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
                 } else {
                     card.on('delete', async () => { await _installModel(model); });
                 }
@@ -352,7 +365,58 @@ export const MpiModelsModal = ComponentFactory.create({
 
         _unsubs.push(Events.on('download:started', ({ modelId }) => {
             const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('downloading');
+            if (!card) return;
+            // setDownloadState('downloading') rebuilds buttons that emit pause/cancel.
+            // Destroy the existing card and remove it so the re-render creates fresh listeners.
+            // This avoids the broken card.display.listeners reference from Bug 3 fix attempt.
+            if (card.display && card.display.el && typeof card.display.el.destroy === 'function') {
+                try { card.display.el.destroy(); } catch (_) { /* ignore */ }
+            }
+            _cardInstances.delete(modelId);
+            _cardHandlers.delete(modelId);
+            // Re-render the card in its place so it shows downloading state with working buttons
+            const cardWrap = card.wrapper;
+            cardWrap.innerHTML = '';
+            const downloadJob = state.downloadJobs.find(j => j.modelId === modelId);
+            const progress = downloadJob ? downloadJob.progress : 0;
+            const speed = downloadJob ? downloadJob.speed : '';
+            const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
+            const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
+
+            const model = MODELS.find(m => m.id === modelId);
+            if (model) {
+                const stats = { sizeText: '', vramText: '' };
+                const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                if (deps.length) {
+                    const totalB = deps.reduce((s, d) => s + _parseSizeToBytes(d.size), 0);
+                    const maxVram = deps.reduce((m, d) => Math.max(m, parseInt(d.vram) || 0), 0);
+                    stats.sizeText = formatBytes(totalB);
+                    stats.vramText = maxVram > 0 ? `${maxVram}GB VRAM` : '';
+                }
+                const newCard = MpiInstalledDisplay.mount(cardWrap, {
+                    title: model.name,
+                    meta: stats.sizeText,
+                    text: model.description || '',
+                    image: model.image || '',
+                    icon: 'info',
+                    iconText: stats.vramText,
+                    installed: model.installed === true,
+                    canUninstall: model.installed === true,
+                    downloadState: 'downloading',
+                    progress,
+                    speed,
+                    downloadedBytes,
+                    totalBytes,
+                });
+                const pauseCb = () => downloadService.pause(modelId);
+                const resumeCb = () => downloadService.resume(modelId);
+                const cancelCb = () => downloadService.cancel(modelId);
+                newCard.on('pause', pauseCb);
+                newCard.on('resume', resumeCb);
+                newCard.on('cancel', cancelCb);
+                _cardHandlers.set(modelId, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
+                _cardInstances.set(modelId, { wrapper: cardWrap, display: newCard });
+            }
         }));
 
         _unsubs.push(Events.on('download:paused', ({ modelId }) => {
@@ -376,6 +440,9 @@ export const MpiModelsModal = ComponentFactory.create({
         }));
 
         _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
+            // Immediately show 'complete' state before async re-sync (Bug 4 fix)
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('complete');
             // awaitReSync() calls renderList() after the sync resolves — a second
             // synchronous renderList() here would render stale MODELS[].installed
             // data (race condition seen in pre-refactor code).

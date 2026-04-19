@@ -16,6 +16,10 @@ const downloadService = {
     _eventSource: null,
 
     async start(modelId, dependencies) {
+        // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
+        // (download:started, download:progress) that fire before the SSE open event.
+        this._ensureSSE();
+
         const job = _createJob(modelId, dependencies);
         state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
         state.downloadQueueActive = true;
@@ -37,8 +41,6 @@ const downloadService = {
             Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
             return;
         }
-
-        this._ensureSSE();
     },
 
     async pause(modelId) {
@@ -107,6 +109,16 @@ const downloadService = {
                 if (res.ok) {
                     const { jobs } = await res.json();
                     if (jobs && jobs.length) {
+                        // Recalculate progress from dep data in case stored value is stale (bug fix)
+                        for (const job of jobs) {
+                            if (job.deps && job.totalBytes > 0) {
+                                const depBytes = job.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
+                                if (depBytes > job.downloadedBytes) {
+                                    job.downloadedBytes = depBytes;
+                                    job.progress = depBytes / job.totalBytes;
+                                }
+                            }
+                        }
                         state.downloadJobs = jobs;
                         state.downloadQueueActive = jobs.some(j => j.status === 'downloading' || j.status === 'installing');
                     }
@@ -118,6 +130,19 @@ const downloadService = {
             this._eventSource.close();
             this._eventSource = null;
             setTimeout(() => this._connectSSE(), 3000);
+        });
+
+        // Backend broadcasts download:started with correct progress from pre-installed deps.
+        // Without this listener, the job stays at progress: 0 until download:progress fires.
+        this._eventSource.addEventListener('download:started', (e) => {
+            const data = JSON.parse(e.data);
+            const job = state.downloadJobs.find(j => j.modelId === data.modelId);
+            if (job) {
+                job.status = data.status;
+                job.progress = data.progress;
+                state.downloadJobs = [...state.downloadJobs];
+            }
+            Events.emit('download:started', data);
         });
 
         this._eventSource.addEventListener('download:progress', (e) => {

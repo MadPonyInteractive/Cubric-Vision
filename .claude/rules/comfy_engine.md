@@ -15,7 +15,7 @@
 
 **No direct Python/pip:** All engine management is via `routes/comfy.js` and `routes/shared.js`. Never spawn Python manually or hardcode binary paths.
 
-**New model checklist:** (1) Add to `MODELS` in modelRegistry, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries.
+**New model checklist:** (1) Add to `MODELS` in modelRegistry, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries, (4) **checkpoint filenames must match the actual on-disk path** — do not include subfolder prefixes (e.g. `SDXL/`, `ILL/`, `PONY/`) unless that subfolder actually exists in the models folder. The backend searches using the exact path in `dep.filename` against `customRoot` (or engine default); mismatches cause the model to show as "not installed" despite files being present.
 
 See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for the registry structure.
 
