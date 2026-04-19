@@ -158,9 +158,7 @@ export const MpiModelsModal = ComponentFactory.create({
         // each full renderList() to avoid leaking child subscriptions.
         function _destroyAllCards() {
             for (const { display } of _cardInstances.values()) {
-                if (display && display.el && typeof display.el.destroy === 'function') {
-                    try { display.el.destroy(); } catch (_) { /* ignore */ }
-                }
+                display?.el?.destroy?.();
             }
             _cardInstances.clear();
         }
@@ -385,14 +383,7 @@ export const MpiModelsModal = ComponentFactory.create({
 
             const model = MODELS.find(m => m.id === modelId);
             if (model) {
-                const stats = { sizeText: '', vramText: '' };
-                const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
-                if (deps.length) {
-                    const totalB = deps.reduce((s, d) => s + _parseSizeToBytes(d.size), 0);
-                    const maxVram = deps.reduce((m, d) => Math.max(m, parseInt(d.vram) || 0), 0);
-                    stats.sizeText = formatBytes(totalB);
-                    stats.vramText = maxVram > 0 ? `${maxVram}GB VRAM` : '';
-                }
+                const stats = _computeModelStats(model);
                 const newCard = MpiInstalledDisplay.mount(cardWrap, {
                     title: model.name,
                     meta: stats.sizeText,

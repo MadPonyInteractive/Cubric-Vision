@@ -78,6 +78,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
         const grid = el.querySelector('.mpi-gallery-grid__grid');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
 
+        /** @type {Array<Function>} */
+        const _unsubs = [];
+
         // Selection state (managed externally by parent block, but grid applies it to cards)
         let _selectedIds = new Set();
         let _selectionMode = false;
@@ -355,6 +358,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // Pack all groups into rows (generating card will be first if present)
                 const targetCardWidth = _cardWidth;
                 const allGroups = [...generatingGroups, ...normalGroups];
+                const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
                 const items = allGroups.map(group => ({
                     id: group.id,
                     // Generating cards: use slider size (targetCardWidth), maintain aspect ratio via height calc
@@ -368,7 +372,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     let maxHeight = 0; // Track maximum item height in this row
 
                     rowItems.forEach(({ id, targetWidth }) => {
-                        const group = allGroups.find(g => g.id === id);
+                        const group = allGroupsMap.get(id);
                         const { card, wrapper } = _makeCard(group);
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
 
@@ -427,21 +431,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
         });
         infoBtn.on('click', () => { state.galleryShowInfo = !state.galleryShowInfo; });
         // Sync active state and propagate to all cards when galleryShowInfo changes
-        const _unsubInfoBtn = Events.on('state:changed', ({ key }) => {
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 'galleryShowInfo') {
                 infoBtn.el.classList.toggle('mpi-btn--active', state.galleryShowInfo);
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
             }
-        });
+        }));
 
         // ── Gallery organize tabs ───────────────────────────────────────────────
 
         const tabsEl = el.querySelector('.mpi-gallery-grid__tabs');
 
         // Subscribe to state.gallerySort changes
-        const _unsubSort = Events.on('state:changed', ({ key }) => {
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 'gallerySort') _rerenderJustified();
-        });
+        }));
 
         // Tab click delegation
         tabsEl.addEventListener('click', (e) => {
@@ -529,6 +533,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 generatingSlot.innerHTML = '';
                 generatingSlot.classList.remove('mpi-gallery-grid__generating-slot--visible');
             }
+        };
+
+        // ── Cleanup ─────────────────────────────────────────────────────────────
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn());
+            _cardMap.forEach(({ card }) => card.el.destroy?.());
+            _cardMap.clear();
         };
     }
 });

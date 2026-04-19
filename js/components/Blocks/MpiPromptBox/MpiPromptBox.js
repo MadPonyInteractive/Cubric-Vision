@@ -353,7 +353,6 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Radial menu → operation sync ───────────────────────────────────────
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
-        Events.on('workspace:set-operation', _onSetOperation);
 
         // ── Prompt injection (from gallery reuse button) ──────────────────────
         el.injectPrompts = ({ positive, negative }) => {
@@ -363,17 +362,12 @@ export const MpiPromptBox = ComponentFactory.create({
             updateHeight();
         };
         const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
-        Events.on('workspace:inject-prompts', _onInjectPrompts);
 
-        // Cleanup listener when element leaves the DOM
-        const _observer = new MutationObserver(() => {
-            if (!document.contains(el)) {
-                Events.off('workspace:set-operation', _onSetOperation);
-                Events.off('workspace:inject-prompts', _onInjectPrompts);
-                _observer.disconnect();
-            }
-        });
-        _observer.observe(document.body, { childList: true, subtree: true });
+        /** @type {Array<Function>} */
+        const _unsubs = [
+            Events.on('workspace:set-operation', _onSetOperation),
+            Events.on('workspace:inject-prompts', _onInjectPrompts),
+        ];
 
         // ── Operation dropdown ─────────────────────────────────────────────────
         let runBtn = null;
@@ -573,5 +567,10 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Initialise operation dropdown and op slot ──────────────────────────
         _refreshOpDropdown();
         _refreshOpSlot();
+
+        // ── Cleanup ─────────────────────────────────────────────────────────────
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn());
+        };
     }
 });

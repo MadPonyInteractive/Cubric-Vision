@@ -113,6 +113,9 @@ export const ComponentFactory = {
                         listeners.get(event).push(callback);
                     },
                     destroy: () => {
+                        if (el && typeof el.destroy === 'function') {
+                            el.destroy();
+                        }
                         if (el && el.parentNode) {
                             el.parentNode.removeChild(el);
                         }

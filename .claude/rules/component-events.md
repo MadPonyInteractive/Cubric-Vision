@@ -154,7 +154,7 @@ LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders card li
          `download:installing` `{ modelId }` — sets card to 'installing' state
          `download:cancelled` `{ modelId }` — sets card to 'cancelled' state
          `download:complete` `{ modelId }` — calls awaitReSync() to fetch new install state
-         `download:failed` `{ modelId, error }` — emits `ui:error` and re-renders list
+         `download:failed` `{ modelId }` — calls `awaitReSync()` to re-render list (no `ui:error` emitted)
 PATTERN: Cards stored in Map by modelId for in-place updates; state polling replaced with event-driven updates
 
 ### MpiNewProject
@@ -205,8 +205,8 @@ LISTENS: (none)
 
 ### MpiToolbar
 EMITS:   `select`      `{ value: string }`
-         `save`        `{}`
-         `delete`      `{}`
+         `save`        `{}` — only when `props.comps` is falsy
+         `delete`      `{}` — only when `props.comps` is falsy
          `modelChange` `{ value: number }`
          `clipChange`  `{ value: number }`
 LISTENS: (none)
@@ -224,12 +224,18 @@ LISTENS: (none)
 ## Blocks
 
 ### MpiGalleryGrid
-EMITS:   `open-group` `{ group: ItemGroup }`
-         `compare`    `{ groups: [ItemGroup, ItemGroup] }`
-         `delete`     `{ groups: ItemGroup[] }`
-         `download`   `{ groups: ItemGroup[] }`
-         `gc-group`   `{ group: ItemGroup }`
-         `gc-remove`  `{ groupId: string }`
+EMITS:   `open-group`      `{ group: ItemGroup }`
+         `compare`         `{ groups: [ItemGroup, ItemGroup] }`
+         `delete`          `{ groups: ItemGroup[] }`
+         `download`        `{ groups: ItemGroup[] }`
+         `gc-group`        `{ group: ItemGroup }`
+         `gc-remove`       `{ groupId: string }`
+         `favourite`       `{ group: ItemGroup, favourite: boolean }`
+         `reuse`           `{ positive: string, negative: string }`
+         `select`          `{ group: ItemGroup, selected: boolean }`
+         `media-missing`   `{ group: ItemGroup, itemId: string }`
+         `selection-start` `{}` — selection mode activated (hide PromptBox)
+         `selection-end`   `{}` — selection mode exited (show PromptBox)
 LISTENS: (none — internal MpiSelectionBar/MpiGroupCard events handled internally)
 
 ### MpiPromptBox
@@ -237,12 +243,13 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `copy`             `{ text: string }`
          `mode-change`      `{ mode: 'positive'|'negative' }`
          `media-change`     `{ imageCount: number, videoCount: number, items: MediaItem[] }`
+         `media-imported`   `{ url: string, filename: string, mediaType: string, source: 'file' }` — also emitted on EventBus as `media:imported`
          `run`              `{ operation: string, positive: string, negative: string, mediaItems: MediaItem[], injectionParams: Object }`
          `cancel`           `{}`
          `model-change`     `{ model: ModelDef }`
          `operation-change` `{ operation: string }`
          `settings`         `{ model: ModelDef }`
-LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via MutationObserver
+LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
 
 ### MpiVideoPlayer
 EMITS:   `play`       `{ time: number }`
@@ -290,14 +297,6 @@ NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
 ---
 
 ## Workspaces (cross-cutting event usage)
-
-### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
-LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation dropdown
-         `models:closed` — remounts PromptBox if it was null (no models at gallery-open time); also sets `activeModel` directly before remount so generation works immediately after first-time model install
-         `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models installed
-EMITS:   `models:open` — when zero image models installed at mount time or after registry update
-NOTE:    Reads `state.s_selectedModelId`; writes `state.s_selectedModelId` and `state.currentProject`
-         Race condition: if model registry hasn't updated when gallery mounts (e.g. user closes model manager immediately after install), `activeModel` = null and `promptBox` = null. The `models:closed` handler re-derives and sets `activeModel` before remounting PromptBox — this is the recovery path.
 
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.

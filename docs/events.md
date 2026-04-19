@@ -26,7 +26,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `comfy:starting` | ComfyUI engine is starting |
 | `comfy:ready` | ComfyUI engine is ready |
 | `comfy:error` | ComfyUI engine error |
-| `tool:running` | A tool is actively running |
+| `tool:running` | A tool is actively running `{ tool: string, type: string }` |
 | `tool:idle` | All tools are idle |
 | `nav:tool` | Navigation tool was activated |
 | `download:started` | A download job was enqueued and started |
