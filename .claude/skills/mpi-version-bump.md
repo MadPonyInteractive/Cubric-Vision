@@ -1,0 +1,339 @@
+---
+description: Interactive release workflow — bump app version, update operation registry, update model mappings, sync operation_registry.json, generate release notes, and run pre-release tests.
+---
+# /mpi-version-bump — Interactive Release Workflow
+
+This skill guides you through a complete release: bumping the app version, updating engine versions, registering new operations, updating all related files, generating release notes, and optionally running pre-release tests.
+
+Use this skill whenever you're ready to cut a new release of MpiAiSuite.
+
+---
+
+## Step 1: Read Current State
+
+I will read the following files to understand the current state:
+- `js/core/appVersion.js` — current APP_VERSION, SCHEMA_VERSION
+- `dev_configs/system_dependencies.json` — current COMFY_VERSION and LLAMA_VERSION
+- `js/core/operationRegistry.js` — all registered operations
+- `js/data/commandRegistry.js` — UI metadata for all operations
+- `js/data/modelConstants/models.js` — model/operation/workflow mappings
+- `js/data/modelConstants/universal_workflows.js` — universal operation definitions
+- `operation_registry.json` — JSON mirror (should match operationRegistry.js)
+
+---
+
+## Step 2: Ask Questions Interactively
+
+I will ask you the following questions:
+
+### Q1: Bump Type?
+Choose: **patch** / **minor** / **major**
+
+- **patch** (e.g., 0.0.1 → 0.0.2): Bug fixes, no new features, no schema change
+- **minor** (e.g., 0.0.1 → 0.1.0): New operations added OR ComfyUI engine updated
+- **major** (e.g., 0.1.0 → 1.0.0): Breaking changes (schema change, significant architecture change)
+
+### Q2: ComfyUI Engine Version Changing?
+Current ComfyUI version: **X.Y.Z** (read from `dev_configs/system_dependencies.json`)
+
+If yes, provide new version (e.g., `0.19.0`). If no, press Enter to keep current.
+
+### Q3: Llama Server Version Changing?
+Current Llama version: **X** (read from `dev_configs/system_dependencies.json`)
+
+If yes, provide new version (e.g., `b8465`). If no, press Enter to keep current.
+
+### Q4: New Operations Being Added?
+List each new operation. For each:
+- **Key**: snake_case identifier (e.g., `my_new_op`)
+- **Label**: Display name (e.g., `My New Operation`)
+- **Media Type**: `image` or `video`
+- **Requires Images**: Number (0, 1, 2, ...) — does it need input images?
+- **Requires Mask**: `y` or `n`
+- **Prompt Required**: `y` or `n`
+- **Universal**: `y` or `n` — is it model-agnostic, or model-tied?
+- **If universal**: none of the fields below
+- **If model-tied**:
+  - **Supporting Models**: comma-separated model IDs (e.g., `sdxl-realistic,ill-anime-beauty`)
+  - **Workflow Filenames**: one per model (e.g., `my_new_op_sdxl_realistic.json, my_new_op_ill_anime_beauty.json`)
+
+Example:
+```
+New operation key: segment
+Label: Image Segmentation
+Media type: image
+Requires images: 1
+Requires mask: n
+Prompt required: n
+Universal: y
+```
+
+Or:
+```
+New operation key: upscale_2x
+Label: 2x Upscale
+Media type: image
+Requires images: 1
+Requires mask: n
+Prompt required: n
+Universal: n
+Supporting models: sdxl-realistic,ill-anime-beauty
+Workflow filenames: upscale_2x_sdxl_realistic.json, upscale_2x_ill_anime_beauty.json
+```
+
+### Q5: Operations Being Deprecated?
+List operation keys to mark as deprecated (e.g., `old_op_v1, legacy_filter`), or press Enter for none.
+
+**Important:** Deprecation does NOT remove operations — it marks them so the UI hides them but projects using them can still load.
+
+### Q6: Project Schema Version Changing?
+`y` or `n`
+
+If yes, the app's `SCHEMA_VERSION` will increment (from 1 to 2, etc.) and you'll need to implement a migration in `js/migrations/projectMigrations.js`. I will create a stub for you.
+
+### Q7: Notable Changelog Items?
+Free-text description of what changed. Examples:
+- "Added image segmentation operation"
+- "Upgraded ComfyUI to support new video models"
+- "Bug fixes in the gallery grid rendering"
+- "Performance improvements in project load"
+
+Press Enter to skip if no additional notes.
+
+---
+
+## Step 3: Compute and Confirm New Version
+
+I will calculate the new version based on your bump type and confirm it with you:
+
+```
+Current version: 0.0.1
+Bump type: minor
+New version: 0.1.0
+
+Is this correct? [y/n]
+```
+
+Answer `n` to re-do the questions, `y` to continue.
+
+---
+
+## Step 4: Make Targeted Edits
+
+**In this exact order** (so if anything fails, state is consistent):
+
+### 4a. Edit `js/core/appVersion.js`
+
+- Bump `APP_VERSION` to the new version
+- If schema version changing, increment `SCHEMA_VERSION`
+- **Do NOT edit engine versions** — those are in `system_dependencies.json`
+
+### 4b. Edit `dev_configs/system_dependencies.json`
+
+If ComfyUI or Llama versions changed:
+- Update `engine.version` to the new ComfyUI version
+- Update `llamaServer.version` to the new Llama version
+
+This is the **single source of truth** for engine versions. `routes/platformEngine.js` reads from this file.
+
+### 4c. Edit `js/core/operationRegistry.js`
+
+For each new operation:
+- Add entry: `opKey: { latestVersion: '1.0', appVersionIntroduced: '<newVersion>' }`
+
+For each deprecated operation:
+- Add field: `deprecated: true` (do NOT remove the entry)
+
+### 4d. Edit `js/data/commandRegistry.js`
+
+For each new operation, add a CommandDef:
+
+```javascript
+myNewOp: {
+    label: 'My New Operation',
+    mediaType: 'image',  // or 'video'
+    requiresImages: 1,   // or 0, 2, etc.
+    requiresMask: false,
+    promptRequired: false,
+    universal: true,     // or omit if model-tied
+    components: [],
+},
+```
+
+### 4e. Edit `js/data/modelConstants/models.js`
+
+For each model that supports a new operation:
+- Add the operation key to the model's `supportedOps[]` array
+- Add the operation key and workflow filename to the model's `workflows{}` object
+
+Example:
+```javascript
+supportedOps: ['t2i', 'upscale', 'myNewOp'],
+workflows: {
+    t2i: 't2i_sdxl_realistic.json',
+    upscale: 'upscaler_sdxl_realistic.json',
+    myNewOp: 'my_new_op_sdxl_realistic.json',
+},
+```
+
+### 4f. Edit `js/data/modelConstants/universal_workflows.js`
+
+For each new universal operation, add entry:
+
+```javascript
+myNewOp: {
+    workflow: 'my_new_op.json',
+    dependencies: ['dep1', 'dep2'],  // or []
+},
+```
+
+### 4g. Edit `operation_registry.json`
+
+Add/update entries to match `operationRegistry.js` exactly. Add `universal: true` for universal ops. Mark deprecated ops with `deprecated: true`.
+
+### 4h. If Schema Changed: Edit `js/migrations/projectMigrations.js`
+
+I will add a migration stub:
+
+```javascript
+function migrateVXtoVY(projectJson) {
+    // TODO: Implement migration from schema X to Y
+    return projectJson;
+}
+
+export const MIGRATIONS = {
+    Y: migrateVXtoVY,
+    // ... existing migrations
+};
+```
+
+You fill in the actual migration logic.
+
+---
+
+## Step 5: Generate Release Notes
+
+I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
+
+```markdown
+# MpiAiSuite vX.Y.Z — YYYY-MM-DD
+
+## Changelog
+
+<summary from Q7>
+
+### Changes
+- <changelog items>
+
+### New Operations
+- **op_key** (Op Label): media type, input requirements
+(or "None")
+
+### Breaking Changes
+<list from Q6 if schema changed, otherwise "None">
+
+### ComfyUI Engine
+ComfyUI version unchanged (X.Y.Z) | Updated to X.Y.Z
+
+### Llama Server
+Llama version unchanged (X) | Updated to X
+
+---
+
+## Platform Update Checklist
+
+After publishing this release, update all parallel platforms:
+
+- [ ] **Landing Page**: Update version badge, feature list if new ops added
+- [ ] **Documentation Website**: Update operation list, changelog page
+- [ ] **GitHub Releases**: Create release with tag vX.Y.Z, attach Windows installer, write release notes
+- [ ] **Patreon**: Post update announcement with changelog highlights
+- [ ] **Discord**: Post in #updates channel with release highlights and download link
+```
+
+---
+
+## Step 6: Offer to Run Pre-Release Tests
+
+I will print a summary of all changes made:
+- Files edited
+- New version
+- New operations added
+- Release notes written to `docs/releases/`
+
+Then ask:
+```
+All edits complete. Would you like to run scripts/pre_release_test.py now? [y/n]
+```
+
+If **yes**, I run the test suite and surface the results. If tests FAIL, you can re-run them or skip.
+If **no**, testing is skipped.
+
+---
+
+## Step 7: Print Final Summary
+
+After all edits and tests:
+
+```
+=== Release vX.Y.Z Complete ===
+
+Files edited:
+- js/core/appVersion.js
+- dev_configs/system_dependencies.json
+- js/core/operationRegistry.js
+- js/data/commandRegistry.js
+- js/data/modelConstants/models.js
+- operation_registry.json
+
+New operations: 2 (myNewOp, anotherOp)
+Deprecated: 0
+Release notes: docs/releases/2026-04-17-v0.1.0.md
+Test result: PASS (17 tests)
+```
+
+---
+
+## What Happens Next
+
+1. **Commit the changes** using `/commit` or your preferred git workflow
+2. **Tag the release** with the new version: `git tag -a vX.Y.Z -m 'Release vX.Y.Z'`
+3. **Update external platforms** using the checklist in the release notes:
+  - Landing page website
+  - Documentation site
+  - GitHub releases page (attach installer)
+  - Patreon announcement
+  - Discord #updates channel
+4. **Push to GitHub**: `git push && git push origin vX.Y.Z`
+
+---
+
+## Troubleshooting
+
+**Q: I made a mistake during the bump. Can I undo it?**
+A: Yes, the skill edits files atomically in order. If something fails, check the error message and re-run the skill. You can also manually edit the files and re-run `/mpi-version-bump` with the correct values.
+
+**Q: The pre-release tests failed. Should I still release?**
+A: No, FAIL means the test output hash changed unexpectedly. Investigate why, fix the issue, update the baselines if the change is intentional, then re-run.
+
+**Q: How do I add a new model?**
+A: Add the model to `js/data/modelConstants/models.js` with its `id`, `supportedOps`, and workflow filenames. The version-bump skill doesn't touch models — that's a separate step. Rerun `/mpi-version-bump` if model additions happen in the same release.
+
+**Q: I added a universal operation but forgot to add workflows. What do I do?**
+A: Add the `workflow` filename to `js/data/modelConstants/universal_workflows.js` and re-run the pre-release test. The test will fail if the workflow file is missing.
+
+**Q: Where does engine version get read?**
+A: `dev_configs/system_dependencies.json` is the single source of truth for engine and llama versions. `routes/platformEngine.js` reads this file at startup and exports `COMFY_VERSION` and `LLAMA_VERSION` for use by the rest of the app.
+
+---
+
+## See Also
+
+- `docs/versioning.md` — versioning system explained
+- `dev_configs/system_dependencies.json` — engine and llama-server versions (single source of truth)
+- `routes/platformEngine.js` — reads system_dependencies.json and exports version constants
+- `docs/releases/` — all past release notes
+- `scripts/pre_release_test.py` — pre-release test suite
+- `operation_registry.json` — JSON mirror of operation registry
+- `js/core/operationRegistry.js` — source of truth for operations
+- `js/migrations/projectMigrations.js` — schema migration functions

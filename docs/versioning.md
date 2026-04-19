@@ -6,12 +6,26 @@ This document explains how MpiAiSuite tracks and manages versions of the applica
 
 ## The Three Version Constants
 
-All version constants live in `js/core/appVersion.js`:
+Application version constants live in `js/core/appVersion.js`:
 
 ```javascript
-export const APP_VERSION = '0.0.1';      // Application release version (semver)
-export const COMFY_VERSION = '0.18.0';   // Bundled ComfyUI engine version (semver)
-export const SCHEMA_VERSION = 1;         // Project data schema version (integer)
+export const APP_VERSION = '0.0.1';  // Application release version (semver)
+export const SCHEMA_VERSION = 1;     // Project data schema version (integer)
+```
+
+Engine versions are stored in `dev_configs/system_dependencies.json` and accessed via `routes/platformEngine.js`:
+
+```json
+{
+  "engine": {
+    "name": "ComfyUI Portable",
+    "version": "0.18.0"
+  },
+  "llamaServer": {
+    "name": "Llama.cpp Backend Server",
+    "version": "b8464"
+  }
+}
 ```
 
 ### APP_VERSION
@@ -24,12 +38,14 @@ export const SCHEMA_VERSION = 1;         // Project data schema version (integer
   - **Major** (x.0.0 → (x+1).0.0): Breaking changes (schema change, significant architectural shift).
 - **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`) and release notes file naming.
 
-### COMFY_VERSION
+### COMFY_VERSION & LLAMA_VERSION
 
-- **Purpose:** Identifies which ComfyUI portable engine is bundled with this release.
-- **Format:** Semantic versioning matching the upstream ComfyUI tag (e.g., `0.18.0`).
-- **When to bump:** Only when the bundled engine is upgraded. Infrequent. Must stay in sync with `dev_configs/system_dependencies.json`.
-- **Validation:** On app boot, `_bootApp()` compares installed engine version against `COMFY_VERSION`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
+- **Purpose:** Identifies which ComfyUI portable engine and llama-server are bundled with this release.
+- **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
+- **Where:** Stored in `dev_configs/system_dependencies.json` (single source of truth).
+- **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json`.
+- **Access:** `routes/platformEngine.js` reads these values at startup and exports `COMFY_VERSION` and `LLAMA_VERSION` for use by `engine.js` and download manager.
+- **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 
 ### SCHEMA_VERSION
 
@@ -167,7 +183,7 @@ That's it — no manual edits needed.
 
 If `SCHEMA_VERSION` must be bumped (because `project.json` structure changes):
 
-1. **Increment \****`SCHEMA_VERSION`***\* in \****`appVersion.js`** (e.g., `1` → `2`).
+1. **Increment \****`SCHEMA_VERSION`***\* in \****`js/core/appVersion.js`** (e.g., `1` → `2`).
 
 2. **Add a migration function in \****`js/migrations/projectMigrations.js`**\*\*:**
 ```javascript
@@ -217,9 +233,11 @@ These helpers compare `APP_VERSION` against each operation's `appVersionIntroduc
 
 ## References
 
-- `js/core/appVersion.js` — version constants
+- `js/core/appVersion.js` — APP_VERSION and SCHEMA_VERSION constants
+- `dev_configs/system_dependencies.json` — engine and llama-server versions (single source of truth)
+- `routes/platformEngine.js` — reads system_dependencies.json and exports COMFY_VERSION / LLAMA_VERSION
 - `js/core/operationRegistry.js` — operation registry
 - `js/managers/versioningManager.js` — version queries
 - `js/migrations/projectMigrations.js` — schema migration functions
-- `.claude/skills/mpi/mpi-version-bump.md` — the interactive version-bump skill (use this for releases)
+- `.claude/skills/mpi-version-bump.md` — the interactive version-bump skill (use this for releases)
 - `docs/releases/` — archived release notes per version

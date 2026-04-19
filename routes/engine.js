@@ -15,8 +15,7 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_VERSION } = require('../js/core/appVersion.js');
-const { COMFY_DIR, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -299,7 +298,7 @@ router.get('/engine/version-check', async (req, res) => {
     try {
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const versionFile = path.join(ENGINE_ROOT, '.mpi_engine_version');
-        const requiredVersion = COMFY_VERSION; // canonical version from js/core/appVersion.js
+        const requiredVersion = COMFY_VERSION; // from platformEngine.js (reads system_dependencies.json)
 
         let installedVersion = (await fs.pathExists(versionFile))
             ? (await fs.readFile(versionFile, 'utf8')).trim()
