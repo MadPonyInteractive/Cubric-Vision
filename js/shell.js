@@ -10,6 +10,8 @@ import { syncModelInstalled } from './data/modelRegistry.js';
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
+import { clientLogger } from './services/clientLogger.js';
+import { qs } from './utils/dom.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -62,13 +64,13 @@ export async function initShell() {
   preloadComponentStyles();
 
   // 2. DOM Selection
-  const pageLanding = document.getElementById('page-landing');
-  const appShell = document.getElementById('app-shell');
-  const toolContainer = document.getElementById('tool-container');
-  const radialMount = document.getElementById('radial-mount');
-  const monitorMount = document.getElementById('memory-monitor-mount');
-  const projectNameMount = document.getElementById('project-name-mount');
-  const promptBoxMount = document.getElementById('prompt-box-mount');
+  const pageLanding = qs('#page-landing');
+  const appShell = qs('#app-shell');
+  const toolContainer = qs('#tool-container');
+  const radialMount = qs('#radial-mount');
+  const monitorMount = qs('#memory-monitor-mount');
+  const projectNameMount = qs('#project-name-mount');
+  const promptBoxMount = qs('#prompt-box-mount');
   PromptBoxService.init(promptBoxMount);
 
   // 3. Mount Global HUD Components
@@ -109,7 +111,7 @@ export async function initShell() {
   });
 
   // 7. Data Pre-fetching (Non-blocking)
-  _initDataRegistries().catch(err => console.error('[shell] registry failed:', err));
+  _initDataRegistries().catch(err => clientLogger.error('shell', 'registry failed:', err));
 
   // 8. Boot/Restore Logic
   _bootApp();
@@ -140,12 +142,12 @@ async function _bootApp() {
 
     // Wire engine:ready to hide install modal and continue boot
     await new Promise((resolve) => {
-      const handler = () => {
+      let unsub;
+      unsub = Events.on('engine:ready', () => {
         _engineInstall.el.hide();
-        Events.off('engine:ready', handler);
+        unsub();
         resolve();
-      };
-      Events.on('engine:ready', handler);
+      });
 
       // If engine already current, check if UW deps need installing
       if (!versionData.needsInstall && !versionData.needsUpgrade) {
@@ -165,7 +167,7 @@ async function _bootApp() {
       }
     });
   } catch (err) {
-    console.error('[shell] Engine version check failed:', err);
+    clientLogger.error('shell', 'Engine version check failed:', err);
     // Proceed anyway — if engine is truly missing, comfy startup will fail
   }
 
@@ -185,7 +187,6 @@ async function _bootApp() {
 
   // Show model manager when zero image models are installed
   Events.on('models:open', () => {
-    console.log('[shell] models:open event received, calling _modelsModal.el.show()');
     _modelsModal.el.show();
   });
   Events.on('models:all-installed', () => _modelsModal.el.hide());
@@ -218,7 +219,7 @@ async function _initDataRegistries() {
     try {
       await syncModelInstalled();
     } catch (err) {
-      console.error('[shell] model registry sync failed:', err);
+      clientLogger.error('shell', 'model registry sync failed:', err);
     }
   });
 
@@ -227,6 +228,6 @@ async function _initDataRegistries() {
   try {
     await syncModelInstalled();
   } catch (err) {
-    console.error('[shell] background registry failed:', err);
+    clientLogger.error('shell', 'background registry failed:', err);
   }
 }

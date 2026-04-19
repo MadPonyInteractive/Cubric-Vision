@@ -19,11 +19,26 @@
 
 **Shutdown:** `cancelAllDownloads()` is exported from `routes/downloadManager.js` and called on app shutdown to abort active downloads gracefully.
 
+## Single SSE Connection Architecture
+
+**CRITICAL ARCHITECTURAL PATTERN:** `downloadService.js` is the ONLY component that opens an EventSource connection. All other frontend code subscribes to events via the Events bus.
+
+**How it works:**
+1. `downloadService._connectSSE()` opens `/comfy/downloads/stream` (one connection, shared)
+2. SSE events from the backend include: `download:*` (model downloads) and `engine:*` (engine install/upgrade)
+3. `downloadService` bridges ALL SSE events to the `Events` bus via `Events.emit()`
+4. Components subscribe via `Events.on()` — no direct EventSource connections
+
+**Engine events bridged:** `engine:downloading`, `engine:extracting`, `engine:patching`, `engine:upgrade-status`, `engine:uw-installing`, `engine:complete`, `engine:error`
+
+**Why:** Prevents multiple EventSource connections competing for the same stream, ensures atomic state updates, simplifies cleanup, and makes event flow auditable through the Events bus.
+
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **Never Raw Fetch for Downloads:** Always use `downloadService.start/pause/resume/cancel/uninstall()`. Raw `fetch` bypasses the SSE sync and state management.
 2. **Never Delete \****`.part`**\*\* Files:** The resume mechanism depends on `.part` files written by `node-downloader-helper`. Deleting them breaks resume.
 3. **Never Skip \****`comfyNeedsRestart`**\*\*:** After custom node install, ComfyUI must be restarted. `ensureServerRunning()` handles this automatically — do not suppress or bypass it.
 4. **Always Use Events for Download UI:** Components must subscribe to `download:*` events via `Events.on()`, not poll `state.downloadJobs` directly. Store the unsubscribe function and call it on cleanup.
+5. **Never Open a Second EventSource:** Only `downloadService._connectSSE()` opens `/comfy/downloads/stream`. All other code subscribes via `Events.on()` to events already bridged by `downloadService`.
 
 ---
 

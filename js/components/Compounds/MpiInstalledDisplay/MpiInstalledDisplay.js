@@ -4,6 +4,7 @@ import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { qs, ce } from '../../../utils/dom.js';
+import { formatBytes } from '../../../utils/formatBytes.js';
 
 /**
  * MpiInstalledDisplay — Installed Item Info Compound
@@ -24,7 +25,7 @@ import { qs, ce } from '../../../utils/dom.js';
  *   - Color modifier for the info row icon
  * @param {boolean} [installed=false]     - Whether this item is installed; controls badge label/variant
  * @param {string} [deleteLabel='Install']    - Label for the primary action button
- * @param {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'} [downloadState='idle']
+ * @param {'idle'|'downloading'|'paused'|'partial'|'installing'|'complete'|'cancelled'} [downloadState='idle']
  * @param {number} [progress=0]          - Download progress 0–1
  * @param {string} [speed='']            - Download speed string e.g. "12.3 MB/s"
  * @param {number} [downloadedBytes=0]   - Bytes downloaded so far
@@ -33,6 +34,11 @@ import { qs, ce } from '../../../utils/dom.js';
  * @param {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
  *   (e.g. some deps are on disk but missing others). Use with downloadState='idle' to show
  *   a progress bar while keeping the Install button.
+ *
+ * Public APIs (on el):
+ *   el.setProgress({ progress, speed, downloadedBytes, totalBytes }) — update progress bar in place
+ *   el.setDownloadState(downloadState) — re-render buttons + badge for new state
+ *   el.destroy() — tear down all mounted children
  *
  * Emits:
  * 'delete'    {} — Action button clicked (Install when idle)
@@ -60,12 +66,20 @@ export const MpiInstalledDisplay = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        function _formatBytes(bytes) {
-            if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)}GB`;
-            if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)}MB`;
-            if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}KB`;
-            return `${bytes}B`;
-        }
+        // Track mounted children for destroy() cleanup
+        const _children = [];
+
+        // Mutable local copy of download-related fields so setProgress/setDownloadState
+        // can re-render without losing prior values.
+        const _current = {
+            downloadState: props.downloadState || 'idle',
+            progress: props.progress || 0,
+            speed: props.speed || '',
+            downloadedBytes: props.downloadedBytes || 0,
+            totalBytes: props.totalBytes || 0,
+            hasPartialProgress: !!props.hasPartialProgress,
+            installed: !!props.installed,
+        };
 
         // Title
         const titleSlot = qs('#idtitle-slot', el);
@@ -103,6 +117,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                     color: props.iconColor || 'danger'
                 });
                 iconWrap.appendChild(iconInst.el);
+                _children.push(iconInst);
             }
 
             if (props.iconText) {
@@ -118,103 +133,192 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             infoSlot.style.display = 'none';
         }
 
-        // ── Download state handling ──────────────────────────────────────────────
-
-        const isDownloading = ['downloading', 'paused', 'partial'].includes(props.downloadState);
-        const isInstalling = props.downloadState === 'installing';
-        const isComplete = props.downloadState === 'complete' || props.installed;
-        const showProgress = isDownloading || props.hasPartialProgress;
-
-        // Badge row — conditional based on installed prop and download state
         const badgeSlot = qs('#idbadge-slot', el);
-        badgeSlot.innerHTML = '';
-        if (isComplete) {
-            const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
-            badgeSlot.appendChild(badge.el);
-        } else if (props.hasPartialProgress && !props.installed) {
-            const badge = MpiBadge.mount(ce('div'), { label: 'PARTIALLY INSTALLED', variant: 'warning' });
-            badgeSlot.appendChild(badge.el);
-        } else if (!showProgress && !isInstalling) {
-            const badge = MpiBadge.mount(ce('div'), { label: 'NOT INSTALLED', variant: 'danger' });
-            badgeSlot.appendChild(badge.el);
-        }
-
-        // Actions row — driven by downloadState (NOT hasPartialProgress — that only affects the progress bar)
         const actionsSlot = qs('#idactions-slot', el);
-        actionsSlot.innerHTML = '';
 
-        // Progress bar — shown for active downloads OR partial progress (hasPartialProgress)
-        if (showProgress) {
-            const progressSlot = ce('div', { className: 'mpi-installed-display__progress-slot' });
+        // Live refs for in-place progress update (populated by _renderState)
+        let _progressBarInst = null;
+        let _progressLabelEl = null;
 
-            const barWrap = ce('div', { style: 'padding: 4px 0;' });
-            MpiProgressBar.mount(barWrap, {
-                value: Math.round((props.progress || 0) * 100),
-                min: 0,
-                max: 100,
-                variant: props.downloadState === 'paused' ? 'secondary' : 'primary',
-                interactive: false,
-            });
-            progressSlot.appendChild(barWrap);
-
-            const label = ce('div', { className: 'mpi-installed-display__progress-label' });
-            if (props.downloadState === 'paused') {
-                label.textContent = `Paused${props.speed ? ' — ' + props.speed : ''}`;
-            } else if (props.hasPartialProgress) {
-                const downloadedText = props.totalBytes ? `${_formatBytes(props.downloadedBytes)} / ${_formatBytes(props.totalBytes)}` : '';
-                label.textContent = downloadedText || 'Partially installed';
-            } else {
-                const downloadedText = props.totalBytes ? `${_formatBytes(props.downloadedBytes)} / ${_formatBytes(props.totalBytes)}` : '';
-                const speedText = props.speed || '';
-                label.textContent = downloadedText ? (speedText ? `${downloadedText} — ${speedText}` : downloadedText) : speedText;
+        // Destroy any existing children in a slot, removing them from _children tracking
+        function _clearSlot(slot) {
+            // Children in _children that live inside this slot must be destroyed
+            for (let i = _children.length - 1; i >= 0; i--) {
+                const child = _children[i];
+                if (child.el && slot.contains(child.el)) {
+                    if (typeof child.destroy === 'function') child.destroy();
+                    _children.splice(i, 1);
+                }
             }
-            progressSlot.appendChild(label);
-
-            actionsSlot.appendChild(progressSlot);
+            slot.innerHTML = '';
         }
 
-        if (isInstalling) {
-            const label = ce('div', { className: 'mpi-installed-display__installing-label' });
-            label.textContent = 'Installing';
-            actionsSlot.appendChild(label);
+        // Build the badge + actions rows for the current _current state
+        function _renderState() {
+            const { downloadState, hasPartialProgress, installed } = _current;
+
+            const isDownloading = ['downloading', 'paused', 'partial'].includes(downloadState);
+            const isInstalling = downloadState === 'installing';
+            const isComplete = downloadState === 'complete' || installed;
+            const isCancelled = downloadState === 'cancelled';
+            const showProgress = isDownloading || hasPartialProgress;
+
+            // ── Badge row ────────────────────────────────────────────────────
+            _clearSlot(badgeSlot);
+            if (isComplete) {
+                const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
+                badgeSlot.appendChild(badge.el);
+                _children.push(badge);
+            } else if (hasPartialProgress && !installed) {
+                const badge = MpiBadge.mount(ce('div'), { label: 'PARTIALLY INSTALLED', variant: 'warning' });
+                badgeSlot.appendChild(badge.el);
+                _children.push(badge);
+            } else if (!showProgress && !isInstalling) {
+                // idle + cancelled both fall here → "NOT INSTALLED"
+                const badge = MpiBadge.mount(ce('div'), { label: 'NOT INSTALLED', variant: 'danger' });
+                badgeSlot.appendChild(badge.el);
+                _children.push(badge);
+            }
+
+            // ── Actions row ──────────────────────────────────────────────────
+            _clearSlot(actionsSlot);
+            _progressBarInst = null;
+            _progressLabelEl = null;
+
+            // Progress bar — shown for active downloads OR partial progress (hasPartialProgress)
+            if (showProgress) {
+                const progressSlot = ce('div', { className: 'mpi-installed-display__progress-slot' });
+
+                const barWrap = ce('div', { style: 'padding: 4px 0;' });
+                _progressBarInst = MpiProgressBar.mount(barWrap, {
+                    value: Math.round((_current.progress || 0) * 100),
+                    min: 0,
+                    max: 100,
+                    variant: downloadState === 'paused' ? 'secondary' : 'primary',
+                    interactive: false,
+                });
+                _children.push(_progressBarInst);
+                progressSlot.appendChild(barWrap);
+
+                _progressLabelEl = ce('div', { className: 'mpi-installed-display__progress-label' });
+                _updateProgressLabel();
+                progressSlot.appendChild(_progressLabelEl);
+
+                actionsSlot.appendChild(progressSlot);
+            }
+
+            if (isInstalling) {
+                const label = ce('div', { className: 'mpi-installed-display__installing-label' });
+                label.textContent = 'Installing';
+                actionsSlot.appendChild(label);
+            }
+
+            if (downloadState === 'downloading') {
+                const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
+                pauseBtn.on('click', () => emit('pause', {}));
+                actionsSlot.appendChild(pauseBtn.el);
+                _children.push(pauseBtn);
+                const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                cancelBtn.on('click', () => emit('cancel', {}));
+                actionsSlot.appendChild(cancelBtn.el);
+                _children.push(cancelBtn);
+            } else if (downloadState === 'paused' || downloadState === 'partial') {
+                const resumeBtn = MpiButton.mount(ce('div'), { text: 'Resume', variant: 'primary', size: 'md' });
+                resumeBtn.on('click', () => emit('resume', {}));
+                actionsSlot.appendChild(resumeBtn.el);
+                _children.push(resumeBtn);
+                const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                cancelBtn.on('click', () => emit('cancel', {}));
+                actionsSlot.appendChild(cancelBtn.el);
+                _children.push(cancelBtn);
+            } else if (!isComplete) {
+                // idle + cancelled: show Install (or custom deleteLabel) — cancelled cards
+                // render the same as idle so the user can retry, never blank.
+                const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
+                actionsSlot.appendChild(spacer);
+                const label = isCancelled ? (props.deleteLabel || 'Reinstall') : (props.deleteLabel || 'Install');
+                const actionBtn = MpiButton.mount(ce('div'), {
+                    text: label,
+                    variant: 'secondary',
+                    size: 'md',
+                });
+                actionBtn.on('click', () => emit('delete', {}));
+                actionsSlot.appendChild(actionBtn.el);
+                _children.push(actionBtn);
+            } else if (installed && props.canUninstall) {
+                // Uninstall button — shown for fully installed models
+                const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
+                actionsSlot.appendChild(spacer);
+                const uninstallBtn = MpiButton.mount(ce('div'), {
+                    text: 'Uninstall',
+                    variant: 'ghost',
+                    size: 'md',
+                });
+                uninstallBtn.on('click', () => emit('uninstall', {}));
+                actionsSlot.appendChild(uninstallBtn.el);
+                _children.push(uninstallBtn);
+            }
         }
 
-        if (props.downloadState === 'downloading') {
-            const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
-            pauseBtn.on('click', () => emit('pause', {}));
-            actionsSlot.appendChild(pauseBtn.el);
-            const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
-            cancelBtn.on('click', () => emit('cancel', {}));
-            actionsSlot.appendChild(cancelBtn.el);
-        } else if (props.downloadState === 'paused' || props.downloadState === 'partial') {
-            const resumeBtn = MpiButton.mount(ce('div'), { text: 'Resume', variant: 'primary', size: 'md' });
-            resumeBtn.on('click', () => emit('resume', {}));
-            actionsSlot.appendChild(resumeBtn.el);
-            const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
-            cancelBtn.on('click', () => emit('cancel', {}));
-            actionsSlot.appendChild(cancelBtn.el);
-        } else if (!isComplete) {
-            // Spacer + action button (Install)
-            const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
-            actionsSlot.appendChild(spacer);
-            const actionBtn = MpiButton.mount(ce('div'), {
-                text: props.deleteLabel || 'Install',
-                variant: 'secondary',
-                size: 'md',
-            });
-            actionBtn.on('click', () => emit('delete', {}));
-            actionsSlot.appendChild(actionBtn.el);
-        } else if (props.installed && props.canUninstall) {
-            // Uninstall button — shown for fully installed models
-            const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
-            actionsSlot.appendChild(spacer);
-            const uninstallBtn = MpiButton.mount(ce('div'), {
-                text: 'Uninstall',
-                variant: 'ghost',
-                size: 'md',
-            });
-            uninstallBtn.on('click', () => emit('uninstall', {}));
-            actionsSlot.appendChild(uninstallBtn.el);
+        function _updateProgressLabel() {
+            if (!_progressLabelEl) return;
+            const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes } = _current;
+            if (downloadState === 'paused') {
+                _progressLabelEl.textContent = `Paused${speed ? ' — ' + speed : ''}`;
+            } else if (hasPartialProgress) {
+                const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
+                _progressLabelEl.textContent = downloadedText || 'Partially installed';
+            } else {
+                const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
+                const speedText = speed || '';
+                _progressLabelEl.textContent = downloadedText ? (speedText ? `${downloadedText} — ${speedText}` : downloadedText) : speedText;
+            }
         }
+
+        // ── Public APIs ──────────────────────────────────────────────────────
+
+        el.setProgress = ({ progress, speed, downloadedBytes, totalBytes } = {}) => {
+            if (typeof progress === 'number') _current.progress = progress;
+            if (typeof speed === 'string') _current.speed = speed;
+            if (typeof downloadedBytes === 'number') _current.downloadedBytes = downloadedBytes;
+            if (typeof totalBytes === 'number') _current.totalBytes = totalBytes;
+
+            if (_progressBarInst) {
+                // MpiProgressBar has no public setter — update input value + track fill directly.
+                // This mirrors the internal updateVisuals() math.
+                const pct = Math.round((_current.progress || 0) * 100);
+                const input = qs('.mpi-progress__input', _progressBarInst.el);
+                const trackFill = qs('.mpi-progress__track-fill', _progressBarInst.el);
+                if (input) input.value = pct;
+                if (trackFill) trackFill.style.width = `${pct}%`;
+            }
+            _updateProgressLabel();
+        };
+
+        el.setDownloadState = (downloadState) => {
+            if (!downloadState) return;
+            _current.downloadState = downloadState;
+            // 'complete' implies installed for badge rendering
+            if (downloadState === 'complete') _current.installed = true;
+            // Leaving a download state clears partial-progress flag (caller can set it again)
+            if (['downloading', 'paused', 'partial', 'installing'].includes(downloadState)) {
+                // keep hasPartialProgress as-is for 'partial'
+            } else if (downloadState === 'complete' || downloadState === 'cancelled' || downloadState === 'idle') {
+                _current.hasPartialProgress = false;
+            }
+            _renderState();
+        };
+
+        el.destroy = () => {
+            for (const child of _children) {
+                if (typeof child.destroy === 'function') {
+                    try { child.destroy(); } catch (_) { /* ignore */ }
+                }
+            }
+            _children.length = 0;
+        };
+
+        // Initial render of state-driven bits
+        _renderState();
     }
 });

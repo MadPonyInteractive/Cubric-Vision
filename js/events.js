@@ -99,5 +99,29 @@ export const Events = new EventBus();
  * 'comfy:ready'      —                               — ComfyUI server is ready
  * 'comfy:error'      { message: string }             — ComfyUI failed to start
  * 'nav:tool'         { toolName: string }            — user navigated to a tool
+ *
+ * Download & Engine Events (bridged from SSE via downloadService):
+ * 'download:started'      { modelId: string, job: DownloadJob }    — download enqueued
+ * 'download:progress'     { modelId: string, progress: number, speed: string, downloadedBytes: number, totalBytes: number } — download progress update
+ * 'download:complete'     { modelId: string }                      — download succeeded
+ * 'download:failed'       { modelId: string, error: string }       — download failed
+ * 'download:paused'       { modelId: string }                      — download paused by user
+ * 'download:resumed'      { modelId: string }                      — download resumed by user
+ * 'download:cancelled'    { modelId: string }                      — download cancelled by user
+ * 'download:uninstalled'  { modelId: string }                      — model files uninstalled
+ * 'download:installing'   { modelId: string }                      — custom node install in progress
+ * 'comfy:needs-restart'   { modelId: string }                      — ComfyUI restart required after custom node install
+ * 'engine:downloading'    { progress: number, speed: string, downloadedBytes: number, totalBytes: number } — engine download progress
+ * 'engine:extracting'     { progress: number }                     — engine extraction in progress
+ * 'engine:patching'       { progress: number }                     — engine patching in progress
+ * 'engine:upgrade-status' { status: string }                       — engine upgrade status update
+ * 'engine:uw-installing'  { progress: number }                     — universal workflow deps installing
+ * 'engine:complete'       —                                        — engine install/upgrade complete
+ * 'engine:error'          { error: string }                        — engine install/upgrade failed
+ * 'engine:ready'          —                                        — engine is ready for use (emitted by shell after all checks)
+ * 'models:open'           —                                        — models modal opened
+ * 'models:closed'         —                                        — models modal closed
+ * 'models:checked'        { installedModelIds: string[] }          — model install state synced
+ * 'models:all-installed'  —                                        — all models are now installed
  */
 

@@ -10,6 +10,7 @@ import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../data/
 import { DEPS } from '../../../data/modelConstants/dependencies.js';
 import { downloadService } from '../../../services/downloadService.js';
 import { qs, qsa, ce, on } from '../../../utils/dom.js';
+import { formatBytes } from '../../../utils/formatBytes.js';
 
 /**
  * MpiModelsModal — Block: Zero-Installed State Overlay
@@ -81,6 +82,13 @@ export const MpiModelsModal = ComponentFactory.create({
 
         const _unsubs = [];
 
+        // Per-modelId card instance tracking so downloadProgress events can update a
+        // single card in-place instead of re-rendering the whole list (see
+        // .claude/rules/downloads.md rule 4 — subscribe to download:* via Events, do
+        // not poll state.downloadJobs).
+        //   Map<modelId, { wrapper: HTMLElement, display: MpiInstalledDisplayInstance }>
+        const _cardInstances = new Map();
+
         // ── Refresh button ───────────────────────────────────────────────────
         const refreshBtn = MpiButton.mount(refreshSlot, {
             icon: 'refresh',
@@ -129,7 +137,7 @@ export const MpiModelsModal = ComponentFactory.create({
             }
 
             return {
-                sizeText: totalBytes > 0 ? _formatBytes(totalBytes) : '',
+                sizeText: totalBytes > 0 ? formatBytes(totalBytes) : '',
                 vramText: maxVram > 0 ? `${maxVram}GB VRAM` : '',
             };
         }
@@ -141,15 +149,20 @@ export const MpiModelsModal = ComponentFactory.create({
             return parseFloat(match[1]) * { GB: 1024 ** 3, MB: 1024 ** 2, KB: 1024, B: 1 }[match[2].toUpperCase()] || 0;
         }
 
-        function _formatBytes(bytes) {
-            if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)}GB`;
-            if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)}MB`;
-            if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}KB`;
-            return `${bytes}B`;
+        // Destroy all existing card instances and clear tracking Map. Called before
+        // each full renderList() to avoid leaking child subscriptions.
+        function _destroyAllCards() {
+            for (const { display } of _cardInstances.values()) {
+                if (display && display.el && typeof display.el.destroy === 'function') {
+                    try { display.el.destroy(); } catch (_) { /* ignore */ }
+                }
+            }
+            _cardInstances.clear();
         }
 
         // ── Render card list ───────────────────────────────────────────────
         function renderList() {
+            _destroyAllCards();
             qsa('.mpi-models-modal__card', bodySlot).forEach(c => c.remove());
             qsa('.mpi-models-modal__section-header', bodySlot).forEach(h => h.remove());
             qsa('.mpi-models-modal__empty', bodySlot).forEach(e => e.remove());
@@ -233,6 +246,8 @@ export const MpiModelsModal = ComponentFactory.create({
                             await reSyncInstalledModels();
                         });
                     }
+
+                    _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
                 });
             }
 
@@ -315,18 +330,56 @@ export const MpiModelsModal = ComponentFactory.create({
                 } else {
                     card.on('delete', async () => { await _installModel(model); });
                 }
+
+                _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
             });
         }
 
-        // ── Subscribe to state changes ───────────────────────────────────
-        _unsubs.push(Events.on('state:changed', ({ key, value }) => {
-            if (key === 's_installedModelIds' || key === 'downloadJobs') renderList();
+        // ── State subscriptions ──────────────────────────────────────────────
+        // Only re-render the full list when install status changes. Progress updates
+        // flow through the download:progress event below and patch single cards.
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
+            if (key === 's_installedModelIds') renderList();
         }));
 
-        // ── Download event subscriptions ─────────────────────────────────
+        // ── Download event subscriptions ─────────────────────────────────────
+        // download:progress patches a single card in place — no full re-render.
+        _unsubs.push(Events.on('download:progress', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
+            const card = _cardInstances.get(modelId);
+            if (!card) return;
+            card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
+        }));
+
+        _unsubs.push(Events.on('download:started', ({ modelId }) => {
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('downloading');
+        }));
+
+        _unsubs.push(Events.on('download:paused', ({ modelId }) => {
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('paused');
+        }));
+
+        _unsubs.push(Events.on('download:resumed', ({ modelId }) => {
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('downloading');
+        }));
+
+        _unsubs.push(Events.on('download:installing', ({ modelId }) => {
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('installing');
+        }));
+
+        _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
+            const card = _cardInstances.get(modelId);
+            if (card) card.display.el.setDownloadState('cancelled');
+        }));
+
         _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
+            // awaitReSync() calls renderList() after the sync resolves — a second
+            // synchronous renderList() here would render stale MODELS[].installed
+            // data (race condition seen in pre-refactor code).
             awaitReSync();
-            renderList();
         }));
 
         _unsubs.push(Events.on('download:failed', ({ modelId, error }) => {
@@ -337,16 +390,13 @@ export const MpiModelsModal = ComponentFactory.create({
             renderList();
         }));
 
-        _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
-            renderList();
-        }));
-
         // ── Initial render ─────────────────────────────────────────────────
         renderList();
 
         // ── Cleanup ────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            _destroyAllCards();
         };
     },
 });

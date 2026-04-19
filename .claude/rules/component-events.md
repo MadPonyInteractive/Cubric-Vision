@@ -93,6 +93,18 @@ LISTENS: (none — internal MpiDropdown instances handle their own events)
 EMITS:   `close` `{}`
 LISTENS: (forwarded from internal MpiOverlay 'close')
 
+### MpiEngineInstall
+EMITS:   (none — emits to Events bus, not component events)
+LISTENS: `engine:downloading` — displays download progress
+         `engine:extracting` — displays extraction status
+         `engine:patching` — displays patching status
+         `engine:upgrade-status` — displays upgrade progress
+         `engine:uw-installing` — displays universal workflow deps install
+         `download:progress` — filters for modelId='__universal_workflow__', aggregates with engine progress
+         `engine:complete` — hides modal, emits `engine:ready` to Events bus
+         `engine:error` — displays error message with retry button
+PATTERN: Single SSE connection bridge — all events come from `downloadService` (no own EventSource)
+
 ### MpiErrorDialog
 EMITS:   `dismiss`     `{}`
          `downloadLog` `{}`
@@ -134,7 +146,16 @@ LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.a
 
 ### MpiModelsModal
 EMITS:   `close` `{}`
-LISTENS: (forwarded from internal MpiOverlay 'close')
+LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders card list when install state changes
+         `download:progress` `{ modelId, progress, speed, downloadedBytes, totalBytes }` — patches single card in place
+         `download:started` `{ modelId }` — sets card to 'downloading' state
+         `download:paused` `{ modelId }` — sets card to 'paused' state
+         `download:resumed` `{ modelId }` — sets card to 'downloading' state
+         `download:installing` `{ modelId }` — sets card to 'installing' state
+         `download:cancelled` `{ modelId }` — sets card to 'cancelled' state
+         `download:complete` `{ modelId }` — calls awaitReSync() to fetch new install state
+         `download:failed` `{ modelId, error }` — emits `ui:error` and re-renders list
+PATTERN: Cards stored in Map by modelId for in-place updates; state polling replaced with event-driven updates
 
 ### MpiNewProject
 EMITS:   `create` `{ name: string, location: string|null }`

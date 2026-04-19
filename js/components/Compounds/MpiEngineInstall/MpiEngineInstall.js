@@ -4,8 +4,9 @@ import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.j
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { Storage } from '../../../core/storage.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, qsa } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiEngineInstall — Engine provisioning modal for first install and upgrades (Compound)
@@ -29,8 +30,8 @@ import { Events } from '../../../events.js';
  * Emits (internal to component):
  *   'engine:ready' — when download/extract/patch complete (actually emitted to Events bus)
  *
- * SSE integration:
- *   Connects to existing /comfy/downloads/stream and filters for engine:* events
+ * Event subscription:
+ *   Subscribes to engine:* events via downloadService bridge (no direct SSE connection)
  */
 export const MpiEngineInstall = ComponentFactory.create({
     name: 'MpiEngineInstall',
@@ -94,7 +95,6 @@ export const MpiEngineInstall = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         let _modal = null;
-        let _sseConnection = null;
         let _currentMode = null; // 'installing' or 'upgrading'
         let _downloadState = 'idle'; // 'downloading', 'paused', 'extracting', 'patching'
         let _progressBarInst = null;
@@ -104,6 +104,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         let _retryButtonInst = null;
         let _pauseButtonInst = null;
         let _resumeButtonInst = null;
+        const _unsubs = [];
 
         const progressBar = qs('[data-ref="progressBar"]', el);
         const progressInfo = qs('[data-ref="progressInfo"]', el);
@@ -145,7 +146,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         });
 
         // Get reference to the actual input field
-        const pathInputField = _pathInputInst.el.querySelector('.mpi-input__field');
+        const pathInputField = qs('.mpi-input__field', _pathInputInst.el);
 
         // ── Mount browse button ───────────────────────────────────────────────────
         _browseButtonInst = MpiButton.mount(browseButtonMount, {
@@ -173,7 +174,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                     }
                 }
             } catch (err) {
-                console.error('Browse folder failed:', err);
+                clientLogger.error('MpiEngineInstall', 'Browse folder failed:', err);
             }
         });
 
@@ -200,7 +201,7 @@ export const MpiEngineInstall = ComponentFactory.create({
 
                 // 2. Move to progress phase and start download
                 _showPhase('progress');
-                _connectSSE();
+                _subscribeEngineEvents();
                 await fetch('/engine/download', { method: 'POST' });
             } catch (err) {
                 _setError(`Failed to start installation: ${err.message}`);
@@ -218,13 +219,13 @@ export const MpiEngineInstall = ComponentFactory.create({
             try {
                 // Attempt to resume the paused/failed download
                 _showPhase('progress');
-                _connectSSE();
+                _subscribeEngineEvents();
                 await fetch('/engine/resume', { method: 'POST' });
                 progressSubtitle.textContent = 'Resuming installation...';
             } catch (err) {
                 // If resume fails (no partial file), go back to setup for fresh start
                 _showPhase('setup');
-                _disconnectSSE();
+                _unsubscribeEngineEvents();
             }
         });
 
@@ -243,7 +244,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                 resumeButtonMount.style.display = 'block';
                 progressSubtitle.textContent = 'Download paused. Click Resume to continue.';
             } catch (err) {
-                console.error('Pause failed:', err);
+                clientLogger.error('MpiEngineInstall', 'Pause failed:', err);
             }
         });
 
@@ -262,13 +263,13 @@ export const MpiEngineInstall = ComponentFactory.create({
                 resumeButtonMount.style.display = 'none';
                 progressSubtitle.textContent = 'Resuming download...';
             } catch (err) {
-                console.error('Resume failed:', err);
+                clientLogger.error('MpiEngineInstall', 'Resume failed:', err);
             }
         });
 
         // ── Phase management ──────────────────────────────────────────────────────
         function _showPhase(phaseName) {
-            el.querySelectorAll('[data-phase]').forEach(phase => {
+            qsa('[data-phase]', el).forEach(phase => {
                 phase.style.display = phase.dataset.phase === phaseName ? 'block' : 'none';
             });
         }
@@ -295,7 +296,6 @@ export const MpiEngineInstall = ComponentFactory.create({
                 upgradeMessage.style.display = 'none';
             }
 
-            // Create and show modal
             if (!_modal) {
                 _modal = MpiModal.mount(document.createElement('div'), {
                     width: 'min(500px, 90vw)',
@@ -305,15 +305,13 @@ export const MpiEngineInstall = ComponentFactory.create({
             }
             _modal.el.show();
 
-            // If upgrading or repairing, start SSE immediately
             if (mode === 'upgrading') {
-                _connectSSE();
+                _subscribeEngineEvents();
                 fetch('/engine/upgrade', { method: 'POST' }).catch(err => {
                     _setError(`Upgrade failed: ${err.message}`);
                 });
             } else if (mode === 'repairing') {
-                _connectSSE();
-                // Initialize progress bar immediately so user sees feedback
+                _subscribeEngineEvents();
                 _progressBarInst = MpiProgressBar.mount(progressBar, {
                     min: 0,
                     max: 100,
@@ -329,7 +327,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         };
 
         el.hide = () => {
-            _disconnectSSE();
+            _unsubscribeEngineEvents();
             if (_modal) {
                 _modal.el.hide();
             }
@@ -373,10 +371,10 @@ export const MpiEngineInstall = ComponentFactory.create({
             const combinedProgress = combinedTotal > 0 ? Math.round((combinedDownloaded / combinedTotal) * 100) : 0;
 
             // Update progress bar
-            const input = _progressBarInst.el.querySelector('.mpi-progress__input');
+            const input = qs('.mpi-progress__input', _progressBarInst.el);
             if (input) {
                 input.value = combinedProgress;
-                const trackFill = _progressBarInst.el.querySelector('.mpi-progress__track-fill');
+                const trackFill = qs('.mpi-progress__track-fill', _progressBarInst.el);
                 if (trackFill) trackFill.style.width = `${combinedProgress}%`;
             }
 
@@ -401,7 +399,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         };
 
         function _setError(message) {
-            _disconnectSSE();
+            _unsubscribeEngineEvents();
             _showPhase('error');
             errorMessage.textContent = message;
         }
@@ -409,7 +407,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         el.setError = _setError;
 
         el.destroy = () => {
-            _disconnectSSE();
+            _unsubscribeEngineEvents();
             if (_progressBarInst) _progressBarInst.destroy();
             if (_pathInputInst) _pathInputInst.destroy();
             if (_browseButtonInst) _browseButtonInst.destroy();
@@ -421,24 +419,20 @@ export const MpiEngineInstall = ComponentFactory.create({
             el.hide();
         };
 
-        // ── SSE Connection ───────────────────────────────────────────────────────
-        function _connectSSE() {
-            if (_sseConnection) return;
+        // ── Event Subscriptions ──────────────────────────────────────────────────
+        function _subscribeEngineEvents() {
+            if (_unsubs.length) return;
 
-            _sseConnection = new EventSource('/comfy/downloads/stream');
-
-            _sseConnection.addEventListener('engine:downloading', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('engine:downloading', (data) => {
                 _downloadState = 'downloading';
                 // Show pause button, hide resume button during download
                 pauseButtonMount.style.display = 'block';
                 resumeButtonMount.style.display = 'none';
                 el.setLoading(false); // Disable pulsation during actual download
                 el.setProgress(data);
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:extracting', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('engine:extracting', (data) => {
                 _downloadState = 'extracting';
                 // Hide both pause/resume buttons during extraction
                 pauseButtonMount.style.display = 'none';
@@ -458,10 +452,9 @@ export const MpiEngineInstall = ComponentFactory.create({
                 progressInfo.textContent = 'Extracting files...';
                 // Show loading animation during extraction
                 el.setLoading(true);
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:patching', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('engine:patching', (data) => {
                 _downloadState = 'patching';
                 // Hide buttons during patching
                 pauseButtonMount.style.display = 'none';
@@ -469,15 +462,13 @@ export const MpiEngineInstall = ComponentFactory.create({
                 el.setStatus(data.status || 'Finalizing...');
                 progressInfo.textContent = 'Finalizing installation...';
                 el.setLoading(true);
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:upgrade-status', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('engine:upgrade-status', (data) => {
                 el.setStatus(data.status);
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:uw-installing', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('engine:uw-installing', (data) => {
                 el.setStatus(data.status || 'Installing dependencies...');
                 if (data.progress !== undefined) {
                     el.setProgress(data);
@@ -485,19 +476,18 @@ export const MpiEngineInstall = ComponentFactory.create({
                 el.setLoading(true);
                 pauseButtonMount.style.display = 'none';
                 resumeButtonMount.style.display = 'none';
-            });
+            }));
 
-            _sseConnection.addEventListener('download:progress', (e) => {
-                const data = JSON.parse(e.data);
+            _unsubs.push(Events.on('download:progress', (data) => {
                 if (data.modelId === '__universal_workflow__') {
                     el.setLoading(false); // Disable pulsation during actual download
                     el.setProgress(data);
                 }
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:complete', () => {
+            _unsubs.push(Events.on('engine:complete', () => {
                 _downloadState = 'idle';
-                _disconnectSSE();
+                _unsubscribeEngineEvents();
                 pauseButtonMount.style.display = 'none';
                 resumeButtonMount.style.display = 'none';
                 el.setLoading(false);
@@ -505,29 +495,21 @@ export const MpiEngineInstall = ComponentFactory.create({
                 setTimeout(() => {
                     Events.emit('engine:ready');
                 }, 500);
-            });
+            }));
 
-            _sseConnection.addEventListener('engine:error', (e) => {
+            _unsubs.push(Events.on('engine:error', (data) => {
                 _downloadState = 'idle';
-                _disconnectSSE();
+                _unsubscribeEngineEvents();
                 // Hide pause/resume during error state
                 pauseButtonMount.style.display = 'none';
                 resumeButtonMount.style.display = 'none';
-                const data = JSON.parse(e.data);
                 _setError(data.error);
-            });
-
-            _sseConnection.addEventListener('error', () => {
-                _disconnectSSE();
-                _setError('Connection lost during installation');
-            });
+            }));
         }
 
-        function _disconnectSSE() {
-            if (_sseConnection) {
-                _sseConnection.close();
-                _sseConnection = null;
-            }
+        function _unsubscribeEngineEvents() {
+            _unsubs.forEach(fn => fn());
+            _unsubs.length = 0;
         }
     }
 });

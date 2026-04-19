@@ -10,6 +10,7 @@ import { state } from '../state.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 import { reSyncInstalledModels, getModelById } from '../data/modelRegistry.js';
+import { clientLogger } from './clientLogger.js';
 
 const downloadService = {
     _eventSource: null,
@@ -160,7 +161,7 @@ const downloadService = {
                 toastInstance.on('close', () => toastWrap.remove());
             }
 
-            reSyncInstalledModels().catch(err => console.error('[downloadService] re-sync failed:', err));
+            reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after complete failed:', err));
             Events.emit('download:complete', data);
         });
 
@@ -199,6 +200,7 @@ const downloadService = {
             state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
             Events.emit('download:uninstalled', data);
+            reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after uninstall failed:', err));
         });
 
         this._eventSource.addEventListener('download:paused', (e) => {
@@ -226,6 +228,16 @@ const downloadService = {
             const data = JSON.parse(e.data);
             state.comfyNeedsRestart = true;
             Events.emit('comfy:needs-restart', data);
+        });
+
+        // Engine install/upgrade events — bridge from SSE to Events bus
+        ['engine:downloading', 'engine:extracting', 'engine:patching',
+         'engine:upgrade-status', 'engine:uw-installing', 'engine:complete',
+         'engine:error'].forEach(eventName => {
+            this._eventSource.addEventListener(eventName, (e) => {
+                const data = e.data ? JSON.parse(e.data) : {};
+                Events.emit(eventName, data);
+            });
         });
     },
 

@@ -21,6 +21,7 @@ import { MODELS } from './modelConstants/models.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
+import { clientLogger } from '../services/clientLogger.js';
 
 // ── Per-dep status cache (populated by syncModelInstalled) ────────────────────
 // Map of modelId → Map of depId → installed: boolean
@@ -50,7 +51,7 @@ export async function initPaths() {
             _paths.customNodes = `engine/${comfyDir}/ComfyUI/custom_nodes`;
         }
     } catch (err) {
-        console.warn('[modelRegistry] Failed to fetch platform config, using defaults:', err);
+        clientLogger.warn('modelRegistry', 'Failed to fetch platform config, using defaults:', err);
     }
 }
 
@@ -62,6 +63,12 @@ export async function initPaths() {
  *
  * Sends pre-resolved dep filenames so the server only needs to stat paths —
  * modelRegistry.js remains the single source of truth for all model data.
+ *
+ * NOTE: MODELS[].installed is intentionally module-level (not in state proxy) because
+ * components read directly from the MODELS reference. The authoritative reactive signal
+ * is the 'models:checked' event emitted on the Events bus — components subscribe to this
+ * to know when install state changes, rather than watching state.s_installedModelIds.
+ * This pattern avoids duplicating model data across both MODELS and state.
  *
  * @returns {Promise<boolean>} true if the sync succeeded
  */
@@ -121,7 +128,7 @@ export async function syncModelInstalled() {
 
         return true;
     } catch (err) {
-        console.error('[modelRegistry] syncModelInstalled failed:', err);
+        clientLogger.error('modelRegistry', 'syncModelInstalled failed:', err);
         return false;
     }
 }
