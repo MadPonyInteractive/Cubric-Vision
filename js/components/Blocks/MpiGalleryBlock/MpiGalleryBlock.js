@@ -633,7 +633,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const currentModels = getModelsByType('image').filter(m => m.installed !== false);
             // Remount PromptBox if no component is mounted but models are available
             if (!PromptBoxService.component && currentModels.length > 0) {
-                const newModel = currentModels[0];
+                const newModel = currentModels.find(m => m.id === state.s_selectedModelId) || currentModels[0];
+                activeModel = newModel;
+                activeModelId = newModel.id;
+                state.s_selectedModelId = newModel.id;
                 const newPromptBox = PromptBoxService.mount({
                     model: newModel,
                     modelList: currentModels,

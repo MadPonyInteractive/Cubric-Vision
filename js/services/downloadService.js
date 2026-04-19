@@ -173,7 +173,8 @@ const downloadService = {
             }
             state.downloadQueueActive = state.downloadJobs.some(j => j.status === 'downloading');
 
-            if (data.modelId) {
+            // UW installs are surfaced through engine UI — skip toast
+            if (data.modelId && data.modelId !== '__universal_workflow__') {
                 const model = getModelById(data.modelId);
                 const modelName = model?.name || data.modelId;
                 const toastWrap = ce('div');
@@ -192,6 +193,11 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:failed', (e) => {
             const data = JSON.parse(e.data);
+            // UW dep failures are surfaced through engine:error / install modal — skip toast here
+            if (data.modelId === '__universal_workflow__') {
+                Events.emit('download:failed', data);
+                return;
+            }
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
             if (job) {
                 job.status = 'failed';

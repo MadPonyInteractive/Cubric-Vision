@@ -277,18 +277,23 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
     for (const dep of dependencies) {
         let localPath;
+        let installedCheckPath;
         if (dep.type === 'custom_nodes') {
-            // GitHub archives download as .zip
+            // GitHub archives download as .zip; after extraction the zip is deleted.
+            // Use the extracted folder path to check if already installed.
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
             localPath = path.join(defaultCustomNodesRoot, zipName);
+            installedCheckPath = path.join(defaultCustomNodesRoot, dep.filename);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;
+            installedCheckPath = lp;
         } else {
             localPath = path.join(defaultModelsRoot, dep.filename);
+            installedCheckPath = localPath;
         }
 
-        const isInstalled = await fs.pathExists(localPath);
+        const isInstalled = await fs.pathExists(installedCheckPath);
 
         let depJob = _depJobs.get(dep.id);
         if (!depJob) {
@@ -307,6 +312,11 @@ router.post('/comfy/models/download/start', async (req, res) => {
             depJob.status = 'complete';
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
+        } else if (depJob.status !== 'queued' && depJob.status !== 'downloading') {
+            // Reset any terminal state (complete, failed, cancelled) back to queued.
+            depJob.status = 'queued';
+            depJob.downloadedBytes = 0;
+            depJob.error = null;
         }
     }
 
@@ -421,6 +431,9 @@ async function _runCustomNodeInstall(modelJob) {
         return;
     }
     logger.info('download', `_runCustomNodeInstall: extracting ${customDeps.length} custom node(s) for model ${modelJob.modelId}`);
+
+    let anyFailure = false;
+
     for (const dep of customDeps) {
         // Guard: skip deps without a valid localPath string
         if (dep.localPath == null || typeof dep.localPath !== 'string') {
@@ -435,8 +448,16 @@ async function _runCustomNodeInstall(modelJob) {
         const extractDir = path.dirname(zipPath); // custom_nodes/
         const targetDir = path.join(extractDir, dep.filename); // dep.filename is the source of truth for target name
 
+        // If the extracted folder already exists (installed by engine install or a prior run),
+        // skip extraction entirely — no failure, just move on.
+        if (await fs.pathExists(targetDir)) {
+            logger.info('download', `Custom node already extracted: ${targetDir}, skipping`);
+            continue;
+        }
+
         // Extract GitHub archive zip (extracts to custom_nodes/owner-repo-main/)
         // Do this FIRST so we can scan for the extracted folder AFTER it's created
+        let extractionSucceeded = false;
         try {
             if (await fs.pathExists(zipPath)) {
                 logger.info('download', `Extracting zip: ${zipPath}`);
@@ -445,30 +466,42 @@ async function _runCustomNodeInstall(modelJob) {
                     stream.on('end', resolve);
                     stream.on('error', reject);
                 });
-                await fs.remove(zipPath); // clean up zip after extraction
+                await fs.remove(zipPath); // clean up zip after successful extraction
                 logger.info('download', `Zip extracted and removed: ${zipPath}`);
+                extractionSucceeded = true;
             } else {
-                logger.warn('download', `Zip not found at ${zipPath} — skipping extract`);
+                // Zip not found — download was never completed. Mark failure so repair
+                // flow (engine/repair-deps) re-triggers the full download.
+                logger.warn('download', `Zip not found at ${zipPath} — marking dep for repair re-download`);
+                anyFailure = true;
                 continue;
             }
         } catch (err) {
-            logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message}`);
+            logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message} — removing corrupted zip so repair can re-download`);
+            await fs.remove(zipPath).catch(() => {}); // delete corrupted zip so repair re-downloads it
+            anyFailure = true;
             continue;
         }
 
-        // Now scan for the extracted folder — it will be named 'something-main'
-        // GitHub archives preserve repo casing which may differ from dep.filename
-        // e.g. repo is 'ComfyUI_UltimateSDUpscale' but dep.filename is 'comfyui_ultimatesdupscale'
+        // Scan for the extracted folder — GitHub archives extract as '<RepoName>-<BranchName>/'
+        // The branch name casing varies (e.g. 'main' vs 'Main') and the repo name casing
+        // may differ from dep.filename. Match case-insensitively against dep.filename and
+        // dep.id, accepting any branch-name suffix after the last '-'.
         let extractedMainDir = null;
         try {
             const entries = await fs.readdir(extractDir, { withFileTypes: true });
+            const targetLower = (dep.filename || '').toLowerCase();
+            const depIdLower = (dep.id || '').toLowerCase();
             for (const entry of entries) {
                 if (!entry.isDirectory()) continue;
-                // Match any '-main' folder whose base name matches dep.filename (case-insensitive)
                 const entryLower = entry.name.toLowerCase();
-                const targetLower = (dep.filename || '').toLowerCase();
-                if (entryLower === targetLower + '-main') {
+                // Strip the last '-<branch>' segment and compare the base against dep.filename/dep.id
+                const lastDash = entryLower.lastIndexOf('-');
+                if (lastDash === -1) continue;
+                const entryBase = entryLower.slice(0, lastDash);
+                if (entryBase === targetLower || entryBase === depIdLower) {
                     extractedMainDir = path.join(extractDir, entry.name);
+                    logger.info('download', `Found extracted folder: ${extractedMainDir}`);
                     break;
                 }
             }
@@ -477,24 +510,9 @@ async function _runCustomNodeInstall(modelJob) {
         }
 
         if (!extractedMainDir) {
-            // Folder not found — try scanning for ANY -main folder that matches dep.id (exact or close match)
-            try {
-                const entries = await fs.readdir(extractDir, { withFileTypes: true });
-                const depIdLower = (dep.id || '').toLowerCase();
-                for (const entry of entries) {
-                    if (!entry.isDirectory()) continue;
-                    const entryLower = entry.name.toLowerCase();
-                    if (entryLower === depIdLower + '-main') {
-                        extractedMainDir = path.join(extractDir, entry.name);
-                        logger.info('download', `Found extracted folder via dep.id fallback: ${extractedMainDir}`);
-                        break;
-                    }
-                }
-            } catch (err) { /* ignore */ }
-        }
-
-        if (!extractedMainDir) {
-            logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir}`);
+            // Zip was removed (extraction succeeded per flow) but folder not found — corrupt extraction
+            logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir} — corrupt zip, will re-download on repair`);
+            anyFailure = true;
             continue;
         }
 
@@ -534,6 +552,13 @@ async function _runCustomNodeInstall(modelJob) {
             }
         }
     }
+
+    if (anyFailure) {
+        modelJob.status = 'failed';
+        _broadcast('download:failed', { modelId: modelJob.modelId, error: 'One or more custom node extractions failed' });
+        throw new Error('One or more custom node extractions failed — see logs');
+    }
+
     modelJob.status = 'complete';
     _broadcast('download:complete', { modelId: modelJob.modelId });
     _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
@@ -706,18 +731,24 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
         modelJob.totalBytes += _parseSizeToBytes(dep.size);
 
         let localPath;
+        let installedCheckPath; // path to check for "already installed" (folder for custom_nodes, file otherwise)
         if (dep.type === 'custom_nodes') {
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
             localPath = path.join(defaultCustomNodesRoot, zipName);
+            // After successful extraction the zip is deleted and only the folder remains.
+            // Check the folder, not the zip, so repair-deps skips already-extracted nodes.
+            installedCheckPath = path.join(defaultCustomNodesRoot, dep.filename);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;
+            installedCheckPath = lp;
         } else {
             localPath = path.join(defaultModelsRoot, dep.filename);
+            installedCheckPath = localPath;
         }
 
-        const isInstalled = await fs.pathExists(localPath);
-        logger.info('download', `startUniversalWorkflowInstall: dep ${depId} resolved to ${localPath}, exists=${isInstalled}`);
+        const isInstalled = await fs.pathExists(installedCheckPath);
+        logger.info('download', `startUniversalWorkflowInstall: dep ${depId} resolved to ${localPath}, installedCheck=${installedCheckPath}, exists=${isInstalled}`);
 
         let depJob = _depJobs.get(depId);
         if (!depJob) {
@@ -736,7 +767,16 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             depJob.status = 'complete';
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
-            logger.info('download', `startUniversalWorkflowInstall: skipping already installed: ${depId} -> ${localPath}`);
+            logger.info('download', `startUniversalWorkflowInstall: skipping already installed: ${depId} -> ${installedCheckPath}`);
+        } else if (depJob.status !== 'queued' && depJob.status !== 'downloading') {
+            // Reset any terminal state (complete, failed, cancelled) back to queued
+            // so _startPendingDeps will re-download. Covers: zip missing after failed
+            // extraction (was complete), and previously failed downloads on retry.
+            const prevStatus = depJob.status;
+            depJob.status = 'queued';
+            depJob.downloadedBytes = 0;
+            depJob.error = null;
+            logger.info('download', `startUniversalWorkflowInstall: resetting ${depId} (was ${prevStatus}) for re-download`);
         }
     }
 

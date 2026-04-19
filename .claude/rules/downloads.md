@@ -9,9 +9,9 @@
 
 **Backend router:** `routes/downloadManager.js` — manages `ResumableDownloader` instances, job maps, and SSE broadcast. The `.part` file pattern is used for resume — never delete these manually.
 
-**SHA256 verification is automatic.** Each dep can declare a `sha256` in the registry. The backend verifies on completion and marks `failed` on mismatch. Do not bypass or override this.
+**SHA256 verification is automatic.** Each dep can declare a `sha256` in the registry. The backend verifies on completion and marks `failed` on mismatch. Do not bypass or override this. **Exception: `custom_nodes` deps must NOT have `sha256` set** — GitHub branch archive zips regenerate on every commit, making pinned hashes permanently stale. Leave `sha256` as `null`/omitted for all `custom_nodes` type deps.
 
-**`comfyNeedsRestart`****:** Backend sets this flag after custom node `requirements.txt` pip install. `ensureServerRunning()` in `comfyController.js` polls and restarts ComfyUI when this is true — do not skip this check.
+**`comfyNeedsRestart`:** After custom node extraction completes, the backend broadcasts `comfy:needs-restart` via SSE. `downloadService.js` receives this and sets `state.comfyNeedsRestart = true`. `ensureServerRunning()` in `comfyController.js` checks this flag BEFORE the early-return on `running && ready` — if set and ComfyUI is running, it auto-restarts. Do not skip or reorder this check.
 
 **custom_nodes path:** The `extra_model_paths.yaml` does NOT remap the `custom_nodes` type. All custom node deps (ComfyUI-MpiNodes, ComfyUI-UltimateSDUpscale, etc.) use the engine default path `{engine}/custom_nodes/`, regardless of `customRoot`. Do not attempt to redirect custom_nodes downloads to `customRoot/custom_nodes/` — the YAML doesn't support this mapping, and the engine's Python needs to find custom nodes in its own `custom_nodes` folder.
 

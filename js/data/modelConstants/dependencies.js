@@ -145,7 +145,6 @@ export const DEPS = {
         url: 'https://github.com/MadPonyInteractive/ComfyUi-MpiNodes/archive/refs/heads/main.zip',
         installRequirements: false,
         size: '1.76MB',
-        sha256: '4d1fe25b692db4a446d4efe80ff9d3c0f94248619ff6668026098414f8f21f1f',
         installOnEngine: true,
     },
     'ComfyUI-PainterI2Vadvanced': {
@@ -156,7 +155,6 @@ export const DEPS = {
         url: 'https://github.com/princepainter/ComfyUI-PainterI2Vadvanced/archive/refs/heads/main.zip',
         installRequirements: false,
         size: '144KB',
-        sha256: '6bbd78b55c2c83b79e51e43b400df2221ad69df2e9c7d8e739aec419595af031',
     },
     'ComfyUI-VideoHelperSuite': {
         id: 'ComfyUI-VideoHelperSuite',
@@ -166,7 +164,6 @@ export const DEPS = {
         url: 'https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/refs/heads/main.zip',
         installRequirements: false,
         size: '806KB',
-        sha256: 'ca6e1b414dbc07373d4d293d07b2c2cfb947223554a28bc6d92d13d0cf6fc88a',
         installOnEngine: true,
     },
     'ComfyUI-Impact-Pack': {
@@ -177,7 +174,6 @@ export const DEPS = {
         url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack/archive/refs/heads/Main.zip',
         installRequirements: true,
         size: '5MB',
-        sha256: 'c74bc45c9c656157b051a8200d69b3694edb16b2e6d2b6783c41f1a18244e50c',
         installOnEngine: true,
     },
     'comfyui-kjnodes': {
@@ -188,7 +184,6 @@ export const DEPS = {
         url: 'https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.zip',
         installRequirements: true,
         size: '28MB',
-        sha256: 'b41f9da2732e33f9075bc944bb7f048a81e5408bf6807e98129501a2b23ab458',
     },
     'ComfyUI-UltimateSDUpscale': {
         id: 'ComfyUI-UltimateSDUpscale',
@@ -198,7 +193,6 @@ export const DEPS = {
         url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.zip',
         installRequirements: false,
         size: '940KB',
-        sha256: 'fc597d8c67f96a1c0fef990b71716a0cbd88c8f9f2e7af4fdc3cc9e84db48286',
     },
     'ComfyUI-Frame-Interpolation': {
         id: 'ComfyUI-Frame-Interpolation',
@@ -209,7 +203,6 @@ export const DEPS = {
         installRequirements: true,
         installRequirementsCommand: 'python install.py',
         size: '37.4MB',
-        sha256: 'de2758d79bee7c50ea8f3c4a25fe0d1320514cf84bcc3e8ceb9875a99ce718e1',
         installOnEngine: true,
     },
     'ComfyUI-Impact-Subpack': {
@@ -220,7 +213,6 @@ export const DEPS = {
         url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack/archive/refs/heads/main.zip',
         installRequirements: true,
         size: '172KB',
-        sha256: '0a43a609a72e7b2eda02ca49d8dd7fc921f214e4ac32ab028d3cb8470e8a8091',
         installOnEngine: true,
     },
     'face-yolov8n': {

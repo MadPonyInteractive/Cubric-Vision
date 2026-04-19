@@ -81,7 +81,8 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 6. **Patch engine** and write `extra_model_paths.yaml` (critical: YAML must exist before model checker runs)
 7. **Wait for engine-deps downloads to complete**
 8. **Finish custom node installation** via `finishCustomNodeInstall()` (now Python is available)
-9. Emit `engine:complete`
+9. **Stop any running ComfyUI and reset `comfyNeedsRestart`** — `stopComfyUI()` + `processState.comfyNeedsRestart = false` called before broadcast, ensuring a clean start on next generation
+10. Emit `engine:complete`
 
 **Key file locations:**
 - Platform engine + GPU detection: `routes/platformEngine.js` (all path and GPU detection logic)

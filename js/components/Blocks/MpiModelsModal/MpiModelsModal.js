@@ -449,12 +449,8 @@ export const MpiModelsModal = ComponentFactory.create({
             awaitReSync();
         }));
 
-        _unsubs.push(Events.on('download:failed', ({ modelId, error }) => {
-            Events.emit('ui:error', {
-                title: 'Download failed',
-                message: error || 'Download failed. Please try again.',
-            });
-            renderList();
+        _unsubs.push(Events.on('download:failed', () => {
+            awaitReSync();
         }));
 
         // ── Initial render ─────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { Storage } from '../../../core/storage.js';
 import { qs, qsa } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { downloadService } from '../../../services/downloadService.js';
 
 /**
  * MpiEngineInstall — Engine provisioning modal for first install and upgrades (Compound)
@@ -202,6 +203,8 @@ export const MpiEngineInstall = ComponentFactory.create({
                 // 2. Move to progress phase and start download
                 _showPhase('progress');
                 _subscribeEngineEvents();
+                // Ensure SSE is connected BEFORE the POST to avoid missing engine:* broadcasts
+                downloadService._ensureSSE();
                 await fetch('/engine/download', { method: 'POST' });
             } catch (err) {
                 _setError(`Failed to start installation: ${err.message}`);
@@ -217,13 +220,13 @@ export const MpiEngineInstall = ComponentFactory.create({
 
         _retryButtonInst.el.addEventListener('click', async () => {
             try {
-                // Attempt to resume the paused/failed download
                 _showPhase('progress');
                 _subscribeEngineEvents();
-                await fetch('/engine/resume', { method: 'POST' });
-                progressSubtitle.textContent = 'Resuming installation...';
+                // Ensure SSE is connected before POST so engine:* events are not missed
+                downloadService._ensureSSE();
+                await fetch('/engine/repair-deps', { method: 'POST' });
+                progressSubtitle.textContent = 'Retrying installation...';
             } catch (err) {
-                // If resume fails (no partial file), go back to setup for fresh start
                 _showPhase('setup');
                 _unsubscribeEngineEvents();
             }
@@ -320,6 +323,8 @@ export const MpiEngineInstall = ComponentFactory.create({
                     variant: 'primary',
                     info: 'Installing additional packages...'
                 });
+                // Ensure SSE is connected before POST to avoid missing engine:* broadcasts
+                downloadService._ensureSSE();
                 fetch('/engine/repair-deps', { method: 'POST' }).catch(err => {
                     _setError(`Repair failed: ${err.message}`);
                 });

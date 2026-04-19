@@ -37,9 +37,8 @@ export const ComfyUIController = {
         try {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
-            if (status.running && status.ready) return true;
 
-            // ── Auto-restart if custom nodes were installed (and ComfyUI was running) ─
+            // ── Auto-restart if custom nodes were installed (even if ComfyUI is ready) ─
             if (state.comfyNeedsRestart && status.running) {
                 clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
                 Events.emit('ui:error', {

@@ -258,8 +258,11 @@ LISTENS: (none)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation dropdown
-EMITS:   `tool:running` — NOT emitted here; emitted by MpiGroupHistoryBlock
+         `models:closed` — remounts PromptBox if it was null (no models at gallery-open time); also sets `activeModel` directly before remount so generation works immediately after first-time model install
+         `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models installed
+EMITS:   `models:open` — when zero image models installed at mount time or after registry update
 NOTE:    Reads `state.s_selectedModelId`; writes `state.s_selectedModelId` and `state.currentProject`
+         Race condition: if model registry hasn't updated when gallery mounts (e.g. user closes model manager immediately after install), `activeModel` = null and `promptBox` = null. The `models:closed` handler re-derives and sets `activeModel` before remounting PromptBox — this is the recovery path.
 
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.

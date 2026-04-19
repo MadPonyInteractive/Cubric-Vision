@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
@@ -193,11 +193,16 @@ async function _runEngineDownload(type) {
         logger.info('engine', 'Waiting for UW deps downloads to complete...');
         await uwDepsPromise;
 
+        let uwInstallFailed = false;
         if (type === 'comfy' && uwModelJob) {
             logger.info('engine', 'Engine ready, finishing custom node installation...');
-            await finishCustomNodeInstall(uwModelJob, true).catch(err => {
+            try {
+                await finishCustomNodeInstall(uwModelJob, true);
+            } catch (err) {
                 logger.error('engine', `Custom node install error: ${err.message}`);
-            });
+                uwInstallFailed = true;
+                // Do NOT re-throw — engine itself is fine; user can repair UW deps later
+            }
         }
 
         // ── 4. Patch ───────────────────────────────────────────────────────────
@@ -273,8 +278,17 @@ async function _runEngineDownload(type) {
         }
 
         // ── 7. Complete engine (UW deps fully done) ─────────────────────────────
-        broadcastEngineEvent('engine:complete', { success: true });
-        logger.info('engine', `Engine provisioning complete for type: ${type}`);
+        if (uwInstallFailed) {
+            broadcastEngineEvent('engine:error', {
+                error: 'UW deps installation failed. Press Retry to re-attempt.'
+            });
+        } else {
+            // Stop any running ComfyUI and clear restart flag — fresh install needs a clean start
+            stopComfyUI();
+            processState.comfyNeedsRestart = false;
+            broadcastEngineEvent('engine:complete', { success: true });
+            logger.info('engine', `Engine provisioning complete for type: ${type}`);
+        }
 
     } catch (e) {
         logger.error('engine', 'Engine download/install failed', e);
