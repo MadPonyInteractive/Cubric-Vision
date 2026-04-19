@@ -27,12 +27,32 @@ import { Events } from '../events.js';
 const _modelDepStatusCache = new Map();
 
 // ── Path Config ───────────────────────────────────────────────────────────────
+// Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
 
-export const PATHS = Object.freeze({
+let _paths = {
     models: 'engine/ComfyUI_windows_portable/ComfyUI/models',
     customNodes: 'engine/ComfyUI_windows_portable/ComfyUI/custom_nodes',
     workflows: 'comfy_workflows',
-});
+};
+
+export const PATHS = _paths;
+
+/**
+ * Initialize platform-specific paths from the server.
+ * Called on app startup before any path-dependent operations.
+ */
+export async function initPaths() {
+    try {
+        const res = await fetch('/system/platform-config');
+        if (res.ok) {
+            const { comfyDir } = await res.json();
+            _paths.models = `engine/${comfyDir}/ComfyUI/models`;
+            _paths.customNodes = `engine/${comfyDir}/ComfyUI/custom_nodes`;
+        }
+    } catch (err) {
+        console.warn('[modelRegistry] Failed to fetch platform config, using defaults:', err);
+    }
+}
 
 // ── Runtime Installed Sync ────────────────────────────────────────────────────
 

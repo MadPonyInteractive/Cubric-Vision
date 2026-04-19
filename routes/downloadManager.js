@@ -20,6 +20,7 @@ const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot } = require('./shared');
+const { getComfyPath } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
 const sevenBin = require('7zip-bin');
@@ -267,8 +268,8 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
     const customRoot = await getCustomRoot();
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
-    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     // Pre-sum totalBytes from ALL deps (including already-installed ones)
     const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
@@ -413,7 +414,6 @@ async function _runCustomNodeInstall(modelJob) {
         logger.info('download', `_runCustomNodeInstall: no custom_nodes deps found for model ${modelJob.modelId}`);
         modelJob.status = 'complete';
         _broadcast('download:complete', { modelId: modelJob.modelId });
-        _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
         return;
     }
     logger.info('download', `_runCustomNodeInstall: extracting ${customDeps.length} custom node(s) for model ${modelJob.modelId}`);
@@ -603,8 +603,8 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
     const customRoot = await getCustomRoot();
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
-    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     for (const dep of dependencies) {
         let localPath;
@@ -673,8 +673,8 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const customRoot = await getCustomRoot();
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
-    const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     logger.info('download', `startUniversalWorkflowInstall: customRoot=${customRoot}, ${depIds.length} deps to check`);
 

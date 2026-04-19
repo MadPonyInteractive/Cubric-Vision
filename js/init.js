@@ -2,6 +2,7 @@
  * init.js — Application entry point.
  */
 import { initShell } from './shell.js';
+import { initPaths } from './data/modelRegistry.js';
 
 // Global alert/confirm system — will be replaced by MpiOkCancel component
 // For now wire up basic browser fallbacks to prevent crashes
@@ -23,6 +24,7 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 async function init() {
+    await initPaths();
     await initShell();
 }
 

@@ -36,6 +36,7 @@ const {
     syncWorkflowStates,
     getCustomRoot,
 } = require('./shared');
+const { getPythonBin, getComfyPath } = require('./platformEngine');
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -85,15 +86,15 @@ router.post('/comfy/start', async (req, res) => {
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
 
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-        const pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
-        const mainPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'main.py');
+        const pythonPath = getPythonBin(ENGINE_ROOT);
+        const mainPath = getComfyPath(ENGINE_ROOT, 'main.py');
 
         if (!(await fs.pathExists(pythonPath))) {
             return res.status(500).json({ error: 'ComfyUI Python not found. Provision engine first.' });
         }
 
         logger.info('comfy', 'Starting ComfyUI background process...');
-        const extraConfigPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'extra_model_paths.yaml');
+        const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
         const args = [mainPath, '--listen', '127.0.0.1', '--port', COMFYUI_PORT.toString(), '--lowvram', '--preview-method', 'taesd', '--enable-cors-header'];
 
         if (await fs.pathExists(extraConfigPath)) {
@@ -175,9 +176,8 @@ router.post('/comfy/set-path', async (req, res) => {
     const { path: customPath } = req.body;
     try {
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-        const comfyDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI');
-        const extraConfigPath = path.join(comfyDir, 'extra_model_paths.yaml');
-        await fs.ensureDir(comfyDir);
+        const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
+        await fs.ensureDir(path.dirname(extraConfigPath));
 
         if (!customPath) {
             if (await fs.pathExists(extraConfigPath)) await fs.remove(extraConfigPath);
@@ -235,8 +235,8 @@ router.post('/comfy/models/check', async (req, res) => {
     try {
         const customRoot = await getCustomRoot();
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-        const defaultModelsRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'models');
-        const defaultCustomNodesRoot = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'custom_nodes');
+        const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+        const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
         const results = {};
 

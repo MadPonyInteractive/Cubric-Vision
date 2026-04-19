@@ -26,6 +26,7 @@ const {
     stopLlamaServer,
     streamDownload,
 } = require('./shared');
+const { getLlamaBin } = require('./platformEngine');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -137,9 +138,10 @@ router.post('/llm/generate', async (req, res) => {
             return res.status(400).json({ error: 'Model not downloaded locally' });
         }
 
-        const serverExePath = path.posix.join(LLAMA_ENGINE_ROOT, 'llama-server.exe');
+        const llamaBin = getLlamaBin();
+        const serverExePath = path.join(LLAMA_ENGINE_ROOT, llamaBin);
         if (!(await fs.pathExists(serverExePath))) {
-            return res.status(500).json({ success: false, error: 'llama-server.exe backend is missing. Please review engine provisioning.' });
+            return res.status(500).json({ success: false, error: `${llamaBin} backend is missing. Please review engine provisioning.` });
         }
 
         if (processState.activeModelId !== modelId || !processState.activeLlamaProcess) {

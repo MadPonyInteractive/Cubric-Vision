@@ -16,6 +16,7 @@ const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDep
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_VERSION } = require('../js/core/appVersion.js');
+const { COMFY_DIR, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -24,14 +25,11 @@ router.get('/engine/status', async (req, res) => {
             return res.json({ success: true, exists: false });
         }
         if (type === 'llama') {
-            const serverPath = path.posix.join(__dirname, '..', 'llama_engine', 'llama-server.exe');
+            const serverPath = path.join(__dirname, '..', 'llama_engine', getLlamaBin());
             res.json({ success: true, exists: await fs.pathExists(serverPath) });
         } else {
             const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-            let pythonPath = path.join(ENGINE_ROOT, 'python_embeded', 'python.exe');
-            if (!(await fs.pathExists(pythonPath))) {
-                pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
-            }
+            const pythonPath = getPythonBin(ENGINE_ROOT);
             res.json({ success: true, exists: await fs.pathExists(pythonPath) });
         }
     } catch (e) {
@@ -60,12 +58,23 @@ async function _runEngineDownload(type) {
         const config = await fs.readJson(SYS_DEPS_PATH);
         logger.info('engine', `System dependencies loaded successfully`);
 
+        // Detect GPU and resolve download URLs
+        const downloadConfig = await resolveDownloadConfig();
+
         let engineInfo, targetDir;
         if (type === 'llama') {
-            engineInfo = config.llamaServer;
+            engineInfo = {
+                version: config.llamaServer.version,
+                filename: downloadConfig.llama.filename,
+                url: downloadConfig.llama.url,
+            };
             targetDir = path.join(__dirname, '..', 'llama_engine');
         } else {
-            engineInfo = config.engine || config.comfyUI;
+            engineInfo = {
+                version: config.engine.version,
+                filename: downloadConfig.comfy.filename,
+                url: downloadConfig.comfy.url,
+            };
             targetDir = path.join(__dirname, '..', 'engine');
         }
 
@@ -197,7 +206,7 @@ async function _runEngineDownload(type) {
         logger.info('system', 'Patching engine...');
 
         if (type === 'comfy') {
-            const batPath = path.join(targetDir, 'ComfyUI_windows_portable', 'run_nvidia_gpu.bat');
+            const batPath = path.join(targetDir, COMFY_DIR, 'run_nvidia_gpu.bat');
             if (await fs.pathExists(batPath)) {
                 let content = await fs.readFile(batPath, 'utf8');
                 if (!content.includes('--enable-cors-header')) {
@@ -206,7 +215,7 @@ async function _runEngineDownload(type) {
                     await fs.writeFile(batPath, content, 'utf8');
                 }
             }
-            const settingsPath = path.join(targetDir, 'ComfyUI_windows_portable', 'ComfyUI', 'user', 'default', 'comfy.settings.json');
+            const settingsPath = getComfyPath(targetDir, 'user', 'default', 'comfy.settings.json');
             try {
                 await fs.ensureDir(path.dirname(settingsPath));
                 let settings = {};
@@ -219,6 +228,7 @@ async function _runEngineDownload(type) {
                 logger.warn('system', `Failed to update ComfyUI settings: ${err}`);
             }
         } else if (type === 'llama') {
+            const llamaBin = getLlamaBin();
             const findServer = async (dir) => {
                 const items = await fs.readdir(dir);
                 for (const i of items) {
@@ -226,15 +236,15 @@ async function _runEngineDownload(type) {
                     if ((await fs.stat(p)).isDirectory()) {
                         const nested = await findServer(p);
                         if (nested) return nested;
-                    } else if (i === 'llama-server.exe') {
+                    } else if (i === llamaBin) {
                         return p;
                     }
                 }
                 return null;
             };
             const found = await findServer(targetDir);
-            if (found && path.resolve(found) !== path.resolve(path.join(targetDir, 'llama-server.exe'))) {
-                await fs.copy(found, path.join(targetDir, 'llama-server.exe'));
+            if (found && path.resolve(found) !== path.resolve(path.join(targetDir, llamaBin))) {
+                await fs.copy(found, path.join(targetDir, llamaBin));
             }
         }
 
@@ -252,12 +262,7 @@ async function _runEngineDownload(type) {
             const mpiModelsDir = path.join(targetDir, 'mpi_models');
             await fs.ensureDir(mpiModelsDir);
 
-            const extraConfigPath = path.join(
-                targetDir,
-                'ComfyUI_windows_portable',
-                'ComfyUI',
-                'extra_model_paths.yaml'
-            );
+            const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
 
             if (!(await fs.pathExists(extraConfigPath))) {
                 const yaml = `# MPI AI Suite — Extra Model Paths\nall:\n  base_path: "${mpiModelsDir.replace(/\\/g, '/')}"\n`;
@@ -302,10 +307,7 @@ router.get('/engine/version-check', async (req, res) => {
 
         // Verify that engine binaries actually exist, not just the version stamp
         if (installedVersion !== null) {
-            let pythonPath = path.join(ENGINE_ROOT, 'python_embeded', 'python.exe');
-            if (!(await fs.pathExists(pythonPath))) {
-                pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
-            }
+            const pythonPath = getPythonBin(ENGINE_ROOT);
             const engineExists = await fs.pathExists(pythonPath);
             if (!engineExists) {
                 logger.warn('engine', 'Version stamp found but engine binaries missing — treating as fresh install');
@@ -361,15 +363,15 @@ router.post('/engine/repair-deps', async (req, res) => {
 router.post('/engine/upgrade', async (req, res) => {
     try {
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-        const portableDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable');
+        const portableDir = path.join(ENGINE_ROOT, COMFY_DIR);
         const mpiModelsDir = path.join(ENGINE_ROOT, 'mpi_models');
-        const extraConfigPath = path.join(portableDir, 'ComfyUI', 'extra_model_paths.yaml');
+        const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
 
         // 1. Check if models are inside engine (legacy user)
         const hasCustomRoot = await fs.pathExists(extraConfigPath);
         if (!hasCustomRoot) {
             broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
-            const defaultModels = path.join(portableDir, 'ComfyUI', 'models');
+            const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
             if (await fs.pathExists(defaultModels)) {
                 logger.info('engine', 'Migrating legacy models from engine to mpi_models');
                 await fs.move(defaultModels, mpiModelsDir, { overwrite: false });

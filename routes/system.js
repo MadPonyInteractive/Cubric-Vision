@@ -16,6 +16,7 @@ const fs   = require('fs-extra');
 const path = require('path');
 const { exec } = require('child_process');
 const logger = require('./logger');
+const { COMFY_DIR } = require('./platformEngine');
 
 // ── VRAM Helper ───────────────────────────────────────────────────────────────
 
@@ -135,6 +136,20 @@ router.get('/logs/download', async (req, res) => {
         logger.error('system', 'Log download failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+// ── Platform Configuration ────────────────────────────────────────────────────
+
+/**
+ * GET /system/platform-config
+ * Returns platform-specific configuration for client use (e.g., engine folder name).
+ */
+router.get('/system/platform-config', (req, res) => {
+    res.json({
+        success: true,
+        platform: process.platform,
+        comfyDir: COMFY_DIR,
+    });
 });
 
 module.exports = router;

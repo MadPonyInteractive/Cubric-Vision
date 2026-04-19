@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
 const logger = require('./routes/logger');
+const { getComfyPath } = require('./routes/platformEngine');
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
 
@@ -323,8 +324,8 @@ app.on('window-all-closed', () => {
 // Clean ComfyUI temp folders on quit (cross-platform, synchronous)
 app.on('before-quit', () => {
   const ENGINE_ROOT = path.join(__dirname, 'engine');
-  const inputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'input');
-  const outputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'output');
+  const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+  const outputDir = getComfyPath(ENGINE_ROOT, 'output');
   for (const dir of [inputDir, outputDir]) {
     if (fs.existsSync(dir)) {
       // Empty the directory contents without removing the directory itself

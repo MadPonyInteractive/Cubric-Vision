@@ -18,6 +18,7 @@ const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
 const { exec, spawn } = require('child_process');
+const { COMFY_DIR, getPythonBin, getComfyPath } = require('./platformEngine');
 
 const _require = createRequire(__filename);
 
@@ -150,7 +151,7 @@ function _formatSpeed(bytesPerSec) {
  */
 async function runPipCommand(args) {
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
+    const pythonPath = getPythonBin(ENGINE_ROOT);
     if (!(await fs.pathExists(pythonPath))) {
         throw new Error('Embedded Python not found. Cannot run pip.');
     }
@@ -172,7 +173,7 @@ async function runPipCommand(args) {
  */
 async function runCustomCommand(commandStr, cwd) {
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const pythonPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'python_embeded', 'python.exe');
+    const pythonPath = getPythonBin(ENGINE_ROOT);
     const parts = commandStr.split(' ');
     const exe = parts[0].toLowerCase() === 'python' ? pythonPath : parts[0];
     const args = parts.slice(1);
@@ -193,7 +194,10 @@ async function runCustomCommand(commandStr, cwd) {
  */
 async function isPackageRequiredElsewhere(packageName, excludedNodePath) {
     const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-    const customNodesRoot = path.join(__dirname, '..', config.local_custom_nodes_path || 'engine/ComfyUI_windows_portable/ComfyUI/custom_nodes');
+    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const customNodesRoot = config.local_custom_nodes_path
+        ? path.join(config.local_custom_nodes_path)
+        : getComfyPath(ENGINE_ROOT, 'custom_nodes');
     if (!(await fs.pathExists(customNodesRoot))) return false;
 
     const nodes = await fs.readdir(customNodesRoot);
@@ -273,13 +277,19 @@ async function resolveComfyPath(dep, customRoot, config) {
             localPath = modelsDir;
         }
     } else {
-        let baseDir = config.local_models_path || 'engine/ComfyUI_windows_portable/ComfyUI/models';
+        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+        let baseDir;
         if (isCustomNode) {
-            baseDir = config.local_custom_nodes_path || 'engine/ComfyUI_windows_portable/ComfyUI/custom_nodes';
+            baseDir = config.local_custom_nodes_path
+                ? config.local_custom_nodes_path
+                : getComfyPath(ENGINE_ROOT, 'custom_nodes');
         } else {
+            baseDir = config.local_models_path
+                ? config.local_models_path
+                : getComfyPath(ENGINE_ROOT, 'models');
             baseDir = path.join(baseDir, subDirPrefix);
         }
-        localPath = path.join(__dirname, '..', baseDir, dep.filename || '');
+        localPath = path.join(baseDir, dep.filename || '');
     }
 
     return { localPath, isCustomNode };
@@ -327,7 +337,7 @@ async function syncWorkflowStates(customRootOverride = undefined) {
 
         if (customRoot === undefined) {
             const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-            const extraConfigPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'extra_model_paths.yaml');
+            const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
             if (await fs.pathExists(extraConfigPath)) {
                 const content = await fs.readFile(extraConfigPath, 'utf8');
                 const match = content.match(/base_path:\s*(.*)/i);
@@ -360,7 +370,7 @@ async function syncWorkflowStates(customRootOverride = undefined) {
  */
 async function getCustomRoot() {
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const extraConfigPath = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'extra_model_paths.yaml');
+    const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
     if (await fs.pathExists(extraConfigPath)) {
         const content = await fs.readFile(extraConfigPath, 'utf8');
         // Match both formats: "base_path: value" and "base_path: value" (quoted or unquoted)
@@ -480,8 +490,8 @@ async function getUniversalWorkflowDepsTotalSize(missingDepIds) {
  */
 async function cleanComfyUITempFiles() {
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const inputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'input');
-    const outputDir = path.join(ENGINE_ROOT, 'ComfyUI_windows_portable', 'ComfyUI', 'output');
+    const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+    const outputDir = getComfyPath(ENGINE_ROOT, 'output');
     for (const dir of [inputDir, outputDir]) {
         if (await fs.pathExists(dir)) {
             await fs.emptyDir(dir);
