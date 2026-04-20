@@ -384,8 +384,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
                 });
 
-                // Get container width (grid.clientWidth already excludes padding)
-                const containerWidth = grid.clientWidth;
+                // Get container width (grid.clientWidth includes padding, so subtract it)
+                const gridStyle = getComputedStyle(grid);
+                const paddingX = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
+                const containerWidth = grid.clientWidth - paddingX;
 
                 // Separate generating groups from normal groups
                 const generatingGroups = display.filter(g => g.isGenerating);

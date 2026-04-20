@@ -64,7 +64,9 @@ export function buildJustifiedRows(items, containerWidth, targetRowHeight, gap) 
 
         // Non-last rows: scale to fill containerWidth exactly
         const availWidth = containerWidth - gapCount * gap;
-        const scale = availWidth / rowWidth;
+        // rowWidth includes gaps, so we must subtract them to get the pure items width sum
+        const itemsWidthSum = rowWidth - gapCount * gap;
+        const scale = availWidth / itemsWidthSum;
         const scaledRowHeight = Math.round(targetRowHeight * scale);
 
         // Compute widths and ensure they sum to exactly fill container
