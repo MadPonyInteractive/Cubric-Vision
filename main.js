@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
@@ -306,6 +306,20 @@ app.on('ready', () => {
     } else {
       // Linux: use xdotool if available, silent fail if not installed
       execFile('xdotool', ['mousemove', '--', String(px), String(py)], () => {});
+    }
+  });
+
+  // Open external URL in default browser
+  ipcMain.handle('open-external', async (_evt, url) => {
+    try {
+      if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+        return { ok: false, error: 'Invalid URL' };
+      }
+      await shell.openExternal(url);
+      return { ok: true };
+    } catch (err) {
+      logger.error('system', 'open-external error', err);
+      return { ok: false, error: err.message };
     }
   });
 

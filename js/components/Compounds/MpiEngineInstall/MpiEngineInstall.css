@@ -146,6 +146,26 @@
     text-align: left;
 }
 
+/* ── Docs link ───────────────────────────────────────────────────────────── */
+.mpi-engine-install__docs-link {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    text-align: center;
+}
+
+.mpi-engine-install__docs-link a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 500;
+}
+
+.mpi-engine-install__docs-link a:hover {
+    opacity: 0.85;
+}
+
 /* ── Error message ───────────────────────────────────────────────────────── */
 .mpi-engine-install__error-message {
     margin: 0;

@@ -76,6 +76,11 @@ export const MpiEngineInstall = ComponentFactory.create({
                         Your models are safe — only the ComfyUI engine is being updated.
                     </p>
 
+                    <p class="mpi-engine-install__docs-link">
+                        While you wait, learn more in the
+                        <a href="https://docs.cubric.studio" data-ref="docsLink" target="_blank" rel="noopener noreferrer">documentation</a>.
+                    </p>
+
                     <div class="mpi-engine-install__button-group">
                         <div data-ref="pauseButtonMount"></div>
                         <div data-ref="resumeButtonMount" style="display: none;"></div>
@@ -210,6 +215,23 @@ export const MpiEngineInstall = ComponentFactory.create({
                 _setError(`Failed to start installation: ${err.message}`);
             }
         });
+
+        // ── Docs link (opens in default browser via Electron shell) ───────────────
+        const docsLink = qs('[data-ref="docsLink"]', el);
+        if (docsLink) {
+            docsLink.addEventListener('click', (evt) => {
+                evt.preventDefault();
+                const url = docsLink.href;
+                if (ipcRenderer) {
+                    ipcRenderer.invoke('open-external', url).catch(err => {
+                        clientLogger.error('MpiEngineInstall', 'open-external failed, falling back to window.open:', err);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    });
+                } else {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                }
+            });
+        }
 
         // ── Mount retry button ────────────────────────────────────────────────────
         _retryButtonInst = MpiButton.mount(retryButtonMount, {
