@@ -124,8 +124,6 @@
 .mpi-gallery-grid__row-wrap {
     /* wrapper per card within a row — width set by JS */
     flex-shrink: 0;
-    min-width: 0;
-    /* ensure card fills wrapper exactly */
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
