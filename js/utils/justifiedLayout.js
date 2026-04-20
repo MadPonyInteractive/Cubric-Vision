@@ -51,14 +51,31 @@ export function buildJustifiedRows(items, containerWidth, targetRowHeight, gap) 
         const isLastRow = isLast || rowIndex === rows.length - 1;
 
         if (isLastRow) {
-            // Last row: no scaling, natural sizes at targetRowHeight
+            // Last row: scale to fill container like other rows (no gap on right)
+            const availWidth = containerWidth - gapCount * gap;
+            const scale = availWidth / rowWidth;
+            const scaledRowHeight = Math.round(targetRowHeight * scale);
+
+            // Compute widths and ensure they sum to exactly fill container
+            const widths = rowItems.map(({ id, aspectRatio }) => ({
+                id,
+                width: Math.round(targetRowHeight * scale * aspectRatio),
+            }));
+
+            // Distribute rounding error to last card to ensure perfect fit
+            const totalWidth = widths.reduce((sum, w) => sum + w.width, 0);
+            const error = availWidth - totalWidth;
+            if (error !== 0 && widths.length > 0) {
+                widths[widths.length - 1].width += error;
+            }
+
             return {
-                items: rowItems.map(({ id, aspectRatio }) => ({
+                items: widths.map(({ id, width }) => ({
                     id,
-                    width: Math.round(targetRowHeight * aspectRatio),
-                    height: Math.round(targetRowHeight),
+                    width,
+                    height: scaledRowHeight,
                 })),
-                rowHeight: targetRowHeight,
+                rowHeight: scaledRowHeight,
             };
         }
 
