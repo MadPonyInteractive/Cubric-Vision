@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { on } from '../../../utils/dom.js';
 import { ICONS } from '../../../utils/icons.js';
-import { updateProject } from '../../../managers/projectManager.js';
+import { updateProject } from '../../../services/projectService.js';
 import { state } from '../../../state.js';
 
 /**

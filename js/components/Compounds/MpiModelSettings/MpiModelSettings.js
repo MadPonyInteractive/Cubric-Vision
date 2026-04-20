@@ -39,7 +39,7 @@ import {
 } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { DEPS } from '../../../data/modelConstants/dependencies.js';
-import { saveProjectSettings } from '../../../managers/projectManager.js';
+import { saveProjectSettings } from '../../../services/projectService.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 

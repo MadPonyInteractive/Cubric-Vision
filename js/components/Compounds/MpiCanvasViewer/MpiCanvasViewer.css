@@ -31,7 +31,7 @@
 
 .mpi-canvas-viewer__spinner--visible {
     opacity: 1;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 /* ── Crop/mask action bar mount point ──────────────────────────────────── */

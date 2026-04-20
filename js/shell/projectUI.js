@@ -4,7 +4,7 @@
  * The creation dialog uses the MpiNewProject compound component.
  */
 
-import { listProjects, createProject, deleteProject, openProject } from '../managers/projectManager.js';
+import { listProjects, createProject, deleteProject, openProject } from '../services/projectService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';

@@ -14,7 +14,7 @@
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { state } from '../../../state.js';
 import { getModelSettings, setModelSettings } from '../../../data/projectModel.js';
-import { saveProjectSettings } from '../../../managers/projectManager.js';
+import { saveProjectSettings } from '../../../services/projectService.js';
 
 /** @type {Record<string, ControlDef>} */
 export const PROMPT_BOX_CONTROLS = {

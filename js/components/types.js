@@ -593,27 +593,6 @@
  */
 
 /**
- * @typedef {Object} MpiGroupCardProps (Compound — js/components/Compounds/MpiGroupCard)
- * @property {import('./data/projectModel.js').ItemGroup} group - The item group to display
- * @property {boolean} [selectionMode=false] - When true, clicks toggle selection instead of opening
- * @property {boolean} [selected=false]      - Whether this card is currently selected
- * @property {boolean} [favourite=false]    - Whether this group is marked as a favourite
- *
- * Instance methods (on instance.el):
- *   setGenerating(previewUrl)  — switch to generating state with optional latent preview
- *   updatePreview(previewUrl)  — update latent preview image mid-generation
- *   setDone(group)             — generation complete, update group and return to normal state
- *   setSelected(bool)          — toggle selection highlight externally
- *   setSelectionMode(bool)     — switch between open-on-click and select-on-click
- *   setFavourite(bool)         — set favourite state externally without emitting
- *
- * Emits:
- *   'open'   { group }             — card clicked in normal mode
- *   'select' { group, selected }   — checkbox toggled or card clicked in selection mode
- *   'favourite' { group, favourite } — heart button toggled; group.favourite is updated
- */
-
-/**
  * @typedef {Object} MpiSelectionBarProps (Compound — js/components/Compounds/MpiSelectionBar)
  * @property {number} [count=0] - Initial selected item count
  *
@@ -634,6 +613,10 @@
  * Instance methods (on instance.el):
  *   setGroups(groups)                 — replace all groups and re-render; detects isGenerating flag
  *   updatePreview(tempId, previewUrl) — push latent preview to a generating card during generation
+ *   removeCard(groupId)               — remove a single card by ID without full re-render
+ *   setSelectionMode(val)             — toggle selection mode on UI
+ *   setGeneratingCard(wrapper, w, h)  — mount an external generating card in the grid's top slot
+ *   clearGeneratingCard()             — remove the external generating card
  *
  * Emits:
  *   'open-group'  { group }       — user clicked a card (navigate to group history)

@@ -169,7 +169,7 @@ export const StatusBar = {
          * Mark the job complete. Flashes the fill, fades it out, fires a toast.
          * @param {string} [toastMessage]  Toast text. Defaults to 'Done'.
          */
-        complete(toastMessage = 'Done') {
+        complete(toastMessage = 'Done', silent = false) {
             if (!_isProgress) return;
             _isProgress = false;
 
@@ -188,15 +188,17 @@ export const StatusBar = {
                     _setText('Ready');
                 }, 600);
 
-                // Fire toast
-                const wrapper = document.createElement('div');
-                document.body.appendChild(wrapper);
-                const t = MpiToast.mount(wrapper, {
-                    message: toastMessage,
-                    variant: 'success',
-                    duration: 3000
-                });
-                t.on('close', () => { t.destroy(); wrapper.remove(); });
+                if (!silent) {
+                    // Fire toast
+                    const wrapper = document.createElement('div');
+                    document.body.appendChild(wrapper);
+                    const t = MpiToast.mount(wrapper, {
+                        message: toastMessage,
+                        variant: 'success',
+                        duration: 3000
+                    });
+                    t.on('close', () => { t.destroy(); wrapper.remove(); });
+                }
 
             }, 200);
         },
@@ -234,7 +236,7 @@ export const StatusBar = {
             if (tool === 'groupHistory') StatusBar.progress.cancel();
         });
         Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.complete('Done!');
+            if (tool === 'groupHistory') StatusBar.progress.complete('Done!', true);
         });
     },
 };

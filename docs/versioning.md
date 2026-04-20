@@ -209,7 +209,7 @@ If `SCHEMA_VERSION` must be bumped (because `project.json` structure changes):
 
 4. **Run the version-bump skill** with "schema version changing? yes" — it will create a migration stub for you (you fill in the logic).
 
-On project open, `openProject()` in `projectManager.js` runs all pending migrations (e.g., if project has `schemaVersion: 1` and app has `SCHEMA_VERSION: 2`, it runs `migrateV1toV2`). After migration completes, reconciliation and hydration proceed normally.
+On project open, `openProject()` in `projectService.js` (or related initialization logic) runs all pending migrations (e.g., if project has `schemaVersion: 1` and app has `SCHEMA_VERSION: 2`, it runs `migrateV1toV2`). After migration completes, reconciliation and hydration proceed normally.
 
 ---
 

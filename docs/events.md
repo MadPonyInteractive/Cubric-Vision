@@ -7,6 +7,7 @@ Cross-component and cross-layer communication. Not just UI — events span the e
 - `Events.on(event, handler)`: Subscribe. Returns an unsubscribe function — **always store and call it on cleanup.**
 - `Events.emit(event, data)`: Broadcast an event.
 - `Events.once(event, handler)`: One-time subscription.
+- `Events.onState(key, handler)`: Subscribe to a specific state key. Filters `state:changed` events internally. Returns unsubscribe. **Preferred over manual key filtering.**
 - `Events.channel(namespace)`: Returns a namespaced bus (`bus.emit('subevent')` → `'namespace:subevent'` globally).
 
 ## Key Rule
@@ -23,6 +24,9 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `ui:close-all-popups` | Signal to close all floating UIs |
 | `state:changed` | Global reactive state mutation (auto-fired by state Proxy) |
 | `project:changed` | User switched active project |
+| `project:group-added` | Group added to current project `{ group }` |
+| `project:group-updated` | Group updated in current project `{ group }` |
+| `project:group-removed` | Group removed from current project `{ groupId }` |
 | `comfy:starting` | ComfyUI engine is starting |
 | `comfy:ready` | ComfyUI engine is ready |
 | `comfy:error` | ComfyUI engine error |
@@ -39,6 +43,9 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `download:uninstalled` | Model was uninstalled |
 | `download:installing` | Custom node install phase started |
 | `comfy:needs-restart` | ComfyUI auto-restart needed after custom node install |
+| `media:imported` | File imported via PromptBox drop `{ url, filename, mediaType }` |
+| `workspace:set-operation` | Radial menu operation change `{ operation }` |
+| `workspace:inject-prompts` | Reuse button injects prompt into PromptBox `{ positive, negative }` |
 
 ## Cleanup Pattern (mandatory)
 
@@ -52,5 +59,5 @@ setup: (el, props, emit) => {
 ## State vs Events
 
 - `state:changed` is auto-fired by the state Proxy. **Never manually call `Events.emit('state:changed', ...)`** — it fires twice if you do.
-- `project:changed` is emitted via `Events.emit('project:changed', { project })` in `projectManager.js openProject()`. Use `Events.on('project:changed', ...)` to subscribe.
+- `project:changed` is emitted via `Events.emit('project:changed', { project })` in `projectService.js openProject()` (or related initialization). Use `Events.on('project:changed', ...)` to subscribe.
 - Other events (`comfy:*`, `tool:*`, `nav:*`) are emitted by their respective services/managers.

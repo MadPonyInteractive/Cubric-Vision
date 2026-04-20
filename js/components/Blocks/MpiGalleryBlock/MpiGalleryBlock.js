@@ -21,65 +21,23 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { ce } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
+import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { resolveActiveModel } from '../../../utils/modelHelpers.js';
+import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { runCommand } from '../../../services/commandExecutor.js';
-import { StatusBar } from '../../../shell/statusBar.js';
+import { startGeneration } from '../../../services/generationService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { addGroup, updateGroup, removeGroup, persistGroups } from '../../../services/projectService.js';
 import {
     createImageItem,
     createVideoItem,
     createItemGroup,
     appendToHistory,
-    addGroupToProject,
     getSelectedItem,
-    removeGroupFromProject,
-    updateGroupInProject,
+    removeHistoryEntry,
 } from '../../../data/projectModel.js';
-
-/**
- * Hydrate gallery groups: convert UUID strings in history to full item objects.
- * Fetches meta files for any UUIDs found in group histories.
- */
-async function _hydrateGalleryGroups(groups, folderPath) {
-    if (!folderPath) return groups;
-
-    const hydratedGroups = [];
-    for (const group of groups) {
-        const hydratedHistory = [];
-        let needsHydration = false;
-
-        for (const item of (group.history || [])) {
-            if (typeof item === 'string') {
-                // It's a UUID, fetch the meta file
-                needsHydration = true;
-                try {
-                    const url = `/load-meta?id=${encodeURIComponent(item)}&folderPath=${encodeURIComponent(folderPath)}`;
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const meta = await res.json();
-                        hydratedHistory.push(meta);
-                    } else {
-                        hydratedHistory.push(item); // Keep UUID if fetch fails
-                    }
-                } catch {
-                    hydratedHistory.push(item);
-                }
-            } else {
-                // Already a full object
-                hydratedHistory.push(item);
-            }
-        }
-
-        if (needsHydration) {
-            hydratedGroups.push({ ...group, history: hydratedHistory });
-        } else {
-            hydratedGroups.push(group);
-        }
-    }
-    return hydratedGroups;
-}
 
 export const MpiGalleryBlock = ComponentFactory.create({
     name: 'MpiGalleryBlock',
@@ -92,41 +50,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const _unsubs = [];
 
         let groups = state.currentProject?.itemGroups || [];
-        const folderPath = state.currentProject?.folderPath;
-
-        // Hydrate any UUID strings to full items (async, will update grid when done)
-        if (folderPath && groups.some(g => g.history?.some(item => typeof item === 'string'))) {
-            _hydrateGalleryGroups(groups, folderPath).then(hydratedGroups => {
-                groups = hydratedGroups;
-                grid.el.setGroups(groups);
-            }).catch(() => {
-                // Hydration failed, continue with UUIDs
-            });
-        }
 
         const grid   = MpiGalleryGrid.mount(el, { groups });
 
         // ── Selection bar (mounted in grid's footer slot) ────────────────────────
         const selectionSlot = grid.el.querySelector('.mpi-gallery-grid__selectionbar-slot');
         const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
-
-        // ── Watch for project changes and re-hydrate ────────────────────────────
-        _unsubs.push(Events.on('state:changed', ({ key, value }) => {
-            if (key === 'currentProject' && value?.folderPath) {
-                const newGroups = value.itemGroups || [];
-                const needsHydration = newGroups.some(g => g.history?.some(item => typeof item === 'string'));
-                if (needsHydration) {
-                    _hydrateGalleryGroups(newGroups, value.folderPath).then(hydratedGroups => {
-                        grid.el.setGroups(hydratedGroups);
-                    }).catch(() => {
-                        // Hydration failed, show UUIDs
-                        grid.el.setGroups(newGroups);
-                    });
-                } else {
-                    grid.el.setGroups(newGroups);
-                }
-            }
-        }));
 
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
@@ -141,50 +70,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
 
         // ── Persist helper ──────────────────────────────────────────────────────
-        function _persistGroups() {
-            if (!state.currentProject) return;
-
-            // Serialize history as UUID strings only (per Plan B: history in project.json contains only IDs)
-            // In-memory state.currentProject keeps full objects for components; this function serializes for persistence
-            const toSave = {
-                ...state.currentProject,
-                itemGroups: state.currentProject.itemGroups.map(g => ({
-                    id: g.id,
-                    type: g.type,
-                    name: g.name,
-                    createdAt: g.createdAt,
-                    selectedIndex: g.selectedIndex,
-                    open: g.open,
-                    favourite: g.favourite,
-                    history: g.history.map(item => (typeof item === 'string' ? item : item.id)),
-                })),
-            };
-
-            fetch('/update-project', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
-                    folderPath: state.currentProject.folderPath,
-                    updates:    { itemGroups: toSave.itemGroups },
-                }),
-            }).catch(err => clientLogger.warn('MpiGalleryBlock', 'update-project failed:', err));
-        }
+        // (removed — now in ProjectService)
 
         // ── GC ──────────────────────────────────────────────────────────────────
         grid.on('gc-group', ({ group }) => {
-            if (!state.currentProject) return;
-            state.currentProject = updateGroupInProject(state.currentProject, group);
-            _persistGroups();
+            updateGroup(group);
         });
         grid.on('gc-remove', ({ groupId }) => {
-            if (!state.currentProject) return;
-            state.currentProject = removeGroupFromProject(state.currentProject, groupId);
-            _persistGroups();
+            removeGroup(groupId);
         });
         grid.on('favourite', ({ group }) => {
-            if (!state.currentProject) return;
-            state.currentProject = updateGroupInProject(state.currentProject, group);
-            _persistGroups();
+            updateGroup(group);
         });
 
         // ── Selection mode ──────────────────────────────────────────────────────
@@ -238,28 +134,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const selected = Array.from(_selectedIds)
                 .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
                 .filter(Boolean);
-            const project = state.currentProject;
-            if (!project) return;
-            for (const group of selected) {
-                const item = getSelectedItem(group);
-                if (!item?.filePath) continue;
-                let filename = null;
-                try {
-                    const match = item.filePath.match(/[?&]path=([^&]+)/);
-                    if (match) {
-                        const absPath = decodeURIComponent(match[1]);
-                        filename = absPath.replace(/\\/g, '/').split('/').pop();
-                    }
-                } catch (_) { continue; }
-                if (!filename) continue;
-                const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }
+            const items = selected.flatMap(g => {
+                const sel = getSelectedItem(g);
+                return sel ? [sel] : [];
+            });
+            downloadMediaFiles(state.currentProject, items);
         });
 
         selectionBar.on('delete', () => {
@@ -281,42 +160,22 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (missingIdx === -1) return;
 
             if (g.history.length <= 1) {
+                removeGroup(g.id);
                 grid.el.removeCard(g.id);
             } else {
                 const pruned = removeHistoryEntry(g, missingIdx);
-                if (state.currentProject) {
-                    state.currentProject = updateGroupInProject(state.currentProject, pruned);
-                }
+                updateGroup(pruned);
             }
         });
 
-        // Generating card state
-        let _generatingCardId = null;
 
         // ── Download ────────────────────────────────────────────────────────────
         grid.on('download', ({ groups: g }) => {
-            const project = state.currentProject;
-            if (!project) return;
-            for (const group of g) {
-                const item = getSelectedItem(group);
-                if (!item?.filePath) continue;
-                let filename = null;
-                try {
-                    const match = item.filePath.match(/[?&]path=([^&]+)/);
-                    if (match) {
-                        const absPath = decodeURIComponent(match[1]);
-                        filename = absPath.replace(/\\/g, '/').split('/').pop();
-                    }
-                } catch (_) { continue; }
-                if (!filename) continue;
-                const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }
+            const items = g.flatMap(group => {
+                const sel = getSelectedItem(group);
+                return sel ? [sel] : [];
+            });
+            downloadMediaFiles(state.currentProject, items);
         });
 
         // ── Delete ──────────────────────────────────────────────────────────────
@@ -338,27 +197,21 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 for (const item of group.history) {
                     const fp = item.filePath;
                     if (!fp) continue;
-                    let filename = null;
-                    if (fp.includes('project-file')) {
-                        try {
-                            const match = fp.match(/[?&]path=([^&]+)/);
-                            if (match) {
-                                const absPath = decodeURIComponent(match[1]);
-                                filename = absPath.replace(/\\/g, '/').split('/').pop();
-                            }
-                        } catch (_) { /* skip */ }
-                    }
+                    const filename = extractFilenameFromPath(fp);
                     if (!filename) continue;
-                    fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
+                    // Delete media file (including itemId for sidecar cleanup in backend)
+                    fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`, {
                         method: 'DELETE',
                     }).catch(err => clientLogger.warn('MpiGalleryBlock', 'delete file failed:', err));
+                    // Explicitly delete sidecar as backup
+                    const sidecar = `${item.id}.json`;
+                    fetch(`/project-media/${project.id}/${encodeURIComponent(sidecar)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
+                        method: 'DELETE',
+                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'delete sidecar failed:', err));
                 }
             }
 
-            let updated = project;
-            for (const group of g) updated = removeGroupFromProject(updated, group.id);
-            state.currentProject = updated;
-            _persistGroups();
+            for (const group of g) removeGroup(group.id);
             for (const group of g) {
                 _selectedIds.delete(group.id);
                 grid.el.removeCard(group.id);
@@ -378,22 +231,89 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
 
         // ── PromptBox setup via PromptBoxService ────────────────────────────────
-        const installedImageModels = getModelsByType('image').filter(m => m.installed !== false);
-
-        let activeModelId = state.s_selectedModelId
-            ? (installedImageModels.find(m => m.id === state.s_selectedModelId)?.id ?? installedImageModels[0]?.id ?? null)
-            : (installedImageModels[0]?.id ?? null);
-
-        let activeModel = activeModelId
-            ? (installedImageModels.find(m => m.id === activeModelId) || installedImageModels[0] || null)
-            : (installedImageModels[0] || null);
-
+        const { model: activeModelInit, modelId: activeModelIdInit, installedModels: installedImageModels } = resolveActiveModel('image');
+        let activeModelId = activeModelIdInit;
+        let activeModel = activeModelInit;
         if (activeModelId) state.s_selectedModelId = activeModelId;
 
         let activeOperation = 't2i';
         let imageCount      = 0;
         let videoCount      = 0;
-        let _activeExec     = null;
+        let _activeGen      = null;
+
+        function _wirePromptBox(pb) {
+            if (!pb) return;
+
+            pb.on('model-change', ({ model }) => {
+                state.s_selectedModelId = model.id;
+                activeModelId   = model.id;
+                activeModel     = model;
+                activeOperation = model.supportedOps[0];
+            });
+
+            pb.on('operation-change', ({ operation }) => {
+                activeOperation = operation;
+            });
+
+            pb.on('settings', () => {
+                _settingsOverlay.el.open({ modelId: activeModel.id });
+            });
+
+            pb.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
+                imageCount = ic;
+                videoCount = vc;
+                PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
+                refreshRadial({ imageCount, videoCount });
+            });
+
+            pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
+                if (!activeModel) return;
+
+                const tempId   = crypto.randomUUID();
+                const cardType = activeModel.mediaType;
+                const currentGroups = state.currentProject?.itemGroups || [];
+
+                const placeholderGroup = {
+                    id: tempId,
+                    type: cardType,
+                    name: 'Generating...',
+                    history: [],
+                    selectedIndex: 0,
+                    width: injectionParams.Width || 1024,
+                    height: injectionParams.Height || 1024,
+                    isGenerating: true,
+                };
+
+                grid.el.setGroups([placeholderGroup, ...currentGroups]);
+
+                _activeGen = startGeneration(
+                    { operation, model: activeModel, positive, negative, mediaItems, injectionParams },
+                    {
+                        onPreview: (url) => grid.el.updatePreview(tempId, url),
+                        onComplete: ({ item, group }) => {
+                            _activeGen = null;
+                            grid.el.removeCard(tempId);
+                            grid.el.setGroups([group, ...currentGroups]);
+                        },
+                        onCancel: () => {
+                            _activeGen = null;
+                            grid.el.removeCard(tempId);
+                            grid.el.setGroups(currentGroups);
+                        },
+                        onError: () => {
+                            _activeGen = null;
+                            grid.el.removeCard(tempId);
+                            grid.el.setGroups(currentGroups);
+                        }
+                    }
+                );
+            });
+
+            pb.on('cancel', () => {
+                _activeGen?.cancel();
+                _activeGen = null;
+            });
+        }
 
         // Model settings overlay
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
@@ -411,28 +331,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         if (promptBox) {
             // Ensure PromptBox is visible when block is created
             PromptBoxService.show();
-
-            promptBox.on('model-change', ({ model }) => {
-                state.s_selectedModelId = model.id;
-                activeModelId   = model.id;
-                activeModel     = model;
-                activeOperation = model.supportedOps[0];
-            });
-
-            promptBox.on('operation-change', ({ operation }) => {
-                activeOperation = operation;
-            });
-
-            promptBox.on('settings', () => {
-                _settingsOverlay.el.open({ modelId: activeModel.id });
-            });
-
-            promptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
-                imageCount = ic;
-                videoCount = vc;
-                PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
-                refreshRadial({ imageCount, videoCount });
-            });
+            _wirePromptBox(promptBox);
 
             // ── media:imported listener (declared outer-scope so both observers can clean it up)
             let _unsubMediaImported = null;
@@ -449,171 +348,34 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     ? filename.replace(/\.[^.]+$/, '')
                     : (isVideo ? 'Imported Video' : 'Imported Image');
 
+                const itemId = filename.replace(/\.[^.]+$/, '');
                 const item = isVideo
-                    ? createVideoItem({ filePath: url, uploaded: true, operation: 'imported' })
-                    : createImageItem({ filePath: url, uploaded: true, operation: 'imported' });
+                    ? createVideoItem({ id: itemId, filePath: url, uploaded: true, operation: 'imported' })
+                    : createImageItem({ id: itemId, filePath: url, uploaded: true, operation: 'imported' });
 
                 const group = createItemGroup(mediaType, { name: displayName });
                 const finalGroup = appendToHistory(group, item);
 
                 const currentGroups = state.currentProject?.itemGroups || [];
-                state.currentProject = addGroupToProject(state.currentProject, finalGroup);
-                _persistGroups();
+                addGroup(finalGroup);
 
                 // Prepend the new group to the visible grid and re-render.
-                // Note: currentGroups is captured BEFORE addGroupToProject so it does
-                // NOT contain finalGroup — only [old..., old] which is correct.
                 grid.el.setGroups([finalGroup, ...currentGroups]);
             });
 
             // Clean up the Events subscription when this block leaves the DOM.
             // NOTE: MutationObserver on document.body does NOT fire for
             // _toolContainer.innerHTML = '' because _toolContainer is not a direct
-            // child of document.body (grandchild). Using state:changed as the
+            // child of document.body (grandchild). Using onState as the
             // reliable cleanup trigger instead.
             _unsubs.push(_unsubMediaImported || (() => {}));
-            _unsubs.push(Events.on('state:changed', ({ key, value }) => {
-                if (key === 'currentPage' && value !== PAGE_GALLERY) {
+            _unsubs.push(Events.onState('currentPage', (value) => {
+                if (value !== PAGE_GALLERY) {
                     _unsubs.forEach(fn => fn?.());
                 }
             }));
-
-            promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
-                if (!activeModel) return;
-
-                const generationStartTime = Date.now();
-                const tempId   = crypto.randomUUID();
-                const cardType = activeModel.mediaType;
-
-                // Capture current groups BEFORE creating placeholder
-                const currentGroups = state.currentProject?.itemGroups || [];
-
-                // Create placeholder group with isGenerating flag
-                // Use actual generation dimensions from ComfyUI injection
-                // Grid scales these proportionally based on _cardWidth (slider)
-                const placeholderGroup = {
-                    id: tempId,
-                    type: cardType,
-                    name: 'Generating...',
-                    history: [],
-                    selectedIndex: 0,
-                    width: injectionParams.Width || 1024,
-                    height: injectionParams.Height || 1024,
-                    isGenerating: true,  // ← FLAG for grid to detect
-                };
-
-                // Tell grid: display this group + all current groups
-                grid.el.setGroups([placeholderGroup, ...currentGroups]);
-
-                // Track generating card state
-                _generatingCardId = tempId;
-
-                Events.emit('tool:running', { tool: 'groupHistory', type: operation });
-
-                // ... rest of generation logic (unchanged)
-                _activeExec = runCommand({
-                    operation,
-                    modelId:  activeModel.id,
-                    positive,
-                    negative,
-                    mediaItems,
-                    injectionParams,
-                });
-                const exec = _activeExec;
-
-                exec.onPreview  = (url) => grid.el.updatePreview(tempId, url);
-                exec.onProgress = (value) => StatusBar.progress.update(value);
-
-                exec.onComplete = async (urls) => {
-                    _activeExec = null;
-                    PromptBoxService.component?.setGenerating(false);
-
-                    if (!urls.length) {
-                        StatusBar.progress.cancel();
-                        grid.el.setGroups(currentGroups);  // Remove placeholder
-                        return;
-                    }
-
-                    const itemId = crypto.randomUUID();
-                    let filePath    = urls[0];
-                    let displayName = operation;
-
-                    if (state.currentProject?.folderPath) {
-                        try {
-                            const elapsedMs = Date.now() - generationStartTime;
-                            const res = await fetch('/project/save-generation', {
-                                method:  'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body:    JSON.stringify({
-                                    folderPath:   state.currentProject.folderPath,
-                                    comfyViewUrl: urls[0],
-                                    itemId,
-                                    operation,
-                                    meta: {
-                                        prompt:         positive,
-                                        negativePrompt: negative,
-                                        modelId:        activeModel.id,
-                                    },
-                                    generationMs: elapsedMs,
-                                    pixelDimensions: { w: 0, h: 0 },
-                                }),
-                            });
-                            if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
-                            const data = await res.json();
-                            if (data.success) {
-                                filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                                displayName = data.filename.replace(/\.[^.]+$/, '');
-                            }
-                        } catch (err) {
-                            clientLogger.warn('MpiGalleryBlock', 'save-generation failed, using comfy URL:', err);
-                        }
-                    }
-
-                    const cardName = displayName.length > 28
-                        ? displayName.slice(0, 27) + '…'
-                        : displayName;
-
-                    // Create full item object for in-memory use (displayed immediately in grid)
-                    // Full items stay in memory; _persistGroups() converts to UUIDs when saving to disk
-                    const item = createImageItem({
-                        id:             itemId,
-                        filePath,
-                        modelId:        activeModel.id,
-                        operation,
-                        prompt:         positive,
-                        negativePrompt: negative,
-                    });
-
-                    // Keep full item in memory (UUID conversion happens in _persistGroups)
-                    let group = createItemGroup(cardType, { name: cardName });
-                    group = { ...group, history: [...group.history, item], selectedIndex: group.history.length };
-
-                    if (state.currentProject) {
-                        state.currentProject = addGroupToProject(state.currentProject, group);
-                        _persistGroups();
-                    }
-
-                    // For UI display, show the full item (keep in-memory state consistent)
-                    const displayGroup = { ...group, history: [item], selectedIndex: 0 };
-                    StatusBar.progress.complete('Image generated!');
-                    grid.el.setGroups([displayGroup, ...currentGroups]);  // Replace placeholder with final
-                };
-
-                exec.onError = (err) => {
-                    _activeExec = null;
-                    clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
-                    PromptBoxService.component?.setGenerating(false);
-                    StatusBar.progress.cancel();
-                    grid.el.setGroups(currentGroups);  // Remove placeholder
-                };
-            });
-
-            promptBox.on('cancel', () => {
-                _activeExec?.cancel();
-                _activeExec = null;
-                StatusBar.progress.cancel();
-            });
         }
+
 
         // ── Selection mode: show/hide shell PromptBox ───────────────────────────
         grid.on('selection-start', () => PromptBoxService.hide());
@@ -628,8 +390,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
         if (installedImageModels.length === 0) Events.emit('models:open');
 
-        _unsubs.push(Events.on('state:changed', ({ key }) => {
-            if (key !== 's_installedModelIds') return;
+        _unsubs.push(Events.onState('s_installedModelIds', () => {
             const hasImageModels = getModelsByType('image').some(m => m.installed === true);
             if (!hasImageModels) Events.emit('models:open');
         }));
@@ -652,160 +413,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includeNegative: true,
                 });
 
-                if (newPromptBox) {
-                    // Wire the essential event listeners that were skipped during initial setup
-                    newPromptBox.on('model-change', ({ model }) => {
-                        state.s_selectedModelId = model.id;
-                        activeModelId = model.id;
-                        activeModel = model;
-                        activeOperation = model.supportedOps[0];
-                    });
-
-                    newPromptBox.on('operation-change', ({ operation }) => {
-                        activeOperation = operation;
-                    });
-
-                    newPromptBox.on('settings', () => {
-                        _settingsOverlay.el.open({ modelId: activeModel.id });
-                    });
-
-                    newPromptBox.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
-                        imageCount = ic;
-                        videoCount = vc;
-                        PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
-                        refreshRadial({ imageCount, videoCount });
-                    });
-
-                    // Wire the run handler — this is critical for generation to work
-                    newPromptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
-                        if (!activeModel) return;
-
-                        const generationStartTime = Date.now();
-                        const tempId   = crypto.randomUUID();
-                        const cardType = activeModel.mediaType;
-                        const currentGroups = state.currentProject?.itemGroups || [];
-
-                        const placeholderGroup = {
-                            id: tempId,
-                            type: cardType,
-                            name: 'Generating...',
-                            history: [],
-                            selectedIndex: 0,
-                            width: injectionParams.Width || 1024,
-                            height: injectionParams.Height || 1024,
-                            isGenerating: true,
-                        };
-
-                        grid.el.setGroups([placeholderGroup, ...currentGroups]);
-                        _generatingCardId = tempId;
-
-                        Events.emit('tool:running', { tool: 'groupHistory', type: operation });
-
-                        _activeExec = runCommand({
-                            operation,
-                            modelId:  activeModel.id,
-                            positive,
-                            negative,
-                            mediaItems,
-                            injectionParams,
-                        });
-                        const exec = _activeExec;
-
-                        exec.onPreview  = (url) => grid.el.updatePreview(tempId, url);
-                        exec.onProgress = (value) => StatusBar.progress.update(value);
-
-                        exec.onComplete = async (urls) => {
-                            _activeExec = null;
-                            PromptBoxService.component?.setGenerating(false);
-
-                            if (!urls.length) {
-                                StatusBar.progress.cancel();
-                                grid.el.setGroups(currentGroups);
-                                return;
-                            }
-
-                            const itemId = crypto.randomUUID();
-                            let filePath    = urls[0];
-                            let displayName = operation;
-
-                            if (state.currentProject?.folderPath) {
-                                try {
-                                    const elapsedMs = Date.now() - generationStartTime;
-                                    const res = await fetch('/project/save-generation', {
-                                        method:  'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body:    JSON.stringify({
-                                            folderPath:   state.currentProject.folderPath,
-                                            comfyViewUrl: urls[0],
-                                            itemId,
-                                            operation,
-                                            meta: {
-                                                prompt:         positive,
-                                                negativePrompt: negative,
-                                                modelId:        activeModel.id,
-                                            },
-                                            generationMs: elapsedMs,
-                                            pixelDimensions: { w: 0, h: 0 },
-                                        }),
-                                    });
-                                    if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
-                                    const data = await res.json();
-                                    if (data.success) {
-                                        filePath    = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                                        displayName = data.filename.replace(/\.[^.]+$/, '');
-                                    }
-                                } catch (err) {
-                                    clientLogger.warn('MpiGalleryBlock', 'save-generation failed, using comfy URL:', err);
-                                }
-                            }
-
-                            const cardName = displayName.length > 28
-                                ? displayName.slice(0, 27) + '…'
-                                : displayName;
-
-                            // Create full item object for in-memory use (displayed immediately in grid)
-                            // But only the itemId string will be persisted to project.json
-                            const item = createImageItem({
-                                id:             itemId,
-                                filePath,
-                                modelId:        activeModel.id,
-                                operation,
-                                prompt:         positive,
-                                negativePrompt: negative,
-                            });
-
-                            // Append only the itemId string to history for persistence
-                            // Components receive the full item from reconciliation on project load
-                            let group = createItemGroup(cardType, { name: cardName });
-                            group = { ...group, history: [...group.history, itemId], selectedIndex: group.history.length };
-
-                            if (state.currentProject) {
-                                state.currentProject = addGroupToProject(state.currentProject, group);
-                                _persistGroups();
-                            }
-
-                            // For UI display, show the full item (keep in-memory state consistent)
-                            const displayGroup = { ...group, history: [item], selectedIndex: 0 };
-                            StatusBar.progress.complete('Image generated!');
-                            grid.el.setGroups([displayGroup, ...currentGroups]);
-                        };
-
-                        exec.onError = (err) => {
-                            _activeExec = null;
-                            clientLogger.error('MpiGalleryBlock', 'Generation error:', err);
-                            PromptBoxService.component?.setGenerating(false);
-                            StatusBar.progress.cancel();
-                            grid.el.setGroups(currentGroups);
-                        };
-                    });
-
-                    newPromptBox.on('cancel', () => {
-                        _activeExec?.cancel();
-                        _activeExec = null;
-                        StatusBar.progress.cancel();
-                    });
-                }
-
+                _wirePromptBox(newPromptBox);
                 PromptBoxService.show();
             }
         }));

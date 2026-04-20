@@ -18,55 +18,18 @@ import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../../data/commandRegistry.js';
-import { runCommand } from '../../../services/commandExecutor.js';
-import { StatusBar } from '../../../shell/statusBar.js';
+import { startGeneration } from '../../../services/generationService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { resolveActiveModel } from '../../../utils/modelHelpers.js';
+import { updateGroup, persistGroups } from '../../../services/projectService.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
-    updateGroupInProject,
     removeHistoryEntry,
 } from '../../../data/projectModel.js';
 import { MpiModelsModal } from '../MpiModelsModal/MpiModelsModal.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
-
-function _resolveUrl(filePath) {
-    if (!filePath) return '';
-    const p = filePath;
-    if (p.startsWith('http') || p.startsWith('blob:') || p.startsWith('data:') || p.includes('project-file')) return p;
-    return `/project-file?path=${encodeURIComponent(p.replace(/\\/g, '/'))}`;
-}
-
-/**
- * Convert UUID strings in history to full item objects by fetching their meta files.
- * This handles the case where history is not yet hydrated when navigating to groupHistory.
- */
-async function _hydrateGroupHistory(group, folderPath) {
-    const needsHydration = group.history.some(item => typeof item === 'string');
-    if (!needsHydration || !folderPath) return group;
-
-    const hydratedHistory = [];
-    for (const item of group.history) {
-        if (typeof item === 'string') {
-            // It's a UUID, fetch the meta file
-            try {
-                const url = `/load-meta?id=${encodeURIComponent(item)}&folderPath=${encodeURIComponent(folderPath)}`;
-                const res = await fetch(url);
-                if (res.ok) {
-                    const meta = await res.json();
-                    hydratedHistory.push(meta);
-                } else {
-                    hydratedHistory.push(item); // Keep UUID if fetch fails
-                }
-            } catch {
-                hydratedHistory.push(item);
-            }
-        } else {
-            hydratedHistory.push(item);
-        }
-    }
-    return { ...group, history: hydratedHistory };
-}
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
@@ -99,17 +62,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Context helpers ──────────────────────────────────────────────────
 
         const isVideo = _group.type === 'video';
-        const installedModels = getModelsByType(isVideo ? 'video' : 'image')
-            .filter(m => m.installed !== false);
-
-        let activeModelId = state.s_selectedModelId
-            ? (installedModels.find(m => m.id === state.s_selectedModelId)?.id ?? installedModels[0]?.id ?? null)
-            : (installedModels[0]?.id ?? null);
-
-        let activeModel = activeModelId
-            ? (installedModels.find(m => m.id === activeModelId) || installedModels[0] || null)
-            : (installedModels[0] || null);
-
+        const { model: activeModelInit, modelId: activeModelIdInit, installedModels } = resolveActiveModel(isVideo ? 'video' : 'image');
+        let activeModelId = activeModelIdInit;
+        let activeModel = activeModelInit;
         if (activeModelId) state.s_selectedModelId = activeModelId;
 
         // groupHistory always has an input image/video available
@@ -155,28 +110,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         function _persistGroup() {
             if (!state.currentProject) return;
-            state.currentProject = updateGroupInProject(state.currentProject, _group);
+            updateGroup(_group);
             Events.emit('media:updated', { projectId: state.currentProject.id });
-
-            // Serialize history as UUID string arrays for project.json
-            // (in-memory _group.history stays as full objects)
-            const toSave = {
-                ...state.currentProject,
-                itemGroups: state.currentProject.itemGroups.map(g =>
-                    g.id === _group.id
-                        ? { ...g, history: g.history.map(item => item.id ?? item) }
-                        : { ...g, history: g.history.map(item => item.id ?? item) }
-                ),
-            };
-
-            fetch('/update-project', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    folderPath: state.currentProject.folderPath,
-                    updates: { itemGroups: toSave.itemGroups },
-                }),
-            }).catch(err => console.warn('[MpiGroupHistoryBlock] update-project failed:', err));
         }
 
         // ── Bottom bar state coordinator ──────────────────────────────────────
@@ -223,7 +158,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const selectionBar = MpiSelectionBar.mount(bottomSlot, { count: 0 });
 
         const canvasViewer = MpiCanvasViewer.mount(el.querySelector('#centre-slot'), {
-            initialImageUrl: _resolveUrl(_group.history[_currentIdx]?.filePath),
+            initialImageUrl: resolveMediaUrl(_group.history[_currentIdx]?.filePath),
             initialIdx: _currentIdx,
             barContainer: bottomSlot,
         });
@@ -235,18 +170,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // Load initial entry to ensure _currentItem is set (required for crop, mask, etc.)
         canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
-
-        // Hydrate history if needed (async, will update components when done)
-        if (_group.history.some(item => typeof item === 'string') && state.currentProject?.folderPath) {
-            _hydrateGroupHistory(_group, state.currentProject.folderPath).then(hydratedGroup => {
-                _group = hydratedGroup;
-                // Update components with hydrated data
-                historyList.el.setGroups(_group.history);
-                canvasViewer.el.loadEntry(_group.history[_currentIdx] || _group.history[0], _currentIdx);
-            }).catch(() => {
-                // Hydration failed, continue with UUIDs
-            });
-        }
 
         // ── PromptBox via PromptBoxService ────────────────────────────────────
 
@@ -309,129 +232,47 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null, injectionParams = {} }) {
             if (!activeModel) return;
 
-            const generationStartTime = Date.now();
-
-            Events.emit('tool:running', { tool: 'groupHistory', type: operation });
             canvasViewer.el.setGenerating(true);
 
-            // Always inject current selected history entry as input image
-            // unless user has dropped a replacement
+            // Always inject current selected history entry as input
             const currentItem = _group.history[_currentIdx];
             const hasDroppedImage = mediaItems.some(m => m.mediaType === 'image');
             const resolvedMedia = (!hasDroppedImage && currentItem?.filePath)
-                ? [{ url: _resolveUrl(currentItem.filePath), mediaType: 'image', source: 'history' }, ...mediaItems]
+                ? [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }, ...mediaItems]
                 : mediaItems;
 
-            _activeExec = runCommand({
-                operation,
-                modelId: activeModel.id,
-                positive,
-                negative,
-                mediaItems: resolvedMedia,
-                maskDataUrl,
-                injectionParams,
-            });
-            const exec = _activeExec;
-
-            exec.onPreview = async (url) => {
-                canvasViewer.el.setGenerating(false);
-                canvasViewer.el.isComparisonMode = false;
-                // Detect if this is a latent preview (blob URL) vs final result
-                const isPreview = url?.startsWith('blob:');
-                // Hide mask BEFORE loading preview (different dimensions cause misalignment)
-                if (isPreview) {
-                    canvasViewer.el.setMaskHidden(true);
-                }
-                try {
-                    await canvasViewer.el.loadEntry({ filePath: url }, _currentIdx);
-                } catch (_) { }
-            };
-
-            exec.onProgress = (value) => StatusBar.progress.update(value);
-
-            exec.onComplete = async (urls) => {
-                _activeExec = null;
-                PromptBoxService.component?.setGenerating(false);
-                canvasViewer.el.setGenerating(false);
-
-                if (!urls.length) {
-                    clientLogger.warn('MpiGroupHistoryBlock', 'Generation completed but no output returned.');
-                    Events.emit('tool:cancelled', { tool: 'groupHistory' });
-                    return;
-                }
-
-                // Generate UUID before save-generation — will be the item's stable ID
-                const itemId = crypto.randomUUID();
-
-                let filePath = urls[0];
-                let displayName = operation;
-
-                if (state.currentProject?.folderPath) {
-                    try {
-                        const elapsedMs = Date.now() - generationStartTime;
-                        const res = await fetch('/project/save-generation', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                folderPath: state.currentProject.folderPath,
-                                comfyViewUrl: urls[0],
-                                itemId,
-                                operation,
-                                meta: { prompt: positive, negativePrompt: negative, modelId: activeModel.id },
-                                generationMs: elapsedMs,
-                                pixelDimensions: { w: 0, h: 0 },
-                            }),
-                        });
-                        if (!res.ok) throw new Error(`save-generation ${res.status}`);
-                        const data = await res.json();
-                        if (data.success) {
-                            filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                            displayName = data.filename.replace(/\.[^.]+$/, '');
-                        }
-                    } catch (err) {
-                        clientLogger.warn('MpiGroupHistoryBlock', 'save-generation failed, using comfy URL:', err);
-                    }
-                }
-
-                // Full object for in-memory use (never written to project.json as-is)
-                const newItem = {
-                    id: itemId,
-                    type: 'image',
-                    filePath,
-                    operation: displayName,
-                    prompt: positive,
-                    negativePrompt: negative,
-                    seed: -1,
-                    modelId: activeModel.id,
-                    createdAt: new Date().toISOString(),
-                    name: null,
-                    uploaded: false,
-                    pixelDimensions: { w: 0, h: 0 },
-                };
-
-                // Clear all saved masks — they are stale after generation
-                canvasViewer.el.exitMode?.();
-                _canvasHasMask = false;
-                _refreshOpOptions();
-
-                _group = appendToHistory(_group, newItem);
-                _currentIdx = _group.selectedIndex;
-                _persistGroup();
-                historyList.el.appendEntry(newItem);
-                canvasViewer.el.loadEntry(newItem, _currentIdx);
-                // Unhide mask after loading final result (preview was hidden with blob URLs)
-                canvasViewer.el.setMaskHidden(false);
-
-                Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
-            };
-
-            exec.onError = (err) => {
-                _activeExec = null;
-                PromptBoxService.component?.setGenerating(false);
-                canvasViewer.el.setGenerating(false);
-                Events.emit('tool:cancelled', { tool: 'groupHistory' });
-                clientLogger.error('MpiGroupHistoryBlock', 'Generation error:', err);
-            };
+            _activeExec = startGeneration(
+                { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl, injectionParams },
+                {
+                    onPreview: async (url) => {
+                        canvasViewer.el.setGenerating(false);
+                        canvasViewer.el.isComparisonMode = false;
+                        if (url?.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
+                        try { await canvasViewer.el.loadEntry({ filePath: url }, _currentIdx); } catch (_) {}
+                    },
+                    onComplete: ({ item, group }) => {
+                        _activeExec = null;
+                        canvasViewer.el.setGenerating(false);
+                        canvasViewer.el.exitMode?.();
+                        _canvasHasMask = false;
+                        _refreshOpOptions();
+                        _group = group;
+                        _currentIdx = _group.selectedIndex;
+                        historyList.el.appendEntry(item);
+                        canvasViewer.el.loadEntry(item, _currentIdx);
+                        canvasViewer.el.setMaskHidden(false);
+                    },
+                    onCancel: () => {
+                        _activeExec = null;
+                        canvasViewer.el.setGenerating(false);
+                    },
+                    onError: () => {
+                        _activeExec = null;
+                        canvasViewer.el.setGenerating(false);
+                    },
+                },
+                { existingGroup: _group }
+            );
         }
 
         // ── Wire sub-component events ─────────────────────────────────────────
@@ -477,23 +318,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         selectionBar.on('download', () => {
             const project = state.currentProject;
             if (!project) return;
-            for (const idx of _currentSelectionIndices) {
-                const item = _group.history[idx];
-                if (!item?.filePath) continue;
-                let filename = null;
-                try {
-                    const match = item.filePath.match(/[?&]path=([^&]+)/);
-                    if (match) filename = decodeURIComponent(match[1]).replace(/\\/g, '/').split('/').pop();
-                } catch (_) { continue; }
-                if (!filename) continue;
-                const url = `/project-media/${project.id}/download/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }
+            const items = _currentSelectionIndices.map(idx => _group.history[idx]).filter(Boolean);
+            downloadMediaFiles(project, items);
         });
 
         selectionBar.on('cancel', () => {
@@ -513,11 +339,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 for (const idx of sorted) {
                     const item = _group.history[idx];
                     if (!item) continue;
-                    let filename = null;
-                    try {
-                        const match = item.filePath?.match(/[?&]path=([^&]+)/);
-                        if (match) filename = decodeURIComponent(match[1]).replace(/\\/g, '/').split('/').pop();
-                    } catch (_) { /* no filename */ }
+                    const filename = extractFilenameFromPath(item.filePath);
                     if (filename) {
                         fetch(
                             `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
@@ -597,8 +419,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── State model change subscription ────────────────────────────────────
 
-        const _onStateModelChange = ({ key, value }) => {
-            if (key !== 's_selectedModelId') return;
+        const _onStateModelChange = (value) => {
             if (!value || value === activeModelId) return;
             const newModel = installedModels.find(m => m.id === value);
             if (newModel && newModel !== activeModel) {
@@ -608,7 +429,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
             }
         };
-        _unsubs.push(Events.on('state:changed', _onStateModelChange));
+        _unsubs.push(Events.onState('s_selectedModelId', _onStateModelChange));
 
         // ── Zero-installed state modal ────────────────────────────────────────
 
@@ -623,11 +444,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _hasInstalledImageModels = () => getModelsByType('image').some(m => m.installed === true);
 
-        const _onZeroInstalled = ({ key }) => {
-            if (key !== 's_installedModelIds') return;
+        const _onZeroInstalled = () => {
             if (!_hasInstalledImageModels()) _modelsModal.el.show();
         };
-        _unsubs.push(Events.on('state:changed', _onZeroInstalled));
+        _unsubs.push(Events.onState('s_installedModelIds', _onZeroInstalled));
         _unsubs.push(Events.on('models:all-installed', () => _modelsModal.el.hide()));
 
         if (!_hasInstalledImageModels()) _modelsModal.el.show();

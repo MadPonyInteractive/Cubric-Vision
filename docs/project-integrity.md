@@ -125,7 +125,7 @@ After loading, `state.currentProject.itemGroups[n].history[m]` is a full object 
 
 ## The `openProject()` Flow
 
-`projectManager.openProject(projectPath)` runs this sequence:
+`projectService` (or reconciliation hook) runs this sequence:
 
 1. **Load \****`project.json`** from disk.
 
@@ -202,7 +202,7 @@ Users can drag-drop image/video files into the gallery. These are "uploaded" ite
 
 ## Persistence: `_persistGroups()`
 
-When the app saves the project, `_persistGroups()` in `projectManager.js` serializes state back to disk:
+When the app saves the project, `persistGroups()` in `projectService.js` serializes state back to disk:
 
 1. For each group and history item, extract the UUID.
 2. Write `project.json` with history arrays containing only UUIDs.
@@ -253,7 +253,7 @@ See `docs/versioning.md` for the full versioning system.
 
 ## References
 
-- `js/managers/projectManager.js` — `openProject()` entry point
+- `js/services/projectService.js` — Group mutation, saving, basic operations
 - `js/managers/projectReconciler.js` — `reconcileAndHydrate()` implementation
 - `js/migrations/projectMigrations.js` — migration functions
 - `routes/projects.js` — `/migrate-project`, `/load-meta`, `/file-exists`, `/delete-meta` routes

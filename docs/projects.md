@@ -89,10 +89,10 @@ projects/
 
 Projects are self-contained folders. The `folderPath` field points to the project root. This makes projects portable — copy the folder to another machine and it works.
 
-## Project Manager (`js/managers/projectManager.js`)
+## Project Service (`js/services/projectService.js`)
 
-- `openProject(projectPath)`: Loads project.json, runs migrations, reconciles/hydrates from `.meta/` files, sets `state.currentProject`, fires `project:changed`.
-- `updateProject(project)`: Saves project to disk (via `_persistGroups()` which converts full objects → UUID strings).
+- `openProject(projectPath)`: Loads project.json, runs migrations, reconciles/hydrates from `.meta/` files, sets `state.currentProject`, fires `project:changed`. *(Note: Initialization logic remains in root/shell helpers or `projectReconciler.js` as appropriate depending on split)*
+- `updateGroup(group)`: Centralized way to update paths/favourite status and write to disk.
 - Other methods: see `docs/project-integrity.md` for full API.
 
 ---

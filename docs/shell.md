@@ -72,3 +72,29 @@ Project-scoped UI elements — project name display, breadcrumb, up-arrow naviga
 ## memoryOps.js (`js/shell/memoryOps.js`)
 
 Project export/import (portability).
+
+## projectService.js (`js/services/projectService.js`)
+
+Centralized persistence layer for project mutations. Replaces the old `projectManager.js` pattern where blocks directly mutated `state.currentProject` and called ad-hoc save functions.
+
+**Key pattern:** All group mutations (add, update, remove) go through ProjectService. The service handles in-memory state update, disk persistence (via `/update-project`), and event emission in a single atomic operation.
+
+**API:**
+- `addGroup(group)` — Add group, persist, emit `project:group-added`
+- `updateGroup(group)` — Update group, persist, emit `project:group-updated`
+- `removeGroup(groupId)` — Remove group, persist, emit `project:group-removed`
+- `persistGroups()` — Low-level: serialize and write all groups to disk
+- `saveGeneration(opts)` — Save a generated media file to the project folder with sidecar metadata
+
+**Architectural principle:** Blocks never write `state.currentProject.itemGroups` directly. They call ProjectService methods which handle the full mutation → persist → emit cycle.
+
+## generationService.js (`js/services/generationService.js`)
+
+Centralized generation lifecycle manager. Wraps `runCommand()` with project persistence, StatusBar progress, and callback-based state management.
+
+**API:**
+- `startGeneration(config, callbacks, opts)` — Run a generation with automatic save, group creation/update, and progress tracking. Returns `{ cancel }`.
+
+**Callbacks:** `onPreview`, `onComplete`, `onCancel`, `onError`
+
+**Key pattern:** Blocks call `startGeneration()` and handle their own UI lifecycle (placeholders, spinner) via callbacks. The service handles the backend lifecycle (command execution, file save, project mutation).

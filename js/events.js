@@ -138,5 +138,13 @@ export const Events = new EventBus();
  * 'models:closed'         —                                        — models modal closed
  * 'models:checked'        { installedModelIds: string[] }          — model install state synced
  * 'models:all-installed'  —                                        — all models are now installed
+ *
+ * Project events (emitted by ProjectService):
+ * 'project:group-added'   { group: Object }                        — new group added and persisted
+ * 'project:group-updated' { group: Object }                        — existing group updated and persisted
+ * 'project:group-removed' { groupId: string }                      — group removed and persisted
+ *
+ * Media events:
+ * 'media:imported'        { url: string, filename: string, mediaType: string } — file imported via PromptBox drop
  */
 

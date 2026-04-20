@@ -3,7 +3,7 @@ import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { qs } from '../../../utils/dom.js';
-import { chooseFolder } from '../../../managers/projectManager.js';
+import { chooseFolder } from '../../../services/projectService.js';
 
 /**
  * MpiNewProject — New Project Creation Dialog (Compound)
