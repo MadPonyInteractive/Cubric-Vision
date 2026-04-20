@@ -126,9 +126,20 @@ a {
   text-decoration: none;
 }
 
+*:focus,
+*:focus-visible {
+  outline: none;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
+  outline: none;
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
 }
 
 /* ── Global Scrollbar Styling ─────────────────────────────────────────────── */

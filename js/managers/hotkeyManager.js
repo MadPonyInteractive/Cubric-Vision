@@ -82,11 +82,18 @@ class HotkeyManager {
 
     /**
      * Main event handler logic
-     * @param {KeyboardEvent} e 
+     * @param {KeyboardEvent} e
      * @private
      */
     _handleKeyDown(e) {
         const key = this._getEventKeyString(e);
+
+        // Suppress spacebar on buttons to prevent accidental triggers
+        if (key === ' ' && e.target.tagName === 'BUTTON') {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
 
         // Check for exact matches in the registry
         if (this._handlers.has(key)) {
