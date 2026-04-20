@@ -104,22 +104,32 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _rerenderJustified();
         });
 
-        // Register +/- hotkeys to control slider
-        _unsubs.push(Hotkeys.register('=', () => {
+        // Register +/- hotkeys to control slider (keyboard and numpad)
+        const incrementSlider = () => {
             const input = sliderWrap.querySelector('.mpi-progress__input');
             const currentValue = parseFloat(input.value);
             const nextValue = Math.min(5, currentValue + 1);
             input.value = nextValue;
             input.dispatchEvent(new Event('input'));
-        }));
+        };
 
-        _unsubs.push(Hotkeys.register('-', () => {
+        const decrementSlider = () => {
             const input = sliderWrap.querySelector('.mpi-progress__input');
             const currentValue = parseFloat(input.value);
             const nextValue = Math.max(1, currentValue - 1);
             input.value = nextValue;
             input.dispatchEvent(new Event('input'));
-        }));
+        };
+
+        // Regular +/= and - keys
+        _unsubs.push(Hotkeys.register('=', incrementSlider));
+        _unsubs.push(Hotkeys.register('-', decrementSlider));
+
+        // Numpad +/- keys
+        _unsubs.push(Hotkeys.register('NumpadAdd', incrementSlider));
+        _unsubs.push(Hotkeys.register('NumpadSubtract', decrementSlider));
+        _unsubs.push(Hotkeys.register('NumpadPlus', incrementSlider));
+        _unsubs.push(Hotkeys.register('NumpadMinus', decrementSlider));
 
         // Set initial card width
         _cardWidth = SIZE_MAP[3];
