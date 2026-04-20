@@ -17,6 +17,8 @@
  * - Constants and shared helpers belong in routes/shared.js.
  */
 
+require('dotenv').config();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');

@@ -15,6 +15,7 @@ const os   = require('os');
 const fs   = require('fs-extra');
 const path = require('path');
 const { exec } = require('child_process');
+const axios = require('axios');
 const logger = require('./logger');
 const { COMFY_DIR } = require('./platformEngine');
 
@@ -135,6 +136,86 @@ router.get('/logs/download', async (req, res) => {
     } catch (err) {
         logger.error('system', 'Log download failed', err);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/logs/read', async (req, res) => {
+    const logPath = logger.getLogPath();
+    try {
+        const exists = await fs.pathExists(logPath);
+        if (!exists) {
+            return res.json({ success: true, log: '' });
+        }
+        const content = await fs.readFile(logPath, 'utf-8');
+        res.json({ success: true, log: content });
+    } catch (err) {
+        logger.error('system', 'Log read failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ── GitHub Issue Creation ─────────────────────────────────────────────────────
+
+/**
+ * POST /github/create-issue
+ * Creates a GitHub issue with error report.
+ * Body: { title, message, summary, log }
+ */
+router.post('/github/create-issue', async (req, res) => {
+    const token = process.env.GITHUB_TOKEN;
+    const repo = process.env.GITHUB_REPO;
+
+    if (!token || !repo) {
+        return res.status(500).json({ success: false, error: 'GitHub credentials not configured' });
+    }
+
+    const { title, message, summary, log } = req.body;
+
+    if (!title || !message) {
+        return res.status(400).json({ success: false, error: 'title and message required' });
+    }
+
+    try {
+        // Trim log to last 2000 chars to stay within GitHub's 65k limit
+        let trimmedLog = log || '(no log available)';
+        if (trimmedLog.length > 2000) {
+            trimmedLog = '...' + trimmedLog.slice(-2000);
+        }
+
+        let body = `**Error:** ${message}`;
+        if (summary) {
+            body += `\n\n**What I was doing:**\n${summary}`;
+        }
+        body += `\n\n<details>\n<summary>App Log</summary>\n\n\`\`\`\n${trimmedLog}\n\`\`\`\n\n</details>`;
+
+        const response = await axios.post(
+            `https://api.github.com/repos/${repo}/issues`,
+            {
+                title,
+                body,
+                labels: ['bug']
+            },
+            {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            }
+        );
+
+        res.json({
+            success: true,
+            issueUrl: response.data.html_url,
+            issueNumber: response.data.number
+        });
+    } catch (err) {
+        console.error('GitHub API error:', err.response?.data || err.message);
+        logger.error('system', 'GitHub issue creation failed', err);
+        res.status(500).json({
+            success: false,
+            error: err.response?.data?.message || err.message,
+            details: err.response?.data
+        });
     }
 });
 

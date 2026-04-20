@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
+import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { qs } from '../../../utils/dom.js';
 
 /**
@@ -40,6 +41,7 @@ export const MpiErrorDialog = ComponentFactory.create({
                 <div class="mpi-error-dialog__title" id="title-slot"></div>
             </div>
             <div class="mpi-error-dialog__message" id="message-slot"></div>
+            <div class="mpi-error-dialog__summary" id="summary-slot" autoHeight: true></div>
             <div class="mpi-error-dialog__actions" id="actions-slot"></div>
         </div>
     `,
@@ -71,26 +73,74 @@ export const MpiErrorDialog = ComponentFactory.create({
         const messageSlot = qs('#message-slot', el);
         messageSlot.textContent = props.message || '';
 
+        // ── Summary Input ────────────────────────────────────────────────────
+        const summarySlot = qs('#summary-slot', el);
+        const summaryInput = MpiInput.mount(document.createElement('div'), {
+            type: 'textarea',
+            placeholder: 'Briefly describe what you were doing when this error occurred...',
+            label: 'Error Summary (optional)',
+        });
+        summaryInput.el.style.width = '100%';
+        summarySlot.appendChild(summaryInput.el);
+        const summaryField = summaryInput.el.querySelector('.mpi-input__field');
+
         // ── Actions ──────────────────────────────────────────────────────────
         const actionsSlot = qs('#actions-slot', el);
 
-        if (props.downloadLog !== false) {
-            const downloadBtn = MpiButton.mount(document.createElement('div'), {
-                text: 'Download Log',
-                variant: 'outline',
-                size: 'md',
-                icon: 'download',
-                label: 'Download Log',
-            });
-            downloadBtn.on('click', () => {
-                emit('downloadLog', {});
-                const a = document.createElement('a');
-                a.href = '/logs/download';
-                a.download = 'mpi-app.log';
-                a.click();
-            });
-            actionsSlot.appendChild(downloadBtn.el);
-        }
+        const reportBtn = MpiButton.mount(document.createElement('div'), {
+            text: 'Report on GitHub',
+            variant: 'outline',
+            size: 'md',
+            icon: 'external-link',
+            label: 'Report on GitHub',
+        });
+        reportBtn.on('click', async () => {
+            emit('report', {});
+            try {
+                const logRes = await fetch('/logs/read');
+                if (!logRes.ok) {
+                    console.warn('Log fetch failed:', logRes.status);
+                }
+                const logData = await logRes.json();
+                const log = logData.log || '';
+
+                const title = titleSlot.textContent;
+                const message = messageSlot.textContent;
+                const summary = summaryField.value.trim();
+
+                // Send to backend to create GitHub issue
+                const createRes = await fetch('/github/create-issue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, message, summary, log })
+                });
+
+                const createData = await createRes.json();
+
+                if (!createData.success) {
+                    console.error('Failed to create GitHub issue:', createData.error);
+                    return;
+                }
+
+                console.log('GitHub issue created:', createData.issueUrl);
+
+                // Open issue in system browser via Electron IPC
+                try {
+                    const { ipcRenderer } = require('electron');
+                    if (ipcRenderer) {
+                        await ipcRenderer.invoke('open-external', createData.issueUrl);
+                    } else {
+                        window.open(createData.issueUrl);
+                    }
+                } catch (ipcErr) {
+                    console.warn('Electron IPC unavailable, falling back to window.open:', ipcErr);
+                    window.open(createData.issueUrl);
+                }
+            } catch (err) {
+                console.error('Failed to create GitHub issue:', err);
+            }
+        });
+        actionsSlot.appendChild(reportBtn.el);
 
         const dismissBtn = MpiButton.mount(document.createElement('div'), {
             text: 'Dismiss',
@@ -107,12 +157,7 @@ export const MpiErrorDialog = ComponentFactory.create({
         el.setError = (title, message) => {
             titleSlot.textContent = title || 'An error occurred';
             messageSlot.textContent = message || '';
+            summaryField.value = '';
         };
-
-        // ── Support hint (always shown) ───────────────────────────────────────
-        const hint = document.createElement('p');
-        hint.className = 'mpi-error-dialog__support-hint';
-        hint.textContent = 'If this keeps happening, download the log file and send it to support.';
-        qs('#actions-slot', el).before(hint);
     }
 });

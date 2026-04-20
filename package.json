@@ -14,6 +14,7 @@
     "axios": "^1.13.6",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "electron-context-menu": "^4.1.2",
     "express": "^4.18.2",
     "fs-extra": "^11.1.1",
