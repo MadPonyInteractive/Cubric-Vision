@@ -103,6 +103,10 @@ When user's prompt is NOT in English:
 2. **Respond in user's language** - match their communication
 3. **Code comments/variables** remain in English
 
+### 🌐 Browser & Automation
+
+- **Headless Mode Mandatory:** Always use headless mode for browser automation tools. Visible browsers will only be displayed if the user specifically asks for them.
+
 ### 🧹 Clean Code (Global Mandatory)
 
 **ALL code MUST follow `@[skills/clean-code]` rules. No exceptions.**
