@@ -1,12 +1,12 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
+import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { state } from '../../../../state.js';
 import { Storage } from '../../../../core/storage.js';
 
 /**
  * MpiSettings — Settings overlay compound for the landing page.
  *
- * Wraps MpiProjectsPageOverlay and renders the full settings UI.
+ * Wraps MpiOverlay (body-mount) and renders the full settings UI.
  * All settings logic is self-contained; callers only call show()/hide().
  *
  * Usage:
@@ -66,7 +66,7 @@ export const MpiSettings = ComponentFactory.create({
             `;
 
         // ── Mount overlay ────────────────────────────────────────────────────
-        const overlay = MpiProjectsPageOverlay.mount(el, { closable: true });
+        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
         overlay.el.appendToContainer(content);
 
         overlay.on('close', () => emit('close', {}));

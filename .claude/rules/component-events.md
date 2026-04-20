@@ -39,7 +39,8 @@ LISTENS: `ui:close-all-popups` — calls `el.hide()` if backdrop is active
 
 ### MpiOverlay
 EMITS:   `close` `{}`
-LISTENS: (none — MutationObserver for safety release only)
+LISTENS: `ui:close-all-popups` — calls `el.hide()` if currently shown
+         (MutationObserver for safety release only)
 
 ### MpiPopup
 EMITS:   `close`      `{}`
@@ -53,10 +54,6 @@ LISTENS: `ui:close-all-popups` — removes `is-active`, emits `close`
 EMITS:   `input`  `{ value: number }`
          `change` `{ value: number }`
 LISTENS: (none)
-
-### MpiProjectsPageOverlay
-EMITS:   `close` `{}`
-LISTENS: `ui:close-all-popups` — calls `el.hide()` if backdrop is active
 
 ### MpiRadialMenu
 EMITS:   `select` `{ action: string }`

@@ -1,10 +1,10 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
+import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 
 /**
  * MpiAbout — About overlay compound for the landing page.
  *
- * Wraps MpiProjectsPageOverlay and renders app info and version.
+ * Wraps MpiOverlay (body-mount) and renders app info and version.
  * Callers only call show()/hide().
  *
  * Usage:
@@ -32,7 +32,7 @@ export const MpiAbout = ComponentFactory.create({
             </p>
             <span class="mpi-about__version">Alpha v0.0.1</span>`;
 
-        const overlay = MpiProjectsPageOverlay.mount(el, { closable: true });
+        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
         overlay.el.appendToContainer(content);
         overlay.on('close', () => emit('close', {}));
 

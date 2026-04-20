@@ -448,22 +448,6 @@
  */
 
 /**
- * @typedef {Object} MpiProjectsPageOverlayProps (Primitive — js/components/Primitives/MpiProjectsPageOverlay)
- * @property {boolean} [closable=true] - Show the X close button in the top-right corner
- *
- * Identical API to MpiOverlay but mounts over document.body instead of #tool-container.
- * Use on the landing page where #app-shell / #tool-container are hidden.
- *
- * Instance methods (on instance.el):
- *   show()                      — stashes body children, appends backdrop + overlay
- *   hide()                      — restores body children, releases OverlayManager queue
- *   appendToContainer(el: HTMLElement) — append a child into the scrollable content slot
- *
- * Emits:
- * 'close' {} — X button clicked (hide() called automatically)
- */
-
-/**
  * @typedef {Object} MpiSettingsProps (Compound — js/components/Compounds/MpiSettings)
  * No props required — all state is read from localStorage / app state internally.
  *
@@ -502,14 +486,17 @@
 /**
  * @typedef {Object} MpiOverlayProps (Primitive — js/components/Primitives/MpiOverlay)
  * @property {boolean} [closable=true] - Show the X close button in the top-right corner
+ * @property {('tool-container'|'body')} [mountTarget='tool-container'] - Where to inject the overlay:
+ *           'tool-container' — fills main area, leaves sidebar/titlebar visible (workspace pages)
+ *           'body'           — full viewport with backdrop (landing page, no #tool-container)
  *
  * Instance methods (on instance.el):
- *   show()                      — injects into #tool-container, stashing prior content
+ *   show()                      — injects into the chosen target, stashing prior content
  *   hide()                      — restores prior content, releases OverlayManager queue
  *   appendToContainer(el: HTMLElement) — append a child into the scrollable content slot
  *
  * Emits:
- * 'close' {} — X button clicked (hide() called automatically)
+ * 'close' {} — X button clicked or `ui:close-all-popups` received (hide() called automatically)
  */
 
 /**

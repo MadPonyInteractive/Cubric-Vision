@@ -1,30 +1,50 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiOverlay — Main-Area Page Overlay Primitive
-   Full scrollable page injected into #tool-container.
-   Sidebar, titlebar, and status bar remain untouched.
+   MpiOverlay — Page Overlay Primitive
+
+   Two mount modes:
+     .mpi-overlay--tool — injected into #tool-container (sidebar/titlebar visible)
+     .mpi-overlay--body — injected into document.body with backdrop (full viewport)
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Root: fills the entire main-area including the topbar ────── */
+/* ── Stash: hidden container for background DOM ─────────────── */
+.mpi-overlay-stash {
+    display: none !important;
+}
+
+/* ── Backdrop (body-mount only) ──────────────────────────────── */
+.mpi-overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: var(--bg);
+}
+
+/* ── Root: shared layout ─────────────────────────────────────── */
 .mpi-overlay {
     position: fixed;
-    top: var(--titlebar-h, 32px);
-    left: 0;
-    right: 0;
-    bottom: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 3rem 2rem 5rem;
     gap: 1.5rem;
-    z-index: 200;
-    background: var(--bg);
     animation: mpi-overlay-fadein 0.3s ease-out both;
 }
 
-/* ── Stash: hidden container for background tool nodes ─────── */
-.mpi-overlay-stash {
-    display: none !important;
+/* ── Tool-container mode — fills main area, leaves titlebar ── */
+.mpi-overlay--tool {
+    top: var(--titlebar-h, 32px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    background: var(--bg);
+}
+
+/* ── Body mode — full viewport on top of backdrop ───────────── */
+.mpi-overlay--body {
+    inset: 0;
+    z-index: 401;
 }
 
 @keyframes mpi-overlay-fadein {

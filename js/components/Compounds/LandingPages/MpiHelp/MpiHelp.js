@@ -1,10 +1,10 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiProjectsPageOverlay } from '../../../Primitives/MpiProjectsPageOverlay/MpiProjectsPageOverlay.js';
+import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 
 /**
  * MpiHelp — Help overlay compound for the landing page.
  *
- * Wraps MpiProjectsPageOverlay and renders keyboard shortcuts and app guidance.
+ * Wraps MpiOverlay (body-mount) and renders keyboard shortcuts and app guidance.
  * Callers only call show()/hide().
  *
  * Usage:
@@ -79,7 +79,7 @@ export const MpiHelp = ComponentFactory.create({
                 </div>
             </div>`;
 
-        const overlay = MpiProjectsPageOverlay.mount(el, { closable: true });
+        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
         overlay.el.appendToContainer(content);
         overlay.on('close', () => emit('close', {}));
 
