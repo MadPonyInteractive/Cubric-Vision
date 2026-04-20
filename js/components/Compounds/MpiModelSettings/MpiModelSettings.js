@@ -37,6 +37,8 @@ import {
     getToolSettings,
     setToolSettings,
 } from '../../../data/projectModel.js';
+import { getModelById } from '../../../data/modelRegistry.js';
+import { DEPS } from '../../../data/modelConstants/dependencies.js';
 import { saveProjectSettings } from '../../../managers/projectManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -50,11 +52,23 @@ function _loraOptions(availableLoras) {
     ];
 }
 
+/** Convert a dep ID to its filename, for matching against dropdown option values. */
+function _depToFilename(depId) {
+    const filename = DEPS[depId]?.filename;
+    return filename ? filename.split('/').pop() : null;
+}
+
+/** Reverse-lookup: filename → dep ID. Returns dep ID or null. */
+function _filenameToDep(filename) {
+    if (!filename) return null;
+    for (const [depId, dep] of Object.entries(DEPS)) {
+        if (dep.filename?.split('/').pop() === filename) return depId;
+    }
+    return null;
+}
+
 function _upscaleOptions(upscaleModels) {
-    return [
-        { label: '— Default —', value: '' },
-        ...(upscaleModels || []).map(f => ({ label: f, value: f })),
-    ];
+    return (upscaleModels || []).map(f => ({ label: f, value: f }));
 }
 
 export const MpiModelSettings = ComponentFactory.create({
@@ -101,17 +115,18 @@ export const MpiModelSettings = ComponentFactory.create({
         async function _autoSave() {
             if (!state.currentProject || !_context) return;
             try {
+                const depId = _filenameToDep(_upscaleValue) || null;
                 if (_context.modelId) {
                     state.currentProject = setModelSettings(
                         state.currentProject,
                         _context.modelId,
-                        { loras: _loraSlots, upscaleModel: _upscaleValue || null }
+                        { loras: _loraSlots, upscaleModel: depId }
                     );
                 } else if (_context.toolKey) {
                     state.currentProject = setToolSettings(
                         state.currentProject,
                         _context.toolKey,
-                        { upscaleModel: _upscaleValue || null }
+                        { upscaleModel: depId }
                     );
                 }
                 await saveProjectSettings();
@@ -132,7 +147,6 @@ export const MpiModelSettings = ComponentFactory.create({
             const dd = MpiDropdown.mount(slot, {
                 options: _upscaleOptions(state.upscaleModels),
                 value: _upscaleValue,
-                placeholder: '— Default —',
             });
 
             dd.on('change', ({ value }) => {
@@ -256,12 +270,18 @@ export const MpiModelSettings = ComponentFactory.create({
 
             if (ctx.modelId) {
                 const settings = getModelSettings(state.currentProject, ctx.modelId);
-                _mountUpscaleDropdown(settings.upscaleModel);
+                const model = getModelById(ctx.modelId);
+                // Resolve saved dep ID → filename; fallback to model default → filename → SIAX
+                const savedFile = _depToFilename(settings.upscaleModel);
+                const modelDefaultFile = _depToFilename(model?.defaultUpscale);
+                const siaxFile = _depToFilename('4x-NMKD-Siax');
+                const defaultUpscale = savedFile || modelDefaultFile || siaxFile;
+                _mountUpscaleDropdown(defaultUpscale);
                 _mountLoraSlots(settings.loras);
                 lorasSection.style.display = '';
             } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
-                _mountUpscaleDropdown(settings.upscaleModel);
+                _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || _depToFilename('4x-NMKD-Siax'));
                 lorasSection.style.display = 'none';
             }
 
