@@ -6,7 +6,8 @@ import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
-import { packItemsIntoRows, resizeRowImages } from '../../../utils/justifiedLayout.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
+import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 
 /**
  * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
@@ -102,6 +103,23 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _cardWidth = SIZE_MAP[value] || 288;
             _rerenderJustified();
         });
+
+        // Register +/- hotkeys to control slider
+        _unsubs.push(Hotkeys.register('=', () => {
+            const input = sliderWrap.querySelector('.mpi-progress__input');
+            const currentValue = parseFloat(input.value);
+            const nextValue = Math.min(5, currentValue + 1);
+            input.value = nextValue;
+            input.dispatchEvent(new Event('input'));
+        }));
+
+        _unsubs.push(Hotkeys.register('-', () => {
+            const input = sliderWrap.querySelector('.mpi-progress__input');
+            const currentValue = parseFloat(input.value);
+            const nextValue = Math.max(1, currentValue - 1);
+            input.value = nextValue;
+            input.dispatchEvent(new Event('input'));
+        }));
 
         // Set initial card width
         _cardWidth = SIZE_MAP[3];
@@ -306,19 +324,36 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // ── Justified Layout helpers ─────────────────────────────────────────
 
-        const GAP = 12; // px, matches CSS gap
+        const GAP = 2; // px, matches CSS gap (2px)
+
+        /**
+         * Get aspect ratio for a group.
+         * Priority: loaded image naturalWidth/naturalHeight, then group.width/group.height
+         */
+        function _getAspectRatio(group) {
+            const cardEntry = _cardMap.get(group.id);
+            if (cardEntry) {
+                const thumb = cardEntry.el.querySelector('.mpi-group-card__thumb');
+                if (thumb && thumb.naturalWidth > 0) {
+                    return thumb.naturalWidth / thumb.naturalHeight;
+                }
+            }
+            if (group.width && group.height) {
+                return group.width / group.height;
+            }
+            return 1.0; // Fallback to square
+        }
 
         /**
          * Re-render the grid using the justified layout algorithm.
-         * Cards are rendered immediately with natural image heights (CSS flex),
-         * then resized proportionally after images load so rows fill the container.
+         * Builds rows with correct dimensions upfront — no async resize snapping.
          */
         let _renderTimeout = null;
 
-        async function _rerenderJustified() {
+        function _rerenderJustified() {
             // Debounce rapid calls
             if (_renderTimeout) clearTimeout(_renderTimeout);
-            _renderTimeout = setTimeout(async () => {
+            _renderTimeout = setTimeout(() => {
                 const { order, filter } = state.gallerySort;
 
                 // Filter
@@ -344,60 +379,41 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
                 });
 
-                // Get container width
-                const containerWidth = grid.clientWidth - 2 * 16; // 16px padding each side
-
-                // ── Render grid with justified layout (generating card as first item if present) ──
-                // Clear all rows
-                grid.querySelectorAll('.mpi-gallery-grid__row').forEach(row => row.remove());
+                // Get container width (grid.clientWidth already excludes padding)
+                const containerWidth = grid.clientWidth;
 
                 // Separate generating groups from normal groups
                 const generatingGroups = display.filter(g => g.isGenerating);
                 const normalGroups = display.filter(g => !g.isGenerating);
 
-                // Pack all groups into rows (generating card will be first if present)
-                const targetCardWidth = _cardWidth;
+                // Build items with aspect ratios (generating first)
                 const allGroups = [...generatingGroups, ...normalGroups];
-                const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
                 const items = allGroups.map(group => ({
                     id: group.id,
-                    // Generating cards: use slider size (targetCardWidth), maintain aspect ratio via height calc
-                    // Normal cards: use slider size
-                    targetWidth: targetCardWidth,
+                    aspectRatio: _getAspectRatio(group),
                 }));
-                const rows = packItemsIntoRows(items, containerWidth, GAP, targetCardWidth);
 
-                rows.forEach(({ items: rowItems, rowWidth }, rowIndex) => {
+                // Build justified rows
+                const rows = buildJustifiedRows(items, containerWidth, _cardWidth, GAP);
+
+                // Clear all rows
+                grid.querySelectorAll('.mpi-gallery-grid__row').forEach(row => row.remove());
+
+                const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
+
+                rows.forEach(({ items: rowItems, rowHeight }) => {
                     const rowEl = ce('div', { className: 'mpi-gallery-grid__row' });
-                    let maxHeight = 0; // Track maximum item height in this row
+                    rowEl.style.height = `${rowHeight}px`;
 
-                    rowItems.forEach(({ id, targetWidth }) => {
+                    rowItems.forEach(({ id, width, height }) => {
                         const group = allGroupsMap.get(id);
                         const { card, wrapper } = _makeCard(group);
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
-
-                        // Size calculation: slider controls width, injection dimensions control aspect ratio
-                        let width = targetWidth;
-                        let height = targetWidth; // Default square for normal cards
-
-                        if (group.isGenerating && group.width && group.height) {
-                            // Generating card: use slider-controlled width, scale height by aspect ratio
-                            width = targetWidth;
-                            const aspectRatio = group.width / group.height;
-                            height = Math.round(targetWidth / aspectRatio);
-                            // Store aspect dimensions so resizeRowImages can access them
-                            wrapper.dataset.aspectWidth = group.width;
-                            wrapper.dataset.aspectHeight = group.height;
-                        }
-
                         wrapper.style.width = `${width}px`;
                         wrapper.style.height = `${height}px`;
+
                         rowEl.appendChild(wrapper);
 
-                        // Track the maximum height to set row height correctly
-                        maxHeight = Math.max(maxHeight, height);
-
-                        // Mark as generating if needed
                         if (group.isGenerating) {
                             card.el.setGenerating();
                         }
@@ -405,22 +421,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         _cardMap.set(id, { card, el: wrapper });
                     });
 
-                    // Set row height to accommodate the tallest item
-                    rowEl.style.height = `${maxHeight}px`;
-
                     grid.appendChild(rowEl);
-                    // For last row: skip resizing (keep natural layout, left-aligned)
-                    // For other rows: stretch to containerWidth (justified)
-                    const isLastRow = rowIndex === rows.length - 1;
-                    if (!isLastRow) {
-                        resizeRowImages(rowEl, '.mpi-gallery-grid__row-wrap', '.mpi-group-card__thumb', GAP, containerWidth);
-                    }
                 });
 
                 // Sync info state to all cards
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
             }, 16); // ~60fps debounce
         }
+
+        // ── ResizeObserver for window resize ──────────────────────────────────
+
+        const resizeObserver = new ResizeObserver(() => {
+            _rerenderJustified();
+        });
+        resizeObserver.observe(grid);
+        _unsubs.push(() => resizeObserver.disconnect());
 
         // ── Info toggle button ──────────────────────────────────────────────────
         const infoBtnSlot = el.querySelector('.mpi-gallery-grid__info-btn-slot');

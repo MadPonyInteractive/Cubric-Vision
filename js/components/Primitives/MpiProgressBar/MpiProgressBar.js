@@ -81,8 +81,9 @@ export const MpiProgressBar = ComponentFactory.create({
 
         // Mouse wheel support (opt-in via wheel=true)
         if (props.wheel === true) {
-            el.addEventListener('wheel', (e) => {
+            const handleWheel = (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 const step = props.step !== undefined ? props.step : 1;
                 const min = props.min !== undefined ? props.min : 0;
                 const max = props.max !== undefined ? props.max : 100;
@@ -95,7 +96,10 @@ export const MpiProgressBar = ComponentFactory.create({
                 input.value = val;
                 input.dispatchEvent(new Event('input'));
                 input.dispatchEvent(new Event('change'));
-            }, { passive: false });
+            };
+
+            el.addEventListener('wheel', handleWheel, { passive: false });
+            input.addEventListener('wheel', handleWheel, { passive: false });
         } else {
             el.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
             input.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });

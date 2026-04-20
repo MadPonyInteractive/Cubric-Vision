@@ -108,7 +108,7 @@
     padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 2px;
 }
 
 /* ── Row (justified layout row) ─────────────────────────────────────────── */
@@ -117,7 +117,7 @@
     display: flex;
     flex-direction: row;
     align-items: flex-end;
-    gap: 0.5rem;
+    gap: 2px;
     width: 100%;
 }
 
@@ -189,7 +189,7 @@
 .mpi-group-card__thumb {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
     transition: opacity 0.2s ease;
 }
@@ -214,7 +214,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* Spinner — centered, visible until the first latent preview image arrives */

@@ -1,99 +1,92 @@
 /**
  * Justified Layout (Google Photos-style) utilities.
  *
- * Provides row-packing and proportional image resize for adaptive grids
+ * Provides row-packing using aspect ratios to build perfectly justified grids
  * where rows have uniform height and item widths scale to fill the container.
  */
 
 /**
- * Packs items into rows using the justified layout algorithm.
- * Each row's total width (including gaps) approaches but does not exceed containerWidth.
+ * Build justified layout rows from groups with aspect ratios.
+ * Each row's items are scaled so the row exactly fills containerWidth.
+ * Last row is left-aligned at natural sizes (no scaling).
  *
- * @param {Array<{id: string, targetWidth: number}>} items - Items with desired widths
+ * @param {Array<{id: string, aspectRatio: number}>} items - Items with aspect ratios
  * @param {number} containerWidth - Available width in pixels
  * @param {number} gap - Gap between items in pixels
- * @param {number} targetCardWidth - Target card width used for initial estimate
- * @returns {Array<{items: Array<{id, targetWidth}>, rowWidth: number}>}
+ * @returns {Array<{items: Array<{id, width, height}>, rowHeight: number}>}
  */
-export function packItemsIntoRows(items, containerWidth, gap, targetCardWidth) {
+export function buildJustifiedRows(items, containerWidth, targetRowHeight, gap) {
+    if (!items.length) return [];
+
     const rows = [];
     let row = [];
     let rowWidthSum = 0;
 
     for (const item of items) {
-        const { id, targetWidth } = item;
-        const testRow = [...row, { id, targetWidth }];
-        const testWidth = rowWidthSum + targetWidth + (row.length > 0 ? gap : 0);
+        const { id, aspectRatio } = item;
+        const itemWidth = targetRowHeight * aspectRatio;
 
-        if (row.length > 0 && testWidth > containerWidth) {
-            // Row is full — flush it and start a new one
-            rows.push({ items: row, rowWidth: rowWidthSum });
-            row = [{ id, targetWidth }];
-            rowWidthSum = targetWidth;
+        // Test if adding this item exceeds container
+        const testRowWidth = rowWidthSum + itemWidth + (row.length > 0 ? gap : 0);
+
+        if (row.length > 0 && testRowWidth > containerWidth) {
+            // Row is full — flush it
+            rows.push({ items: row, rowWidth: rowWidthSum, gapCount: row.length - 1 });
+            row = [{ id, aspectRatio }];
+            rowWidthSum = itemWidth;
         } else {
-            row.push({ id, targetWidth });
-            rowWidthSum = row.length === 1 ? targetWidth : rowWidthSum + targetWidth + gap;
+            row.push({ id, aspectRatio });
+            rowWidthSum = row.length === 1 ? itemWidth : rowWidthSum + itemWidth + gap;
         }
     }
 
+    // Flush last row
     if (row.length > 0) {
-        rows.push({ items: row, rowWidth: rowWidthSum });
+        rows.push({ items: row, rowWidth: rowWidthSum, gapCount: row.length - 1, isLast: true });
     }
 
-    return rows;
-}
+    // Compute actual widths and row height for each row
+    return rows.map((rowData, rowIndex) => {
+        const { items: rowItems, rowWidth, gapCount, isLast } = rowData;
+        const isLastRow = isLast || rowIndex === rows.length - 1;
 
-/**
- * Resizes all images in a row proportionally so their total widths fill the row.
- * Loads image dimensions internally via Promise.all, then computes and applies
- * proportional widths and row height.
- *
- * @param {HTMLElement} rowEl - The row container element
- * @param {string} itemSelector - CSS selector for item wrappers within the row
- * @param {string} imgSelector - CSS selector for the image within each item wrapper
- * @param {number} gap - Gap between items in pixels
- * @param {number} rowWidth - Explicit width of the row
- * @returns {Promise<{rowHeight: number, widths: number[]}>}
- */
-export function resizeRowImages(rowEl, itemSelector, imgSelector, gap, rowWidth) {
-    const items = rowEl.querySelectorAll(itemSelector);
+        if (isLastRow) {
+            // Last row: no scaling, natural sizes at targetRowHeight
+            return {
+                items: rowItems.map(({ id, aspectRatio }) => ({
+                    id,
+                    width: Math.round(targetRowHeight * aspectRatio),
+                    height: Math.round(targetRowHeight),
+                })),
+                rowHeight: targetRowHeight,
+            };
+        }
 
-    const loaders = Array.from(items).map(wrapper => {
-        return new Promise(resolve => {
-            const img = wrapper.querySelector(imgSelector);
+        // Non-last rows: scale to fill containerWidth exactly
+        const availWidth = containerWidth - gapCount * gap;
+        const scale = availWidth / rowWidth;
+        const scaledRowHeight = Math.round(targetRowHeight * scale);
 
-            // Try to get dimensions from the image element
-            if (img && img.src) {
-                if (img.complete && img.naturalWidth > 0) {
-                    resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
-                } else {
-                    img.onload = () => resolve({ wrapper, width: img.naturalWidth, height: img.naturalHeight });
-                    img.onerror = () => resolve({ wrapper, width: 1, height: 1 });
-                }
-            } else {
-                // For items without images (like generating cards), try to get dimensions from wrapper's stored data
-                const storedWidth = wrapper.dataset.aspectWidth;
-                const storedHeight = wrapper.dataset.aspectHeight;
-                if (storedWidth && storedHeight) {
-                    resolve({ wrapper, width: parseInt(storedWidth), height: parseInt(storedHeight) });
-                } else {
-                    // Fallback to 1:1 ratio
-                    resolve({ wrapper, width: 1, height: 1 });
-                }
-            }
-        });
-    });
+        // Compute widths and ensure they sum to exactly fill container
+        const widths = rowItems.map(({ id, aspectRatio }) => ({
+            id,
+            width: Math.round(targetRowHeight * scale * aspectRatio),
+        }));
 
-    return Promise.all(loaders).then(results => {
-        const totalAspectSum = results.reduce((sum, r) => sum + r.width / r.height, 0);
-        const availWidth = rowWidth - (results.length - 1) * gap;
-        const rowHeight = availWidth / totalAspectSum;
+        // Distribute rounding error to last card to ensure perfect fit
+        const totalWidth = widths.reduce((sum, w) => sum + w.width, 0);
+        const error = availWidth - totalWidth;
+        if (error !== 0 && widths.length > 0) {
+            widths[widths.length - 1].width += error;
+        }
 
-        rowEl.style.height = `${Math.round(rowHeight)}px`;
-        results.forEach(r => {
-            r.wrapper.style.width = `${Math.round(rowHeight * r.width / r.height)}px`;
-        });
-
-        return { rowHeight, widths: results.map(r => Math.round(rowHeight * r.width / r.height)) };
+        return {
+            items: widths.map(({ id, width }) => ({
+                id,
+                width,
+                height: scaledRowHeight,
+            })),
+            rowHeight: scaledRowHeight,
+        };
     });
 }
