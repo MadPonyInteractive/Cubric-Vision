@@ -121,15 +121,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             input.dispatchEvent(new Event('input'));
         };
 
-        // Regular +/= and - keys
+        // Regular +/= and - keys (both keyboard and numpad send + and -)
         _unsubs.push(Hotkeys.register('=', incrementSlider));
+        _unsubs.push(Hotkeys.register('+', incrementSlider));
         _unsubs.push(Hotkeys.register('-', decrementSlider));
-
-        // Numpad +/- keys
-        _unsubs.push(Hotkeys.register('NumpadAdd', incrementSlider));
-        _unsubs.push(Hotkeys.register('NumpadSubtract', decrementSlider));
-        _unsubs.push(Hotkeys.register('NumpadPlus', incrementSlider));
-        _unsubs.push(Hotkeys.register('NumpadMinus', decrementSlider));
 
         // Set initial card width
         _cardWidth = SIZE_MAP[3];
