@@ -4,6 +4,7 @@
     height: 100%;
     overflow: hidden;
     position: relative;
+    right: 8px;
 }
 
 /* ── Tab bar ─────────────────────────────────────────────────────────────── */
@@ -105,8 +106,7 @@
 .mpi-gallery-grid__grid {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem 1rem 1rem 1rem;
-    padding-right: calc(1rem + 8px);
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 2px;
