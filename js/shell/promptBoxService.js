@@ -52,6 +52,11 @@ export const PromptBoxService = {
             _unsubModelListUpdate = null;
         }
 
+        // Tear down previous instance before clearing DOM
+        if (_instance?.el?.destroy) {
+            _instance.el.destroy();
+        }
+
         _mountEl.innerHTML = '';
         _instance = MpiPromptBox.mount(_mountEl, props);
 

@@ -61,6 +61,19 @@ class EventBus {
     }
 
     /**
+     * Subscribe to a specific state key change. Filters state:changed events by key.
+     * Returns unsubscribe function.
+     * @param {string} key
+     * @param {Function} handler
+     * @returns {Function} unsubscribe
+     */
+    onState(key, handler) {
+        return this.on('state:changed', ({ key: k, value }) => {
+            if (k === key) handler(value);
+        });
+    }
+
+    /**
      * Returns a namespaced sub-bus. Useful for tool-level event isolation.
      * @param {string} namespace
      * @returns {{ on: Function, once: Function, off: Function, emit: Function }}

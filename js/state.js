@@ -41,6 +41,10 @@ const _state = {
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
 };
 
+// Batching control for state mutations
+let _batching = false;
+const _batchQueue = new Map(); // key → last value (deduped)
+
 /**
  * Singleton state object wrapped in a Proxy to automatically emit 'state:changed'
  * events when any property is mutated.
@@ -48,7 +52,11 @@ const _state = {
 export const state = new Proxy(_state, {
     set(target, key, value) {
         target[key] = value;
-        Events.emit('state:changed', { key, value });
+        if (_batching) {
+            _batchQueue.set(key, value);
+        } else {
+            Events.emit('state:changed', { key, value });
+        }
         return true;
     },
     get(target, key) {
@@ -56,3 +64,18 @@ export const state = new Proxy(_state, {
     }
 });
 
+/**
+ * Batch multiple state mutations into a single render pass.
+ * Dedupes mutations to same key — only final value is emitted.
+ * @param {Function} fn - Function that performs state mutations
+ */
+export function batchState(fn) {
+    _batching = true;
+    try {
+        fn();
+    } finally {
+        _batching = false;
+        _batchQueue.forEach((value, key) => Events.emit('state:changed', { key, value }));
+        _batchQueue.clear();
+    }
+}

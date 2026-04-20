@@ -24,6 +24,9 @@
 - **NEVER modify \****`js/components/factory.js`**\*\*.** The factory is locked.
 - **Every new component MUST:** register its `.css` in `js/shell/preloadStyles.js` AND document its props in `js/components/types.js`.
 - **Use \****`Events.on()`***\* / \****`Events.emit()`**\*\* for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
+- **Navigation MUST call `instance.destroy()` before clearing mounted Block.** See `.claude/rules/components.md` section "Observer Lifecycle & Teardown Contract". Never use `innerHTML = ''` alone.
+- **If `setup` calls `Events.on(...)`, `window.addEventListener(...)`, or creates any Observer — MUST define `el.destroy()` that cleans them up.** Collect unsubscribes in `const _unsubs = []`.
+- **Never mutate `state` sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
 
 ---

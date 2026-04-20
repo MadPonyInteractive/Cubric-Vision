@@ -29,6 +29,7 @@ let _projectNameInst  = null;
 let _toolContainer    = null;
 let _appShell         = null;
 let _pageLanding      = null;
+let _currentBlock     = null;   // track mounted view Block for teardown
 
 // ── Radial context definitions ─────────────────────────────────────────────
 
@@ -110,8 +111,14 @@ export function handleNavigation(page, params = {}) {
         // Tear down radial so the next project entry re-mounts fresh,
         // correctly re-evaluating tutorialSeen for the new project.
         if (_radialInstance) {
+            _radialInstance.destroy?.();
             _radialMount.innerHTML = '';
             _radialInstance = null;
+        }
+        // Tear down mounted view block if it exists
+        if (_currentBlock) {
+            _currentBlock.destroy?.();
+            _currentBlock = null;
         }
         _showLanding();
         loadProjectGrid();
@@ -167,6 +174,11 @@ async function _loadView(page, params = {}) {
 
     // ── Page content ────────────────────────────────────────────────────────
     Overlays.reset();
+    // Tear down previously mounted block before clearing DOM
+    if (_currentBlock) {
+        _currentBlock.destroy?.();
+        _currentBlock = null;
+    }
     _toolContainer.innerHTML = '';
     _toolContainer.style.position = 'relative';
 
@@ -176,7 +188,9 @@ async function _loadView(page, params = {}) {
 
     try {
         const mod = await _importView(page);
-        if (mod?.mount) mod.mount(_toolContainer, params);
+        if (mod?.mount) {
+            _currentBlock = mod.mount(_toolContainer, params);
+        }
     } catch (err) {
         console.error(`[navigation] Failed to load view "${page}":`, err);
     }

@@ -82,6 +82,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
+        // ── Cleanup array ─────────────────────────────────────────────────────
+        const _unsubs = [];
+
         // ── Resolve group ─────────────────────────────────────────────────────
 
         let _group = state.currentProject?.itemGroups?.find(g => g.id === props.groupId);
@@ -265,34 +268,34 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     filterNoInputOps: true,
                 });
 
-                promptBox.on('settings', () => {
+                _unsubs.push(promptBox.on('settings', () => {
                     _settingsOverlay.el.open({ modelId: activeModel.id });
-                });
+                }));
 
-                promptBox.on('model-change', ({ model }) => {
+                _unsubs.push(promptBox.on('model-change', ({ model }) => {
                     state.s_selectedModelId = model.id;
                     activeModelId = model.id;
                     activeModel = model;
                     PromptBoxService.component?.setModel(model);
                     _refreshOpOptions();
-                });
+                }));
 
-                promptBox.on('operation-change', ({ operation }) => {
+                _unsubs.push(promptBox.on('operation-change', ({ operation }) => {
                     activeOperation = operation;
-                });
+                }));
 
-                promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
+                _unsubs.push(promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
                     const maskDataUrl = canvasViewer.el.hasMask()
                         ? canvasViewer.el.getCurrentMaskDataURL()
                         : null;
                     _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams });
-                });
+                }));
 
-                promptBox.on('cancel', () => {
+                _unsubs.push(promptBox.on('cancel', () => {
                     _activeExec?.cancel();
                     _activeExec = null;
                     Events.emit('tool:cancelled', { tool: 'groupHistory' });
-                });
+                }));
 
                 // Initialize bottom bar to show prompt box
                 _setBottomBar('promptbox');
@@ -582,7 +585,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Radial → operation sync ───────────────────────────────────────────
 
-        const _unsubSetOp = Events.on('workspace:set-operation', ({ operation }) => {
+        _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
             if (!PromptBoxService.component) return;
             const opts = _opOptions();
             const match = opts.find(o => o.value === operation && !o.disabled);
@@ -590,7 +593,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 activeOperation = operation;
                 PromptBoxService.component?.setOperation(activeOperation);
             }
-        });
+        }));
 
         // ── State model change subscription ────────────────────────────────────
 
@@ -605,7 +608,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
             }
         };
-        Events.on('state:changed', _onStateModelChange);
+        _unsubs.push(Events.on('state:changed', _onStateModelChange));
 
         // ── Zero-installed state modal ────────────────────────────────────────
 
@@ -624,21 +627,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (key !== 's_installedModelIds') return;
             if (!_hasInstalledImageModels()) _modelsModal.el.show();
         };
-        Events.on('state:changed', _onZeroInstalled);
-        Events.on('models:all-installed', () => _modelsModal.el.hide());
+        _unsubs.push(Events.on('state:changed', _onZeroInstalled));
+        _unsubs.push(Events.on('models:all-installed', () => _modelsModal.el.hide()));
 
         if (!_hasInstalledImageModels()) _modelsModal.el.show();
 
         // ── Cleanup ───────────────────────────────────────────────────────────
 
-        const _observer = new MutationObserver(() => {
-            if (!document.contains(el)) {
-                _unsubSetOp();
-                Events.off('state:changed', _onStateModelChange);
-                Events.off('state:changed', _onZeroInstalled);
-                _observer.disconnect();
-            }
-        });
-        _observer.observe(document.body, { childList: true, subtree: true });
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn?.());
+            canvasViewer.destroy?.();
+            historyList.destroy?.();
+            historyTools.destroy?.();
+            selectionBar.destroy?.();
+            _modelsModal.destroy?.();
+            _settingsOverlay.destroy?.();
+        };
     },
 });

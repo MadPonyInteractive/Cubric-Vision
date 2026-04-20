@@ -176,6 +176,63 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 ---
 
+## Observer Lifecycle & Teardown Contract
+
+**Navigation MUST call `instance.destroy()` before unmounting blocks.** When a component is removed from the DOM, its subscriptions (Events.on, window listeners, Observers) must be cleaned up explicitly via `el.destroy()`.
+
+### Pattern: Define `el.destroy` in setup()
+
+Collect all subscriptions in a cleanup array:
+
+```javascript
+setup: (el, props, emit) => {
+    const _unsubs = [];
+
+    // Collect all subscription cleanup functions
+    _unsubs.push(Events.on('state:changed', ({ key, value }) => {
+        if (key === 'myKey') handleChange(value);
+    }));
+
+    _unsubs.push(Events.on('other:event', handler));
+
+    // Collect child component cleanups
+    const child = MpiButton.mount(...);
+
+    // Define cleanup hook
+    el.destroy = () => {
+        _unsubs.forEach(fn => fn?.());
+        child.destroy?.();
+    };
+}
+```
+
+**Why:** The Proxy in `state.js` is a source of truth. Navigation at `js/shell/navigation.js` calls `destroy()` before clearing `_toolContainer.innerHTML`. Without explicit `el.destroy()`, subscriptions leak memory and cause duplicate handlers on re-navigation.
+
+### Critical Leaks to Avoid
+
+1. **Events.on return values discarded** — always collect into `_unsubs` array
+2. **PromptBox handlers never unsubscribed** — collect into `_unsubs` too
+3. **Child components not destroyed** — call `child.destroy?.()` in parent's `el.destroy`
+4. **State sub-object mutations** — ALWAYS use `state.key = { ...state.key, ...changes }`, never `state.key.field = x`
+
+### Utilities for Cleanup
+
+- **`Events.onState(key, handler)`** — Subscribe to a specific state key (preferred over manual `state:changed` filtering). Returns unsubscribe.
+- **`batchState(fn)`** — Batch multiple state mutations into one render pass. Dedupes mutations per key.
+
+```javascript
+import { batchState } from '../state.js';
+
+// Instead of 5 separate state:changed emissions:
+batchState(() => {
+    state.key1 = val1;
+    state.key2 = val2;
+    state.key1 = val3; // Only final value (val3) is emitted
+});
+```
+
+---
+
 ## Debugging Component Issues
 
 When a component isn't working as expected, follow this checklist:

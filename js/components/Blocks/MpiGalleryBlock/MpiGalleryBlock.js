@@ -88,6 +88,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
     template: () => `<div class="mpi-gallery-block"></div>`,
 
     setup: (el, props, emit) => {
+        // ── Cleanup array ─────────────────────────────────────────────────────
+        const _unsubs = [];
+
         let groups = state.currentProject?.itemGroups || [];
         const folderPath = state.currentProject?.folderPath;
 
@@ -108,7 +111,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
 
         // ── Watch for project changes and re-hydrate ────────────────────────────
-        const _unsubProjectChange = Events.on('state:changed', ({ key, value }) => {
+        _unsubs.push(Events.on('state:changed', ({ key, value }) => {
             if (key === 'currentProject' && value?.folderPath) {
                 const newGroups = value.itemGroups || [];
                 const needsHydration = newGroups.some(g => g.history?.some(item => typeof item === 'string'));
@@ -123,7 +126,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     grid.el.setGroups(newGroups);
                 }
             }
-        });
+        }));
 
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
@@ -281,8 +284,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 grid.el.removeCard(g.id);
             } else {
                 const pruned = removeHistoryEntry(g, missingIdx);
-                const idx = state.currentProject?.itemGroups?.findIndex(x => x.id === g.id) || -1;
-                if (idx !== -1) state.currentProject.itemGroups[idx] = pruned;
+                if (state.currentProject) {
+                    state.currentProject = updateGroupInProject(state.currentProject, pruned);
+                }
             }
         });
 
@@ -467,12 +471,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // _toolContainer.innerHTML = '' because _toolContainer is not a direct
             // child of document.body (grandchild). Using state:changed as the
             // reliable cleanup trigger instead.
-            const _unsubPageChange = Events.on('state:changed', ({ key, value }) => {
+            _unsubs.push(_unsubMediaImported || (() => {}));
+            _unsubs.push(Events.on('state:changed', ({ key, value }) => {
                 if (key === 'currentPage' && value !== PAGE_GALLERY) {
-                    _unsubMediaImported?.();
-                    _unsubPageChange();
+                    _unsubs.forEach(fn => fn?.());
                 }
-            });
+            }));
 
             promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                 if (!activeModel) return;
@@ -616,24 +620,24 @@ export const MpiGalleryBlock = ComponentFactory.create({
         grid.on('selection-end',   () => PromptBoxService.show());
 
         // ── Radial → operation sync ─────────────────────────────────────────────
-        const _unsubSetOp = Events.on('workspace:set-operation', ({ operation }) => {
+        _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
             activeOperation = operation;
             PromptBoxService.component?.setOperation(activeOperation);
-        });
+        }));
 
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
         if (installedImageModels.length === 0) Events.emit('models:open');
 
-        const _unsubZeroInstalled = Events.on('state:changed', ({ key }) => {
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key !== 's_installedModelIds') return;
             const hasImageModels = getModelsByType('image').some(m => m.installed === true);
             if (!hasImageModels) Events.emit('models:open');
-        });
+        }));
 
         // ── Post-install PromptBox remount ─────────────────────────────────────
         // If models are installed while the modal is open, promptBox will be null.
         // When the modal closes (models:closed), check if PromptBox needs to be mounted.
-        const _unsubModelsClosed = Events.on('models:closed', () => {
+        _unsubs.push(Events.on('models:closed', () => {
             const currentModels = getModelsByType('image').filter(m => m.installed !== false);
             // Remount PromptBox if no component is mounted but models are available
             if (!PromptBoxService.component && currentModels.length > 0) {
@@ -804,19 +808,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                 PromptBoxService.show();
             }
-        });
+        }));
 
-        // ── Cleanup when block leaves the gallery workspace ────────────────────
-        // Using state:changed instead of MutationObserver because the observer
-        // does not fire for _toolContainer.innerHTML = '' (grandchild mutation).
-        const _unsubPageChange2 = Events.on('state:changed', ({ key, value }) => {
-            if (key === 'currentPage' && value !== PAGE_GALLERY) {
-                _unsubProjectChange?.();
-                _unsubSetOp?.();
-                _unsubZeroInstalled?.();
-                _unsubModelsClosed?.();
-                _unsubPageChange2();
-            }
-        });
+        // ── Cleanup on destroy ────────────────────────────────────────────────────
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn?.());
+            grid.destroy?.();
+            selectionBar.destroy?.();
+            _compareOverlay.destroy?.();
+            _deleteDialog.destroy?.();
+            _settingsOverlay.destroy?.();
+        };
     },
 });

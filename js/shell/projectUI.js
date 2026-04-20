@@ -20,6 +20,9 @@ let projectGrid = null;
 /** Lazily created MpiNewProject dialog instance (reused across opens). */
 let _newProjectDialog = null;
 
+/** Unsubscribe fn for the current create listener (replaced each call). */
+let _newProjectUnsub = null;
+
 /** Lazily created delete-confirm dialog instance (reused across opens). */
 let _deleteConfirmDialog = null;
 
@@ -81,17 +84,19 @@ export function initProjectUI() {
     triggerBtn.on('click', () => {
       if (!_newProjectDialog) {
         _newProjectDialog = MpiNewProject.mount(document.createElement('div'));
-        _newProjectDialog.on('create', async ({ name, location }) => {
-          try {
-            const project = await createProject(name || 'Untitled Project', location);
-            await openProject(project);
-            navigate(PAGE_GALLERY);
-          } catch (err) {
-            console.error('[projectUI] createProject failed:', err);
-            alert('Could not create project: ' + err.message);
-          }
-        });
       }
+      // Replace the create listener with fresh handler
+      if (_newProjectUnsub) { _newProjectUnsub(); _newProjectUnsub = null; }
+      _newProjectUnsub = _newProjectDialog.on('create', async ({ name, location }) => {
+        try {
+          const project = await createProject(name || 'Untitled Project', location);
+          await openProject(project);
+          navigate(PAGE_GALLERY);
+        } catch (err) {
+          console.error('[projectUI] createProject failed:', err);
+          alert('Could not create project: ' + err.message);
+        }
+      });
       _newProjectDialog.el.show();
     });
   }

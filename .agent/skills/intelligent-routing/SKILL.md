@@ -49,6 +49,8 @@ graph TD
 | **Performance**     | "slow", "optimize", "performance", "speed" | `performance-optimizer`                     | ✅ YES       |
 | **Product Def**     | "requirements", "user story", "backlog", "MVP" | `product-owner`                             | ✅ YES       |
 | **New Feature**     | "build", "create", "implement", "new app"  | `orchestrator` → multi-agent                | ⚠️ ASK FIRST |
+| **Refactor/Simplify**| "refactor", "simplify", "cleanup", "structure" | `code-simplify` + `orchestrator`         | ✅ YES       |
+| **Code Review**     | "review", "audit", "check changes", "PR"   | `requesting-code-review` + `orchestrator` | ✅ YES       |
 | **Complex Task**    | Multiple domains detected                  | `orchestrator` → multi-agent                | ⚠️ ASK FIRST |
 
 ### 3. Automatic Routing Protocol
@@ -94,6 +96,7 @@ function analyzeRequest(userMessage) {
 
 - ✅ User sees which expertise is being applied
 - ✅ Transparent decision-making
+- ✅ Skills: clean-code, app-builder, plan-writing, brainstorming, code-simplify, requesting-code-review
 - ✅ Still automatic (no /commands needed)
 
 ## Domain Detection Rules
@@ -113,6 +116,8 @@ function analyzeRequest(userMessage) {
 | **Performance** | slow, lag, optimize, cache, performance    | `performance-optimizer` |
 | **SEO**         | seo, meta, analytics, sitemap, robots      | `seo-specialist`        |
 | **Game**        | unity, godot, phaser, game, multiplayer    | `game-developer`        |
+| **Refactor**    | refactor, simplify, cleanup, smell         | `code-simplify`         |
+| **Review**      | review, audit, check, pr, verify           | `requesting-code-review`|
 
 ### Multi-Domain Tasks (Auto-invoke Orchestrator)
 
