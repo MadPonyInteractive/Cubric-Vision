@@ -11,6 +11,18 @@ let mainWindow;
 let serverProcess;
 let windowState = {};
 
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 function loadWindowState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
