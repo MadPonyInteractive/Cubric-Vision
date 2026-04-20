@@ -8,8 +8,8 @@
 
 Antigravity Kit is a modular system consisting of:
 
-- **20 Specialist Agents** - Role-based AI personas
-- **36 Skills** - Domain-specific knowledge modules
+- **24 Specialist Agents** - Role-based AI personas
+- **40 Skills** - Domain-specific knowledge modules
 - **11 Workflows** - Slash command procedures
 
 ---
@@ -19,8 +19,8 @@ Antigravity Kit is a modular system consisting of:
 ```plaintext
 .agent/
 ├── ARCHITECTURE.md          # This file
-├── agents/                  # 20 Specialist Agents
-├── skills/                  # 36 Skills
+├── agents/                  # 24 Specialist Agents
+├── skills/                  # 40 Skills
 ├── workflows/               # 11 Slash Commands
 ├── rules/                   # Global Rules
 └── scripts/                 # Master Validation Scripts
@@ -28,7 +28,7 @@ Antigravity Kit is a modular system consisting of:
 
 ---
 
-## 🤖 Agents (20)
+## 🤖 Agents (24)
 
 Specialist AI personas for different domains.
 
@@ -54,10 +54,14 @@ Specialist AI personas for different domains.
 | `qa-automation-engineer` | E2E testing, CI pipelines  | webapp-testing, testing-patterns                         |
 | `code-archaeologist`     | Legacy code, refactoring   | clean-code, code-review-checklist                        |
 | `explorer-agent`         | Codebase analysis          | -                                                        |
+| `caveman`                | Token-efficient comms      | caveman, behavioral-modes                                |
+| `caveman-commit`         | Git commit optimization    | caveman-commit, clean-code                               |
+| `caveman-review`         | Rapid code feedback        | caveman-review, requesting-code-review                    |
+| `caveman-compress`       | Project memory compression | caveman-compress, code-simplify                          |
 
 ---
 
-## 🧩 Skills (36)
+## 🧩 Skills (40)
 
 Modular knowledge domains that agents can load on-demand. based on task context.
 
@@ -166,6 +170,15 @@ Modular knowledge domains that agents can load on-demand. based on task context.
 | `performance-profiling`   | Web Vitals, optimization  |
 | `systematic-debugging`    | Troubleshooting           |
 
+### Token Efficiency (Caveman)
+
+| Skill              | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| `caveman`          | Ultra-compressed communication mode (~75% token savings) |
+| `caveman-commit`   | Terse git commit message generation                     |
+| `caveman-review`   | One-line code review comments                           |
+| `caveman-compress` | Natural language memory file compression                |
+
 ---
 
 ## 🔄 Workflows (11)
@@ -266,8 +279,8 @@ For details, see [scripts/README.md](scripts/README.md)
 
 | Metric              | Value                         |
 | ------------------- | ----------------------------- |
-| **Total Agents**    | 20                            |
-| **Total Skills**    | 36                            |
+| **Total Agents**    | 24                            |
+| **Total Skills**    | 40                            |
 | **Total Workflows** | 11                            |
 | **Total Scripts**   | 2 (master) + 18 (skill-level) |
 | **Coverage**        | ~90% web/mobile development   |
@@ -285,4 +298,5 @@ For details, see [scripts/README.md](scripts/README.md)
 | Security | `security-auditor`    | vulnerability-scanner                 |
 | Testing  | `test-engineer`       | testing-patterns, webapp-testing      |
 | Debug    | `debugger`            | systematic-debugging                  |
+| Efficiency | `caveman`           | caveman, behavioral-modes             |
 | Plan     | `project-planner`     | brainstorming, plan-writing           |
