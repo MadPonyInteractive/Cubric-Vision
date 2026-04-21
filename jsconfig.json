@@ -8,5 +8,5 @@
       "*": ["./*", "js/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "Backup", "tmp"]
+  "exclude": ["node_modules", "dist", "tmp"]
 }
