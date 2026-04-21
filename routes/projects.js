@@ -328,7 +328,7 @@ router.post('/project-media/:projectId/update-meta', async (req, res) => {
 router.post('/project-media/:projectId/upload', async (req, res) => {
     try {
         const { folderPath } = req.query;
-        const { filename, base64Data, promptContext, seed, autoSequence, itemId } = req.body;
+        const { filename, base64Data, promptContext, seed, autoSequence, itemId, mediaType } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!filename || !base64Data) return res.status(400).json({ success: false, error: 'filename and base64Data required' });
 
@@ -355,7 +355,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             finalFileName = `${prefix}_${nextNum}.${ext}`;
         }
 
-        const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, '');
+        const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
         const buffer = Buffer.from(base64Content, 'base64');
         const filePath = path.join(mediaDir, finalFileName);
         await fs.writeFile(filePath, buffer);
@@ -367,7 +367,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const metaPath = path.join(metaDir, `${id}.json`);
         const metaContent = {
             id,
-            type:           'image',
+            type:           mediaType === 'video' ? 'video' : 'image',
             filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
             operation:      'imported',
             prompt:         promptContext || '',

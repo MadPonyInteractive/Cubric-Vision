@@ -201,6 +201,7 @@ export const MpiPromptBox = ComponentFactory.create({
                             base64Data: base64,
                             autoSequence: true,
                             itemId,
+                            mediaType,
                             width,
                             height,
                         }),
