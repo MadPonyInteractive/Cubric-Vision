@@ -181,7 +181,8 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             try {
                 const ext = file.name.split('.').pop() || (mediaType === 'image' ? 'png' : 'mp4');
-                const filename = `mpi_${Date.now()}.${ext}`;
+                const filename = `imported_001.${ext}`; // backend overrides sequence via autoSequence
+                const itemId = crypto.randomUUID();
 
                 // Convert file to base64 for the upload endpoint
                 const base64 = await _fileToBase64(file);
@@ -194,15 +195,16 @@ export const MpiPromptBox = ComponentFactory.create({
                         body: JSON.stringify({
                             filename,
                             base64Data: base64,
+                            autoSequence: true,
+                            itemId,
                         }),
                     }
                 );
                 if (!res.ok) throw new Error(`upload failed: ${res.status}`);
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'upload failed');
-                // Construct the project-file URL (same format as test 5): /project-file?path=<url-encoded absolute path>
                 const filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                return { filePath, filename: data.filename };
+                return { filePath, filename: data.filename, itemId };
             } catch (e) {
                 clientLogger.warn('MpiPromptBox', 'Media save failed:', e);
                 return null;
@@ -284,10 +286,8 @@ export const MpiPromptBox = ComponentFactory.create({
 
                 // Notify parent to create a history card for this imported media
                 if (uploaded) {
-                    emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, mediaType, source: 'file' });
-                    // Also emit via the Event Bus so any listener (e.g. MpiGalleryBlock) can
-                    // subscribe without needing a direct reference to the promptBox instance.
-                    Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, mediaType });
+                    emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
+                    Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType });
                 }
             });
 

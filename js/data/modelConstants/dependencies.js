@@ -1,7 +1,10 @@
 // ── Shared Dependencies ───────────────────────────────────────────────────────
 // Defined once, referenced by id in model dependency lists to avoid repetition.
 // *********
-// IMPORTANT: If you need to change a URL, you have to set the SHA256 back to null. 
+// IMPORTANT: 
+// 1 - If you need to change a URL, you have to set the SHA256 back to null.
+// 2 - When adding universal workflow dependencies, they need to be installed with the engine
+//     Set installOnEngine: true for those.
 // *********
 
 export const DEPS = {
@@ -9,7 +12,6 @@ export const DEPS = {
     'sdxl-realistic': {
         id: 'sdxl-realistic',
         name: 'SDXL Realistic',
-        type: 'checkpoint',
         origin: 'lustify_7',
         filename: 'checkpoints/SDXL_Realistic.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/SDXL_Realistic.safetensors',
@@ -20,7 +22,6 @@ export const DEPS = {
     'ill-anime': {
         id: 'ill-anime',
         name: 'ILL Anime',
-        type: 'checkpoint',
         origin: 'animemix_v80',
         filename: 'checkpoints/ILL_Anime.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime.safetensors',
@@ -31,7 +32,6 @@ export const DEPS = {
     'ill-anime-beauty': {
         id: 'ill-anime-beauty',
         name: 'ILL Anime Beauty',
-        type: 'checkpoint',
         origin: 'ramthrustsNSFWPINK_alchemyMix176',
         filename: 'checkpoints/ILL_Anime_Beauty.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/ILL_Anime_Beauty.safetensors',
@@ -42,7 +42,6 @@ export const DEPS = {
     'pony-mix': {
         id: 'pony-mix',
         name: 'PONY Mix',
-        type: 'checkpoint',
         origin: 'animergemeij_v30VAE',
         filename: 'checkpoints/PONY_Mix.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/PONY_Mix.safetensors',
@@ -54,7 +53,6 @@ export const DEPS = {
     'wan-22-t2v-high': {
         id: 'wan-22-t2v-high',
         name: 'Wan 2.2 t2v',
-        type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_t2vHighV30',
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_High.safetensors',
@@ -65,7 +63,6 @@ export const DEPS = {
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
         name: 'Wan 2.2 t2v',
-        type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_t2vLowV30',
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_i2v_Low.safetensors',
@@ -76,7 +73,6 @@ export const DEPS = {
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
         name: 'Wan 2.2 i2v',
-        type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_i2vV20High',
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_t2v_High.safetensors',
@@ -87,7 +83,6 @@ export const DEPS = {
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
         name: 'Wan 2.2 i2v',
-        type: 'checkpoint',
         origin: 'smoothMixWan2214BI2V_i2vV20Low',
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
         url: 'https://huggingface.co/CubricStudio/app-models/resolve/main/Wan_22_t2v_Low.safetensors',
@@ -99,7 +94,6 @@ export const DEPS = {
     'wan_2.1_vae': {
         id: 'wan_2.1_vae',
         name: 'wan_2.1_vae',
-        type: 'vae',
         filename: 'vae/wan_2.1_vae.safetensors',
         url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors',
         size: '254MB',
@@ -109,7 +103,6 @@ export const DEPS = {
     'umt5_xxl_fp8_e4m3fn_scaled': {
         id: 'umt5_xxl_fp8_e4m3fn_scaled',
         name: 'umt5_xxl_fp8_e4m3fn_scaled',
-        type: 'text_encoders',
         filename: 'vae/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         size: '6.27GB',
@@ -119,7 +112,6 @@ export const DEPS = {
     '4x-NMKD-Siax': {
         id: '4x-NMKD-Siax',
         name: '4x NMKD-Siax 200k',
-        type: 'upscale_model',
         filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
         url: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
         size: '67MB',
@@ -129,7 +121,6 @@ export const DEPS = {
     '4x-AnimeSharp': {
         id: '4x-AnimeSharp',
         name: '4x-AnimeSharp',
-        type: 'upscale_model',
         filename: 'upscale_models/4x-AnimeSharp.pth',
         url: 'https://huggingface.co/Kim2091/AnimeSharp/resolve/main/4x-AnimeSharp.pth',
         size: '65MB',
@@ -193,6 +184,7 @@ export const DEPS = {
         url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.zip',
         installRequirements: false,
         size: '940KB',
+        installOnEngine: true,
     },
     'ComfyUI-Frame-Interpolation': {
         id: 'ComfyUI-Frame-Interpolation',
@@ -218,7 +210,6 @@ export const DEPS = {
     'face-yolov8n': {
         id: 'face-yolov8n',
         name: 'face_yolov8n.pt',
-        type: 'ultralytics',
         filename: 'ultralytics/bbox/face_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt',
         size: '5.9MB',
@@ -228,7 +219,6 @@ export const DEPS = {
     'hand-yolov8n': {
         id: 'hand-yolov8n',
         name: 'hand_yolov8n.pt',
-        type: 'ultralytics',
         filename: 'ultralytics/bbox/hand_yolov8n.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt',
         size: '5.9MB',
@@ -238,7 +228,6 @@ export const DEPS = {
     'person-yolov8n-seg': {
         id: 'person-yolov8n-seg',
         name: 'person_yolov8n-seg.pt',
-        type: 'ultralytics',
         filename: 'ultralytics/bbox/person_yolov8n-seg.pt',
         url: 'https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt',
         size: '6.9MB',
@@ -248,7 +237,6 @@ export const DEPS = {
     'sam-vit-b': {
         id: 'sam-vit-b',
         name: 'SAM ViT-B',
-        type: 'sams',
         filename: 'sams/sam_vit_b_01ec64.pth',
         url: 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/sams/sam_vit_b_01ec64.pth',
         size: '367MB',

@@ -16,6 +16,7 @@ const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDep
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
+const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -263,14 +264,12 @@ async function _runEngineDownload(type) {
 
         // ── 6. Post-install: Write extra_model_paths.yaml (if needed) ────────────
         if (type === 'comfy') {
-            const mpiModelsDir = path.join(targetDir, 'mpi_models');
-            await fs.ensureDir(mpiModelsDir);
-
             const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
 
             if (!(await fs.pathExists(extraConfigPath))) {
-                const yaml = `# MPI AI Suite — Extra Model Paths\nall:\n  base_path: "${mpiModelsDir.replace(/\\/g, '/')}"\n`;
-                await fs.writeFile(extraConfigPath, yaml, 'utf8');
+                const mpiModelsDir = path.join(targetDir, 'mpi_models');
+                await fs.ensureDir(mpiModelsDir);
+                await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir), 'utf8');
                 logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
             } else {
                 logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);

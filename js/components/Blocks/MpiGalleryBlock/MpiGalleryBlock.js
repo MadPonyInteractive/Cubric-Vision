@@ -329,52 +329,34 @@ export const MpiGalleryBlock = ComponentFactory.create({
             : null;
 
         if (promptBox) {
-            // Ensure PromptBox is visible when block is created
             PromptBoxService.show();
             _wirePromptBox(promptBox);
-
-            // ── media:imported listener (declared outer-scope so both observers can clean it up)
-            let _unsubMediaImported = null;
-
-            // When media is dropped into the prompt box it is immediately uploaded
-            // to the project folder and a history card is created — no need to wait
-            // for the generate button.
-            _unsubMediaImported = Events.on('media:imported', ({ url, filename, mediaType }) => {
-                if (!state.currentProject) return;
-
-                const isVideo = mediaType === 'video';
-                // Derive display name from filename or use a default
-                const displayName = filename
-                    ? filename.replace(/\.[^.]+$/, '')
-                    : (isVideo ? 'Imported Video' : 'Imported Image');
-
-                const itemId = filename.replace(/\.[^.]+$/, '');
-                const item = isVideo
-                    ? createVideoItem({ id: itemId, filePath: url, uploaded: true, operation: 'imported' })
-                    : createImageItem({ id: itemId, filePath: url, uploaded: true, operation: 'imported' });
-
-                const group = createItemGroup(mediaType, { name: displayName });
-                const finalGroup = appendToHistory(group, item);
-
-                const currentGroups = state.currentProject?.itemGroups || [];
-                addGroup(finalGroup);
-
-                // Prepend the new group to the visible grid and re-render.
-                grid.el.setGroups([finalGroup, ...currentGroups]);
-            });
-
-            // Clean up the Events subscription when this block leaves the DOM.
-            // NOTE: MutationObserver on document.body does NOT fire for
-            // _toolContainer.innerHTML = '' because _toolContainer is not a direct
-            // child of document.body (grandchild). Using onState as the
-            // reliable cleanup trigger instead.
-            _unsubs.push(_unsubMediaImported || (() => {}));
-            _unsubs.push(Events.onState('currentPage', (value) => {
-                if (value !== PAGE_GALLERY) {
-                    _unsubs.forEach(fn => fn?.());
-                }
-            }));
         }
+
+        // ── media:imported listener — registered unconditionally.
+        // Must not be gated by promptBox presence; PromptBox may be remounted
+        // later (post-install) and drops need to create cards regardless.
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, mediaType }) => {
+            if (!state.currentProject) return;
+
+            const isVideo = mediaType === 'video';
+            const displayName = filename
+                ? filename.replace(/\.[^.]+$/, '')
+                : (isVideo ? 'Imported Video' : 'Imported Image');
+
+            const id = itemId || filename.replace(/\.[^.]+$/, '');
+            const item = isVideo
+                ? createVideoItem({ id, filePath: url, uploaded: true, operation: 'imported' })
+                : createImageItem({ id, filePath: url, uploaded: true, operation: 'imported' });
+
+            const group = createItemGroup(mediaType, { name: displayName });
+            const finalGroup = appendToHistory(group, item);
+
+            const currentGroups = state.currentProject?.itemGroups || [];
+            addGroup(finalGroup);
+
+            grid.el.setGroups([finalGroup, ...currentGroups]);
+        }));
 
 
         // ── Selection mode: show/hide shell PromptBox ───────────────────────────
@@ -392,7 +374,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             const hasImageModels = getModelsByType('image').some(m => m.installed === true);
-            if (!hasImageModels) Events.emit('models:open');
+            if (!hasImageModels) {
+                Events.emit('models:open');
+            } else {
+                Events.emit('models:all-installed');
+            }
         }));
 
         // ── Post-install PromptBox remount ─────────────────────────────────────

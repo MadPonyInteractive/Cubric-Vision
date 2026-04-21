@@ -9,7 +9,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
-import { reSyncInstalledModels, getModelById } from '../data/modelRegistry.js';
+import { reSyncInstalledModels, getModelById, MODELS } from '../data/modelRegistry.js';
 import { clientLogger } from './clientLogger.js';
 
 const downloadService = {
@@ -174,7 +174,8 @@ const downloadService = {
             state.downloadQueueActive = state.downloadJobs.some(j => j.status === 'downloading');
 
             // UW installs are surfaced through engine UI — skip toast
-            if (data.modelId && data.modelId !== '__universal_workflow__') {
+            const isUW = !data.modelId || data.modelId === '__universal_workflow__';
+            if (!isUW) {
                 const model = getModelById(data.modelId);
                 const modelName = model?.name || data.modelId;
                 const toastWrap = ce('div');
@@ -187,7 +188,25 @@ const downloadService = {
                 toastInstance.on('close', () => toastWrap.remove());
             }
 
-            reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after complete failed:', err));
+            // Capture installed IDs before re-sync to detect cascade installs
+            const preSync = new Set(MODELS.filter(m => m.installed).map(m => m.id));
+            reSyncInstalledModels().then(() => {
+                if (isUW) return;
+                // Toast any model that became installed as a side-effect (shared deps)
+                // Skip the primary modelId — already toasted above
+                for (const m of MODELS) {
+                    if (m.installed && !preSync.has(m.id) && m.id !== data.modelId) {
+                        const wrap = ce('div');
+                        document.body.appendChild(wrap);
+                        const t = MpiToast.mount(wrap, {
+                            message: `${m.name} installed.`,
+                            variant: 'success',
+                            duration: 4000,
+                        });
+                        t.on('close', () => wrap.remove());
+                    }
+                }
+            }).catch(err => clientLogger.error('downloadService', 're-sync after complete failed:', err));
             Events.emit('download:complete', data);
         });
 

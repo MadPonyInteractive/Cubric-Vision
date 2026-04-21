@@ -56,6 +56,8 @@
 
 **Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. If the new workflow requires a dep not yet marked `installOnEngine: true` in `dependencies.js`, add the flag there — it is automatically included in future engine installs.
 
+**Adding a custom_node dep to an image/video model:** If a `custom_nodes` dep is referenced by any entry in `models.js`, it MUST be marked `installOnEngine: true` in `dependencies.js`. Otherwise a fresh engine install leaves the custom node missing, `POST /comfy/models/check` reports the model as not installed, and the model manager pops up on project entry even though the user installed nothing extra. The engine install is the only path that handles `custom_nodes` deps proactively — regular model install only fetches them as a side effect of installing a specific model.
+
 ---
 
 ## 🛠️ Implementation Patterns

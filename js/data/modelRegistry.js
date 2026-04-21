@@ -110,6 +110,12 @@ export async function syncModelInstalled() {
             .map(([id]) => id);
         Events.emit('models:checked', { installedModelIds });
 
+        // Auto-close model manager if all image models are now installed
+        const allImageInstalled = MODELS
+            .filter(m => m.mediaType === 'image')
+            .every(m => m.installed === true);
+        if (allImageInstalled) Events.emit('models:all-installed');
+
         return true;
     } catch (err) {
         clientLogger.error('modelRegistry', 'syncModelInstalled failed:', err);

@@ -328,7 +328,7 @@ router.post('/project-media/:projectId/update-meta', async (req, res) => {
 router.post('/project-media/:projectId/upload', async (req, res) => {
     try {
         const { folderPath } = req.query;
-        const { filename, base64Data, promptContext, seed, autoSequence } = req.body;
+        const { filename, base64Data, promptContext, seed, autoSequence, itemId } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!filename || !base64Data) return res.status(400).json({ success: false, error: 'filename and base64Data required' });
 
@@ -337,18 +337,22 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
 
         let finalFileName = filename;
         if (autoSequence) {
+            const ext = path.extname(finalFileName).slice(1) || 'png';
+            const stem = path.basename(finalFileName, path.extname(finalFileName));
+            // Strip trailing _NNN sequence to get the bare prefix (e.g. imported_001 → imported)
+            const prefix = stem.replace(/_\d+$/, '') || 'imported';
             const entries = await fs.readdir(mediaDir);
             let maxNum = 0;
+            const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
             entries.forEach(e => {
-                const m = e.match(/^mpiAiSuite_(\d+)/);
+                const m = e.match(re);
                 if (m) {
                     const num = parseInt(m[1], 10);
                     if (num > maxNum) maxNum = num;
                 }
             });
-            const nextNum = (maxNum + 1).toString().padStart(5, '0');
-            const ext = finalFileName.split('.').pop() || 'png';
-            finalFileName = `mpiAiSuite_${nextNum}.${ext}`;
+            const nextNum = (maxNum + 1).toString().padStart(3, '0');
+            finalFileName = `${prefix}_${nextNum}.${ext}`;
         }
 
         const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, '');
@@ -356,20 +360,28 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const filePath = path.join(mediaDir, finalFileName);
         await fs.writeFile(filePath, buffer);
 
-        // Metadata lives in Media/.meta/ not alongside the file
+        // Write UUID-keyed sidecar to Media/.meta/<uuid>.json (same pattern as save-generation)
+        const id = itemId || uuidv4();
         const metaDir = path.join(mediaDir, '.meta');
         await fs.ensureDir(metaDir);
-        const metaPath = path.join(metaDir, finalFileName + '.json');
-        const meta = {
-            promptContext: promptContext || '',
+        const metaPath = path.join(metaDir, `${id}.json`);
+        const metaContent = {
+            id,
+            type:           'image',
+            filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
+            operation:      'imported',
+            prompt:         promptContext || '',
             negativePrompt: req.body.negativePrompt || '',
-            seed: seed || null,
-            width: req.body.width || null,
-            height: req.body.height || null,
-            timestamp: new Date().toISOString()
+            seed:           seed ?? -1,
+            modelId:        null,
+            createdAt:      new Date().toISOString(),
+            name:           null,
+            uploaded:       true,
+            pixelDimensions: { w: req.body.width || 0, h: req.body.height || 0 },
+            generationMs:   null,
         };
-        await fs.writeJson(metaPath, meta, { spaces: 2 });
-        res.json({ success: true, filePath, filename: finalFileName });
+        await fs.writeJson(metaPath, metaContent, { spaces: 2 });
+        res.json({ success: true, filePath, filename: finalFileName, itemId: id });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

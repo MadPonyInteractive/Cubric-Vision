@@ -29,6 +29,7 @@ const {
     getCustomRoot,
 } = require('./shared');
 const { getPythonBin, getComfyPath } = require('./platformEngine');
+const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -176,31 +177,7 @@ router.post('/comfy/set-path', async (req, res) => {
             return res.json({ success: true });
         }
 
-        const normalizedPath = customPath.replace(/\\/g, '/');
-        const yamlContent = `
-comfyui:
-    base_path: ${normalizedPath}
-    checkpoints: checkpoints/
-    clip: clip/
-    clip_vision: clip_vision/
-    configs: configs/
-    controlnet: controlnet/
-    embeddings: embeddings/
-    loras: loras/
-    upscale_models: upscale_models/
-    vae: vae/
-    unet: unet/
-    diffusers: diffusers/
-    vae_approx: vae_approx/
-    gligen: gligen/
-    hypernetworks: hypernetworks/
-    photomaker: photomaker/
-    classifiers: classifiers/
-    style_models: style_models/
-    face_models: face_models/
-    ipadapter: ipadapter/
-    diffusion_models: diffusion_models/
-`;
+        const yamlContent = buildExtraModelPathsYaml(customPath);
         await fs.writeFile(extraConfigPath, yamlContent, 'utf8');
         res.json({ success: true, writtenTo: extraConfigPath });
     } catch (err) {

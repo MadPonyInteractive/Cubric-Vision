@@ -214,30 +214,17 @@ async function findFileRecursive(dir, filename) {
 async function resolveComfyPath(dep, customRoot, config) {
     const isCustomNode = dep.type === 'custom_nodes';
     let localPath;
-    let subDirPrefix = '';
-
-    if (!dep.filename) {
-        if (dep.type === 'checkpoint') subDirPrefix = 'checkpoints';
-        else if (dep.type === 'lora') subDirPrefix = 'loras';
-        else if (dep.type === 'vae') subDirPrefix = 'vae';
-        else if (dep.type === 'upscaler' || dep.type === 'upscale_model') subDirPrefix = 'upscale_models';
-        else if (dep.type === 'diffusion_model') subDirPrefix = 'diffusion_models';
-        else if (dep.type === 'clip') subDirPrefix = 'clip';
-        else if (dep.type === 'ultralytics') subDirPrefix = 'ultralytics';
-        else if (dep.type === 'sams') subDirPrefix = 'sams';
-    }
 
     if (customRoot && !isCustomNode) {
-        const modelsDir = path.join(customRoot, subDirPrefix);
-        const directPath = path.join(modelsDir, dep.filename || '');
+        const directPath = path.join(customRoot, dep.filename || '');
         if (dep.filename && await fs.pathExists(directPath)) {
             localPath = directPath;
         } else if (dep.filename) {
             const baseFilename = path.basename(dep.filename);
-            const found = await findFileRecursive(modelsDir, baseFilename);
+            const found = await findFileRecursive(customRoot, baseFilename);
             localPath = found || directPath;
         } else {
-            localPath = modelsDir;
+            localPath = customRoot;
         }
     } else {
         const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
@@ -250,7 +237,6 @@ async function resolveComfyPath(dep, customRoot, config) {
             baseDir = config.local_models_path
                 ? config.local_models_path
                 : getComfyPath(ENGINE_ROOT, 'models');
-            baseDir = path.join(baseDir, subDirPrefix);
         }
         localPath = path.join(baseDir, dep.filename || '');
     }
@@ -306,9 +292,9 @@ async function getCustomRoot() {
  */
 function getUniversalWorkflowDepIds() {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
-    return Object.values(DEPS)
-        .filter(dep => dep.installOnEngine === true)
-        .map(dep => dep.id);
+    return Object.entries(DEPS)
+        .filter(([, dep]) => dep.installOnEngine === true)
+        .map(([id]) => id);
 }
 
 /**
