@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
@@ -201,8 +202,8 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (appData) {
                     try {
                         const { filePath, type } = JSON.parse(appData);
-                        if (type === 'image' && !acceptsImage) return;
-                        if (type === 'video' && !acceptsVideo) return;
+                        if (type === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
+                        if (type === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
                         _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
                     } catch { /* malformed payload */ }
                     return;
@@ -215,8 +216,8 @@ export const MpiPromptBox = ComponentFactory.create({
                                 : file.type.startsWith('video/') ? 'video'
                                 : null;
                 if (!mediaType) return;
-                if (mediaType === 'image' && !acceptsImage) return;
-                if (mediaType === 'video' && !acceptsVideo) return;
+                if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
+                if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
 
                 // Upload to project folder and create history card immediately
                 const project = state.currentProject;
@@ -298,6 +299,27 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Radial menu → operation sync ───────────────────────────────────────
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
+
+        // ── Toast for incompatible media drop ─────────────────────────────────
+        function _showIncompatibleToast() {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+            document.body.appendChild(wrapper);
+            const toast = MpiToast.mount(wrapper, {
+                message: 'Media type not supported for this model.',
+                variant: 'warning',
+                duration: 3000,
+            });
+            toast.on('close', () => wrapper.remove());
+        }
+
+        // ── Public media injection — used by PromptBoxService.injectMedia ─────
+        el.injectMedia = ({ url, mediaType }) => {
+            if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return false; }
+            if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return false; }
+            _tryAddMedia({ url, file: null, mediaType, source: 'app' });
+            return true;
+        };
 
         // ── Prompt injection (from gallery reuse button) ──────────────────────
         el.injectPrompts = ({ positive, negative }) => {

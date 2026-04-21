@@ -12,7 +12,7 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiGalleryGrid } from '../../Compounds/MpiGalleryGrid/MpiGalleryGrid.js';
-import { MpiGalleryDropOverlay } from '../../Primitives/MpiGalleryDropOverlay/MpiGalleryDropOverlay.js';
+import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
@@ -30,6 +30,7 @@ import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration } from '../../../services/generationService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { addGroup, updateGroup, removeGroup, persistGroups } from '../../../services/projectService.js';
 import {
     createImageItem,
@@ -54,8 +55,25 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         const grid   = MpiGalleryGrid.mount(el, { groups });
 
-        // ── OS-file drop overlay (model-agnostic import) ───────────────────────
-        const dropOverlay = MpiGalleryDropOverlay.mount(document.createElement('div'));
+        // ── OS-file drop overlay ───────────────────────────────────────────────
+        const dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
+            onDrop: async ({ file, mediaType }) => {
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) {
+                    clientLogger.warn('MpiGalleryBlock', 'No current project on drop');
+                    return;
+                }
+                const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
+                if (!uploaded) return;
+                Events.emit('media:imported', {
+                    url: uploaded.filePath,
+                    filename: uploaded.filename,
+                    itemId: uploaded.itemId,
+                    mediaType,
+                });
+                PromptBoxService.injectMedia({ url: uploaded.filePath, mediaType });
+            },
+        });
         el.appendChild(dropOverlay.el);
 
         let _dragCounter = 0;

@@ -30,6 +30,8 @@ import {
 } from '../../../data/projectModel.js';
 import { MpiModelsModal } from '../MpiModelsModal/MpiModelsModal.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
+import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
@@ -170,6 +172,48 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // Load initial entry to ensure _currentItem is set (required for crop, mask, etc.)
         canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
+
+        // ── OS-file drop overlay ───────────────────────────────────────────────
+        const _dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
+            onDrop: async ({ file, mediaType }) => {
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) {
+                    clientLogger.warn('MpiGroupHistoryBlock', 'No current project on drop');
+                    return;
+                }
+                const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
+                if (uploaded) {
+                    PromptBoxService.injectMedia({ url: uploaded.filePath, mediaType });
+                }
+            },
+        });
+        el.appendChild(_dropOverlay.el);
+
+        let _histDragCounter = 0;
+        const _isFileDrag = (e) =>
+            e.dataTransfer?.types?.includes('Files') &&
+            !e.dataTransfer.types.includes('application/mpi-media');
+
+        const _onHistDragEnter = (e) => {
+            if (!_isFileDrag(e)) return;
+            if (!state.currentProject) return;
+            _histDragCounter++;
+            _dropOverlay.el.show();
+        };
+        const _onHistDragLeave = (e) => {
+            if (!_isFileDrag(e)) return;
+            if (_histDragCounter > 0 && --_histDragCounter === 0) _dropOverlay.el.hide();
+        };
+        const _onHistDrop = () => {
+            _histDragCounter = 0;
+            _dropOverlay.el.hide();
+        };
+        const _onHistDragOver = (e) => { if (_isFileDrag(e)) e.preventDefault(); };
+
+        window.addEventListener('dragenter', _onHistDragEnter);
+        window.addEventListener('dragleave', _onHistDragLeave);
+        window.addEventListener('dragover',  _onHistDragOver);
+        window.addEventListener('drop',      _onHistDrop);
 
         // ── PromptBox via PromptBoxService ────────────────────────────────────
 
@@ -456,6 +500,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
+            window.removeEventListener('dragenter', _onHistDragEnter);
+            window.removeEventListener('dragleave', _onHistDragLeave);
+            window.removeEventListener('dragover',  _onHistDragOver);
+            window.removeEventListener('drop',      _onHistDrop);
+            _dropOverlay.el.destroy?.();
+            _dropOverlay.el.remove();
             canvasViewer.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();

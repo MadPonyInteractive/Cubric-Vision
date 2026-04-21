@@ -50,10 +50,10 @@ EMITS:   `close`      `{}`
          `click`      `MouseEvent`
 LISTENS: `ui:close-all-popups` — removes `is-active`, emits `close`
 
-### MpiGalleryDropOverlay
-EMITS:   (none — uses `Events.emit('media:imported', { url, filename, itemId, mediaType })` globally on drop)
+### MpiMediaDropOverlay
+EMITS:   (none — dumb primitive; calls `props.onDrop({ file, mediaType })` on valid drop; all side effects in caller)
 LISTENS: `ui:close-all-popups` — hides overlay (Escape during drag)
-NOTE:    Accepts any image/video OS file drag. Ignores internal `application/mpi-media` drags (those are gallery-card drags).
+NOTE:    Accepts any image/video OS file drag. Ignores internal `application/mpi-media` drags. Replaced `MpiGalleryDropOverlay`.
 
 ### MpiProgressBar
 EMITS:   `input`  `{ value: number }`
@@ -272,7 +272,7 @@ EMITS:   `play`       `{ time: number }`
 LISTENS: (none)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
-Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiGalleryDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
+Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
@@ -313,7 +313,7 @@ NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
 ## Workspaces (cross-cutting event usage)
 
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
-Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, and wires them via Events.
+Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
@@ -321,3 +321,5 @@ EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          StatusBar listens to tool:running, tool:loading-model, tool:sampling-start, tool:idle, tool:cancelled and updates progress label/variant
          commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)
+         Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
+         MpiMediaDropOverlay onDrop: uploads file + calls PromptBoxService.injectMedia() only (no history card created)

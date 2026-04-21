@@ -226,6 +226,9 @@
  *   setModel(model)       — sync internal model dropdown to a new model (no remount)
  *   setModelList(list)    — update the available models list in the dropdown
  *   updateContext({ imageCount, videoCount, hasMask })
+ *   injectMedia({ url, mediaType }) → boolean
+ *     — Adds media chip if model accepts the type; fires warning toast and returns
+ *       false if incompatible. Single source of truth for all inject paths.
  *
  * Emits:
  *   'model-change'      { model }
@@ -792,12 +795,13 @@
  */
 
 /**
- * @typedef {Object} MpiGalleryDropOverlayProps (Primitive — js/components/Primitives/MpiGalleryDropOverlay)
- * No props required at mount time.
+ * @typedef {Object} MpiMediaDropOverlayProps (Primitive — js/components/Primitives/MpiMediaDropOverlay)
+ * @property {function({ file: File, mediaType: 'image'|'video' }): void} [onDrop]
+ *   Called when a valid OS file is dropped. Upload, Events.emit, etc. are the
+ *   caller's responsibility — this primitive is dumb.
  *
- * Full-area OS-file drop target. Shown by MpiGalleryBlock while OS files
- * are being dragged over the window. Model-agnostic — accepts any image
- * or video file and emits the global `media:imported` event.
+ * Full-area OS-file drop target. Shown by blocks while OS files are dragged
+ * over the window. Ignores internal `application/mpi-media` drags.
  *
  * Instance methods (on instance.el):
  *   show() — add `--visible` modifier, making overlay interactive
@@ -805,8 +809,16 @@
  *
  * Auto-hides on global `ui:close-all-popups` event (Escape key).
  *
- * Does not emit component-level events. Uses `Events.emit('media:imported', ...)`
- * so the existing gallery listener creates the ItemGroup and persists.
+ * Does NOT emit component-level events and does NOT upload — callers own side effects.
+ */
+
+/**
+ * PromptBoxService — Shell-level singleton wrapper around MpiPromptBox.
+ *
+ * Additional method (beyond existing):
+ *   injectMedia({ url, mediaType }) → boolean
+ *     — Delegates to mounted MpiPromptBox el.injectMedia(). Returns false if no
+ *       instance is mounted or the model rejects the type (toast already fired).
  */
 
 /**

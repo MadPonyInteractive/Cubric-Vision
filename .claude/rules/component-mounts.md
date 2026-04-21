@@ -8,7 +8,7 @@
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
-- `MpiGalleryDropOverlay`   props: none   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags
+- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags; `onDrop` uploads file, emits `media:imported`, then calls `PromptBoxService.injectMedia()`
 - `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` (inside grid's footer) — hidden by default; shown when selection mode activates
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
@@ -25,6 +25,7 @@
 - `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — includes crop, mask, plus universal tool commands (autoMaskImg, interpolate, videoUpscale)   slot: `#left-slot`
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask/compare tool modes internally
 - `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
+- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; `onDrop` uploads file and calls `PromptBoxService.injectMedia()` only (no card created); window drag-counter pattern same as GalleryBlock
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedModels, operation: activeOperation, includeNegative: true }`   — shell-level PromptBox; only called when `activeModel` is non-null
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 - `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero image models installed (separate instance from shell's modal; emits `models:all-installed` to hide)

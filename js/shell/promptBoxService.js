@@ -109,6 +109,18 @@ export const PromptBoxService = {
     },
 
     /**
+     * Inject media into the mounted PromptBox.
+     * Delegates to el.injectMedia() which handles compat check + toast.
+     * @param {Object} opts
+     * @param {string} opts.url - Media file URL
+     * @param {'image'|'video'} opts.mediaType
+     * @returns {boolean} true on success, false if rejected or no instance
+     */
+    injectMedia({ url, mediaType } = {}) {
+        return _instance?.el?.injectMedia?.({ url, mediaType }) ?? false;
+    },
+
+    /**
      * Direct access to the mounted PromptBox component instance API.
      * The component instance has updateContext(), setGenerating(), setOperation(),
      * setModel(), setModelList(), getMediaItems(), etc. attached directly to the
