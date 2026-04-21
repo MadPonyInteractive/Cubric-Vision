@@ -39,6 +39,7 @@ const _state = {
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'favorites'
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
+    gallerySizeLevel: 3,             // 1–5; survives gallery navigation within session
 };
 
 // Batching control for state mutations

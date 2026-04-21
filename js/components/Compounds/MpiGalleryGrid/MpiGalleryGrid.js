@@ -93,7 +93,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
 
         const slider = MpiProgressBar.mount(sliderWrap, {
-            min: 1, max: 5, step: 1, value: 3,
+            min: 1, max: 5, step: 1, value: state.gallerySizeLevel,
             interactive: true,
             wheel: true,
             info: 'Size: {value}',
@@ -101,9 +101,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // Level → target card width (px)
         const SIZE_MAP = { 1: 160, 2: 224, 3: 288, 4: 384, 5: 512 };
-        let _cardWidth = SIZE_MAP[3];
+        let _cardWidth = SIZE_MAP[state.gallerySizeLevel] || 288;
 
         slider.on('input', ({ value }) => {
+            state.gallerySizeLevel = value;
             _cardWidth = SIZE_MAP[value] || 288;
             _rerenderJustified();
         });
@@ -130,8 +131,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         _unsubs.push(Hotkeys.register('+', incrementSlider));
         _unsubs.push(Hotkeys.register('-', decrementSlider));
 
-        // Set initial card width
-        _cardWidth = SIZE_MAP[3];
+        // Initial card width set from state above
 
         // ── Card rendering helper (merged from MpiGroupCard) ──────────────────
 

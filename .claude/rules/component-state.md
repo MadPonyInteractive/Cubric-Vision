@@ -21,4 +21,7 @@
 | `downloadJobs[]`      | `DownloadJob[]`                        | MpiModelsModal, downloadService.js | downloadService.js |
 | `downloadQueueActive`| `boolean`                              | (read by components polling state) | downloadService.js |
 | `comfyNeedsRestart`  | `boolean`                              | comfyController.js (ensureServerRunning guard) | downloadService.js (set on `comfy:needs-restart` SSE event) |
+| `gallerySort`        | `{ order: string, filter: string }`    | MpiGalleryGrid (`_rerenderJustified`)                                                   | MpiGalleryGrid (tab click handler)                                                 |
+| `galleryShowInfo`    | `boolean`                              | MpiGalleryGrid (info button active state, card sync)                                    | MpiGalleryGrid (info button click)                                                 |
+| `gallerySizeLevel`   | `number` (1–5)                         | MpiGalleryGrid (slider initial value, `_cardWidth` init)                                | MpiGalleryGrid (slider input handler)                                              |
 
