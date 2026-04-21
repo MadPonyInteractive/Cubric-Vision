@@ -112,15 +112,24 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             ? createVideoItem({ id: itemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id })
             : createImageItem({ id: itemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id });
 
+        // Dimensions from injection params — drives correct aspect ratio in gallery card.
+        const width  = injectionParams.Width  || 0;
+        const height = injectionParams.Height || 0;
+
         // Project mutation
         if (opts.existingGroup) {
-            // GroupHistory mode — append to existing group
-            const updatedGroup = appendToHistory(opts.existingGroup, item);
+            // GroupHistory mode — append to existing group; backfill w/h only when missing.
+            const base = appendToHistory(opts.existingGroup, item);
+            const updatedGroup = {
+                ...base,
+                width:  opts.existingGroup.width  || width,
+                height: opts.existingGroup.height || height,
+            };
             updateGroup(updatedGroup);
             callbacks.onComplete?.({ item, group: updatedGroup });
         } else {
-            // Gallery mode — create new group
-            const group = createItemGroup(model.mediaType, { name: displayName });
+            // Gallery mode — create new group with resolved dimensions.
+            const group = createItemGroup(model.mediaType, { name: displayName, width, height });
             const finalGroup = appendToHistory(group, item);
             addGroup(finalGroup);
             callbacks.onComplete?.({ item, group: finalGroup });

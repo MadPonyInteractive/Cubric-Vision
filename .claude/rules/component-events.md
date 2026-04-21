@@ -183,8 +183,10 @@ LISTENS: (none)
 ### MpiRatioSelector
 EMITS:   `change`             `{ value: string, ratio: number|null, w: number|null, h: number|null, orientation: string|null }`
          `orientation_change` `{ orientation: 'portrait'|'landscape' }`
+         `quality_change`     `{ qualityTier: string }`
          `popup_toggle`       `{ active: boolean }`
 LISTENS: `ui:close-all-popups` — closes popup if open
+API:     `instance.el.getValue()` → `{ value, w, h, orientation, qualityTier }` — reads live props; use for injection instead of change-event cache
 
 ### MpiSelectionBar
 EMITS:   `compare`  `{}`

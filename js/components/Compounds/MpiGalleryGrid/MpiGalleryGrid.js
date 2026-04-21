@@ -76,6 +76,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {Map<string, {card: object, el: HTMLElement}>} */
         const _cardMap = new Map(); // groupId or tempId → { card instance, wrapper el }
 
+        // Tracks group IDs whose image has already triggered a post-load rerender.
+        // Prevents the rerender → new img → onload → rerender loop for cached images.
+        const _stabilizedIds = new Set();
+
         const grid = el.querySelector('.mpi-gallery-grid__grid');
         const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
 
@@ -221,7 +225,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const src = selected?.filePath || '';
 
                 if (src) {
-                    thumb.onload = () => cardEl.classList.remove('mpi-group-card--missing');
+                    thumb.onload = () => {
+                        cardEl.classList.remove('mpi-group-card--missing');
+                        // Re-layout once after first load so naturalWidth drives aspect ratio
+                        // for groups that lack stored width/height (e.g. legacy groups).
+                        if (group?.id && !_stabilizedIds.has(group.id)) {
+                            _stabilizedIds.add(group.id);
+                            _rerenderJustified();
+                        }
+                    };
                     thumb.onerror = () => {
                         cardEl.classList.add('mpi-group-card--missing');
                         emit('media-missing', { group, itemId: selected?.id });
@@ -496,6 +508,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.setGroups = (groups) => {
             _groups = groups;
             _selectedIds.clear();
+            _stabilizedIds.clear();
             _rerenderJustified();
         };
 

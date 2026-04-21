@@ -15,6 +15,7 @@ import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelec
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
+import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 /** @type {Record<string, ControlDef>} */
 export const PROMPT_BOX_CONTROLS = {
@@ -80,13 +81,25 @@ export const PROMPT_BOX_CONTROLS = {
                 });
             });
 
-            // Initialize with persisted value + dimensions
-            this.value = { label: initialValue, w: 1024, h: 1024 };
+            // Initialize cache with resolved dimensions (not hardcoded 1024×1024)
+            const mode = RATIO_MODES[modelType] ?? 'orientation';
+            const initRatios = getModelRatios(
+                modelType,
+                mode === 'orientation' ? initialOrientation : undefined,
+                mode === 'quality' ? initialQualityTier : undefined
+            );
+            const initMatch = initRatios.find(r => r.label === initialValue) || initRatios[0];
+            this.value = { label: initMatch.label, w: initMatch.w ?? 1024, h: initMatch.h ?? 1024 };
         },
         getValue() {
             return this.value ?? null;
         },
         getInjectionParams() {
+            // Prefer live dimensions from the mounted selector; fall back to cache.
+            if (this._instance?.el?.getValue) {
+                const live = this._instance.el.getValue();
+                if (live.w && live.h) return { Width: live.w, Height: live.h };
+            }
             const v = this.value ?? { w: 1024, h: 1024 };
             return { Width: v.w, Height: v.h };
         },

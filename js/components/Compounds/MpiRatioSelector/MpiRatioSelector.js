@@ -7,6 +7,33 @@ import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 /**
+ * Resolves current { value, w, h, orientation, qualityTier } from live props.
+ * Used by getValue() and by callers who need injection-ready dimensions.
+ * @param {Object} props
+ * @returns {{ value: string, w: number, h: number, orientation: string|null, qualityTier: string }}
+ */
+function resolveCurrentDimensions(props) {
+    const modelType   = props.modelType || 'flux';
+    const orientation = props.orientation || props.initialOrientation || 'portrait';
+    const qualityTier = props.qualityTier || 'medium';
+    const value       = props.value || '1:1';
+    const mode        = RATIO_MODES[modelType] ?? 'orientation';
+    const ratios      = getModelRatios(
+        modelType,
+        mode === 'orientation' ? orientation : undefined,
+        mode === 'quality' ? qualityTier : undefined
+    );
+    const match = ratios.find(r => r.label === value) || ratios[0];
+    return {
+        value:       match.label,
+        w:           match.w ?? 0,
+        h:           match.h ?? 0,
+        orientation: mode === 'orientation' ? orientation : null,
+        qualityTier,
+    };
+}
+
+/**
  * MpiRatioSelector — Block-level Aspect Ratio Picker
  * 
  * Composes a trigger button + popup with ratio presets.
@@ -115,6 +142,10 @@ export const MpiRatioSelector = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
+        // Expose live accessor so callers (e.g. PromptBoxControls) can read
+        // current dimensions without relying on change-event callbacks.
+        el.getValue = () => resolveCurrentDimensions(props);
+
         const trigger = el.querySelector('.mpi-ratio-sel__trigger');
         const popupEl = el.querySelector('.mpi-popup');
         // Capture DOM refs before portaling (they live inside popupEl)
