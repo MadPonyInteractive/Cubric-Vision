@@ -154,6 +154,25 @@ router.post('/update-project', async (req, res) => {
     }
 });
 
+router.post('/validate-project', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.json({ success: false, error: 'folderPath required' });
+        const jsonPath = path.join(folderPath, 'project.json');
+        if (!(await fs.pathExists(jsonPath))) {
+            return res.json({ success: false, error: 'No project.json found in folder' });
+        }
+        const project = await fs.readJson(jsonPath);
+        if (!project.id || !project.name) {
+            return res.json({ success: false, error: 'Invalid project.json (missing id/name)' });
+        }
+        res.json({ success: true, project });
+    } catch (err) {
+        logger.error('project', 'validate-project error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/update-project-settings', async (req, res) => {
     try {
         const { folderPath, updates } = req.body;

@@ -2,6 +2,7 @@
    LANDING PAGE
 ══════════════════════════════════════════════════════════════════════════════ */
 .page-landing {
+  position: relative;
   height: calc(100vh - var(--titlebar-h));
   margin-top: var(--titlebar-h);
   overflow-y: auto;

@@ -4,12 +4,15 @@
  * The creation dialog uses the MpiNewProject compound component.
  */
 
-import { listProjects, createProject, deleteProject, openProject } from '../services/projectService.js';
+import { listProjects, createProject, deleteProject, openProject, addProjectByFolder } from '../services/projectService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
+import { Events } from '../events.js';
+import { clientLogger } from '../services/clientLogger.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
@@ -99,6 +102,54 @@ export function initProjectUI() {
       });
       _newProjectDialog.el.show();
     });
+  }
+
+  // ── Drag-and-drop project import (Electron only) ──────────────────────────
+  // Feature-detect window.require — in plain browser dev mode webUtils is
+  // unavailable and the feature cannot deliver absolute paths, so skip mount.
+  if (typeof window.require === 'function') {
+    const landingEl = document.getElementById('page-landing');
+    if (landingEl) {
+      const dropOverlay = MpiProjectDropOverlay.mount(document.createElement('div'), {
+        onDrop: ({ folderPath }) => { handleProjectDrop(folderPath); },
+      });
+      landingEl.appendChild(dropOverlay.el);
+
+      // Scope drag listeners to #page-landing — navigation toggles its
+      // display, so events only fire while the landing page is visible.
+      let _dragCounter = 0;
+      const _isFileDrag = (e) => e.dataTransfer?.types?.includes('Files');
+
+      landingEl.addEventListener('dragenter', (e) => {
+        if (!_isFileDrag(e)) return;
+        _dragCounter++;
+        dropOverlay.el.show();
+      });
+      landingEl.addEventListener('dragleave', (e) => {
+        if (!_isFileDrag(e)) return;
+        if (_dragCounter > 0 && --_dragCounter === 0) dropOverlay.el.hide();
+      });
+      landingEl.addEventListener('dragover', (e) => { if (_isFileDrag(e)) e.preventDefault(); });
+      landingEl.addEventListener('drop', () => {
+        _dragCounter = 0;
+        dropOverlay.el.hide();
+      });
+      // initProjectUI runs once at boot — no teardown needed.
+    }
+  }
+}
+
+/**
+ * Validate a dropped project folder, register its parent in extra paths,
+ * and refresh the grid so a card appears. Does NOT open the project.
+ */
+async function handleProjectDrop(folderPath) {
+  try {
+    await addProjectByFolder(folderPath);
+    await loadProjectGrid();
+  } catch (err) {
+    clientLogger.error('projectUI', 'drop import failed', err);
+    Events.emit('ui:error', { title: 'Could not import project', message: err.message });
   }
 }
 

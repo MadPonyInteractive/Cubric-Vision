@@ -211,6 +211,27 @@ export async function openProject(project) {
     Events.emit('project:changed', { project: reconciled });
 }
 
+/**
+ * Validate a folder as a project and register its parent directory in the
+ * extra project paths list, so the next listProjects() surfaces it.
+ * Does NOT open the project — the user clicks the new card to open.
+ * @param {string} folderPath — absolute path to the project folder
+ * @returns {Promise<Object>} the validated project.json contents
+ */
+export async function addProjectByFolder(folderPath) {
+    const normalized = folderPath.replace(/\\/g, '/');
+    const res = await post('/validate-project', { folderPath: normalized });
+    if (!res.success) throw new Error(res.error);
+
+    const parentDir = normalized.split('/').slice(0, -1).join('/');
+    const extras = Storage.getExtraProjectPaths();
+    if (!extras.includes(parentDir)) {
+        extras.push(parentDir);
+        Storage.setExtraProjectPaths(extras);
+    }
+    return res.project;
+}
+
 export async function updateProject(updates) {
     if (!state.currentProject) return;
     const result = await post('/update-project', {

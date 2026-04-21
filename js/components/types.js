@@ -813,6 +813,28 @@
  */
 
 /**
+ * @typedef {Object} MpiProjectDropOverlayProps (Primitive — js/components/Primitives/MpiProjectDropOverlay)
+ * @property {function({ folderPath: string, source: 'folder'|'json' }): void} [onDrop]
+ *   Called when the user drops a project folder or a project.json onto the
+ *   overlay. folderPath is absolute, normalised to forward slashes. Validation
+ *   of the folder contents (project.json shape, id/name) is the caller's
+ *   responsibility — this primitive only resolves the input to a folder path.
+ *
+ * Full-area OS-file drop target. Shown by the landing page while OS files are
+ * dragged over the window. Reads the absolute path via Electron's
+ * `webUtils.getPathForFile`; silently ignores drops when `webUtils` is
+ * unavailable (plain-browser dev mode).
+ *
+ * Instance methods (on instance.el):
+ *   show() — add `--visible` modifier, making overlay interactive
+ *   hide() — remove `--visible` modifier
+ *
+ * Auto-hides on global `ui:close-all-popups` event (Escape key).
+ *
+ * Does NOT emit component-level events and does NOT call the backend — callers own side effects.
+ */
+
+/**
  * PromptBoxService — Shell-level singleton wrapper around MpiPromptBox.
  *
  * Additional method (beyond existing):
