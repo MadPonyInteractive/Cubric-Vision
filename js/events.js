@@ -144,6 +144,12 @@ export const Events = new EventBus();
  * 'project:group-updated' { group: Object }                        — existing group updated and persisted
  * 'project:group-removed' { groupId: string }                      — group removed and persisted
  *
+ * Settings events (emitted by UI components, consumed by projectService):
+ * 'settings:model:select' { modelId: string }                      — model first selected, create key with defaults if missing
+ * 'settings:tool:select'  { toolKey: string }                      — tool first selected, create key with defaults if missing
+ * 'settings:model:update' { modelId: string, key: string, value: any } — partial model setting update (queued + debounced)
+ * 'settings:tool:update'  { toolKey: string,  key: string, value: any } — partial tool setting update (queued + debounced)
+ *
  * Media events:
  * 'media:imported'        { url: string, filename: string, mediaType: string } — file imported via PromptBox drop
  */

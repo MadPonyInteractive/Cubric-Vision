@@ -495,7 +495,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 });
                 _modelDropdown.on('change', ({ value }) => {
                     const selected = modelList.find(m => m.id === value);
-                    if (selected) emit('model-change', { model: selected });
+                    if (selected) {
+                        el.setModel(selected);
+                        Events.emit('settings:model:select', { modelId: selected.id });
+                        emit('model-change', { model: selected });
+                    }
                 });
                 leftSlot.appendChild(_modelDropdown.el);
             }

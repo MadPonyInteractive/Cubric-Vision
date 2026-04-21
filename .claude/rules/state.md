@@ -55,3 +55,15 @@ setup: (el, props, emit) => {
 ```
 
 > **Note on Architecture:** The `state.js` file contains legacy keys and is undergoing structural refactoring. However, the exact rule still applies: **use `js/state.js` as the source of truth for persistency.**
+
+---
+
+## Settings Persistence Rule
+
+`projectService` is the **sole writer** to `modelSettings` and `toolSettings` in `project.json`. Components must **not** directly call `setModelSettings`, `setToolSettings`, or `saveProjectSettings` for these fields.
+
+**Instead, emit:**
+- `settings:model:update` `{ modelId, key, value }` — to queue a partial model setting write
+- `settings:tool:update` `{ toolKey, key, value }` — to queue a partial tool setting write
+- `settings:model:select` `{ modelId }` — when a model is first selected (ensures key exists)
+- `settings:tool:select` `{ toolKey }` — when a tool is first opened (ensures key exists)

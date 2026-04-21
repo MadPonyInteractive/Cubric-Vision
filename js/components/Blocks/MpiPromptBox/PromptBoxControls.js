@@ -13,8 +13,8 @@
 
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
 import { state } from '../../../state.js';
-import { getModelSettings, setModelSettings } from '../../../data/projectModel.js';
-import { saveProjectSettings } from '../../../services/projectService.js';
+import { getModelSettings } from '../../../data/projectModel.js';
+import { Events } from '../../../events.js';
 
 /** @type {Record<string, ControlDef>} */
 export const PROMPT_BOX_CONTROLS = {
@@ -48,36 +48,36 @@ export const PROMPT_BOX_CONTROLS = {
                 qualityTier: initialQualityTier,
             });
 
-            // Ratio selection: update displayed size + save to project
+            // Ratio selection: update displayed size + queue save via projectService
             this._instance.on('change', ({ value, w, h, orientation }) => {
                 this.value = { label: value, w, h };
-                if (state.currentProject && modelId) {
-                    const updated = setModelSettings(state.currentProject, modelId, {
-                        ratioSelector: { selectedRatio: value, orientation },
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'ratioSelector',
+                        value: { selectedRatio: value, orientation },
                     });
-                    state.currentProject = updated;
-                    saveProjectSettings();
                 }
             });
 
-            // Orientation change: save to project
+            // Orientation change: queue save via projectService
             this._instance.on('orientation_change', ({ orientation }) => {
-                if (!state.currentProject || !modelId) return;
-                const updated = setModelSettings(state.currentProject, modelId, {
-                    ratioSelector: { orientation },
+                if (!modelId) return;
+                Events.emit('settings:model:update', {
+                    modelId,
+                    key: 'ratioSelector',
+                    value: { orientation },
                 });
-                state.currentProject = updated;
-                saveProjectSettings();
             });
 
-            // Quality tier change: save to project
+            // Quality tier change: queue save via projectService
             this._instance.on('quality_change', ({ qualityTier }) => {
-                if (!state.currentProject || !modelId) return;
-                const updated = setModelSettings(state.currentProject, modelId, {
-                    ratioSelector: { qualityTier },
+                if (!modelId) return;
+                Events.emit('settings:model:update', {
+                    modelId,
+                    key: 'ratioSelector',
+                    value: { qualityTier },
                 });
-                state.currentProject = updated;
-                saveProjectSettings();
             });
 
             // Initialize with persisted value + dimensions

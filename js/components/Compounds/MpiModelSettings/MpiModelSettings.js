@@ -33,13 +33,10 @@ import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
 import {
     getModelSettings,
-    setModelSettings,
     getToolSettings,
-    setToolSettings,
 } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { DEPS } from '../../../data/modelConstants/dependencies.js';
-import { saveProjectSettings } from '../../../services/projectService.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
@@ -112,27 +109,19 @@ export const MpiModelSettings = ComponentFactory.create({
 
         // ── Auto-save helper ──────────────────────────────────────────────────
 
-        async function _autoSave() {
-            if (!state.currentProject || !_context) return;
+        function _autoSave() {
+            if (!_context) return;
             try {
                 const depId = _filenameToDep(_upscaleValue) || null;
                 if (_context.modelId) {
-                    state.currentProject = setModelSettings(
-                        state.currentProject,
-                        _context.modelId,
-                        { loras: _loraSlots, upscaleModel: depId }
-                    );
+                    Events.emit('settings:model:update', { modelId: _context.modelId, key: 'loras', value: _loraSlots });
+                    Events.emit('settings:model:update', { modelId: _context.modelId, key: 'upscaleModel', value: depId });
                 } else if (_context.toolKey) {
-                    state.currentProject = setToolSettings(
-                        state.currentProject,
-                        _context.toolKey,
-                        { upscaleModel: depId }
-                    );
+                    Events.emit('settings:tool:update', { toolKey: _context.toolKey, key: 'upscaleModel', value: depId });
                 }
-                await saveProjectSettings();
                 emit('saved', {});
             } catch (err) {
-                clientLogger.error('model-settings', 'Failed to auto-save model settings', err);
+                clientLogger.error('model-settings', 'Failed to emit model settings update', err);
                 Events.emit('ui:error', { message: 'Failed to save settings. Please try again.' });
             }
         }
@@ -265,6 +254,12 @@ export const MpiModelSettings = ComponentFactory.create({
             }
 
             _context = ctx;
+
+            if (ctx.modelId) {
+                Events.emit('settings:model:select', { modelId: ctx.modelId });
+            } else if (ctx.toolKey) {
+                Events.emit('settings:tool:select', { toolKey: ctx.toolKey });
+            }
 
             const lorasSection = qs('[data-section="loras"]', el);
 

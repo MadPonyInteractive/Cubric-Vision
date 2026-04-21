@@ -88,6 +88,18 @@ Centralized persistence layer for project mutations. Replaces the old `projectMa
 
 **Architectural principle:** Blocks never write `state.currentProject.itemGroups` directly. They call ProjectService methods which handle the full mutation → persist → emit cycle.
 
+**Settings pipeline:** `projectService` subscribes to `settings:model:*` and `settings:tool:*` events and processes them through per-model/per-tool debounced queues (300ms). All writes to `modelSettings` and `toolSettings` in `project.json` are centralized here.
+
+**Queue behavior:** Each `modelId` (and `toolKey`) has its own queue. Multiple models write in parallel. `ratioSelector` sub-keys are deep-merged so rapid partial updates (`orientation`, `qualityTier`, `selectedRatio`) don't drop each other. `loras` and `upscaleModel` are full replacements.
+
+**Key creation:** Keys are created on first `select` event using defaults from `getModelSettings` / `getToolSettings`. Components never need to check key existence.
+
+**Events consumed:**
+- `settings:model:select` — create `modelSettings[modelId]` key with defaults if missing
+- `settings:tool:select` — create `toolSettings[toolKey]` key with defaults if missing
+- `settings:model:update` — queue partial update, debounced write
+- `settings:tool:update` — queue partial update, debounced write
+
 ## generationService.js (`js/services/generationService.js`)
 
 Centralized generation lifecycle manager. Wraps `runCommand()` with project persistence, StatusBar progress, and callback-based state management.

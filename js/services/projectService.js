@@ -14,6 +14,10 @@ import {
     addGroupToProject,
     updateGroupInProject,
     removeGroupFromProject,
+    getModelSettings,
+    setModelSettings,
+    getToolSettings,
+    setToolSettings,
 } from '../data/projectModel.js';
 import { clientLogger } from './clientLogger.js';
 
@@ -42,6 +46,111 @@ function _debouncedSaveProjectSettings() {
         if (!result.success) throw new Error(result.error);
     }, 500);
 }
+
+// ── Settings event queue ───────────────────────────────────────────────────────
+
+// Per-model queues: Map<modelId, { timer: number|null, pending: Object }>
+const _modelQueues = new Map();
+
+// Per-tool queues: Map<toolKey, { timer: number|null, pending: Object }>
+const _toolQueues = new Map();
+
+const _QUEUE_DEBOUNCE_MS = 300;
+
+function _enqueueModelUpdate(modelId, key, value) {
+    if (!_modelQueues.has(modelId)) _modelQueues.set(modelId, { timer: null, pending: {} });
+    const q = _modelQueues.get(modelId);
+
+    // Deep-merge ratioSelector sub-keys; replace everything else
+    q.pending[key] = (key === 'ratioSelector')
+        ? { ...(q.pending[key] ?? {}), ...value }
+        : value;
+
+    clearTimeout(q.timer);
+    q.timer = setTimeout(async () => {
+        try {
+            if (!state.currentProject) return;
+            if (!state.currentProject.modelSettings?.[modelId]) {
+                const defaults = getModelSettings(state.currentProject, modelId);
+                state.currentProject = {
+                    ...state.currentProject,
+                    updatedAt: new Date().toISOString(),
+                    modelSettings: { ...state.currentProject.modelSettings, [modelId]: defaults },
+                };
+            }
+            for (const [k, v] of Object.entries(q.pending)) {
+                state.currentProject = setModelSettings(state.currentProject, modelId, { [k]: v });
+            }
+            q.pending = {};
+            saveProjectSettings();
+        } catch (err) {
+            clientLogger.error('projectService', 'Failed to flush model queue', err);
+            Events.emit('ui:error', { title: 'Save failed', message: 'Failed to save model settings.' });
+        }
+    }, _QUEUE_DEBOUNCE_MS);
+}
+
+function _enqueueToolUpdate(toolKey, key, value) {
+    if (!_toolQueues.has(toolKey)) _toolQueues.set(toolKey, { timer: null, pending: {} });
+    const q = _toolQueues.get(toolKey);
+    q.pending[key] = value;
+
+    clearTimeout(q.timer);
+    q.timer = setTimeout(async () => {
+        try {
+            if (!state.currentProject) return;
+            if (!state.currentProject.toolSettings?.[toolKey]) {
+                const defaults = getToolSettings(state.currentProject, toolKey);
+                state.currentProject = {
+                    ...state.currentProject,
+                    updatedAt: new Date().toISOString(),
+                    toolSettings: { ...state.currentProject.toolSettings, [toolKey]: defaults },
+                };
+            }
+            for (const [k, v] of Object.entries(q.pending)) {
+                state.currentProject = setToolSettings(state.currentProject, toolKey, { [k]: v });
+            }
+            q.pending = {};
+            saveProjectSettings();
+        } catch (err) {
+            clientLogger.error('projectService', 'Failed to flush tool queue', err);
+            Events.emit('ui:error', { title: 'Save failed', message: 'Failed to save tool settings.' });
+        }
+    }, _QUEUE_DEBOUNCE_MS);
+}
+
+// Store unsubs — service is a permanent singleton, but events.md rule requires it
+const _settingsUnsubs = [
+    Events.on('settings:model:select', ({ modelId }) => {
+        if (!state.currentProject) return;
+        if (state.currentProject.modelSettings?.[modelId]) return;
+        const defaults = getModelSettings(state.currentProject, modelId);
+        state.currentProject = {
+            ...state.currentProject,
+            updatedAt: new Date().toISOString(),
+            modelSettings: { ...state.currentProject.modelSettings, [modelId]: defaults },
+        };
+        saveProjectSettings();
+    }),
+    Events.on('settings:tool:select', ({ toolKey }) => {
+        if (!state.currentProject) return;
+        if (state.currentProject.toolSettings?.[toolKey]) return;
+        const defaults = getToolSettings(state.currentProject, toolKey);
+        state.currentProject = {
+            ...state.currentProject,
+            updatedAt: new Date().toISOString(),
+            toolSettings: { ...state.currentProject.toolSettings, [toolKey]: defaults },
+        };
+        saveProjectSettings();
+    }),
+    Events.on('settings:model:update', ({ modelId, key, value }) => {
+        _enqueueModelUpdate(modelId, key, value);
+    }),
+    Events.on('settings:tool:update', ({ toolKey, key, value }) => {
+        _enqueueToolUpdate(toolKey, key, value);
+    }),
+];
+// If service ever needs hot-teardown: _settingsUnsubs.forEach(u => u());
 
 // ── CRUD (same signatures as projectManager.js) ────────────────────────────────
 
