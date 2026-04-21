@@ -524,6 +524,21 @@
  */
 
 /**
+ * @typedef {Object} MpiCheckboxProps (Primitive — js/components/Primitives/MpiCheckbox)
+ * @property {boolean} [checked=false]   - Initial checked state.
+ * @property {string}  [label='']        - Optional label text; omit for a standalone checkbox.
+ * @property {string}  [name='checkbox'] - Accessibility / form name attribute.
+ * @property {boolean} [disabled=false]  - Disables interaction and applies muted styling.
+ *
+ * Instance methods (on instance.el):
+ *   isChecked()    — Returns current boolean checked state.
+ *   setChecked(v)  — Programmatically sets the checked state (boolean).
+ *
+ * Emits:
+ * 'change' { checked: boolean } — Fired on each user toggle.
+ */
+
+/**
  * @typedef {Object} MpiOkCancelProps (Compound — js/components/Compounds/MpiOkCancel)
  * @property {string}  [title='']             - Large title text at the top of the dialog.
  * @property {string}  [text='']              - Descriptive body text shown below the title.
@@ -532,6 +547,10 @@
  * @property {boolean} [showCancel=true]      - Whether to display the Cancel button.
  * @property {string}  [okLabel='OK']         - Label for the confirm/OK button.
  * @property {string}  [cancelLabel='Cancel'] - Label for the cancel button.
+ * @property {{label?: string, checked?: boolean}|null} [checkbox=null]
+ *   When set, renders an MpiCheckbox between the input slot and actions.
+ *   `label` — optional text next to the checkbox.
+ *   `checked` — initial checked state (default true).
  *
  * Instance methods (on instance.el):
  *   show() — Self-portals a blurred backdrop + centred dialog to document.body.
@@ -545,9 +564,10 @@
  *   d.el.show(); // all backdrop/Escape/queue handling is internal
  *
  * Emits:
- * 'ok'     { inputValue?: string } — OK button clicked (includes input value if field is present)
- * 'cancel' {}                      — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
- * 'input'  { value: string }       — Optional input field value changed
+ * 'ok'     { inputValue?: string, checkboxChecked?: boolean }
+ *              — OK button clicked; checkboxChecked included when checkbox prop is set.
+ * 'cancel' {}  — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
+ * 'input'  { value: string } — Optional input field value changed
  */
 
 /**

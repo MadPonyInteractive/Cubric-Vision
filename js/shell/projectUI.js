@@ -20,17 +20,12 @@ import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout
 // DOM refs
 let projectGrid = null;
 
-/** Lazily created MpiNewProject dialog instance (reused across opens). */
-let _newProjectDialog = null;
+// MpiNewProject is NOT a singleton — fresh mount per open.
+// factory.on() accumulates listeners with no unsub, so reusing would stack handlers.
 
-/** Unsubscribe fn for the current create listener (replaced each call). */
-let _newProjectUnsub = null;
-
-/** Lazily created delete-confirm dialog instance (reused across opens). */
-let _deleteConfirmDialog = null;
-
-/** Unsubscribe fn for the current ok listener (replaced each call). */
-let _deleteConfirmUnsub = null;
+// Delete-confirm dialog is NOT a singleton — a fresh instance is created per
+// confirmation. The factory's .on() accumulates listeners with no unsub, so
+// reusing a singleton would fire all prior handlers on every confirmation.
 
 /** Lazily created landing-action overlay instances (reused across opens). */
 let _settingsOverlay = null;
@@ -85,22 +80,18 @@ export function initProjectUI() {
     });
 
     triggerBtn.on('click', () => {
-      if (!_newProjectDialog) {
-        _newProjectDialog = MpiNewProject.mount(document.createElement('div'));
-      }
-      // Replace the create listener with fresh handler
-      if (_newProjectUnsub) { _newProjectUnsub(); _newProjectUnsub = null; }
-      _newProjectUnsub = _newProjectDialog.on('create', async ({ name, location }) => {
+      const newProjectDialog = MpiNewProject.mount(document.createElement('div'));
+      newProjectDialog.on('create', async ({ name, location }) => {
         try {
           const project = await createProject(name || 'Untitled Project', location);
           await openProject(project);
           navigate(PAGE_GALLERY);
         } catch (err) {
-          console.error('[projectUI] createProject failed:', err);
-          alert('Could not create project: ' + err.message);
+          clientLogger.error('projectUI', 'createProject failed', err);
+          window.MpiAlert('Could not create project: ' + err.message);
         }
       });
-      _newProjectDialog.el.show();
+      newProjectDialog.el.show();
     });
   }
 
@@ -181,21 +172,22 @@ export async function loadProjectGrid() {
  * Shows an MpiOkCancel confirmation dialog for project deletion.
  * The component self-manages the backdrop, portal, and overlay queue.
  * @param {string} projectName
- * @param {Function} onConfirm - Called only when user confirms.
+ * @param {Function} onConfirm - Called with { deleteFiles: boolean } when user confirms.
  */
 function _showDeleteConfirm(projectName, onConfirm) {
-  if (!_deleteConfirmDialog) {
-    _deleteConfirmDialog = MpiOkCancel.mount(document.createElement('div'), {
-      title: 'Delete Project',
-      text: `Are you sure you want to delete this project? This cannot be undone.`,
-      okLabel: 'Delete',
-      cancelLabel: 'Keep it',
-    });
-  }
-  // Replace the ok listener with the fresh onConfirm
-  if (_deleteConfirmUnsub) { _deleteConfirmUnsub(); _deleteConfirmUnsub = null; }
-  _deleteConfirmUnsub = _deleteConfirmDialog.on('ok', () => onConfirm());
-  _deleteConfirmDialog.el.show();
+  // Fresh mount per confirmation — factory.on() accumulates listeners with no
+  // unsub mechanism, so a singleton would fire all prior handlers on each ok.
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Delete Project',
+    text: `Are you sure you want to delete "${projectName}"?`,
+    okLabel: 'Delete',
+    cancelLabel: 'Keep it',
+    checkbox: { label: 'Also delete files from disk', checked: true },
+  });
+  dialog.on('ok', ({ checkboxChecked }) => {
+    onConfirm({ deleteFiles: !!checkboxChecked });
+  });
+  dialog.el.show();
 }
 
 /**
@@ -223,9 +215,9 @@ function _buildProjectCard(project) {
   });
 
   card.on('delete', () => {
-    _showDeleteConfirm(project.name, async () => {
+    _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
       try {
-        await deleteProject(project.folderPath);
+        await deleteProject(project, { deleteFiles });
         loadProjectGrid();
       } catch (err) {
         window.MpiAlert('Could not delete project: ' + err.message);

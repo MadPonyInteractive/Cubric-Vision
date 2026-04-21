@@ -4,12 +4,16 @@
 import { initShell } from './shell.js';
 import { initPaths } from './data/modelRegistry.js';
 
-// Global alert/confirm system — will be replaced by MpiOkCancel component
-// For now wire up basic browser fallbacks to prevent crashes
-window.MpiAlert = (msg) => alert(msg);
-window.MpiConfirm = (msg) => confirm(msg);
-window.MpiPrompt = (msg, def) => prompt(msg, def);
-window.alert = (msg) => window.MpiAlert(msg);
+// Capture native dialogs before any override to prevent mutual recursion.
+const _nativeAlert   = window.alert.bind(window);
+const _nativeConfirm = window.confirm.bind(window);
+const _nativePrompt  = window.prompt.bind(window);
+
+// Global dialog stubs — will be replaced by MpiOkCancel component.
+// Do NOT override window.alert — doing so causes infinite recursion with MpiAlert.
+window.MpiAlert   = (msg)      => _nativeAlert(msg);
+window.MpiConfirm = (msg)      => _nativeConfirm(msg);
+window.MpiPrompt  = (msg, def) => _nativePrompt(msg, def);
 
 // Mouse wheel on number inputs — standalone, no external dependency
 document.addEventListener('wheel', (e) => {

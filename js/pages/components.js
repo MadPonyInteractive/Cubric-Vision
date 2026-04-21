@@ -20,6 +20,7 @@ import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgr
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiCheckbox } from '../components/Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
 import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
@@ -576,6 +577,32 @@ function mountAll() {
         rg.on('select', ({ value }) => {
             const infoBar = document.getElementById('shell-info-text');
             if (infoBar) infoBar.textContent = `RadioGroup (obj options): ${value}`;
+        });
+    });
+
+    // ── MpiCheckbox (Primitive) ───────────────────────────────────────────────
+    mount('preview-checkbox-default', () => {
+        const cb = MpiCheckbox.mount(slot('preview-checkbox-default'), { checked: false });
+        cb.on('change', ({ checked }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `MpiCheckbox: ${checked}`;
+        });
+    });
+    mount('preview-checkbox-label', () => {
+        const cb = MpiCheckbox.mount(slot('preview-checkbox-label'), {
+            label: 'Also delete files from disk',
+            checked: true,
+        });
+        cb.on('change', ({ checked }) => {
+            const infoBar = document.getElementById('shell-info-text');
+            if (infoBar) infoBar.textContent = `MpiCheckbox (label): ${checked}`;
+        });
+    });
+    mount('preview-checkbox-disabled', () => {
+        MpiCheckbox.mount(slot('preview-checkbox-disabled'), {
+            label: 'Disabled option',
+            checked: true,
+            disabled: true,
         });
     });
 

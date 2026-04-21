@@ -52,6 +52,12 @@
     font-size: 0.9rem;
 }
 
+/* Optional Checkbox Slot */
+.mpi-ok-cancel__checkbox {
+    display: flex;
+    align-items: center;
+}
+
 /* Action Buttons Container */
 .mpi-ok-cancel__actions {
     display: flex;

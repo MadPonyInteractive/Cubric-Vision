@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
+import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { qs } from '../../../utils/dom.js';
 
 /**
@@ -26,9 +27,10 @@ import { qs } from '../../../utils/dom.js';
  * @param {boolean} [showCancel=true]      - Whether the Cancel button is shown
  * @param {string} [okLabel='OK']          - Label for the confirm button
  * @param {string} [cancelLabel='Cancel']  - Label for the cancel button
+ * @param {{label?: string, checked?: boolean}|null} [checkbox=null]  - Optional checkbox below input slot
  *
  * Emits:
- * 'ok'     { inputValue?: string } — Confirm button clicked
+ * 'ok'     { inputValue?: string, checkboxChecked?: boolean } — Confirm button clicked
  * 'cancel' {}                      — Cancel button clicked (NOT emitted on Escape/hide)
  * 'input'  { value: string }       — Input field changed
  */
@@ -39,9 +41,10 @@ export const MpiOkCancel = ComponentFactory.create({
     template: () => `
         <div class="mpi-ok-cancel" role="dialog" aria-modal="true">
             <div class="mpi-ok-cancel__content">
-                <div class="mpi-ok-cancel__title" id="title-slot"></div>
-                <div class="mpi-ok-cancel__text"  id="text-slot"></div>
-                <div class="mpi-ok-cancel__input" id="input-slot"></div>
+                <div class="mpi-ok-cancel__title"    id="title-slot"></div>
+                <div class="mpi-ok-cancel__text"     id="text-slot"></div>
+                <div class="mpi-ok-cancel__input"    id="input-slot"></div>
+                <div class="mpi-ok-cancel__checkbox" id="checkbox-slot"></div>
             </div>
             <div class="mpi-ok-cancel__actions" id="actions-slot"></div>
         </div>
@@ -55,15 +58,6 @@ export const MpiOkCancel = ComponentFactory.create({
         modal.el.appendChild(el);
         el.show = () => modal.el.show();
         el.hide = () => modal.el.hide();
-
-        // ── Enter key to confirm (via MpiModal's confirm event) ────────────
-        modal.on('confirm', () => {
-            const inputValue = inputComponent
-                ? inputComponent.el.querySelector('input')?.value
-                : undefined;
-            emit('ok', { inputValue });
-            el.hide();
-        });
 
         // ── Content: Title ───────────────────────────────────────────────────
         const titleSlot = qs('#title-slot', el);
@@ -88,6 +82,38 @@ export const MpiOkCancel = ComponentFactory.create({
             inputSlot.style.display = 'none';
         }
 
+        // ── Content: Optional checkbox ───────────────────────────────────────
+        let checkboxComponent = null;
+        const checkboxSlot = qs('#checkbox-slot', el);
+        if (props.checkbox) {
+            const cbProps = props.checkbox;
+            checkboxComponent = MpiCheckbox.mount(document.createElement('div'), {
+                label:   cbProps.label   ?? '',
+                checked: cbProps.checked ?? true,
+                name:    'ok-cancel-checkbox',
+            });
+            checkboxSlot.appendChild(checkboxComponent.el);
+        } else {
+            checkboxSlot.style.display = 'none';
+        }
+
+        // Helper to build ok payload
+        const _okPayload = () => {
+            const inputValue = inputComponent
+                ? inputComponent.el.querySelector('input')?.value
+                : undefined;
+            const checkboxChecked = checkboxComponent
+                ? checkboxComponent.el.isChecked()
+                : undefined;
+            return { inputValue, checkboxChecked };
+        };
+
+        // ── Enter key to confirm (via MpiModal's confirm event) ────────────
+        modal.on('confirm', () => {
+            emit('ok', _okPayload());
+            el.hide();
+        });
+
         // ── Actions: Cancel button ───────────────────────────────────────────
         const actionsSlot = qs('#actions-slot', el);
 
@@ -111,10 +137,7 @@ export const MpiOkCancel = ComponentFactory.create({
             size: 'md'
         });
         okBtn.on('click', () => {
-            const inputValue = inputComponent
-                ? inputComponent.el.querySelector('input')?.value
-                : undefined;
-            emit('ok', { inputValue });
+            emit('ok', _okPayload());
             el.hide();
         });
         actionsSlot.appendChild(okBtn.el);
