@@ -66,10 +66,6 @@ app.listen(port, '127.0.0.1', () => {
         llmRoutes.setAxios(axios);
         comfyRoutes.setAxios(axios);
 
-        // Sync workflow install states on startup
-        const { syncWorkflowStates } = require('./routes/shared');
-        syncWorkflowStates().catch(err => logger.error('system', 'Startup workflow sync failed', err));
-
         logger.info('system', `Server started at http://127.0.0.1:${port}`);
         if (process.send) process.send('server-ready');
     }).catch(err => {

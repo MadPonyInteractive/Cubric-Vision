@@ -26,7 +26,6 @@ const DEFAULT_PROJECTS_ROOT = path.join(__dirname, '..', 'projects');
 const MODELS_ROOT = path.join(__dirname, '..', 'data', 'models');
 const LLM_CONFIG_PATH = path.join(__dirname, '..', 'dev_configs', 'llm_models.json');
 const LLAMA_ENGINE_ROOT = path.join(__dirname, '..', 'llama_engine');
-const COMFY_WORKFLOWS_PATH = path.join(__dirname, '..', 'dev_configs', 'comfy_workflows.json');
 const SYS_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'system_dependencies.json');
 const LLAMA_SERVER_PORT = 8080;
 const COMFYUI_PORT = 8188;
@@ -190,42 +189,6 @@ async function runCustomCommand(commandStr, cwd) {
 }
 
 /**
- * Checks if a Python package is required by any other installed custom node.
- */
-async function isPackageRequiredElsewhere(packageName, excludedNodePath) {
-    const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-    const customNodesRoot = config.local_custom_nodes_path
-        ? path.join(config.local_custom_nodes_path)
-        : getComfyPath(ENGINE_ROOT, 'custom_nodes');
-    if (!(await fs.pathExists(customNodesRoot))) return false;
-
-    const nodes = await fs.readdir(customNodesRoot);
-    const normalizedPackage = packageName.toLowerCase().replace(/_/g, '-');
-
-    for (const nodeDir of nodes) {
-        const nodePath = path.join(customNodesRoot, nodeDir);
-        if (nodePath === excludedNodePath) continue;
-        const reqPath = path.join(nodePath, 'requirements.txt');
-        if (await fs.pathExists(reqPath)) {
-            const content = await fs.readFile(reqPath, 'utf8');
-            const lines = content.split('\n')
-                .map(l => l.trim().toLowerCase())
-                .filter(l => l && !l.startsWith('#'))
-                .map(l => {
-                    let pkg = l.split('==')[0].split('>=')[0].split('<=')[0].split('>')[0].split('<')[0].trim();
-                    if (pkg.includes('#egg=')) pkg = pkg.split('#egg=')[1];
-                    else if (pkg.startsWith('git+') || pkg.startsWith('http')) return null;
-                    return pkg.replace(/_/g, '-');
-                })
-                .filter(Boolean);
-            if (lines.includes(normalizedPackage)) return true;
-        }
-    }
-    return false;
-}
-
-/**
  * Recursively search for a filename within a directory.
  */
 async function findFileRecursive(dir, filename) {
@@ -312,56 +275,6 @@ async function cleanEmptyDirs(filePath, stopAt) {
         } catch (e) {
             break;
         }
-    }
-}
-
-/**
- * Checks if all dependencies of a workflow exist on disk.
- */
-async function isWorkflowInstalled(wf, customRoot, config) {
-    if (!wf.dependencies || wf.dependencies.length === 0) return false;
-    for (const dep of wf.dependencies) {
-        const { localPath } = await resolveComfyPath(dep, customRoot, config);
-        if (!(await fs.pathExists(localPath))) return false;
-    }
-    return true;
-}
-
-/**
- * Re-scans all workflows and updates their 'installed' flag in comfy_workflows.json.
- */
-async function syncWorkflowStates(customRootOverride = undefined) {
-    try {
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-        let customRoot = customRootOverride;
-
-        if (customRoot === undefined) {
-            const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
-            const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
-            if (await fs.pathExists(extraConfigPath)) {
-                const content = await fs.readFile(extraConfigPath, 'utf8');
-                const match = content.match(/base_path:\s*(.*)/i);
-                if (match) customRoot = match[1].trim();
-            } else {
-                customRoot = null;
-            }
-        }
-
-        let changed = false;
-        for (const wf of config.workflows) {
-            const currentlyInstalled = await isWorkflowInstalled(wf, customRoot, config);
-            if (wf.installed !== currentlyInstalled) {
-                wf.installed = currentlyInstalled;
-                changed = true;
-                logger.info('comfy', `State Sync: Workflow ${wf.id} is now ${currentlyInstalled ? 'INSTALLED' : 'NOT INSTALLED'}`);
-            }
-        }
-
-        if (changed) {
-            await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
-        }
-    } catch (err) {
-        logger.error('comfy', 'syncWorkflowStates failed', err);
     }
 }
 
@@ -497,7 +410,6 @@ module.exports = {
     MODELS_ROOT,
     LLM_CONFIG_PATH,
     LLAMA_ENGINE_ROOT,
-    COMFY_WORKFLOWS_PATH,
     SYS_DEPS_PATH,
     LLAMA_SERVER_PORT,
     COMFYUI_PORT,
@@ -507,12 +419,9 @@ module.exports = {
     streamDownload,
     runPipCommand,
     runCustomCommand,
-    isPackageRequiredElsewhere,
     findFileRecursive,
     resolveComfyPath,
     cleanEmptyDirs,
-    isWorkflowInstalled,
-    syncWorkflowStates,
     getCustomRoot,
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,

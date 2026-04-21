@@ -1,5 +1,5 @@
 /**
- * routes/comfy.js — ComfyUI process management and workflow/model routes.
+ * routes/comfy.js — ComfyUI process management and model routes.
  *
  * Routes exposed:
  *   GET  /comfy/status              — is ComfyUI running + ready?
@@ -8,10 +8,7 @@
  *   POST /comfy/unload              — unload models / free memory
  *   POST /comfy/set-path            — set custom models root path
  *   GET  /comfy/list-files          — list model files in a subdirectory
- *   GET  /comfy/workflows           — list all workflows with install status
  *   POST /comfy/models/check        — check which models are installed on disk
- *   POST /comfy/workflow/delete     — delete a workflow and optionally its files
- *   POST /comfy/workflow/install-complete — mark a workflow as installed
  */
 
 'use strict';
@@ -23,17 +20,12 @@ const path = require('path');
 const { exec, spawn } = require('child_process');
 const logger = require('./logger');
 const {
-    COMFY_WORKFLOWS_PATH,
     COMFYUI_PORT,
     processState,
     stopLlamaServer,
     stopComfyUI,
-    runPipCommand,
-    isPackageRequiredElsewhere,
     resolveComfyPath,
     cleanEmptyDirs,
-    isWorkflowInstalled,
-    syncWorkflowStates,
     getCustomRoot,
 } = require('./shared');
 const { getPythonBin, getComfyPath } = require('./platformEngine');
@@ -181,7 +173,6 @@ router.post('/comfy/set-path', async (req, res) => {
 
         if (!customPath) {
             if (await fs.pathExists(extraConfigPath)) await fs.remove(extraConfigPath);
-            await syncWorkflowStates(null);
             return res.json({ success: true });
         }
 
@@ -211,7 +202,6 @@ comfyui:
     diffusion_models: diffusion_models/
 `;
         await fs.writeFile(extraConfigPath, yamlContent, 'utf8');
-        await syncWorkflowStates(customPath);
         res.json({ success: true, writtenTo: extraConfigPath });
     } catch (err) {
         logger.error('comfy', 'set-path failed', err);
@@ -309,7 +299,6 @@ router.get('/comfy/list-files', async (req, res) => {
     if (!subDir) return res.status(400).json({ success: false, error: 'subDir required' });
 
     try {
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
         const customRoot = await getCustomRoot();
         const type = subDir.includes('checkpoint') ? 'checkpoint' :
                      subDir.includes('lora') ? 'lora' :
@@ -317,7 +306,7 @@ router.get('/comfy/list-files', async (req, res) => {
                      subDir.includes('upscale') ? 'upscaler' :
                      subDir.includes('diffusion') ? 'diffusion_model' : 'checkpoint';
 
-        const { localPath: targetPath } = await resolveComfyPath({ type, filename: '' }, customRoot, config);
+        const { localPath: targetPath } = await resolveComfyPath({ type, filename: '' }, customRoot, {});
 
         if (!targetPath || !(await fs.pathExists(targetPath))) {
             return res.json({ success: true, files: [] });
@@ -345,162 +334,6 @@ router.get('/comfy/list-files', async (req, res) => {
         res.json({ success: true, files: files.sort() });
     } catch (err) {
         logger.error('comfy', 'list-files error', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-/**
- * GET /comfy/workflows
- * Returns all workflows from COMFY_WORKFLOWS_PATH with install status and dep metadata.
- * Returns: { success: true, workflows: Workflow[] }
- */
-router.get('/comfy/workflows', async (req, res) => {
-    try {
-        if (!(await fs.pathExists(COMFY_WORKFLOWS_PATH))) return res.json({ success: true, workflows: [] });
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-        const customRoot = await getCustomRoot();
-
-        const workflows = await Promise.all(config.workflows.map(async (wf) => {
-            let maxVramRequired = 0;
-            let totalRequiredSize = 0;
-            let totalSizeOnDisk = 0;
-
-            const deps = await Promise.all(wf.dependencies.map(async (dep) => {
-                const { localPath } = await resolveComfyPath(dep, customRoot, config);
-                const exists = await fs.pathExists(localPath);
-                let sizeOnDisk = 0;
-                if (exists) {
-                    try {
-                        const stats = await fs.stat(localPath);
-                        sizeOnDisk = stats.isFile() ? stats.size : 0;
-                        totalSizeOnDisk += sizeOnDisk;
-                    } catch (e) {}
-                }
-                totalRequiredSize += _parseSizeToBytes(dep.size);
-                const vramNum = parseInt(dep.vram) || 0;
-                if (vramNum > maxVramRequired) maxVramRequired = vramNum;
-                return { ...dep, exists, sizeOnDisk };
-            }));
-
-            const isInstalled = wf.installed || deps.every(d => d.exists);
-            return {
-                ...wf,
-                isInstalled,
-                installed: wf.installed || false,
-                maxVramRequired: `${maxVramRequired}GB`,
-                totalSizeOnDisk,
-                totalRequiredSize,
-                dependencies: deps
-            };
-        }));
-
-        res.json({ success: true, workflows });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// ── Model / Workflow Management ───────────────────────────────────────────────
-
-/**
- * POST /comfy/workflow/delete
- * Body: { id: string, deleteModels?: boolean }
- * Deletes a workflow and optionally its model files. Skips files still used by other installed workflows.
- * Returns: { success: true, deleted: string[], skipped: string[] }
- */
-router.post('/comfy/workflow/delete', async (req, res) => {
-    const { id, deleteModels } = req.body;
-    try {
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-        const targetWf = config.workflows.find(wf => wf.id === id);
-        if (!targetWf) return res.status(404).json({ success: false, error: 'Workflow not found' });
-
-        const otherWfs = config.workflows.filter(wf => wf.id !== id);
-        const customRoot = await getCustomRoot();
-        const deleted = [];
-        const skipped = [];
-
-        for (const dep of targetWf.dependencies) {
-            const isCustomNode = dep.type === 'custom_nodes';
-            const usedByInstalledWf = otherWfs.some(wf =>
-                wf.installed && wf.dependencies.some(d => d.filename === dep.filename)
-            );
-
-            if (usedByInstalledWf) { skipped.push(dep.filename); continue; }
-
-            if (isCustomNode || deleteModels) {
-                const { localPath } = await resolveComfyPath(dep, customRoot, config);
-                if (await fs.pathExists(localPath)) {
-                    if (isCustomNode) {
-                        stopComfyUI();
-                        const reqPath = path.join(localPath, 'requirements.txt');
-                        if (await fs.pathExists(reqPath)) {
-                            try {
-                                const content = await fs.readFile(reqPath, 'utf8');
-                                const lines = content.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
-                                const coreProtected = [
-                                    'comfyui-frontend-package', 'comfyui-workflow-templates', 'comfyui-embedded-docs',
-                                    'torch', 'torchsde', 'torchvision', 'torchaudio', 'numpy', 'einops', 'transformers',
-                                    'tokenizers', 'sentencepiece', 'safetensors', 'aiohttp', 'yarl', 'pyyaml', 'Pillow',
-                                    'scipy', 'tqdm', 'psutil', 'alembic', 'SQLAlchemy', 'filelock', 'av', 'comfy-kitchen',
-                                    'comfy-aimdo', 'requests', 'simpleeval', 'blake3', 'kornia', 'spandrel', 'pydantic',
-                                    'pydantic-settings', 'PyOpenGL', 'glfw', 'accelerate', 'diffusers'
-                                ];
-                                for (const line of lines) {
-                                    let pkg = line.split('==')[0].split('>=')[0].split('<=')[0].split('>')[0].split('<')[0].trim();
-                                    if (pkg.includes('#egg=')) pkg = pkg.split('#egg=')[1];
-                                    else if (pkg.startsWith('git+') || pkg.startsWith('http')) continue;
-                                    const isProtected = coreProtected.some(p => pkg.toLowerCase() === p.toLowerCase() || pkg.toLowerCase().replace(/_/g, '-') === p.toLowerCase());
-                                    if (isProtected) continue;
-                                    const isRequiredElsewhere = await isPackageRequiredElsewhere(pkg, localPath);
-                                    if (!isRequiredElsewhere) {
-                                        await runPipCommand(['uninstall', pkg, '-y']).catch(e => logger.error('comfy', `Failed to uninstall ${pkg}`, e));
-                                    }
-                                }
-                            } catch (e) {
-                                logger.error('comfy', `Pruning logic failed for ${dep.filename}`, e);
-                            }
-                        }
-                    }
-
-                    await fs.remove(localPath);
-                    deleted.push(dep.filename);
-
-                    if (!isCustomNode && customRoot) {
-                        await cleanEmptyDirs(localPath, customRoot);
-                    } else if (!isCustomNode) {
-                        await cleanEmptyDirs(localPath, path.join(__dirname, '..', 'engine'));
-                    }
-                }
-            }
-        }
-
-        targetWf.installed = false;
-        await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
-        res.json({ success: true, deleted, skipped });
-    } catch (err) {
-        logger.error('comfy', 'Workflow delete failed', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-/**
- * POST /comfy/workflow/install-complete
- * Body: { id: string }
- * Marks a workflow as installed in COMFY_WORKFLOWS_PATH.
- * Returns: { success: true }
- */
-router.post('/comfy/workflow/install-complete', async (req, res) => {
-    const { id } = req.body;
-    try {
-        const config = await fs.readJson(COMFY_WORKFLOWS_PATH);
-        const targetWf = config.workflows.find(wf => wf.id === id);
-        if (!targetWf) return res.status(404).json({ success: false, error: 'Workflow not found' });
-        targetWf.installed = true;
-        await fs.writeJson(COMFY_WORKFLOWS_PATH, config, { spaces: 2 });
-        res.json({ success: true });
-    } catch (err) {
-        logger.error('comfy', 'Workflow install-complete failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

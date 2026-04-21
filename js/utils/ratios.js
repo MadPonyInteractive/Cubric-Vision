@@ -7,7 +7,7 @@
  * RULES FOR AGENTS:
  * - Do NOT hardcode aspect ratios in individual tool files.
  * - Always use `getModelRatios(modelType, orientation)` to fetch the correct array.
- * - `modelType` should be sourced from `dev_configs/comfy_workflows.json`.
+ * - `modelType` comes from model.type in `js/data/modelRegistry.js`
  */
 
 import { ICONS } from './icons.js';
