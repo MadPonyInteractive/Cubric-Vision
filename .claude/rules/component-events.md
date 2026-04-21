@@ -339,7 +339,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
 - Listens to `tool:sampling-start` → calls `updateLabel('Generating...')`
 - Listens to `tool:cancelled` → calls `cancel()`
-- Listens to `tool:idle` → calls `complete('Done!')`
+- Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast)
 
 **Pattern notes:**
 - Blocks emit `tool:running` at generation start (in promptBox 'run' handler)

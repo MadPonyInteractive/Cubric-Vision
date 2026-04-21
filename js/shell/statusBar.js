@@ -236,7 +236,7 @@ export const StatusBar = {
             if (tool === 'groupHistory') StatusBar.progress.cancel();
         });
         Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.complete('Done!', true);
+            if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished', false);
         });
     },
 };

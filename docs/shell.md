@@ -42,7 +42,7 @@ Bottom status bar. Shows ComfyUI engine status, active model, generation progres
 - On `tool:loading-model`: updates label to "Loading model..." (model VRAM load phase)
 - On `tool:sampling-start`: updates label back to "Generating..." (KSampler steps begin)
 - On `tool:cancelled`: cancels progress bar instantly
-- On `tool:idle`: flashes bar, fires success toast
+- On `tool:idle`: completes progress bar, fires success toast with "Generation finished"
 - `progress.update(value)`: driven by KSampler step progress (called directly from blocks, not via events)
 
 ## promptBoxService.js (`js/shell/promptBoxService.js`)
