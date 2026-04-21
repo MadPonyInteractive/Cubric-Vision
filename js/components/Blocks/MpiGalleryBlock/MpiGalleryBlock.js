@@ -12,6 +12,7 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiGalleryGrid } from '../../Compounds/MpiGalleryGrid/MpiGalleryGrid.js';
+import { MpiGalleryDropOverlay } from '../../Primitives/MpiGalleryDropOverlay/MpiGalleryDropOverlay.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
@@ -52,6 +53,36 @@ export const MpiGalleryBlock = ComponentFactory.create({
         let groups = state.currentProject?.itemGroups || [];
 
         const grid   = MpiGalleryGrid.mount(el, { groups });
+
+        // ── OS-file drop overlay (model-agnostic import) ───────────────────────
+        const dropOverlay = MpiGalleryDropOverlay.mount(document.createElement('div'));
+        el.appendChild(dropOverlay.el);
+
+        let _dragCounter = 0;
+        const _isFileDrag = (e) =>
+            e.dataTransfer?.types?.includes('Files') &&
+            !e.dataTransfer.types.includes('application/mpi-media');
+
+        const _onDragEnter = (e) => {
+            if (!_isFileDrag(e)) return;
+            if (!state.currentProject) return;
+            _dragCounter++;
+            dropOverlay.el.show();
+        };
+        const _onDragLeave = (e) => {
+            if (!_isFileDrag(e)) return;
+            if (_dragCounter > 0 && --_dragCounter === 0) dropOverlay.el.hide();
+        };
+        const _onDrop = () => {
+            _dragCounter = 0;
+            dropOverlay.el.hide();
+        };
+        const _onDragOver = (e) => { if (_isFileDrag(e)) e.preventDefault(); };
+
+        window.addEventListener('dragenter', _onDragEnter);
+        window.addEventListener('dragleave', _onDragLeave);
+        window.addEventListener('dragover',  _onDragOver);
+        window.addEventListener('drop',      _onDrop);
 
         // ── Selection bar (mounted in grid's footer slot) ────────────────────────
         const selectionSlot = grid.el.querySelector('.mpi-gallery-grid__selectionbar-slot');
@@ -407,6 +438,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Cleanup on destroy ────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
+            window.removeEventListener('dragenter', _onDragEnter);
+            window.removeEventListener('dragleave', _onDragLeave);
+            window.removeEventListener('dragover',  _onDragOver);
+            window.removeEventListener('drop',      _onDrop);
+            dropOverlay.el.remove();
+            dropOverlay.destroy?.();
             grid.destroy?.();
             selectionBar.destroy?.();
             _compareOverlay.destroy?.();

@@ -50,6 +50,11 @@ EMITS:   `close`      `{}`
          `click`      `MouseEvent`
 LISTENS: `ui:close-all-popups` — removes `is-active`, emits `close`
 
+### MpiGalleryDropOverlay
+EMITS:   (none — uses `Events.emit('media:imported', { url, filename, itemId, mediaType })` globally on drop)
+LISTENS: `ui:close-all-popups` — hides overlay (Escape during drag)
+NOTE:    Accepts any image/video OS file drag. Ignores internal `application/mpi-media` drags (those are gallery-card drags).
+
 ### MpiProgressBar
 EMITS:   `input`  `{ value: number }`
          `change` `{ value: number }`
@@ -267,16 +272,18 @@ EMITS:   `play`       `{ time: number }`
 LISTENS: (none)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
-Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiPromptBox, and handles generation lifecycle.
+Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiGalleryDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
+         `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
 EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
          `models:open` — when zero image models installed
 NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
+         Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
 
 ---
 

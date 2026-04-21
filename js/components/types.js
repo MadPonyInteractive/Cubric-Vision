@@ -792,6 +792,24 @@
  */
 
 /**
+ * @typedef {Object} MpiGalleryDropOverlayProps (Primitive — js/components/Primitives/MpiGalleryDropOverlay)
+ * No props required at mount time.
+ *
+ * Full-area OS-file drop target. Shown by MpiGalleryBlock while OS files
+ * are being dragged over the window. Model-agnostic — accepts any image
+ * or video file and emits the global `media:imported` event.
+ *
+ * Instance methods (on instance.el):
+ *   show() — add `--visible` modifier, making overlay interactive
+ *   hide() — remove `--visible` modifier
+ *
+ * Auto-hides on global `ui:close-all-popups` event (Escape key).
+ *
+ * Does not emit component-level events. Uses `Events.emit('media:imported', ...)`
+ * so the existing gallery listener creates the ItemGroup and persists.
+ */
+
+/**
  * @typedef {Object} MpiComponentInstance
  * @property {HTMLElement} el - The root element in the DOM
  * @property {Object} props - Current properties

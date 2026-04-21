@@ -7,8 +7,7 @@ import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
-import { clientLogger } from '../../../services/clientLogger.js';
-import { measureMediaDimensions } from '../../../utils/mediaDimensions.js';
+import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -168,70 +167,6 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, items: [..._mediaItems] });
         }
 
-        /**
-         * Uploads a file to the project media folder and returns the stable URL.
-         * @param {File} file
-         * @param {'image'|'video'} mediaType
-         * @returns {Promise<{filePath: string, filename: string}|null>}
-         */
-        async function _uploadToProjectMedia(file, mediaType) {
-            const project = state.currentProject;
-            if (!project?.folderPath) {
-                clientLogger.warn('MpiPromptBox', 'No current project — cannot save media');
-                return null;
-            }
-            try {
-                const ext = file.name.split('.').pop() || (mediaType === 'image' ? 'png' : 'mp4');
-                const filename = `imported_001.${ext}`; // backend overrides sequence via autoSequence
-                const itemId = crypto.randomUUID();
-
-                // Convert file to base64 for the upload endpoint
-                const base64 = await _fileToBase64(file);
-
-                // Measure pixel dimensions so sidecar has correct aspect ratio
-                const { w: width, h: height } = await measureMediaDimensions(file, mediaType);
-
-                const res = await fetch(
-                    `/project-media/${project.id}/upload?folderPath=${encodeURIComponent(project.folderPath)}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            filename,
-                            base64Data: base64,
-                            autoSequence: true,
-                            itemId,
-                            mediaType,
-                            width,
-                            height,
-                        }),
-                    }
-                );
-                if (!res.ok) throw new Error(`upload failed: ${res.status}`);
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error || 'upload failed');
-                const filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                return { filePath, filename: data.filename, itemId };
-            } catch (e) {
-                clientLogger.warn('MpiPromptBox', 'Media save failed:', e);
-                return null;
-            }
-        }
-
-        /**
-         * Converts a File/blob to a base64 data URL string.
-         * @param {File} file
-         * @returns {Promise<string>}
-         */
-        function _fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(/** @type {string} */ (reader.result));
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
         function _tryAddMedia({ url, file, mediaType, source }) {
             // Max 1 per type — replace existing rather than stack
             const existing = _mediaItems.find(m => m.mediaType === mediaType);
@@ -284,7 +219,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (mediaType === 'video' && !acceptsVideo) return;
 
                 // Upload to project folder and create history card immediately
-                const uploaded = await _uploadToProjectMedia(file, mediaType);
+                const project = state.currentProject;
+                const uploaded = project
+                    ? await uploadMediaFile(file, mediaType, project.folderPath, project.id)
+                    : null;
                 const fileUrl = uploaded
                     ? uploaded.filePath
                     : URL.createObjectURL(file); // fallback: keep blob URL

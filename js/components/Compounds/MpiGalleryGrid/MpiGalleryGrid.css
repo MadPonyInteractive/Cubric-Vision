@@ -195,6 +195,10 @@
     transition: opacity 0.2s ease;
 }
 
+.mpi-group-card__thumb--video {
+    object-fit: cover;
+}
+
 /* ── Generating state ────────────────────────────────────────────────────── */
 
 .mpi-group-card__preview {

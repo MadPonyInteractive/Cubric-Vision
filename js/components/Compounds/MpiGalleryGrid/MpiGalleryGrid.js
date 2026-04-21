@@ -217,6 +217,50 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 });
             });
 
+            // Replace <img> thumb with a <video> element (first-frame preview,
+            // hover-play). Keeps same class so CSS still applies.
+            let _videoThumb = null;
+            function _swapThumbToVideo(src) {
+                if (_videoThumb && _videoThumb.src.endsWith(src)) return;
+                if (!_videoThumb) {
+                    _videoThumb = document.createElement('video');
+                    _videoThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--video';
+                    _videoThumb.muted = true;
+                    _videoThumb.loop = true;
+                    _videoThumb.playsInline = true;
+                    _videoThumb.preload = 'metadata';
+                    _videoThumb.draggable = true;
+                    _videoThumb.addEventListener('loadeddata', () => {
+                        cardEl.classList.remove('mpi-group-card--missing');
+                        if (group?.id && !_stabilizedIds.has(group.id)) {
+                            _stabilizedIds.add(group.id);
+                            _rerenderJustified();
+                        }
+                    });
+                    _videoThumb.addEventListener('error', () => {
+                        cardEl.classList.add('mpi-group-card--missing');
+                        const sel = group?.history?.[group.selectedIndex];
+                        emit('media-missing', { group, itemId: sel?.id });
+                    });
+                    cardEl.addEventListener('mouseenter', () => _videoThumb.play().catch(() => {}));
+                    cardEl.addEventListener('mouseleave', () => {
+                        _videoThumb.pause();
+                        _videoThumb.currentTime = 0;
+                    });
+                    _videoThumb.addEventListener('dragstart', (e) => {
+                        const sel = group?.history?.[group.selectedIndex];
+                        e.dataTransfer.setData('application/mpi-media', JSON.stringify({
+                            groupId: group.id,
+                            itemId: sel?.id,
+                            filePath: sel?.filePath,
+                            type: group.type,
+                        }));
+                    });
+                    thumb.replaceWith(_videoThumb);
+                }
+                _videoThumb.src = src;
+            }
+
             // Render card from group data
             function _render() {
                 if (!group) return;
@@ -225,20 +269,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const src = selected?.filePath || '';
 
                 if (src) {
-                    thumb.onload = () => {
-                        cardEl.classList.remove('mpi-group-card--missing');
-                        // Re-layout once after first load so naturalWidth drives aspect ratio
-                        // for groups that lack stored width/height (e.g. legacy groups).
-                        if (group?.id && !_stabilizedIds.has(group.id)) {
-                            _stabilizedIds.add(group.id);
-                            _rerenderJustified();
-                        }
-                    };
-                    thumb.onerror = () => {
-                        cardEl.classList.add('mpi-group-card--missing');
-                        emit('media-missing', { group, itemId: selected?.id });
-                    };
-                    thumb.src = src;
+                    const isVideo = group.type === 'video' || selected?.type === 'video';
+                    if (isVideo) {
+                        // Swap <img> thumb for <video> so the first frame renders
+                        // natively (no canvas/CORS) and we can hover-play.
+                        _swapThumbToVideo(src);
+                    } else {
+                        thumb.onload = () => {
+                            cardEl.classList.remove('mpi-group-card--missing');
+                            if (group?.id && !_stabilizedIds.has(group.id)) {
+                                _stabilizedIds.add(group.id);
+                                _rerenderJustified();
+                            }
+                        };
+                        thumb.onerror = () => {
+                            cardEl.classList.add('mpi-group-card--missing');
+                            emit('media-missing', { group, itemId: selected?.id });
+                        };
+                        thumb.src = src;
+                    }
                 } else {
                     thumb.onload = null;
                     thumb.onerror = null;
@@ -351,14 +400,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const cardEntry = _cardMap.get(group.id);
             if (cardEntry) {
                 const thumb = cardEntry.el.querySelector('.mpi-group-card__thumb');
-                if (thumb && thumb.naturalWidth > 0) {
-                    return thumb.naturalWidth / thumb.naturalHeight;
+                if (thumb) {
+                    if (thumb.naturalWidth > 0) return thumb.naturalWidth / thumb.naturalHeight;
+                    if (thumb.videoWidth   > 0) return thumb.videoWidth   / thumb.videoHeight;
                 }
             }
-            if (group.width && group.height) {
-                return group.width / group.height;
-            }
-            return 1.0; // Fallback to square
+            const sel = group.history?.[group.selectedIndex];
+            const px = sel?.pixelDimensions;
+            if (px?.w && px?.h) return px.w / px.h;
+            if (group.width && group.height) return group.width / group.height;
+            return 1.0;
         }
 
         /**

@@ -8,6 +8,8 @@
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
+- `MpiGalleryDropOverlay`   props: none   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags
+- `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` (inside grid's footer) — hidden by default; shown when selection mode activates
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
@@ -56,9 +58,16 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 - One card per ItemGroup in `.mpi-gallery-grid__grid` with justified layout
 - Generating cards detected by `isGenerating` flag and rendered in `.mpi-gallery-grid__generating-slot`
 
-**Public API:**
+**Video card rendering:**
+- Video groups (`group.type === 'video'`) swap `<img>` thumb for native `<video>` element (`_swapThumbToVideo`)
+- Video element: `muted`, `loop`, `playsInline`, `preload='metadata'` — first frame shows at rest, hover triggers `play()`/`pause()`
+- No canvas/poster extraction — browser/Electron decodes natively
+
+**Public API (on `instance.el`):**
 - `setGroups(groups)` — replace all groups and re-render; generating cards flow through `isGenerating` flag
 - `updatePreview(tempId, url)` — push latent preview to generating card during image generation
+- `removeCard(groupId)` — remove single card from grid and `_cardMap`
+- `setSelectionMode(bool)` — toggle selection mode CSS on all cards
 
 ---
 
