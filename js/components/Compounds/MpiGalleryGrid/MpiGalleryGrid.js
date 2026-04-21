@@ -485,7 +485,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         rowEl.appendChild(wrapper);
 
                         if (group.isGenerating) {
-                            card.el.setGenerating();
+                            card.el.setGenerating(group.latestPreviewUrl ?? null);
                         }
 
                         _cardMap.set(id, { card, el: wrapper });

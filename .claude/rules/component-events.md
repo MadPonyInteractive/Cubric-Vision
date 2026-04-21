@@ -282,13 +282,47 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
+         `generation:started` `{ id, scope, tempId, placeholderGroup }` — adds placeholder card; seeds `_myGenIds`
+         `generation:preview` `{ id, url }` — calls `grid.el.updatePreview(tempId, url)`
+         `generation:complete` `{ id, item, group, tempId }` — removes placeholder, inserts final card
+         `generation:error` `{ id, tempId }` — removes placeholder, restores group list
+         `generation:cancelled` `{ id, tempId }` — removes placeholder, restores group list
 EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
          `models:open` — when zero image models installed
 NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
+         On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
+         Cancel via `pb.on('cancel')` delegates to `activeGenerations.cancel(last.id)` — does NOT call `exec.cancel()` directly
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
+
+---
+
+## Active Generation Registry (`js/services/activeGenerations.js`)
+
+Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch-ready).
+
+**Purpose:** keeps exec handles, preview blob URLs, and placeholder group descriptors alive across page navigation so blocks can rehydrate on mount.
+
+**Events emitted (via Events bus):**
+| Event | Payload | When |
+|---|---|---|
+| `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup }` | `activeGenerations.start()` called |
+| `generation:preview` | `{ id, url }` | `activeGenerations.setPreview()` called — also writes `entry.placeholderGroup.latestPreviewUrl` |
+| `generation:complete` | `{ id, item, group, tempId? }` | `generationService` emits after `end()` |
+| `generation:error` | `{ id, tempId? }` | `generationService` emits after `end()` |
+| `generation:cancelled` | `{ id, tempId? }` | `generationService` or `activeGenerations.cancel()` emits after `end()` |
+
+**API:** `start({ scope, groupId, tempId, operation, modelId, placeholderGroup, exec })` → `{ id }` · `get(id)` · `list()` · `listFor(scope, groupId|null)` · `setPreview(id, url)` · `end(id, { revokePreview })` · `cancel(id)` · `cancelAll()`
+
+**Scope values:** `'gallery'` | `'groupHistory'`
+
+**Rehydration pattern (on block mount):**
+1. Call `activeGenerations.listFor(scope, groupId)` filtered by `status === 'running'`
+2. Seed local `_myGenIds` Set
+3. Apply cached preview via `placeholderGroup.latestPreviewUrl` (already set on placeholder; grid reads it in `setGenerating()`)
+4. Subscribe to `generation:*` events filtered by `_myGenIds`; unsubscribe in `destroy()` — **do NOT cancel exec on destroy**
 
 ---
 
@@ -320,10 +354,17 @@ NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
+         `generation:started` `{ id, scope, groupId }` — seeds `_myGenIds` if scope+groupId match; shows generating state on canvas
+         `generation:preview` `{ id, url }` — loads preview into canvasViewer if id in `_myGenIds`
+         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas, clears generating state
+         `generation:error` `{ id }` — clears generating state
+         `generation:cancelled` `{ id }` — clears generating state
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
+         On mount: rehydrates from `activeGenerations.listFor('groupHistory', _group.id)` — canvas shows cached preview immediately
+         `destroy()` unsubscribes all events but does NOT cancel exec — generation continues across navigation
          StatusBar listens to tool:running, tool:loading-model, tool:sampling-start, tool:idle, tool:cancelled and updates progress label/variant
          commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`

@@ -29,6 +29,7 @@ import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration } from '../../../services/generationService.js';
+import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { addGroup, updateGroup, removeGroup, persistGroups } from '../../../services/projectService.js';
@@ -53,7 +54,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         let groups = state.currentProject?.itemGroups || [];
 
-        const grid   = MpiGalleryGrid.mount(el, { groups });
+        // ── Rehydrate any in-flight gallery generations ───────────────────────
+        const _myGenIds = new Set();
+        const _runningGallery = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
+        const _placeholderGroups = _runningGallery.map(e => e.placeholderGroup).filter(Boolean);
+
+        const grid   = MpiGalleryGrid.mount(el, { groups: [..._placeholderGroups, ...groups] });
+
+        for (const entry of _runningGallery) {
+            _myGenIds.add(entry.id);
+        }
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
         const dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
@@ -288,7 +298,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         let activeOperation = 't2i';
         let imageCount      = 0;
         let videoCount      = 0;
-        let _activeGen      = null;
 
         function _wirePromptBox(pb) {
             if (!pb) return;
@@ -320,7 +329,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
                 const tempId   = crypto.randomUUID();
                 const cardType = activeModel.mediaType;
-                const currentGroups = state.currentProject?.itemGroups || [];
 
                 const placeholderGroup = {
                     id: tempId,
@@ -333,36 +341,58 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     isGenerating: true,
                 };
 
-                grid.el.setGroups([placeholderGroup, ...currentGroups]);
-
-                _activeGen = startGeneration(
+                startGeneration(
                     { operation, model: activeModel, positive, negative, mediaItems, injectionParams },
-                    {
-                        onPreview: (url) => grid.el.updatePreview(tempId, url),
-                        onComplete: ({ item, group }) => {
-                            _activeGen = null;
-                            grid.el.removeCard(tempId);
-                            grid.el.setGroups([group, ...currentGroups]);
-                        },
-                        onCancel: () => {
-                            _activeGen = null;
-                            grid.el.removeCard(tempId);
-                            grid.el.setGroups(currentGroups);
-                        },
-                        onError: () => {
-                            _activeGen = null;
-                            grid.el.removeCard(tempId);
-                            grid.el.setGroups(currentGroups);
-                        }
-                    }
+                    { onCancel: () => {} },
+                    { scope: 'gallery', tempId, placeholderGroup }
                 );
             });
 
             pb.on('cancel', () => {
-                _activeGen?.cancel();
-                _activeGen = null;
+                const last = activeGenerations.listFor('gallery', null).at(-1);
+                if (last) activeGenerations.cancel(last.id);
             });
         }
+
+        // ── Registry event subscriptions (gallery-scoped) ─────────────────────
+        _unsubs.push(Events.on('generation:started', ({ id, scope, tempId: tid, placeholderGroup: pg }) => {
+            if (scope !== 'gallery') return;
+            _myGenIds.add(id);
+            const currentGroups = state.currentProject?.itemGroups || [];
+            const runningPlaceholders = activeGenerations.listFor('gallery', null)
+                .filter(e => e.status === 'running' && e.id !== id)
+                .map(e => e.placeholderGroup)
+                .filter(Boolean);
+            if (pg) grid.el.setGroups([pg, ...runningPlaceholders, ...currentGroups]);
+        }));
+
+        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
+            if (!_myGenIds.has(id)) return;
+            const entry = activeGenerations.get(id);
+            if (entry?.tempId) grid.el.updatePreview(entry.tempId, url);
+        }));
+
+        _unsubs.push(Events.on('generation:complete', ({ id, item, group, tempId: tid }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            const currentGroups = state.currentProject?.itemGroups || [];
+            if (tid) grid.el.removeCard(tid);
+            grid.el.setGroups([group, ...currentGroups.filter(g => g.id !== group.id)]);
+        }));
+
+        _unsubs.push(Events.on('generation:error', ({ id, tempId: tid }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            if (tid) grid.el.removeCard(tid);
+            grid.el.setGroups(state.currentProject?.itemGroups || []);
+        }));
+
+        _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            if (tid) grid.el.removeCard(tid);
+            grid.el.setGroups(state.currentProject?.itemGroups || []);
+        }));
 
         // Model settings overlay
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));

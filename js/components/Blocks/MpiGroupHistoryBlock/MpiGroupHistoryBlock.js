@@ -19,6 +19,7 @@ import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getToolCommands } from '../../../data/commandRegistry.js';
 import { startGeneration } from '../../../services/generationService.js';
+import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
@@ -173,6 +174,64 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Load initial entry to ensure _currentItem is set (required for crop, mask, etc.)
         canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
 
+        // ── Active generation registry ─────────────────────────────────────────
+        // Track which registry entry IDs belong to this group instance.
+        const _myGenIds = new Set();
+
+        // Rehydrate from any in-flight generation for this group.
+        for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
+            if (entry.status !== 'running') continue;
+            _myGenIds.add(entry.id);
+            canvasViewer.el.setGenerating(true);
+            if (entry.latestPreviewUrl) {
+                canvasViewer.el.setGenerating(false);
+                canvasViewer.el.isComparisonMode = false;
+                if (entry.latestPreviewUrl.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
+                canvasViewer.el.loadEntry({ filePath: entry.latestPreviewUrl }, _currentIdx).catch(() => {});
+            }
+        }
+
+        _unsubs.push(Events.on('generation:started', ({ id, scope, groupId }) => {
+            if (scope === 'groupHistory' && groupId === _group.id) {
+                _myGenIds.add(id);
+                canvasViewer.el.setGenerating(true);
+            }
+        }));
+
+        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
+            if (!_myGenIds.has(id)) return;
+            canvasViewer.el.setGenerating(false);
+            canvasViewer.el.isComparisonMode = false;
+            if (url?.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
+            canvasViewer.el.loadEntry({ filePath: url }, _currentIdx).catch(() => {});
+        }));
+
+        _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            canvasViewer.el.setGenerating(false);
+            canvasViewer.el.exitMode?.();
+            _canvasHasMask = false;
+            _refreshOpOptions();
+            _group = group;
+            _currentIdx = _group.selectedIndex;
+            historyList.el.appendEntry(item);
+            canvasViewer.el.loadEntry(item, _currentIdx);
+            canvasViewer.el.setMaskHidden(false);
+        }));
+
+        _unsubs.push(Events.on('generation:error', ({ id }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            canvasViewer.el.setGenerating(false);
+        }));
+
+        _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
+            if (!_myGenIds.has(id)) return;
+            _myGenIds.delete(id);
+            canvasViewer.el.setGenerating(false);
+        }));
+
         // ── OS-file drop overlay ───────────────────────────────────────────────
         const _dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
             onDrop: async ({ file, mediaType }) => {
@@ -288,34 +347,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _activeExec = startGeneration(
                 { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl, injectionParams },
                 {
-                    onPreview: async (url) => {
-                        canvasViewer.el.setGenerating(false);
-                        canvasViewer.el.isComparisonMode = false;
-                        if (url?.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
-                        try { await canvasViewer.el.loadEntry({ filePath: url }, _currentIdx); } catch (_) {}
-                    },
-                    onComplete: ({ item, group }) => {
-                        _activeExec = null;
-                        canvasViewer.el.setGenerating(false);
-                        canvasViewer.el.exitMode?.();
-                        _canvasHasMask = false;
-                        _refreshOpOptions();
-                        _group = group;
-                        _currentIdx = _group.selectedIndex;
-                        historyList.el.appendEntry(item);
-                        canvasViewer.el.loadEntry(item, _currentIdx);
-                        canvasViewer.el.setMaskHidden(false);
-                    },
-                    onCancel: () => {
-                        _activeExec = null;
-                        canvasViewer.el.setGenerating(false);
-                    },
-                    onError: () => {
-                        _activeExec = null;
-                        canvasViewer.el.setGenerating(false);
-                    },
+                    onCancel: () => { _activeExec = null; },
                 },
-                { existingGroup: _group }
+                { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
         }
 

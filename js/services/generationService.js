@@ -15,6 +15,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
+import { activeGenerations } from './activeGenerations.js';
 
 /**
  * @typedef {Object} GenerationConfig
@@ -43,7 +44,7 @@ import { truncateCardName } from '../utils/displayHelpers.js';
  *
  * @param {GenerationConfig} config
  * @param {GenerationCallbacks} callbacks
- * @param {{ existingGroup?: Object }} [opts] — if existingGroup is provided, appends to it instead of creating new
+ * @param {{ existingGroup?: Object, scope?: string, groupId?: string, tempId?: string, placeholderGroup?: Object }} [opts]
  * @returns {{ cancel: function }}
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
@@ -64,7 +65,20 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         injectionParams,
     });
 
-    exec.onPreview = (url) => callbacks.onPreview?.(url);
+    const { id: _regId } = activeGenerations.start({
+        scope:            opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
+        groupId:          opts.groupId ?? opts.existingGroup?.id ?? null,
+        tempId:           opts.tempId ?? null,
+        operation,
+        modelId:          model.id,
+        placeholderGroup: opts.placeholderGroup ?? null,
+        exec,
+    });
+
+    exec.onPreview = (url) => {
+        activeGenerations.setPreview(_regId, url);
+        callbacks.onPreview?.(url);
+    };
 
     exec.onProgress = (value) => StatusBar.progress.update(value);
 
@@ -74,6 +88,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
+            const _cancelTempId = activeGenerations.get(_regId)?.tempId ?? null;
+            activeGenerations.end(_regId, { revokePreview: true });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId });
             callbacks.onCancel?.();
             return;
         }
@@ -126,12 +143,17 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 height: opts.existingGroup.height || height,
             };
             updateGroup(updatedGroup);
+            activeGenerations.end(_regId, { revokePreview: false });
+            Events.emit('generation:complete', { id: _regId, item, group: updatedGroup });
             callbacks.onComplete?.({ item, group: updatedGroup });
         } else {
             // Gallery mode — create new group with resolved dimensions.
             const group = createItemGroup(model.mediaType, { name: displayName, width, height });
             const finalGroup = appendToHistory(group, item);
             addGroup(finalGroup);
+            const _galleryTempId = activeGenerations.get(_regId)?.tempId ?? null;
+            activeGenerations.end(_regId, { revokePreview: false });
+            Events.emit('generation:complete', { id: _regId, item, group: finalGroup, tempId: _galleryTempId });
             callbacks.onComplete?.({ item, group: finalGroup });
         }
 
@@ -141,6 +163,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     exec.onError = (err) => {
         PromptBoxService.component?.setGenerating(false);
         Events.emit('tool:cancelled', { tool: 'groupHistory' });
+        const _errTempId = activeGenerations.get(_regId)?.tempId ?? null;
+        activeGenerations.end(_regId, { revokePreview: true });
+        Events.emit('generation:error', { id: _regId, tempId: _errTempId });
         callbacks.onError?.();
     };
 
