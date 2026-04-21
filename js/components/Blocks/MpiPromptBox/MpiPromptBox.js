@@ -8,6 +8,7 @@ import { commands, getAvailableCommands, getCommandComponents } from '../../../d
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { measureMediaDimensions } from '../../../utils/mediaDimensions.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -187,6 +188,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 // Convert file to base64 for the upload endpoint
                 const base64 = await _fileToBase64(file);
 
+                // Measure pixel dimensions so sidecar has correct aspect ratio
+                const { w: width, h: height } = await measureMediaDimensions(file, mediaType);
+
                 const res = await fetch(
                     `/project-media/${project.id}/upload?folderPath=${encodeURIComponent(project.folderPath)}`,
                     {
@@ -197,6 +201,8 @@ export const MpiPromptBox = ComponentFactory.create({
                             base64Data: base64,
                             autoSequence: true,
                             itemId,
+                            width,
+                            height,
                         }),
                     }
                 );
