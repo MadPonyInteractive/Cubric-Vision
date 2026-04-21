@@ -32,6 +32,15 @@
 
 ---
 
+## projectUI.js (landing page — mounted once at boot)
+
+- `MpiProjectDropOverlay`   props: `{ onDrop({ folderPath, source }) }` callback   slot: `document.createElement('div')` appended to `#page-landing` — full-area OS drop target for project folders / `project.json`; shown/hidden via `#page-landing` `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); `onDrop` calls `addProjectByFolder()` then `loadProjectGrid()`. Feature-gated on `window.require` — skipped in plain-browser dev mode.
+- `MpiNewProject`, `MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiOkCancel` (delete-confirm)   slot: `document.createElement('div')` — lazy singletons shown on user action; not mounted until first trigger.
+- `MpiProjectCard` (one per project)   props: `{ title, date, media }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`.
+- `MpiButton` (landing header actions + "+ New Project")   slot: `#landingActions` / `#newProjectBtn`.
+
+---
+
 ## shell.js (global singletons — mounted once at startup)
 
 - `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event

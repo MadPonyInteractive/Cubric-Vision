@@ -55,6 +55,11 @@ EMITS:   (none — dumb primitive; calls `props.onDrop({ file, mediaType })` on 
 LISTENS: `ui:close-all-popups` — hides overlay (Escape during drag)
 NOTE:    Accepts any image/video OS file drag. Ignores internal `application/mpi-media` drags. Replaced `MpiGalleryDropOverlay`.
 
+### MpiProjectDropOverlay
+EMITS:   (none — dumb primitive; calls `props.onDrop({ folderPath, source })` on valid drop; all side effects in caller)
+LISTENS: `ui:close-all-popups` — hides overlay
+NOTE:    Accepts a project folder OR a project.json file. Resolves absolute path via Electron `webUtils.getPathForFile`; no-op when `window.require` is absent (browser dev mode). Used by landing page (projectUI.js) — `onDrop` calls `addProjectByFolder()` then reloads the grid.
+
 ### MpiProgressBar
 EMITS:   `input`  `{ value: number }`
          `change` `{ value: number }`

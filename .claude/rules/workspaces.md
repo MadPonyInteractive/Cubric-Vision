@@ -24,7 +24,7 @@ Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History 
 [projectUI.js handles UI]      [lazy import by navigation.js]   [lazy import by navigation.js]
 ```
 
-1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, and Landing overlay pages (`MpiSettings`, `MpiHelp`, `MpiAbout`).
+1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, Landing overlay pages (`MpiSettings`, `MpiHelp`, `MpiAbout`), and (under Electron only) `MpiProjectDropOverlay` for drag-and-drop project import — dropping a project folder or `project.json` registers the folder's parent in the extra project paths list and refreshes the grid (does not auto-open).
 
 2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid`. Drives shell PromptBox via `PromptBoxService`. Navigate to group history on card open.
 
