@@ -138,6 +138,11 @@ FLAG:    Uses raw `window.addEventListener` for Ctrl key — not using Hotkeys.r
 ### MpiModelSettings
 EMITS:   `saved` `{}`
          `close` `{}`
+GLOBAL EMITS (via Events.emit, consumed by projectService):
+         `settings:model:select` `{ modelId }` — emitted in `el.open()` when opened for a model
+         `settings:tool:select`  `{ toolKey }`  — emitted in `el.open()` when opened for a tool
+         `settings:model:update` `{ modelId, key, value }` — loras + upscaleModel on _autoSave
+         `settings:tool:update`  `{ toolKey, key, value }` — upscaleModel on _autoSave
 LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
          `ui:error` emitted on save failure via `Events.emit`
 
@@ -246,6 +251,9 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `model-change`     `{ model: ModelDef }`
          `operation-change` `{ operation: string }`
          `settings`         `{ model: ModelDef }`
+GLOBAL EMITS (via Events.emit, consumed by projectService):
+         `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
+         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
 
 ### MpiVideoPlayer
