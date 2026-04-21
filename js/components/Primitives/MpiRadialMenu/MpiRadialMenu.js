@@ -9,12 +9,14 @@ import { state } from '../../../state.js';
  * MpiRadialMenu — Radial navigation primitive.
  *
  * Hold Tab to show items in ghost style.
- * Move mouse > 100px from centre to highlight the nearest item (angle-based).
+ * Uses Pointer Lock API to capture raw mouse deltas — no OS cursor warp needed.
+ * A direction line shows virtual cursor position from centre.
+ * Move mouse > moveDist px (virtual) from centre to highlight nearest item.
  * Release Tab while outside centre → selects highlighted item.
  * Release Tab while inside centre → no selection, menu closes.
  *
- * First open shows a tutorial hint ("Hold Tab to call me") until the user
- * completes one Tab-hold cycle; then project.tutorialSeen is set to true.
+ * First open shows a tutorial hint until user completes one Tab-hold cycle;
+ * then project.tutorialSeen is set to true.
  *
  * @param {string} [context='root'] - Active context key.
  * @param {boolean} [open=false]    - Force-open state (first-run).
@@ -33,7 +35,10 @@ export const MpiRadialMenu = ComponentFactory.create({
 
     setup: (el, props, emit) => {
 
-        // ── Distance from centre fo trigger visual feedback ────────
+        // ── Dead-zone radius (virtual px from centre to activate item) ──────────
+        // Pointer lock movementX/Y are in physical pixels on HiDPI screens,
+        // so normalise by devicePixelRatio to get consistent CSS-px distance.
+        const _dpr = window.devicePixelRatio || 1;
         const moveDist = 40;
 
         // ── Context item definitions ────────────────────────────────────────────
@@ -47,17 +52,21 @@ export const MpiRadialMenu = ComponentFactory.create({
         let _tabHeld = false;
         let _cleanups = [];
 
-        // Mouse-tracking state
-        let _centerX = 0;   // page coords of radial centre
-        let _centerY = 0;
-        let _mouseX = 0;
-        let _mouseY = 0;
-        let _activeIndex = -1;  // currently highlighted item index (-1 = none / centre)
+        // Virtual cursor — accumulated delta from centre since menu opened.
+        // Does NOT correspond to real cursor screen position.
+        let _vx = 0;
+        let _vy = 0;
+        let _activeIndex = -1;
 
         // Cached item angles (set on render)
         /** @type {number[]} */
         let _itemAngles = [];
         let _itemCount = 0;
+
+        // Direction line SVG elements (set in _render)
+        let _lineSvg = null;
+        let _lineEl = null;
+        let _dotVirtual = null;
 
         // ── SVG icon helper ─────────────────────────────────────────────────────
         function _icon(name) {
@@ -78,31 +87,47 @@ export const MpiRadialMenu = ComponentFactory.create({
             updateProject({ tutorialSeen: true });
         }
 
-        // ── Centre coords ───────────────────────────────────────────────────────
-        function _updateCenter() {
-            const rect = el.getBoundingClientRect();
-            _centerX = rect.left + rect.width / 2;
-            _centerY = rect.top + rect.height / 2;
+        // ── Pointer lock ────────────────────────────────────────────────────────
+        function _requestLock() {
+            if (document.pointerLockElement === el) return;
+            el.requestPointerLock();
         }
 
-        // ── Cursor warp ─────────────────────────────────────────────────────────
-        // Snaps the OS cursor to the radial centre via Electron IPC.
-        // Falls back silently in browser mode.
-        let _ipcRenderer = null;
-        try {
-            if (typeof window.require === 'function') {
-                _ipcRenderer = window.require('electron').ipcRenderer;
+        function _releaseLock() {
+            if (document.pointerLockElement === el) {
+                document.exitPointerLock();
             }
-        } catch (e) { /* browser mode — no warp */ }
+        }
 
-        function _warpToCenter() {
-            if (!_ipcRenderer) return;
-            _updateCenter();
-            _ipcRenderer.send('warp-cursor', _centerX, _centerY);
-            // Sync our internal mouse position so the first move event
-            // is relative to the centre, not the old cursor position.
-            _mouseX = _centerX;
-            _mouseY = _centerY;
+        // ── Direction line update ───────────────────────────────────────────────
+        // SVG coordinate space: centre = (50%, 50%) of el.
+        // We use a fixed large viewBox and place centre at (500,500).
+        const SVG_CX = 500;
+        const SVG_CY = 500;
+        const SVG_SCALE = 1; // 1 virtual px = 1 SVG unit
+
+        function _updateLine() {
+            if (!_lineEl || !_lineSvg || !_dotVirtual) return;
+
+            const tx = SVG_CX + _vx * SVG_SCALE;
+            const ty = SVG_CY + _vy * SVG_SCALE;
+            const dist = Math.sqrt(_vx * _vx + _vy * _vy);
+            const active = dist >= moveDist;
+
+            _lineEl.setAttribute('x1', SVG_CX);
+            _lineEl.setAttribute('y1', SVG_CY);
+            _lineEl.setAttribute('x2', tx.toFixed(1));
+            _lineEl.setAttribute('y2', ty.toFixed(1));
+            _lineEl.style.opacity = dist < 4 ? '0' : '1';
+
+            _dotVirtual.setAttribute('cx', tx.toFixed(1));
+            _dotVirtual.setAttribute('cy', ty.toFixed(1));
+            _dotVirtual.style.opacity = dist < 4 ? '0' : '1';
+
+            // Line colour: active = primary, dead-zone = dim
+            const colour = active ? 'var(--primary)' : 'var(--text-3)';
+            _lineEl.setAttribute('stroke', colour);
+            _dotVirtual.setAttribute('fill', colour);
         }
 
         // ── Render ──────────────────────────────────────────────────────────────
@@ -118,7 +143,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             dot.className = 'mpi-radial__dot';
             el.appendChild(dot);
 
-            // Tutorial hint — only if not yet seen
+            // Tutorial hints
             const hintTop = document.createElement('div');
             hintTop.className = 'mpi-radial__hint mpi-radial__hint--top';
             hintTop.textContent = 'Hold Tab...';
@@ -132,11 +157,40 @@ export const MpiRadialMenu = ComponentFactory.create({
             el.appendChild(hintTop);
             el.appendChild(hintBottom);
 
-            // Cone SVG (one per menu, rotated/clipped by JS)
+            // Cone SVG
             const cone = document.createElement('div');
             cone.className = 'mpi-radial__cone';
             cone.innerHTML = _buildConeSvg(_itemCount);
             el.appendChild(cone);
+
+            // Direction line SVG — full-size overlay, pointer-events none
+            const svgNS = 'http://www.w3.org/2000/svg';
+            _lineSvg = document.createElementNS(svgNS, 'svg');
+            _lineSvg.setAttribute('viewBox', '0 0 1000 1000');
+            _lineSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            _lineSvg.classList.add('mpi-radial__dir-svg');
+
+            _lineEl = document.createElementNS(svgNS, 'line');
+            _lineEl.setAttribute('x1', SVG_CX);
+            _lineEl.setAttribute('y1', SVG_CY);
+            _lineEl.setAttribute('x2', SVG_CX);
+            _lineEl.setAttribute('y2', SVG_CY);
+            _lineEl.setAttribute('stroke', 'var(--text-3)');
+            _lineEl.setAttribute('stroke-width', '2');
+            _lineEl.setAttribute('stroke-linecap', 'round');
+            _lineEl.style.opacity = '0';
+
+            _dotVirtual = document.createElementNS(svgNS, 'circle');
+            _dotVirtual.setAttribute('cx', SVG_CX);
+            _dotVirtual.setAttribute('cy', SVG_CY);
+            _dotVirtual.setAttribute('r', '5');
+            _dotVirtual.setAttribute('fill', 'var(--text-3)');
+            _dotVirtual.style.opacity = '0';
+            _dotVirtual.style.transition = 'opacity 0.1s ease';
+
+            _lineSvg.appendChild(_lineEl);
+            _lineSvg.appendChild(_dotVirtual);
+            el.appendChild(_lineSvg);
 
             items.forEach((item, i) => {
                 const angleDeg = -90 + (360 / _itemCount) * i;
@@ -172,23 +226,18 @@ export const MpiRadialMenu = ComponentFactory.create({
             });
 
             _activeIndex = -1;
-            _updateCenter();
+            _vx = 0;
+            _vy = 0;
         }
 
         // ── Cone SVG builder ────────────────────────────────────────────────────
-        /**
-         * Builds an SVG with a single wedge/cone that spans one item's angular slot.
-         * The cone is centred at 0° (pointing right) and rotated via CSS transform.
-         * Half-angle = 360 / itemCount / 2
-         */
         function _buildConeSvg(count) {
-            const size = 600; // px (viewBox)
+            const size = 600;
             const cx = size / 2;
             const cy = size / 2;
             const outerR = size / 2;
             const halfAngle = (360 / Math.max(count, 1) / 2) * (Math.PI / 180);
 
-            // Wedge from centre, pointing right (0°), spanning ±halfAngle
             const x1 = cx + outerR * Math.cos(-halfAngle);
             const y1 = cy + outerR * Math.sin(-halfAngle);
             const x2 = cx + outerR * Math.cos(halfAngle);
@@ -218,14 +267,9 @@ export const MpiRadialMenu = ComponentFactory.create({
         }
 
         // ── Active item tracking ────────────────────────────────────────────────
-        /**
-         * Given current mouse offset from centre, returns the item index
-         * whose angle is nearest, or -1 if within the dead-zone radius.
-         */
         function _resolveActiveIndex(dx, dy) {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < moveDist) return -1;
-
             if (_itemCount === 0) return -1;
 
             const mouseAngle = Math.atan2(dy, dx);
@@ -234,7 +278,6 @@ export const MpiRadialMenu = ComponentFactory.create({
 
             for (let i = 0; i < _itemCount; i++) {
                 let diff = mouseAngle - _itemAngles[i];
-                // Normalise to [-π, π]
                 while (diff > Math.PI) diff -= 2 * Math.PI;
                 while (diff < -Math.PI) diff += 2 * Math.PI;
                 const absDiff = Math.abs(diff);
@@ -243,7 +286,6 @@ export const MpiRadialMenu = ComponentFactory.create({
             return best;
         }
 
-        /** Apply/remove the is-active class and rotate the cone */
         function _applyActive(index) {
             if (index === _activeIndex) return;
             _activeIndex = index;
@@ -259,22 +301,19 @@ export const MpiRadialMenu = ComponentFactory.create({
             if (index === -1) {
                 cone.classList.remove('mpi-radial__cone--visible');
             } else {
-                // Rotate cone to point at the active item
-                // Item angles are in radians; convert to degrees
                 const angleDeg = (_itemAngles[index] * 180 / Math.PI);
                 cone.style.setProperty('--cone-angle', `${angleDeg.toFixed(1)}deg`);
                 cone.classList.add('mpi-radial__cone--visible');
             }
         }
 
-        // ── Mouse move handler ──────────────────────────────────────────────────
-        const _onMouseMove = (e) => {
+        // ── Pointer lock mouse move — raw deltas, no absolute position ──────────
+        const _onPointerMove = (e) => {
             if (!_visible) return;
-            _mouseX = e.clientX;
-            _mouseY = e.clientY;
-            const dx = _mouseX - _centerX;
-            const dy = _mouseY - _centerY;
-            _applyActive(_resolveActiveIndex(dx, dy));
+            _vx += e.movementX / _dpr;
+            _vy += e.movementY / _dpr;
+            _updateLine();
+            _applyActive(_resolveActiveIndex(_vx, _vy));
         };
 
         // ── Visibility ──────────────────────────────────────────────────────────
@@ -284,7 +323,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             _render();
             el.classList.remove('mpi-radial--hidden');
             el.classList.add('mpi-radial--visible');
-            _warpToCenter();
+            _requestLock();
             emit('open', {});
         }
 
@@ -294,6 +333,13 @@ export const MpiRadialMenu = ComponentFactory.create({
             el.classList.remove('mpi-radial--visible');
             el.classList.add('mpi-radial--hidden');
             _applyActive(-1);
+            _releaseLock();
+            // Reset virtual cursor and hide line immediately so it doesn't
+            // persist visibly during the CSS fade-out transition.
+            _vx = 0;
+            _vy = 0;
+            if (_lineEl) { _lineEl.style.opacity = '0'; _lineEl.setAttribute('x2', SVG_CX); _lineEl.setAttribute('y2', SVG_CY); }
+            if (_dotVirtual) { _dotVirtual.style.opacity = '0'; _dotVirtual.setAttribute('cx', SVG_CX); _dotVirtual.setAttribute('cy', SVG_CY); }
             emit('close', {});
         }
 
@@ -314,23 +360,31 @@ export const MpiRadialMenu = ComponentFactory.create({
             _tabHeld = false;
 
             if (_visible) {
-                if (_activeIndex !== -1) {
-                    // Grab action before hide clears state
-                    const btn = el.querySelector(`.mpi-radial__item[data-index="${_activeIndex}"]`);
+                // Snapshot active index before hide resets it
+                const idx = _activeIndex;
+                if (idx !== -1) {
+                    const btn = el.querySelector(`.mpi-radial__item[data-index="${idx}"]`);
                     const action = btn?.dataset?.action;
                     if (action) _selectItem(action);
                     else _hide();
                 } else {
                     _hide();
                 }
-                // First completed Tab cycle marks tutorial as seen
                 _markTutorialSeen();
+            }
+        };
+
+        // Pointer lock change — if lock lost externally, clean up
+        const _onPointerLockChange = () => {
+            if (document.pointerLockElement !== el && _visible) {
+                _hide();
             }
         };
 
         Hotkeys.register('tab', _onTabDown);
         const _removeKeyUp = on(window, 'keyup', _onTabUp);
-        const _removeMouseMove = on(window, 'mousemove', _onMouseMove);
+        const _removePointerMove = on(el, 'mousemove', _onPointerMove);
+        const _removeLockChange = on(document, 'pointerlockchange', _onPointerLockChange);
 
         // ── Public API ──────────────────────────────────────────────────────────
         el.show = _show;
@@ -361,11 +415,12 @@ export const MpiRadialMenu = ComponentFactory.create({
         }
 
         // ── Cleanup ─────────────────────────────────────────────────────────────
-        _cleanups.push(_removeKeyUp, _removeMouseMove);
+        _cleanups.push(_removeKeyUp, _removePointerMove, _removeLockChange);
         _cleanups.push(() => Hotkeys.unregister('tab', _onTabDown));
 
         const observer = new MutationObserver(() => {
             if (!document.contains(el)) {
+                _releaseLock();
                 _cleanups.forEach(fn => fn());
                 _cleanups = [];
                 observer.disconnect();
