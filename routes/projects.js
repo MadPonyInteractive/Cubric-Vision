@@ -91,6 +91,7 @@ router.post('/list-projects', async (req, res) => {
                 if (await fs.pathExists(jsonPath)) {
                     try {
                         const p = await fs.readJson(jsonPath);
+                        const diskFolder = path.join(root, entry).replace(/\\/g, '/');
                         let recentThumbnail = null;
                         try {
                             const mediaDir = path.join(root, entry, 'Media');
@@ -111,7 +112,7 @@ router.post('/list-projects', async (req, res) => {
                                 }
                             }
                         } catch (e) { /* silent fail for media scan */ }
-                        projects.push({ ...p, recentThumbnail });
+                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail });
                     } catch (_) { /* skip corrupt entries */ }
                 }
             }
@@ -120,8 +121,9 @@ router.post('/list-projects', async (req, res) => {
         projects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
         const seen = new Set();
         const unique = projects.filter(p => {
-            if (seen.has(p.id)) return false;
-            seen.add(p.id);
+            const key = p.id || `path:${p.folderPath}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
             return true;
         });
         res.json({ success: true, projects: unique });
@@ -135,6 +137,7 @@ router.post('/get-project', async (req, res) => {
     try {
         const { folderPath } = req.body;
         const project = await fs.readJson(path.join(folderPath, 'project.json'));
+        project.folderPath = folderPath.replace(/\\/g, '/');
         res.json({ success: true, project });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -166,6 +169,7 @@ router.post('/validate-project', async (req, res) => {
         if (!project.id || !project.name) {
             return res.json({ success: false, error: 'Invalid project.json (missing id/name)' });
         }
+        project.folderPath = folderPath.replace(/\\/g, '/');
         res.json({ success: true, project });
     } catch (err) {
         logger.error('project', 'validate-project error', err);
@@ -188,10 +192,25 @@ router.post('/update-project-settings', async (req, res) => {
 
 router.post('/delete-project', async (req, res) => {
     try {
-        const { folderPath } = req.body;
+        const { folderPath, expectedId } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        // Folder already gone — nothing to delete, treat as success.
+        if (!(await fs.pathExists(folderPath))) {
+            return res.json({ success: true });
+        }
+        // Safety: only delete if target is actual project folder (contains project.json).
         const jsonPath = path.join(folderPath, 'project.json');
         if (!(await fs.pathExists(jsonPath))) {
-            return res.status(400).json({ success: false, error: 'Not a valid project folder.' });
+            return res.status(400).json({ success: false, error: 'Refusing to delete: no project.json in target folder' });
+        }
+        // Optional id match — prevents deleting wrong project if caller passed stale folderPath.
+        if (expectedId) {
+            try {
+                const onDisk = await fs.readJson(jsonPath);
+                if (onDisk.id && onDisk.id !== expectedId) {
+                    return res.status(409).json({ success: false, error: `ID mismatch: folder holds project ${onDisk.id}, expected ${expectedId}` });
+                }
+            } catch (_) { /* unreadable json — still refuse below if no id guard met */ }
         }
         await fs.remove(folderPath);
         res.json({ success: true });

@@ -60,6 +60,10 @@ Located at `<projectFolder>/project.json`. Example structure:
 
 **Key field: \****`schemaVersion`** — Identifies which data schema this project was saved in. On project open, if this doesn't match `SCHEMA_VERSION` from `appVersion.js`, migrations are run first.
 
+**Key field: \****`id`** — UUID assigned at `/create-project`. **Authoritative project identifier.** All destructive ops (`/delete-project`) require the caller to pass `expectedId`; server refuses (409) if the on-disk `project.json` id differs from the expected id. This prevents stale `folderPath` values (e.g., imported projects moved on disk, or JSON copied between folders) from causing the wrong folder to be deleted.
+
+**Stale `folderPath` safety:** The `folderPath` field inside `project.json` is NOT trusted by the server. `/list-projects`, `/get-project`, and `/validate-project` all overwrite it with the actual disk path where the JSON was found before returning it to the client. This keeps `project.folderPath` in UI state always pointing at the real folder even if the JSON was moved manually.
+
 **Key field: \****`history[]`** — Array of UUID strings (NOT full objects). Each UUID corresponds to a `.meta/<uuid>.json` file in the Media folder.
 
 ### `.meta/<uuid>.json` Sidecar Files

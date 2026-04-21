@@ -246,9 +246,21 @@ export function saveProjectSettings() {
     _debouncedSaveProjectSettings();
 }
 
-export async function deleteProject(folderPath) {
-    const result = await post('/delete-project', { folderPath });
-    if (!result.success) throw new Error(result.error);
+export async function deleteProject(project, { deleteFiles = true } = {}) {
+    const folderPath = project.folderPath;
+
+    if (deleteFiles) {
+        const result = await post('/delete-project', { folderPath, expectedId: project.id });
+        if (!result.success) throw new Error(result.error);
+    }
+
+    // Always remove parent dir from extras registry when present.
+    // Works for imported projects; created projects live under DEFAULT_PROJECTS_ROOT
+    // which is not stored in extras, so filtering is a safe no-op for them.
+    const parentDir = folderPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/');
+    const extras = Storage.getExtraProjectPaths().filter(p => p !== parentDir);
+    Storage.setExtraProjectPaths(extras);
+
     if (state.currentProject?.folderPath === folderPath) {
         state.currentProject = null;
         navigate(PAGE_LANDING);
