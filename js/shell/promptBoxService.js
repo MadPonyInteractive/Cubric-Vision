@@ -3,31 +3,64 @@
  *
  * The PromptBox lives in #prompt-box-mount (a persistent element in #app-shell,
  * outside #tool-container). Workspace Blocks call PromptBoxService.mount(props)
- * to (re)configure it when they load. The old instance is destroyed automatically.
+ * to (re)configure it when they load.
  *
- * The mount point itself is hidden/shown with #app-shell (on landing, app-shell
- * has class 'hide', so PromptBox is never visible on the landing page).
+ * Also owns the external media strip rendered *above* the PromptBox — the
+ * component emits `media-change`, the service paints chips here.
  *
- * Auto-refresh on model install:
- * When a new model is installed, the service automatically refreshes the PromptBox's
- * model list by listening to state:changed for s_installedModelIds. This ensures
- * the dropdown always reflects the current installed models without blocks having
- * to manually wire that update.
+ * Auto-refresh on model install: subscribes to state:changed for
+ * s_installedModelIds and refreshes the dropdown model list automatically.
  */
 
 import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { Events } from '../events.js';
 import { getModelsByType } from '../data/modelRegistry.js';
+import { renderIcon } from '../utils/icons.js';
 
-let _mountEl              = null;   // The #prompt-box-mount HTMLElement — set by init()
-let _instance             = null;   // Current MpiPromptBox component instance
-let _currentModelType     = null;   // 'image' or 'video' — tracked from last mount
-let _unsubModelListUpdate = null;   // Unsubscribe function for state:changed listener
+let _mountEl              = null;   // #prompt-box-mount
+let _stripEl              = null;   // Media strip element (above the box)
+let _boxHostEl            = null;   // Wrapper the MpiPromptBox is mounted into
+let _instance             = null;
+let _currentModelType     = null;
+let _unsubModelListUpdate = null;
+
+function _ensureScaffold() {
+    if (!_mountEl) return;
+    _mountEl.innerHTML = '';
+
+    _stripEl = document.createElement('div');
+    _stripEl.className = 'mpi-prompt-box-media-strip';
+    _mountEl.appendChild(_stripEl);
+
+    _boxHostEl = document.createElement('div');
+    _boxHostEl.className = 'mpi-prompt-box-host';
+    _mountEl.appendChild(_boxHostEl);
+}
+
+function _renderStrip(items) {
+    if (!_stripEl) return;
+    _stripEl.innerHTML = '';
+    items.forEach(item => {
+        const chip = document.createElement('div');
+        chip.className = 'mpi-prompt-box-media-strip__chip';
+        chip.dataset.id = item.id;
+        chip.innerHTML = item.mediaType === 'image'
+            ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="">
+               <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`
+            : `<div class="mpi-prompt-box-media-strip__video-thumb">${renderIcon('video', 'sm')}</div>
+               <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`;
+        chip.querySelector('.mpi-prompt-box-media-strip__remove').addEventListener('click', (e) => {
+            e.stopPropagation();
+            _instance?.el?.removeMedia?.(item.id);
+        });
+        _stripEl.appendChild(chip);
+    });
+}
 
 export const PromptBoxService = {
     /**
      * Initialize with the DOM element. Called once from shell.js on startup.
-     * @param {HTMLElement} mountEl - The #prompt-box-mount element
+     * @param {HTMLElement} mountEl
      */
     init(mountEl) {
         _mountEl = mountEl;
@@ -35,10 +68,8 @@ export const PromptBoxService = {
 
     /**
      * (Re)mount the PromptBox with fresh props.
-     * Destroys the previous instance by clearing the mount point.
-     * Sets up auto-refresh listener for installed models.
-     * @param {Object} props - MpiPromptBox props
-     * @returns {Object} The new component instance (call .on() on it to subscribe)
+     * @param {Object} props
+     * @returns {Object} component instance
      */
     mount(props) {
         if (!_mountEl) {
@@ -46,22 +77,22 @@ export const PromptBoxService = {
             return null;
         }
 
-        // Clean up previous model list update subscription
         if (_unsubModelListUpdate) {
             _unsubModelListUpdate();
             _unsubModelListUpdate = null;
         }
 
-        // Tear down previous instance before clearing DOM
         if (_instance?.el?.destroy) {
             _instance.el.destroy();
         }
 
-        _mountEl.innerHTML = '';
-        _instance = MpiPromptBox.mount(_mountEl, props);
+        _ensureScaffold();
+        _instance = MpiPromptBox.mount(_boxHostEl, props);
 
-        // Track model type from the mounted model so we know which type to re-fetch
-        // when installed models change. Use mediaType from the model if available.
+        // Paint media strip in response to box media changes
+        _instance.on('media-change', ({ items }) => _renderStrip(items));
+        _renderStrip([]);
+
         if (props.model?.mediaType) {
             _currentModelType = props.model.mediaType;
         } else if (props.modelList?.length > 0) {
@@ -70,7 +101,6 @@ export const PromptBoxService = {
             _currentModelType = null;
         }
 
-        // Subscribe to state changes and refresh model list when new models are installed
         if (_currentModelType) {
             _unsubModelListUpdate = Events.on('state:changed', ({ key }) => {
                 if (key === 's_installedModelIds' && _instance?.el) {
@@ -84,62 +114,27 @@ export const PromptBoxService = {
         return _instance;
     },
 
-    /**
-     * Show the PromptBox area. Called when entering selection mode exit.
-     */
     show() {
         if (_mountEl) _mountEl.classList.remove('hide');
     },
 
-    /**
-     * Hide the PromptBox area. Called when selection mode activates.
-     */
     hide() {
         if (_mountEl) _mountEl.classList.add('hide');
     },
 
-    /**
-     * Convenience wrapper to inject prompts into the mounted PromptBox.
-     * @param {Object} opts
-     * @param {string} [opts.positive] - Positive prompt text
-     * @param {string} [opts.negative] - Negative prompt text
-     */
     injectPrompts({ positive, negative } = {}) {
         _instance?.el?.injectPrompts?.({ positive, negative });
     },
 
-    /**
-     * Inject media into the mounted PromptBox.
-     * Delegates to el.injectMedia() which handles compat check + toast.
-     * @param {Object} opts
-     * @param {string} opts.url - Media file URL
-     * @param {'image'|'video'} opts.mediaType
-     * @returns {boolean} true on success, false if rejected or no instance
-     */
     injectMedia({ url, mediaType } = {}) {
         return _instance?.el?.injectMedia?.({ url, mediaType }) ?? false;
     },
 
-    /**
-     * Direct access to the mounted PromptBox component instance API.
-     * The component instance has updateContext(), setGenerating(), setOperation(),
-     * setModel(), setModelList(), getMediaItems(), etc. attached directly to the
-     * DOM element by MpiPromptBox.setup().
-     *
-     * Returns null if no PromptBox is currently mounted.
-     * @returns {HTMLElement|null}
-     */
     get component() {
         return _instance?.el ?? null;
     },
 
-    /**
-     * Alias for component — for callers that expect a DOM element.
-     * @deprecated Use .component instead. This returns the same value but the
-     * name is misleading since the component instance API (updateContext,
-     * setGenerating, etc.) is attached to it, not a plain DOM element.
-     * @returns {HTMLElement|null}
-     */
+    /** @deprecated Use .component */
     get el() {
         return this.component;
     },

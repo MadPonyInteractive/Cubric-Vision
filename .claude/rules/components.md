@@ -154,6 +154,11 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 * No Overlays registration.
 * MUST self-close on the `ui:close-all-popups` global event.
 * MUST use a `MutationObserver` to clean up `document.body` portals when the component is removed from the DOM.
+* MUST dismiss on outside-click (not on hover-leave). Multiple portaled popups overlap on body; hover-close creates chaotic cross-closes.
+* Outside-click handlers MUST ignore clicks inside other portaled surfaces (other `.mpi-popup` nodes, `.mpi-dropdown__list` nodes) — those are logically nested even when body-adjacent.
+* Z-index contract: dropdown lists (`z-index: 10001`) sit above popups (`z-index: 9999`) so selects inside a popup render correctly.
+* Viewport clamp: after placing a portaled popup by trigger coordinates, measure `getBoundingClientRect()` in `requestAnimationFrame` and nudge `left` back into view. Popups anchored with `translateX(-50%)` will clip off-screen near viewport edges otherwise.
+* Seed live props from `initial*` fallbacks in `setup()` (e.g. `props.orientation = props.initialOrientation || 'portrait'`). Click handlers read `props.*` directly; if setup skips this seed, first-click handlers see `undefined` and diverge from the template's rendered state.
 
 ### Hotkeys
 * MUST use `Hotkeys.register(key, fn)` (Never use raw `window.addEventListener('keydown')`).

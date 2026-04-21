@@ -2,6 +2,8 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
+import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
@@ -13,42 +15,30 @@ import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
  *
- * Owns the operation dropdown internally and injects operation-specific
- * sub-controls (e.g. MpiRatioSelector for upscale) into the bottom slot.
+ * Bottom bar carries a settings badge (model · operation), the negative toggle
+ * and the run button. All other controls (model dropdown, gear, download,
+ * operation dropdown, op-specific controls) live inside a popup triggered by
+ * the settings badge.
  *
- * @param {import('../../../data/modelRegistry.js').ModelDef|null} [model=null]
- *   Active model — determines which media types the drop zone accepts.
- *   If null, no media drop zone is rendered.
- * @param {import('../../../data/modelRegistry.js').ModelDef[]} [modelList=[]]
- *   Full list of selectable models. When provided and length > 1, a model
- *   dropdown is rendered in the left slot. Requires `model` to be set.
- * @param {string} [operation='t2i'] - Initial active operation key
- * @param {string} [value=''] - Initial positive prompt value
- * @param {string} [negativeValue=''] - Initial negative prompt value
- * @param {boolean} [includeNegative=false] - Whether to show the negative prompt toggle
- * @param {boolean} [showSettings=true] - Show gear button next to model selector (only when model is set)
- * @param {boolean} [generating=false] - Initial generating state (toggles play/stop icon)
- * @param {Object} [context={}] - Runtime context for available-command filtering
+ * Media chips render outside the box (above it) via PromptBoxService — the
+ * component owns the media state and emits `media-change`, the service paints.
  *
  * Instance API (on instance.el):
- *   el.imageCount      {number}  — current number of dropped images
- *   el.videoCount      {number}  — current number of dropped videos
- *   el.getMediaItems()           — returns copy of current media items array
- *   el.clearMedia()              — remove all dropped media
- *   el.setOperation(key)        — set active operation (also fired by radial menu event)
- *   el.setGenerating(bool)       — sync button to generating state
- *   el.updateContext(ctx)        — update context and refresh op dropdown
+ *   el.imageCount / el.videoCount
+ *   el.getMediaItems()
+ *   el.clearMedia()
+ *   el.removeMedia(id)
+ *   el.injectMedia({ url, mediaType })
+ *   el.injectPrompts({ positive, negative })
+ *   el.setOperation(key)
+ *   el.setGenerating(bool)
+ *   el.updateContext(ctx)
+ *   el.setModel(model)
+ *   el.setModelList(list)
  *
  * Emits:
- *   'input'        { positive, negative, activeMode }
- *   'copy'         { text }
- *   'mode-change'  { mode }
- *   'media-change' { imageCount, videoCount, items }
- *   'run'          { operation, positive, negative, mediaItems, injectionParams }
- *   'cancel'       {}
- *   'model-change' { model }   - fired when the internal model dropdown changes
- *   'operation-change' { operation } - fired when operation changes
- *   'settings'     { model }  - fired when the gear button is clicked
+ *   'input' | 'copy' | 'mode-change' | 'media-change' | 'media-imported'
+ *   'run' | 'cancel' | 'model-change' | 'operation-change' | 'settings'
  */
 export const MpiPromptBox = ComponentFactory.create({
     name: 'MpiPromptBox',
@@ -59,12 +49,9 @@ export const MpiPromptBox = ComponentFactory.create({
             <div class="mpi-prompt-box__lock-container" id="expand-lock-slot"></div>
 
             ${props.model ? `
-            <div class="mpi-prompt-box__media-zone" id="media-zone">
-                <div class="mpi-prompt-box__media-chips" id="media-chips"></div>
-                <div class="mpi-prompt-box__drop-hint" id="drop-hint">
-                    <span class="mpi-prompt-box__drop-hint-icon">${renderIcon('media', 'sm')}</span>
-                    <span class="mpi-prompt-box__drop-hint-text"></span>
-                </div>
+            <div class="mpi-prompt-box__drop-overlay">
+                <span class="mpi-prompt-box__drop-overlay-icon">${renderIcon('media', 'md')}</span>
+                <span class="mpi-prompt-box__drop-overlay-text">Drop here</span>
             </div>
             ` : ''}
 
@@ -76,13 +63,9 @@ export const MpiPromptBox = ComponentFactory.create({
             <div class="mpi-prompt-box__separator"></div>
 
             <div class="mpi-prompt-box__bottom">
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--left"    id="bottom-left-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--center"  id="bottom-center-slot">
-                    <div id="op-dropdown-slot"></div>
-                </div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--neg"    id="bottom-neg-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--right"   id="bottom-right-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--bottom"  id="bottom-bottom-slot"></div>
+                <div class="mpi-prompt-box__area mpi-prompt-box__area--left"  id="settings-badge-slot"></div>
+                <div class="mpi-prompt-box__area mpi-prompt-box__area--neg"   id="bottom-neg-slot"></div>
+                <div class="mpi-prompt-box__area mpi-prompt-box__area--right" id="bottom-right-slot"></div>
             </div>
         </div>
     `,
@@ -94,18 +77,16 @@ export const MpiPromptBox = ComponentFactory.create({
         let negativeValue     = props.negativeValue || '';
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
+        let _context          = props.context || {};
 
-        // Runtime context for filtering available commands
-        let _context = props.context || {};
-
-        // Active sub-controls — mounted/unmounted as operation changes
         /** @type {Map<string, Object>} */
         const _activeControls = new Map();
 
-        // Mutable model state — updated via setModel() / setModelList()
         let model = props.model || null;
         let modelList = props.modelList || [];
         let _modelDropdown = null;
+        let _opDropdown = null;
+
         const acceptsImage = model
             ? model.supportedOps.some(op => (commands[op]?.requiresImages ?? 0) >= 1)
             : false;
@@ -117,48 +98,11 @@ export const MpiPromptBox = ComponentFactory.create({
         /** @type {Array<{id:string, url:string, file:File|null, mediaType:'image'|'video', source:'file'|'app'}>} */
         const _mediaItems = [];
 
-        const mediaZone = el.querySelector('#media-zone');
-        const chipsEl   = el.querySelector('#media-chips');
-        const dropHint  = el.querySelector('#drop-hint');
-
-        function _syncDropHint() {
-            if (!dropHint) return;
-            const empty = _mediaItems.length === 0;
-            dropHint.style.display = empty ? '' : 'none';
-            if (empty) {
-                const parts = [];
-                if (acceptsImage) parts.push('image');
-                if (acceptsVideo) parts.push('video');
-                dropHint.querySelector('.mpi-prompt-box__drop-hint-text').textContent =
-                    `Drop ${parts.join(' or ')} here`;
-            }
-            mediaZone.classList.toggle('mpi-prompt-box__media-zone--has-media', !empty);
-        }
-
-        function _addChip(item) {
-            const chip = document.createElement('div');
-            chip.className = 'mpi-prompt-box__media-chip';
-            chip.dataset.id = item.id;
-            chip.innerHTML = item.mediaType === 'image'
-                ? `<img src="${item.url}" class="mpi-prompt-box__chip-thumb" alt="">
-                   <button class="mpi-prompt-box__chip-remove" title="Remove">${renderIcon('close', 'xs')}</button>`
-                : `<div class="mpi-prompt-box__chip-video-thumb">${renderIcon('video', 'sm')}</div>
-                   <button class="mpi-prompt-box__chip-remove" title="Remove">${renderIcon('close', 'xs')}</button>`;
-
-            chip.querySelector('.mpi-prompt-box__chip-remove').addEventListener('click', (e) => {
-                e.stopPropagation();
-                _removeItem(item.id);
-            });
-            chipsEl.appendChild(chip);
-        }
-
         function _removeItem(id) {
             const idx = _mediaItems.findIndex(m => m.id === id);
             if (idx === -1) return;
             const item = _mediaItems.splice(idx, 1)[0];
             if (item.source === 'file') URL.revokeObjectURL(item.url);
-            chipsEl.querySelector(`[data-id="${id}"]`)?.remove();
-            _syncDropHint();
             _emitMediaChange();
         }
 
@@ -169,35 +113,30 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         function _tryAddMedia({ url, file, mediaType, source }) {
-            // Max 1 per type — replace existing rather than stack
             const existing = _mediaItems.find(m => m.mediaType === mediaType);
             if (existing) _removeItem(existing.id);
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
             _mediaItems.push(item);
-            _addChip(item);
-            _syncDropHint();
             _emitMediaChange();
         }
 
-        // ── Drop zone events ───────────────────────────────────────────────────
-        if (mediaZone) {
+        // ── Drop events (on root el; overlay toggled via root modifier) ───────
+        if (model) {
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev =>
                 el.addEventListener(ev, e => e.preventDefault())
             );
 
-            el.addEventListener('dragenter', () => mediaZone.classList.add('mpi-prompt-box__media-zone--drag-over'));
-            el.addEventListener('dragover',  () => mediaZone.classList.add('mpi-prompt-box__media-zone--drag-over'));
+            el.addEventListener('dragenter', () => el.classList.add('mpi-prompt-box--drag-over'));
+            el.addEventListener('dragover',  () => el.classList.add('mpi-prompt-box--drag-over'));
             el.addEventListener('dragleave', (e) => {
                 if (!el.contains(e.relatedTarget))
-                    mediaZone.classList.remove('mpi-prompt-box__media-zone--drag-over');
+                    el.classList.remove('mpi-prompt-box--drag-over');
             });
 
             el.addEventListener('drop', async (e) => {
-                mediaZone.classList.remove('mpi-prompt-box__media-zone--drag-over');
+                el.classList.remove('mpi-prompt-box--drag-over');
 
-                // App-internal drag from MpiGroupCard — re-use existing media in prompt
-                // box, no history card (the card already exists in the gallery).
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
@@ -205,11 +144,10 @@ export const MpiPromptBox = ComponentFactory.create({
                         if (type === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
                         if (type === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
                         _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
-                    } catch { /* malformed payload */ }
+                    } catch { /* malformed */ }
                     return;
                 }
 
-                // Native file drop — upload to project media folder immediately
                 const file = e.dataTransfer.files[0];
                 if (!file) return;
                 const mediaType = file.type.startsWith('image/') ? 'image'
@@ -219,25 +157,21 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
                 if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
 
-                // Upload to project folder and create history card immediately
                 const project = state.currentProject;
                 const uploaded = project
                     ? await uploadMediaFile(file, mediaType, project.folderPath, project.id)
                     : null;
                 const fileUrl = uploaded
                     ? uploaded.filePath
-                    : URL.createObjectURL(file); // fallback: keep blob URL
+                    : URL.createObjectURL(file);
 
                 _tryAddMedia({ url: fileUrl, file, mediaType, source: 'file' });
 
-                // Notify parent to create a history card for this imported media
                 if (uploaded) {
                     emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
                     Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType });
                 }
             });
-
-            _syncDropHint();
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -245,15 +179,16 @@ export const MpiPromptBox = ComponentFactory.create({
         el.videoCount    = 0;
         el.getMediaItems = () => [..._mediaItems];
         el.clearMedia    = () => [..._mediaItems].forEach(m => _removeItem(m.id));
+        el.removeMedia   = (id) => _removeItem(id);
 
         el.setOperation = (key) => {
             activeOperation = key;
             _refreshOpDropdown();
             _refreshOpSlot();
+            _renderBadge();
             emit('operation-change', { operation: key });
         };
 
-        // updateContext — update context and refresh op dropdown options
         el.updateContext = (ctx) => {
             _context = { ..._context, ...ctx };
             _refreshOpDropdown();
@@ -264,11 +199,6 @@ export const MpiPromptBox = ComponentFactory.create({
             runBtn.el.classList.toggle('is-active', active);
         };
 
-        /**
-         * Sync internal model state to a new model.
-         * Updates the closure variable, syncs the dropdown selection,
-         * and refreshes the operation dropdown and op slot.
-         */
         el.setModel = (newModel) => {
             model = newModel;
             if (_modelDropdown) {
@@ -279,12 +209,9 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             _refreshOpDropdown();
             _refreshOpSlot();
+            _renderBadge();
         };
 
-        /**
-         * Update the available models list.
-         * Refreshes dropdown options and operation availability.
-         */
         el.setModelList = (newModelList) => {
             modelList = newModelList;
             if (_modelDropdown) {
@@ -297,10 +224,8 @@ export const MpiPromptBox = ComponentFactory.create({
             _refreshOpSlot();
         };
 
-        // ── Radial menu → operation sync ───────────────────────────────────────
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
 
-        // ── Toast for incompatible media drop ─────────────────────────────────
         function _showIncompatibleToast() {
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
@@ -313,7 +238,6 @@ export const MpiPromptBox = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
-        // ── Public media injection — used by PromptBoxService.injectMedia ─────
         el.injectMedia = ({ url, mediaType }) => {
             if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return false; }
             if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return false; }
@@ -321,7 +245,6 @@ export const MpiPromptBox = ComponentFactory.create({
             return true;
         };
 
-        // ── Prompt injection (from gallery reuse button) ──────────────────────
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
@@ -335,69 +258,6 @@ export const MpiPromptBox = ComponentFactory.create({
             Events.on('workspace:set-operation', _onSetOperation),
             Events.on('workspace:inject-prompts', _onInjectPrompts),
         ];
-
-        // ── Operation dropdown ─────────────────────────────────────────────────
-        let runBtn = null;
-
-        function _refreshOpDropdown() {
-            if (!model) return;
-
-            const opSlot = el.querySelector('#op-dropdown-slot');
-            if (!opSlot) return;
-
-            // Use getAvailableCommands for context-aware filtering
-            const availableCmds = getAvailableCommands(model.mediaType, model, _context);
-            // Filter out operations that don't require images/video when context requests it
-            const filteredCmds = _context.filterNoInputOps
-                ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
-                : availableCmds;
-            const availableOps = filteredCmds
-                .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
-
-            if (availableOps.length === 0) {
-                opSlot.innerHTML = '';
-                return;
-            }
-
-            // Insert label
-            const labelEl = document.createElement('span');
-            labelEl.className = 'mpi-prompt-box__op-label';
-            labelEl.textContent = 'Op:';
-            labelEl.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-right:0.25rem;';
-
-            const opDropdown = MpiDropdown.mount(document.createElement('div'), {
-                options: availableOps,
-                value: activeOperation,
-                info: 'Operation',
-                direction: 'up',
-            });
-            opDropdown.on('change', ({ value }) => el.setOperation(value));
-
-            opSlot.innerHTML = '';
-            opSlot.appendChild(labelEl);
-            opSlot.appendChild(opDropdown.el);
-        }
-
-        function _refreshOpSlot() {
-            const bottomSlot = el.querySelector('#bottom-bottom-slot');
-            if (!bottomSlot) return;
-            bottomSlot.innerHTML = '';
-            _activeControls.clear();
-
-            const componentIds = getCommandComponents(activeOperation);
-
-            for (const componentId of componentIds) {
-                const ctrl = PROMPT_BOX_CONTROLS[componentId];
-                if (!ctrl) continue;
-
-                const ctrlEl = document.createElement('div');
-                ctrlEl.style.display = 'contents';
-                bottomSlot.appendChild(ctrlEl);
-
-                ctrl.mount(ctrlEl, { model });
-                _activeControls.set(componentId, ctrl);
-            }
-        }
 
         // ── Textarea ───────────────────────────────────────────────────────────
         const mainInput = MpiInput.mount(el.querySelector('#textarea-slot'), {
@@ -438,21 +298,109 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('copy', { text: textareaEl.value });
         });
 
-        // ── Bottom areas ───────────────────────────────────────────────────────
-        const mountArea = (slotId, content) => {
-            const container = el.querySelector(`#${slotId}`);
-            if (!container || !content) return;
-            const items = Array.isArray(content) ? content : [content];
-            items.forEach(item => {
-                if (item?.el) container.appendChild(item.el);
-                else if (typeof item === 'string') container.innerHTML += item;
+        // ── Settings popup (portaled) ──────────────────────────────────────────
+        const popupEl = document.createElement('div');
+        popupEl.innerHTML = MpiPopup.template({ active: false, position: 'top' }, `
+            <div class="mpi-prompt-box__settings">
+                <div class="mpi-prompt-box__settings-header">
+                    ${MpiBadge.template({ label: 'SETTINGS', variant: 'secondary' })}
+                </div>
+                <div class="mpi-prompt-box__settings-grid">
+                    <div class="mpi-prompt-box__settings-row" id="settings-model-slot"></div>
+                    <div class="mpi-prompt-box__settings-row" id="settings-op-dropdown-slot"></div>
+                    <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
+                </div>
+            </div>
+        `).trim();
+        const popupNode = popupEl.firstChild;
+        document.body.appendChild(popupNode);
+
+        let popupActive = false;
+        let leaveTimer = null;
+
+        const positionPopup = () => {
+            const rect = badgeBtn.el.getBoundingClientRect();
+            popupNode.style.bottom = `${window.innerHeight - rect.top + 12}px`;
+            popupNode.style.left   = `${rect.left + rect.width / 2}px`;
+            popupNode.style.top    = '';
+
+            // Clamp to viewport after layout (CSS translateX(-50%) centers on left).
+            requestAnimationFrame(() => {
+                const pr = popupNode.getBoundingClientRect();
+                const margin = 8;
+                const overflowLeft  = margin - pr.left;
+                const overflowRight = pr.right - (window.innerWidth - margin);
+                if (overflowLeft > 0)  popupNode.style.left = `${parseFloat(popupNode.style.left) + overflowLeft}px`;
+                if (overflowRight > 0) popupNode.style.left = `${parseFloat(popupNode.style.left) - overflowRight}px`;
             });
         };
 
-        // ── Model selector + gear button (left slot) ──────────────────────────
-        if (model) {
-            const leftSlot = el.querySelector('#bottom-left-slot');
+        const openPopup = () => {
+            popupActive = true;
+            positionPopup();
+            popupNode.classList.add('is-active');
+            badgeBtn.el.classList.add('is-active');
+        };
+        const closePopup = () => {
+            popupActive = false;
+            popupNode.classList.remove('is-active');
+            badgeBtn.el.classList.remove('is-active');
+        };
 
+        const cancelClose = () => { clearTimeout(leaveTimer); leaveTimer = null; };
+        const scheduleClose = () => { /* hover-close disabled — see outside-click handler below */ };
+
+        // ── Settings badge (trigger) ───────────────────────────────────────────
+        const badgeSlot = el.querySelector('#settings-badge-slot');
+        const badgeBtn = MpiButton.mount(badgeSlot, {
+            variant: 'ghost', size: 'sm',
+            toggleable: true,
+            info: 'Open model & operation settings',
+            extraClasses: 'mpi-prompt-box__settings-trigger',
+        });
+        // Replace empty button content with a badge span we can update.
+        const badgeHost = document.createElement('span');
+        badgeHost.className = 'mpi-prompt-box__settings-badge-host';
+        badgeBtn.el.appendChild(badgeHost);
+
+        function _renderBadge() {
+            const modelName = model?.name ?? '—';
+            const opLabel   = commands[activeOperation]?.label ?? activeOperation;
+            badgeHost.innerHTML = MpiBadge.template({
+                label: `${modelName} · ${opLabel}`,
+                variant: 'secondary',
+            });
+        }
+
+        badgeBtn.on('click', () => {
+            if (popupActive) closePopup(); else openPopup();
+        });
+
+        // Outside-click dismiss (hover-close removed to avoid multi-popup churn).
+        // Popup stays open until user clicks outside or presses Escape.
+        const onPopupOutsideClick = (e) => {
+            if (!popupActive) return;
+            if (popupNode.contains(e.target) || badgeBtn.el.contains(e.target)) return;
+            // Ignore clicks inside any portaled child surface (dropdown list,
+            // nested popup like MpiRatioSelector's). These are logically inside
+            // our popup but live in document.body due to portaling.
+            if (e.target.closest?.('.mpi-dropdown__list')) return;
+            if (e.target.closest?.('.mpi-popup')) return;
+            closePopup();
+        };
+        document.addEventListener('click', onPopupOutsideClick);
+        void cancelClose; void scheduleClose;
+
+        _unsubs.push(Events.on('ui:close-all-popups', () => {
+            if (popupActive) closePopup();
+        }));
+
+        // ── Settings popup content ─────────────────────────────────────────────
+        const modelSlot      = popupNode.querySelector('#settings-model-slot');
+        const opDropdownSlot = popupNode.querySelector('#settings-op-dropdown-slot');
+        const opSlot         = popupNode.querySelector('#settings-op-slot');
+
+        if (model) {
             if (modelList.length >= 1) {
                 _modelDropdown = MpiDropdown.mount(document.createElement('div'), {
                     options:   modelList.map(m => ({ value: m.id, label: m.name })),
@@ -468,7 +416,7 @@ export const MpiPromptBox = ComponentFactory.create({
                         emit('model-change', { model: selected });
                     }
                 });
-                leftSlot.appendChild(_modelDropdown.el);
+                modelSlot.appendChild(_modelDropdown.el);
             }
 
             if (props.showSettings !== false) {
@@ -476,19 +424,67 @@ export const MpiPromptBox = ComponentFactory.create({
                     icon: 'settings', variant: 'ghost', size: 'sm', info: 'Model Settings',
                 });
                 gearBtn.on('click', () => emit('settings', { model }));
-                leftSlot.appendChild(gearBtn.el);
+                modelSlot.appendChild(gearBtn.el);
             }
         }
 
-        // ── Download Manager button (always visible in left slot) ─────────────
+        // Download manager (always available)
         const downloadManagerBtn = MpiButton.mount(document.createElement('div'), {
             icon: 'download', variant: 'ghost', size: 'sm', info: 'Open Download Manager',
         });
         downloadManagerBtn.on('click', () => Events.emit('models:open', {}));
-        el.querySelector('#bottom-left-slot').appendChild(downloadManagerBtn.el);
+        modelSlot.appendChild(downloadManagerBtn.el);
 
-        mountArea('bottom-left-slot',  props.LeftA);
-        mountArea('bottom-right-slot', props.rightA);
+        function _refreshOpDropdown() {
+            if (!model) return;
+            if (!opDropdownSlot) return;
+
+            const availableCmds = getAvailableCommands(model.mediaType, model, _context);
+            const filteredCmds = _context.filterNoInputOps
+                ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
+                : availableCmds;
+            const availableOps = filteredCmds
+                .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
+
+            opDropdownSlot.innerHTML = '';
+            if (availableOps.length === 0) return;
+
+            const labelEl = document.createElement('span');
+            labelEl.className = 'mpi-prompt-box__op-label';
+            labelEl.textContent = 'Op:';
+            labelEl.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-right:0.25rem;';
+
+            _opDropdown = MpiDropdown.mount(document.createElement('div'), {
+                options: availableOps,
+                value: activeOperation,
+                info: 'Operation',
+                direction: 'up',
+            });
+            _opDropdown.on('change', ({ value }) => el.setOperation(value));
+
+            opDropdownSlot.appendChild(labelEl);
+            opDropdownSlot.appendChild(_opDropdown.el);
+        }
+
+        function _refreshOpSlot() {
+            if (!opSlot) return;
+            opSlot.innerHTML = '';
+            _activeControls.clear();
+
+            const componentIds = getCommandComponents(activeOperation);
+
+            for (const componentId of componentIds) {
+                const ctrl = PROMPT_BOX_CONTROLS[componentId];
+                if (!ctrl) continue;
+
+                const ctrlEl = document.createElement('div');
+                ctrlEl.style.display = 'contents';
+                opSlot.appendChild(ctrlEl);
+
+                ctrl.mount(ctrlEl, { model });
+                _activeControls.set(componentId, ctrl);
+            }
+        }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
         if (props.includeNegative) {
@@ -505,11 +501,11 @@ export const MpiPromptBox = ComponentFactory.create({
             });
         }
 
-        // ── Run / Stop button ──────────────────────────────────────────────────
+        // ── Run / Stop ─────────────────────────────────────────────────────────
         const runBtnSlot = document.createElement('div');
         el.querySelector('#bottom-right-slot').appendChild(runBtnSlot);
 
-        runBtn = MpiButton.mount(runBtnSlot, {
+        const runBtn = MpiButton.mount(runBtnSlot, {
             icon: 'play', iconActive: 'stop',
             info: 'Generate / Stop',
             size: 'md', variant: 'primary',
@@ -518,7 +514,6 @@ export const MpiPromptBox = ComponentFactory.create({
 
         runBtn.on('toggle', (data) => {
             if (data.active) {
-                // Switched to active = generating started
                 isGenerating = true;
                 const injectionParams = getInjectionParamsFromControls(_activeControls);
                 emit('run', {
@@ -529,19 +524,31 @@ export const MpiPromptBox = ComponentFactory.create({
                     injectionParams,
                 });
             } else if (isGenerating) {
-                // Only emit cancel if we were actually generating (not a reset from setGenerating)
                 isGenerating = false;
                 emit('cancel', {});
             }
         });
 
-        // ── Initialise operation dropdown and op slot ──────────────────────────
+        // ── Initialise ─────────────────────────────────────────────────────────
         _refreshOpDropdown();
         _refreshOpSlot();
+        _renderBadge();
+
+        // ── Portaled popup teardown on el removal ──────────────────────────────
+        const domObserver = new MutationObserver(() => {
+            if (!document.contains(el)) {
+                if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
+                domObserver.disconnect();
+            }
+        });
+        domObserver.observe(document.body, { childList: true, subtree: true });
 
         // ── Cleanup ─────────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            domObserver.disconnect();
+            document.removeEventListener('click', onPopupOutsideClick);
+            if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
         };
     }
 });

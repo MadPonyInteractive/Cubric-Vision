@@ -42,6 +42,26 @@ import { clientLogger } from '../../../services/clientLogger.js';
 
 const LORA_COUNT = 6;
 
+/**
+ * Filter a flat file list (from /comfy/list-files recursive walk) to files
+ * belonging to a given model type.
+ *
+ * Convention: subfolders under `loras/` and `upscale_models/` are named after
+ * model.type (e.g. `loras/sdxl/foo.safetensors`, `upscale_models/wan/bar.pth`).
+ * Files at the root (no subfolder in path) are universal (e.g. SIAX) and
+ * always included.
+ */
+function _filterByType(files, modelType) {
+    if (!modelType || !files?.length) return files || [];
+    const prefix = `${modelType}/`;
+    // Root-level files are universal (e.g. SIAX). Typed subfolder files are
+    // scoped to the matching model.type.
+    return files.filter(f => {
+        const norm = f.replace(/\\/g, '/');
+        return !norm.includes('/') || norm.startsWith(prefix);
+    });
+}
+
 function _loraOptions(availableLoras) {
     return [
         { label: '— None —', value: '' },
@@ -128,13 +148,21 @@ export const MpiModelSettings = ComponentFactory.create({
 
         // ── Upscale dropdown ──────────────────────────────────────────────────
 
-        function _mountUpscaleDropdown(currentValue) {
+        function _mountUpscaleDropdown(currentValue, modelType) {
             const slot = qs('.mpi-model-settings__upscale-slot', el);
             slot.innerHTML = '';
-            _upscaleValue = currentValue || '';
+
+            const filtered = _filterByType(state.upscaleModels, modelType);
+            // SIAX is always installed with the engine → guaranteed fallback.
+            const siaxFile = _depToFilename('4x-NMKD-Siax');
+            const resolved = (currentValue && filtered.includes(currentValue))
+                ? currentValue
+                : (filtered.includes(siaxFile) ? siaxFile : (filtered[0] || ''));
+
+            _upscaleValue = resolved;
 
             const dd = MpiDropdown.mount(slot, {
-                options: _upscaleOptions(state.upscaleModels),
+                options: _upscaleOptions(filtered),
                 value: _upscaleValue,
             });
 
@@ -146,7 +174,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
         // ── LoRA slots ────────────────────────────────────────────────────────
 
-        function _mountLoraSlots(slots) {
+        function _mountLoraSlots(slots, modelType) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
 
@@ -160,7 +188,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 };
             });
 
-            const loraOpts = _loraOptions(state.availableLoras);
+            const loraOpts = _loraOptions(_filterByType(state.availableLoras, modelType));
 
             _loraSlots.forEach((slot, i) => {
                 const slotEl = document.createElement('div');
@@ -266,17 +294,19 @@ export const MpiModelSettings = ComponentFactory.create({
             if (ctx.modelId) {
                 const settings = getModelSettings(state.currentProject, ctx.modelId);
                 const model = getModelById(ctx.modelId);
+                const modelType = model?.type ?? null;
                 // Resolve saved dep ID → filename; fallback to model default → filename → SIAX
                 const savedFile = _depToFilename(settings.upscaleModel);
                 const modelDefaultFile = _depToFilename(model?.defaultUpscale);
                 const siaxFile = _depToFilename('4x-NMKD-Siax');
                 const defaultUpscale = savedFile || modelDefaultFile || siaxFile;
-                _mountUpscaleDropdown(defaultUpscale);
-                _mountLoraSlots(settings.loras);
+                _mountUpscaleDropdown(defaultUpscale, modelType);
+                _mountLoraSlots(settings.loras, modelType);
                 lorasSection.style.display = '';
             } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
-                _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || _depToFilename('4x-NMKD-Siax'));
+                // Tool context has no model type → no filter, show all upscalers.
+                _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || _depToFilename('4x-NMKD-Siax'), null);
                 lorasSection.style.display = 'none';
             }
 

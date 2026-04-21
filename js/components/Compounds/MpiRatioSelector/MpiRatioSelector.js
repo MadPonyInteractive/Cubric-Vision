@@ -142,6 +142,11 @@ export const MpiRatioSelector = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
+        // Seed live prop from initial value so click/orient handlers (which
+        // read props.orientation directly) stay in sync with the template's
+        // initialOrientation fallback.
+        if (!props.orientation) props.orientation = props.initialOrientation || 'portrait';
+
         // Expose live accessor so callers (e.g. PromptBoxControls) can read
         // current dimensions without relying on change-event callbacks.
         el.getValue = () => resolveCurrentDimensions(props);
@@ -170,16 +175,29 @@ export const MpiRatioSelector = ComponentFactory.create({
                 if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
                 domObserver.disconnect();
                 unsub(); // Cleanup bus subscription
+                document.removeEventListener('click', onOutsideClick);
             }
         });
         domObserver.observe(document.body, { childList: true, subtree: true });
 
         // ── Positioning ─────────────────────────────────────────────────────────
+        // Popup uses CSS transform: translateX(-50%) to center on `left`.
+        // After placing, measure and nudge left/right to keep popup inside viewport.
         const positionPopup = () => {
             const rect = trigger.getBoundingClientRect();
             popupEl.style.bottom = `${window.innerHeight - rect.top + 12}px`;
             popupEl.style.left   = `${rect.left + rect.width / 2}px`;
             popupEl.style.top    = '';
+
+            // Measure after layout; clamp if overflowing left or right.
+            requestAnimationFrame(() => {
+                const pr = popupEl.getBoundingClientRect();
+                const margin = 8;
+                const overflowLeft  = margin - pr.left;
+                const overflowRight = pr.right - (window.innerWidth - margin);
+                if (overflowLeft > 0)  popupEl.style.left = `${parseFloat(popupEl.style.left) + overflowLeft}px`;
+                if (overflowRight > 0) popupEl.style.left = `${parseFloat(popupEl.style.left) - overflowRight}px`;
+            });
         };
 
         // ── Close helper ────────────────────────────────────────────────────────
@@ -191,19 +209,18 @@ export const MpiRatioSelector = ComponentFactory.create({
             emit('popup_toggle', { active: false });
         };
 
-        // ── Hover (keep open while hovering trigger OR popup) ────────────────────
-        // After portaling, the popup is outside el's DOM subtree, so el's
-        // mouseenter/mouseleave won't fire when the mouse moves into the popup.
-        // We cancel/restart the close timer on the popup element itself too.
-        const cancelClose = () => { clearTimeout(leaveTimer); leaveTimer = null; };
-        const scheduleClose = () => {
-            leaveTimer = setTimeout(() => { if (props.showPopup) closePopup(); }, 300);
+        // ── Outside-click dismiss (replaces hover-close) ─────────────────────────
+        // Hover-close created chaos when multiple portaled popups overlapped.
+        // Popup stays open until user clicks elsewhere or presses Escape.
+        const onOutsideClick = (e) => {
+            if (!props.showPopup) return;
+            if (popupEl.contains(e.target) || el.contains(e.target)) return;
+            // Don't close when clicking portaled children (dropdowns etc).
+            if (e.target.closest?.('.mpi-dropdown__list')) return;
+            closePopup();
         };
-
-        el.addEventListener('mouseenter', cancelClose);
-        el.addEventListener('mouseleave', scheduleClose);
-        popupEl.addEventListener('mouseenter', cancelClose);
-        popupEl.addEventListener('mouseleave', scheduleClose);
+        document.addEventListener('click', onOutsideClick);
+        void leaveTimer; // retained for API parity; no longer scheduled
 
         // ── Toggle popup ─────────────────────────────────────────────────────────
         trigger.addEventListener('click', (e) => {
@@ -312,6 +329,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                     mode === 'quality' ? (props.qualityTier || 'medium') : undefined
                 );
                 const ratio = ratios.find(r => r.label === label);
+                if (!ratio) return;
 
                 // SOCIAL_RATIOS have only `ratio` (float); generation ratios have `w`/`h`.
                 const ratioFloat = ratio.ratio ?? (ratio.w && ratio.h ? ratio.w / ratio.h : null);

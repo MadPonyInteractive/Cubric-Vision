@@ -44,6 +44,20 @@ Known titles: "Positive", "Negative", "Seed", "Checkpoint", "Lora_1"…"Lora_6",
 
 Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. Called lazily on ModelSettings open.
 
+### `/comfy/list-files?subDir=<path>`
+
+Recursively walks the requested `subDir` under the resolved models root (custom root from `extra_model_paths.yaml` when set, else engine default). Returns relative paths from `subDir` for files with extensions `.safetensors | .ckpt | .pt | .bin | .pth`. Only scans the requested bucket — does NOT return siblings from other top-level folders (checkpoints, sams, ultralytics, etc).
+
+### Model-type subfolder convention
+
+Files placed directly in `loras/` or `upscale_models/` are **universal** (e.g. `4x_NMKD-Siax_200k.pth`, installed with the engine via `installOnEngine: true`). Files placed under a `<type>/` subfolder (e.g. `loras/sdxl/foo.safetensors`) are **scoped to that model.type**. `MpiModelSettings._filterByType()` reads the flat list and shows:
+
+- Root-level files (no `/` in path) — always included (universal)
+- `<modelType>/*` files — included when opened for a model of matching `type`
+- Other-type subfolder files — excluded
+
+`modelType` comes from `model.type` in `js/data/modelConstants/models.js` (values: `sdxl`, `flux`, `wan`, ...). Tool-context (no `modelId`) passes `null` — no filter, all files shown.
+
 ## Download Manager
 
 ### Architecture Overview

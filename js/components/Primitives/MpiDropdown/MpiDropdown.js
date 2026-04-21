@@ -117,7 +117,10 @@ export const MpiDropdown = ComponentFactory.create({
                 positionList();
                 root.classList.add('is-open');
                 list.classList.add('is-open');
-                cleanupScroll = on(window, 'scroll', closeList, { passive: true, capture: true });
+                cleanupScroll = on(window, 'scroll', (e) => {
+                    if (list.contains(e.target)) return;
+                    closeList();
+                }, { passive: true, capture: true });
                 cleanupResize = on(window, 'resize', closeList, { passive: true });
             } else {
                 closeList();

@@ -34,7 +34,6 @@
 .mpi-prompt-box__lock-container {
     position: absolute;
     top: -12px;
-    /* Pull it halfway over the border */
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
@@ -48,13 +47,9 @@
 .mpi-prompt-box .mpi-input__field--textarea {
     resize: none;
     min-height: 3.5rem;
-    /* ~2 lines */
     max-height: 14rem;
-    /* ~8 lines */
     padding-right: 3rem;
-    /* Room for copy button */
     overflow-y: auto;
-    /* background: transparent !important; */
     background: var(--bg-recessed);
     border: none !important;
     box-shadow: none !important;
@@ -62,6 +57,23 @@
     font-family: inherit;
     font-size: 0.95rem;
     line-height: 1.5;
+    scrollbar-color: var(--surface-3) var(--bg-recessed);
+}
+
+/* Scrollbar — match app recessed surfaces (webkit) */
+.mpi-prompt-box .mpi-input__field--textarea::-webkit-scrollbar {
+    width: 10px;
+}
+.mpi-prompt-box .mpi-input__field--textarea::-webkit-scrollbar-track {
+    background: var(--bg-recessed);
+}
+.mpi-prompt-box .mpi-input__field--textarea::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border: 2px solid var(--bg-recessed);
+    border-radius: 6px;
+}
+.mpi-prompt-box .mpi-input__field--textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dim);
 }
 
 .mpi-prompt-box .mpi-input__field--textarea::placeholder {
@@ -70,19 +82,17 @@
 
 .mpi-prompt-box .mpi-input__field--textarea--locked {
     height: 3.5rem !important;
-    /* Fixed at ~2 lines */
     max-height: 3.5rem !important;
 }
 
-/* Copy button position */
+/* Copy button — 5px further left of scrollbar */
 .mpi-prompt-box__copy-wrapper {
     position: absolute;
-    right: 0.25rem;
+    right: calc(0.25rem + 5px);
     bottom: 0.25rem;
     z-index: 5;
 }
 
-/* Negative label/header (kept for CSS naming consistency if used) */
 .mpi-prompt-box__label {
     font-size: 0.7rem;
     text-transform: uppercase;
@@ -106,7 +116,6 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    /* min-height: 2.5rem; */
 }
 
 .mpi-prompt-box__area {
@@ -120,11 +129,6 @@
     justify-content: flex-start;
 }
 
-.mpi-prompt-box__area--center {
-    justify-content: center;
-    flex: 0 0 auto;
-}
-
 .mpi-prompt-box__area--right {
     justify-content: flex-end;
 }
@@ -133,61 +137,93 @@
     flex: 0 0 auto;
 }
 
-/* Operation dropdown slot — ensure label + dropdown render horizontally */
-.mpi-prompt-box__area #op-dropdown-slot {
-    display: flex;
+/* Settings trigger button hosting dynamic badge */
+.mpi-prompt-box__settings-trigger {
+    cursor: pointer;
+}
+.mpi-prompt-box__settings-badge-host {
+    display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
 }
 
-/* ── Media drop zone ──────────────────────────────────────────────────────── */
+/* ── Drop overlay ──────────────────────────────────────────────────────────── */
 
-.mpi-prompt-box__media-zone {
+.mpi-prompt-box__drop-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: color-mix(in srgb, var(--primary) 10%, var(--surface-glass));
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius-xl);
+    z-index: 50;
+    pointer-events: none;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.mpi-prompt-box__drop-overlay-text {
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.mpi-prompt-box--drag-over .mpi-prompt-box__drop-overlay {
+    display: flex;
+}
+
+/* ── Settings popup content ───────────────────────────────────────────────── */
+
+.mpi-prompt-box__settings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 280px;
+}
+
+.mpi-prompt-box__settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.mpi-prompt-box__settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mpi-prompt-box__settings-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-height: 2.5rem;
-    /* padding: 0.25rem 0; */
-    border-bottom: 1px dashed var(--border-soft);
-    margin-bottom: 0.5rem;
-    transition: border-color var(--transition), background var(--transition);
     flex-wrap: wrap;
 }
 
-.mpi-prompt-box__media-zone--drag-over {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 6%, transparent);
-    border-radius: var(--radius);
-}
+/* ── External media strip (rendered by promptBoxService) ─────────────────── */
 
-/* .mpi-prompt-box__media-zone--has-media {
-    border-style: solid;
-} */
-
-/* Drop hint (shown when zone is empty) */
-.mpi-prompt-box__drop-hint {
+.mpi-prompt-box-media-strip {
+    position: fixed;
+    bottom: calc(36px + 10rem);
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    pointer-events: none;
-    user-select: none;
-}
-
-.mpi-prompt-box__drop-hint-icon {
-    display: flex;
-    align-items: center;
-}
-
-/* Media chips */
-.mpi-prompt-box__media-chips {
-    display: flex;
-    gap: 0.4rem;
     flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.25rem 0.5rem;
+    justify-content: center;
+    z-index: 9;
+    pointer-events: auto;
 }
 
-.mpi-prompt-box__media-chip {
+.mpi-prompt-box-media-strip:empty {
+    display: none;
+}
+
+.mpi-prompt-box-media-strip__chip {
     position: relative;
     width: 3rem;
     height: 3rem;
@@ -195,9 +231,10 @@
     overflow: visible;
     border: 1px solid var(--border-soft);
     flex-shrink: 0;
+    background: var(--surface-2);
 }
 
-.mpi-prompt-box__chip-thumb {
+.mpi-prompt-box-media-strip__thumb {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -205,7 +242,7 @@
     display: block;
 }
 
-.mpi-prompt-box__chip-video-thumb {
+.mpi-prompt-box-media-strip__video-thumb {
     width: 100%;
     height: 100%;
     display: flex;
@@ -216,7 +253,7 @@
     color: var(--text-2);
 }
 
-.mpi-prompt-box__chip-remove {
+.mpi-prompt-box-media-strip__remove {
     position: absolute;
     top: -6px;
     right: -6px;
@@ -236,7 +273,7 @@
     z-index: 5;
 }
 
-.mpi-prompt-box__chip-remove:hover {
+.mpi-prompt-box-media-strip__remove:hover {
     background: var(--danger);
     border-color: var(--danger);
 }
