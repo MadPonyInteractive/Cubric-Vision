@@ -75,7 +75,7 @@ export const MpiVideoViewer = ComponentFactory.create({
             _playerInstance.on(eventName, (payload) => emit(eventName, payload));
         });
 
-        _videoElement = qs('.mpi-video-player__video', _playerInstance.el);
+        _videoElement = _playerInstance.el.getVideoElement();
 
         // ── Overlay canvas setup ─────────────────────────────────────────
 
@@ -90,16 +90,34 @@ export const MpiVideoViewer = ComponentFactory.create({
             },
         });
 
+        // ── Sync overlay canvas to video element's rendered bounding rect ─
+
+        const _syncOverlayToVideo = () => {
+            const videoRect = _videoElement.getBoundingClientRect();
+            const stageRect = stageEl.getBoundingClientRect();
+
+            overlayCanvas.style.left   = (videoRect.left - stageRect.left) + 'px';
+            overlayCanvas.style.top    = (videoRect.top  - stageRect.top)  + 'px';
+            overlayCanvas.style.width  = videoRect.width  + 'px';
+            overlayCanvas.style.height = videoRect.height + 'px';
+
+            overlayCanvas.width  = Math.max(1, Math.round(videoRect.width));
+            overlayCanvas.height = Math.max(1, Math.round(videoRect.height));
+
+            _cropTool.redraw?.();
+        };
+
         // ── Resize observer ──────────────────────────────────────────────
 
         _resizeObserver = new ResizeObserver(() => {
-            if (_cropTool && _isInCropMode) _cropTool.redraw?.();
+            if (_cropTool && _isInCropMode) _syncOverlayToVideo();
         });
         _resizeObserver.observe(stageEl);
+        _resizeObserver.observe(_videoElement);
         _unsubs.push(() => _resizeObserver.disconnect());
 
         _unsubs.push(on(_videoElement, 'loadedmetadata', () => {
-            if (_cropTool && _isInCropMode) _cropTool.redraw?.();
+            if (_cropTool && _isInCropMode) _syncOverlayToVideo();
         }));
 
         // ── Instance API ─────────────────────────────────────────────────
@@ -114,12 +132,10 @@ export const MpiVideoViewer = ComponentFactory.create({
             _isInCropMode = true;
             el.setAttribute('data-mode', 'crop');
 
-            const stageRect = stageEl.getBoundingClientRect();
-            overlayCanvas.width = stageRect.width;
-            overlayCanvas.height = stageRect.height;
-
             const rect = initialRect ?? { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
             _cropTool.enable(rect);
+
+            _syncOverlayToVideo();
 
             if (_cropRatio !== null) _cropTool.setRatio(_cropRatio);
         };

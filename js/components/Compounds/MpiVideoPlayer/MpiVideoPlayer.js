@@ -337,6 +337,10 @@ export const MpiVideoPlayer = ComponentFactory.create({
         });
 
         // --- External API ---
+
+        /** Instance API: returns the raw video element (stable contract for parent organisms) */
+        el.getVideoElement = () => el.querySelector('.mpi-video-player__video');
+
         el._setSrc = (url) => {
             if (!url) return;
             video.src = url;
