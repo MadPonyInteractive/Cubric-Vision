@@ -79,6 +79,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     url: uploaded.filePath,
                     filename: uploaded.filename,
                     itemId: uploaded.itemId,
+                    thumbPath: uploaded.thumbPath,
                     mediaType,
                 });
                 PromptBoxService.injectMedia({ url: uploaded.filePath, mediaType });
@@ -427,7 +428,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, mediaType }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
@@ -437,7 +438,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             const id = itemId || filename.replace(/\.[^.]+$/, '');
             const item = isVideo
-                ? createVideoItem({ id, filePath: url, uploaded: true, operation: 'imported' })
+                ? createVideoItem({ id, filePath: url, thumbPath, uploaded: true, operation: 'imported' })
                 : createImageItem({ id, filePath: url, uploaded: true, operation: 'imported' });
 
             const group = createItemGroup(mediaType, { name: displayName });

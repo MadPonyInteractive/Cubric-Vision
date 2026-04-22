@@ -441,7 +441,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
-        res.json({ success: true, filePath, filename: finalFileName, itemId: id });
+        res.json({ success: true, filePath, filename: finalFileName, itemId: id, thumbPath: metaContent.thumbPath || null });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
