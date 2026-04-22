@@ -96,6 +96,10 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
         let isSeeking = false;
 
+        // ── Hoist button declarations out of if-block for destroy() scope ──
+        let playBtn, progressSlider, muteBtn, volumeSlider;
+        let frameBackBtn, frameForwardBtn, loopBtn, fullscreenBtn;
+
         // --- Sub-components (only if controls are enabled) ---
         if (hasControls) {
             const playPauseWrapper = el.querySelector('.mpi-video-player__play-pause-wrapper');
@@ -112,7 +116,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const fps = props.fps || 24;
 
             // 1. Play/Pause Button
-            const playBtn = MpiButton.mount(playPauseWrapper, {
+            playBtn = MpiButton.mount(playPauseWrapper, {
                 icon: 'play',
                 iconActive: 'pause',
                 active: !video.paused,
@@ -121,7 +125,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
 
             // 2. Progress Slider
-            const progressSlider = MpiProgressBar.mount(sliderWrapper, {
+            progressSlider = MpiProgressBar.mount(sliderWrapper, {
                 min: 0,
                 max: 1000, // High granularity
                 step: 1,
@@ -134,28 +138,28 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const initialVolume = props.volume !== undefined ? props.volume : 1.0;
             const initialMuted = props.muted || false;
 
-            const muteBtn = MpiButton.mount(volumeMuteWrapper, {
+            muteBtn = MpiButton.mount(volumeMuteWrapper, {
                 icon: initialMuted ? 'volumeOff' : (initialVolume < 0.5 ? 'volumeLow' : 'volumeHigh'),
                 size: 'lg',
                 info: 'Mute/Unmute'
             });
 
             // 4. Frame-Back Button
-            const frameBackBtn = MpiButton.mount(frameBackWrapper, {
+            frameBackBtn = MpiButton.mount(frameBackWrapper, {
                 icon: 'frameBack',
                 size: 'lg',
                 info: 'Previous Frame'
             });
 
             // 5. Frame-Forward Button
-            const frameForwardBtn = MpiButton.mount(frameForwardWrapper, {
+            frameForwardBtn = MpiButton.mount(frameForwardWrapper, {
                 icon: 'frameForward',
                 size: 'lg',
                 info: 'Next Frame'
             });
 
             // 6. Loop Toggle Button
-            const loopBtn = MpiButton.mount(loopWrapper, {
+            loopBtn = MpiButton.mount(loopWrapper, {
                 icon: 'loop',
                 active: video.loop,
                 size: 'lg',
@@ -163,13 +167,13 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
 
             // 7. Fullscreen Button
-            const fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
+            fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
                 icon: 'fullscreen',
                 size: 'lg',
                 info: 'Fullscreen'
             });
 
-            const volumeSlider = MpiProgressBar.mount(volumeSliderWrapper, {
+            volumeSlider = MpiProgressBar.mount(volumeSliderWrapper, {
                 min: 0,
                 max: 100,
                 step: 1,
