@@ -29,7 +29,7 @@ See `docs/comfy.md` for the full injection pattern and example.
 | `"Checkpoint_Refiner"` | `inputs.ckpt_name` | Refiner checkpoint |
 | `"Lora_1"` … `"Lora_6"` | `inputs.lora_name`, `strength_model`, `strength_clip` | User LoRA slots — system LoRAs are baked in, not injected |
 | `"Use_Refiner"` | `inputs.boolean` / `inputs.value` | MpiBoolean uses `inputs.boolean` |
-| `"Batch_Size"` | `inputs.value` | Must be a PrimitiveInt driving Empty Latent via link — never inject directly |
+| `"Batch_Size"` | `inputs.int` | `MpiInt` node driving Empty Latent via link. Value from `MpiBatchSelector` (1–4). Workflow returns N images → N gallery cards (one per URL). |
 | `"Input_Image"` | `inputs.image` | Auto-uploaded by controller |
 | `"Input_Mask"` | `inputs.mask` | Auto-uploaded by controller |
 | `"Denoise"` | `inputs.denoise` / `inputs.value` | Denoising strength |

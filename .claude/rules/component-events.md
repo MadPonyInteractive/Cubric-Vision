@@ -198,6 +198,16 @@ EMITS:   `change`             `{ value: string, ratio: number|null, w: number|nu
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `instance.el.getValue()` → `{ value, w, h, orientation, qualityTier }` — reads live props; use for injection instead of change-event cache
 
+### MpiBatchSelector
+EMITS:   `change`        `{ value: 1|2|3|4 }` — batch size pick
+         `popup_toggle`  `{ active: boolean }`
+LISTENS: `ui:close-all-popups` — closes popup if open
+API:     `instance.el.getValue()` → `1|2|3|4`
+NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch']`.
+         Persists as `modelSettings[modelId].batch` via `settings:model:update`.
+         Injects workflow param `Batch_Size` (ComfyUI node title "Batch_Size", MpiInt.inputs.int).
+         N outputs → N cards in gallery; N placeholders shown from generation start.
+
 ### MpiSelectionBar
 EMITS:   `compare`  `{}`
          `download` `{}`
@@ -282,11 +292,11 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
-         `generation:started` `{ id, scope, tempId, placeholderGroup }` — adds placeholder card; seeds `_myGenIds`
-         `generation:preview` `{ id, url }` — calls `grid.el.updatePreview(tempId, url)`
-         `generation:complete` `{ id, item, group, tempId }` — removes placeholder, inserts final card
-         `generation:error` `{ id, tempId }` — removes placeholder, restores group list
-         `generation:cancelled` `{ id, tempId }` — removes placeholder, restores group list
+         `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` — adds N placeholder cards (1 + extras); seeds `_myGenIds`
+         `generation:preview` `{ id, url }` — broadcasts preview to all N placeholder tempIds (main + extras)
+         `generation:complete` `{ id, item, group, tempId, extraTempIds }` — removes all N placeholders, `setGroups` from state
+         `generation:error` `{ id, tempId, extraTempIds }` — removes all N placeholders, restores group list
+         `generation:cancelled` `{ id, tempId, extraTempIds }` — removes all N placeholders, restores group list
 EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
@@ -308,13 +318,15 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 **Events emitted (via Events bus):**
 | Event | Payload | When |
 |---|---|---|
-| `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup }` | `activeGenerations.start()` called |
-| `generation:preview` | `{ id, url }` | `activeGenerations.setPreview()` called — also writes `entry.placeholderGroup.latestPreviewUrl` |
-| `generation:complete` | `{ id, item, group, tempId? }` | `generationService` emits after `end()` |
-| `generation:error` | `{ id, tempId? }` | `generationService` emits after `end()` |
-| `generation:cancelled` | `{ id, tempId? }` | `generationService` or `activeGenerations.cancel()` emits after `end()` |
+| `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` | `activeGenerations.start()` called |
+| `generation:preview` | `{ id, url }` | `activeGenerations.setPreview()` — preview broadcast to all N placeholders (same latent, ComfyUI emits one) |
+| `generation:complete` | `{ id, item, group, tempId?, extraTempIds? }` | `generationService` emits after `end()` |
+| `generation:error` | `{ id, tempId?, extraTempIds? }` | `generationService` emits after `end()` |
+| `generation:cancelled` | `{ id, tempId?, extraTempIds? }` | `generationService` or `activeGenerations.cancel()` emits after `end()` |
 
-**API:** `start({ scope, groupId, tempId, operation, modelId, placeholderGroup, exec })` → `{ id }` · `get(id)` · `list()` · `listFor(scope, groupId|null)` · `setPreview(id, url)` · `end(id, { revokePreview })` · `cancel(id)` · `cancelAll()`
+**API:** `start({ scope, groupId, tempId, operation, modelId, placeholderGroup, extraTempIds, extraPlaceholders, exec })` → `{ id }` · `get(id)` · `list()` · `listFor(scope, groupId|null)` · `setPreview(id, url)` · `end(id, { revokePreview })` · `cancel(id)` · `cancelAll()`
+
+**Batch semantics:** `extraTempIds` + `extraPlaceholders` describe N-1 sibling placeholder cards for a batch > 1. Gallery renders all N up front, broadcasts preview to all, removes all on complete/error/cancelled, then `setGroups()` with the N real groups already in `state.currentProject.itemGroups` (generationService calls `addGroup` N times before emit).
 
 **Scope values:** `'gallery'` | `'groupHistory'`
 

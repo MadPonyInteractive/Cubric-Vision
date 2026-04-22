@@ -160,6 +160,19 @@
  */
 
 /**
+ * @typedef {Object} MpiBatchSelectorProps (Compound — js/components/Compounds/MpiBatchSelector)
+ * @property {number} [value=1] - Batch count (1..4)
+ *
+ * Instance methods (on instance.el):
+ *   getValue()   — returns current integer value (1..4)
+ *   setValue(n)  — imperatively set value; re-renders grid + trigger
+ *
+ * Emits:
+ * 'change'       { value: number } — user picked a new batch size
+ * 'popup_toggle' { active: boolean } — popup opened/closed
+ */
+
+/**
  * @typedef {Object} MpiVideoPlayerProps (Block — js/components/Blocks/MpiVideoPlayer)
  * @property {string} [src] - Video source URL
  * @property {string} [poster] - Poster image URL

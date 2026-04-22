@@ -12,6 +12,7 @@
  */
 
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiBatchSelector } from '../../Compounds/MpiBatchSelector/MpiBatchSelector.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -102,6 +103,46 @@ export const PROMPT_BOX_CONTROLS = {
             }
             const v = this.value ?? { w: 1024, h: 1024 };
             return { Width: v.w, Height: v.h };
+        },
+    },
+
+    /**
+     * batch — Batch size picker (1..4) for image operations.
+     * Mounts MpiBatchSelector and injects into node titled "Batch".
+     * Persists per-model under modelSettings[modelId].batch.
+     */
+    batch: {
+        nodeTitle: 'Batch',
+        defaultValue: 1,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const initialValue = Number(saved.batch ?? this.defaultValue) || this.defaultValue;
+
+            this._instance = MpiBatchSelector.mount(hostEl, { value: initialValue });
+            this.value = initialValue;
+
+            this._instance.on('change', ({ value }) => {
+                this.value = value;
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'batch',
+                        value,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const live = this._instance?.el?.getValue?.();
+            const v = Number(live ?? this.value ?? this.defaultValue) || this.defaultValue;
+            // Workflow node titled "Batch_Size" (MpiInt, inputs.int).
+            return { Batch_Size: v };
         },
     },
 

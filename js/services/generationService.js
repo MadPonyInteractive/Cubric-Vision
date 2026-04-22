@@ -66,12 +66,14 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     });
 
     const { id: _regId } = activeGenerations.start({
-        scope:            opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
-        groupId:          opts.groupId ?? opts.existingGroup?.id ?? null,
-        tempId:           opts.tempId ?? null,
+        scope:             opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
+        groupId:           opts.groupId ?? opts.existingGroup?.id ?? null,
+        tempId:            opts.tempId ?? null,
         operation,
-        modelId:          model.id,
-        placeholderGroup: opts.placeholderGroup ?? null,
+        modelId:           model.id,
+        placeholderGroup:  opts.placeholderGroup ?? null,
+        extraTempIds:      opts.extraTempIds ?? [],
+        extraPlaceholders: opts.extraPlaceholders ?? [],
         exec,
     });
 
@@ -88,73 +90,95 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
-            const _cancelTempId = activeGenerations.get(_regId)?.tempId ?? null;
+            const _cancelEntry = activeGenerations.get(_regId);
+            const _cancelTempId = _cancelEntry?.tempId ?? null;
+            const _cancelExtraTempIds = _cancelEntry?.extraTempIds ?? [];
             activeGenerations.end(_regId, { revokePreview: true });
-            Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId, extraTempIds: _cancelExtraTempIds });
             callbacks.onCancel?.();
             return;
         }
 
-        let filePath = urls[0];
-        let displayName = operation;
-
-        // Save to project folder
-        if (state.currentProject?.folderPath) {
-            try {
-                const elapsedMs = Date.now() - generationStartTime;
-                const data = await saveGeneration({
-                    folderPath: state.currentProject.folderPath,
-                    comfyViewUrl: urls[0],
-                    itemId,
-                    operation,
-                    meta: { prompt: positive, negativePrompt: negative, modelId: model.id },
-                    generationMs: elapsedMs,
-                    pixelDimensions: injectionParams.Width
-                        ? { w: injectionParams.Width, h: injectionParams.Height }
-                        : { w: 0, h: 0 },
-                });
-                if (data.success) {
-                    filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                    displayName = data.filename.replace(/\.[^.]+$/, '');
-                }
-            } catch (err) {
-                clientLogger.warn('generationService', 'save-generation failed, using comfy URL:', err);
-            }
-        }
-
-        displayName = truncateCardName(displayName);
-
-        // Create full item object
-        const item = isVideo
-            ? createVideoItem({ id: itemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id })
-            : createImageItem({ id: itemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id });
-
-        // Dimensions from injection params — drives correct aspect ratio in gallery card.
         const width  = injectionParams.Width  || 0;
         const height = injectionParams.Height || 0;
+        const elapsedMs = Date.now() - generationStartTime;
 
-        // Project mutation
+        // Build one item per output URL. Each item gets its own uuid (first reuses
+        // the pre-allocated itemId so existing telemetry stays consistent).
+        const builtItems = [];
+        let firstDisplayName = operation;
+
+        for (let i = 0; i < urls.length; i++) {
+            const url = urls[i];
+            const thisItemId = i === 0 ? itemId : crypto.randomUUID();
+            let filePath = url;
+            let displayName = operation;
+
+            if (state.currentProject?.folderPath) {
+                try {
+                    const data = await saveGeneration({
+                        folderPath: state.currentProject.folderPath,
+                        comfyViewUrl: url,
+                        itemId: thisItemId,
+                        operation,
+                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id },
+                        generationMs: elapsedMs,
+                        pixelDimensions: width
+                            ? { w: width, h: height }
+                            : { w: 0, h: 0 },
+                    });
+                    if (data.success) {
+                        filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
+                        displayName = data.filename.replace(/\.[^.]+$/, '');
+                    }
+                } catch (err) {
+                    clientLogger.warn('generationService', 'save-generation failed, using comfy URL:', err);
+                }
+            }
+
+            displayName = truncateCardName(displayName);
+            if (i === 0) firstDisplayName = displayName;
+
+            const item = isVideo
+                ? createVideoItem({ id: thisItemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id })
+                : createImageItem({ id: thisItemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id });
+            builtItems.push(item);
+        }
+
+        // Project mutation.
         if (opts.existingGroup) {
-            // GroupHistory mode — append to existing group; backfill w/h only when missing.
-            const base = appendToHistory(opts.existingGroup, item);
+            // GroupHistory mode — append all items to existing group (history view).
+            let working = opts.existingGroup;
+            for (const it of builtItems) {
+                working = appendToHistory(working, it);
+            }
             const updatedGroup = {
-                ...base,
+                ...working,
                 width:  opts.existingGroup.width  || width,
                 height: opts.existingGroup.height || height,
             };
             updateGroup(updatedGroup);
             activeGenerations.end(_regId, { revokePreview: false });
-            Events.emit('generation:complete', { id: _regId, item, group: updatedGroup });
-            callbacks.onComplete?.({ item, group: updatedGroup });
+            const lastItem = builtItems[builtItems.length - 1];
+            Events.emit('generation:complete', { id: _regId, item: lastItem, group: updatedGroup });
+            callbacks.onComplete?.({ item: lastItem, group: updatedGroup });
         } else {
-            // Gallery mode — create new group with resolved dimensions.
-            const group = createItemGroup(model.mediaType, { name: displayName, width, height });
-            const finalGroup = appendToHistory(group, item);
-            addGroup(finalGroup);
+            // Gallery mode — one group (card) per item.
             const _galleryTempId = activeGenerations.get(_regId)?.tempId ?? null;
+            const groups = builtItems.map((it) => {
+                const name = truncateCardName(it.operation || firstDisplayName);
+                const g = createItemGroup(model.mediaType, { name, width, height });
+                return appendToHistory(g, it);
+            });
+            for (const g of groups) addGroup(g);
             activeGenerations.end(_regId, { revokePreview: false });
-            Events.emit('generation:complete', { id: _regId, item, group: finalGroup, tempId: _galleryTempId });
-            callbacks.onComplete?.({ item, group: finalGroup });
+            const firstItem = builtItems[0];
+            const firstGroup = groups[0];
+            // Single emit — handler reads state.currentProject.itemGroups (already
+            // contains all N groups via addGroup) and rebuilds grid with them.
+            const _galleryExtraTempIds = activeGenerations.get(_regId)?.extraTempIds ?? [];
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds });
+            callbacks.onComplete?.({ item: firstItem, group: firstGroup });
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
@@ -163,9 +187,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     exec.onError = (err) => {
         PromptBoxService.component?.setGenerating(false);
         Events.emit('tool:cancelled', { tool: 'groupHistory' });
-        const _errTempId = activeGenerations.get(_regId)?.tempId ?? null;
+        const _errEntry = activeGenerations.get(_regId);
+        const _errTempId = _errEntry?.tempId ?? null;
+        const _errExtraTempIds = _errEntry?.extraTempIds ?? [];
         activeGenerations.end(_regId, { revokePreview: true });
-        Events.emit('generation:error', { id: _regId, tempId: _errTempId });
+        Events.emit('generation:error', { id: _regId, tempId: _errTempId, extraTempIds: _errExtraTempIds });
         callbacks.onError?.();
     };
 

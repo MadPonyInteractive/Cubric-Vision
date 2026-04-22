@@ -57,14 +57,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio'],
+        components: ['ratio', 'batch'],
     },
     i2i: {
         label: 'Image to Image',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: true,
-        components: ['ratio'],
+        components: ['ratio', 'batch'],
     },
     upscale: {
         label: 'Upscale',

@@ -8,8 +8,11 @@
 | Control ID | Component        | nodeTitle(s)                     | Params injected                  | Operations (from commandRegistry)          |
 |------------|------------------|----------------------------------|----------------------------------|--------------------------------------------|
 | `ratio`    | `MpiRatioSelector` | `"Width"`, `"Height"` (separate nodes) | `{ Width: number, Height: number }` | `t2i`, `i2i`, `t2v`, `i2v`             |
+| `batch`    | `MpiBatchSelector` | `"Batch_Size"` (MpiInt.inputs.int) | `{ Batch_Size: 1\|2\|3\|4 }`     | `t2i`, `i2i`                               |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
+
+> **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted per-model as `modelSettings[modelId].batch`.
 
 ---
 
@@ -42,6 +45,7 @@ MpiPromptBox 'run' event
 | ID      | Component         | nodeTitle | defaultValue | `getInjectionParams()` return |
 |---------|-------------------|-----------|--------------|-------------------------------|
 | `ratio` | `MpiRatioSelector` | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
+| `batch` | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }` |
 
 > **Adding a new control:** (1) create component, (2) add entry to `PROMPT_BOX_CONTROLS` with `nodeTitle` + `getInjectionParams()`, (3) add control ID to operation's `components[]` in `commandRegistry.js`
 
@@ -51,8 +55,8 @@ MpiPromptBox 'run' event
 
 | Operation key     | Label              | mediaType | requiresImages | requiresVideo | requiresMask | promptRequired | components          | status      |
 |-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|-------------|
-| `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio']`         | active      |
-| `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio']`         | active      |
+| `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio','batch']` | active      |
+| `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio','batch']` | active      |
 | `upscale`         | Upscale            | image     | 1              | —             | —            | no             | (none)              | active      |
 | `edit`            | Edit               | image     | 1              | —             | —            | yes            | (none)              | active      |
 | `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |

@@ -327,11 +327,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
             pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
                 if (!activeModel) return;
 
-                const tempId   = crypto.randomUUID();
-                const cardType = activeModel.mediaType;
+                const batchCount = Math.max(1, Number(injectionParams.Batch_Size) || 1);
+                const cardType   = activeModel.mediaType;
 
-                const placeholderGroup = {
-                    id: tempId,
+                const tempIds = Array.from({ length: batchCount }, () => crypto.randomUUID());
+                const tempId  = tempIds[0];
+
+                const mkPlaceholder = (id) => ({
+                    id,
                     type: cardType,
                     name: 'Generating...',
                     history: [],
@@ -339,12 +342,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     width: injectionParams.Width || 1024,
                     height: injectionParams.Height || 1024,
                     isGenerating: true,
-                };
+                });
+
+                const placeholderGroup  = mkPlaceholder(tempId);
+                const extraPlaceholders = tempIds.slice(1).map(mkPlaceholder);
 
                 startGeneration(
                     { operation, model: activeModel, positive, negative, mediaItems, injectionParams },
                     { onCancel: () => {} },
-                    { scope: 'gallery', tempId, placeholderGroup }
+                    { scope: 'gallery', tempId, placeholderGroup, extraTempIds: tempIds.slice(1), extraPlaceholders }
                 );
             });
 
@@ -355,42 +361,48 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }
 
         // ── Registry event subscriptions (gallery-scoped) ─────────────────────
-        _unsubs.push(Events.on('generation:started', ({ id, scope, tempId: tid, placeholderGroup: pg }) => {
+        _unsubs.push(Events.on('generation:started', ({ id, scope, tempId: tid, placeholderGroup: pg, extraPlaceholders = [] }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
             const currentGroups = state.currentProject?.itemGroups || [];
             const runningPlaceholders = activeGenerations.listFor('gallery', null)
                 .filter(e => e.status === 'running' && e.id !== id)
-                .map(e => e.placeholderGroup)
+                .flatMap(e => [e.placeholderGroup, ...(e.extraPlaceholders || [])])
                 .filter(Boolean);
-            if (pg) grid.el.setGroups([pg, ...runningPlaceholders, ...currentGroups]);
+            const myPlaceholders = [pg, ...extraPlaceholders].filter(Boolean);
+            if (myPlaceholders.length) grid.el.setGroups([...myPlaceholders, ...runningPlaceholders, ...currentGroups]);
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
             const entry = activeGenerations.get(id);
-            if (entry?.tempId) grid.el.updatePreview(entry.tempId, url);
+            if (!entry) return;
+            const allTempIds = [entry.tempId, ...(entry.extraTempIds || [])].filter(Boolean);
+            for (const t of allTempIds) grid.el.updatePreview(t, url);
         }));
 
-        _unsubs.push(Events.on('generation:complete', ({ id, item, group, tempId: tid }) => {
+        _unsubs.push(Events.on('generation:complete', ({ id, item, group, tempId: tid, extraTempIds = [] }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
             const currentGroups = state.currentProject?.itemGroups || [];
-            if (tid) grid.el.removeCard(tid);
-            grid.el.setGroups([group, ...currentGroups.filter(g => g.id !== group.id)]);
+            const allTempIds = [tid, ...extraTempIds].filter(Boolean);
+            for (const t of allTempIds) grid.el.removeCard(t);
+            grid.el.setGroups(currentGroups);
         }));
 
-        _unsubs.push(Events.on('generation:error', ({ id, tempId: tid }) => {
+        _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            if (tid) grid.el.removeCard(tid);
+            const allTempIds = [tid, ...extraTempIds].filter(Boolean);
+            for (const t of allTempIds) grid.el.removeCard(t);
             grid.el.setGroups(state.currentProject?.itemGroups || []);
         }));
 
-        _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid }) => {
+        _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            if (tid) grid.el.removeCard(tid);
+            const allTempIds = [tid, ...extraTempIds].filter(Boolean);
+            for (const t of allTempIds) grid.el.removeCard(t);
             grid.el.setGroups(state.currentProject?.itemGroups || []);
         }));
 
