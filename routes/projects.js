@@ -26,6 +26,7 @@ const path   = require('path');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_PROJECTS_ROOT, COMFYUI_PORT, streamDownload } = require('./shared');
+const { probeVideo } = require('../services/ffprobeVideo');
 
 // ── Project CRUD ──────────────────────────────────────────────────────────────
 
@@ -418,6 +419,20 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             pixelDimensions: { w: req.body.width || 0, h: req.body.height || 0 },
             generationMs:   null,
         };
+        if (mediaType === 'video') {
+            const v = await probeVideo(filePath);
+            if (v) {
+                metaContent.fps        = v.fps;
+                metaContent.duration   = v.duration;
+                metaContent.frameCount = v.frameCount;
+                metaContent.hasAudio   = v.hasAudio;
+                metaContent.videoMeta  = {
+                    fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio,
+                };
+                if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
+                if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
+            }
+        }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
         res.json({ success: true, filePath, filename: finalFileName, itemId: id });
     } catch (err) {
@@ -431,6 +446,67 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
  *   x-filename: final_name.mp4
  *   content-type: application/octet-stream (or specific)
  */
+/**
+ * POST /project-media/:projectId/probe-videos
+ * Body: { folderPath }
+ * Scans Media/ for video files, probes any whose sidecar lacks fps, and patches
+ * the sidecar with { fps, duration, frameCount, hasAudio, videoMeta }.
+ * Returns { patched: number, total: number }.
+ */
+router.post('/project-media/:projectId/probe-videos', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir  = path.join(mediaDir, '.meta');
+        if (!(await fs.pathExists(metaDir))) return res.json({ success: true, patched: 0, total: 0 });
+
+        const sidecars = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        let patched = 0, total = 0;
+
+        for (const f of sidecars) {
+            const p = path.join(metaDir, f);
+            let meta;
+            try { meta = await fs.readJson(p); } catch { continue; }
+            if (meta.type !== 'video') continue;
+            total++;
+            if (meta.fps && meta.duration) continue;
+
+            // Resolve media file path from stored filePath URL
+            let inputPath = '';
+            try {
+                const raw = meta.filePath || '';
+                if (raw.includes('project-file?path=')) {
+                    const u = new URL(raw, 'http://localhost');
+                    inputPath = decodeURIComponent(u.searchParams.get('path') || '');
+                }
+            } catch { continue; }
+            if (!inputPath || !(await fs.pathExists(inputPath))) continue;
+
+            const v = await probeVideo(inputPath);
+            if (!v) continue;
+
+            meta.fps        = v.fps;
+            meta.duration   = v.duration;
+            meta.frameCount = v.frameCount;
+            meta.hasAudio   = v.hasAudio;
+            meta.videoMeta  = { fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio };
+            if (meta.pixelDimensions) {
+                if (!meta.pixelDimensions.w && v.width)  meta.pixelDimensions.w = v.width;
+                if (!meta.pixelDimensions.h && v.height) meta.pixelDimensions.h = v.height;
+            }
+            await fs.writeJson(p, meta, { spaces: 2 });
+            patched++;
+        }
+
+        res.json({ success: true, patched, total });
+    } catch (err) {
+        logger.error('project', 'probe-videos failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/project-media/:projectId/upload-raw', async (req, res) => {
     try {
         const { folderPath } = req.query;

@@ -17,6 +17,8 @@
     "dotenv": "^17.4.2",
     "electron-context-menu": "^4.1.2",
     "express": "^4.18.2",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "fs-extra": "^11.1.1",
     "node-7z": "^3.0.0",
     "node-downloader-helper": "^2.1.11",
