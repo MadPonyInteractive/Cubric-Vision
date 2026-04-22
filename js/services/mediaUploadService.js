@@ -14,16 +14,20 @@ import { measureMediaDimensions } from '../utils/mediaDimensions.js';
  * @param {'image'|'video'} mediaType
  * @param {string} projectFolderPath
  * @param {string} projectId
+ * @param {Object} [opts]
+ * @param {string} [opts.filenamePrefix='imported'] - Filename prefix (e.g. 'snapshot') before _NNN.<ext>
+ * @param {string} [opts.operation='imported'] - Sidecar operation field (e.g. 'snapshot')
  * @returns {Promise<{filePath: string, filename: string, itemId: string}|null>}
  */
-export async function uploadMediaFile(file, mediaType, projectFolderPath, projectId) {
+export async function uploadMediaFile(file, mediaType, projectFolderPath, projectId, opts = {}) {
     if (!projectFolderPath || !projectId) {
         clientLogger.warn('mediaUploadService', 'Missing project context — cannot save media');
         return null;
     }
     try {
         const ext = file.name.split('.').pop() || (mediaType === 'image' ? 'png' : 'mp4');
-        const filename = `imported_001.${ext}`; // backend overrides sequence via autoSequence
+        const prefix = opts.filenamePrefix || 'imported';
+        const filename = `${prefix}_001.${ext}`; // backend overrides sequence via autoSequence
         const itemId = crypto.randomUUID();
 
         const base64 = await _fileToBase64(file);
@@ -42,6 +46,7 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
                     mediaType,
                     width,
                     height,
+                    operation: opts.operation || undefined,
                 }),
             }
         );

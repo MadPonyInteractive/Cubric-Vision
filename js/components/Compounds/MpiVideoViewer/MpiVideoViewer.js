@@ -5,9 +5,11 @@
  * - MpiVideoPlayer (Compound) for rendering + controls
  * - An overlay canvas (absolute-positioned) for crop-box drawing
  * - A reserved timeline slot (empty, for deferred trim tool)
+ * - An optional MpiToolActionBar (mounted in barContainer when crop active)
  *
  * @param {number} [fps=24] - Frame rate for video playback (passed to MpiVideoPlayer)
  * @param {boolean} [controls=true] - Show video player controls
+ * @param {HTMLElement} [barContainer] - DOM node where the crop action bar is mounted
  *
  * Instance API (on el):
  *   loadVideo(url, meta = {})         — load video URL; meta may include { fps, duration, frameCount, hasAudio }
@@ -20,12 +22,18 @@
  *
  * Emits:
  *   'play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change' — forwarded from MpiVideoPlayer
- *   'crop-change'  { rect }           — crop rect changed (on cropTool onChange)
+ *   'crop-change'       { rect }      — crop rect changed (on cropTool onChange)
+ *   'crop-save-snapshot'              — user clicked "Save Snapshot" in crop action bar
+ *   'crop-save-video'                 — user clicked "Save Cropped Video" in crop action bar
+ *   'crop-cancel'                     — user clicked "Cancel" in crop action bar
  */
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiVideoPlayer } from '../MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiToolActionBar } from '../MpiToolActionBar/MpiToolActionBar.js';
+import { MpiRatioSelector } from '../MpiRatioSelector/MpiRatioSelector.js';
 import { createCropTool } from '../../../utils/cropTool.js';
+import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 
 export const MpiVideoViewer = ComponentFactory.create({
     name: 'MpiVideoViewer',
@@ -44,6 +52,7 @@ export const MpiVideoViewer = ComponentFactory.create({
     setup: (el, props, emit) => {
         const fps = props.fps ?? 24;
         const controls = props.controls !== false;
+        const barContainer = props.barContainer || null;
         const _unsubs = [];
 
         // ── State ────────────────────────────────────────────────────────
@@ -53,7 +62,9 @@ export const MpiVideoViewer = ComponentFactory.create({
         let _resizeObserver = null;
         let _videoElement = null;
         let _isInCropMode = false;
-        let _cropRatio = null; // aspect ratio lock, null = free
+        let _cropRatio = SOCIAL_RATIOS[0].ratio;
+        let _cropBar = null;
+        let _ratioSel = null;
 
         // ── Player mount ─────────────────────────────────────────────────
 
@@ -115,6 +126,38 @@ export const MpiVideoViewer = ComponentFactory.create({
             _videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
         });
 
+        // ── Crop action bar (mounted in external barContainer, hidden by default) ──
+
+        if (barContainer) {
+            _ratioSel = MpiRatioSelector.mount(document.createElement('div'), {
+                modelType: 'social',
+                value: SOCIAL_RATIOS[0].label,
+            });
+            _ratioSel.on('change', ({ ratio }) => {
+                _cropRatio = ratio;
+                if (_cropTool && _isInCropMode) _cropTool.setRatio(ratio);
+            });
+
+            const cropBarSlot = document.createElement('div');
+            cropBarSlot.className = 'mpi-video-viewer__bar-slot';
+            barContainer.appendChild(cropBarSlot);
+
+            _cropBar = MpiToolActionBar.mount(cropBarSlot, {
+                leftSlot: _ratioSel,
+                actions: [
+                    { key: 'snapshot', icon: 'camera', label: 'Save Snapshot',     variant: 'ghost',   info: 'Save current frame as image (cropped if crop active)' },
+                    { key: 'cancel',   icon: 'close',  label: 'Cancel',            variant: 'ghost',   info: 'Cancel crop' },
+                    { key: 'apply',    icon: 'check',  label: 'Save Cropped Video', variant: 'primary', info: 'Encode cropped region to new video' },
+                ],
+            });
+
+            _cropBar.on('action', ({ key }) => {
+                if (key === 'snapshot') emit('crop-save-snapshot', {});
+                if (key === 'apply')    emit('crop-save-video', {});
+                if (key === 'cancel')   emit('crop-cancel', {});
+            });
+        }
+
         // ── Instance API ─────────────────────────────────────────────────
 
         el.loadVideo = (url, meta = {}) => {
@@ -148,6 +191,8 @@ export const MpiVideoViewer = ComponentFactory.create({
             if (_cropRatio !== null) {
                 _cropTool.setRatio(_cropRatio);
             }
+
+            if (_cropBar) _cropBar.el.show();
         };
 
         el.exitCropMode = () => {
@@ -155,6 +200,7 @@ export const MpiVideoViewer = ComponentFactory.create({
             _isInCropMode = false;
             el.setAttribute('data-mode', 'idle');
             _cropTool.disable();
+            if (_cropBar) _cropBar.el.hide();
         };
 
         el.getCropRect = () => {
@@ -211,6 +257,11 @@ export const MpiVideoViewer = ComponentFactory.create({
         };
 
         el.destroy = () => {
+            if (_cropBar && _cropBar.destroy) _cropBar.destroy();
+            _cropBar = null;
+            if (_ratioSel && _ratioSel.destroy) _ratioSel.destroy();
+            _ratioSel = null;
+
             // Clean up player
             if (_playerInstance && _playerInstance.destroy) {
                 _playerInstance.destroy();

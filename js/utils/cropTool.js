@@ -101,20 +101,39 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
     }
 
     /**
+     * Get content aspect ratio (intrinsic W/H) for normalizing crop ratios.
+     * Normalized space is [0..1]×[0..1] over anisotropic content, so a crop
+     * ratio (w/h in pixels) maps to normRatio = ratio * (contentH/contentW).
+     */
+    function _contentAspect() {
+        let cw, ch;
+        if (targetElement.tagName === 'VIDEO') {
+            cw = targetElement.videoWidth || 1;
+            ch = targetElement.videoHeight || 1;
+        } else {
+            cw = targetElement.naturalWidth || targetElement.width || 1;
+            ch = targetElement.naturalHeight || targetElement.height || 1;
+        }
+        return cw / ch;
+    }
+
+    /**
      * Clamp and fit normalized rect to locked ratio and bounds.
      */
     function _applyRatioToRect(rect = _normRect) {
-        const ratio = _lockedRatio;
+        const contentAspect = _contentAspect();
+        // Pixel ratio → normalized-space ratio (account for anisotropic norm coords)
+        const normRatio = _lockedRatio / contentAspect;
         let { x, y, w, h } = rect;
 
         // Fit by width first
         w = Math.min(w, 1);
-        h = w / ratio;
+        h = w / normRatio;
 
         if (h > 1) {
             // Doesn't fit vertically, fit by height instead
             h = 1;
-            w = h * ratio;
+            w = h * normRatio;
         }
 
         // Center if smaller than bounds
@@ -178,7 +197,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
 
         const dx = normX - _dragStartMouse.x;
         const dy = normY - _dragStartMouse.y;
-        const r = _lockedRatio;
+        const r = _lockedRatio / _contentAspect();
         const sr = _dragStartNormRect;
 
         let { x, y, w, h } = sr;

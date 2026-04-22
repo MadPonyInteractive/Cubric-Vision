@@ -27,6 +27,7 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
 const { ffmpegPath } = require('../services/ffmpegBinary');
 const { probeVideo } = require('../services/ffprobeVideo');
+const { extractVideoThumb } = require('../services/ffmpegThumb');
 
 const execFileP = promisify(execFile);
 
@@ -71,12 +72,24 @@ router.post('/api/video/crop', async (req, res) => {
         const cropX = Math.max(0, Math.floor(x * srcMeta.width));
         const cropY = Math.max(0, Math.floor(y * srcMeta.height));
 
-        // 3. Prepare output path
+        // 3. Prepare output path — sequenced "video_crop_NNN.mp4" like image crop
         const mediaDir = path.join(folderPath, 'Media');
         await fs.ensureDir(mediaDir);
-        const finalName = (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName))
-            ? outFileName
-            : `video_crop_${Date.now()}.mp4`;
+
+        let finalName;
+        if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
+            finalName = outFileName;
+        } else {
+            const existing = await fs.readdir(mediaDir);
+            const re = /^video_crop_(\d+)\./i;
+            let maxNum = 0;
+            for (const f of existing) {
+                const m = f.match(re);
+                if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
+            }
+            const seq = String(maxNum + 1).padStart(3, '0');
+            finalName = `video_crop_${seq}.mp4`;
+        }
         outputPath = path.join(mediaDir, finalName);
 
         // 4. Run ffmpeg
@@ -131,6 +144,11 @@ router.post('/api/video/crop', async (req, res) => {
             sourceItemId: itemId  || null,
             sourceGroupId: groupId || null,
         };
+        // Extract first-frame thumbnail alongside sidecar
+        const thumbAbs = path.join(metaDir, `${newId}.thumb.jpg`);
+        const thumbed = await extractVideoThumb(outputPath, thumbAbs);
+        if (thumbed) sidecar.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+
         await fs.writeJson(path.join(metaDir, `${newId}.json`), sidecar, { spaces: 2 });
 
         // 7. Build item + group payload for frontend addGroup()

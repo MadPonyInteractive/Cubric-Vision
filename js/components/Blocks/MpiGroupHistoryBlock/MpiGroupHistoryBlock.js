@@ -24,16 +24,19 @@ import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
-import { updateGroup, persistGroups } from '../../../services/projectService.js';
+import { updateGroup, persistGroups, addGroup } from '../../../services/projectService.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
     removeHistoryEntry,
+    createImageItem,
+    createItemGroup,
 } from '../../../data/projectModel.js';
 import { MpiModelsModal } from '../MpiModelsModal/MpiModelsModal.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
@@ -118,9 +121,23 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             Events.emit('media:updated', { projectId: state.currentProject.id });
         }
 
+        function _showToast(message, variant = 'info') {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+            document.body.appendChild(wrapper);
+            const toast = MpiToast.mount(wrapper, { message, variant, duration: 3000 });
+            toast.on('close', () => wrapper.remove());
+        }
+
         // ── Bottom bar state coordinator ──────────────────────────────────────
 
         function _setBottomBar(barState) {
+            // Video groups have no generation ops yet — never show PromptBox
+            if (isVideo && barState === 'promptbox') {
+                PromptBoxService.hide();
+                selectionBar.el.style.display = 'none';
+                return;
+            }
             if (barState === 'promptbox') {
                 PromptBoxService.show();
                 selectionBar.el.style.display = 'none';
@@ -177,6 +194,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer = MpiVideoViewer.mount(el.querySelector('#centre-slot'), {
                 fps: 24,
                 controls: true,
+                barContainer: bottomSlot,
             });
         } else {
             viewer = MpiCanvasViewer.mount(el.querySelector('#centre-slot'), {
@@ -428,6 +446,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // For video, only crop mode is supported for now
                 if (mode === 'crop') {
                     canvasViewer.el.enterCropMode();
+                    _setBottomBar('canvas-tool');
                 }
             } else {
                 canvasViewer.el.enterMode(mode);
@@ -438,11 +457,104 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // For video, exit crop mode
                 if (mode === 'crop') {
                     canvasViewer.el.exitCropMode();
+                    _setBottomBar('promptbox');
                 }
             } else {
                 canvasViewer.el.exitMode();
             }
         });
+
+        // ── Video crop action-bar events ──────────────────────────────────────
+        if (isVideo) {
+            canvasViewer.on('crop-cancel', () => {
+                canvasViewer.el.exitCropMode();
+                _setBottomBar('promptbox');
+                historyTools.el.syncMode('none');
+            });
+
+            canvasViewer.on('crop-save-snapshot', async () => {
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) return;
+                try {
+                    const { blob } = await canvasViewer.el.captureSnapshot();
+                    if (!blob) return;
+                    const file = new File([blob], `snapshot_001.png`, { type: 'image/png' });
+                    const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, { filenamePrefix: 'snapshot', operation: 'snapshot' });
+                    if (!uploaded) { _showToast('Snapshot save failed', 'error'); return; }
+
+                    // Register as new gallery itemGroup so it shows in gallery immediately
+                    const displayName = uploaded.filename.replace(/\.[^.]+$/, '');
+                    const item = createImageItem({
+                        id: uploaded.itemId,
+                        filePath: uploaded.filePath,
+                        uploaded: true,
+                        operation: 'snapshot',
+                    });
+                    const group = createItemGroup('image', { name: displayName });
+                    const finalGroup = appendToHistory(group, item);
+                    await addGroup(finalGroup);
+
+                    Events.emit('media:imported', {
+                        url: uploaded.filePath,
+                        filename: uploaded.filename,
+                        itemId: uploaded.itemId,
+                        mediaType: 'image',
+                    });
+                    _showToast('Snapshot saved to gallery', 'success');
+                } catch (err) {
+                    clientLogger.warn('MpiGroupHistoryBlock', 'snapshot save failed', err);
+                    _showToast('Snapshot save failed', 'error');
+                }
+            });
+
+            canvasViewer.on('crop-save-video', async () => {
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) return;
+                const rect = canvasViewer.el.getCropRect();
+                if (!rect) { _showToast('No crop selected', 'warning'); return; }
+                const currentItem = _group.history[_currentIdx];
+                const sourcePath = currentItem?.filePath;
+                if (!sourcePath) { _showToast('No source video', 'error'); return; }
+
+                _showToast('Cropping video…', 'info');
+                try {
+                    const res = await fetch('/api/video/crop', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            folderPath: project.folderPath,
+                            sourcePath,
+                            cropRect: { x: rect.x, y: rect.y, width: rect.w, height: rect.h },
+                            groupId: _group.id,
+                            itemId:  currentItem?.id,
+                        }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+
+                    // Append to current group's history (new entry), instead of new group
+                    _group = appendToHistory(_group, data.item);
+                    _currentIdx = _group.selectedIndex;
+                    _persistGroup();
+                    historyList.el.appendEntry(data.item);
+
+                    const videoMeta = {
+                        fps: data.item.fps || _group.fps || 24,
+                        duration: data.item.duration,
+                        frameCount: data.item.frameCount,
+                        hasAudio: data.item.hasAudio,
+                    };
+                    canvasViewer.el.loadVideo(resolveMediaUrl(data.item.filePath), videoMeta);
+                    canvasViewer.el.exitCropMode();
+                    _setBottomBar('promptbox');
+                    historyTools.el.syncMode('none');
+                    _showToast('Cropped video saved', 'success');
+                } catch (err) {
+                    clientLogger.warn('MpiGroupHistoryBlock', 'video crop failed', err);
+                    _showToast('Video crop failed: ' + err.message, 'error');
+                }
+            });
+        }
 
         historyList.on('entry-selected', ({ idx, item }) => {
             if (isVideo) {

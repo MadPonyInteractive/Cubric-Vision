@@ -79,7 +79,8 @@ export const MpiHistoryList = ComponentFactory.create({
                 const thumb = document.createElement('img');
                 thumb.className = 'mpi-history-list__thumb';
                 thumb.alt = '';
-                if (item.filePath) thumb.src = _resolveUrl(item.filePath);
+                const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
+                if (srcPath) thumb.src = _resolveUrl(srcPath);
 
                 const meta = document.createElement('div');
                 meta.className = 'mpi-history-list__meta';
@@ -193,7 +194,8 @@ export const MpiHistoryList = ComponentFactory.create({
             const thumb = document.createElement('img');
             thumb.className = 'mpi-history-list__thumb';
             thumb.alt = '';
-            if (item.filePath) thumb.src = _resolveUrl(item.filePath);
+            const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
+            if (srcPath) thumb.src = _resolveUrl(srcPath);
 
             const meta = document.createElement('div');
             meta.className = 'mpi-history-list__meta';

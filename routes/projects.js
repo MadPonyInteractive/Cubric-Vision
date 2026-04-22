@@ -27,6 +27,7 @@ const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { DEFAULT_PROJECTS_ROOT, COMFYUI_PORT, streamDownload } = require('./shared');
 const { probeVideo } = require('../services/ffprobeVideo');
+const { extractVideoThumb } = require('../services/ffmpegThumb');
 
 // ── Project CRUD ──────────────────────────────────────────────────────────────
 
@@ -408,7 +409,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             id,
             type:           mediaType === 'video' ? 'video' : 'image',
             filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
-            operation:      'imported',
+            operation:      req.body.operation || 'imported',
             prompt:         promptContext || '',
             negativePrompt: req.body.negativePrompt || '',
             seed:           seed ?? -1,
@@ -431,6 +432,12 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 };
                 if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
                 if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
+            }
+            // Extract first-frame thumbnail → .meta/<id>.thumb.jpg
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractVideoThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
