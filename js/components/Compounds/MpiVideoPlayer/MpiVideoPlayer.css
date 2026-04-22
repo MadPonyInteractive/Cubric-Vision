@@ -6,7 +6,7 @@
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: #050505;
+    background: var(--bg-base);
     border-radius: 12px;
     overflow: hidden;
     user-select: none;
@@ -59,9 +59,9 @@
     background: rgba(255, 255, 255, 0.1) !important;
 }
 
-.mpi-video-player__slider-wrapper .mpi-progress__fill {
-    background: linear-gradient(90deg, #10b981 0%, #34d399 100%) !important; /* Emerald gradient */
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+.mpi-video-player__slider-wrapper .mpi-progress__track-fill {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
+    box-shadow: 0 0 10px var(--accent-glow, rgba(16, 185, 129, 0.3));
 }
 
 /* Bottom Controls Row */
@@ -91,7 +91,7 @@
 }
 
 .mpi-video-player__current {
-    color: #fff;
+    color: var(--text-1);
     min-width: 60px;
 }
 
@@ -125,7 +125,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--text-1);
     opacity: 0;
     transform: scale(0.6);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -147,10 +147,35 @@
 
 /* Accessibility & State */
 .mpi-video-player:focus-within {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 20px 50px var(--bg-recessed);
+    box-shadow: 0 0 0 2px var(--accent-glow, rgba(16, 185, 129, 0.4)), 0 20px 50px var(--bg-recessed);
 }
 
-/* Adjust volume control for video context */
-.mpi-video-player__volume-wrapper .mpi-volume-control__popup {
-    bottom: calc(100% + 15px) !important;
+/* Inlined Volume Control */
+.mpi-video-player__volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mpi-video-player__volume-mute {
+    flex-shrink: 0;
+}
+
+.mpi-video-player__volume-slider {
+    flex: 1;
+    min-width: 80px;
+    max-width: 140px;
+}
+
+.mpi-video-player__volume-slider .mpi-progress {
+    height: 16px;
+}
+
+.mpi-video-player__volume-slider .mpi-progress__track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mpi-video-player__volume-slider .mpi-progress__track-fill {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
+    box-shadow: 0 0 8px var(--accent-glow, rgba(16, 185, 129, 0.2));
 }

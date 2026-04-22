@@ -1,14 +1,14 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { MpiVolumeControl } from '../../Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { formatTime } from '../../../utils/string.js';
 
 /**
- * MpiVideoPlayer — Block: Video + Custom Controls Overlay.
- * 
+ * MpiVideoPlayer — Compound: Video + Custom Controls Overlay.
+ *
  * Orchestrates a video element with a stylish glass-morphic control set.
- * 
+ * Includes an inlined volume control (mute button + slider).
+ *
  * Props:
  * @param {string} [src] - Video source URL
  * @param {string} [poster] - Poster image URL
@@ -17,7 +17,7 @@ import { formatTime } from '../../../utils/string.js';
  * @param {boolean} [muted=false] - Start muted
  * @param {number} [volume=1.0] - Initial volume (0–1)
  * @param {boolean} [controls=true] - Show custom UI controls overlay
- * 
+ *
  * Emits:
  * 'play' { time: number }
  * 'pause' { time: number }
@@ -27,7 +27,7 @@ import { formatTime } from '../../../utils/string.js';
  */
 export const MpiVideoPlayer = ComponentFactory.create({
     name: 'MpiVideoPlayer',
-    css: ['js/components/Blocks/MpiVideoPlayer/MpiVideoPlayer.css'],
+    css: ['js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css'],
 
     template: (props) => {
         const src = props.src || '';
@@ -64,7 +64,10 @@ export const MpiVideoPlayer = ComponentFactory.create({
                         </div>
                         
                         <div class="mpi-video-player__right">
-                            <div class="mpi-video-player__volume-wrapper"></div>
+                            <div class="mpi-video-player__volume">
+                                <div class="mpi-video-player__volume-mute"></div>
+                                <div class="mpi-video-player__volume-slider"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,7 +92,8 @@ export const MpiVideoPlayer = ComponentFactory.create({
         if (hasControls) {
             const playPauseWrapper = el.querySelector('.mpi-video-player__play-pause-wrapper');
             const sliderWrapper = el.querySelector('.mpi-video-player__slider-wrapper');
-            const volumeWrapper = el.querySelector('.mpi-video-player__volume-wrapper');
+            const volumeMuteWrapper = el.querySelector('.mpi-video-player__volume-mute');
+            const volumeSliderWrapper = el.querySelector('.mpi-video-player__volume-slider');
             const currentTimeEl = el.querySelector('.mpi-video-player__current');
             const durationEl = el.querySelector('.mpi-video-player__duration');
 
@@ -112,10 +116,25 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 variant: 'primary'
             });
 
-            // 3. Volume Control
-            const volumeControl = MpiVolumeControl.mount(volumeWrapper, {
-                volume: props.volume !== undefined ? props.volume : 1.0,
-                muted: props.muted || false
+            // 3. Volume Control (inlined: mute button + slider)
+            const initialVolume = props.volume !== undefined ? props.volume : 1.0;
+            const initialMuted = props.muted || false;
+
+            const muteBtn = MpiButton.mount(volumeMuteWrapper, {
+                icon: initialMuted ? 'volumeOff' : (initialVolume < 0.5 ? 'volumeLow' : 'volumeHigh'),
+                size: 'md',
+                info: 'Mute/Unmute'
+            });
+
+            const volumeSlider = MpiProgressBar.mount(volumeSliderWrapper, {
+                min: 0,
+                max: 100,
+                step: 1,
+                value: Math.round(initialVolume * 100),
+                prefix: '',
+                suffix: '%',
+                interactive: true,
+                variant: 'primary'
             });
 
             // --- UI Syncing Logic ---
@@ -166,10 +185,20 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 isSeeking = false;
             });
 
-            volumeControl.on('change', ({ volume, muted }) => {
-                video.volume = volume;
-                video.muted = muted;
-                emit('change', { volume, muted });
+            // Volume slider change
+            volumeSlider.on('change', ({ value }) => {
+                const newVolume = value / 100;
+                video.volume = newVolume;
+                if (video.muted && newVolume > 0) {
+                    video.muted = false;
+                }
+                emit('change', { volume: newVolume, muted: video.muted });
+            });
+
+            // Mute button toggle
+            muteBtn.on('click', () => {
+                video.muted = !video.muted;
+                emit('change', { volume: video.volume, muted: video.muted });
             });
 
             // Video events for UI sync
@@ -178,8 +207,18 @@ export const MpiVideoPlayer = ComponentFactory.create({
             video.addEventListener('timeupdate', updateTime);
             video.addEventListener('loadedmetadata', updateTime);
             video.addEventListener('volumechange', () => {
-                volumeControl.el._setVolume?.(video.volume);
-                volumeControl.el._setMuted?.(video.muted);
+                // Update mute button icon
+                const isMuted = video.muted;
+                const vol = video.volume;
+                const newIcon = isMuted ? 'volumeOff' : (vol < 0.5 ? 'volumeLow' : 'volumeHigh');
+                muteBtn.el.setAttribute('data-icon', newIcon);
+
+                // Update slider position
+                const sliderInput = volumeSlider.el.querySelector('input');
+                if (sliderInput) {
+                    sliderInput.value = Math.round(video.volume * 100);
+                    sliderInput.dispatchEvent(new Event('input'));
+                }
             });
         }
 
@@ -204,5 +243,23 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
         el._play = () => video.play();
         el._pause = () => video.pause();
+
+        // Volume control API (for external consumers)
+        if (hasControls) {
+            el._setVolume = (v) => {
+                video.volume = Math.max(0, Math.min(1, v));
+                const sliderInput = volumeSlider.el.querySelector('input');
+                if (sliderInput) {
+                    sliderInput.value = Math.round(video.volume * 100);
+                    sliderInput.dispatchEvent(new Event('input'));
+                }
+            };
+
+            el._setMuted = (m) => {
+                video.muted = m;
+                const newIcon = m ? 'volumeOff' : (video.volume < 0.5 ? 'volumeLow' : 'volumeHigh');
+                muteBtn.el.setAttribute('data-icon', newIcon);
+            };
+        }
     }
 });

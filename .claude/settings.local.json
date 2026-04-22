@@ -190,7 +190,15 @@
       "Bash(git status:*)",
       "Bash(sed -i \"272s/\\\\$/,/\" \"c:/AI/Mpi/MpiAiSuite/js/data/modelConstants/dependencies.js\")",
       "Bash(sed -i \"273s/^        installOnEngine/        installOnEngine/\" \"c:/AI/Mpi/MpiAiSuite/js/data/modelConstants/dependencies.js\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_doctor",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_index"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
