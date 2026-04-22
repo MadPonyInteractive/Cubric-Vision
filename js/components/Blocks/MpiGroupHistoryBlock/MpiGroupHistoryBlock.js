@@ -69,6 +69,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Context helpers ──────────────────────────────────────────────────
 
         const isVideo = _group.type === 'video';
+        // Hide carried-over shell PromptBox before any gen-wiring runs.
+        // Video has no ops yet; image-group setup will show it later via _setBottomBar.
+        if (isVideo) PromptBoxService.hide();
         const { model: activeModelInit, modelId: activeModelIdInit, installedModels } = resolveActiveModel(isVideo ? 'video' : 'image');
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
@@ -360,7 +363,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-        if (activeModel) {
+        if (activeModel && !isVideo) {
             const promptBox = PromptBoxService.mount({
                 model: activeModel,
                 modelList: installedModels,

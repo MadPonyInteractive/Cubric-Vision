@@ -28,6 +28,7 @@ async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
             outPath,
         ];
         await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
+        logger.info('ffmpegThumb', `thumb ok: ${outPath}`);
         return outPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `thumb extract failed for ${inputPath}: ${err.message}`);
