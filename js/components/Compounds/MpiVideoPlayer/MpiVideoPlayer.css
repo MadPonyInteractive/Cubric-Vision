@@ -179,3 +179,24 @@
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
     box-shadow: 0 0 8px var(--accent-glow);
 }
+
+/* Loop Button */
+.mpi-video-player__loop-wrapper {
+    flex-shrink: 0;
+}
+
+.mpi-video-player__loop-wrapper .mpi-button.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Frame Step Buttons */
+.mpi-video-player__frame-back-wrapper,
+.mpi-video-player__frame-forward-wrapper {
+    flex-shrink: 0;
+}
+
+/* Fullscreen Button */
+.mpi-video-player__fullscreen-wrapper {
+    flex-shrink: 0;
+}

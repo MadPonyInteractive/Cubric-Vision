@@ -67,6 +67,12 @@ export const ICONS = {
     'volumeLow': '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>',
     'volumeHigh': '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>',
 
+    // ── Video Controls ────────────────────────────────────────────────────────
+    'loop': '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>',
+    'fullscreen': '<path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16-4h2v6h-6v-2h4v-4z"/>',
+    'frameBack': '<path d="M6 4v16h2V4H6zm4 8L4 20v-4h12V8H4v4l6 0zm10 0l6-8v16l-6-8z"/>',
+    'frameForward': '<path d="M16 4v16h2V4h-2zM8 12l6 8V4l-6 8zm8-8v16l6-8-6-8z"/>',
+
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:
     'negative': '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1c1.06 1.35 1.69 3.05 1.69 4.9 0 4.42-3.58 8-8 8z"/>',

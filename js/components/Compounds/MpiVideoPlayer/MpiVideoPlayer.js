@@ -8,7 +8,7 @@ import { renderIcon } from '../../../utils/icons.js';
  * MpiVideoPlayer — Compound: Video + Custom Controls Overlay.
  *
  * Orchestrates a video element with a stylish glass-morphic control set.
- * Includes an inlined volume control (mute button + slider).
+ * Includes an inlined volume control (mute button + slider), loop/fullscreen, and frame-step controls.
  *
  * Props:
  * @param {string} [src] - Video source URL
@@ -17,6 +17,7 @@ import { renderIcon } from '../../../utils/icons.js';
  * @param {boolean} [loop=false] - Loop playback
  * @param {boolean} [muted=false] - Start muted
  * @param {number} [volume=1.0] - Initial volume (0–1)
+ * @param {number} [fps=24] - Frame rate for frame-step buttons
  * @param {boolean} [controls=true] - Show custom UI controls overlay
  *
  * Emits:
@@ -25,6 +26,7 @@ import { renderIcon } from '../../../utils/icons.js';
  * 'ended' { time: number }
  * 'timeupdate' { time: number, duration: number }
  * 'change' { volume: number, muted: boolean }
+ * 'loop-change' { loop: boolean }
  */
 export const MpiVideoPlayer = ComponentFactory.create({
     name: 'MpiVideoPlayer',
@@ -57,18 +59,22 @@ export const MpiVideoPlayer = ComponentFactory.create({
                     <div class="mpi-video-player__bottom">
                         <div class="mpi-video-player__left">
                             <div class="mpi-video-player__play-pause-wrapper"></div>
+                            <div class="mpi-video-player__frame-back-wrapper"></div>
+                            <div class="mpi-video-player__frame-forward-wrapper"></div>
                             <div class="mpi-video-player__time">
                                 <span class="mpi-video-player__current">00:00.00</span>
                                 <span class="mpi-video-player__separator">/</span>
                                 <span class="mpi-video-player__duration">00:00.00</span>
                             </div>
                         </div>
-                        
+
                         <div class="mpi-video-player__right">
+                            <div class="mpi-video-player__loop-wrapper"></div>
                             <div class="mpi-video-player__volume">
                                 <div class="mpi-video-player__volume-mute"></div>
                                 <div class="mpi-video-player__volume-slider"></div>
                             </div>
+                            <div class="mpi-video-player__fullscreen-wrapper"></div>
                         </div>
                     </div>
                 </div>
@@ -96,15 +102,21 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const sliderWrapper = el.querySelector('.mpi-video-player__slider-wrapper');
             const volumeMuteWrapper = el.querySelector('.mpi-video-player__volume-mute');
             const volumeSliderWrapper = el.querySelector('.mpi-video-player__volume-slider');
+            const frameBackWrapper = el.querySelector('.mpi-video-player__frame-back-wrapper');
+            const frameForwardWrapper = el.querySelector('.mpi-video-player__frame-forward-wrapper');
+            const loopWrapper = el.querySelector('.mpi-video-player__loop-wrapper');
+            const fullscreenWrapper = el.querySelector('.mpi-video-player__fullscreen-wrapper');
             const currentTimeEl = el.querySelector('.mpi-video-player__current');
             const durationEl = el.querySelector('.mpi-video-player__duration');
+
+            const fps = props.fps || 24;
 
             // 1. Play/Pause Button
             const playBtn = MpiButton.mount(playPauseWrapper, {
                 icon: 'play',
                 iconActive: 'pause',
                 active: !video.paused,
-                size: 'md',
+                size: 'lg',
                 info: 'Play/Pause'
             });
 
@@ -124,8 +136,37 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
             const muteBtn = MpiButton.mount(volumeMuteWrapper, {
                 icon: initialMuted ? 'volumeOff' : (initialVolume < 0.5 ? 'volumeLow' : 'volumeHigh'),
-                size: 'md',
+                size: 'lg',
                 info: 'Mute/Unmute'
+            });
+
+            // 4. Frame-Back Button
+            const frameBackBtn = MpiButton.mount(frameBackWrapper, {
+                icon: 'frameBack',
+                size: 'lg',
+                info: 'Previous Frame'
+            });
+
+            // 5. Frame-Forward Button
+            const frameForwardBtn = MpiButton.mount(frameForwardWrapper, {
+                icon: 'frameForward',
+                size: 'lg',
+                info: 'Next Frame'
+            });
+
+            // 6. Loop Toggle Button
+            const loopBtn = MpiButton.mount(loopWrapper, {
+                icon: 'loop',
+                active: video.loop,
+                size: 'lg',
+                info: 'Loop'
+            });
+
+            // 7. Fullscreen Button
+            const fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
+                icon: 'fullscreen',
+                size: 'lg',
+                info: 'Fullscreen'
             });
 
             const volumeSlider = MpiProgressBar.mount(volumeSliderWrapper, {
@@ -203,6 +244,40 @@ export const MpiVideoPlayer = ComponentFactory.create({
             muteBtn.on('click', () => {
                 video.muted = !video.muted;
                 emit('change', { volume: video.volume, muted: video.muted });
+            });
+
+            // Frame-back button: seek backward by 1/fps
+            frameBackBtn.on('click', () => {
+                video.pause();
+                const frameStep = 1 / fps;
+                video.currentTime = Math.max(0, video.currentTime - frameStep);
+            });
+
+            // Frame-forward button: seek forward by 1/fps
+            frameForwardBtn.on('click', () => {
+                video.pause();
+                const frameStep = 1 / fps;
+                video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
+            });
+
+            // Loop toggle button
+            loopBtn.on('click', () => {
+                video.loop = !video.loop;
+                loopBtn.el.classList.toggle('is-active', video.loop);
+                emit('loop-change', { loop: video.loop });
+            });
+
+            // Fullscreen button
+            fullscreenBtn.on('click', async () => {
+                try {
+                    if (document.fullscreenElement) {
+                        await document.exitFullscreen();
+                    } else {
+                        await el.requestFullscreen();
+                    }
+                } catch (err) {
+                    console.error('Fullscreen request failed:', err);
+                }
             });
 
             // Video events for UI sync
@@ -291,6 +366,10 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 if (progressSlider && progressSlider.destroy) progressSlider.destroy();
                 if (muteBtn && muteBtn.destroy) muteBtn.destroy();
                 if (volumeSlider && volumeSlider.destroy) volumeSlider.destroy();
+                if (frameBackBtn && frameBackBtn.destroy) frameBackBtn.destroy();
+                if (frameForwardBtn && frameForwardBtn.destroy) frameForwardBtn.destroy();
+                if (loopBtn && loopBtn.destroy) loopBtn.destroy();
+                if (fullscreenBtn && fullscreenBtn.destroy) fullscreenBtn.destroy();
             }
             _unsubs.forEach(fn => fn());
             _unsubs.length = 0;
