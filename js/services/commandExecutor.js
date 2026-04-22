@@ -27,6 +27,7 @@ import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
 import { getModelSettings, getToolSettings } from '../data/projectModel.js';
 import { DEPS } from '../data/modelConstants/dependencies.js';
+import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
 
 /**
  * @typedef {Object} RunPayload
@@ -350,6 +351,10 @@ export function runCommand(payload) {
             if (node.class_type) nodeClassMap[id] = node.class_type;
         }
 
+        // Build weight map and create aggregator for this execution
+        const weightMap  = buildWeightMap(workflow);
+        const aggregator = createAggregator(weightMap);
+
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
         let _samplingStartFired = false;
@@ -359,21 +364,53 @@ export function runCommand(payload) {
                 return;
             }
 
+            if (msg.type === 'progress_state') {
+                aggregator.onProgressState(msg);
+                if (!_samplingStartFired) {
+                    // Only flip badge when a work node is actually running
+                    const nodeData = msg.data?.nodes || {};
+                    const workRunning = Object.entries(nodeData).some(([id, info]) => {
+                        if (info.state !== 'running') return false;
+                        const k = weightMap.nodes[id]?.kind;
+                        return k === 'sampler' || k === 'ultimateSDUpscale' || k === 'imageUpscale' || k === 'vhs';
+                    });
+                    if (workRunning) {
+                        _samplingStartFired = true;
+                        Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                    }
+                }
+                exec.onProgress?.(aggregator.percent());
+                return;
+            }
+
             if (msg.type === 'progress') {
-                const { value, max } = msg.data || {};
+                aggregator.onProgress(msg);
                 if (!_samplingStartFired) {
                     _samplingStartFired = true;
                     Events.emit('tool:sampling-start', { tool: 'groupHistory' });
                 }
-                if (max > 0) exec.onProgress?.(value / max);
+                exec.onProgress?.(aggregator.percent());
                 return;
             }
 
-            if (msg.type === 'executing' && msg.data?.node !== null) {
+            if (msg.type === 'executing') {
                 const nodeId = msg.data?.node;
-                if (LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
-                    Events.emit('tool:loading-model', { tool: 'groupHistory' });
+
+                if (nodeId !== null) {
+                    const nodeKind = weightMap.nodes[nodeId]?.kind;
+                    if (!_samplingStartFired && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
+                        Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                    } else if (!_samplingStartFired && (nodeKind === 'sampler' || nodeKind === 'ultimateSDUpscale' || nodeKind === 'imageUpscale' || nodeKind === 'vhs')) {
+                        _samplingStartFired = true;
+                        Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                    }
+                    aggregator.onExecuting(msg);
+                    return;
                 }
+
+                // node === null: execution complete signal
+                aggregator.onExecutionSuccess();
+                exec.onComplete?.(outputUrls);
                 return;
             }
 
@@ -389,12 +426,6 @@ export function runCommand(payload) {
                         );
                     });
                 }
-                return;
-            }
-
-            // execution complete signal
-            if (msg.type === 'executing' && msg.data?.node === null) {
-                exec.onComplete?.(outputUrls);
             }
         };
 
