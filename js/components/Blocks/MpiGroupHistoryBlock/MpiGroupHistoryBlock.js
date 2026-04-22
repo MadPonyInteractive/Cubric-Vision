@@ -10,6 +10,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiCanvasViewer } from '../../Compounds/MpiCanvasViewer/MpiCanvasViewer.js';
+import { MpiVideoViewer } from '../../Compounds/MpiVideoViewer/MpiVideoViewer.js';
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
@@ -150,29 +151,59 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 info: _universalToolIcons[key]?.info ?? label,
             }));
 
-        const historyTools = MpiHistoryTools.mount(el.querySelector('#left-slot'), {
-            tools: [
+        // Build tools array based on group type
+        const _toolsForGroup = isVideo
+            ? [{ mode: 'crop', icon: 'crop', info: 'Crop' }]
+            : [
                 { mode: 'crop', icon: 'crop', info: 'Crop' },
                 { mode: 'mask', icon: 'edit', info: 'Draw Mask' },
                 ..._universalTools,
-            ],
+            ];
+
+        const historyTools = MpiHistoryTools.mount(el.querySelector('#left-slot'), {
+            tools: _toolsForGroup,
         });
 
         const selectionBar = MpiSelectionBar.mount(bottomSlot, { count: 0 });
 
-        const canvasViewer = MpiCanvasViewer.mount(el.querySelector('#centre-slot'), {
-            initialImageUrl: resolveMediaUrl(_group.history[_currentIdx]?.filePath),
-            initialIdx: _currentIdx,
-            barContainer: bottomSlot,
-        });
+        // Mount viewer based on group type (video or canvas/image)
+        let viewer = null;
+        if (isVideo) {
+            viewer = MpiVideoViewer.mount(el.querySelector('#centre-slot'), {
+                fps: 24,
+                controls: true,
+            });
+        } else {
+            viewer = MpiCanvasViewer.mount(el.querySelector('#centre-slot'), {
+                initialImageUrl: resolveMediaUrl(_group.history[_currentIdx]?.filePath),
+                initialIdx: _currentIdx,
+                barContainer: bottomSlot,
+            });
+        }
+
+        // Alias for backwards compatibility and generic handling
+        const canvasViewer = viewer;
 
         const historyList = MpiHistoryList.mount(el.querySelector('#right-slot'), {
             history: _group.history,
             selectedIndex: _currentIdx,
         });
 
-        // Load initial entry to ensure _currentItem is set (required for crop, mask, etc.)
-        canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
+        // Load initial entry
+        if (isVideo) {
+            const currentItem = _group.history[_currentIdx];
+            if (currentItem?.filePath) {
+                const videoMeta = {
+                    fps: currentItem.fps || _group.fps || 24,
+                    duration: currentItem.duration,
+                    frameCount: currentItem.frameCount,
+                    hasAudio: currentItem.hasAudio,
+                };
+                canvasViewer.el.loadVideo(resolveMediaUrl(currentItem.filePath), videoMeta);
+            }
+        } else {
+            canvasViewer.el.loadEntry(_group.history[_currentIdx], _currentIdx);
+        }
 
         // ── Active generation registry ─────────────────────────────────────────
         // Track which registry entry IDs belong to this group instance.
@@ -185,9 +216,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             canvasViewer.el.setGenerating(true);
             if (entry.latestPreviewUrl) {
                 canvasViewer.el.setGenerating(false);
-                canvasViewer.el.isComparisonMode = false;
-                if (entry.latestPreviewUrl.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
-                canvasViewer.el.loadEntry({ filePath: entry.latestPreviewUrl }, _currentIdx).catch(() => {});
+                if (isVideo) {
+                    // For video, don't try isComparisonMode or setMaskHidden
+                    const videoMeta = {
+                        fps: _group.fps || 24,
+                    };
+                    canvasViewer.el.loadVideo(entry.latestPreviewUrl, videoMeta).catch(() => {});
+                } else {
+                    canvasViewer.el.isComparisonMode = false;
+                    if (entry.latestPreviewUrl.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
+                    canvasViewer.el.loadEntry({ filePath: entry.latestPreviewUrl }, _currentIdx).catch(() => {});
+                }
             }
         }
 
@@ -201,23 +240,43 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
             canvasViewer.el.setGenerating(false);
-            canvasViewer.el.isComparisonMode = false;
-            if (url?.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
-            canvasViewer.el.loadEntry({ filePath: url }, _currentIdx).catch(() => {});
+            if (isVideo) {
+                // For video, just load the preview URL
+                const videoMeta = { fps: _group.fps || 24 };
+                canvasViewer.el.loadVideo(url, videoMeta).catch(() => {});
+            } else {
+                canvasViewer.el.isComparisonMode = false;
+                if (url?.startsWith('blob:')) canvasViewer.el.setMaskHidden(true);
+                canvasViewer.el.loadEntry({ filePath: url }, _currentIdx).catch(() => {});
+            }
         }));
 
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
             canvasViewer.el.setGenerating(false);
-            canvasViewer.el.exitMode?.();
+            if (isVideo) {
+                canvasViewer.el.exitCropMode?.();
+            } else {
+                canvasViewer.el.exitMode?.();
+            }
             _canvasHasMask = false;
             _refreshOpOptions();
             _group = group;
             _currentIdx = _group.selectedIndex;
             historyList.el.appendEntry(item);
-            canvasViewer.el.loadEntry(item, _currentIdx);
-            canvasViewer.el.setMaskHidden(false);
+            if (isVideo) {
+                const videoMeta = {
+                    fps: item.fps || _group.fps || 24,
+                    duration: item.duration,
+                    frameCount: item.frameCount,
+                    hasAudio: item.hasAudio,
+                };
+                canvasViewer.el.loadVideo(resolveMediaUrl(item.filePath), videoMeta);
+            } else {
+                canvasViewer.el.loadEntry(item, _currentIdx);
+                canvasViewer.el.setMaskHidden(false);
+            }
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id }) => {
@@ -360,15 +419,39 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (_currentSelectionIndices.length > 0) {
                 historyList.el.exitSelectMode();
             }
-            canvasViewer.el.enterMode(mode);
+            if (isVideo) {
+                // For video, only crop mode is supported for now
+                if (mode === 'crop') {
+                    canvasViewer.el.enterCropMode();
+                }
+            } else {
+                canvasViewer.el.enterMode(mode);
+            }
         });
         historyTools.on('deactivate', ({ mode }) => {
-            canvasViewer.el.exitMode();
+            if (isVideo) {
+                // For video, exit crop mode
+                if (mode === 'crop') {
+                    canvasViewer.el.exitCropMode();
+                }
+            } else {
+                canvasViewer.el.exitMode();
+            }
         });
 
         historyList.on('entry-selected', ({ idx, item }) => {
-            canvasViewer.el.loadEntry(item, idx);
-            canvasViewer.el.setMaskHidden(false);
+            if (isVideo) {
+                const videoMeta = {
+                    fps: item.fps || _group.fps || 24,
+                    duration: item.duration,
+                    frameCount: item.frameCount,
+                    hasAudio: item.hasAudio,
+                };
+                canvasViewer.el.loadVideo(resolveMediaUrl(item.filePath), videoMeta);
+            } else {
+                canvasViewer.el.loadEntry(item, idx);
+                canvasViewer.el.setMaskHidden(false);
+            }
             _currentIdx = idx;
             _group = promoteHistoryEntry(_group, idx);
             _persistGroup();
@@ -438,50 +521,62 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         });
 
-        canvasViewer.on('mode-changed', ({ mode }) => {
-            // Map canonical 'automask' back to 'autoMaskImg' for historyTools
-            const toolMode = mode === 'automask' ? 'autoMaskImg' : mode;
-            historyTools.el.syncMode(toolMode);
+        // Only set up mode-changed for canvas viewer (video viewer doesn't emit this)
+        if (!isVideo) {
+            canvasViewer.on('mode-changed', ({ mode }) => {
+                // Map canonical 'automask' back to 'autoMaskImg' for historyTools
+                const toolMode = mode === 'automask' ? 'autoMaskImg' : mode;
+                historyTools.el.syncMode(toolMode);
 
-            // Don't change bottom bar state if in comparison mode — comparison
-            // is an overlay that shouldn't affect selection bar visibility
-            if (canvasViewer.el.canvas?.isComparisonMode) return;
+                // Don't change bottom bar state if in comparison mode — comparison
+                // is an overlay that shouldn't affect selection bar visibility
+                if (canvasViewer.el.canvas?.isComparisonMode) return;
 
-            if (mode === 'none') {
-                _setBottomBar('promptbox');
-            } else {
-                _setBottomBar('canvas-tool');
-            }
-        });
-
-        canvasViewer.on('crop-applied', ({ item }) => {
-            _group = appendToHistory(_group, item);
-            _currentIdx = _group.selectedIndex;
-            _persistGroup();
-            historyList.el.appendEntry(item);
-            canvasViewer.el.loadEntry(item, _currentIdx);
-            canvasViewer.el.setMaskHidden(false);
-        });
-
-        canvasViewer.on('entry-loaded', ({ idx, hasMask }) => {
-            _currentIdx = idx;
-            _canvasHasMask = hasMask;
-            PromptBoxService.component?.updateContext({
-                ..._baseCtx,
-                hasMask: _canvasHasMask,
-                filterNoInputOps: true,
+                if (mode === 'none') {
+                    _setBottomBar('promptbox');
+                } else {
+                    _setBottomBar('canvas-tool');
+                }
             });
-        });
+        }
 
-        canvasViewer.on('mask-ready', ({ hasMask }) => {
-            _canvasHasMask = true;
-            _refreshOpOptions();
-        });
+        // Only set up crop-applied for canvas viewer
+        if (!isVideo) {
+            canvasViewer.on('crop-applied', ({ item }) => {
+                _group = appendToHistory(_group, item);
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.appendEntry(item);
+                canvasViewer.el.loadEntry(item, _currentIdx);
+                canvasViewer.el.setMaskHidden(false);
+            });
+        }
 
-        canvasViewer.on('mask-clear', () => {
-            _canvasHasMask = false;
-            _refreshOpOptions();
-        });
+        // Only set up entry-loaded for canvas viewer (video viewer doesn't emit this)
+        if (!isVideo) {
+            canvasViewer.on('entry-loaded', ({ idx, hasMask }) => {
+                _currentIdx = idx;
+                _canvasHasMask = hasMask;
+                PromptBoxService.component?.updateContext({
+                    ..._baseCtx,
+                    hasMask: _canvasHasMask,
+                    filterNoInputOps: true,
+                });
+            });
+        }
+
+        // Only set up mask events for canvas viewer
+        if (!isVideo) {
+            canvasViewer.on('mask-ready', ({ hasMask }) => {
+                _canvasHasMask = true;
+                _refreshOpOptions();
+            });
+
+            canvasViewer.on('mask-clear', () => {
+                _canvasHasMask = false;
+                _refreshOpOptions();
+            });
+        }
 
         // ── Radial → operation sync ───────────────────────────────────────────
 
@@ -541,6 +636,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _dropOverlay.el.destroy?.();
             _dropOverlay.el.remove();
             canvasViewer.destroy?.();
+            canvasViewer.el.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();
             selectionBar.destroy?.();
