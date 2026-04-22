@@ -94,9 +94,21 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`id`** — UUID matching the entry in `project.json` history. This is the primary key.
 - **`filePath`** — Server-relative URL to the actual image/video file. NOT a simple filename — it's a `/project-file?path=...` query string.
 - **`type`** — `'image'` or `'video'`.
-- **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`).
+- **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`).
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
+
+**Video-specific sidecar fields** (present when `type === 'video'`):
+- **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` at upload/crop time. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
+- **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` on upload.
+- **`duration`** — Duration in seconds (number). Written by `services/ffprobeVideo.js` on upload.
+- **`frameCount`** — Total frame count (number). Written by `services/ffprobeVideo.js` on upload.
+- **`hasAudio`** — Whether the video has an audio stream (boolean). Written by `services/ffprobeVideo.js` on upload.
+- **`sourceItemId`** — UUID of the source item, present on crop/upscale/interpolate outputs. Traces lineage back to original.
+- **`sourceGroupId`** — Group ID of the source item, present on crop outputs.
+- **`videoMeta`** — Object containing raw ffprobe output fields (optional; used for future enrichment).
+
+> **Note:** `fps`, `duration`, `frameCount`, `hasAudio` are probed once at import/upload time and written into the sidecar. They are available in memory as `item.fps`, `item.duration`, etc. after hydration.
 
 **Source of truth:** This file is THE source of truth for everything about the item. Nothing in `project.json` duplicates this data.
 

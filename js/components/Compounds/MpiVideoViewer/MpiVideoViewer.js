@@ -5,11 +5,11 @@
  * - MpiVideoPlayer (Compound) for rendering + controls
  * - An overlay canvas (absolute-positioned) for crop-box drawing
  * - A reserved timeline slot (empty, for deferred trim tool)
- * - An optional MpiToolActionBar (mounted in barContainer when crop active)
+ * - Optional MpiToolActionBars (mounted in barContainer) for crop, upscale, interpolate
  *
  * @param {number} [fps=24] - Frame rate for video playback (passed to MpiVideoPlayer)
  * @param {boolean} [controls=true] - Show video player controls
- * @param {HTMLElement} [barContainer] - DOM node where the crop action bar is mounted
+ * @param {HTMLElement} [barContainer] - DOM node where tool action bars are mounted
  *
  * Instance API (on el):
  *   loadVideo(url, meta = {})         — load video URL; meta may include { fps, duration, frameCount, hasAudio }
@@ -18,6 +18,10 @@
  *   getCropRect()                     — returns current normalized crop rect { x, y, w, h }
  *   setCropRatio(ratio)               — set aspect ratio lock (null = free)
  *   captureSnapshot()                 — returns { blob, dataUrl } of current frame, respecting crop if active
+ *   enterUpscaleMode()                — show upscale action bar
+ *   exitUpscaleMode()                 — hide upscale action bar
+ *   enterInterpolateMode()            — show interpolate action bar
+ *   exitInterpolateMode()             — hide interpolate action bar
  *   destroy()                         — clean up player, cropTool, observers, listeners
  *
  * Emits:
@@ -26,6 +30,11 @@
  *   'crop-save-snapshot'              — user clicked "Save Snapshot" in crop action bar
  *   'crop-save-video'                 — user clicked "Save Cropped Video" in crop action bar
  *   'crop-cancel'                     — user clicked "Cancel" in crop action bar
+ *   'upscale-run'                     — user clicked "Upscale" in upscale action bar
+ *   'upscale-cancel'                  — user clicked "Cancel" in upscale action bar
+ *   'interpolate-run'                 — user clicked "Interpolate" in interpolate action bar
+ *   'interpolate-cancel'              — user clicked "Cancel" in interpolate action bar
+ *  User Comment: CRITICAL: This component does not follow rules of component hirerarchy, it imports compounds being a compound itself (BAD IMPLEMENTATION)
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -65,6 +74,8 @@ export const MpiVideoViewer = ComponentFactory.create({
         let _cropRatio = SOCIAL_RATIOS[0].ratio;
         let _cropBar = null;
         let _ratioSel = null;
+        let _upscaleBar = null;
+        let _interpolateBar = null;
 
         // ── Player mount ─────────────────────────────────────────────────
 
@@ -155,6 +166,38 @@ export const MpiVideoViewer = ComponentFactory.create({
                 if (key === 'snapshot') emit('crop-save-snapshot', {});
                 if (key === 'apply')    emit('crop-save-video', {});
                 if (key === 'cancel')   emit('crop-cancel', {});
+            });
+
+            // ── Upscale action bar ────────────────────────────────────────
+            const upscaleBarSlot = document.createElement('div');
+            upscaleBarSlot.className = 'mpi-video-viewer__bar-slot';
+            barContainer.appendChild(upscaleBarSlot);
+
+            _upscaleBar = MpiToolActionBar.mount(upscaleBarSlot, {
+                actions: [
+                    { key: 'cancel', icon: 'close',  label: 'Cancel',  variant: 'ghost',   info: 'Cancel upscale' },
+                    { key: 'run',    icon: 'rocket',  label: 'Upscale', variant: 'primary', info: 'Run video upscale' },
+                ],
+            });
+            _upscaleBar.on('action', ({ key }) => {
+                if (key === 'run')    emit('upscale-run', {});
+                if (key === 'cancel') emit('upscale-cancel', {});
+            });
+
+            // ── Interpolate action bar ────────────────────────────────────
+            const interpolateBarSlot = document.createElement('div');
+            interpolateBarSlot.className = 'mpi-video-viewer__bar-slot';
+            barContainer.appendChild(interpolateBarSlot);
+
+            _interpolateBar = MpiToolActionBar.mount(interpolateBarSlot, {
+                actions: [
+                    { key: 'cancel', icon: 'close', label: 'Cancel',      variant: 'ghost',   info: 'Cancel interpolate' },
+                    { key: 'run',    icon: 'film',  label: 'Interpolate',  variant: 'primary', info: 'Run frame interpolation' },
+                ],
+            });
+            _interpolateBar.on('action', ({ key }) => {
+                if (key === 'run')    emit('interpolate-run', {});
+                if (key === 'cancel') emit('interpolate-cancel', {});
             });
         }
 
@@ -256,11 +299,44 @@ export const MpiVideoViewer = ComponentFactory.create({
             });
         };
 
+        el.hideAllToolBars = () => {
+            el.setAttribute('data-mode', 'idle');
+            if (_cropBar) _cropBar.el.hide();
+            if (_upscaleBar) _upscaleBar.el.hide();
+            if (_interpolateBar) _interpolateBar.el.hide();
+            _isInCropMode = false;
+            _cropTool?.disable();
+        };
+
+        el.enterUpscaleMode = () => {
+            el.setAttribute('data-mode', 'upscale');
+            if (_upscaleBar) _upscaleBar.el.show();
+        };
+
+        el.exitUpscaleMode = () => {
+            el.setAttribute('data-mode', 'idle');
+            if (_upscaleBar) _upscaleBar.el.hide();
+        };
+
+        el.enterInterpolateMode = () => {
+            el.setAttribute('data-mode', 'interpolate');
+            if (_interpolateBar) _interpolateBar.el.show();
+        };
+
+        el.exitInterpolateMode = () => {
+            el.setAttribute('data-mode', 'idle');
+            if (_interpolateBar) _interpolateBar.el.hide();
+        };
+
         el.destroy = () => {
             if (_cropBar && _cropBar.destroy) _cropBar.destroy();
             _cropBar = null;
             if (_ratioSel && _ratioSel.destroy) _ratioSel.destroy();
             _ratioSel = null;
+            if (_upscaleBar && _upscaleBar.destroy) _upscaleBar.destroy();
+            _upscaleBar = null;
+            if (_interpolateBar && _interpolateBar.destroy) _interpolateBar.destroy();
+            _interpolateBar = null;
 
             // Clean up player
             if (_playerInstance && _playerInstance.destroy) {

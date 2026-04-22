@@ -20,6 +20,7 @@
  *   'crop-applied'  { item }          — crop completed; item is the new HistoryItem
  *   'mask-ready'    { hasMask }       — mask painted or cleared
  *   'entry-loaded'  { idx, hasMask }  — image loaded for index
+ *  User Comment: CRITICAL: This component does not follow rules of component hirerarchy, it imports compounds being a compound itself (BAD IMPLEMENTATION)
  */
 
 import { ComponentFactory } from '../../factory.js';

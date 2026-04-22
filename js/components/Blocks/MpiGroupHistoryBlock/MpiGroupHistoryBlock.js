@@ -137,19 +137,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         function _setBottomBar(barState) {
             // Video groups have no generation ops yet — never show PromptBox
             if (isVideo && barState === 'promptbox') {
+                // User Comment: This is Absolutely ridiculous. 
+                // Video groups will have generation soon. It's one of the following implementations. Why did this happen here? 
+                // This was a lazy fix. Needs to be addressed. 
                 PromptBoxService.hide();
                 selectionBar.el.style.display = 'none';
+                canvasViewer?.el?.hideAllToolBars?.();
                 return;
             }
+            // User Comment: Shouldn't events be controlling this state instead of an if-else? 
+            // Isn't that what we had before the recent plan? 
             if (barState === 'promptbox') {
                 PromptBoxService.show();
                 selectionBar.el.style.display = 'none';
             } else if (barState === 'selection') {
                 PromptBoxService.hide();
                 selectionBar.el.style.display = '';
+                if (isVideo) canvasViewer?.el?.hideAllToolBars?.();
             } else if (barState === 'canvas-tool') {
                 PromptBoxService.hide();
                 selectionBar.el.style.display = 'none';
+                if (isVideo) canvasViewer?.el?.hideAllToolBars?.();
             }
         }
 
@@ -173,7 +181,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // Build tools array based on group type
         const _toolsForGroup = isVideo
-            ? [{ mode: 'crop', icon: 'crop', info: 'Crop' }]
+            ? [
+                { mode: 'crop',        icon: 'crop',   info: 'Crop' },
+                { mode: 'videoUpscale', icon: _universalToolIcons.videoUpscale.icon, info: _universalToolIcons.videoUpscale.info },
+                { mode: 'interpolate',  icon: _universalToolIcons.interpolate.icon,  info: _universalToolIcons.interpolate.info  },
+            ]
             : [
                 { mode: 'crop', icon: 'crop', info: 'Crop' },
                 { mode: 'mask', icon: 'edit', info: 'Draw Mask' },
@@ -438,6 +450,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             );
         }
 
+        function _runVideoTool(operation) {
+            const currentItem = _group.history[_currentIdx];
+            if (!currentItem?.filePath) { _showToast('No source video', 'error'); return; }
+            const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'video', source: 'history' }];
+            const videoModel = { id: null, mediaType: 'video' };
+            canvasViewer.el.setGenerating(true);
+            _activeExec = startGeneration(
+                { operation, model: videoModel, positive: '', negative: '', mediaItems },
+                { onCancel: () => { _activeExec = null; }, onError: () => { canvasViewer.el.setGenerating(false); } },
+                { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
+            );
+        }
+
         // ── Wire sub-component events ─────────────────────────────────────────
 
         historyTools.on('activate', ({ mode }) => {
@@ -446,10 +471,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 historyList.el.exitSelectMode();
             }
             if (isVideo) {
-                // For video, only crop mode is supported for now
                 if (mode === 'crop') {
-                    canvasViewer.el.enterCropMode();
                     _setBottomBar('canvas-tool');
+                    canvasViewer.el.enterCropMode();
+                } else if (mode === 'videoUpscale') {
+                    _setBottomBar('canvas-tool');
+                    canvasViewer.el.enterUpscaleMode();
+                } else if (mode === 'interpolate') {
+                    _setBottomBar('canvas-tool');
+                    canvasViewer.el.enterInterpolateMode();
                 }
             } else {
                 canvasViewer.el.enterMode(mode);
@@ -457,9 +487,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         });
         historyTools.on('deactivate', ({ mode }) => {
             if (isVideo) {
-                // For video, exit crop mode
                 if (mode === 'crop') {
                     canvasViewer.el.exitCropMode();
+                    _setBottomBar('promptbox');
+                } else if (mode === 'videoUpscale') {
+                    canvasViewer.el.exitUpscaleMode();
+                    _setBottomBar('promptbox');
+                } else if (mode === 'interpolate') {
+                    canvasViewer.el.exitInterpolateMode();
                     _setBottomBar('promptbox');
                 }
             } else {
@@ -467,10 +502,36 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         });
 
-        // ── Video crop action-bar events ──────────────────────────────────────
+        // ── Video tool action-bar events ──────────────────────────────────────
         if (isVideo) {
             canvasViewer.on('crop-cancel', () => {
                 canvasViewer.el.exitCropMode();
+                _setBottomBar('promptbox');
+                historyTools.el.syncMode('none');
+            });
+
+            canvasViewer.on('upscale-run', () => {
+                canvasViewer.el.exitUpscaleMode();
+                _setBottomBar('promptbox');
+                historyTools.el.syncMode('none');
+                _runVideoTool('videoUpscale');
+            });
+
+            canvasViewer.on('upscale-cancel', () => {
+                canvasViewer.el.exitUpscaleMode();
+                _setBottomBar('promptbox');
+                historyTools.el.syncMode('none');
+            });
+
+            canvasViewer.on('interpolate-run', () => {
+                canvasViewer.el.exitInterpolateMode();
+                _setBottomBar('promptbox');
+                historyTools.el.syncMode('none');
+                _runVideoTool('interpolate');
+            });
+
+            canvasViewer.on('interpolate-cancel', () => {
+                canvasViewer.el.exitInterpolateMode();
                 _setBottomBar('promptbox');
                 historyTools.el.syncMode('none');
             });
@@ -579,13 +640,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         historyList.on('selection-changed', ({ indices }) => {
             _currentSelectionIndices = indices;
-            canvasViewer.el.exitMode();
+            if (indices.length === 0) {
+                _setBottomBar('promptbox');
+                return;
+            }
+            if (isVideo) {
+                historyTools.el.syncMode('none');
+            } else {
+                canvasViewer.el.exitMode();
+            }
             selectionBar.el.setCount(indices.length);
             _setBottomBar('selection');
         });
 
         historyList.on('selection-exited', () => {
-            canvasViewer.el.clearCompare();
+            if (!isVideo) canvasViewer.el.clearCompare();
             _setBottomBar('promptbox');
         });
 
@@ -605,7 +674,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         selectionBar.on('cancel', () => {
             historyList.el.exitSelectMode();
-            canvasViewer.el.clearCompare();
+            if (!isVideo) canvasViewer.el.clearCompare();
             _setBottomBar('promptbox');
         });
 

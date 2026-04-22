@@ -19,7 +19,7 @@ Goal: make the history page a proper video workspace — playback, crop, video u
 3. **Video Upscale** + **Interpolate** — minimal: just Run button in action bar. Params baked in workflow JSON for now.
 4. **Meta schema enrichment** — probe fps/duration/frameCount/hasAudio via ffprobe at save time; write to `.meta/<uuid>.json`.
 5. **Hierarchy fix** — demote `MpiVideoPlayer` Block → Compound (required because history is a Block, and Blocks consume Compounds). Inline volume controls.
-6. **New `MpiVideoViewer` Compound** — sibling of `MpiCanvasViewer`, orchestrates player + crop overlay + future timeline.
+6. **New \****`MpiVideoViewer`**\*\* Compound** — sibling of `MpiCanvasViewer`, orchestrates player + crop overlay + future timeline.
 7. **Crop logic extraction** — shared `js/utils/cropTool.js` consumed by both `MpiCanvasViewer` and `MpiVideoViewer`.
 8. **ffmpeg bundling** — ship ffmpeg binary with Electron resources.
 
@@ -38,7 +38,7 @@ Goal: make the history page a proper video workspace — playback, crop, video u
 ## Architecture Decisions
 
 | Decision | Rationale |
-|---|---|
+| --- | --- |
 | Native `<video>` + transparent canvas overlay (hybrid) | GPU decode scales to large clips; crop/future-mask draw on overlay without re-architecting. |
 | `MpiVideoPlayer` → Compound (not Block) | Blocks can't import Blocks; history Block must consume it. Verified: imports only `MpiButton` + `MpiProgressBar` Primitives after inlining volume. |
 | Inline volume (slider + mute btn) into `MpiVideoPlayer` | Removes `MpiVolumeControl` Compound import (Compound-on-Compound violation). `MpiVolumeControl` kept intact in codebase for future use. |
@@ -91,7 +91,7 @@ Goal: make the history page a proper video workspace — playback, crop, video u
 ## Toolbar Routing Matrix (video group)
 
 | Active tool | Toolbar | PromptBox | Viewer overlay |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | none | Op action bar; PromptBox shown if current op has `requiresVideo >= 1` | conditional | none |
 | Crop | Action bar: Save Snapshot, Save Cropped Video | hidden | crop canvas on player |
 | Video Upscale | Action bar: Run | hidden | none |
@@ -105,7 +105,7 @@ Goal: make the history page a proper video workspace — playback, crop, video u
 1. **Tier-fix pass**: move `MpiVideoPlayer` to Compounds, inline volume, update `pages/components.js`, `preloadStyles.js`, `types.js`. Verify dev gallery page renders.
 2. **Player enhancements**: add loop btn, fullscreen btn, frame-step (reads fps from passed-in meta, fallback 24). Big control size.
 3. **Crop util extract**: move crop logic to `js/utils/cropTool.js`, refactor `MpiCanvasViewer` to consume. Verify image crop still works.
-4. **`MpiVideoViewer` Compound**: build shell with player + overlay canvas + reserved timeline div. Wire `loadVideo()`, crop mode API.
+4. **`MpiVideoViewer`**** Compound**: build shell with player + overlay canvas + reserved timeline div. Wire `loadVideo()`, crop mode API.
 5. **History block branching**: `_group.type === 'video'` → mount `MpiVideoViewer`. Verify click-video-in-gallery now plays.
 6. **Meta schema + ffprobe**: ffmpeg-static + ffprobe-static install. `projectService` probes on video save. Update `.meta/` writer.
 7. **Backend crop route**: `POST /api/video/crop` with ffmpeg crop + re-encode. Project service integration to register new itemGroup. Emit `generation:complete`.
@@ -147,7 +147,7 @@ Goal: make the history page a proper video workspace — playback, crop, video u
 
 - **ffmpeg-static packaging in Electron**: code-signing on macOS may require extra config. First pass Windows-only test; macOS/Linux during release.
 - **MpiVolumeControl Compound import**: if inlining proves ugly, fallback is to demote `MpiVolumeControl` itself to a Primitive-only compound (it likely already imports only Primitives internally). Verify at step 1.
-- **`MpiHistoryTools` may hardcode image modes**: if deeply coupled to image crop/mask, step 8 may balloon. Mitigation: add `mode` prop for video-variant modes and branch template.
+- **`MpiHistoryTools`**** may hardcode image modes**: if deeply coupled to image crop/mask, step 8 may balloon. Mitigation: add `mode` prop for video-variant modes and branch template.
 - **Snapshot→gallery integration path**: requires project service API for "create itemGroup from in-memory blob". If missing, new service method needed. Verify in step 8.
 
 ---

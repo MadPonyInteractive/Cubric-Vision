@@ -279,12 +279,26 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
 
 ### MpiVideoPlayer
-EMITS:   `play`       `{ time: number }`
-         `pause`      `{ time: number }`
-         `ended`      `{ time: number }`
-         `timeupdate` `{ time: number, duration: number }`
-         `change`     `{ volume: number, muted: boolean }`
+EMITS:   `play`        `{ time: number }`
+         `pause`       `{ time: number }`
+         `ended`       `{ time: number }`
+         `timeupdate`  `{ time: number, duration: number }`
+         `change`      `{ volume: number, muted: boolean }`
+         `loop-change` `{ loop: boolean }`
 LISTENS: (none)
+NOTE:    Demoted from Block → Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Volume control inlined; `MpiVolumeControl` import removed. Loop + fullscreen + frame-step buttons added.
+
+### MpiVideoViewer (Compound — js/components/Compounds/MpiVideoViewer/)
+EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer
+         `crop-change`        `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
+         `crop-save-snapshot` `{}` — user clicked "Save Snapshot" in crop bar
+         `crop-save-video`    `{}` — user clicked "Save Cropped Video" in crop bar
+         `crop-cancel`        `{}` — user clicked "Cancel" in crop bar
+         `upscale-run`        `{}` — user clicked "Upscale" in upscale bar
+         `upscale-cancel`     `{}` — user clicked "Cancel" in upscale bar
+         `interpolate-run`    `{}` — user clicked "Interpolate" in interpolate bar
+         `interpolate-cancel` `{}` — user clicked "Cancel" in interpolate bar
+LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
@@ -364,11 +378,11 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 ## Workspaces (cross-cutting event usage)
 
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
-Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer, MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
+Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer (image) or MpiVideoViewer (video), MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `generation:started` `{ id, scope, groupId }` — seeds `_myGenIds` if scope+groupId match; shows generating state on canvas
          `generation:preview` `{ id, url }` — loads preview into canvasViewer if id in `_myGenIds`
-         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas, clears generating state
+         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state
          `generation:error` `{ id }` — clears generating state
          `generation:cancelled` `{ id }` — clears generating state
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
@@ -381,3 +395,4 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
          MpiMediaDropOverlay onDrop: uploads file + calls PromptBoxService.injectMedia() only (no history card created)
+         **Video groups:** PromptBox hidden entirely. Tools: crop, videoUpscale, interpolate. MpiVideoViewer mounted instead of MpiCanvasViewer. Tool activate/deactivate flows through `_setBottomBar()` coordinator which calls `hideAllToolBars()` before showing new bar. Snapshot → `uploadMediaFile` → `addGroup` (gallery). Crop video → `POST /api/video/crop` → new video history entry. Upscale/interpolate → `_runVideoTool(operation)` → `commandExecutor` → universal workflow.
