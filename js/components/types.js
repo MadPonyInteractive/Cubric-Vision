@@ -191,6 +191,25 @@
  */
 
 /**
+ * @typedef {Object} MpiVideoViewerProps (Compound — js/components/Compounds/MpiVideoViewer)
+ * @property {number} [fps=24] - Frame rate for video playback (passed to MpiVideoPlayer)
+ * @property {boolean} [controls=true] - Show video player controls
+ *
+ * Instance methods (on instance.el):
+ *   loadVideo(url, meta = {})         — load video URL; meta may include { fps, duration, frameCount, hasAudio }
+ *   enterCropMode(initialRect = null) — enable crop overlay with optional initial normalized rect
+ *   exitCropMode()                    — disable crop overlay
+ *   getCropRect()                     — returns current normalized crop rect { x, y, w, h }
+ *   setCropRatio(ratio)               — set aspect ratio lock (null = free)
+ *   captureSnapshot()                 — returns { blob, dataUrl } of current frame, respecting active crop
+ *   destroy()                         — clean up player, cropTool, observers, listeners
+ *
+ * Emits:
+ *   'play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change' — forwarded from MpiVideoPlayer
+ *   'crop-change' { rect: { x, y, w, h } } — crop rect changed
+ */
+
+/**
  * @typedef {Object} MpiDragListProps (Primitive — js/components/Primitives/MpiDragList)
  * @property {MpiDragListItem[]} items - Array of items to be displayed and reordered
  * @property {string|number} [maxHeight='250px'] - Max list height before scrolling
