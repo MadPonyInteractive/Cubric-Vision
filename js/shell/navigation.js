@@ -164,30 +164,24 @@ export function updateTitlebarProject() {
  * @param {Object} params - Route params (e.g. { groupId } for group-history)
  */
 async function _loadView(page, params = {}) {
-    // ── Breadcrumb ──────────────────────────────────────────────────────────
-    if (page === PAGE_GALLERY) {
-        _projectNameInst.el.setGalleryLabel('');
-        _projectNameInst.el.setGroupLabel('');
-    } else if (page === PAGE_GROUP_HISTORY) {
-        const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
-        _projectNameInst.el.setGalleryLabel('Gallery');
-        _projectNameInst.el.setGroupLabel(group?.name || 'Group');
-    }
-
     // ── Radial menu ─────────────────────────────────────────────────────────
     _syncRadial(page);
 
     // ── Page content ────────────────────────────────────────────────────────
     Overlays.reset();
-    // Tear down previously mounted block before clearing DOM
+
+    // Tear down previously mounted block before clearing DOM.
+    // Swallow destroy errors so a broken teardown can't block the next mount.
     if (_currentBlock) {
-        _currentBlock.destroy?.();
+        try { _currentBlock.destroy?.(); }
+        catch (err) { console.error(`[navigation] destroy() threw for previous block:`, err); }
         _currentBlock = null;
     }
     _toolContainer.innerHTML = '';
     _toolContainer.style.position = 'relative';
 
     if (params.view === 'components') {
+        _updateBreadcrumb(page, params);
         return _loadComponentsGallery();
     }
 
@@ -196,8 +190,22 @@ async function _loadView(page, params = {}) {
         if (mod?.mount) {
             _currentBlock = mod.mount(_toolContainer, params);
         }
+        // Only update breadcrumb after successful mount — prevents "cleared
+        // breadcrumb + stale view" state when mount throws.
+        _updateBreadcrumb(page, params);
     } catch (err) {
         console.error(`[navigation] Failed to load view "${page}":`, err);
+    }
+}
+
+function _updateBreadcrumb(page, params) {
+    if (page === PAGE_GALLERY) {
+        _projectNameInst.el.setGalleryLabel('');
+        _projectNameInst.el.setGroupLabel('');
+    } else if (page === PAGE_GROUP_HISTORY) {
+        const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
+        _projectNameInst.el.setGalleryLabel('Gallery');
+        _projectNameInst.el.setGroupLabel(group?.name || 'Group');
     }
 }
 

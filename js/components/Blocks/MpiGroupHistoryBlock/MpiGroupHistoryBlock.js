@@ -331,12 +331,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _myGenIds = new Set();
 
+        const _setGenerating = (flag) => {
+            if (typeof canvasViewer.el.setGenerating === 'function') {
+                canvasViewer.el.setGenerating(flag);
+            }
+        };
+
         for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
             if (entry.status !== 'running') continue;
             _myGenIds.add(entry.id);
-            canvasViewer.el.setGenerating(true);
+            _setGenerating(true);
             if (entry.latestPreviewUrl) {
-                canvasViewer.el.setGenerating(false);
+                _setGenerating(false);
                 strategy.onRehydratePreview(viewer, entry, _currentIdx, { group: _group });
             }
         }
@@ -344,20 +350,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation:started', ({ id, scope, groupId }) => {
             if (scope === 'groupHistory' && groupId === _group.id) {
                 _myGenIds.add(id);
-                canvasViewer.el.setGenerating(true);
+                _setGenerating(true);
             }
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
-            canvasViewer.el.setGenerating(false);
+            _setGenerating(false);
             strategy.onGenerationPreview(viewer, { url, currentIdx: _currentIdx, group: _group });
         }));
 
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            canvasViewer.el.setGenerating(false);
+            _setGenerating(false);
             _canvasHasMask = false;
             _refreshOpOptions();
             _group = group;
@@ -369,13 +375,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation:error', ({ id }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            canvasViewer.el.setGenerating(false);
+            _setGenerating(false);
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            canvasViewer.el.setGenerating(false);
+            _setGenerating(false);
         }));
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
@@ -509,10 +515,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!currentItem?.filePath) { _showToast('No source video', 'error'); return; }
             const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'video', source: 'history' }];
             const videoModel = { id: null, mediaType: 'video' };
-            canvasViewer.el.setGenerating(true);
+            _setGenerating(true);
             _activeExec = startGeneration(
                 { operation, model: videoModel, positive: '', negative: '', mediaItems },
-                { onCancel: () => { _activeExec = null; }, onError: () => { canvasViewer.el.setGenerating(false); } },
+                { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
         }
