@@ -56,7 +56,7 @@
 }
 
 .mpi-video-player__slider-wrapper .mpi-progress__track {
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: var(--border) !important;
 }
 
 .mpi-video-player__slider-wrapper .mpi-progress__track-fill {
@@ -172,7 +172,7 @@
 }
 
 .mpi-video-player__volume-slider .mpi-progress__track {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--border);
 }
 
 .mpi-video-player__volume-slider .mpi-progress__track-fill {

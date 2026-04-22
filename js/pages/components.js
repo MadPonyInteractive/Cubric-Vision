@@ -445,7 +445,7 @@ function mountAll() {
         setupDz(baseProps);
     });
 
-    // ── MpiVideoPlayer (Block) ────────────────────────────────────────────────
+    // ── MpiVideoPlayer (Compound) ────────────────────────────────────────────────
     mount('preview-videoplayer-default', () => {
         const vp = MpiVideoPlayer.mount(slot('preview-videoplayer-default'), {
             src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',

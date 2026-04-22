@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { formatTime } from '../../../utils/string.js';
+import { renderIcon } from '../../../utils/icons.js';
 
 /**
  * MpiVideoPlayer — Compound: Video + Custom Controls Overlay.
@@ -75,7 +76,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 
                 <div class="mpi-video-player__overlay">
                     <div class="mpi-video-player__big-play">
-                        <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        ${renderIcon('play', 'lg')}
                     </div>
                 </div>
             </div>
@@ -85,6 +86,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
     setup: (el, props, emit) => {
         const video = el.querySelector('.mpi-video-player__video');
         const hasControls = props.controls !== false;
+        const _unsubs = [];
 
         let isSeeking = false;
 
@@ -178,11 +180,13 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
 
             // Slider 'input' (dragging) to pause time syncing
-            progressSlider.el.querySelector('input').addEventListener('input', () => {
-                isSeeking = true;
-            });
-            progressSlider.el.querySelector('input').addEventListener('change', () => {
-                isSeeking = false;
+            const handleSeekStart = () => { isSeeking = true; };
+            const handleSeekEnd = () => { isSeeking = false; };
+            progressSlider.el.querySelector('input').addEventListener('input', handleSeekStart);
+            progressSlider.el.querySelector('input').addEventListener('change', handleSeekEnd);
+            _unsubs.push(() => {
+                progressSlider.el.querySelector('input').removeEventListener('input', handleSeekStart);
+                progressSlider.el.querySelector('input').removeEventListener('change', handleSeekEnd);
             });
 
             // Volume slider change
@@ -202,11 +206,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
 
             // Video events for UI sync
-            video.addEventListener('play', updatePlayState);
-            video.addEventListener('pause', updatePlayState);
-            video.addEventListener('timeupdate', updateTime);
-            video.addEventListener('loadedmetadata', updateTime);
-            video.addEventListener('volumechange', () => {
+            const handleVolumeChange = () => {
                 // Update mute button icon
                 const isMuted = video.muted;
                 const vol = video.volume;
@@ -219,20 +219,42 @@ export const MpiVideoPlayer = ComponentFactory.create({
                     sliderInput.value = Math.round(video.volume * 100);
                     sliderInput.dispatchEvent(new Event('input'));
                 }
+            };
+
+            video.addEventListener('play', updatePlayState);
+            video.addEventListener('pause', updatePlayState);
+            video.addEventListener('timeupdate', updateTime);
+            video.addEventListener('loadedmetadata', updateTime);
+            video.addEventListener('volumechange', handleVolumeChange);
+
+            _unsubs.push(() => {
+                video.removeEventListener('play', updatePlayState);
+                video.removeEventListener('pause', updatePlayState);
+                video.removeEventListener('timeupdate', updateTime);
+                video.removeEventListener('loadedmetadata', updateTime);
+                video.removeEventListener('volumechange', handleVolumeChange);
             });
         }
 
         // --- Global Interactions ---
 
         // Toggle play on video click
-        el.addEventListener('click', (e) => {
+        const handleVideoClick = (e) => {
             // Don't toggle if clicking controls
             if (e.target.closest('.mpi-video-player__controls')) return;
             video.paused ? video.play() : video.pause();
-        });
+        };
 
-        video.addEventListener('ended', () => {
+        const handleEnded = () => {
             emit('ended', { time: video.currentTime });
+        };
+
+        el.addEventListener('click', handleVideoClick);
+        video.addEventListener('ended', handleEnded);
+
+        _unsubs.push(() => {
+            el.removeEventListener('click', handleVideoClick);
+            video.removeEventListener('ended', handleEnded);
         });
 
         // --- External API ---
@@ -261,5 +283,17 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 muteBtn.el.setAttribute('data-icon', newIcon);
             };
         }
+
+        // --- Cleanup & Destroy ---
+        el.destroy = () => {
+            if (hasControls) {
+                if (playBtn && playBtn.destroy) playBtn.destroy();
+                if (progressSlider && progressSlider.destroy) progressSlider.destroy();
+                if (muteBtn && muteBtn.destroy) muteBtn.destroy();
+                if (volumeSlider && volumeSlider.destroy) volumeSlider.destroy();
+            }
+            _unsubs.forEach(fn => fn());
+            _unsubs.length = 0;
+        };
     }
 });
