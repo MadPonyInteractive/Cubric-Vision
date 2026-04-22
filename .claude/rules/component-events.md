@@ -255,7 +255,7 @@ EMITS:   `play`        `{ time: number }`
          `change`      `{ volume: number, muted: boolean }`
          `loop-change` `{ loop: boolean }`
 LISTENS: (none)
-NOTE:    Promoted to Organism (lives at `js/components/Organisms/MpiVideoPlayer/`). Volume control inlined; `MpiVolumeControl` import removed. Loop + fullscreen + frame-step buttons added.
+NOTE:    Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Imports only Primitives (`MpiButton`, `MpiProgressBar`). Volume control inlined. Loop + fullscreen + frame-step buttons included.
 
 ### MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/)
 EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer

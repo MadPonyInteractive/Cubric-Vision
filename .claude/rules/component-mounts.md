@@ -136,7 +136,7 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ---
 
-## MpiVideoPlayer.js (internal mounts, when `controls !== false`)
+## MpiVideoPlayer.js (Compound — js/components/Compounds/MpiVideoPlayer — internal mounts, when `controls !== false`)
 
 - `MpiButton` (play/pause)   props: `{ icon:'play', iconActive:'pause', active, size:'md', info }`   slot: `.mpi-video-player__play-pause-wrapper`
 - `MpiProgressBar` (seek slider)   props: `{ min:0, max:1000, step:1, value:0, info, variant:'primary' }`   slot: `.mpi-video-player__slider-wrapper`

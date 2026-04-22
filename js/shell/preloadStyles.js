@@ -54,9 +54,9 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css',
   'js/components/Compounds/MpiHistoryList/MpiHistoryList.css',
   'js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css',
+  'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
 
   // Organisms
-  'js/components/Organisms/MpiVideoPlayer/MpiVideoPlayer.css',
   'js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css',
   'js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css',
 

@@ -2,7 +2,7 @@
  * MpiVideoViewer — Organism: video display with crop-box overlay.
  *
  * Mirrors MpiCanvasViewer role but for video. Internally composes:
- * - MpiVideoPlayer for rendering + controls
+ * - MpiVideoPlayer (Compound) for rendering + controls
  * - An overlay canvas (absolute-positioned) for crop-box drawing
  * - A reserved timeline slot (empty, for deferred trim tool)
  *
@@ -31,9 +31,11 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiVideoPlayer } from '../MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiVideoPlayer } from '../../Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
+import { captureFrameBlob } from '../../../utils/Video.js';
+import { qs, on } from '../../../utils/dom.js';
 
 export const MpiVideoViewer = ComponentFactory.create({
     name: 'MpiVideoViewer',
@@ -65,7 +67,7 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         // ── Player mount ─────────────────────────────────────────────────
 
-        const playerMount = el.querySelector('[data-mount="player"]');
+        const playerMount = qs('[data-mount="player"]', el);
         _playerInstance = MpiVideoPlayer.mount(playerMount, { fps, controls });
 
         const playerEventNames = ['play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change'];
@@ -73,12 +75,12 @@ export const MpiVideoViewer = ComponentFactory.create({
             _playerInstance.on(eventName, (payload) => emit(eventName, payload));
         });
 
-        _videoElement = _playerInstance.el.querySelector('.mpi-video-player__video');
+        _videoElement = qs('.mpi-video-player__video', _playerInstance.el);
 
         // ── Overlay canvas setup ─────────────────────────────────────────
 
-        const overlayCanvas = el.querySelector('.mpi-video-viewer__overlay');
-        const stageEl = el.querySelector('.mpi-video-viewer__stage');
+        const overlayCanvas = qs('.mpi-video-viewer__overlay', el);
+        const stageEl = qs('.mpi-video-viewer__stage', el);
 
         _cropTool = createCropTool({
             overlayCanvas,
@@ -96,11 +98,9 @@ export const MpiVideoViewer = ComponentFactory.create({
         _resizeObserver.observe(stageEl);
         _unsubs.push(() => _resizeObserver.disconnect());
 
-        const handleLoadedMetadata = () => {
+        _unsubs.push(on(_videoElement, 'loadedmetadata', () => {
             if (_cropTool && _isInCropMode) _cropTool.redraw?.();
-        };
-        _videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
-        _unsubs.push(() => _videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata));
+        }));
 
         // ── Instance API ─────────────────────────────────────────────────
 
@@ -139,42 +139,14 @@ export const MpiVideoViewer = ComponentFactory.create({
         };
 
         el.captureSnapshot = async () => {
-            if (!_videoElement || _videoElement.readyState < 2) {
-                throw new Error('Video not ready for capture');
-            }
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const vW = _videoElement.videoWidth;
-            const vH = _videoElement.videoHeight;
-
+            let rect = { x: 0, y: 0, width: 1, height: 1 };
             if (_isInCropMode) {
                 const cropRect = el.getCropRect();
                 if (cropRect) {
-                    const sx = cropRect.x * vW;
-                    const sy = cropRect.y * vH;
-                    const sw = cropRect.w * vW;
-                    const sh = cropRect.h * vH;
-                    canvas.width = sw;
-                    canvas.height = sh;
-                    ctx.drawImage(_videoElement, sx, sy, sw, sh, 0, 0, sw, sh);
-                } else {
-                    canvas.width = vW;
-                    canvas.height = vH;
-                    ctx.drawImage(_videoElement, 0, 0);
+                    rect = { x: cropRect.x, y: cropRect.y, width: cropRect.w, height: cropRect.h };
                 }
-            } else {
-                canvas.width = vW;
-                canvas.height = vH;
-                ctx.drawImage(_videoElement, 0, 0);
             }
-
-            return new Promise((resolve) => {
-                canvas.toBlob((blob) => {
-                    const dataUrl = canvas.toDataURL('image/png', 1.0);
-                    resolve({ blob, dataUrl });
-                });
-            });
+            return captureFrameBlob(_videoElement, rect);
         };
 
         el.enterUpscaleMode    = () => el.setAttribute('data-mode', 'upscale');

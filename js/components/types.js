@@ -173,7 +173,7 @@
  */
 
 /**
- * @typedef {Object} MpiVideoPlayerProps (Organism — js/components/Organisms/MpiVideoPlayer)
+ * @typedef {Object} MpiVideoPlayerProps (Compound — js/components/Compounds/MpiVideoPlayer)
  * @property {string} [src] - Video source URL
  * @property {string} [poster] - Poster image URL
  * @property {boolean} [autoplay=false] - Auto-play on mount

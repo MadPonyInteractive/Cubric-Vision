@@ -53,7 +53,7 @@ import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorD
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiToolActionBar } from '../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
-import { MpiVideoPlayer } from '../components/Organisms/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 
 // Organisms
 

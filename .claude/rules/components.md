@@ -29,7 +29,7 @@
 You MUST follow Atomic Design principles. **NEVER "import up".**
 * **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything).
 * **Tier 2 (Compounds):** Cards, forms, toolbars. (Can only import Primitives).
-* **Tier 3 (Organisms):** Rich widgets that compose multiple Compounds. (Can import Primitives + Compounds). Examples: `MpiCanvasViewer`, `MpiVideoViewer`, `MpiVideoPlayer`.
+* **Tier 3 (Organisms):** Rich widgets that compose multiple Compounds. (Can import Primitives + Compounds). Examples: `MpiCanvasViewer`, `MpiVideoViewer`.
 * **Tier 4 (Blocks):** Sidebars, grids, workspace coordinators. (Can import Primitives, Compounds, and Organisms).
 
 > **Note on complexity:** Blocks like `MpiPromptBox` are substantially more complex than Primitives and most Compounds. They own multiple mount points, conditional sub-component rendering, and dynamic operation switching. Approach debugging and modifications to Blocks carefully — trace all mount targets before making changes.

@@ -30,7 +30,7 @@ import { renderIcon } from '../../../utils/icons.js';
  */
 export const MpiVideoPlayer = ComponentFactory.create({
     name: 'MpiVideoPlayer',
-    css: ['js/components/Organisms/MpiVideoPlayer/MpiVideoPlayer.css'],
+    css: ['js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css'],
 
     template: (props) => {
         const src = props.src || '';
