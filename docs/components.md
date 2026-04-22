@@ -17,11 +17,12 @@ export const MyComponent = ComponentFactory.create({
 });
 ```
 
-## 3-Tier Hierarchy
+## 4-Tier Hierarchy
 
 **Primitives** (Tier 1): Buttons, inputs, icons. Import nothing.
 **Compounds** (Tier 2): Cards, forms, modals. Import Primitives only.
-**Blocks** (Tier 3): Sidebars, grids. Import Primitives + Compounds.
+**Organisms** (Tier 3): Rich widgets composing multiple Compounds. Import Primitives + Compounds. Examples: `MpiCanvasViewer`, `MpiVideoViewer`, `MpiVideoPlayer`.
+**Blocks** (Tier 4): Sidebars, grids, workspace coordinators. Import Primitives + Compounds + Organisms.
 
 **Never import up.** A Compound cannot import another Compound's JS — only its CSS if needed.
 
