@@ -1,0 +1,44 @@
+/* MpiVideoViewer — Video viewer with crop overlay */
+
+.mpi-video-viewer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg-default);
+}
+
+.mpi-video-viewer__stage {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-tertiary);
+}
+
+.mpi-video-viewer__player {
+    width: 100%;
+    height: 100%;
+}
+
+.mpi-video-viewer__overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* When in crop mode, overlay is interactive */
+.mpi-video-viewer[data-mode="crop"] .mpi-video-viewer__overlay {
+    pointer-events: auto;
+}
+
+.mpi-video-viewer__timeline {
+    min-height: 0;
+    flex-shrink: 0;
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-default);
+}

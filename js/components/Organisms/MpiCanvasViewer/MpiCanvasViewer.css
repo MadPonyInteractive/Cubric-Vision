@@ -1,0 +1,52 @@
+/* ── MpiCanvasViewer — canvas display + tool bars ─────────────────────────── */
+
+.mpi-canvas-viewer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-1);
+}
+
+/* Canvas container fills entire viewer */
+.mpi-canvas-viewer__wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* ── Generation spinner — centred over the canvas ────────────────────────── */
+
+.mpi-canvas-viewer__spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 5;
+}
+
+.mpi-canvas-viewer__spinner--visible {
+    opacity: 1;
+    pointer-events: none;
+}
+
+/* ── Crop/mask action bar mount point ──────────────────────────────────── */
+/* MpiToolActionBar uses position:fixed so this needs no layout of its own */
+.mpi-canvas-viewer__crop-bar {
+}
+
+/* ── Bar slot for tool action bars ──────────────────────────────────────── */
+.mpi-canvas-viewer__bar-slot {
+}
+
+/* ── Auto-mask left slot — model dropdown + mode radio side by side ─────── */
+
+.mpi-canvas-viewer__auto-mask-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}

@@ -173,7 +173,7 @@
  */
 
 /**
- * @typedef {Object} MpiVideoPlayerProps (Compound — js/components/Compounds/MpiVideoPlayer)
+ * @typedef {Object} MpiVideoPlayerProps (Organism — js/components/Organisms/MpiVideoPlayer)
  * @property {string} [src] - Video source URL
  * @property {string} [poster] - Poster image URL
  * @property {boolean} [autoplay=false] - Auto-play on mount
@@ -191,7 +191,7 @@
  */
 
 /**
- * @typedef {Object} MpiVideoViewerProps (Compound — js/components/Compounds/MpiVideoViewer)
+ * @typedef {Object} MpiVideoViewerProps (Organism — js/components/Organisms/MpiVideoViewer)
  * @property {number} [fps=24] - Frame rate for video playback (passed to MpiVideoPlayer)
  * @property {boolean} [controls=true] - Show video player controls
  *
@@ -715,7 +715,7 @@
  */
 
 /**
- * @typedef {Object} MpiCanvasViewerProps (Compound — js/components/Compounds/MpiCanvasViewer)
+ * @typedef {Object} MpiCanvasViewerProps (Organism — js/components/Organisms/MpiCanvasViewer)
  * @property {string} [initialImageUrl=''] - URL of the first image to load
  * @property {number} [initialIdx=0]       - History index of the initial image
  *

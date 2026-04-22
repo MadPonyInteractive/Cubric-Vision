@@ -7,7 +7,7 @@
 
 - **All components MUST use `ComponentFactory.create()`** — never build a component by hand.
 - **NEVER modify `js/components/factory.js`** — it is locked. Fix your component, not the factory.
-- **3-Tier hierarchy (never import up):** Primitives → Compounds → Blocks. Primitives import nothing. Compounds import Primitives only. Blocks import both.
+- **4-Tier hierarchy (never import up):** Primitives → Compounds → Organisms → Blocks. Primitives import nothing. Compounds import Primitives only. Organisms import Primitives + Compounds. Blocks import all tiers.
 - **Every new component checklist:** (1) register `.css` in `js/shell/preloadStyles.js`, (2) document props in `js/components/types.js`, (3) ask user about gallery addition.
 - **Use `js/utils/dom.js`** shorthands — never raw `document.querySelector`.
 - **Blocking UI (modals/overlays):** call `Overlays.request(...)` to show, `Overlays.release(el)` to hide. Portal to `document.body`. Self-close on `ui:close-all-popups`.
@@ -25,11 +25,12 @@
 
 ---
 
-## The 3-Tier Hierarchy
+## The 4-Tier Hierarchy
 You MUST follow Atomic Design principles. **NEVER "import up".**
 * **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything).
-* **Tier 2 (Compounds):** Cards, forms, modals. (Can only import Primitives).
-* **Tier 3 (Blocks):** Sidebars, grids. (Can import Primitives & Compounds).
+* **Tier 2 (Compounds):** Cards, forms, toolbars. (Can only import Primitives).
+* **Tier 3 (Organisms):** Rich widgets that compose multiple Compounds. (Can import Primitives + Compounds). Examples: `MpiCanvasViewer`, `MpiVideoViewer`, `MpiVideoPlayer`.
+* **Tier 4 (Blocks):** Sidebars, grids, workspace coordinators. (Can import Primitives, Compounds, and Organisms).
 
 > **Note on complexity:** Blocks like `MpiPromptBox` are substantially more complex than Primitives and most Compounds. They own multiple mount points, conditional sub-component rendering, and dynamic operation switching. Approach debugging and modifications to Blocks carefully — trace all mount targets before making changes.
 
@@ -61,7 +62,7 @@ import { ComponentFactory } from '../../factory.js';
 
 export const MyComponent = ComponentFactory.create({
     name: 'MyComponent',
-    css: ['js/components/[Tier]/MyComponent/MyComponent.css'], // Use BEM styling (.mpi-my-comp)
+    css: ['js/components/[Primitives|Compounds|Organisms|Blocks]/MyComponent/MyComponent.css'], // Use BEM styling (.mpi-my-comp)
     template: (props) => `<div class="mpi-my-comp">${props.text}</div>`,
     setup: (el, props, emit) => {
         // Logic and event listeners go here

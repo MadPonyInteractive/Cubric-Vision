@@ -30,9 +30,12 @@
 
 **Video groups** (`_group.type === 'video'`):
 - `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — video tools: crop (mode='crop'), videoUpscale (mode='videoUpscale'), interpolate (mode='interpolate')   slot: `#left-slot`
-- `MpiVideoViewer`   props: `{ barContainer: bottomSlot }` — `bottomSlot` is a DOM node in `#centre-slot`; `MpiVideoViewer` mounts all 3 action bars there   slot: `#centre-slot`
+- `MpiVideoViewer`   props: `{ fps, controls }` — no barContainer; viewer owns display + crop overlay only   slot: `#centre-slot`
+- Crop `MpiToolActionBar`   props: `{ leftSlot: ratioSel, actions: [snapshot, cancel, apply] }`   slot: `#bottom-slot` — mounted directly by Block
+- Upscale `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `#bottom-slot` — mounted directly by Block
+- Interpolate `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `#bottom-slot` — mounted directly by Block
 - `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
-- PromptBox is **hidden** for video groups (no model-based operations exposed); `PromptBoxService.hide()` called on mount
+- PromptBox is **hidden** for video groups (no model-based operations); `strategy.supportsPromptBox()` returns false
 
 **Both group types:**
 - `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; `onDrop` uploads file and calls `PromptBoxService.injectMedia()` only (no card created); window drag-counter pattern same as GalleryBlock
@@ -41,19 +44,14 @@
 
 ---
 
-## MpiVideoViewer (Compound — js/components/Compounds/MpiVideoViewer/MpiVideoViewer.js)
+## MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js)
 
 Wraps `MpiVideoPlayer` + crop overlay canvas + reserved timeline slot. Mounted by `MpiGroupHistoryBlock` for video groups.
+Tool action bars (crop, upscale, interpolate) are owned by the Block and mounted into `#bottom-slot` — NOT by the viewer.
 
 - `MpiVideoPlayer`   props: `{ fps, controls }`   slot: `[data-mount="player"]` inside viewer
-- `MpiRatioSelector`   props: `{ modelType: 'social', value: SOCIAL_RATIOS[0].label }`   slot: leftSlot of cropBar — only when `barContainer` prop provided
-- Crop `MpiToolActionBar`   props: `{ leftSlot: ratioSel, actions: [snapshot, cancel, apply] }`   slot: `cropBarSlot` div appended to `barContainer`
-- Upscale `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `upscaleBarSlot` div appended to `barContainer`
-- Interpolate `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `interpolateBarSlot` div appended to `barContainer`
 
-All three action bars are hidden by default. Only one bar is visible at a time. `hideAllToolBars()` resets all bars and disables the crop overlay.
-
-**Instance API (on `el`):** `loadVideo(url, meta)`, `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `hideAllToolBars()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
+**Instance API (on `el`):** `loadVideo(url, meta)`, `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
 
 ---
 

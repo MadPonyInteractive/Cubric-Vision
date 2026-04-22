@@ -48,7 +48,7 @@
 If you are asked to perform a task in any of the following categories, you MUST use the `Read` tool to ingest the respective rule file first.
 
 ### Components & UI
-If you are building, moving, styling, or debugging a visual component (Primitives, Compounds, Blocks):
+If you are building, moving, styling, or debugging a visual component (Primitives, Compounds, Organisms, Blocks):
 **->** **MUST READ:** `.claude/rules/components.md`
 
 ### General Logic, DOM, CSS & Utilities

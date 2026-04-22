@@ -28,7 +28,6 @@ export const PRELOAD_COMPONENT_STYLES = [
   // Compounds
   'js/components/Compounds/MpiSelectionBar/MpiSelectionBar.css',
   'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
-  'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
   'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
   'js/components/Compounds/MpiBatchSelector/MpiBatchSelector.css',
   'js/components/Compounds/MpiToolbar/MpiToolbar.css',
@@ -54,9 +53,12 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiToolActionBar/MpiToolActionBar.css',
   'js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css',
   'js/components/Compounds/MpiHistoryList/MpiHistoryList.css',
-  'js/components/Compounds/MpiCanvasViewer/MpiCanvasViewer.css',
-  'js/components/Compounds/MpiVideoViewer/MpiVideoViewer.css',
   'js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css',
+
+  // Organisms
+  'js/components/Organisms/MpiVideoPlayer/MpiVideoPlayer.css',
+  'js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css',
+  'js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css',
 
   // Blocks
   'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',

@@ -1,0 +1,202 @@
+/**
+ * MpiVideoPlayer.css — Aesthetic Glass-morphic Video Player.
+ */
+
+.mpi-video-player {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-base);
+    border-radius: 12px;
+    overflow: hidden;
+    user-select: none;
+    box-shadow: 0 20px 50px var(--bg-recessed);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.mpi-video-player__video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+/* Glass-morphic Controls Overlay */
+.mpi-video-player__controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: linear-gradient(0deg, var(--bg-recessed) 0%, var(--bg-recessed) 60%, transparent 100%);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+
+.mpi-video-player:hover .mpi-video-player__controls,
+.mpi-video-player[data-playing="false"] .mpi-video-player__controls {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Top Progress Row */
+.mpi-video-player__progress {
+    margin-bottom: 6px;
+    position: relative;
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress {
+    height: 18px; /* Slightly taller for easier scrubbing */
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress__track {
+    background: var(--border) !important;
+}
+
+.mpi-video-player__slider-wrapper .mpi-progress__track-fill {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Bottom Controls Row */
+.mpi-video-player__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mpi-video-player__left,
+.mpi-video-player__right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Time Display */
+.mpi-video-player__time {
+    font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-2);
+    letter-spacing: 0.02em;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.mpi-video-player__current {
+    color: var(--text-1);
+    min-width: 60px;
+}
+
+.mpi-video-player__duration {
+    min-width: 60px;
+    color: var(--text-2);
+}
+
+.mpi-video-player__separator {
+    opacity: 0.3;
+}
+
+/* Big Center Play Button Overlay */
+.mpi-video-player__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.mpi-video-player__big-play {
+    width: 80px;
+    height: 80px;
+    background: var(--bg-recessed);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-1);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 40px var(--bg-recessed);
+}
+
+.mpi-video-player[data-playing="false"] .mpi-video-player__big-play {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.mpi-video-player:hover[data-playing="false"] .mpi-video-player__big-play {
+    background: var(--bg-recessed);
+    border-color: var(--border);
+    transform: scale(1.1);
+}
+
+/* Hide controls if mouse inactive (optional future feat) */
+
+/* Accessibility & State */
+.mpi-video-player:focus-within {
+    box-shadow: 0 0 0 2px var(--accent-glow), 0 20px 50px var(--bg-recessed);
+}
+
+/* Inlined Volume Control */
+.mpi-video-player__volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mpi-video-player__volume-mute {
+    flex-shrink: 0;
+}
+
+.mpi-video-player__volume-slider {
+    flex: 1;
+    min-width: 80px;
+    max-width: 140px;
+}
+
+.mpi-video-player__volume-slider .mpi-progress {
+    height: 16px;
+}
+
+.mpi-video-player__volume-slider .mpi-progress__track {
+    background: var(--border);
+}
+
+.mpi-video-player__volume-slider .mpi-progress__track-fill {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* Loop Button */
+.mpi-video-player__loop-wrapper {
+    flex-shrink: 0;
+}
+
+.mpi-video-player__loop-wrapper .mpi-button.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Frame Step Buttons */
+.mpi-video-player__frame-back-wrapper,
+.mpi-video-player__frame-forward-wrapper {
+    flex-shrink: 0;
+}
+
+/* Fullscreen Button */
+.mpi-video-player__fullscreen-wrapper {
+    flex-shrink: 0;
+}

@@ -245,6 +245,34 @@ LISTENS: (none)
 
 ---
 
+## Organisms
+
+### MpiVideoPlayer
+EMITS:   `play`        `{ time: number }`
+         `pause`       `{ time: number }`
+         `ended`       `{ time: number }`
+         `timeupdate`  `{ time: number, duration: number }`
+         `change`      `{ volume: number, muted: boolean }`
+         `loop-change` `{ loop: boolean }`
+LISTENS: (none)
+NOTE:    Promoted to Organism (lives at `js/components/Organisms/MpiVideoPlayer/`). Volume control inlined; `MpiVolumeControl` import removed. Loop + fullscreen + frame-step buttons added.
+
+### MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/)
+EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer
+         `crop-change`  `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
+LISTENS: (none — tool bars are owned by MpiGroupHistoryBlock, not viewer)
+NOTE:    Viewer owns display + crop overlay state only. Bar action events (`crop-save-snapshot`,
+         `crop-save-video`, `upscale-run`, etc.) now emitted by Block-owned MpiToolActionBars.
+
+### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
+EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
+         `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
+         `mask-ready`    `{ hasMask }` — mask painted or cleared
+         `entry-loaded`  `{ idx, hasMask }` — image loaded for index
+LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
+
+---
+
 ## Blocks
 
 ### MpiGalleryGrid
@@ -277,28 +305,6 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
          `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
-
-### MpiVideoPlayer
-EMITS:   `play`        `{ time: number }`
-         `pause`       `{ time: number }`
-         `ended`       `{ time: number }`
-         `timeupdate`  `{ time: number, duration: number }`
-         `change`      `{ volume: number, muted: boolean }`
-         `loop-change` `{ loop: boolean }`
-LISTENS: (none)
-NOTE:    Demoted from Block → Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Volume control inlined; `MpiVolumeControl` import removed. Loop + fullscreen + frame-step buttons added.
-
-### MpiVideoViewer (Compound — js/components/Compounds/MpiVideoViewer/)
-EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer
-         `crop-change`        `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
-         `crop-save-snapshot` `{}` — user clicked "Save Snapshot" in crop bar
-         `crop-save-video`    `{}` — user clicked "Save Cropped Video" in crop bar
-         `crop-cancel`        `{}` — user clicked "Cancel" in crop bar
-         `upscale-run`        `{}` — user clicked "Upscale" in upscale bar
-         `upscale-cancel`     `{}` — user clicked "Cancel" in upscale bar
-         `interpolate-run`    `{}` — user clicked "Interpolate" in interpolate bar
-         `interpolate-cancel` `{}` — user clicked "Cancel" in interpolate bar
-LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
