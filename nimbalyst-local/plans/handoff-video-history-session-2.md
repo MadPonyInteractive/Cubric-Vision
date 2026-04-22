@@ -22,6 +22,15 @@ All commits on `feature/video-history-support`. No merges to master yet.
 
 ---
 
+## Post-run verified (session 1 end)
+
+Tested in app:
+- ✅ Video plays
+- ✅ Back nav works (no crash)
+- ✅ Breadcrumb shows Gallery
+- ✅ Selection bar hidden in video mode
+- ⚠️ **Crop overlay + drag feel off** — handles don't follow mouse precisely. Root cause: stage has 16:9 aspect-ratio CSS but videos may be portrait → content rect math correct BUT stage dead-zone makes coord mapping feel wrong at boundaries. Defer to session 2 when stage sizing + video-mode toolbar layout overhauled.
+
 ## Known issues / deviations from plan
 
 1. **cropTool extraction scope**: plan called for MpiCanvasViewer refactor; actual crop logic lives in MpiCanvas Primitive. Options for session 2:
