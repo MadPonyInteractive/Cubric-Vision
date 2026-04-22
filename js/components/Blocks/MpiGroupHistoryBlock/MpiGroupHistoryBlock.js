@@ -166,6 +166,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const selectionBar = MpiSelectionBar.mount(bottomSlot, { count: 0 });
 
+        // Hide selection bar for video groups (selection/compare is image-only)
+        if (isVideo) {
+            selectionBar.el.style.display = 'none';
+        }
+
         // Mount viewer based on group type (video or canvas/image)
         let viewer = null;
         if (isVideo) {
