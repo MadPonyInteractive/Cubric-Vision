@@ -289,6 +289,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
     /**
      * Redraw the crop overlay.
      * Clears canvas and draws crop box, handles, grid, and scrim.
+     * Scrim dims everything outside the crop rect, but stays within content bounds.
      */
     function _redraw() {
         if (!_isEnabled) return;
@@ -297,7 +298,10 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         const bounds = _getContentBounds();
         const { x, y, w, h } = _normRect;
 
-        // Convert to pixel space
+        // Guard against unloaded video/image
+        if (bounds.w <= 0 || bounds.h <= 0) return;
+
+        // Convert normalized crop rect to pixel space
         const px = bounds.x + x * bounds.w;
         const py = bounds.y + y * bounds.h;
         const pw = w * bounds.w;
@@ -307,16 +311,24 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         ctx.save();
 
-        // 1. Dark scrim outside crop rect
+        // 1. Dark scrim outside crop rect (within content bounds only)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-        // Top
-        ctx.fillRect(bounds.x, 0, bounds.w, py - bounds.y);
-        // Bottom
-        ctx.fillRect(bounds.x, py + ph, bounds.w, overlayCanvas.height - (py + ph));
-        // Left of crop
-        ctx.fillRect(bounds.x, py, px - bounds.x, ph);
-        // Right of crop
-        ctx.fillRect(px + pw, py, bounds.x + bounds.w - (px + pw), ph);
+        // Top (from content top to crop top)
+        if (py > bounds.y) {
+            ctx.fillRect(bounds.x, bounds.y, bounds.w, py - bounds.y);
+        }
+        // Bottom (from crop bottom to content bottom)
+        if (py + ph < bounds.y + bounds.h) {
+            ctx.fillRect(bounds.x, py + ph, bounds.w, bounds.y + bounds.h - (py + ph));
+        }
+        // Left of crop (within content height bounds)
+        if (px > bounds.x) {
+            ctx.fillRect(bounds.x, py, px - bounds.x, ph);
+        }
+        // Right of crop (within content height bounds)
+        if (px + pw < bounds.x + bounds.w) {
+            ctx.fillRect(px + pw, py, bounds.x + bounds.w - (px + pw), ph);
+        }
 
         // 2. Crop border (white outline)
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
