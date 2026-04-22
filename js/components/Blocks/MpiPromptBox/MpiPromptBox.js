@@ -109,6 +109,30 @@ export const MpiPromptBox = ComponentFactory.create({
         function _emitMediaChange() {
             el.imageCount = _mediaItems.filter(m => m.mediaType === 'image').length;
             el.videoCount = _mediaItems.filter(m => m.mediaType === 'video').length;
+            _context = { ..._context, imageCount: el.imageCount, videoCount: el.videoCount };
+
+            const hasMedia = el.imageCount > 0 || el.videoCount > 0;
+            const curCmd = commands[activeOperation];
+            const curIsTextOnly = curCmd && (curCmd.requiresImages ?? 0) === 0 && (curCmd.requiresVideo ?? 0) === 0;
+
+            if (hasMedia && curIsTextOnly) {
+                const fallback = _pickFallbackOp();
+                if (fallback) {
+                    el.setOperation(fallback);
+                } else {
+                    _refreshOpDropdown();
+                }
+            } else if (!hasMedia && curCmd && !curIsTextOnly) {
+                const textOp = _pickTextOnlyOp();
+                if (textOp) {
+                    el.setOperation(textOp);
+                } else {
+                    _refreshOpDropdown();
+                }
+            } else {
+                _refreshOpDropdown();
+            }
+
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, items: [..._mediaItems] });
         }
 
@@ -435,16 +459,35 @@ export const MpiPromptBox = ComponentFactory.create({
         downloadManagerBtn.on('click', () => Events.emit('models:open', {}));
         modelSlot.appendChild(downloadManagerBtn.el);
 
+        function _pickTextOnlyOp() {
+            if (!model) return null;
+            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const textOnly = cmds.filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0);
+            return textOnly[0]?.key ?? null;
+        }
+
+        function _pickFallbackOp() {
+            if (!model) return null;
+            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const candidates = cmds.filter(c => (c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
+            const ready = candidates.find(c => c.available);
+            return (ready ?? candidates[0])?.key ?? null;
+        }
+
         function _refreshOpDropdown() {
             if (!model) return;
             if (!opDropdownSlot) return;
 
+            const hasMedia = el.imageCount > 0 || el.videoCount > 0;
             const availableCmds = getAvailableCommands(model.mediaType, model, _context);
             const filteredCmds = _context.filterNoInputOps
                 ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 : availableCmds;
-            const availableOps = filteredCmds
-                .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
+            const availableOps = filteredCmds.map(cmd => {
+                const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
+                const disabled = !cmd.available || (hasMedia && isTextOnly);
+                return { value: cmd.key, label: cmd.label, disabled };
+            });
 
             opDropdownSlot.innerHTML = '';
             if (availableOps.length === 0) return;

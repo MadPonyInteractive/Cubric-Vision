@@ -59,8 +59,13 @@ const OP_ICONS = {
 function _buildGalleryItems(ctx = {}) {
     const model = getModelById(state.s_selectedModelId);
     if (!model) return [];
+    const hasMedia = (ctx.imageCount ?? 0) > 0 || (ctx.videoCount ?? 0) > 0;
     return getAvailableCommands(model.mediaType, model, ctx)
-        .filter(cmd => cmd.available)
+        .filter(cmd => {
+            if (!cmd.available) return false;
+            const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
+            return !(hasMedia && isTextOnly);
+        })
         .map(cmd => ({ action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate' }));
 }
 
