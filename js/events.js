@@ -1,3 +1,5 @@
+import { clientLogger } from './services/clientLogger.js';
+
 /**
  * js/events.js — Centralized Event Bus for MpiAiSuite.
  *
@@ -56,7 +58,7 @@ class EventBus {
      */
     emit(event, data) {
         this._listeners.get(event)?.forEach(h => {
-            try { h(data); } catch (e) { console.error(`[Events] Error in "${event}" handler:`, e); }
+            try { h(data); } catch (e) { clientLogger.error(`[Events] Error in "${event}" handler:`, e); }
         });
     }
 
