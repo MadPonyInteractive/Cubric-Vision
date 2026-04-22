@@ -338,8 +338,14 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
         // --- External API ---
         el._setSrc = (url) => {
+            console.log('[MpiVideoPlayer] _setSrc called with:', url);
+            if (!url) {
+                console.warn('[MpiVideoPlayer] _setSrc called with empty URL');
+                return;
+            }
             video.src = url;
             video.load();
+            console.log('[MpiVideoPlayer] Video element src set and load() called');
         };
 
         el._play = () => video.play();

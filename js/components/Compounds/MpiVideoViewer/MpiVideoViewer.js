@@ -118,8 +118,19 @@ export const MpiVideoViewer = ComponentFactory.create({
         // ── Instance API ─────────────────────────────────────────────────
 
         el.loadVideo = (url, meta = {}) => {
-            if (_playerInstance && _playerInstance.el._setSrc) {
+            if (!url) {
+                console.warn('[MpiVideoViewer] loadVideo called with empty URL');
+                return;
+            }
+            if (!_playerInstance || !_playerInstance.el) {
+                console.warn('[MpiVideoViewer] Player not mounted when loadVideo called');
+                return;
+            }
+            if (_playerInstance.el._setSrc) {
+                console.log('[MpiVideoViewer] Loading video URL:', url);
                 _playerInstance.el._setSrc(url);
+            } else {
+                console.warn('[MpiVideoViewer] Player missing _setSrc method');
             }
             // Store meta for future use (fps, duration, frameCount, hasAudio)
             // Currently just pass fps to player (already done via props)
