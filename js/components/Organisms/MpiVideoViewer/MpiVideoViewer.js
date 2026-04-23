@@ -114,7 +114,7 @@ export const MpiVideoViewer = ComponentFactory.create({
         });
         _resizeObserver.observe(stageEl);
         _resizeObserver.observe(_videoElement);
-        _unsubs.push(() => _resizeObserver.disconnect());
+        _unsubs.push(() => _resizeObserver?.disconnect());
 
         _unsubs.push(on(_videoElement, 'loadedmetadata', () => {
             if (_cropTool && _isInCropMode) _syncOverlayToVideo();
@@ -170,13 +170,18 @@ export const MpiVideoViewer = ComponentFactory.create({
         el.enterInterpolateMode = () => el.setAttribute('data-mode', 'interpolate');
         el.exitInterpolateMode  = () => el.setAttribute('data-mode', 'idle');
 
+        let _destroyed = false;
         el.destroy = () => {
+            if (_destroyed) return;
+            _destroyed = true;
             _unsubs.forEach(fn => fn?.());
+            _unsubs.length = 0;
+            _resizeObserver?.disconnect();
+            _resizeObserver = null;
             _playerInstance?.destroy?.();
             _playerInstance = null;
             _cropTool?.destroy?.();
             _cropTool = null;
-            _resizeObserver = null;
             _videoElement = null;
         };
     },
