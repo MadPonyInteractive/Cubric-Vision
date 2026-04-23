@@ -13,7 +13,7 @@ import { qs } from '../../../utils/dom.js';
  * Props:
  * @param {string[]} values              - Ordered list of selectable value strings
  * @param {string}   [value]             - Initially selected value (defaults to values[0])
- * @param {string}   [icon='layers']     - Icon shown on the trigger button
+ * @param {string}   [icon]               - Icon shown on the trigger button (optional, none by default)
  * @param {string}   [popupTitle]        - Badge label shown at top of popup (optional)
  * @param {string}   [info]              - Tooltip on the trigger button
  *
@@ -32,7 +32,7 @@ export const MpiNumberSelector = ComponentFactory.create({
     template: (props) => {
         const values   = props.values || [];
         const current  = props.value ?? values[0] ?? '';
-        const icon     = props.icon || 'layers';
+        const icon     = props.icon ?? null;
         const isActive = props.showPopup || false;
 
         const itemsHtml = values.map(v => `
@@ -57,8 +57,7 @@ export const MpiNumberSelector = ComponentFactory.create({
         `;
 
         const triggerHtml = MpiButton.template({
-            icon,
-            label: String(current),
+            ...(icon ? { icon, label: String(current) } : { text: String(current), variant: 'secondary' }),
             size: 'md',
             active: isActive,
             toggleable: true,
@@ -77,11 +76,11 @@ export const MpiNumberSelector = ComponentFactory.create({
     setup: (el, props, emit) => {
         const values = props.values || [];
         props.value  = props.value ?? values[0] ?? '';
-        const icon   = props.icon || 'layers';
 
         const trigger = qs('.mpi-number-sel__trigger', el);
         const popupEl = qs('.mpi-popup', el);
         const grid    = qs('.mpi-number-sel__grid', el);
+        const icon    = props.icon ?? null;
 
         // Portal to body — escapes ancestor overflow/transform stacking contexts.
         // MpiPopup.template() renders raw HTML only; no setup() runs, so we portal manually.
@@ -155,8 +154,7 @@ export const MpiNumberSelector = ComponentFactory.create({
             `).join('');
 
             trigger.innerHTML = MpiButton.template({
-                icon,
-                label: String(current),
+                ...(icon ? { icon, label: String(current) } : { text: String(current), variant: 'secondary' }),
                 size: 'md',
                 active: props.showPopup,
                 toggleable: true,

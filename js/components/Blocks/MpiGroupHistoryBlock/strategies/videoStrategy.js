@@ -14,9 +14,9 @@ export function videoStrategy({ group, tools }) {
 
         toolsFor() {
             return [
-                { mode: 'crop',         icon: 'crop',                              info: 'Crop' },
-                { mode: 'videoUpscale', icon: _universalToolIcons.videoUpscale.icon, info: _universalToolIcons.videoUpscale.info },
-                { mode: 'interpolate',  icon: _universalToolIcons.interpolate.icon,  info: _universalToolIcons.interpolate.info  },
+                { mode: 'crop',         icon: 'crop',                                info: 'Crop' },
+                { mode: 'videoUpscale', icon: _universalToolIcons.videoUpscale.icon, info: 'Video Upscale' },
+                { mode: 'interpolate',  icon: _universalToolIcons.interpolate.icon,  info: 'Interpolate' },
             ];
         },
 

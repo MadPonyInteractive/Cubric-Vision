@@ -73,6 +73,7 @@ export const ICONS = {
     'fullscreen': '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>',
     'frameBack': '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
     'frameForward': '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
+    'interpolate_stroke': '<rect x="2" y="5" width="5" height="5" rx="1"/><rect x="17" y="5" width="5" height="5" rx="1"/><path d="M9 7.5L12 7.5M15 7.5L18 7.5"/><circle cx="10.5" cy="7.5" r="0.8"/><circle cx="13.5" cy="7.5" r="0.8"/><rect x="2" y="14" width="5" height="5" rx="1"/><rect x="17" y="14" width="5" height="5" rx="1"/><path d="M9 16.5L12 16.5M15 16.5L18 16.5"/><circle cx="10.5" cy="16.5" r="0.8"/><circle cx="13.5" cy="16.5" r="0.8"/>',
 
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:

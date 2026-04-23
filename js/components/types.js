@@ -163,7 +163,7 @@
  * @typedef {Object} MpiNumberSelectorProps (Compound — js/components/Compounds/MpiNumberSelector)
  * @property {string[]} values           - Ordered list of selectable value strings
  * @property {string}   [value]          - Initially selected value (defaults to values[0])
- * @property {string}   [icon='layers']  - Icon shown on trigger button
+ * @property {string}   [icon]           - Icon shown on trigger button (optional, none by default)
  * @property {string}   [popupTitle]     - Badge label at top of popup (optional)
  * @property {string}   [info]           - Tooltip on trigger button
  *

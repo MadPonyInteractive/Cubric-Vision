@@ -87,8 +87,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _universalToolIcons = {
             autoMaskImg: { icon: 'enhance', info: 'Auto Mask' },
-            interpolate: { icon: 'film',    info: 'Interpolate' },
-            videoUpscale: { icon: 'rocket', info: 'Video Upscale' },
+            interpolate: { icon: 'interpolate_stroke', info: 'Interpolate' },
+            videoUpscale: { icon: 'upscaler', info: 'Video Upscale' },
         };
 
         const strategy = (_group.type === 'video')
@@ -199,7 +199,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _upscaleFactorSel = MpiNumberSelector.mount(document.createElement('div'), {
                 values: ['x1.5', 'x2', 'x3', 'x4'],
                 value: 'x2',
-                icon: 'rocket',
+                // icon: _universalToolIcons.videoUpscale.icon,
                 popupTitle: 'FACTOR',
                 info: 'Upscale factor',
             });
@@ -242,7 +242,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 leftSlot: { el: upscaleLeftSlot },
                 actions: [
                     { key: 'cancel', icon: 'close',  label: 'Cancel',  variant: 'ghost',   info: 'Cancel upscale' },
-                    { key: 'run',    icon: 'rocket',  label: 'Upscale', variant: 'primary', info: 'Run video upscale' },
+                    { key: 'run',    icon: _universalToolIcons.videoUpscale.icon,  label: 'Upscale', variant: 'primary', info: 'Run video upscale' },
                 ],
             });
 
@@ -250,7 +250,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _interpMultiplierSel = MpiNumberSelector.mount(document.createElement('div'), {
                 values: ['x2', 'x3', 'x4'],
                 value: 'x2',
-                icon: 'film',
+                // icon: _universalToolIcons.interpolate.icon,
                 popupTitle: 'MULTIPLIER',
                 info: 'Frame multiplier',
             });
@@ -262,7 +262,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 leftSlot: _interpMultiplierSel,
                 actions: [
                     { key: 'cancel', icon: 'close', label: 'Cancel',      variant: 'ghost',   info: 'Cancel interpolate' },
-                    { key: 'run',    icon: 'film',  label: 'Interpolate',  variant: 'primary', info: 'Run frame interpolation' },
+                    { key: 'run',    icon: _universalToolIcons.interpolate.icon,  label: 'Interpolate',  variant: 'primary', info: 'Run frame interpolation' },
                 ],
             });
         }
