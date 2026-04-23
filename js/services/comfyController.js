@@ -77,6 +77,9 @@ export const ComfyUIController = {
                 state.comfyNeedsRestart = false;
             }
 
+            // Already running and ready — skip startup indicator to avoid flash.
+            if (status.running && status.ready) return true;
+
             Events.emit('comfy:starting');
 
             if (!status.running) {
