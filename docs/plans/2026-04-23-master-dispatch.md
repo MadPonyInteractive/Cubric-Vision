@@ -24,7 +24,7 @@
   - Scope: MpiBatchSelector→MpiNumberSelector refactor; upscale factor + model selectors; interpolate multiplier selector; injectionParams wired through _runVideoTool
   - Files: `js/components/Compounds/MpiNumberSelector/`, `js/components/Blocks/MpiPromptBox/PromptBoxControls.js`, `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js`, `.claude/rules/comfy_injection.md`
 
-- [ ] **SESSION 3** — ffmpeg packaging + merge prep
+- [x] **SESSION 3** — ffmpeg packaging + merge prep
   - Tracker: NIM-9
   - Scope: Package ffmpeg as extraResources in electron-builder config, verify binary path resolution on all platforms
   - Files: `electron-builder.yml` or equivalent, `services/ffmpegBinary.js`

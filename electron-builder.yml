@@ -1,0 +1,55 @@
+appId: com.madponyinteractive.cubric-studio
+productName: Cubric Studio
+copyright: Copyright © 2026 MadPonyInteractive
+
+directories:
+  output: dist
+
+files:
+  - "**/*"
+  - "!engine/**"
+  - "!node_modules/ffmpeg-static/**"
+  - "!node_modules/ffprobe-static/**"
+  - "!*.log"
+  - "!logs/**"
+  - "!dist/**"
+  - "!.playwright-cli/**"
+  - "!nimbalyst-local/**"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  extraResources:
+    - from: "node_modules/ffmpeg-static/ffmpeg.exe"
+      to: "ffmpeg.exe"
+    - from: "node_modules/ffprobe-static/bin/win32/x64/ffprobe.exe"
+      to: "ffprobe.exe"
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  extraResources:
+    - from: "node_modules/ffmpeg-static/ffmpeg"
+      to: "ffmpeg"
+    - from: "node_modules/ffprobe-static/bin/darwin/${arch}/ffprobe"
+      to: "ffprobe"
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  extraResources:
+    - from: "node_modules/ffmpeg-static/ffmpeg"
+      to: "ffmpeg"
+    - from: "node_modules/ffprobe-static/bin/linux/x64/ffprobe"
+      to: "ffprobe"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

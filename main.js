@@ -209,7 +209,11 @@ function startServer() {
   const userDataPath = app.getPath('userData');
   console.log('[main] APP_USER_DATA set to:', userDataPath);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
-    env: { ...process.env, APP_USER_DATA: userDataPath }
+    env: {
+      ...process.env,
+      APP_USER_DATA: userDataPath,
+      MPI_RESOURCES_PATH: app.isPackaged ? process.resourcesPath : '',
+    }
   });
 
   serverProcess.on('error', (err) => {
