@@ -44,6 +44,7 @@ export const MpiModal = ComponentFactory.create({
         let _unregisterEnter = null;
         let _isShown = false;  // guard against duplicate show() calls
         let _overlayEntry = null; // store the queue entry so hide() can release correctly
+        const _unsubs = [];
 
         const _handleEnter = () => {
             emit('confirm', {});
@@ -83,17 +84,23 @@ export const MpiModal = ComponentFactory.create({
             _overlayEntry = null;
         };
 
-        const _unsubClose = Events.on('ui:close-all-popups', () => {
+        _unsubs.push(Events.on('ui:close-all-popups', () => {
             if (_backdrop) el.hide();
-        });
+        }));
 
         const _observer = new MutationObserver(() => {
             if (!document.contains(el) && !_wrapper) {
                 if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
-                _unsubClose();
+                _unsubs.forEach(fn => fn?.());
                 _observer.disconnect();
             }
         });
         _observer.observe(document.body, { childList: true, subtree: true });
+
+        el.destroy = () => {
+            if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
+            _unsubs.forEach(fn => fn?.());
+            _observer.disconnect();
+        };
     }
 });

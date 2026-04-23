@@ -48,6 +48,7 @@ export const MpiPopup = ComponentFactory.create({
         const anchor = (props.triggerEl instanceof Element) ? props.triggerEl : el.parentElement;
         const position = props.position || 'top';
         const gap = 12;
+        const _unsubs = [];
 
         // Portal to body — escapes all ancestor overflow/transform stacking contexts.
         document.body.appendChild(el);
@@ -88,13 +89,13 @@ export const MpiPopup = ComponentFactory.create({
         classObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
 
         // Force-dismiss from global bus
-        const unsub = Events.on('ui:close-all-popups', () => {
+        _unsubs.push(Events.on('ui:close-all-popups', () => {
             if (props.active) {
                 props.active = false;
                 el.classList.remove('is-active');
                 emit('close', {});
             }
-        });
+        }));
 
         // Remove portal node when the original anchor leaves the DOM.
         const domObserver = new MutationObserver(() => {
@@ -102,7 +103,7 @@ export const MpiPopup = ComponentFactory.create({
                 if (el.parentNode) el.parentNode.removeChild(el);
                 classObserver.disconnect();
                 domObserver.disconnect();
-                unsub(); // Cleanup bus subscription
+                _unsubs.forEach(fn => fn?.());
             }
         });
         domObserver.observe(document.body, { childList: true, subtree: true });
@@ -120,5 +121,11 @@ export const MpiPopup = ComponentFactory.create({
             if (item) emit('select', { id: item.getAttribute('data-id'), el: item });
             emit('click', e);
         });
+
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn?.());
+            classObserver.disconnect();
+            domObserver.disconnect();
+        };
     }
 });

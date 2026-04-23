@@ -157,6 +157,7 @@ export const MpiRatioSelector = ComponentFactory.create({
         const grid = el.querySelector('.mpi-ratio-sel__grid');
         const orientContainer = el.querySelector('.mpi-ratio-sel__orient-btn');
         let leaveTimer = null;
+        const _unsubs = [];
 
         // ── Portal ──────────────────────────────────────────────────────────────
         // MpiPopup is template-rendered here (not independently mounted), so we
@@ -165,16 +166,16 @@ export const MpiRatioSelector = ComponentFactory.create({
         document.body.appendChild(popupEl);
 
         // Force-dismiss from global bus
-        const unsub = Events.on('ui:close-all-popups', () => {
+        _unsubs.push(Events.on('ui:close-all-popups', () => {
             if (props.showPopup) closePopup();
-        });
+        }));
 
         // Remove portal node when this component is removed from the DOM.
         const domObserver = new MutationObserver(() => {
             if (!document.contains(el)) {
                 if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
                 domObserver.disconnect();
-                unsub(); // Cleanup bus subscription
+                _unsubs.forEach(fn => fn());
                 document.removeEventListener('click', onOutsideClick);
             }
         });
@@ -346,5 +347,11 @@ export const MpiRatioSelector = ComponentFactory.create({
                 updateUI();
             }
         });
+
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn?.());
+            domObserver.disconnect();
+            document.removeEventListener('click', onOutsideClick);
+        };
     }
 });
