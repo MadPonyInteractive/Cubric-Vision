@@ -150,7 +150,7 @@ export const MpiSettings = ComponentFactory.create({
                             const res = await fetch('/choose-folder', { method: 'POST' });
                             const data = await res.json();
                             if (!data.cancelled && data.path) {
-                                const field = pathInst.el.querySelector('.mpi-input__field');
+                                const field = qs('.mpi-input__field', pathInst.el);
                                 if (field) field.value = data.path;
                                 _setComfyPath(data.path);
                             }
