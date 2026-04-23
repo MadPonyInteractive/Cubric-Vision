@@ -198,7 +198,10 @@
       "mcp__plugin_context-mode_context-mode__ctx_search",
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
       "mcp__plugin_context-mode_context-mode__ctx_execute",
-      "mcp__plugin_context-mode_context-mode__ctx_index"
+      "mcp__plugin_context-mode_context-mode__ctx_index",
+      "mcp__nimbalyst-mcp__tracker_create",
+      "mcp__nimbalyst-mcp__tracker_link_session",
+      "mcp__nimbalyst-mcp__tracker_add_comment"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",
