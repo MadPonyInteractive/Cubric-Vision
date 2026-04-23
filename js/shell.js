@@ -30,6 +30,8 @@ import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
 import { StatusBar } from './shell/statusBar.js';
 import { initNavigation, handleNavigation, updateTitlebarProject } from './shell/navigation.js';
+import { initNotificationService } from './shell/notificationService.js';
+import { initFocusModeService } from './shell/focusModeService.js';
 
 // Internal references for communication
 let _projectNameInstance = null;
@@ -109,6 +111,10 @@ export async function initShell() {
     }
     handleNavigation(page, params);
   });
+
+  // 6.5. Shell-level services
+  initNotificationService();
+  initFocusModeService();
 
   // 7. Data Pre-fetching (Non-blocking)
   _initDataRegistries().catch(err => clientLogger.error('shell', 'registry failed:', err));

@@ -15,4 +15,5 @@
 @import url('styles/shell/titlebar.css');
 @import url('styles/shell/landing.css');
 @import url('styles/shell/workspace.css');
-@import url('styles/shell/components.css');
+@import url('styles/shell/components.css');
+@import url('styles/shell/focus-mode.css');

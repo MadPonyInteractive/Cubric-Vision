@@ -154,5 +154,17 @@ export const Events = new EventBus();
  *
  * Media events:
  * 'media:imported'        { url: string, filename: string, mediaType: string } — file imported via PromptBox drop
+ *
+ * Generation lifecycle events (emitted by generationService / activeGenerations):
+ * 'generation:started'    { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }
+ * 'generation:preview'    { id, url }
+ * 'generation:cancelled'  { id, tempId, extraTempIds }
+ * 'generation:complete'   { id, item, group, tempId?, extraTempIds? } — generation succeeded and persisted
+ *
+ * Focus mode events (state-driven; subscribe via `Events.onState('focusMode', ...)`):
+ * 'state:changed' { key: 'focusMode', value: boolean } — focus mode toggled
+ *
+ * Hotkey bridge events (auto-emitted by HotkeyManager for every keypress):
+ * 'hotkey:<keyString>'    KeyboardEvent — e.g. 'hotkey:f', 'hotkey:escape'
  */
 

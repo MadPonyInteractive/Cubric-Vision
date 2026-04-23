@@ -40,6 +40,12 @@ const _state = {
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'favorites'
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
     gallerySizeLevel: 3,             // 1–5; survives gallery navigation within session
+
+    // ── Focus mode ─────────────────────────────────────────────────────────────
+    focusMode: false,                // F-key toggle: hides app chrome (sidebar, promptbox,
+                                     // statusbar, tools/history panels) so the user can focus
+                                     // on canvas / gallery / video player. Custom titlebar stays.
+                                     // Auto-resets when navigating to PAGE_LANDING.
 };
 
 // Batching control for state mutations

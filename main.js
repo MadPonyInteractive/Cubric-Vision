@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
@@ -289,6 +289,25 @@ app.on('ready', () => {
     if (mainWindow) {
       mainWindow.setFullScreen(!mainWindow.isFullScreen());
     }
+  });
+
+  // System notification — fires only when window is minimized.
+  // Renderer sends unconditionally; main gates on isMinimized().
+  ipcMain.on('notify-generation-complete', (event, payload = {}) => {
+    if (!mainWindow || !mainWindow.isMinimized()) return;
+    if (!Notification.isSupported()) return;
+    const notif = new Notification({
+      title: payload.title || 'Generation complete',
+      body: payload.body || '',
+      silent: false,
+    });
+    notif.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      }
+    });
+    notif.show();
   });
 
   // TODO: replace platform branches with screen.setCursorScreenPoint({x,y})

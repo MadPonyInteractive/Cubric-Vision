@@ -1,0 +1,72 @@
+/* ──────────────────────────────────────────────────────────────────────────
+ * focus-mode.css — Global Focus Mode chrome rules.
+ *
+ * Toggled by `js/shell/focusModeService.js` via `body.mpi-focus-mode`.
+ * Per-page rules ride on `body.page-gallery` / `body.page-group-history`
+ * (set by the same service from `state.currentPage`).
+ *
+ * Goal: hide every piece of app chrome except the custom titlebar (window
+ * controls). The mounted view block fills the remaining viewport so the
+ * user can focus on canvas, video, or gallery grid.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Universal chrome hiding (all non-landing workspaces) ─────────────────── */
+body.mpi-focus-mode #workspace-topbar,
+body.mpi-focus-mode #radial-mount,
+body.mpi-focus-mode #prompt-box-mount,
+body.mpi-focus-mode #shell-info-bar {
+    display: none !important;
+}
+
+/* App-shell is a flex column. With chrome rows removed, #tool-container
+ * is the only remaining child — let it consume the full available height. */
+body.mpi-focus-mode #tool-container {
+    flex: 1 1 auto;
+    height: 100%;
+    width: 100%;
+    /* Default tool-container reserves 58px top padding for the floating
+     * workspace-topbar. Workspace-topbar is hidden in focus mode → reclaim
+     * that space so the view fills the viewport edge-to-edge. */
+    padding: 0 !important;
+}
+
+/* ── Gallery filter chrome — hide tabs row + slider in focus mode ─────────── */
+body.mpi-focus-mode.page-gallery .mpi-gallery-grid__tabs,
+body.mpi-focus-mode.page-gallery .mpi-gallery-grid__footer {
+    display: none !important;
+}
+
+body.mpi-focus-mode.page-gallery .mpi-gallery-grid {
+    height: 100%;
+    width: 100%;
+}
+
+body.mpi-focus-mode.page-gallery .mpi-gallery-grid__grid {
+    flex: 1 1 auto;
+    height: 100%;
+}
+
+/* ── Group history workspace — collapse side rails + hide bottom slot ─────── */
+body.mpi-focus-mode.page-group-history .mpi-group-history-block {
+    grid-template-columns: 0 1fr 0;
+}
+
+body.mpi-focus-mode.page-group-history .mpi-group-history-block__left,
+body.mpi-focus-mode.page-group-history .mpi-group-history-block__right,
+body.mpi-focus-mode.page-group-history .mpi-group-history-block__bottom {
+    display: none !important;
+}
+
+/* ── Gallery workspace — block already fills, just ensures full height ──── */
+body.mpi-focus-mode.page-gallery .mpi-gallery-block {
+    height: 100%;
+    width: 100%;
+}
+
+/* ── Safety: never engage focus chrome on landing ────────────────────────── */
+body.mpi-focus-mode.page-landing #workspace-topbar,
+body.mpi-focus-mode.page-landing #radial-mount,
+body.mpi-focus-mode.page-landing #prompt-box-mount,
+body.mpi-focus-mode.page-landing #shell-info-bar {
+    display: revert !important;
+}

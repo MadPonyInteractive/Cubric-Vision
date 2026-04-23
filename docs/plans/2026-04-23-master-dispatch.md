@@ -85,7 +85,7 @@
   - Scope: Identify and replace sliders/buttons bypassing primitives, route through `ComponentFactory.create()`
   - Files: Components using raw `<input type="range">` or `<button>` instead of primitives
 
-- [ ] **SESSION 13** — Small features batch
+- [x] **SESSION 13** — Small features batch
   - Trackers: `feat_mo9477jgtiqxnj` (Hotkey F focus mode), `feat_mo90qos2dlq3x7` (system notification on generation finish)
   - Scope: Register F hotkey, hide non-essential UI per page; Electron notification API on generation complete
   - Files: `js/shell.js` or hotkey registration point, `routes/save-generation.js` or generation completion hook
