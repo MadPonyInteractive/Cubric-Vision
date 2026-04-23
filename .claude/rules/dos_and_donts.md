@@ -7,6 +7,7 @@
 
 - **Never hardcode colors.** CSS variables only — from `styles/01_base.css`. No hex codes, no named colors.
 - **Never paste raw SVG.** Import from `js/utils/icons.js`. If the icon is missing, add it there first.
+- **Icon stroke is auto-detected — never pass `stroke: true` to `MpiButton`.** Name icons with `ratio_` prefix or `_stroke` suffix and `renderIcon()` handles stroke automatically.
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
 - **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
 - **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `seed.js`, `ratios.js`, `promptOptions.js` may already do what you need.
@@ -21,6 +22,8 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
 1. **`icons.js` (The Icon Source of Truth):** 
    - NEVER paste raw SVG code directly into component templates. 
    - ALL icons must be imported from `js/utils/icons.js`. If an icon doesn't exist, add it to this file first.
+   - **Stroke is auto-detected by `renderIcon()` — never pass `stroke: true` to `MpiButton`.** Icons render as stroke automatically if: the name starts with `ratio_`, the name ends with `_stroke`, or it is in the built-in list (`seed`, `gallery`). Name your icon accordingly and stroke is free.
+   - **For outline/stroke icons:** use the `_stroke` suffix (e.g. `refresh_stroke`). For ratio/rect icons: use the `ratio_` prefix (e.g. `ratio_16_9`). No extra props needed.
 2. **`dom.js` (DOM Shorthands):** 
    - Use the shorthands in this file instead of raw, verbose `document.querySelector` or generic DOM manipulation where applicable.
 3. **`ratios.js` (Aspect Ratios):** 

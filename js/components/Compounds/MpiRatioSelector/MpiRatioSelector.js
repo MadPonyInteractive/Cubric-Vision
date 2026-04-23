@@ -72,7 +72,6 @@ export const MpiRatioSelector = ComponentFactory.create({
                 size: 'md',
                 active: isSelected,
                 toggleable: true,
-                stroke: true,
                 info: `Switch to ${r.label} ratio`
             })}
             </div>`;
@@ -91,7 +90,6 @@ export const MpiRatioSelector = ComponentFactory.create({
             icon: orientIcon,
             size: 'sm',
             info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation`,
-            stroke: true
         })}
                 </div>
             </div>`;
@@ -252,7 +250,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                 return `<div class="mpi-ratio-sel__item" data-label="${r.label}">
                     ${MpiButton.template({
                     icon: iconName, label: r.label, labelPosition: 'top',
-                    active: isSelected, toggleable: true, stroke: true
+                    active: isSelected, toggleable: true
                 })}
                 </div>`;
             }).join('');
@@ -263,7 +261,7 @@ export const MpiRatioSelector = ComponentFactory.create({
                 const orientIcon = orientation === 'portrait' ? 'ratio_16_9' : 'ratio_9_16';
                 orientContainer.style.display = 'block';
                 orientContainer.innerHTML = MpiButton.template({
-                    icon: orientIcon, size: 'sm', stroke: true
+                    icon: orientIcon, size: 'sm'
                 });
             } else if (orientContainer) {
                 orientContainer.style.display = 'none';
@@ -273,7 +271,7 @@ export const MpiRatioSelector = ComponentFactory.create({
             const currentRatio = ratios.find(r => r.label === value) || ratios[0];
             const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
             trigger.innerHTML = MpiButton.template({
-                icon: triggerIconName, label: value, stroke: true, active: props.showPopup, toggleable: true
+                icon: triggerIconName, label: value, active: props.showPopup, toggleable: true
             });
         };
 

@@ -21,7 +21,6 @@ import { renderIcon } from '/js/utils/icons.js';
  * @param {string}  [iconActive]    - Alternate icon shown in active/toggled state
  * @param {string}  [label]         - Text label alongside the icon
  * @param {'left'|'right'|'top'|'bottom'} [labelPosition='right'] - Label placement
- * @param {boolean} [stroke=false]  - Use stroke rendering for icon (ratio/outline icons)
  * @param {boolean} [toggleable]    - Click commits the active state
  * @param {boolean} [active]        - Initial active/toggled state
  */
@@ -60,7 +59,6 @@ export const MpiButton = ComponentFactory.create({
         const size = props.size || 'md';
         const variant = props.variant || 'primary';
         const info = props.info || label || '';
-        const isStroke = props.stroke === true;
         const isToggleable = props.toggleable || !!iconActive;
         const isActive = props.active || false;
         const isLoading = variant === 'loading';
@@ -79,8 +77,8 @@ export const MpiButton = ComponentFactory.create({
             props.extraClasses || '',
         ].filter(Boolean).join(' ');
 
-        const iconHtml = renderIcon(icon, size, { stroke: isStroke });
-        const iconActiveHtml = iconActive ? renderIcon(iconActive, size, { stroke: isStroke }) : '';
+        const iconHtml = renderIcon(icon, size);
+        const iconActiveHtml = iconActive ? renderIcon(iconActive, size) : '';
 
         const iconContainer = iconActiveHtml
             ? `<span class="mpi-ibtn__icon">${iconHtml}</span><span class="mpi-ibtn__icon-swap">${iconActiveHtml}</span>`

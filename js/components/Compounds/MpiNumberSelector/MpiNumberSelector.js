@@ -61,7 +61,6 @@ export const MpiNumberSelector = ComponentFactory.create({
             size: 'md',
             active: isActive,
             toggleable: true,
-            stroke: false,
             info: props.info || '',
         });
 
@@ -158,7 +157,6 @@ export const MpiNumberSelector = ComponentFactory.create({
                 size: 'md',
                 active: props.showPopup,
                 toggleable: true,
-                stroke: false,
                 info: props.info || '',
             });
         };
