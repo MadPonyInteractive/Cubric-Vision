@@ -4,6 +4,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { qs } from '../../../utils/dom.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiErrorDialog — Global Error Notification Dialog (Compound)
@@ -82,7 +83,7 @@ export const MpiErrorDialog = ComponentFactory.create({
         });
         summaryInput.el.style.width = '100%';
         summarySlot.appendChild(summaryInput.el);
-        const summaryField = summaryInput.el.querySelector('.mpi-input__field');
+        const summaryField = qs('.mpi-input__field', summaryInput.el);
 
         // ── Actions ──────────────────────────────────────────────────────────
         const actionsSlot = qs('#actions-slot', el);
@@ -99,7 +100,7 @@ export const MpiErrorDialog = ComponentFactory.create({
             try {
                 const logRes = await fetch('/logs/read');
                 if (!logRes.ok) {
-                    console.warn('Log fetch failed:', logRes.status);
+                    clientLogger.warn('error-dialog', 'Log fetch failed', logRes.status);
                 }
                 const logData = await logRes.json();
                 const log = logData.log || '';
@@ -118,11 +119,11 @@ export const MpiErrorDialog = ComponentFactory.create({
                 const createData = await createRes.json();
 
                 if (!createData.success) {
-                    console.error('Failed to create GitHub issue:', createData.error);
+                    clientLogger.error('error-dialog', 'Failed to create GitHub issue', createData.error);
                     return;
                 }
 
-                console.log('GitHub issue created:', createData.issueUrl);
+                clientLogger.log('error-dialog', 'GitHub issue created', createData.issueUrl);
 
                 // Open issue in system browser via Electron IPC
                 try {
@@ -133,11 +134,11 @@ export const MpiErrorDialog = ComponentFactory.create({
                         window.open(createData.issueUrl);
                     }
                 } catch (ipcErr) {
-                    console.warn('Electron IPC unavailable, falling back to window.open:', ipcErr);
+                    clientLogger.warn('error-dialog', 'Electron IPC unavailable, falling back to window.open', ipcErr);
                     window.open(createData.issueUrl);
                 }
             } catch (err) {
-                console.error('Failed to create GitHub issue:', err);
+                clientLogger.error('error-dialog', 'Failed to create GitHub issue', err);
             }
         });
         actionsSlot.appendChild(reportBtn.el);

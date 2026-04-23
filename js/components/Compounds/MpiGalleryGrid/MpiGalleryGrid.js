@@ -1,7 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { ce, qs } from '/js/utils/dom.js';
+import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
+import { ce, qs, qsa } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { state } from '../../../state.js';
@@ -49,15 +50,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
         <div class="mpi-gallery-grid">
             <div class="mpi-gallery-grid__tabs">
                 <div class="mpi-gallery-grid__tab-group">
-                    <button class="mpi-gallery-grid__tab mpi-gallery-grid__tab--active" data-order="newest">Newest</button>
-                    <button class="mpi-gallery-grid__tab" data-order="oldest">Oldest</button>
+                    <div class="mpi-gallery-grid__tab-slot" data-order="newest"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-order="oldest"></div>
                 </div>
                 <div class="mpi-gallery-grid__tab-sep"></div>
                 <div class="mpi-gallery-grid__tab-group">
-                    <button class="mpi-gallery-grid__tab mpi-gallery-grid__tab--active" data-filter="all">All</button>
-                    <button class="mpi-gallery-grid__tab" data-filter="images">Images</button>
-                    <button class="mpi-gallery-grid__tab" data-filter="videos">Videos</button>
-                    <button class="mpi-gallery-grid__tab" data-filter="favorites">Favorites</button>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="images"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="videos"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="favorites"></div>
                     <div class="mpi-gallery-grid__info-btn-slot"></div>
                 </div>
                 <div class="mpi-gallery-grid__slider-wrap"></div>
@@ -80,8 +81,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Prevents the rerender → new img → onload → rerender loop for cached images.
         const _stabilizedIds = new Set();
 
-        const grid = el.querySelector('.mpi-gallery-grid__grid');
-        const sliderWrap = el.querySelector('.mpi-gallery-grid__slider-wrap');
+        const grid = qs('.mpi-gallery-grid__grid', el);
+        const sliderWrap = qs('.mpi-gallery-grid__slider-wrap', el);
 
         /** @type {Array<Function>} */
         const _unsubs = [];
@@ -111,7 +112,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // Register +/- hotkeys to control slider (keyboard and numpad)
         const incrementSlider = () => {
-            const input = sliderWrap.querySelector('.mpi-progress__input');
+            const input = qs('.mpi-progress__input', sliderWrap);
             const currentValue = parseFloat(input.value);
             const nextValue = Math.min(5, currentValue + 1);
             input.value = nextValue;
@@ -119,7 +120,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         };
 
         const decrementSlider = () => {
-            const input = sliderWrap.querySelector('.mpi-progress__input');
+            const input = qs('.mpi-progress__input', sliderWrap);
             const currentValue = parseFloat(input.value);
             const nextValue = Math.max(1, currentValue - 1);
             input.value = nextValue;
@@ -150,9 +151,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 </div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
-                <div class="mpi-group-card__select-wrap">
-                    <input type="checkbox" class="mpi-group-card__checkbox" aria-label="Select group">
-                </div>
+                <div class="mpi-group-card__select-wrap"></div>
                 <div class="mpi-group-card__footer">
                     <span class="mpi-group-card__name"></span>
                     <span class="mpi-group-card__badge"></span>
@@ -163,16 +162,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
             wrapper.appendChild(cardEl);
 
             // References to elements
-            const thumb = cardEl.querySelector('.mpi-group-card__thumb');
-            const preview = cardEl.querySelector('.mpi-group-card__preview');
-            const spinner = cardEl.querySelector('.mpi-group-card__spinner');
-            const previewImg = cardEl.querySelector('.mpi-group-card__preview-img');
-            const checkbox = cardEl.querySelector('.mpi-group-card__checkbox');
-            const nameEl = cardEl.querySelector('.mpi-group-card__name');
-            const badgeEl = cardEl.querySelector('.mpi-group-card__badge');
-            const typeEl = cardEl.querySelector('.mpi-group-card__type');
-            const favWrap = cardEl.querySelector('.mpi-group-card__fav-wrap');
-            const reuseWrap = cardEl.querySelector('.mpi-group-card__reuse-wrap');
+            const thumb = qs('.mpi-group-card__thumb', cardEl);
+            const preview = qs('.mpi-group-card__preview', cardEl);
+            const spinner = qs('.mpi-group-card__spinner', cardEl);
+            const previewImg = qs('.mpi-group-card__preview-img', cardEl);
+            const checkboxSlot = qs('.mpi-group-card__select-wrap', cardEl);
+            const _checkboxInst = MpiCheckbox.mount(checkboxSlot, { checked: false });
+            const checkbox = _checkboxInst.el.querySelector('.mpi-checkbox__input');
+            const nameEl = qs('.mpi-group-card__name', cardEl);
+            const badgeEl = qs('.mpi-group-card__badge', cardEl);
+            const typeEl = qs('.mpi-group-card__type', cardEl);
+            const favWrap = qs('.mpi-group-card__fav-wrap', cardEl);
+            const reuseWrap = qs('.mpi-group-card__reuse-wrap', cardEl);
 
             // State
             let _generating = false;
@@ -319,7 +320,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.setSelected = (val) => {
                 _selected = val;
-                checkbox.checked = val;
+                _checkboxInst.el.setChecked(val);
                 cardEl.classList.toggle('mpi-group-card--selected', val);
             };
 
@@ -338,8 +339,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
             });
 
-            checkbox.addEventListener('change', () => {
-                _selected = checkbox.checked;
+            _checkboxInst.on('change', ({ checked }) => {
+                _selected = checked;
                 cardEl.classList.toggle('mpi-group-card--selected', _selected);
                 if (_selected) {
                     _selectedIds.add(group.id);
@@ -399,7 +400,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         function _getAspectRatio(group) {
             const cardEntry = _cardMap.get(group.id);
             if (cardEntry) {
-                const thumb = cardEntry.el.querySelector('.mpi-group-card__thumb');
+                const thumb = qs('.mpi-group-card__thumb', cardEntry.el);
                 if (thumb) {
                     if (thumb.naturalWidth > 0) return thumb.naturalWidth / thumb.naturalHeight;
                     if (thumb.videoWidth   > 0) return thumb.videoWidth   / thumb.videoHeight;
@@ -439,14 +440,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     return order === 'newest' ? tb - ta : ta - tb;
                 });
 
-                // Update active tab styling
-                tabsEl.querySelectorAll('[data-order]').forEach(btn => {
-                    btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.order === order);
-                });
-                tabsEl.querySelectorAll('[data-filter]').forEach(btn => {
-                    btn.classList.toggle('mpi-gallery-grid__tab--active', btn.dataset.filter === filter);
-                });
-
                 // Get container width (grid.clientWidth includes padding, so subtract it)
                 const gridStyle = getComputedStyle(grid);
                 const paddingX = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
@@ -467,7 +460,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const rows = buildJustifiedRows(items, containerWidth, _cardWidth, GAP);
 
                 // Clear all rows
-                grid.querySelectorAll('.mpi-gallery-grid__row').forEach(row => row.remove());
+                qsa('.mpi-gallery-grid__row', grid).forEach(row => row.remove());
 
                 const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
 
@@ -508,7 +501,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         _unsubs.push(() => resizeObserver.disconnect());
 
         // ── Info toggle button ──────────────────────────────────────────────────
-        const infoBtnSlot = el.querySelector('.mpi-gallery-grid__info-btn-slot');
+        const infoBtnSlot = qs('.mpi-gallery-grid__info-btn-slot', el);
         const infoBtn = MpiButton.mount(infoBtnSlot, {
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
             active: state.galleryShowInfo,
@@ -525,23 +518,58 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // ── Gallery organize tabs ───────────────────────────────────────────────
 
-        const tabsEl = el.querySelector('.mpi-gallery-grid__tabs');
+        const tabsEl = qs('.mpi-gallery-grid__tabs', el);
+
+        // Mount tab buttons into slot divs; track instances for active-state sync
+        const _tabInstances = []; // { slot, btn, order?, filter? }
+
+        const _tabDefs = [
+            { order: 'newest', label: 'Newest' },
+            { order: 'oldest', label: 'Oldest' },
+            { filter: 'all',       label: 'All' },
+            { filter: 'images',    label: 'Images' },
+            { filter: 'videos',    label: 'Videos' },
+            { filter: 'favorites', label: 'Favorites' },
+        ];
+
+        _tabDefs.forEach(({ order, filter, label }) => {
+            const key = order ? `[data-order="${order}"]` : `[data-filter="${filter}"]`;
+            const slot = qs(key, tabsEl);
+            if (!slot) return;
+            const initialActive = order
+                ? state.gallerySort.order === order
+                : state.gallerySort.filter === filter;
+            const btn = MpiButton.mount(slot, {
+                text: label,
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: `mpi-gallery-grid__tab${initialActive ? ' mpi-gallery-grid__tab--active' : ''}`,
+            });
+            btn.on('click', () => {
+                if (order) {
+                    state.gallerySort = { ...state.gallerySort, order };
+                } else {
+                    state.gallerySort = { ...state.gallerySort, filter };
+                }
+            });
+            _tabInstances.push({ btn, order, filter });
+        });
+
+        function _syncTabActive() {
+            const { order, filter } = state.gallerySort;
+            _tabInstances.forEach(({ btn, order: o, filter: f }) => {
+                const active = o ? o === order : f === filter;
+                btn.el.classList.toggle('mpi-gallery-grid__tab--active', active);
+            });
+        }
 
         // Subscribe to state.gallerySort changes
         _unsubs.push(Events.on('state:changed', ({ key }) => {
-            if (key === 'gallerySort') _rerenderJustified();
-        }));
-
-        // Tab click delegation
-        tabsEl.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-order], [data-filter]');
-            if (!btn) return;
-            if (btn.dataset.order) {
-                state.gallerySort = { ...state.gallerySort, order: btn.dataset.order };
-            } else if (btn.dataset.filter) {
-                state.gallerySort = { ...state.gallerySort, filter: btn.dataset.filter };
+            if (key === 'gallerySort') {
+                _syncTabActive();
+                _rerenderJustified();
             }
-        });
+        }));
 
 
         // ── Render all groups ───────────────────────────────────────────────────
@@ -600,7 +628,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
          * @param {number} height - card height in px
          */
         el.setGeneratingCard = (wrapper, width, height) => {
-            const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
+            const generatingSlot = qs('.mpi-gallery-grid__generating-slot', el);
             if (!generatingSlot) return;
 
             wrapper.style.width = `${width}px`;
@@ -614,7 +642,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
          * Remove the generating card and restore normal grid.
          */
         el.clearGeneratingCard = () => {
-            const generatingSlot = el.querySelector('.mpi-gallery-grid__generating-slot');
+            const generatingSlot = qs('.mpi-gallery-grid__generating-slot', el);
             if (generatingSlot) {
                 generatingSlot.innerHTML = '';
                 generatingSlot.classList.remove('mpi-gallery-grid__generating-slot--visible');

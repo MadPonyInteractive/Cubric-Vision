@@ -20,7 +20,7 @@ import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSetti
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
-import { ce } from '../../../utils/dom.js';
+import { ce, qs } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
@@ -114,7 +114,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         window.addEventListener('drop',      _onDrop);
 
         // ── Selection bar (mounted in grid's footer slot) ────────────────────────
-        const selectionSlot = grid.el.querySelector('.mpi-gallery-grid__selectionbar-slot');
+        const selectionSlot = qs('.mpi-gallery-grid__selectionbar-slot', grid.el);
         const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
 
         // ── Navigate to group history ───────────────────────────────────────────

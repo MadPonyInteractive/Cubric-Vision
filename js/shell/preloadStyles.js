@@ -23,6 +23,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiModal/MpiModal.css',
   'js/components/Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.css',
   'js/components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.css',
+  'js/components/Primitives/MpiGalleryDropOverlay/MpiGalleryDropOverlay.css',
   'js/components/Primitives/MpiCheckbox/MpiCheckbox.css',
 
   // Compounds

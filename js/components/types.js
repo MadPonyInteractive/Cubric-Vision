@@ -891,6 +891,24 @@
  */
 
 /**
+ * @typedef {Object} MpiGalleryDropOverlayProps (Primitive — js/components/Primitives/MpiGalleryDropOverlay)
+ * @property {function({ file: File, mediaType: 'image'|'video' }): void} [onDrop]
+ *   Called when a valid OS file is dropped. Upload, Events.emit, etc. are the
+ *   caller's responsibility — this primitive is dumb.
+ *
+ * Full-area OS-file drop target. Shown by gallery block while OS files are dragged
+ * over the window. Ignores internal `application/mpi-media` drags.
+ *
+ * Instance methods (on instance.el):
+ *   show() — add `--visible` modifier, making overlay interactive
+ *   hide() — remove `--visible` modifier
+ *
+ * Auto-hides on global `ui:close-all-popups` event (Escape key).
+ *
+ * Does NOT emit component-level events and does NOT upload — callers own side effects.
+ */
+
+/**
  * PromptBoxService — Shell-level singleton wrapper around MpiPromptBox.
  *
  * Additional method (beyond existing):

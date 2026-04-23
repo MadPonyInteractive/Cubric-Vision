@@ -59,6 +59,13 @@ Tool action bars (crop, upscale, interpolate) are owned by the Block and mounted
 
 - `MpiProjectDropOverlay`   props: `{ onDrop({ folderPath, source }) }` callback   slot: `document.createElement('div')` appended to `#page-landing` — full-area OS drop target for project folders / `project.json`; shown/hidden via `#page-landing` `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); `onDrop` calls `addProjectByFolder()` then `loadProjectGrid()`. Feature-gated on `window.require` — skipped in plain-browser dev mode.
 - `MpiNewProject`, `MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiOkCancel` (delete-confirm)   slot: `document.createElement('div')` — lazy singletons shown on user action; not mounted until first trigger.
+
+> **MpiSettings internal mounts** (built inside `_initFields()`, called on each `el.show()`; slots cleared before remount):
+> - `MpiCheckbox`   props: `{ checked: Storage.getAutoStartComfy(), label:'Auto-start ComfyUI on Launch' }`   slot: `#mpiSettingsAutoStartSlot`
+> - `MpiInput` (Ollama URL)   props: `{ label:'Llama API URL', placeholder:'http://localhost:8080', value }`   slot: `#mpiSettingsOllamaUrlSlot`
+> - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
+> - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
+> - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`
 - `MpiProjectCard` (one per project)   props: `{ title, date, media }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`.
 - `MpiButton` (landing header actions + "+ New Project")   slot: `#landingActions` / `#newProjectBtn`.
 
@@ -84,6 +91,8 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 **Primitives mounted:**
 - `MpiProgressBar` (size slider)   props: `{ min:1, max:5, step:1, value:3, interactive:true, wheel:true, info:'Size: {value}' }`   slot: `.mpi-gallery-grid__slider-wrap`
 - `MpiButton` (info toggle)   props: `{ icon:'info', size:'sm', variant:'ghost', toggleable:true, active, info }`   slot: `.mpi-gallery-grid__info-btn-slot`
+- `MpiButton` ×6 (tab buttons)   props: `{ text, variant:'ghost', size:'sm', extraClasses:'mpi-gallery-grid__tab[ mpi-gallery-grid__tab--active]' }`   slot: `.mpi-gallery-grid__tab-slot[data-order]` / `.mpi-gallery-grid__tab-slot[data-filter]` — active class toggled via `_syncTabActive()` on `state.gallerySort` change; click handlers write to `state.gallerySort`
+- `MpiCheckbox` (card selection)   props: `{ checked: false }`   slot: `.mpi-group-card__select-wrap` — mounted per card inside `_makeCard()`; `on('change')` drives selection state
 
 **Card rendering:**
 - Cards are now rendered as DOM elements (not components)

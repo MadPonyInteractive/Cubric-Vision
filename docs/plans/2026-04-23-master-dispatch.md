@@ -34,28 +34,28 @@
 
 ## Phase 2 — Infra & Architecture (master)
 
-- [ ] **SESSION 4** — localStorage centralization
+- [x] **SESSION 4** — localStorage centralization
   - Plan: `nimbalyst-local/plans/jolly-whistling-forest.md`
   - Scope: Create `js/core/storageKeys.js` + `js/core/storage.js`, migrate 9 hardcoded keys across 8 files
   - Files: `js/core/storageKeys.js` (new), `js/core/storage.js` (new), 8 consumer files
   - **Unblocks Plan A**
 
-- [ ] **SESSION 5** — App versioning layer (Plan A)
+- [x] **SESSION 5** — App versioning layer (Plan A)
   - Plan: `docs/plans/2026-04-16-plan-a-app-versioning.md`
   - Scope: `appVersion.js`, `operationRegistry.js` (13 operations), `versioningManager.js`, update `routes/engine.js`
   - Files: `js/core/appVersion.js` (new), `js/core/operationRegistry.js` (new), `js/managers/versioningManager.js` (new), `routes/engine.js`
 
-- [ ] **SESSION 6** — Engine provisioning (Plan D)
+- [x] **SESSION 6** — Engine provisioning (Plan D)
   - Plan: `docs/plans/2026-04-16-plan-d-engine-provisioning.md`
   - Scope: Engine version check route, SSE progress, `MpiEngineInstall` component, boot-time check in shell.js
   - Files: `routes/engine.js`, `js/components/Compounds/MpiEngineInstall/` (new), `js/shell.js`
 
-- [ ] **SESSION 7** — Project service event queue
+- [x] **SESSION 7** — Project service event queue
   - Plan: `docs/plans/2026-04-21-project-service-event-queue.md`
   - Scope: Canonical events in `events.js`, queue + debounce in `projectService.js`, migrate `PromptBoxControls.js` + `MpiModelSettings.js` + `MpiPromptBox.js`
   - Files: `js/events.js`, `js/services/projectService.js`, `js/components/Compounds/MpiPromptBox/PromptBoxControls.js`, `js/components/Compounds/MpiModelSettings/MpiModelSettings.js`
 
-- [ ] **SESSION 8** — Project integrity / UUID meta (Plan B) ⚠️ riskiest
+- [x] **SESSION 8** — Project integrity / UUID meta (Plan B) ⚠️ riskiest
   - Plan: `docs/plans/2026-04-16-plan-b-project-integrity.md`
   - Scope: UUID `.meta/` sidecars as SSOT, history as ID arrays, migration system, reconciler
   - Files: `js/models/projectModel.js`, `js/managers/projectManager.js`, `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js`, `js/migrations/projectMigrations.js` (new), `js/managers/projectReconciler.js` (new), `routes/save-generation.js`, `routes/project.js`
@@ -65,22 +65,22 @@
 
 ## Phase 3 — Polish & Code Quality (master)
 
-- [ ] **SESSION 9** — Status bar badge + generation timing
+- [x] **SESSION 9** — Status bar badge + generation timing
   - Plan: `nimbalyst-local/plans/implement-tracker-item-gleaming-meteor.md`
   - Scope: Blue badge variant on status bar, "Loading model…" → "Generating…" label, timing to sidecar
   - Files: 5 files per plan
 
-- [ ] **SESSION 10** — NIM-13 + NIM-14 + NIM-15 (component rule enforcement batch 1)
+- [x] **SESSION 10** — NIM-13 + NIM-14 + NIM-15 (component rule enforcement batch 1)
   - Trackers: NIM-13, NIM-14, NIM-15
   - Scope: Migrate `console.*` → `clientLogger`, `querySelector` → `qs/qsa`, `window keydown` → `Hotkeys.register`
   - Files: All components flagged in NIM-11 audit (`nimbalyst-local/plans/implement-tracker-item-nim-11-ethereal-dream.md`)
 
-- [ ] **SESSION 11** — NIM-16 + NIM-17 + NIM-18 (component rule enforcement batch 2)
+- [x] **SESSION 11** — NIM-16 + NIM-17 + NIM-18 (component rule enforcement batch 2)
   - Trackers: NIM-16, NIM-17, NIM-18
   - Scope: Remove hardcoded `'#000'` in `MpiCanvas.js:332`, extract SVGs in `MpiRadialMenu` → `icons.js`, register `MpiGalleryDropOverlay` in `preloadStyles.js` + `types.js`
   - Files: `js/components/Compounds/MpiCanvas/MpiCanvas.js`, `js/utils/icons.js`, `js/components/Compounds/MpiRadialMenu/MpiRadialMenu.js`, `js/shell/preloadStyles.js`, `js/components/types.js`
 
-- [ ] **SESSION 12** — Primitive drift cleanup
+- [x] **SESSION 12** — Primitive drift cleanup
   - Tracker: NIM-2
   - Scope: Identify and replace sliders/buttons bypassing primitives, route through `ComponentFactory.create()`
   - Files: Components using raw `<input type="range">` or `<button>` instead of primitives

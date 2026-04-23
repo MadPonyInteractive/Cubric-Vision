@@ -11,6 +11,7 @@ import { commands, getAvailableCommands, getCommandComponents } from '../../../d
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -284,13 +285,13 @@ export const MpiPromptBox = ComponentFactory.create({
         ];
 
         // ── Textarea ───────────────────────────────────────────────────────────
-        const mainInput = MpiInput.mount(el.querySelector('#textarea-slot'), {
+        const mainInput = MpiInput.mount(qs('#textarea-slot', el), {
             type: 'textarea',
             placeholder: 'Type your prompt...',
             value: positiveValue
         });
 
-        const textareaEl = mainInput.el.querySelector('textarea');
+        const textareaEl = qs('textarea', mainInput.el);
 
         const updateHeight = () => {
             if (isExpansionLocked) { textareaEl.style.height = '3.5rem'; return; }
@@ -308,14 +309,14 @@ export const MpiPromptBox = ComponentFactory.create({
         setTimeout(updateHeight, 0);
 
         // ── Expansion lock ─────────────────────────────────────────────────────
-        MpiButton.mount(el.querySelector('#expand-lock-slot'), {
+        MpiButton.mount(qs('#expand-lock-slot', el), {
             icon: 'chevronDown', iconActive: 'chevronUp',
             info: 'Toggle Expanding Height',
             size: 'sm', variant: 'ghost', toggleable: true, active: !isExpansionLocked
         }).on('click', (data) => { isExpansionLocked = !data.active; updateHeight(); });
 
         // ── Copy button ────────────────────────────────────────────────────────
-        MpiButton.mount(el.querySelector('#copy-btn-slot'), {
+        MpiButton.mount(qs('#copy-btn-slot', el), {
             icon: 'copy', variant: 'ghost', size: 'sm', info: 'Copy current Text to Clipboard'
         }).on('click', () => {
             navigator.clipboard.writeText(textareaEl.value);
@@ -375,7 +376,7 @@ export const MpiPromptBox = ComponentFactory.create({
         const scheduleClose = () => { /* hover-close disabled — see outside-click handler below */ };
 
         // ── Settings badge (trigger) ───────────────────────────────────────────
-        const badgeSlot = el.querySelector('#settings-badge-slot');
+        const badgeSlot = qs('#settings-badge-slot', el);
         const badgeBtn = MpiButton.mount(badgeSlot, {
             variant: 'ghost', size: 'sm',
             toggleable: true,
@@ -420,9 +421,9 @@ export const MpiPromptBox = ComponentFactory.create({
         }));
 
         // ── Settings popup content ─────────────────────────────────────────────
-        const modelSlot      = popupNode.querySelector('#settings-model-slot');
-        const opDropdownSlot = popupNode.querySelector('#settings-op-dropdown-slot');
-        const opSlot         = popupNode.querySelector('#settings-op-slot');
+        const modelSlot      = qs('#settings-model-slot', popupNode);
+        const opDropdownSlot = qs('#settings-op-dropdown-slot', popupNode);
+        const opSlot         = qs('#settings-op-slot', popupNode);
 
         if (model) {
             if (modelList.length >= 1) {
@@ -531,7 +532,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Negative mode toggle ───────────────────────────────────────────────
         if (props.includeNegative) {
-            MpiButton.mount(el.querySelector('#bottom-neg-slot'), {
+            MpiButton.mount(qs('#bottom-neg-slot', el), {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
                 size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
@@ -546,7 +547,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
         const runBtnSlot = document.createElement('div');
-        el.querySelector('#bottom-right-slot').appendChild(runBtnSlot);
+        qs('#bottom-right-slot', el).appendChild(runBtnSlot);
 
         const runBtn = MpiButton.mount(runBtnSlot, {
             icon: 'play', iconActive: 'stop',

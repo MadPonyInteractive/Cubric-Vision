@@ -1,7 +1,12 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
+import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
+import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
+import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../../state.js';
 import { Storage } from '../../../../core/storage.js';
+import { clientLogger } from '../../../../services/clientLogger.js';
+import { qs } from '../../../../utils/dom.js';
 
 /**
  * MpiSettings — Settings overlay compound for the landing page.
@@ -35,10 +40,7 @@ export const MpiSettings = ComponentFactory.create({
             <div class="mpi-settings__section">
                 <h3 class="mpi-settings__section-title">App Behavior</h3>
                 <div class="mpi-settings__form-group">
-                    <label class="mpi-settings__checkbox-pill">
-                        <input type="checkbox" id="mpiSettingsAutoStartComfy">
-                        <span>Auto-start ComfyUI on Launch</span>
-                    </label>
+                    <div class="mpi-settings__checkbox-slot" id="mpiSettingsAutoStartSlot"></div>
                     <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
                 </div>
             </div>
@@ -46,18 +48,15 @@ export const MpiSettings = ComponentFactory.create({
             <div class="mpi-settings__section">
                 <h3 class="mpi-settings__section-title">External Connections</h3>
                 <div class="mpi-settings__form-group">
-                    <label>Llama API URL</label>
-                    <input type="text" id="mpiSettingsOllamaUrl" placeholder="http://localhost:8080">
+                    <div id="mpiSettingsOllamaUrlSlot"></div>
                 </div>
                 <div class="mpi-settings__form-group">
-                    <label>ComfyUI API URL</label>
-                    <input type="text" id="mpiSettingsComfyUrl" placeholder="http://localhost:8188">
+                    <div id="mpiSettingsComfyUrlSlot"></div>
                 </div>
                 <div class="mpi-settings__form-group">
-                    <label>ComfyUI Models Path</label>
                     <div class="mpi-settings__folder-row">
-                        <input type="text" id="mpiSettingsComfyRootPath" placeholder="Default (internal engine)">
-                        <button class="mpi-settings__browse-btn" id="mpiSettingsBrowseComfyBtn" type="button">Browse</button>
+                        <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
+                        <div id="mpiSettingsBrowseBtnSlot"></div>
                     </div>
                     <span class="mpi-settings__hint">Optional: path to an external ComfyUI models folder.</span>
                 </div>
@@ -78,63 +77,88 @@ export const MpiSettings = ComponentFactory.create({
         el.hide = () => overlay.el.hide();
 
         // ── Field initialisation (called each show so values are fresh) ──────
+        // Primitive instances are created once per show; slots are cleared first.
         function _initFields(root) {
-            const ollamaUrl = root.querySelector('#mpiSettingsOllamaUrl');
-            if (ollamaUrl) {
-                ollamaUrl.value = Storage.getOllamaUrl() || 'http://localhost:8080';
-                ollamaUrl.addEventListener('change', () =>
-                    Storage.setOllamaUrl(ollamaUrl.value));
+            // ── Auto-start checkbox ──────────────────────────────────────────
+            const autoStartSlot = qs('#mpiSettingsAutoStartSlot', root);
+            if (autoStartSlot) {
+                autoStartSlot.innerHTML = '';
+                const autoStartInst = MpiCheckbox.mount(autoStartSlot, {
+                    checked: Storage.getAutoStartComfy(),
+                    label: 'Auto-start ComfyUI on Launch',
+                });
+                autoStartInst.on('change', ({ checked }) =>
+                    Storage.setAutoStartComfy(checked));
             }
 
-            const comfyUrl = root.querySelector('#mpiSettingsComfyUrl');
-            if (comfyUrl) {
-                comfyUrl.value = Storage.getComfyUrl() || 'http://localhost:8188';
-                comfyUrl.addEventListener('change', () =>
-                    Storage.setComfyUrl(comfyUrl.value));
+            // ── Ollama URL ───────────────────────────────────────────────────
+            const ollamaSlot = qs('#mpiSettingsOllamaUrlSlot', root);
+            if (ollamaSlot) {
+                ollamaSlot.innerHTML = '';
+                const ollamaInst = MpiInput.mount(ollamaSlot, {
+                    label: 'Llama API URL',
+                    placeholder: 'http://localhost:8080',
+                    value: Storage.getOllamaUrl() || 'http://localhost:8080',
+                });
+                ollamaInst.on('change', ({ value }) => Storage.setOllamaUrl(value));
             }
 
-            const autoStart = root.querySelector('#mpiSettingsAutoStartComfy');
-            if (autoStart) {
-                autoStart.checked = Storage.getAutoStartComfy();
-                autoStart.addEventListener('change', () =>
-                    Storage.setAutoStartComfy(autoStart.checked));
+            // ── ComfyUI URL ──────────────────────────────────────────────────
+            const comfyUrlSlot = qs('#mpiSettingsComfyUrlSlot', root);
+            if (comfyUrlSlot) {
+                comfyUrlSlot.innerHTML = '';
+                const comfyUrlInst = MpiInput.mount(comfyUrlSlot, {
+                    label: 'ComfyUI API URL',
+                    placeholder: 'http://localhost:8188',
+                    value: Storage.getComfyUrl() || 'http://localhost:8188',
+                });
+                comfyUrlInst.on('change', ({ value }) => Storage.setComfyUrl(value));
             }
 
-            const comfyPath = root.querySelector('#mpiSettingsComfyRootPath');
-            if (comfyPath) {
-                const saved = Storage.getComfyRootPath() || '';
+            // ── ComfyUI root path ────────────────────────────────────────────
+            const pathSlot = qs('#mpiSettingsComfyRootPathSlot', root);
+            const browseSlot = qs('#mpiSettingsBrowseBtnSlot', root);
+            if (pathSlot) {
+                pathSlot.innerHTML = '';
+                let saved = Storage.getComfyRootPath() || '';
                 // Clear temp paths (legacy guard)
                 if (saved.toLowerCase().includes('temp') || saved.toLowerCase().includes('tmp')) {
                     Storage.removeComfyRootPath();
-                    comfyPath.value = '';
+                    saved = '';
                     _setComfyPath('');
-                } else {
-                    comfyPath.value = saved;
                 }
-                const sync = () => {
-                    if (comfyPath.value !== Storage.getComfyRootPath()) {
-                        _setComfyPath(comfyPath.value);
-                    }
-                };
-                comfyPath.addEventListener('change', sync);
-                comfyPath.addEventListener('blur', sync);
-                comfyPath.addEventListener('keydown', (e) => { if (e.key === 'Enter') sync(); });
-            }
 
-            const browseBtn = root.querySelector('#mpiSettingsBrowseComfyBtn');
-            if (browseBtn && comfyPath) {
-                browseBtn.addEventListener('click', async () => {
-                    try {
-                        const res = await fetch('/choose-folder', { method: 'POST' });
-                        const data = await res.json();
-                        if (!data.cancelled && data.path) {
-                            comfyPath.value = data.path;
-                            _setComfyPath(data.path);
-                        }
-                    } catch (err) {
-                        console.error('[MpiSettings] choose-folder failed:', err);
-                    }
+                const pathInst = MpiInput.mount(pathSlot, {
+                    label: 'ComfyUI Models Path',
+                    placeholder: 'Default (internal engine)',
+                    value: saved,
                 });
+                pathInst.on('change', ({ value }) => {
+                    if (value !== Storage.getComfyRootPath()) _setComfyPath(value);
+                });
+
+                if (browseSlot) {
+                    browseSlot.innerHTML = '';
+                    const browseInst = MpiButton.mount(browseSlot, {
+                        text: 'Browse',
+                        variant: 'secondary',
+                        size: 'md',
+                        extraClasses: 'mpi-settings__browse-btn',
+                    });
+                    browseInst.on('click', async () => {
+                        try {
+                            const res = await fetch('/choose-folder', { method: 'POST' });
+                            const data = await res.json();
+                            if (!data.cancelled && data.path) {
+                                const field = pathInst.el.querySelector('.mpi-input__field');
+                                if (field) field.value = data.path;
+                                _setComfyPath(data.path);
+                            }
+                        } catch (err) {
+                            clientLogger.error('settings', '[MpiSettings] choose-folder failed', err);
+                        }
+                    });
+                }
             }
         }
 
@@ -149,10 +173,10 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 const data = await res.json();
                 if (!data.success) {
-                    console.error('[MpiSettings] Failed to sync ComfyUI path:', data.error);
+                    clientLogger.error('settings', '[MpiSettings] Failed to sync ComfyUI path', data.error);
                 }
             } catch (err) {
-                console.error('[MpiSettings] Error syncing ComfyUI path:', err);
+                clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }
         }
 

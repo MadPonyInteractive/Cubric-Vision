@@ -40,6 +40,7 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
+import { clientLogger }     from '../../../services/clientLogger.js';
 import { ViewManager }       from './managers/ViewManager.js';
 import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
@@ -184,7 +185,7 @@ class _CanvasCore {
             this.crop.init(this.img.width, this.img.height);
             await this.resetView();
         } catch (err) {
-            console.error('[MpiCanvas] Failed to load image:', err);
+            clientLogger.error('canvas', 'Failed to load image', err);
             throw err;
         }
     }
@@ -329,7 +330,7 @@ class _CanvasCore {
         this.ctx.fillStyle = 'var(--primary, #9a82bb)';
         this.ctx.fill();
 
-        this.ctx.fillStyle = '#000';
+        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-2').trim() || '#ffffff';
         this.ctx.beginPath();
         this.ctx.moveTo(barX - 8, this.canvas.height / 2);
         this.ctx.lineTo(barX - 2, this.canvas.height / 2 - 5);

@@ -27,6 +27,10 @@
     flex-shrink: 0;
 }
 
+.mpi-gallery-grid__tab-slot {
+    display: contents;
+}
+
 .mpi-gallery-grid__slider-wrap {
     flex-shrink: 0;
     width: 8rem;
@@ -53,6 +57,10 @@
     color: var(--text-muted);
     cursor: pointer;
     transition: color 0.15s, background 0.15s, border-color 0.15s;
+    /* Reset MpiButton defaults */
+    min-width: unset;
+    height: unset;
+    gap: unset;
 }
 
 .mpi-gallery-grid__tab:hover {
@@ -64,6 +72,10 @@
     color: var(--text-primary);
     background: var(--surface-3);
     border-color: var(--border-soft);
+}
+
+.mpi-gallery-grid__tab .mpi-btn__text {
+    font-size: inherit;
 }
 
 /* .mpi-gallery-grid__info-btn-slot {

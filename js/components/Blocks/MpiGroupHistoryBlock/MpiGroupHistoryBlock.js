@@ -26,6 +26,7 @@ import { getAvailableCommands, getToolCommands } from '../../../data/commandRegi
 import { startGeneration } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { qs } from '../../../utils/dom.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
@@ -38,6 +39,7 @@ import {
     createItemGroup,
 } from '../../../data/projectModel.js';
 import { MpiModelsModal } from '../MpiModelsModal/MpiModelsModal.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -68,9 +70,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         let _group = state.currentProject?.itemGroups?.find(g => g.id === props.groupId);
 
         if (!_group) {
-            el.innerHTML = `<p class="mpi-group-history-block__error">Group not found. <button class="mpi-group-history-block__back">Back to gallery</button></p>`;
-            el.querySelector('.mpi-group-history-block__back')
-                ?.addEventListener('click', () => navigate(PAGE_GALLERY));
+            el.innerHTML = `<p class="mpi-group-history-block__error">Group not found. <span class="mpi-group-history-block__back-slot"></span></p>`;
+            const backSlot = qs('.mpi-group-history-block__back-slot', el);
+            if (backSlot) {
+                const backBtn = MpiButton.mount(backSlot, {
+                    text: 'Back to gallery',
+                    variant: 'secondary',
+                    size: 'sm',
+                });
+                backBtn.on('click', () => navigate(PAGE_GALLERY));
+            }
             return;
         }
 
@@ -153,7 +162,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const bar = Events.channel('groupHistory');
 
-        const selectionBar = MpiSelectionBar.mount(el.querySelector('#bottom-slot'), { count: 0 });
+        const selectionBar = MpiSelectionBar.mount(qs('#bottom-slot', el), { count: 0 });
 
         // Video action bars — only mounted for video strategy
         let _cropBar = null;
@@ -167,7 +176,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         if (!strategy.supportsPromptBox()) {
             // Mount video tool bars into bottom-slot
-            const bottomSlot = el.querySelector('#bottom-slot');
+            const bottomSlot = qs('#bottom-slot', el);
 
             _ratioSel = MpiRatioSelector.mount(document.createElement('div'), {
                 modelType: 'social',
@@ -307,7 +316,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Mount sub-components ──────────────────────────────────────────────
 
-        const historyTools = MpiHistoryTools.mount(el.querySelector('#left-slot'), {
+        const historyTools = MpiHistoryTools.mount(qs('#left-slot', el), {
             tools: strategy.toolsFor(),
         });
 
@@ -315,7 +324,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             selectionBar.el.style.display = 'none';
         }
 
-        const viewer = strategy.mountViewer(el.querySelector('#centre-slot'), {
+        const viewer = strategy.mountViewer(qs('#centre-slot', el), {
             resolveMediaUrl,
             MpiCanvasViewer,
             MpiVideoViewer,
@@ -326,7 +335,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Alias for backwards compatibility
         const canvasViewer = viewer;
 
-        const historyList = MpiHistoryList.mount(el.querySelector('#right-slot'), {
+        const historyList = MpiHistoryList.mount(qs('#right-slot', el), {
             history: _group.history,
             selectedIndex: _currentIdx,
         });

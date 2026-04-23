@@ -14,6 +14,11 @@ LISTENS: (none — pure DOM events only)
 EMITS:   `modechange` `{ mode: 'none'|'mask'|'crop'|'compare' }`
 LISTENS: (none)
 
+### MpiCheckbox
+EMITS:   `change` `{ checked: boolean }`
+LISTENS: (none)
+API:     `el.isChecked()` → boolean · `el.setChecked(bool)` — imperative sync
+
 ### MpiDragList
 EMITS:   `reorder` `{ items: any[], indices: number[] }`
 LISTENS: (none)
@@ -295,7 +300,8 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
-LISTENS: (none — internal MpiSelectionBar/MpiGroupCard events handled internally)
+LISTENS: (none — internal MpiSelectionBar/MpiCheckbox/MpiButton tab events handled internally)
+NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection driven by internal `MpiCheckbox` `on('change')`.
 
 ### MpiPromptBox
 EMITS:   `input`            `{ positive: string, negative: string, activeMode: 'positive'|'negative' }`
