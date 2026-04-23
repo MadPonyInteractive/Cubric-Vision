@@ -238,8 +238,19 @@ export async function updateProject(updates) {
         folderPath: state.currentProject.folderPath,
         updates,
     });
-    if (result.success) state.currentProject = result.project;
-    return result.project;
+    if (result.success) {
+        // Merge updates into in-memory project. Do NOT replace with result.project
+        // because the server response reads project.json from disk where
+        // itemGroups[].history is stored as UUID strings, not hydrated objects.
+        // Overwriting here would wipe filePath/thumbPath/type from history items,
+        // causing empty gallery cards and blank history entries.
+        state.currentProject = {
+            ...state.currentProject,
+            ...updates,
+            updatedAt: result.project?.updatedAt ?? state.currentProject.updatedAt,
+        };
+    }
+    return state.currentProject;
 }
 
 export function saveProjectSettings() {
