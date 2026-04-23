@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { ce } from '/js/utils/dom.js';
+import { Hotkeys } from '/js/managers/hotkeyManager.js';
 
 /**
  * MpiMemoryMonitor — Compound: MpiProgressBar (×2) + MpiButton (unload).
@@ -98,8 +99,8 @@ export const MpiMemoryMonitor = ComponentFactory.create({
             }
         };
 
-        window.addEventListener('keydown', _onKeydown);
-        window.addEventListener('keyup',   _onKeyup);
+        const _unsubKeydown = Hotkeys.register('control', _onKeydown);
+        const _unsubKeyup   = Hotkeys.registerKeyup('control', _onKeyup);
 
         unloadBtn.on('click', () => emit('release', { deep: _ctrlHeld }));
 
@@ -177,8 +178,8 @@ export const MpiMemoryMonitor = ComponentFactory.create({
         const _observer = new MutationObserver(() => {
             if (!document.contains(el)) {
                 el.stopPolling();
-                window.removeEventListener('keydown', _onKeydown);
-                window.removeEventListener('keyup',   _onKeyup);
+                _unsubKeydown();
+                _unsubKeyup();
                 clearTimeout(_statusTimer);
                 _observer.disconnect();
             }

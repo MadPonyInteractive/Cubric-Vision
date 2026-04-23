@@ -23,15 +23,18 @@ class HotkeyManager {
     constructor() {
         /** @type {Map<string, Function|null>} single handler per key; null = removed but prev was registered */
         this._handlers = new Map();
+        /** @type {Map<string, Function|null>} */
+        this._keyupHandlers = new Map();
         this._init();
     }
 
     /**
-     * Start global keydown listener
+     * Start global keydown + keyup listeners
      * @private
      */
     _init() {
         window.addEventListener('keydown', (e) => this._handleKeyDown(e), { capture: true });
+        window.addEventListener('keyup',   (e) => this._handleKeyUp(e),   { capture: true });
         this._registerBuiltins();
     }
 
@@ -81,19 +84,40 @@ class HotkeyManager {
     }
 
     /**
+     * Register a keyup hotkey callback, replacing any existing handler for this key.
+     * Returns an unsubscribe function that restores the previous handler.
+     * @param {string} keyString - Example: 'space', 'control'
+     * @param {Function} callback
+     * @returns {() => void} Unsubscribe function
+     */
+    registerKeyup(keyString, callback) {
+        const key = keyString.toLowerCase();
+        const prev = this._keyupHandlers.get(key) ?? null;
+        this._keyupHandlers.set(key, callback);
+        return () => {
+            this._keyupHandlers.set(key, prev);
+        };
+    }
+
+    /**
+     * Unregister a keyup hotkey callback. Only removes if it matches the currently registered handler.
+     * @param {string} keyString
+     * @param {Function} callback
+     */
+    unregisterKeyup(keyString, callback) {
+        const key = keyString.toLowerCase();
+        if (this._keyupHandlers.get(key) === callback) {
+            this._keyupHandlers.delete(key);
+        }
+    }
+
+    /**
      * Main event handler logic
      * @param {KeyboardEvent} e
      * @private
      */
     _handleKeyDown(e) {
         const key = this._getEventKeyString(e);
-
-        // Suppress spacebar on buttons to prevent accidental triggers
-        if (key === ' ' && e.target.tagName === 'BUTTON') {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
 
         // Check for exact matches in the registry
         if (this._handlers.has(key)) {
@@ -112,22 +136,44 @@ class HotkeyManager {
     }
 
     /**
-     * Normalizes KeyboardEvent into a standard string key
-     * @param {KeyboardEvent} e 
-     * @returns {string} - e.g. 'control+shift+i'
+     * keyup handler — fires registered keyup callbacks and emits bus event.
+     * @param {KeyboardEvent} e
+     * @private
+     */
+    _handleKeyUp(e) {
+        const key = this._getEventKeyString(e);
+
+        const handler = this._keyupHandlers.get(key);
+        if (handler) {
+            e.preventDefault();
+            e.stopPropagation();
+            try { handler(e); }
+            catch (err) { console.error(`[Hotkeys] Error in keyup "${key}" handler:`, err); }
+        }
+
+        Events.emit(`hotkey:keyup:${key}`, e);
+    }
+
+    /**
+     * Normalizes KeyboardEvent into a standard string key.
+     * Bare modifier presses resolve to their canonical name so callers
+     * can register 'control', 'shift', etc. directly.
+     * @param {KeyboardEvent} e
+     * @returns {string} - e.g. 'control+shift+i', 'control', 'space'
      * @private
      */
     _getEventKeyString(e) {
+        const rawKey = e.key === ' ' ? 'space' : e.key.toLowerCase();
+        const isBareModifier = ['control', 'shift', 'alt', 'meta'].includes(rawKey);
+
+        // Bare modifier press: return just the modifier name (no combo prefix)
+        if (isBareModifier) return rawKey;
+
         const parts = [];
         if (e.ctrlKey || e.metaKey) parts.push('control');
         if (e.shiftKey) parts.push('shift');
         if (e.altKey) parts.push('alt');
-
-        const key = e.key.toLowerCase();
-        // Don't add if it's just a modifier key release
-        if (!['control', 'shift', 'alt', 'meta'].includes(key)) {
-            parts.push(key);
-        }
+        parts.push(rawKey);
 
         return parts.join('+');
     }

@@ -4,6 +4,7 @@
  */
 
 import { CropManager } from './CropManager.js';
+import { Hotkeys } from '/js/managers/hotkeyManager.js';
 
 /**
  * @typedef {Object} Managers
@@ -53,8 +54,10 @@ export class InputController {
         this.canvas.removeEventListener('dblclick', this._boundHandlers.dblclick);
         window.removeEventListener('mousemove', this._boundHandlers.mousemove);
         window.removeEventListener('mouseup', this._boundHandlers.mouseup);
-        window.removeEventListener('keydown', this._boundHandlers.keydown);
-        window.removeEventListener('keyup', this._boundHandlers.keyup);
+        this._boundHandlers.keydownUnsub?.();
+        this._boundHandlers.brushKeyUnsub?.();
+        this._boundHandlers.eraserKeyUnsub?.();
+        this._boundHandlers.keyupUnsub?.();
     }
 
     /**
@@ -172,38 +175,39 @@ export class InputController {
         window.addEventListener('mouseup', this._boundHandlers.mouseup);
 
         // KeyDown: Space and Hotkeys
-        this._boundHandlers.keydown = (e) => {
+        this._boundHandlers.keydownUnsub = Hotkeys.register('space', (e) => {
             const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+            if (isInput) return;
+            if (this.isSpacePressed) return;
+            this.isSpacePressed = true;
+            // Cancel any in-progress mask stroke so Space+drag pans instead of paints
+            this.managers.mask.isDrawingMask = false;
+            this.updateCursor();
+            this.options.onDraw();
+        });
 
-            if (e.code === 'Space' && !this.isSpacePressed) {
-                if (this.container.offsetParent === null || isInput) return;
-                e.preventDefault();
-                this.isSpacePressed = true;
-                this.updateCursor();
-                this.options.onDraw();
-            }
+        this._boundHandlers.brushKeyUnsub = Hotkeys.register('b', (e) => {
+            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+            if (!mask.isMaskingMode || isInput) return;
+            mask.brushType = 'brush';
+            if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('brush');
+            this.options.onDraw();
+        });
 
-            if (mask.isMaskingMode && !isInput) {
-                const key = e.key.toLowerCase();
-                if (key === 'b' || key === 'e') {
-                    const type = key === 'b' ? 'brush' : 'eraser';
-                    mask.brushType = type;
-                    if (this.options.onBrushTypeChange) this.options.onBrushTypeChange(type);
-                    this.options.onDraw();
-                }
-            }
-        };
-        window.addEventListener('keydown', this._boundHandlers.keydown);
+        this._boundHandlers.eraserKeyUnsub = Hotkeys.register('e', (e) => {
+            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+            if (!mask.isMaskingMode || isInput) return;
+            mask.brushType = 'eraser';
+            if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('eraser');
+            this.options.onDraw();
+        });
 
         // KeyUp: Space
-        this._boundHandlers.keyup = (e) => {
-            if (e.code === 'Space') {
-                this.isSpacePressed = false;
-                this.updateCursor();
-                this.options.onDraw();
-            }
-        };
-        window.addEventListener('keyup', this._boundHandlers.keyup);
+        this._boundHandlers.keyupUnsub = Hotkeys.registerKeyup('space', () => {
+            this.isSpacePressed = false;
+            this.updateCursor();
+            this.options.onDraw();
+        });
 
         // DblClick: Reset
         this._boundHandlers.dblclick = () => {
