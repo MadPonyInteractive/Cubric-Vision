@@ -42,12 +42,17 @@ export const on = (el, event, fn, opts) => {
 };
 
 /**
- * Convenience removeEventListener.
+ * Convenience removeEventListener. Returns a re-add function.
  * @param {EventTarget} el
  * @param {string} event
  * @param {Function} fn
+ * @param {AddEventListenerOptions} [opts]
+ * @returns {Function} re-add — call to re-attach the listener
  */
-export const off = (el, event, fn) => el.removeEventListener(event, fn);
+export const off = (el, event, fn, opts) => {
+    el.removeEventListener(event, fn, opts);
+    return () => el.addEventListener(event, fn, opts);
+};
 
 /**
  * Shorthand for document.createElement with optional properties and children.

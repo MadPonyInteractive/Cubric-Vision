@@ -2,7 +2,7 @@ module.exports = {
   meta: {
     type: 'suggestion',
     docs: {
-      description: 'Disallow addEventListener in components; use dom.js utilities',
+      description: 'Disallow addEventListener/removeEventListener in components; use dom.js utilities',
       category: 'Best Practices',
     },
   },
@@ -16,14 +16,18 @@ module.exports = {
           return;
         }
 
-        // Check if this is an addEventListener call
+        // Check if this is an addEventListener or removeEventListener call
         if (
           node.callee.type !== 'MemberExpression' ||
           node.callee.property.type !== 'Identifier' ||
-          node.callee.property.name !== 'addEventListener'
+          (node.callee.property.name !== 'addEventListener' &&
+            node.callee.property.name !== 'removeEventListener')
         ) {
           return;
         }
+
+        const methodName = node.callee.property.name;
+        const replacement = methodName === 'addEventListener' ? 'on()' : 'off()';
 
         // Check if we're inside a destroy function
         let parent = node.parent;
@@ -50,7 +54,7 @@ module.exports = {
 
         context.report({
           node,
-          message: "Use 'on()' from 'js/utils/dom.js' instead of 'addEventListener'",
+          message: `Use '${replacement}' from 'js/utils/dom.js' instead of '${methodName}'`,
         });
       },
     };

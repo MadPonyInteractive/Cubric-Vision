@@ -16,7 +16,8 @@
 
 - **Never hardcode colors.** Use CSS variables from `styles/01_base.css` only.
 - **Never paste raw SVG.** All icons come from `js/utils/icons.js`. Add missing icons there first.
-- **Never use raw \****`document.querySelector`**\*\*.** Use shorthands from `js/utils/dom.js`.
+- **Never use raw \****`document.querySelector`**\*\*.** Use shorthands from `js/utils/dom.js` (`qs`, `qsa`, `gid`).
+- **Never use raw \****`addEventListener`***\* / \****`removeEventListener`**\*\* in components.** Use `on()` / `off()` from `js/utils/dom.js` — both return cleanup/re-add fns. Exception: inside `destroy()`.
 - **Never create global state outside \****`js/state.js`**\*\*.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
 - **Never use raw \****`window.addEventListener('keydown')`**\*\*.** Use `Hotkeys.register` / `Hotkeys.unregister`.
 - **BEM is mandatory.** Format: `.mpi-block__element--modifier`. No exceptions.
