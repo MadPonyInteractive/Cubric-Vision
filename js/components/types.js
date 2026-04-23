@@ -398,6 +398,7 @@
  * @property {string} [suffix=''] - Text shown after value in Info Bar
  * @property {boolean} [interactive=false] - If false, input is disabled (static progress)
  * @property {boolean} [wheel=false] - Enable mouse wheel support
+ * @property {boolean} [handle=false] - Show circular thumb handle on fill position
  * @property {'primary'|'secondary'|'success'|'danger'} [variant='primary'] - Color variant
 */
 

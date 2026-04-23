@@ -14,6 +14,7 @@ import { ComponentFactory } from '../../factory.js';
  * @param {string}  [suffix='']      - Text appended to value in Info Bar (if no info template)
  * @param {boolean} [interactive=false] - false = static progress bar, true = draggable slider
  * @param {boolean} [wheel=false]    - Enable mouse wheel to adjust value (slider mode only)
+ * @param {boolean} [handle=false]   - Show a circular thumb handle on the fill position
  * @param {'primary'|'secondary'|'success'|'danger'} [variant='primary']
  */
 export const MpiProgressBar = ComponentFactory.create({
@@ -35,6 +36,9 @@ export const MpiProgressBar = ComponentFactory.create({
         const isDisabledAttr = isInteractive ? '' : 'disabled';
         const stateClass = isInteractive ? 'mpi-progress--interactive' : 'mpi-progress--disabled';
 
+        const fillPercent = ((value - min) / (max - min)) * 100;
+        const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="left: ${fillPercent}%"></div>` : '';
+
         return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" data-info="${info}">
             <div class="mpi-progress__track-container">
                 <input
@@ -46,7 +50,8 @@ export const MpiProgressBar = ComponentFactory.create({
                     value="${value}"
                     ${isDisabledAttr}
                 >
-                <div class="mpi-progress__track-fill" style="width: ${((value - min) / (max - min)) * 100}%"></div>
+                <div class="mpi-progress__track-fill" style="width: ${fillPercent}%"></div>
+                ${handleHtml}
             </div>
         </div>`;
     },
@@ -54,6 +59,7 @@ export const MpiProgressBar = ComponentFactory.create({
     setup: (el, props, emit) => {
         const input = el.querySelector('.mpi-progress__input');
         const trackFill = el.querySelector('.mpi-progress__track-fill');
+        const handleEl = el.querySelector('.mpi-progress__handle');
 
         // Resolve info template once from props (supports prefix/suffix pattern too)
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
@@ -63,10 +69,20 @@ export const MpiProgressBar = ComponentFactory.create({
             const max = props.max !== undefined ? props.max : 100;
             const percent = ((val - min) / (max - min)) * 100;
             if (trackFill) trackFill.style.width = `${percent}%`;
+            if (handleEl) handleEl.style.left = `${percent}%`;
 
             if (infoTpl.includes('{value}')) {
                 el.dataset.info = infoTpl.replace('{value}', val);
             }
+        };
+
+        // Sync fill + handle to initial value on mount
+        updateVisuals(props.value !== undefined ? props.value : 50);
+
+        // Update visuals without firing change/input events (prevents feedback loop)
+        el.setValueQuiet = (val) => {
+            input.value = val;
+            updateVisuals(val);
         };
 
         input.oninput = (e) => {

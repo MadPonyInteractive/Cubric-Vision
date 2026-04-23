@@ -90,6 +90,26 @@
     pointer-events: none;
 }
 
+/* ── Handle (optional thumb) ──────────────────────────────────────────────── */
+
+.mpi-progress__handle {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid var(--mpi-color-accent, var(--primary));
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+    transition: transform 0.1s ease;
+}
+
+.mpi-progress:not(.mpi-progress--disabled):hover .mpi-progress__handle {
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
 /* Hover effects */
 .mpi-progress:not(.mpi-progress--disabled):hover .mpi-progress__track-fill {
     box-shadow: 0 0 12px var(--primary-glow-sm), 0 0 20px var(--primary-glow-sm);

@@ -120,18 +120,20 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 icon: 'play',
                 iconActive: 'pause',
                 active: !video.paused,
-                size: 'lg',
+                size: 'md',
                 info: 'Play/Pause'
             });
 
             // 2. Progress Slider
             progressSlider = MpiProgressBar.mount(sliderWrapper, {
                 min: 0,
-                max: 1000, // High granularity
+                max: 1000,
                 step: 1,
                 value: 0,
-                info: 'Seek: {value}', // Will update template dynamically if needed, but we mostly use it for seeking
-                variant: 'primary'
+                info: 'Seek: {value}',
+                variant: 'primary',
+                interactive: true,
+                handle: true
             });
 
             // 3. Volume Control (inlined: mute button + slider)
@@ -139,22 +141,24 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const initialMuted = props.muted || false;
 
             muteBtn = MpiButton.mount(volumeMuteWrapper, {
-                icon: initialMuted ? 'volumeOff' : (initialVolume < 0.5 ? 'volumeLow' : 'volumeHigh'),
-                size: 'lg',
+                icon: 'volumeHigh',
+                iconActive: 'volumeOff',
+                active: initialMuted,
+                size: 'md',
                 info: 'Mute/Unmute'
             });
 
             // 4. Frame-Back Button
             frameBackBtn = MpiButton.mount(frameBackWrapper, {
                 icon: 'frameBack',
-                size: 'lg',
+                size: 'sm',
                 info: 'Previous Frame'
             });
 
             // 5. Frame-Forward Button
             frameForwardBtn = MpiButton.mount(frameForwardWrapper, {
                 icon: 'frameForward',
-                size: 'lg',
+                size: 'sm',
                 info: 'Next Frame'
             });
 
@@ -162,14 +166,14 @@ export const MpiVideoPlayer = ComponentFactory.create({
             loopBtn = MpiButton.mount(loopWrapper, {
                 icon: 'loop',
                 active: video.loop,
-                size: 'lg',
+                size: 'md',
                 info: 'Loop'
             });
 
             // 7. Fullscreen Button
             fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
                 icon: 'fullscreen',
-                size: 'lg',
+                size: 'md',
                 info: 'Fullscreen'
             });
 
@@ -181,6 +185,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 prefix: '',
                 suffix: '%',
                 interactive: true,
+                handle: true,
                 variant: 'primary'
             });
 
@@ -203,10 +208,8 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
                 if (dur > 0) {
                     const pct = (cur / dur) * 1000;
-                    const input = progressSlider.el.querySelector('input');
-                    input.value = Math.round(pct);
-                    // Trigger primitive's visual update
-                    input.dispatchEvent(new Event('input'));
+                    console.log('[seek] quiet sync →', Math.round(pct));
+                    progressSlider.el.setValueQuiet(Math.round(pct));
                 }
 
                 emit('timeupdate', { time: cur, duration: dur });
@@ -218,31 +221,37 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 video.paused ? video.play() : video.pause();
             });
 
-            progressSlider.on('change', ({ value }) => {
+            const doSeek = (value) => {
+                console.log('[seek] →', value);
                 if (video.duration) {
                     video.currentTime = (value / 1000) * video.duration;
                 }
+            };
+
+            // Real-time seek during drag
+            progressSlider.on('input', ({ value }) => {
+                isSeeking = true;
+                doSeek(value);
             });
 
-            // Slider 'input' (dragging) to pause time syncing
-            const handleSeekStart = () => { isSeeking = true; };
-            const handleSeekEnd = () => { isSeeking = false; };
-            progressSlider.el.querySelector('input').addEventListener('input', handleSeekStart);
-            progressSlider.el.querySelector('input').addEventListener('change', handleSeekEnd);
-            _unsubs.push(() => {
-                progressSlider.el.querySelector('input').removeEventListener('input', handleSeekStart);
-                progressSlider.el.querySelector('input').removeEventListener('change', handleSeekEnd);
+            // Commit on mouseup (also seeks, resets flag)
+            progressSlider.on('change', ({ value }) => {
+                doSeek(value);
+                isSeeking = false;
             });
-
-            // Volume slider change
-            volumeSlider.on('change', ({ value }) => {
+            // Volume slider — real-time during drag + commit on mouseup
+            const doVolume = (value) => {
+                console.log('[vol] →', value);
                 const newVolume = value / 100;
                 video.volume = newVolume;
                 if (video.muted && newVolume > 0) {
                     video.muted = false;
                 }
                 emit('change', { volume: newVolume, muted: video.muted });
-            });
+            };
+
+            volumeSlider.on('input', ({ value }) => doVolume(value));
+            volumeSlider.on('change', ({ value }) => doVolume(value));
 
             // Mute button toggle
             muteBtn.on('click', () => {
@@ -286,18 +295,11 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
             // Video events for UI sync
             const handleVolumeChange = () => {
-                // Update mute button icon
                 const isMuted = video.muted;
-                const vol = video.volume;
-                const newIcon = isMuted ? 'volumeOff' : (vol < 0.5 ? 'volumeLow' : 'volumeHigh');
-                muteBtn.el.setAttribute('data-icon', newIcon);
-
-                // Update slider position
-                const sliderInput = volumeSlider.el.querySelector('input');
-                if (sliderInput) {
-                    sliderInput.value = Math.round(video.volume * 100);
-                    sliderInput.dispatchEvent(new Event('input'));
-                }
+                console.log('[mute] →', isMuted);
+                muteBtn.el.classList.toggle('is-active', isMuted);
+                console.log('[vol] quiet sync →', Math.round(video.volume * 100));
+                volumeSlider.el.setValueQuiet(Math.round(video.volume * 100));
             };
 
             video.addEventListener('play', updatePlayState);
@@ -354,17 +356,12 @@ export const MpiVideoPlayer = ComponentFactory.create({
         if (hasControls) {
             el._setVolume = (v) => {
                 video.volume = Math.max(0, Math.min(1, v));
-                const sliderInput = volumeSlider.el.querySelector('input');
-                if (sliderInput) {
-                    sliderInput.value = Math.round(video.volume * 100);
-                    sliderInput.dispatchEvent(new Event('input'));
-                }
+                volumeSlider.el.setValueQuiet(Math.round(video.volume * 100));
             };
 
             el._setMuted = (m) => {
                 video.muted = m;
-                const newIcon = m ? 'volumeOff' : (video.volume < 0.5 ? 'volumeLow' : 'volumeHigh');
-                muteBtn.el.setAttribute('data-icon', newIcon);
+                muteBtn.el.classList.toggle('is-active', m);
             };
         }
 

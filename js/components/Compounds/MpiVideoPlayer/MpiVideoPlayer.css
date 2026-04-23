@@ -5,7 +5,7 @@
 .mpi-video-player {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    height: 100%;
     background: var(--bg-base);
     border-radius: 12px;
     overflow: hidden;
@@ -30,13 +30,14 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 12px 16px;
+    padding: 6px 10px;
     background: linear-gradient(0deg, var(--bg-recessed) 0%, var(--bg-recessed) 60%, transparent 100%);
     backdrop-filter: blur(4px);
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 10;
+    max-height: 80px;
 }
 
 .mpi-video-player:hover .mpi-video-player__controls,
@@ -47,21 +48,21 @@
 
 /* Top Progress Row */
 .mpi-video-player__progress {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     position: relative;
 }
 
 .mpi-video-player__slider-wrapper .mpi-progress {
-    height: 18px; /* Slightly taller for easier scrubbing */
+    height: 6px;
 }
 
 .mpi-video-player__slider-wrapper .mpi-progress__track {
-    background: var(--border) !important;
+    background: var(--surface-3) !important;
 }
 
 .mpi-video-player__slider-wrapper .mpi-progress__track-fill {
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
-    box-shadow: 0 0 10px var(--accent-glow);
+    background: linear-gradient(90deg, var(--primary) 0%, var(--neon-electric) 100%);
+    box-shadow: 0 0 10px var(--primary-glow-sm);
 }
 
 /* Bottom Controls Row */
@@ -75,7 +76,7 @@
 .mpi-video-player__right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 6px;
 }
 
 /* Time Display */
@@ -154,7 +155,7 @@
 .mpi-video-player__volume {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .mpi-video-player__volume-mute {
@@ -168,16 +169,16 @@
 }
 
 .mpi-video-player__volume-slider .mpi-progress {
-    height: 16px;
+    height: 6px;
 }
 
 .mpi-video-player__volume-slider .mpi-progress__track {
-    background: var(--border);
+    background: var(--surface-3);
 }
 
 .mpi-video-player__volume-slider .mpi-progress__track-fill {
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
-    box-shadow: 0 0 8px var(--accent-glow);
+    background: linear-gradient(90deg, var(--primary) 0%, var(--neon-electric) 100%);
+    box-shadow: 0 0 8px var(--primary-glow-sm);
 }
 
 /* Loop Button */
