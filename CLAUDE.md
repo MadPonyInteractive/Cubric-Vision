@@ -5,7 +5,7 @@
 ## THE CARDINAL RULES
 1. **NEVER assume architectural patterns.** Check the rules below.
 2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
-3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update ****\*\*\*\*\*****\*\*\*\***`.claude/rules/`**\*\*\*\*\*\*\* to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** 
+3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update ****\*\*\*\*\*\*\*****\*\*\*\*\*\*\*\*\*\***`.claude/rules/`**\*\*\*\*\*\*\*\*\*\*\* to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.** 
 4. **Suggest improvements in the architecture** If you find that areas in the code that you're working on, could use improvements or a different design pattern that could help the project be more efficient, simple and scalable, you should suggest them to the user. 
 5. the backlog.md file is under revision by the user, please ignore it for now.
 ---
@@ -24,9 +24,9 @@
 - **NEVER modify \****`js/components/factory.js`**\*\*.** The factory is locked.
 - **Every new component MUST:** register its `.css` in `js/shell/preloadStyles.js` AND document its props in `js/components/types.js`.
 - **Use \****`Events.on()`***\* / \****`Events.emit()`**\*\* for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
-- **Navigation MUST call `instance.destroy()` before clearing mounted Block.** See `.claude/rules/components.md` section "Observer Lifecycle & Teardown Contract". Never use `innerHTML = ''` alone.
-- **If `setup` calls `Events.on(...)`, `window.addEventListener(...)`, or creates any Observer — MUST define `el.destroy()` that cleans them up.** Collect unsubscribes in `const _unsubs = []`.
-- **Never mutate `state` sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
+- **Navigation MUST call \****`instance.destroy()`**\*\* before clearing mounted Block.** See `.claude/rules/components.md` section "Observer Lifecycle & Teardown Contract". Never use `innerHTML = ''` alone.
+- **If \****`setup`***\* calls \****`Events.on(...)`***\*, \****`window.addEventListener(...)`***\*, or creates any Observer — MUST define \****`el.destroy()`**\*\* that cleans them up.** Collect unsubscribes in `const _unsubs = []`.
+- **Never mutate \****`state`**\*\* sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
 
 ---
@@ -114,7 +114,7 @@ If you are trying to fix a bug, a server crash, or an issue with the python engi
 ### Browser Automation (playwright-cli)
 If you need to run browser automation or test web interfaces:
 **->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`)
-**->** **Important:** The app runs on http://127.0.0.1:3000/
+http://127.0.0.1:3000/**->** **Important:** The app runs on http://127.0.0.1:3000/
 
 ### Git and Commits
 NEVER commit to git unless user specifically asks for it
@@ -130,6 +130,9 @@ Four skills manage a human-in-the-loop execution system:
 | `/mpi-quick-plan` | mpi-quick-plan | Create empty plan scaffold for manual to-do entry |
 | `/mpi-write-plan` | mpi-write-plan | Decompose complex goals with parallel sub-agents into to-dos |
 | `/mpi-execute-next` | mpi-execute-next | Execute next `[ ]` to-do — briefs before code, waits for "go" |
+| `/mpi-handoff` | mpi-handoff | Generate a structured handoff doc when context is getting large |
+| `/mpi-component-audit` | mpi-component-audit | ESLint audit of js/components/ — report violations, no fixes |
+| `/mpi-brief-rule` | mpi-brief-rule | Inject rule briefing into sub-agent prompt at dispatch time |
 
 **Core principle:** Parallel sub-agents only in planning. Execution is always sequential, one to-do at a time, with mandatory brief gate before any code is written.
 
@@ -137,7 +140,15 @@ Four skills manage a human-in-the-loop execution system:
 
 ## Sub-Agent Rule Injection Map
 
-> **FOR THE MAIN AGENT:** When dispatching a sub-agent via the `Agent` tool, sub-agents start cold — they have no CLAUDE.md context. You MUST copy the relevant briefing text from the rule file's `## Sub-Agent Briefing` section directly into the sub-agent's prompt. Always include the Critical Rules Snapshot above in every sub-agent prompt.
+> **FOR THE MAIN AGENT — MANDATORY BEFORE EVERY SUB-AGENT DISPATCH:**
+>
+> Sub-agents start cold with zero CLAUDE.md context. Dispatching without briefing = broken sub-agent.
+>
+> **STEP 1 (REQUIRED):** Run `/mpi-brief-rule <name>` for each relevant rule (see table below). This reads the rule file and returns the `## Sub-Agent Briefing` section verbatim.
+>
+> **STEP 2 (REQUIRED):** Paste the returned briefing text into the sub-agent's prompt, along with the Critical Rules Snapshot above.
+>
+> **No exceptions.** If the rule has no briefing section, paste the Critical Rules Snapshot at minimum.
 
 | Task type | Rule file | Briefing location |
 | --- | --- | --- |

@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "server": "node server.js"
+    "server": "node server.js",
+    "lint": "eslint js/ --max-warnings=9999",
+    "lint:components": "eslint js/components/ --max-warnings=9999",
+    "prepare": "husky"
   },
   "author": "MadPonyInteractive",
   "license": "ISC",
@@ -26,8 +29,15 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "electron": "^41.0.3",
+    "eslint": "^10.2.1",
     "firacode": "^6.2.0",
-    "jetbrains-mono": "^1.0.6"
+    "husky": "^9.1.7",
+    "jetbrains-mono": "^1.0.6",
+    "lint-staged": "^16.4.0"
+  },
+  "lint-staged": {
+    "js/**/*.js": ["eslint --no-error-on-unmatched-pattern --max-warnings=9999"]
   }
 }

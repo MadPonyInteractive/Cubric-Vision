@@ -68,5 +68,4 @@ A prop or API is *added* in step N but can only be *seen working* after step M (
 7. User reviews plan before moving to execution
 
 ## Related commands
-- `/mpi-quick-plan` — for simple goals that don't need investigation
 - `/mpi-execute-next` — executes to-dos one at a time with brief gate
