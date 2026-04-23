@@ -5,9 +5,10 @@ const { fork } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath } = require('./routes/platformEngine');
 
-// Required on Windows to show the app icon (not Electron's) when launched via .bat
+// Required on Windows to show the app icon (not Electron's) when launched via .bat.
+// Use exe path as model ID — recommended for unpackaged Electron apps on Windows.
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.madponyinteractive.mpi-ai-suite');
+  app.setAppUserModelId(process.execPath);
 }
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
