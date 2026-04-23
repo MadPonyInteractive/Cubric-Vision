@@ -32,8 +32,8 @@
 - `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — video tools: crop (mode='crop'), videoUpscale (mode='videoUpscale'), interpolate (mode='interpolate')   slot: `#left-slot`
 - `MpiVideoViewer`   props: `{ fps, controls }` — no barContainer; viewer owns display + crop overlay only   slot: `#centre-slot`
 - Crop `MpiToolActionBar`   props: `{ leftSlot: ratioSel, actions: [snapshot, cancel, apply] }`   slot: `#bottom-slot` — mounted directly by Block
-- Upscale `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `#bottom-slot` — mounted directly by Block
-- Interpolate `MpiToolActionBar`   props: `{ actions: [cancel, run] }`   slot: `#bottom-slot` — mounted directly by Block
+- Upscale `MpiToolActionBar`   props: `{ leftSlot: { el: div[MpiNumberSelector + MpiDropdown] }, actions: [cancel, run] }`   slot: `#bottom-slot` — leftSlot contains `MpiNumberSelector` (upscale factor x1.5/x2/x3/x4) + `MpiDropdown` (upscale model from `state.upscaleModels`, direction:'up')
+- Interpolate `MpiToolActionBar`   props: `{ leftSlot: MpiNumberSelector(x2/x3/x4), actions: [cancel, run] }`   slot: `#bottom-slot` — leftSlot is `MpiNumberSelector` (frame multiplier)
 - `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
 - PromptBox is **hidden** for video groups (no model-based operations); `strategy.supportsPromptBox()` returns false
 

@@ -29,7 +29,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiSelectionBar/MpiSelectionBar.css',
   'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
   'js/components/Compounds/MpiRatioSelector/MpiRatioSelector.css',
-  'js/components/Compounds/MpiBatchSelector/MpiBatchSelector.css',
+  'js/components/Compounds/MpiNumberSelector/MpiNumberSelector.css',
   'js/components/Compounds/MpiToolbar/MpiToolbar.css',
   'js/components/Compounds/MpiCameraConfig/MpiCameraConfig.css',
   'js/components/Compounds/MpiLightingConfig/MpiLightingConfig.css',

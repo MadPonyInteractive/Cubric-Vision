@@ -160,15 +160,19 @@
  */
 
 /**
- * @typedef {Object} MpiBatchSelectorProps (Compound — js/components/Compounds/MpiBatchSelector)
- * @property {number} [value=1] - Batch count (1..4)
+ * @typedef {Object} MpiNumberSelectorProps (Compound — js/components/Compounds/MpiNumberSelector)
+ * @property {string[]} values           - Ordered list of selectable value strings
+ * @property {string}   [value]          - Initially selected value (defaults to values[0])
+ * @property {string}   [icon='layers']  - Icon shown on trigger button
+ * @property {string}   [popupTitle]     - Badge label at top of popup (optional)
+ * @property {string}   [info]           - Tooltip on trigger button
  *
  * Instance methods (on instance.el):
- *   getValue()   — returns current integer value (1..4)
- *   setValue(n)  — imperatively set value; re-renders grid + trigger
+ *   getValue()       — returns current selected string
+ *   setValue(string) — imperatively set value; re-renders grid + trigger
  *
  * Emits:
- * 'change'       { value: number } — user picked a new batch size
+ * 'change'       { value: string } — user picked a new value
  * 'popup_toggle' { active: boolean } — popup opened/closed
  */
 

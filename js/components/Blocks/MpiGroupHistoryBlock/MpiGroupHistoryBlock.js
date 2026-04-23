@@ -15,6 +15,8 @@ import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiNumberSelector } from '../../Compounds/MpiNumberSelector/MpiNumberSelector.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -24,6 +26,7 @@ import { getAvailableCommands, getToolCommands } from '../../../data/commandRegi
 import { startGeneration } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
 import { updateGroup, persistGroups, addGroup } from '../../../services/projectService.js';
@@ -157,6 +160,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         let _ratioSel = null;
         let _upscaleBar = null;
         let _interpolateBar = null;
+        let _upscaleFactorSel = null;
+        let _upscaleModelDd = null;
+        let _upscaleModelValue = '';
+        let _interpMultiplierSel = null;
 
         if (!strategy.supportsPromptBox()) {
             // Mount video tool bars into bottom-slot
@@ -179,20 +186,71 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 ],
             });
 
+            // ── Upscale bar: factor selector + model dropdown in leftSlot ────────
+            _upscaleFactorSel = MpiNumberSelector.mount(document.createElement('div'), {
+                values: ['x1.5', 'x2', 'x3', 'x4'],
+                value: 'x2',
+                icon: 'rocket',
+                popupTitle: 'FACTOR',
+                info: 'Upscale factor',
+            });
+
+            const _upscaleModelOptions = () =>
+                (state.upscaleModels || []).map(f => ({ label: f, value: f }));
+
+            const upscaleModelSlot = document.createElement('div');
+
+            const _mountUpscaleModelDd = () => {
+                upscaleModelSlot.innerHTML = '';
+                const opts = _upscaleModelOptions();
+                _upscaleModelDd = MpiDropdown.mount(upscaleModelSlot, {
+                    options: opts,
+                    value: opts[0]?.value ?? '',
+                    direction: 'up',
+                    info: 'Upscale model',
+                });
+                _upscaleModelValue = opts[0]?.value ?? '';
+                _upscaleModelDd.on('change', ({ value }) => { _upscaleModelValue = value; });
+            };
+
+            if (state.upscaleModels?.length) {
+                _mountUpscaleModelDd();
+            } else {
+                loadAssets().then(() => _mountUpscaleModelDd());
+            }
+
+            const upscaleLeftSlot = document.createElement('div');
+            upscaleLeftSlot.style.display = 'flex';
+            upscaleLeftSlot.style.gap = 'var(--space-2, 0.5rem)';
+            upscaleLeftSlot.style.alignItems = 'center';
+            upscaleLeftSlot.appendChild(_upscaleFactorSel.el);
+            upscaleLeftSlot.appendChild(upscaleModelSlot);
+
             const upscaleBarSlot = document.createElement('div');
             upscaleBarSlot.className = 'mpi-group-history-block__bar-slot';
             bottomSlot.appendChild(upscaleBarSlot);
             _upscaleBar = MpiToolActionBar.mount(upscaleBarSlot, {
+                leftSlot: { el: upscaleLeftSlot },
                 actions: [
                     { key: 'cancel', icon: 'close',  label: 'Cancel',  variant: 'ghost',   info: 'Cancel upscale' },
                     { key: 'run',    icon: 'rocket',  label: 'Upscale', variant: 'primary', info: 'Run video upscale' },
                 ],
             });
 
+            // ── Interpolate bar: multiplier selector in leftSlot ──────────────
+            _interpMultiplierSel = MpiNumberSelector.mount(document.createElement('div'), {
+                values: ['x2', 'x3', 'x4'],
+                value: 'x2',
+                icon: 'film',
+                popupTitle: 'MULTIPLIER',
+                info: 'Frame multiplier',
+            });
+
             const interpolateBarSlot = document.createElement('div');
             interpolateBarSlot.className = 'mpi-group-history-block__bar-slot';
             bottomSlot.appendChild(interpolateBarSlot);
             _interpolateBar = MpiToolActionBar.mount(interpolateBarSlot, {
+                leftSlot: _interpMultiplierSel,
                 actions: [
                     { key: 'cancel', icon: 'close', label: 'Cancel',      variant: 'ghost',   info: 'Cancel interpolate' },
                     { key: 'run',    icon: 'film',  label: 'Interpolate',  variant: 'primary', info: 'Run frame interpolation' },
@@ -297,7 +355,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     viewer.el.exitUpscaleMode();
                     bar.emit('tool:deactivated', { mode: 'videoUpscale' });
                     historyTools.el.syncMode('none');
-                    _runVideoTool('videoUpscale');
+                    const factorStr = _upscaleFactorSel?.el.getValue() ?? 'x2';
+                    const factor = parseFloat(factorStr.replace('x', '')) || 2;
+                    const injectionParams = { Upscale_Factor: factor };
+                    if (_upscaleModelValue) injectionParams.Upscale_Model = _upscaleModelValue;
+                    _runVideoTool('videoUpscale', injectionParams);
                 }
                 if (key === 'cancel') {
                     viewer.el.exitUpscaleMode();
@@ -313,7 +375,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     viewer.el.exitInterpolateMode();
                     bar.emit('tool:deactivated', { mode: 'interpolate' });
                     historyTools.el.syncMode('none');
-                    _runVideoTool('interpolate');
+                    const multStr = _interpMultiplierSel?.el.getValue() ?? 'x2';
+                    const multiplier = parseFloat(multStr.replace('x', '')) || 2;
+                    _runVideoTool('interpolate', { Interp_Multiplier: multiplier });
                 }
                 if (key === 'cancel') {
                     viewer.el.exitInterpolateMode();
@@ -510,14 +574,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             );
         }
 
-        function _runVideoTool(operation) {
+        function _runVideoTool(operation, injectionParams = {}) {
             const currentItem = _group.history[_currentIdx];
             if (!currentItem?.filePath) { _showToast('No source video', 'error'); return; }
             const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'video', source: 'history' }];
             const videoModel = { id: null, mediaType: 'video' };
             _setGenerating(true);
             _activeExec = startGeneration(
-                { operation, model: videoModel, positive: '', negative: '', mediaItems },
+                { operation, model: videoModel, positive: '', negative: '', mediaItems, injectionParams },
                 { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
@@ -802,6 +866,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _ratioSel?.destroy?.();
             _upscaleBar?.destroy?.();
             _interpolateBar?.destroy?.();
+            _upscaleFactorSel?.destroy?.();
+            _upscaleModelDd?.destroy?.();
+            _interpMultiplierSel?.destroy?.();
             _modelsModal.destroy?.();
             _settingsOverlay.destroy?.();
         };

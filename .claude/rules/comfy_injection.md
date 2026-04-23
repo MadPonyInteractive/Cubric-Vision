@@ -36,6 +36,7 @@ See `docs/comfy.md` for the full injection pattern and example.
 | `"Steps"` | `inputs.steps` / `inputs.value` | Sampling steps |
 | `"Upscale_Model"` | `inputs.upscale_model` | Upscale model filename |
 | `"Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
+| `"Interp_Multiplier"` | `inputs.float` | Frame multiplier for RIFE VFI (2, 3, 4) |
 | `"Auto_Grid"` / `"Creative"` | `inputs.boolean` | Upscaler toggles |
 | `"Grid_H"` / `"Grid_V"` | `inputs.int` / `inputs.value` | Grid splits |
 | `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |

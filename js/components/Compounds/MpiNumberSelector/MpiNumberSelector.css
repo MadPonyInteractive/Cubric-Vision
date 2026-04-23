@@ -1,10 +1,10 @@
-/* ── MpiBatchSelector — Compound Picker ─────────────────────────────────── */
-.mpi-batch-sel {
+/* ── MpiNumberSelector — Compound Picker ─────────────────────────────────── */
+.mpi-number-sel {
     position: relative;
     display: inline-block;
 }
 
-.mpi-batch-sel__header {
+.mpi-number-sel__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -12,18 +12,18 @@
     padding: 0 0.25rem;
 }
 
-.mpi-batch-sel__grid {
+.mpi-number-sel__grid {
     display: flex;
     flex-direction: column;
     gap: var(--space-1, 0.25rem);
 }
 
-.mpi-batch-sel__item {
+.mpi-number-sel__item {
     display: flex;
     justify-content: center;
 }
 
-.mpi-batch-sel .mpi-ibtn__label {
+.mpi-number-sel .mpi-ibtn__label {
     font-size: 0.85rem;
     font-weight: 800;
 }

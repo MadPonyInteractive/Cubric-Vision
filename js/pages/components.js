@@ -34,6 +34,7 @@ import { StatusBar } from '../shell/statusBar.js';
 import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiNumberSelector } from '../components/Compounds/MpiNumberSelector/MpiNumberSelector.js';
 import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
 import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCameraConfig.js';
 import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
@@ -698,6 +699,29 @@ function mountAll() {
         sel.on('change', (data) => console.log('[gallery] video ratio change:', data));
     });
 
+
+    // ── MpiNumberSelector (Compound) ─────────────────────────────────────────
+    mount('preview-number-sel-batch', () => {
+        const sel = MpiNumberSelector.mount(slot('preview-number-sel-batch'), {
+            values: ['1', '2', '3', '4'],
+            value: '1',
+            icon: 'layers',
+            popupTitle: 'BATCH',
+            info: 'Batch size',
+        });
+        sel.on('change', (data) => console.log('[gallery] number-sel batch change:', data));
+    });
+
+    mount('preview-number-sel-factor', () => {
+        const sel = MpiNumberSelector.mount(slot('preview-number-sel-factor'), {
+            values: ['x1.5', 'x2', 'x3', 'x4'],
+            value: 'x2',
+            icon: 'rocket',
+            popupTitle: 'FACTOR',
+            info: 'Upscale factor',
+        });
+        sel.on('change', (data) => console.log('[gallery] number-sel factor change:', data));
+    });
 
     // ── MpiPromptBox (Compound) ────────────────────────────────────────────────
     mount('preview-promptbox-standard', () => {

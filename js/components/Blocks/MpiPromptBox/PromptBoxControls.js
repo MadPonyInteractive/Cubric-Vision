@@ -12,7 +12,7 @@
  */
 
 import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiBatchSelector } from '../../Compounds/MpiBatchSelector/MpiBatchSelector.js';
+import { MpiNumberSelector } from '../../Compounds/MpiNumberSelector/MpiNumberSelector.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -112,16 +112,23 @@ export const PROMPT_BOX_CONTROLS = {
      * Persists per-model under modelSettings[modelId].batch.
      */
     batch: {
-        nodeTitle: 'Batch',
-        defaultValue: 1,
+        nodeTitle: 'Batch_Size',
+        defaultValue: '1',
         mount(hostEl, opts = {}) {
             const model = opts.model || {};
             const modelId = model.id;
 
             const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
-            const initialValue = Number(saved.batch ?? this.defaultValue) || this.defaultValue;
+            const savedNum = Number(saved.batch ?? 1);
+            const initialValue = String(Number.isFinite(savedNum) ? Math.min(4, Math.max(1, savedNum)) : 1);
 
-            this._instance = MpiBatchSelector.mount(hostEl, { value: initialValue });
+            this._instance = MpiNumberSelector.mount(hostEl, {
+                values: ['1', '2', '3', '4'],
+                value: initialValue,
+                icon: 'layers',
+                popupTitle: 'BATCH',
+                info: 'Batch size (images per run)',
+            });
             this.value = initialValue;
 
             this._instance.on('change', ({ value }) => {
@@ -130,7 +137,7 @@ export const PROMPT_BOX_CONTROLS = {
                     Events.emit('settings:model:update', {
                         modelId,
                         key: 'batch',
-                        value,
+                        value: parseInt(value, 10),
                     });
                 }
             });
@@ -140,7 +147,7 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const live = this._instance?.el?.getValue?.();
-            const v = Number(live ?? this.value ?? this.defaultValue) || this.defaultValue;
+            const v = parseInt(live ?? this.value ?? this.defaultValue, 10) || 1;
             // Workflow node titled "Batch_Size" (MpiInt, inputs.int).
             return { Batch_Size: v };
         },

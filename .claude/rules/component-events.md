@@ -128,6 +128,13 @@ EMITS:   `activate`   `{ mode: string }`
          `deactivate` `{ mode: string }`
 LISTENS: (none — callers call `el.syncMode(mode)` imperatively)
 
+### MpiNumberSelector
+EMITS:   `change`       `{ value: string }` — user picked a new value
+         `popup_toggle` `{ active: boolean }` — popup opened/closed
+LISTENS: `ui:close-all-popups` — closes popup if open
+API:     `instance.el.getValue()` → current string · `instance.el.setValue(string)` → imperatively set + re-render
+NOTE:    Generic replacement for MpiBatchSelector. Props: `values: string[]`, `value`, `icon`, `popupTitle`, `info`. Portals popup to body manually (MpiPopup.template() used as raw HTML, no setup() runs). Used by PromptBoxControls `batch` entry and MpiGroupHistoryBlock video bars.
+
 ### MpiInstalledDisplay
 EMITS:   `delete`      `{}`     — Action button clicked (Install when idle)
          `pause`       `{}`     — Pause button clicked (during download)
