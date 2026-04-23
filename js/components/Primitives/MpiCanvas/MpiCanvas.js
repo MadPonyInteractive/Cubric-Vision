@@ -47,6 +47,8 @@ import { ComparisonManager } from './managers/ComparisonManager.js';
 import { CropManager }       from './managers/CropManager.js';
 import { InputController }   from './managers/InputController.js';
 
+const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+
 // ── Internal canvas engine ────────────────────────────────────────────────────
 // Not exported — consumers use MpiCanvas.mount() and talk to instance.el.*
 
@@ -318,7 +320,7 @@ class _CanvasCore {
     _drawSliderUI() {
         const barX = this.comparison.sliderPos * this.canvas.width;
         this.ctx.save();
-        this.ctx.strokeStyle = 'var(--primary, #9a82bb)';
+        this.ctx.strokeStyle = getCSSColor('--primary');
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(barX, 0);
@@ -327,10 +329,10 @@ class _CanvasCore {
 
         this.ctx.beginPath();
         this.ctx.arc(barX, this.canvas.height / 2, 16, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'var(--primary, #9a82bb)';
+        this.ctx.fillStyle = getCSSColor('--primary');
         this.ctx.fill();
 
-        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-2').trim() || '#ffffff';
+        this.ctx.fillStyle = getCSSColor('--text-2');
         this.ctx.beginPath();
         this.ctx.moveTo(barX - 8, this.canvas.height / 2);
         this.ctx.lineTo(barX - 2, this.canvas.height / 2 - 5);

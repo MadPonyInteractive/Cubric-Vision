@@ -12,6 +12,9 @@
  *   'body'                — drag the whole rect
  *   null                  — no hit / not in crop mode
  */
+
+const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+
 export class CropManager {
     constructor() {
         this.isCroppingMode = false;
@@ -303,7 +306,7 @@ export class CropManager {
             const hit = handles.find(([,, k]) => k === this._activeHandle);
             if (hit) {
                 const [hx, hy] = hit;
-                ctx.fillStyle = 'var(--neon-electric, #00cfff)';
+                ctx.fillStyle = getCSSColor('--neon-electric');
                 ctx.beginPath();
                 ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
                 ctx.fill();
