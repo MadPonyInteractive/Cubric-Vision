@@ -70,9 +70,9 @@ export const ICONS = {
 
     // ── Video Controls ────────────────────────────────────────────────────────
     'loop': '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>',
-    'fullscreen': '<path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16-4h2v6h-6v-2h4v-4z"/>',
-    'frameBack': '<path d="M6 4v16h2V4H6zm4 8L4 20v-4h12V8H4v4l6 0zm10 0l6-8v16l-6-8z"/>',
-    'frameForward': '<path d="M16 4v16h2V4h-2zM8 12l6 8V4l-6 8zm8-8v16l6-8-6-8z"/>',
+    'fullscreen': '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>',
+    'frameBack': '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
+    'frameForward': '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
 
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:
