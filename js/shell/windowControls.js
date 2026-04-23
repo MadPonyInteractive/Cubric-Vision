@@ -3,6 +3,8 @@
  * Fail-safe for browser testing.
  */
 
+import { gid } from '../utils/dom.js';
+
 let ipcRenderer = null;
 
 try {
@@ -18,15 +20,15 @@ try {
  * Binds Click listeners to window control buttons (min, max, close, fullscreen).
  */
 export function bindWindowControls() {
-  const btnMin    = document.getElementById('win-minimize');
-  const btnMax    = document.getElementById('win-maximize');
-  const btnClose  = document.getElementById('win-close');
-  const btnFS     = document.getElementById('win-fullscreen');
-  
-  const maxIcon      = document.getElementById('max-icon');
-  const restoreIcon  = document.getElementById('restore-icon');
-  const fsEnterIcon  = document.getElementById('fullscreen-enter-icon');
-  const fsExitIcon   = document.getElementById('fullscreen-exit-icon');
+  const btnMin    = gid('win-minimize');
+  const btnMax    = gid('win-maximize');
+  const btnClose  = gid('win-close');
+  const btnFS     = gid('win-fullscreen');
+
+  const maxIcon      = gid('max-icon');
+  const restoreIcon  = gid('restore-icon');
+  const fsEnterIcon  = gid('fullscreen-enter-icon');
+  const fsExitIcon   = gid('fullscreen-exit-icon');
 
   const isBrowser = !ipcRenderer;
 

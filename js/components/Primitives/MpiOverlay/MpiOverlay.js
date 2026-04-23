@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { Overlays } from '../../../managers/overlayManager.js';
 import { Events } from '../../../events.js';
+import { gid } from '../../../utils/dom.js';
 
 /**
  * MpiOverlay — Page Overlay Primitive
@@ -74,7 +75,7 @@ export const MpiOverlay = ComponentFactory.create({
         const _doShow = () => {
             _target = mountTarget === 'body'
                 ? document.body
-                : document.getElementById('tool-container');
+                : gid('tool-container');
             if (!_target) {
                 console.warn(`[MpiOverlay:${_overlayId}] mount target "${mountTarget}" not found`);
                 return;

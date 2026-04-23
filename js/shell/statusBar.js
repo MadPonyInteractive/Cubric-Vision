@@ -18,6 +18,7 @@
 
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { Events } from '../events.js';
+import { gid } from '../utils/dom.js';
 
 // ── DOM refs (populated by init) ──────────────────────────────────────────────
 let _left    = null;  // #shell-info-left
@@ -77,9 +78,9 @@ export const StatusBar = {
      * Wires up the data-info hover delegation.
      */
     init() {
-        _left  = document.getElementById('shell-info-text');
-        _fill  = document.getElementById('shell-info-fill');
-        _right = document.getElementById('shell-info-process');
+        _left  = gid('shell-info-text');
+        _fill  = gid('shell-info-fill');
+        _right = gid('shell-info-process');
 
         if (!_left) return;
 

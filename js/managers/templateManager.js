@@ -24,6 +24,8 @@
 
 'use strict';
 
+import { gid } from '../utils/dom.js';
+
 const _loading = new Map(); // tplId → Promise (in-flight de-duplication)
 
 /**
@@ -35,7 +37,7 @@ const _loading = new Map(); // tplId → Promise (in-flight de-duplication)
  */
 export async function ensureTemplate(tplId) {
     // Fast path: already in DOM
-    const existing = document.getElementById(tplId);
+    const existing = gid(tplId);
     if (existing) return existing;
 
     // De-duplicate concurrent requests for the same template

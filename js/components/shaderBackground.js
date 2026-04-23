@@ -4,6 +4,8 @@
  * Adapted from: https://21st.dev/community/components/thanh/shader-background/default
  */
 
+import { gid } from '../utils/dom.js';
+
 let gl = null;
 let program = null;
 let animationId = null;
@@ -190,7 +192,7 @@ function render(time) {
  * Initializes and starts the shader background.
  */
 export function initShaderBackground() {
-    const canvas = document.getElementById('shader-background');
+    const canvas = gid('shader-background');
     if (!canvas) return;
 
     if (!gl) {
@@ -217,7 +219,7 @@ export function stopShaderBackground() {
         cancelAnimationFrame(animationId);
         animationId = null;
     }
-    const canvas = document.getElementById('shader-background');
+    const canvas = gid('shader-background');
     if (canvas) canvas.classList.add('hide');
 
     console.log('[shader] Background stopped');

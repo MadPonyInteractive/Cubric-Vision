@@ -9,6 +9,7 @@
 import { state } from '../state.js';
 import { Events } from '../events.js';
 import { Storage } from '../core/storage.js';
+import { qs, qsa, gid } from '../utils/dom.js';
 
 // Primitives
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
@@ -61,8 +62,8 @@ import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoP
 // Blocks
 
 export async function initComponentsPage() {
-    const debugToggle = document.getElementById('comp-debugToggle');
-    const searchInput = document.getElementById('comp-search');
+    const debugToggle = gid('comp-debugToggle');
+    const searchInput = gid('comp-search');
 
     // Restore debug state
     if (Storage.getCompDebug()) {
@@ -87,7 +88,7 @@ export async function initComponentsPage() {
  * Adding a new icon to MpiIcon.js will auto-appear here with no HTML changes needed.
  */
 function buildIconSection() {
-    const grid = document.getElementById('grid-MpiIcon');
+    const grid = gid('grid-MpiIcon');
     if (!grid) return;
 
     const SIZES = ['xs', 'sm', 'md', 'lg', 'xl'];
@@ -214,7 +215,7 @@ function mountAll() {
             selectionMode: 'single'
         });
         box.on('select', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `ScrollableBox (Single): ${value}`;
             console.log('[gallery] scrollable box select:', value);
         });
@@ -229,7 +230,7 @@ function mountAll() {
             selected: ['Multi 1', 'Multi 3']
         });
         box.on('select', ({ value, selection }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `ScrollableBox (Multi): ${selection.join(', ')}`;
             console.log('[gallery] scrollable box select:', value, selection);
         });
@@ -296,7 +297,7 @@ function mountAll() {
     mount('preview-mem-monitor', () => {
         const mm = MpiMemoryMonitor.mount(slot('preview-mem-monitor'), { pollInterval: 2000 });
         mm.on('release', ({ deep }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = deep ? 'Deep clean triggered (gallery demo)' : 'VRAM release triggered (gallery demo)';
             console.log('[gallery] memory monitor release:', { deep });
         });
@@ -351,7 +352,7 @@ function mountAll() {
             maxHeight: '180px'
         });
         dl.on('reorder', ({ items }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `List Reordered: ${items[0].label} is now first`;
             console.log('[gallery] drag list reorder:', items);
         });
@@ -393,7 +394,7 @@ function mountAll() {
                 // Dimensions
                 const img = new Image();
                 img.onload = () => {
-                    const badgeSlot = document.getElementById('preview-dropzone-image-badge');
+                    const badgeSlot = gid('preview-dropzone-image-badge');
                     if (badgeSlot) {
                         badgeSlot.innerHTML = '';
                         MpiBadge.mount(badgeSlot, { label: `${img.width}×${img.height}`, variant: 'info', pill: true });
@@ -404,7 +405,7 @@ function mountAll() {
 
             dz.on('remove', () => {
                 setupDz(baseProps);
-                const badgeSlot = document.getElementById('preview-dropzone-image-badge');
+                const badgeSlot = gid('preview-dropzone-image-badge');
                 if (badgeSlot) badgeSlot.innerHTML = '';
             });
         };
@@ -529,7 +530,7 @@ function mountAll() {
             direction: 'down',
         });
         dd.on('change', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `Dropdown (Primitive): ${value}`;
         });
     });
@@ -541,7 +542,7 @@ function mountAll() {
             direction: 'up',
         });
         dd.on('change', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `Dropdown (Primitive) up: ${value}`;
         });
     });
@@ -562,7 +563,7 @@ function mountAll() {
             name: 'config-tab',
         });
         rg.on('select', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `RadioGroup select: ${value}`;
         });
     });
@@ -578,7 +579,7 @@ function mountAll() {
             name: 'aspect-ratio',
         });
         rg.on('select', ({ value }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `RadioGroup (obj options): ${value}`;
         });
     });
@@ -587,7 +588,7 @@ function mountAll() {
     mount('preview-checkbox-default', () => {
         const cb = MpiCheckbox.mount(slot('preview-checkbox-default'), { checked: false });
         cb.on('change', ({ checked }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `MpiCheckbox: ${checked}`;
         });
     });
@@ -597,7 +598,7 @@ function mountAll() {
             checked: true,
         });
         cb.on('change', ({ checked }) => {
-            const infoBar = document.getElementById('shell-info-text');
+            const infoBar = gid('shell-info-text');
             if (infoBar) infoBar.textContent = `MpiCheckbox (label): ${checked}`;
         });
     });
@@ -1239,25 +1240,25 @@ function mountAll() {
 
 /** Clears a slot and returns it. */
 function slot(id) {
-    const el = document.getElementById(id);
+    const el = gid(id);
     if (el) el.innerHTML = '';
     return el;
 }
 
 /** Safely invokes a mount fn, suppressing errors. */
 function mount(id, fn) {
-    try { if (document.getElementById(id)) fn(); }
+    try { if (gid(id)) fn(); }
     catch (e) { console.warn(`[gallery] mount "${id}" failed:`, e); }
 }
 
 function filterComponents(q) {
-    document.querySelectorAll('.comp-card').forEach(c => {
+    qsa('.comp-card').forEach(c => {
         const match = (c.dataset.name || '').includes(q) || (c.dataset.label || '').includes(q);
         c.style.display = match ? 'flex' : 'none';
     });
     ['Primitives', 'MpiIcon', 'Compounds', 'Blocks'].forEach(tier => {
-        const section = document.getElementById(`section-${tier}`);
-        const grid = document.getElementById(`grid-${tier}`);
+        const section = gid(`section-${tier}`);
+        const grid = gid(`grid-${tier}`);
         if (!section || !grid) return;
         section.classList.toggle('hide', !Array.from(grid.children).some(c => c.style.display !== 'none'));
     });

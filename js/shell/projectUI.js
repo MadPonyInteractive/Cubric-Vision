@@ -8,6 +8,7 @@ import { listProjects, createProject, deleteProject, openProject, addProjectByFo
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
 import { clientLogger } from '../services/clientLogger.js';
+import { gid } from '../utils/dom.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -36,10 +37,10 @@ let _aboutOverlay    = null;
  * Initializes the project management UI: trigger button and grid loading.
  */
 export function initProjectUI() {
-  projectGrid = document.getElementById('projectGrid');
+  projectGrid = gid('projectGrid');
 
   // ── Landing action buttons (top-right of header) ──────────────────────────
-  const actionsSlot = document.getElementById('landingActions');
+  const actionsSlot = gid('landingActions');
   if (actionsSlot) {
     const defs = [
       { icon: 'settings', label: 'Settings', handler: () => {
@@ -71,7 +72,7 @@ export function initProjectUI() {
   }
 
   // ── New Project button ─────────────────────────────────────────────────────
-  const btnSlot = document.getElementById('newProjectBtn');
+  const btnSlot = gid('newProjectBtn');
   if (btnSlot) {
     const triggerBtn = MpiButton.mount(btnSlot, {
       text: '+ New Project',
@@ -99,7 +100,7 @@ export function initProjectUI() {
   // Feature-detect window.require — in plain browser dev mode webUtils is
   // unavailable and the feature cannot deliver absolute paths, so skip mount.
   if (typeof window.require === 'function') {
-    const landingEl = document.getElementById('page-landing');
+    const landingEl = gid('page-landing');
     if (landingEl) {
       const dropOverlay = MpiProjectDropOverlay.mount(document.createElement('div'), {
         onDrop: ({ folderPath }) => { handleProjectDrop(folderPath); },

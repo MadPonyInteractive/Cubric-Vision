@@ -13,6 +13,7 @@
 import { state } from '../state.js';
 import { Events } from '../events.js';
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
+import { gid } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
 import { initShaderBackground, stopShaderBackground } from '../components/shaderBackground.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
@@ -287,7 +288,7 @@ async function _loadComponentsGallery() {
     _toolContainer.style.position = '';
 
     await ensureTemplate('tpl-components');
-    const tpl = document.getElementById('tpl-components');
+    const tpl = gid('tpl-components');
     _toolContainer.appendChild(tpl.content.cloneNode(true));
 
     await initComponentsPage();
