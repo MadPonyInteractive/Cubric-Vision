@@ -24,10 +24,12 @@ import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qs } from '../../../utils/dom.js';
 
-// Keep in sync with canvas-viewer's DETECTION_MODELS list.
-const DETECTION_MODELS = [
-    { label: 'YOLO v8',  value: 'yolov8' },
-    { label: 'YOLO v11', value: 'yolov11' },
+// Fallback list; real source of truth is viewer.el.getDetectionModels().
+// Kept in sync with canvas-viewer's DETECTION_MODELS (bbox/*.pt values).
+const DETECTION_MODELS_FALLBACK = [
+    { label: 'Face',   value: 'bbox/face_yolov8n.pt' },
+    { label: 'Hand',   value: 'bbox/hand_yolov8n.pt' },
+    { label: 'Person', value: 'bbox/person_yolov8n-seg.pt' },
 ];
 
 export const MpiToolOptionsAutoMask = ComponentFactory.create({
@@ -50,9 +52,10 @@ export const MpiToolOptionsAutoMask = ComponentFactory.create({
 
         const _children = [];
 
+        const models = viewer.el.getDetectionModels?.() ?? DETECTION_MODELS_FALLBACK;
         const modelDd = MpiDropdown.mount(qs('#model-slot', el), {
-            options: DETECTION_MODELS,
-            value: DETECTION_MODELS[0].value,
+            options: models,
+            value: models[0].value,
             info: 'Detection model',
             direction: 'up',
         });

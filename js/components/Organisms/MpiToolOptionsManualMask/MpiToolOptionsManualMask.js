@@ -42,7 +42,7 @@ export const MpiToolOptionsManualMask = ComponentFactory.create({
         const _children   = [];
 
         const brushBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'pencil', size: 'sm', variant: 'ghost', info: 'Paint mask (B)',
+            icon: 'brush', size: 'sm', variant: 'ghost', info: 'Paint mask (B)',
             toggleable: true, active: true,
         });
         const eraserBtn = MpiButton.mount(document.createElement('div'), {
