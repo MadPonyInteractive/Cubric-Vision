@@ -70,7 +70,7 @@ Merge `MpiRatioSelector` + `MpiNumberSelector` into a single reusable compound a
 
 **Verify:** Dev gallery (`test_styles: true`) renders all three `MpiOptionSelector` variants (ratio, number, buttons); each opens a popup, selects a value, fires `change`. Buttons variant demo should show 2–3 mock tool buttons. Then open an existing image project → gallery ratio selector works. Open a video group → crop ratio, upscale factor, upscale model, interpolate multiplier all work. `grep -r "MpiRatioSelector\|MpiNumberSelector" js/` returns nothing outside the dev gallery history comment.
 
-### [ ] 2. Build `MpiContextMenu` compound
+### [x] 2. Build `MpiContextMenu` compound
 
 New floating-UI compound at `js/components/Compounds/MpiContextMenu/`. Props: `{ items: [{ key, icon?, label, disabled?, danger? }] }`. API: static `MpiContextMenu.show({ x, y, items, onSelect })` that portals to body, clamps to viewport, dismisses on outside-click / Escape / `ui:close-all-popups`, cleans up via MutationObserver, emits `select { key }` then self-closes. Register CSS in preloadStyles, document props in types.js, add dev gallery demo.
 

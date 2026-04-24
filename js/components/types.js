@@ -655,6 +655,30 @@
  */
 
 /**
+ * @typedef {Object} MpiContextMenuProps (Compound — js/components/Compounds/MpiContextMenu)
+ * @property {MpiContextMenuItem[]} items - Menu item definitions
+ *
+ * Static API (primary usage — do not mount):
+ *   MpiContextMenu.show({ x, y, items, onSelect })
+ *     x, y      — cursor coordinates (fixed positioning)
+ *     items     — array of MpiContextMenuItem
+ *     onSelect  — callback(key: string) fired on item click; menu self-closes
+ *
+ * @typedef {Object} MpiContextMenuItem
+ * @property {string}   key           - Unique identifier emitted to onSelect
+ * @property {string}   [icon]        - Optional icon name from icons.js
+ * @property {string}   label         - Display text
+ * @property {boolean}  [disabled]    - Grays out item; click does nothing
+ * @property {boolean}  [danger]      - Renders item in danger color
+ *
+ * Behaviour:
+ *   Portals to document.body at (x, y); clamps to viewport.
+ *   Dismisses on: outside-click, Escape, ui:close-all-popups.
+ *   MutationObserver cleans up if removed externally.
+ *   z-index: 9999 (floating UI popup contract).
+ */
+
+/**
  * @typedef {Object} MpiSelectionBarProps (Compound — js/components/Compounds/MpiSelectionBar)
  * @property {number} [count=0] - Initial selected item count
  *

@@ -4,7 +4,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, on } from '../../../utils/dom.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 /**
@@ -127,20 +127,19 @@ function _setupPortalAndDismiss(el, popupEl, trigger, getShowPopup, closeFn) {
         if (getShowPopup()) closeFn();
     });
 
-    const _onOutsideClick = (e) => {
+    const _offOutsideClick = on(document, 'click', (e) => {
         if (!getShowPopup()) return;
         if (popupEl.contains(e.target) || el.contains(e.target)) return;
         if (e.target.closest?.('.mpi-dropdown__list')) return;
         closeFn();
-    };
-    document.addEventListener('click', _onOutsideClick);
+    });
 
     const _domObserver = new MutationObserver(() => {
         if (!document.contains(el)) {
             if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
             _domObserver.disconnect();
             _unsubBus();
-            document.removeEventListener('click', _onOutsideClick);
+            _offOutsideClick();
         }
     });
     _domObserver.observe(document.body, { childList: true, subtree: true });
@@ -148,7 +147,7 @@ function _setupPortalAndDismiss(el, popupEl, trigger, getShowPopup, closeFn) {
     const destroy = () => {
         _domObserver.disconnect();
         _unsubBus();
-        document.removeEventListener('click', _onOutsideClick);
+        _offOutsideClick();
         if (popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
     };
 
@@ -189,9 +188,10 @@ function _setupRatio(el, props, emit) {
         emit('popup_toggle', { active: false });
     };
 
+    const _unsubs = [];
     const destroyPortal = _setupPortalAndDismiss(el, popupEl, trigger, () => props.showPopup, closePopup);
 
-    trigger.addEventListener('click', (e) => {
+    _unsubs.push(on(trigger, 'click', (e) => {
         e.stopPropagation();
         props.showPopup = !props.showPopup;
         if (props.showPopup) _positionPopup(trigger, popupEl);
@@ -199,7 +199,7 @@ function _setupRatio(el, props, emit) {
         const btn = qs('.mpi-btn', trigger);
         if (btn) btn.classList.toggle('is-active', props.showPopup);
         emit('popup_toggle', { active: props.showPopup });
-    });
+    }));
 
     const updateUI = () => {
         const orientation = props.orientation || props.initialOrientation || 'portrait';
@@ -237,8 +237,8 @@ function _setupRatio(el, props, emit) {
         });
     };
 
-    // Orientation toggle
-    popupEl.addEventListener('click', (e) => {
+    // Orientation toggle + ratio selection (single delegated click handler)
+    _unsubs.push(on(popupEl, 'click', (e) => {
         const orientBtn = e.target.closest('.mpi-opt-sel__orient-btn');
         if (orientBtn) {
             const currentOrient = props.orientation || props.initialOrientation || 'portrait';
@@ -260,30 +260,17 @@ function _setupRatio(el, props, emit) {
                 orientation: props.orientation,
             });
             updateUI();
+            return;
         }
-    });
 
-    // Speed/quality tier change
-    popupEl.addEventListener('change', (e) => {
-        const speedRadio = e.target.closest('#speed-radio-slot');
-        if (speedRadio) {
-            const newTier     = e.target.value;
-            props.qualityTier = newTier;
-            emit('quality_change', { qualityTier: newTier });
-            updateUI();
-        }
-    });
-
-    // Ratio selection
-    popupEl.addEventListener('click', (e) => {
         const item = e.target.closest('.mpi-opt-sel__item[data-label]');
         if (!item) return;
-        const label   = item.dataset.label;
-        const modelType  = props.modelType || 'flux';
+        const label       = item.dataset.label;
+        const modelType   = props.modelType || 'flux';
         const orientation = props.orientation || props.initialOrientation || 'portrait';
         const qualityTier = props.qualityTier || 'medium';
-        const mode    = RATIO_MODES[modelType] ?? 'orientation';
-        const ratios  = getModelRatios(
+        const mode        = RATIO_MODES[modelType] ?? 'orientation';
+        const ratios      = getModelRatios(
             modelType,
             mode === 'orientation' ? orientation : undefined,
             mode === 'quality' ? qualityTier : undefined
@@ -300,9 +287,23 @@ function _setupRatio(el, props, emit) {
         });
         updateUI();
         closePopup();
-    });
+    }));
 
-    el.destroy = destroyPortal;
+    // Speed/quality tier change
+    _unsubs.push(on(popupEl, 'change', (e) => {
+        const speedRadio = e.target.closest('#speed-radio-slot');
+        if (speedRadio) {
+            const newTier     = e.target.value;
+            props.qualityTier = newTier;
+            emit('quality_change', { qualityTier: newTier });
+            updateUI();
+        }
+    }));
+
+    el.destroy = () => {
+        _unsubs.forEach(fn => fn?.());
+        destroyPortal();
+    };
 }
 
 // ── Number variant setup ──────────────────────────────────────────────────────
@@ -331,9 +332,10 @@ function _setupNumber(el, props, emit) {
         emit('popup_toggle', { active: false });
     };
 
+    const _unsubs = [];
     const destroyPortal = _setupPortalAndDismiss(el, popupEl, trigger, () => props.showPopup, _closePopup);
 
-    trigger.addEventListener('click', (e) => {
+    _unsubs.push(on(trigger, 'click', (e) => {
         e.stopPropagation();
         props.showPopup = !props.showPopup;
         if (props.showPopup) _positionPopup(trigger, popupEl);
@@ -341,7 +343,7 @@ function _setupNumber(el, props, emit) {
         const btn = qs('.mpi-btn', trigger);
         if (btn) btn.classList.toggle('is-active', props.showPopup);
         emit('popup_toggle', { active: props.showPopup });
-    });
+    }));
 
     const _updateUI = () => {
         const current = props.value;
@@ -357,7 +359,7 @@ function _setupNumber(el, props, emit) {
         });
     };
 
-    popupEl.addEventListener('click', (e) => {
+    _unsubs.push(on(popupEl, 'click', (e) => {
         const item = e.target.closest('.mpi-opt-sel__item[data-value]');
         if (!item) return;
         const v = item.dataset.value;
@@ -366,9 +368,12 @@ function _setupNumber(el, props, emit) {
         emit('change', { value: v });
         _updateUI();
         _closePopup();
-    });
+    }));
 
-    el.destroy = destroyPortal;
+    el.destroy = () => {
+        _unsubs.forEach(fn => fn?.());
+        destroyPortal();
+    };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

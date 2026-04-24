@@ -9,7 +9,7 @@
 import { state } from '../state.js';
 import { Events } from '../events.js';
 import { Storage } from '../core/storage.js';
-import { qs, qsa, gid } from '../utils/dom.js';
+import { qs, qsa, gid, on } from '../utils/dom.js';
 
 // Primitives
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
@@ -35,6 +35,7 @@ import { StatusBar } from '../shell/statusBar.js';
 import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiOptionSelector } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
 import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCameraConfig.js';
 import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
@@ -723,6 +724,29 @@ function mountAll() {
             info: 'Upscale factor',
         });
         sel.on('change', (data) => console.log('[gallery] number-sel factor change:', data));
+    });
+
+    // ── MpiContextMenu (Compound) ─────────────────────────────────────────────
+    mount('preview-context-menu', () => {
+        const slotEl = slot('preview-context-menu');
+        const btn = MpiButton.mount(document.createElement('div'), {
+            text: 'Right-click me', variant: 'secondary', size: 'md',
+            info: 'Right-click or use keyboard context key to open menu',
+        });
+        slotEl.appendChild(btn.el);
+        on(slotEl, 'contextmenu', (e) => {
+            e.preventDefault();
+            MpiContextMenu.show({
+                x: e.clientX,
+                y: e.clientY,
+                items: [
+                    { key: 'delete',  icon: 'trash',   label: 'Delete',  danger: true,  info: 'Delete selected items' },
+                    { key: 'compare', icon: 'compare', label: 'Compare',                info: 'Compare two selected items' },
+                    { key: 'noop',    label: 'Disabled action', disabled: true,          info: 'This action is unavailable' },
+                ],
+                onSelect: (key) => console.log('[gallery] MpiContextMenu select:', key),
+            });
+        });
     });
 
     // ── MpiPromptBox (Compound) ────────────────────────────────────────────────
