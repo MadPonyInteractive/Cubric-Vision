@@ -541,6 +541,92 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         el.setMaskHidden = (hidden) => { canvas.maskHidden = hidden; };
 
+        // ── Tool-driver surface (consumed by MpiToolOptions* compounds) ─────
+        // These methods expose the canvas-viewer's internal tool actions so that
+        // the Photoshop-pivot MpiToolOptions* compounds can drive the viewer
+        // directly without going through MpiToolActionBar (deleted in sub-commit 3b).
+
+        /** Promote _runCrop so MpiToolOptionsCrop can trigger it via onApply. */
+        el.runCrop = () => _runCrop();
+
+        /**
+         * Switch active brush for manual-mask painting.
+         * @param {'brush'|'eraser'} mode
+         */
+        el.setMaskBrushMode = (mode) => {
+            if (mode === 'brush' || mode === 'eraser') canvas.setBrushType(mode);
+        };
+
+        /** Clear the entire painted mask and emit 'mask-clear'. */
+        el.clearMask = () => {
+            canvas.clearMask();
+            _hasMask = false;
+            emit('mask-clear', {});
+        };
+
+        /** Invert the mask colours in-place (no exit, no emit). */
+        el.invertMask = () => canvas.flipMaskColor();
+
+        /**
+         * Commit the manual mask: exits mask mode, emits 'mask-ready' if paint
+         * strokes exist, otherwise 'mask-clear'. Mirrors the old apply handler.
+         */
+        el.commitMask = () => {
+            const hasContent = hasMaskContent(canvas.maskCanvas);
+            _hasMask = hasContent;
+            _exitMode();
+            if (hasContent) emit('mask-ready', { hasMask: true });
+            else            emit('mask-clear', {});
+        };
+
+        /**
+         * Swap the YOLO detection model for auto-mask. Clears any in-progress
+         * picks + painted mask to keep auto-mask state coherent.
+         */
+        el.setAutoMaskModel = (modelId) => {
+            _autoMaskModel = modelId;
+            autoMaskThumbs.el.clear();
+            autoMaskThumbs.el.clearPicks?.();
+            _autoMaskPicks.clear();
+            canvas.clearMask();
+            _hasMask = false;
+        };
+
+        /**
+         * Toggle between bounding-box and segmentation auto-mask output.
+         * @param {boolean} useBox
+         */
+        el.setAutoMaskUseBox = (useBox) => {
+            _autoMaskUseBox = !!useBox;
+            autoMaskThumbs.el.clear();
+            _autoMaskPicks.clear();
+            canvas.clearMask();
+            _hasMask = false;
+        };
+
+        /** Kick off an auto-mask detect run and populate the thumbs strip. */
+        el.runAutoMaskDetect = () => {
+            autoMaskThumbs.el.clear();
+            _autoMaskPicks.clear();
+            canvas.clearMask();
+            _hasMask = false;
+            _runAutoMaskWorkflow(true);
+        };
+
+        /** Commit current auto-mask selection and exit auto-mask mode. */
+        el.commitAutoMask = () => _exitAutoMaskMode(true);
+
+        /**
+         * Return the internal MpiAutoMaskThumbs DOM node so a parent compound
+         * (e.g. MpiToolOptionsAutoMask) can re-parent it into its own template.
+         * IMPORTANT: parent MUST NOT destroy the thumbs — detach only. The viewer
+         * still owns the instance's lifecycle.
+         */
+        el.getAutoMaskThumbsEl = () => autoMaskThumbs.el;
+
+        /** Expose DETECTION_MODELS constant so options compounds don't fork it. */
+        el.getDetectionModels = () => DETECTION_MODELS.slice();
+
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;
 
