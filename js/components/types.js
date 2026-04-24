@@ -35,18 +35,6 @@
  */
 
 /**
- * @typedef {Object} MpiToolActionBarDef
- * @property {string}  key              - Unique key emitted with 'action' event
- * @property {string}  icon             - Icon registry key
- * @property {string}  [label]          - Text label shown below icon
- * @property {string}  [variant='ghost'] - MpiButton variant
- * @property {boolean} [toggleable]     - Button commits active state on click
- * @property {boolean} [active]         - Initial active state
- * @property {string}  [radioGroup]     - Buttons in the same group are mutually exclusive
- * @property {string}  [info]           - Tooltip / info bar text
- */
-
-/**
  * @typedef {Object} MpiToolOptionsCropProps (Organism — js/components/Organisms/MpiToolOptionsCrop)
  * @property {Object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
  * @property {'image'|'video'} kind
@@ -88,21 +76,6 @@
  *   triggerIcon?, triggerSize?, triggerVariant?, triggerActive?, popupTitle?, info?
  * Instance methods (el): setButtons(arr), setTriggerIcon(icon), setTriggerActive(bool), getButtons()
  * Emits: 'change' { value, def }, 'popup_toggle' { active }
- */
-
-/**
- * @typedef {Object} MpiToolActionBarProps (Compound — js/components/Compounds/MpiToolActionBar)
- * @property {MpiToolActionBarDef[]} actions   - Button definitions
- * @property {Object}               [topSlot]  - A mounted component instance shown above the pill (e.g. MpiAutoMaskThumbs)
- * @property {Object}               [leftSlot] - A mounted component instance to embed on the left of the pill
- *
- * Instance methods (on instance.el):
- *   show()          — make the bar visible (slide-up animation)
- *   hide()          — hide the bar
- *   setActive(key)  — activate a toggleable button and deactivate its radio siblings (no event emitted)
- *
- * Emits:
- *   'action' { key: string, active: boolean } — any button clicked
  */
 
 /**

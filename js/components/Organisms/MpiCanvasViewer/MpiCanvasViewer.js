@@ -378,7 +378,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // ── Tool-driver surface (consumed by MpiToolOptions* compounds) ─────
         // These methods expose the canvas-viewer's internal tool actions so that
         // the Photoshop-pivot MpiToolOptions* compounds can drive the viewer
-        // directly without going through MpiToolActionBar (deleted in sub-commit 3b).
+        // directly without an intermediate tool-action-bar.
 
         /** Promote _runCrop so MpiToolOptionsCrop can trigger it via onApply. */
         el.runCrop = () => _runCrop();

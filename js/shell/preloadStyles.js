@@ -50,7 +50,6 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css',
   'js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.css',
   'js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css',
-  'js/components/Compounds/MpiToolActionBar/MpiToolActionBar.css',
   'js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css',
   'js/components/Compounds/MpiHistoryList/MpiHistoryList.css',
   'js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css',

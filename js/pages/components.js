@@ -54,7 +54,6 @@ import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEn
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
-import { MpiToolActionBar } from '../components/Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 
 // Organisms
@@ -1237,30 +1236,6 @@ function mountAll() {
         );
     });
 
-    // ── MpiToolActionBar with topSlot (Compound) ─────────────────────────────
-    mount('preview-tool-action-bar-top', () => {
-        const thumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
-        const placeholders = Array.from({ length: 4 }, (_, i) => {
-            const c = document.createElement('canvas');
-            c.width = 56; c.height = 56;
-            const ctx = c.getContext('2d');
-            ctx.fillStyle = `hsl(${i * 80}, 55%, 40%)`;
-            ctx.fillRect(0, 0, 56, 56);
-            return c.toDataURL();
-        });
-        thumbs.el.setImages(placeholders);
-
-        const bar = MpiToolActionBar.mount(slot('preview-tool-action-bar-top'), {
-            topSlot: thumbs,
-            actions: [
-                { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
-                { key: 'apply', icon: 'check', label: 'Apply', variant: 'primary', info: 'Apply mask' },
-                { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel' },
-            ],
-        });
-        bar.el.show();
-        bar.on('action', ({ key }) => console.log('[gallery] MpiToolActionBar action:', key));
-    });
 }
 
 /** Clears a slot and returns it. */

@@ -34,10 +34,6 @@
     pointer-events: none;
 }
 
-/* ── Crop/mask action bar mount point ──────────────────────────────────── */
-/* MpiToolActionBar uses position:fixed so this needs no layout of its own */
-.mpi-canvas-viewer__crop-bar {
-}
 
 /* ── Bar slot for tool action bars ──────────────────────────────────────── */
 .mpi-canvas-viewer__bar-slot {

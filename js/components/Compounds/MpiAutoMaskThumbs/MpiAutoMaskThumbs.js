@@ -5,7 +5,8 @@
  * "Detected" ComfyUI node. Clicking a thumbnail toggles it selected/deselected.
  * Multiple thumbnails may be selected at once (additive mask behaviour).
  *
- * Designed to be passed as `topSlot` to MpiToolActionBar.
+ * Owned by MpiCanvasViewer; re-parented into MpiToolOptionsAutoMask via
+ * `viewer.el.getAutoMaskThumbsEl()` while auto-mask tool is active.
  *
  * Usage:
  *   const thumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
