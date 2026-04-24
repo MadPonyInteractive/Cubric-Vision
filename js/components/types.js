@@ -47,6 +47,50 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsCropProps (Organism — js/components/Organisms/MpiToolOptionsCrop)
+ * @property {Object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
+ * @property {'image'|'video'} kind
+ *
+ * Emits: 'apply' { kind: 'image' | 'video-save' | 'video-snapshot' }
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsManualMaskProps (Organism — js/components/Organisms/MpiToolOptionsManualMask)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * Requires viewer.el: enterMode('mask'), exitMode(), setMaskBrushMode, clearMask, invertMask
+ * Emits: 'apply' {}
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsAutoMaskProps (Organism — js/components/Organisms/MpiToolOptionsAutoMask)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * Requires viewer.el: enterMode('automask'), exitMode(), setAutoMaskModel, setAutoMaskUseBox, runAutoMaskDetect, getAutoMaskThumbsEl?
+ * Emits: 'apply' {}
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsUpscaleProps (Organism — js/components/Organisms/MpiToolOptionsUpscale)
+ * @property {Object} viewer - MpiVideoViewer instance
+ * Emits: 'apply' { factor: number, model: string }
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsInterpolateProps (Organism — js/components/Organisms/MpiToolOptionsInterpolate)
+ * @property {Object} viewer - MpiVideoViewer instance
+ * Emits: 'apply' { multiplier: number }
+ */
+
+/**
+ * MpiOptionSelector `buttons` variant (extends MpiOptionSelector):
+ *   buttons: [{ icon, label?, value, info? }]
+ *   triggerIcon?, triggerSize?, triggerVariant?, triggerActive?, popupTitle?, info?
+ * Instance methods (el): setButtons(arr), setTriggerIcon(icon), setTriggerActive(bool), getButtons()
+ * Emits: 'change' { value, def }, 'popup_toggle' { active }
+ */
+
+/**
  * @typedef {Object} MpiToolActionBarProps (Compound — js/components/Compounds/MpiToolActionBar)
  * @property {MpiToolActionBarDef[]} actions   - Button definitions
  * @property {Object}               [topSlot]  - A mounted component instance shown above the pill (e.g. MpiAutoMaskThumbs)

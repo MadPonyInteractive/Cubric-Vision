@@ -90,6 +90,111 @@ function _templateRatio(props) {
     </div>`;
 }
 
+function _templateButtons(props) {
+    const buttons   = props.buttons || [];
+    const triggerIcon = props.triggerIcon ?? buttons[0]?.icon ?? 'settings';
+    const triggerInfo = props.info ?? '';
+    const isActive    = props.showPopup || false;
+
+    const itemsHtml = buttons.map(b => `
+        <div class="mpi-opt-sel__item" data-value="${b.value}">
+            ${MpiButton.template({ icon: b.icon, label: b.label ?? '', labelPosition: 'top', size: 'md', variant: 'ghost', info: b.info ?? b.label ?? '' })}
+        </div>
+    `).join('');
+
+    const popupInnerHtml = `
+        ${props.popupTitle ? `<div class="mpi-opt-sel__header">${MpiBadge.template({ label: props.popupTitle, variant: 'secondary' })}</div>` : ''}
+        <div class="mpi-opt-sel__grid">${itemsHtml}</div>
+    `;
+
+    const triggerHtml = MpiButton.template({
+        icon: triggerIcon, size: 'sm', variant: 'ghost', toggleable: true, active: isActive, info: triggerInfo,
+    });
+
+    return `<div class="mpi-opt-sel mpi-opt-sel--buttons">
+        <div class="mpi-opt-sel__trigger">${triggerHtml}</div>
+        ${MpiPopup.template({ active: isActive, position: 'top' }, popupInnerHtml)}
+    </div>`;
+}
+
+function _setupButtons(el, props, emit) {
+    props.buttons = props.buttons || [];
+    props.triggerIcon = props.triggerIcon ?? props.buttons[0]?.icon ?? 'settings';
+
+    const trigger = qs('.mpi-opt-sel__trigger', el);
+    const popupEl = qs('.mpi-popup', el);
+    const grid    = qs('.mpi-opt-sel__grid', el);
+
+    const _renderTrigger = () => {
+        trigger.innerHTML = MpiButton.template({
+            icon: props.triggerIcon, size: 'sm', variant: 'ghost',
+            toggleable: true, active: props.showPopup || props.triggerActive || false,
+            info: props.info || '',
+        });
+    };
+
+    const _renderGrid = () => {
+        grid.innerHTML = (props.buttons || []).map(b => `
+            <div class="mpi-opt-sel__item" data-value="${b.value}">
+                ${MpiButton.template({ icon: b.icon, label: b.label ?? '', labelPosition: 'top', size: 'md', variant: 'ghost', info: b.info ?? b.label ?? '' })}
+            </div>
+        `).join('');
+    };
+
+    el.setButtons = (buttons) => {
+        props.buttons = buttons || [];
+        if (!props.buttons.some(b => b.icon === props.triggerIcon)) {
+            props.triggerIcon = props.buttons[0]?.icon ?? props.triggerIcon;
+        }
+        _renderGrid();
+        _renderTrigger();
+    };
+    el.setTriggerIcon = (icon) => {
+        props.triggerIcon = icon;
+        _renderTrigger();
+    };
+    el.setTriggerActive = (active) => {
+        props.triggerActive = !!active;
+        _renderTrigger();
+    };
+
+    const _closePopup = () => {
+        props.showPopup = false;
+        popupEl.classList.remove('is-active');
+        _renderTrigger();
+        emit('popup_toggle', { active: false });
+    };
+
+    const _unsubs = [];
+    const destroyPortal = _setupPortalAndDismiss(el, popupEl, trigger, () => props.showPopup, _closePopup);
+
+    _unsubs.push(on(trigger, 'click', (e) => {
+        e.stopPropagation();
+        props.showPopup = !props.showPopup;
+        if (props.showPopup) _positionPopup(trigger, popupEl);
+        popupEl.classList.toggle('is-active', props.showPopup);
+        _renderTrigger();
+        emit('popup_toggle', { active: props.showPopup });
+    }));
+
+    _unsubs.push(on(popupEl, 'click', (e) => {
+        const item = e.target.closest('.mpi-opt-sel__item[data-value]');
+        if (!item) return;
+        const value = item.dataset.value;
+        const btn   = (props.buttons || []).find(b => String(b.value) === String(value));
+        if (!btn) return;
+        props.triggerIcon = btn.icon;
+        emit('change', { value: btn.value, icon: btn.icon, label: btn.label });
+        _renderTrigger();
+        _closePopup();
+    }));
+
+    el.destroy = () => {
+        _unsubs.forEach(fn => fn?.());
+        destroyPortal();
+    };
+}
+
 function _templateNumber(props) {
     const values   = props.values || [];
     const current  = props.value ?? values[0] ?? '';
@@ -116,6 +221,110 @@ function _templateNumber(props) {
         <div class="mpi-opt-sel__trigger">${triggerHtml}</div>
         ${MpiPopup.template({ active: isActive, position: 'top' }, popupInnerHtml)}
     </div>`;
+}
+
+// ── Buttons variant ──────────────────────────────────────────────────────────
+
+function _templateButtons(props) {
+    const buttons     = props.buttons || [];
+    const triggerIcon = props.triggerIcon || buttons[0]?.icon || 'settings';
+    const isActive    = props.showPopup || false;
+
+    const itemsHtml = buttons.map(b => `
+        <div class="mpi-opt-sel__item" data-value="${b.value}">
+            ${MpiButton.template({ icon: b.icon, label: b.label ?? '', labelPosition: 'right', size: 'md', variant: 'ghost', info: b.info || b.label || '' })}
+        </div>
+    `).join('');
+
+    const popupInnerHtml = `
+        ${props.popupTitle ? `<div class="mpi-opt-sel__header">${MpiBadge.template({ label: props.popupTitle, variant: 'secondary' })}</div>` : ''}
+        <div class="mpi-opt-sel__grid mpi-opt-sel__grid--buttons">${itemsHtml}</div>
+    `;
+
+    const triggerHtml = MpiButton.template({
+        icon: triggerIcon,
+        size: props.triggerSize || 'sm',
+        variant: props.triggerVariant || 'ghost',
+        active: props.triggerActive || isActive,
+        toggleable: true,
+        info: props.info || '',
+    });
+
+    return `<div class="mpi-opt-sel mpi-opt-sel--buttons">
+        <div class="mpi-opt-sel__trigger">${triggerHtml}</div>
+        ${MpiPopup.template({ active: isActive, position: 'top' }, popupInnerHtml)}
+    </div>`;
+}
+
+function _setupButtons(el, props, emit) {
+    let _buttons       = [...(props.buttons || [])];
+    let _triggerIcon   = props.triggerIcon || _buttons[0]?.icon || 'settings';
+    let _triggerActive = !!props.triggerActive;
+
+    const trigger = qs('.mpi-opt-sel__trigger', el);
+    const popupEl = qs('.mpi-popup', el);
+    const grid    = qs('.mpi-opt-sel__grid', el);
+
+    const _closePopup = () => {
+        props.showPopup = false;
+        popupEl.classList.remove('is-active');
+        const btn = qs('.mpi-btn', trigger);
+        if (btn) btn.classList.remove('is-active');
+        emit('popup_toggle', { active: false });
+    };
+
+    const _renderTrigger = () => {
+        trigger.innerHTML = MpiButton.template({
+            icon: _triggerIcon,
+            size: props.triggerSize || 'sm',
+            variant: props.triggerVariant || 'ghost',
+            active: _triggerActive || props.showPopup,
+            toggleable: true,
+            info: props.info || '',
+        });
+    };
+
+    const _renderGrid = () => {
+        grid.innerHTML = _buttons.map(b => `
+            <div class="mpi-opt-sel__item" data-value="${b.value}">
+                ${MpiButton.template({ icon: b.icon, label: b.label ?? '', labelPosition: 'right', size: 'md', variant: 'ghost', info: b.info || b.label || '' })}
+            </div>
+        `).join('');
+    };
+
+    el.setButtons       = (buttons) => { _buttons = [...(buttons || [])]; _renderGrid(); };
+    el.setTriggerIcon   = (icon)    => { _triggerIcon = icon; _renderTrigger(); };
+    el.setTriggerActive = (active)  => { _triggerActive = !!active; _renderTrigger(); };
+    el.getButtons       = ()        => _buttons.slice();
+
+    const _unsubs = [];
+    const destroyPortal = _setupPortalAndDismiss(el, popupEl, trigger, () => props.showPopup, _closePopup);
+
+    _unsubs.push(on(trigger, 'click', (e) => {
+        e.stopPropagation();
+        props.showPopup = !props.showPopup;
+        if (props.showPopup) _positionPopup(trigger, popupEl);
+        popupEl.classList.toggle('is-active', props.showPopup);
+        const btn = qs('.mpi-btn', trigger);
+        if (btn) btn.classList.toggle('is-active', props.showPopup);
+        emit('popup_toggle', { active: props.showPopup });
+    }));
+
+    _unsubs.push(on(popupEl, 'click', (e) => {
+        const item = e.target.closest('.mpi-opt-sel__item[data-value]');
+        if (!item) return;
+        const value = item.dataset.value;
+        const def   = _buttons.find(b => b.value === value);
+        if (!def) return;
+        if (def.icon) { _triggerIcon = def.icon; _renderTrigger(); }
+        emit('change', { value, def });
+        _closePopup();
+    }));
+
+    el.destroy = () => {
+        _unsubs.forEach(fn => fn?.());
+        destroyPortal();
+    };
 }
 
 // ── Shared setup helpers ──────────────────────────────────────────────────────
@@ -385,11 +594,13 @@ export const MpiOptionSelector = ComponentFactory.create({
     template: (props) => {
         if (props.variant === 'ratio')  return _templateRatio(props);
         if (props.variant === 'number') return _templateNumber(props);
+        if (props.variant === 'buttons') return _templateButtons(props);
         return `<div class="mpi-opt-sel"></div>`;
     },
 
     setup: (el, props, emit) => {
         if (props.variant === 'ratio')  return _setupRatio(el, props, emit);
         if (props.variant === 'number') return _setupNumber(el, props, emit);
+        if (props.variant === 'buttons') return _setupButtons(el, props, emit);
     },
 });

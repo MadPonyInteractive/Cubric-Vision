@@ -14,6 +14,16 @@ to-do-10: NIM-41
 to-do-11: NIM-42
 -->
 
+## To-do 7 — Sub-commit progress log (live)
+
+**Sub-commit 1a ✅ (2026-04-24):** `MpiOptionSelector` gained a third variant `buttons`. API: `buttons: [{icon, label?, value, info?}]`, `triggerIcon`, `triggerActive`, `popupTitle`, `info`; instance methods `setButtons`, `setTriggerIcon`, `setTriggerActive`, `getButtons`; emits `change {value, def}`. Drives the mask tool-group sub-menu in the rewritten `MpiHistoryTools`.
+
+**Sub-commit 1b ✅ (2026-04-24):** 5 `MpiToolOptions*` components created — **placed in `js/components/Organisms/`**, NOT `Compounds/` as the plan text originally said. Reason: three of them (`Crop`, `Upscale`, `Interpolate`) import `MpiOptionSelector` (a Compound), which violates the Compound tier. Organisms can import Compounds + Primitives, so that is the correct tier. The 5 compound paths in §3 of to-do 7 should be read as `js/components/Organisms/MpiToolOptions<Name>/` everywhere below. CSS registered under the Organisms section of `preloadStyles.js`. Types.js typedefs tagged `(Organism — js/components/Organisms/...)`.
+
+**Missing canvas-viewer API**: `MpiToolOptionsManualMask` + `MpiToolOptionsAutoMask` call methods that don't exist on `MpiCanvasViewer` yet. Sub-commit 3a must expose: `setMaskBrushMode(mode)`, `clearMask()`, `invertMask()`, `commitMask()`, `runCrop()` (promote internal `_runCrop`), `setAutoMaskModel(id)`, `setAutoMaskUseBox(bool)`, `runAutoMaskDetect()`, `commitAutoMask()`, `getAutoMaskThumbsEl()`. Calls in the new compounds already use `?.` optional chaining, so they no-op until exposed.
+
+**DETECTION_MODELS duplication**: `MpiToolOptionsAutoMask` hard-codes `[yolov8, yolov11]` as a placeholder. Real list lives inside `MpiCanvasViewer.js`. Sub-commit 3 either exports the constant from canvas viewer + imports in the Organism, or exposes `viewer.el.getDetectionModels()`.
+
 ## Goal
 
 Rework the Group History workspace into a Photoshop-style layout with a left tool column, a right panel split into a props-bar (top) and a history list (bottom), and a PromptBox that stays at its current centre-bottom position but is toggled via the left toolbar. Consolidate overlapping picker components into one reusable compound. Remove the now-redundant selection-bar and bottom-slot action-bar choreography.
@@ -251,7 +261,7 @@ Rewrite block template + CSS:
 - Remove preloadStyles entry + types.js typedef.
 
 #### 3. New `MpiToolOptions*` compounds (one per tool)
-Path: `js/components/Compounds/MpiToolOptions<Name>/`.
+Path: `js/components/Organisms/MpiToolOptions<Name>/` (tier change from the original plan text — see sub-commit 1b log at top).
 
 Each compound:
 - Accepts `{ viewer, onApply }` props.
@@ -341,7 +351,7 @@ Where `TOOL_OPTIONS_REGISTRY`:
 **Files touched:**
 - Delete: `strategies/imageStrategy.js`, `strategies/videoStrategy.js`.
 - Delete: `js/components/Compounds/MpiToolActionBar/` (whole directory).
-- Create: `js/components/Compounds/MpiToolOptionsCrop/`, `MpiToolOptionsManualMask/`, `MpiToolOptionsAutoMask/`, `MpiToolOptionsUpscale/`, `MpiToolOptionsInterpolate/` (each: `.js` + `.css`).
+- Create: `js/components/Organisms/MpiToolOptionsCrop/`, `MpiToolOptionsManualMask/`, `MpiToolOptionsAutoMask/`, `MpiToolOptionsUpscale/`, `MpiToolOptionsInterpolate/` (each: `.js` + `.css`).
 - Rewrite: `js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js` — accept `mode` prop, build internal tool list, sub-menu support via `MpiOptionSelector buttons` variant, `setMode` / `setDisabled` / `getActiveMode` API, emit only `activate`.
 - Rewrite: `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` — viewer mount inline, mediator replaces `setActiveTool`, strategy imports deleted, channel `tool:*` events deleted, `_opOptions` + `_hasPromptOps` drive PromptBox + prompt-button-disabled.
 - Update: `js/shell/preloadStyles.js` — register new `MpiToolOptions*` CSS, drop `MpiToolActionBar`.
