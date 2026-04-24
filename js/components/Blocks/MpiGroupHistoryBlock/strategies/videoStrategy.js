@@ -9,7 +9,7 @@ export function videoStrategy({ group, tools }) {
     const { _universalToolIcons } = tools;
 
     return {
-        supportsSelection:  () => false,
+        supportsSelection:  () => true,
         supportsPromptBox:  () => false,
 
         toolsFor() {

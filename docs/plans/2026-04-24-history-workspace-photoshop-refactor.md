@@ -102,7 +102,7 @@ Wire the new events in `MpiGroupHistoryBlock`:
 
 GroupHistory removal complete. See commit f03d0ff.
 
-### [ ] 4b. Replace `MpiSelectionBar` in Gallery with ctrl/shift/right-click pattern + delete `MpiSelectionBar` entirely
+### [x] 4b. Replace `MpiSelectionBar` in Gallery with ctrl/shift/right-click pattern + delete `MpiSelectionBar` entirely
 
 **Gallery new interaction model:**
 - Checkbox removed from cards completely (remove `MpiCheckbox` mount + `.mpi-group-card__select-wrap` slot from `MpiGalleryGrid`).
@@ -132,7 +132,7 @@ GroupHistory removal complete. See commit f03d0ff.
 
 **Verify:** `grep -r "MpiSelectionBar\|mpi-selection-bar\|selectionbar-slot" js/ styles/` returns zero hits. `ls js/components/Compounds/MpiSelectionBar/` returns not-found. Gallery: ctrl-click card → selected state visible (CSS highlight). Shift-click second card → both selected. Right-click → context menu appears. With 2 selected → Compare enabled; click → compare overlay opens. With 1 or 3 selected → Compare disabled. Download → files download. Delete → confirm dialog → cards removed. Escape exits selection. Plain click in selection mode toggles, not opens. App boots with no console errors.
 
-### [ ] 5. Rework `MpiGroupHistoryBlock` layout — props-bar host + right-panel split + activeTool reducer
+### [x] 5. Rework `MpiGroupHistoryBlock` layout — props-bar host + right-panel split + activeTool reducer
 
 Rewrite block template + CSS:
 - New DOM: `#left-slot`, `#centre-slot`, `#right-top-slot` (props bar host), `#right-bottom-slot` (history list). Drop `#right-slot` and `#bottom-slot` as primary action-bar targets. Keep a single floating `#prompt-box-mount` container positioned centre-bottom exactly as today (existing CSS `.mpi-group-history-block__bottom` rules retained on a renamed element; PromptBox still managed by `PromptBoxService`).

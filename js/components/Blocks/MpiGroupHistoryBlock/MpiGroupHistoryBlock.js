@@ -54,8 +54,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         <div class="mpi-group-history-block">
             <div class="mpi-group-history-block__left"   id="left-slot"></div>
             <div class="mpi-group-history-block__centre" id="centre-slot"></div>
-            <div class="mpi-group-history-block__right"  id="right-slot"></div>
-            <div class="mpi-group-history-block__bottom"  id="bottom-slot"></div>
+            <div class="mpi-group-history-block__right">
+                <div class="mpi-group-history-block__right-top"    id="right-top-slot"></div>
+                <div class="mpi-group-history-block__right-bottom" id="right-bottom-slot"></div>
+            </div>
+            <div class="mpi-group-history-block__bottom" id="prompt-box-mount"></div>
         </div>
     `,
 
@@ -156,6 +159,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
+        // ── Active tool reducer ───────────────────────────────────────────────
+
+        let _activeTool = null;
+
+        function setActiveTool(tool) {
+            _activeTool = tool;
+            el.classList.toggle('mpi-group-history-block--prompt-active', tool === 'prompt');
+            const rightTopSlot = qs('#right-top-slot', el);
+            rightTopSlot.innerHTML = '';
+            if (tool && tool !== 'prompt') {
+                rightTopSlot.innerHTML = `<div class="mpi-group-history-block__props-placeholder">Props bar: ${tool}</div>`;
+                console.log('[strategy] mountPropsBar called for', tool);
+            }
+            if (strategy.supportsPromptBox()) {
+                if (tool === 'prompt') PromptBoxService.show();
+                else PromptBoxService.hide();
+            }
+        }
+
         // ── Channel bus + bottom-bar reducer ──────────────────────────────────
 
         const bar = Events.channel('groupHistory');
@@ -171,8 +193,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         let _interpMultiplierSel = null;
 
         if (!strategy.supportsPromptBox()) {
-            // Mount video tool bars into bottom-slot
-            const bottomSlot = qs('#bottom-slot', el);
+            // Temporary video bars container — removed in to-do 6 when bars move to #right-top-slot
+            const bottomSlot = document.createElement('div');
+            bottomSlot.id = 'bottom-slot';
+            bottomSlot.className = 'mpi-group-history-block__video-bars';
+            el.appendChild(bottomSlot);
 
             _ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
                 variant: 'ratio',
@@ -272,21 +297,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (_interpolateBar) _interpolateBar.el.hide();
         }
 
-        // Channel reducer: all bottom-bar state driven by channel events
+        // Channel reducer: tool state drives activeTool + legacy video bars (bars removed in to-do 6)
         _unsubs.push(bar.on('tool:activated', ({ mode }) => {
-            PromptBoxService.hide();
+            setActiveTool(mode);
             _hideAllVideoBars();
-            if (mode === 'crop' && _cropBar)         _cropBar.el.show();
-            else if (mode === 'videoUpscale' && _upscaleBar)  _upscaleBar.el.show();
+            if (mode === 'crop' && _cropBar)              _cropBar.el.show();
+            else if (mode === 'videoUpscale' && _upscaleBar)   _upscaleBar.el.show();
             else if (mode === 'interpolate' && _interpolateBar) _interpolateBar.el.show();
         }));
 
         _unsubs.push(bar.on('tool:deactivated', () => {
             _hideAllVideoBars();
             if (strategy.supportsPromptBox()) {
-                PromptBoxService.show();
+                setActiveTool('prompt');
             } else {
-                PromptBoxService.hide();
+                setActiveTool(null);
             }
         }));
 
@@ -325,7 +350,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Alias for backwards compatibility
         const canvasViewer = viewer;
 
-        const historyList = MpiHistoryList.mount(qs('#right-slot', el), {
+        const historyList = MpiHistoryList.mount(qs('#right-bottom-slot', el), {
             history: _group.history,
             selectedIndex: _currentIdx,
             isVideo: _group.type === 'video',
@@ -540,8 +565,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                         Events.emit('tool:cancelled', { tool: 'groupHistory' });
                     }));
 
-                    // Show promptbox initially for image groups
-                    PromptBoxService.show();
+                    // Prompt tool active by default for image groups with a model
+                    setActiveTool('prompt');
                 }
             }
         } else {
@@ -748,7 +773,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (canvasViewer.el.canvas?.isComparisonMode) return;
 
                 if (mode === 'none') {
-                    bar.emit('tool:deactivated', { mode });
+                    // Only deactivate if a canvas tool was active — don't clobber prompt tool
+                    if (_activeTool && _activeTool !== 'prompt') {
+                        bar.emit('tool:deactivated', { mode });
+                    }
                 } else {
                     bar.emit('tool:activated', { mode });
                 }

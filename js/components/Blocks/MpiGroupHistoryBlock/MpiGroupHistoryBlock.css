@@ -38,26 +38,36 @@
     background: var(--surface-1);
 }
 
-/* ── Right history panel ──────────────────────────────────────────────────── */
+/* ── Right panel — split into props bar (top) + history list (bottom) ──────── */
 .mpi-group-history-block__right {
     grid-area: right;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
     background: var(--surface-2);
     border-left: 1px solid var(--border);
 }
 
-/* ── Bottom: floating PromptBox — shell-managed, hidden during selection ──── */
+/* ── Right-top: props bar host — hidden when prompt tool active ─────────────── */
+.mpi-group-history-block__right-top {
+    overflow: hidden;
+}
+
+.mpi-group-history-block--prompt-active .mpi-group-history-block__right-top {
+    display: none;
+}
+
+/* ── Right-bottom: history list ─────────────────────────────────────────────── */
+.mpi-group-history-block__right-bottom {
+    overflow-y: auto;
+}
+
+/* ── Bottom: floating PromptBox — shell-managed ─────────────────────────────── */
 .mpi-group-history-block__bottom {
-    /* Spans all 3 columns so it floats over the full width */
     position: fixed;
     bottom: 30px;
-    /* min-width: 600px; */
     left: 50%;
     transform: translateX(-50%);
-    /* background: var(--surface-glass);
-    border-radius: var(--radius-xl); */
     z-index: 10;
     transition: opacity 0.15s ease, visibility 0.15s ease;
 }
@@ -66,6 +76,19 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+}
+
+/* ── Temporary video bars container (to-do 6 moves these to right-top-slot) ── */
+.mpi-group-history-block__video-bars {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 /* ── Error state ─────────────────────────────────────────────────────────── */
