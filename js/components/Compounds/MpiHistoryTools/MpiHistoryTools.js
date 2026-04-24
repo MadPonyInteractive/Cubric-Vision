@@ -153,7 +153,13 @@ export const MpiHistoryTools = ComponentFactory.create({
                 };
             });
 
-            const triggerIcon = _lastSubIcon.get(def.mode) || def.icon;
+            // Trigger icon defaults to first sub-tool's icon (Photoshop-style —
+            // the trigger reflects which sub-tool will fire on repeat-click).
+            // Persist last-picked across re-renders via _lastSubIcon.
+            if (!_lastSubIcon.has(def.mode)) {
+                _lastSubIcon.set(def.mode, def.group[0]?.icon || def.icon);
+            }
+            const triggerIcon = _lastSubIcon.get(def.mode);
             // Trigger is "active" when any sub-mode is currently selected.
             const triggerActive = def.group.some(sub => sub.mode === _activeMode);
 
