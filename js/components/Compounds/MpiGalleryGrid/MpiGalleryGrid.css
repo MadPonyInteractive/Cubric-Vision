@@ -151,10 +151,6 @@
     /* border-radius: var(--radius-xl); */
 }
 
-.mpi-gallery-grid__selectionbar-slot {
-    width: 100%;
-}
-
 /* ── Selection mode ──────────────────────────────────────────────────────── */
 
 .mpi-gallery-grid--selecting .mpi-gallery-grid__grid {

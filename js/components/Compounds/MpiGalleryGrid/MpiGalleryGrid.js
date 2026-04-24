@@ -1,7 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
+import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { ce, qs, qsa } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
@@ -11,19 +11,20 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 
 /**
- * MpiGalleryGrid — Block: adaptive grid of ItemGroup cards with size slider,
- * selection mode, and a generation preview slot.
+ * MpiGalleryGrid — Compound: adaptive grid of ItemGroup cards with size slider
+ * and selection mode.
  *
  * Uses a justified layout (like Google Photos) where rows have uniform height
- * and image widths scale to fill the container. Cards are not forced to square
- * aspect ratios — images display in their true ratios with object-fit: contain.
+ * and image widths scale to fill the container.
  *
- * The grid has 5 size levels driven by MpiProgressBar. Level maps to a target
- * card width in pixels (160/224/288/384/512).
- *
- * Selection mode activates when the user checks any card. In selection mode:
- *   - Clicking a card toggles selection instead of opening the group
- *   - The footer swaps from PromptBox slot to MpiSelectionBar
+ * Selection model (Photoshop-style, no checkbox):
+ *   - Ctrl/Cmd-click: toggle card; enters selection mode on first select.
+ *   - Shift-click: range-select from anchor to clicked card (rendered order).
+ *   - Plain click in selection mode: toggles card.
+ *   - Plain click outside selection mode: opens group.
+ *   - Right-click: context menu (Compare / Download / Delete).
+ *     If right-clicked card not in selection → replace selection with it first.
+ *   - Escape or selection count → 0: exits selection mode.
  *
  * Props:
  * @param {import('../../../data/projectModel.js').ItemGroup[]} [groups=[]] - Initial groups
@@ -31,16 +32,17 @@ import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
  * Instance methods (on instance.el):
  *   setGroups(groups)                    — replace all groups and re-render
  *   updatePreview(tempId, previewUrl)    — push latent preview url to generating card
+ *   setSelectionMode(val)                — set selection mode externally
  *
  * Emits:
  *   'open-group'  { group }              — user opened a group (navigate to history)
  *   'compare'     { groups: [g1, g2] }   — compare 2 selected groups
  *   'delete'      { groups: [...] }      — delete selected groups
  *   'download'    { groups: [...] }      — download selected groups
- *   'gc-group'    { group }              — group was mutated by GC (missing file); persist to disk
- *   'gc-remove'   { groupId }            — all history entries missing; group removed from grid
- *   'selection-start' {}                  — selection mode activated (hide PromptBox)
- *   'selection-end'   {}                  — selection mode exited (show PromptBox)
+ *   'gc-group'    { group }              — group mutated by GC; persist to disk
+ *   'gc-remove'   { groupId }            — all history entries missing; remove from grid
+ *   'selection-start' {}                 — selection mode activated (hide PromptBox)
+ *   'selection-end'   {}                 — selection mode exited (show PromptBox)
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -64,9 +66,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
             <div class="mpi-gallery-grid__grid"></div>
-            <div class="mpi-gallery-grid__footer">
-                <div class="mpi-gallery-grid__selectionbar-slot" style="display:none"></div>
-            </div>
         </div>
     `,
 
@@ -75,10 +74,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
         let _groups = props.groups || [];
 
         /** @type {Map<string, {card: object, el: HTMLElement}>} */
-        const _cardMap = new Map(); // groupId or tempId → { card instance, wrapper el }
+        const _cardMap = new Map();
 
-        // Tracks group IDs whose image has already triggered a post-load rerender.
-        // Prevents the rerender → new img → onload → rerender loop for cached images.
         const _stabilizedIds = new Set();
 
         const grid = qs('.mpi-gallery-grid__grid', el);
@@ -87,9 +84,86 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {Array<Function>} */
         const _unsubs = [];
 
-        // Selection state (managed externally by parent block, but grid applies it to cards)
-        let _selectedIds = new Set();
+        // ── Selection state ───────────────────────────────────────────────────
+        const _selectedIds = new Set();
         let _selectionMode = false;
+        let _anchorId = null;   // ID of anchor card for shift-click range
+        let _escUnsub = null;   // hotkey cleanup for Escape
+
+        // The currently rendered ordered group list (rebuilt each justified render)
+        let _renderedOrder = [];
+
+        function _getRenderedIndex(groupId) {
+            return _renderedOrder.findIndex(g => g.id === groupId);
+        }
+
+        function _enterSelectionMode() {
+            if (_selectionMode) return;
+            _selectionMode = true;
+            el.classList.add('mpi-gallery-grid--selecting');
+            emit('selection-start', {});
+            _escUnsub = Hotkeys.register('Escape', _exitSelectionMode);
+        }
+
+        function _exitSelectionMode() {
+            if (!_selectionMode) return;
+            _selectedIds.clear();
+            _selectionMode = false;
+            _anchorId = null;
+            el.classList.remove('mpi-gallery-grid--selecting');
+            emit('selection-end', {});
+            if (_escUnsub) { _escUnsub(); _escUnsub = null; }
+            // Re-render to clear selected CSS on all cards
+            _rerenderJustified();
+        }
+
+        function _toggleSelect(groupId) {
+            if (_selectedIds.has(groupId)) {
+                _selectedIds.delete(groupId);
+                if (_selectedIds.size === 0) {
+                    _exitSelectionMode();
+                    return;
+                }
+            } else {
+                _selectedIds.add(groupId);
+                _anchorId = groupId;
+                if (!_selectionMode) _enterSelectionMode();
+            }
+            _syncCardSelectedState();
+        }
+
+        function _rangeSelect(groupId) {
+            if (!_anchorId) {
+                _toggleSelect(groupId);
+                return;
+            }
+            const anchorIdx  = _getRenderedIndex(_anchorId);
+            const clickedIdx = _getRenderedIndex(groupId);
+            if (anchorIdx === -1 || clickedIdx === -1) { _toggleSelect(groupId); return; }
+
+            const from = Math.min(anchorIdx, clickedIdx);
+            const to   = Math.max(anchorIdx, clickedIdx);
+            _selectedIds.clear();
+            for (let i = from; i <= to; i++) {
+                _selectedIds.add(_renderedOrder[i].id);
+            }
+            if (!_selectionMode) _enterSelectionMode();
+            _syncCardSelectedState();
+        }
+
+        function _replaceSelectionWith(groupId) {
+            _selectedIds.clear();
+            _selectedIds.add(groupId);
+            _anchorId = groupId;
+            if (!_selectionMode) _enterSelectionMode();
+            _syncCardSelectedState();
+        }
+
+        function _syncCardSelectedState() {
+            _cardMap.forEach(({ card }, id) => {
+                card.el.setSelected(_selectedIds.has(id));
+            });
+        }
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
 
@@ -100,7 +174,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
             info: 'Size: {value}',
         });
 
-        // Level → target card width (px)
         const SIZE_MAP = { 1: 160, 2: 224, 3: 288, 4: 384, 5: 512 };
         let _cardWidth = SIZE_MAP[state.gallerySizeLevel] || 288;
 
@@ -110,7 +183,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _rerenderJustified();
         });
 
-        // Register +/- hotkeys to control slider (keyboard and numpad)
         const incrementSlider = () => {
             const input = qs('.mpi-progress__input', sliderWrap);
             const currentValue = parseFloat(input.value);
@@ -127,20 +199,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
             input.dispatchEvent(new Event('input'));
         };
 
-        // Regular +/= and - keys (both keyboard and numpad send + and -)
         _unsubs.push(Hotkeys.register('=', incrementSlider));
         _unsubs.push(Hotkeys.register('+', incrementSlider));
         _unsubs.push(Hotkeys.register('-', decrementSlider));
 
-        // Initial card width set from state above
-
-        // ── Card rendering helper (merged from MpiGroupCard) ──────────────────
+        // ── Card rendering helper ─────────────────────────────────────────────
 
         function _makeCard(group) {
             const wrapper = ce('div', { className: 'mpi-gallery-grid__card-wrap' });
             const cardEl = ce('div', { className: 'mpi-group-card' });
 
-            // Build card DOM from merged MpiGroupCard template
             cardEl.innerHTML = `
                 <div class="mpi-group-card__media">
                     <img class="mpi-group-card__thumb" alt="" draggable="true">
@@ -151,7 +219,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 </div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
-                <div class="mpi-group-card__select-wrap"></div>
                 <div class="mpi-group-card__footer">
                     <span class="mpi-group-card__name"></span>
                     <span class="mpi-group-card__badge"></span>
@@ -161,34 +228,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             wrapper.appendChild(cardEl);
 
-            // References to elements
-            const thumb = qs('.mpi-group-card__thumb', cardEl);
-            const preview = qs('.mpi-group-card__preview', cardEl);
-            const spinner = qs('.mpi-group-card__spinner', cardEl);
+            const thumb      = qs('.mpi-group-card__thumb', cardEl);
+            const preview    = qs('.mpi-group-card__preview', cardEl);
+            const spinner    = qs('.mpi-group-card__spinner', cardEl);
             const previewImg = qs('.mpi-group-card__preview-img', cardEl);
-            const checkboxSlot = qs('.mpi-group-card__select-wrap', cardEl);
-            const _checkboxInst = MpiCheckbox.mount(checkboxSlot, { checked: false });
-            const checkbox = _checkboxInst.el.querySelector('.mpi-checkbox__input');
-            const nameEl = qs('.mpi-group-card__name', cardEl);
-            const badgeEl = qs('.mpi-group-card__badge', cardEl);
-            const typeEl = qs('.mpi-group-card__type', cardEl);
-            const favWrap = qs('.mpi-group-card__fav-wrap', cardEl);
-            const reuseWrap = qs('.mpi-group-card__reuse-wrap', cardEl);
+            const nameEl     = qs('.mpi-group-card__name', cardEl);
+            const badgeEl    = qs('.mpi-group-card__badge', cardEl);
+            const typeEl     = qs('.mpi-group-card__type', cardEl);
+            const favWrap    = qs('.mpi-group-card__fav-wrap', cardEl);
+            const reuseWrap  = qs('.mpi-group-card__reuse-wrap', cardEl);
 
-            // State
             let _generating = false;
-            let _showInfo = false;
-            let _favourite = group?.favourite || false;
+            let _showInfo   = false;
+            let _favourite  = group?.favourite || false;
 
-            // Mount favorite button
             const _favBtn = MpiButton.mount(favWrap, {
-                icon: 'heartOutline',
-                iconActive: 'heart',
-                toggleable: true,
-                active: _favourite,
-                size: 'sm',
-                variant: 'ghost',
-                info: 'Favourite',
+                icon: 'heartOutline', iconActive: 'heart',
+                toggleable: true, active: _favourite,
+                size: 'sm', variant: 'ghost', info: 'Favourite',
             });
 
             _favBtn.on('toggle', ({ active }) => {
@@ -200,26 +257,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.toggle('mpi-group-card--favourited', active);
             });
 
-            // Mount reuse button
             const _reuseBtn = MpiButton.mount(reuseWrap, {
-                icon: 'refresh_stroke',
-                size: 'sm',
-                variant: 'ghost',
-                info: 'Reuse Prompt',
+                icon: 'refresh_stroke', size: 'sm', variant: 'ghost', info: 'Reuse Prompt',
             });
 
             _reuseBtn.on('click', (e) => {
                 e.originalEvent?.stopPropagation();
                 const selected = group?.history?.[group.selectedIndex];
                 if (!selected) return;
-                emit('reuse', {
-                    positive: selected.prompt || '',
-                    negative: selected.negativePrompt || '',
-                });
+                emit('reuse', { positive: selected.prompt || '', negative: selected.negativePrompt || '' });
             });
 
-            // Replace <img> thumb with a <video> element (first-frame preview,
-            // hover-play). Keeps same class so CSS still applies.
             let _videoThumb = null;
             function _swapThumbToVideo(src) {
                 if (_videoThumb && _videoThumb.src.endsWith(src)) return;
@@ -251,10 +299,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _videoThumb.addEventListener('dragstart', (e) => {
                         const sel = group?.history?.[group.selectedIndex];
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
-                            groupId: group.id,
-                            itemId: sel?.id,
-                            filePath: sel?.filePath,
-                            type: group.type,
+                            groupId: group.id, itemId: sel?.id,
+                            filePath: sel?.filePath, type: group.type,
                         }));
                     });
                     thumb.replaceWith(_videoThumb);
@@ -262,18 +308,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _videoThumb.src = src;
             }
 
-            // Render card from group data
             function _render() {
                 if (!group) return;
-
                 const selected = group.history?.[group.selectedIndex];
                 const src = selected?.filePath || '';
 
                 if (src) {
                     const isVideo = group.type === 'video' || selected?.type === 'video';
                     if (isVideo) {
-                        // Swap <img> thumb for <video> so the first frame renders
-                        // natively (no canvas/CORS) and we can hover-play.
                         _swapThumbToVideo(src);
                     } else {
                         thumb.onload = () => {
@@ -300,13 +342,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 badgeEl.textContent = model?.name || '';
                 typeEl.textContent = group.type.toUpperCase();
 
-                // Drag support
                 thumb.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('application/mpi-media', JSON.stringify({
-                        groupId: group.id,
-                        itemId: selected?.id,
-                        filePath: selected?.filePath,
-                        type: group.type,
+                        groupId: group.id, itemId: selected?.id,
+                        filePath: selected?.filePath, type: group.type,
                     }));
                 });
 
@@ -315,47 +354,62 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.toggle('mpi-group-card--favourited', _favourite);
             }
 
-            // Selection state management
-            let _selected = false;
-
+            // ── Selection state ──────────────────────────────────────────────
             cardEl.setSelected = (val) => {
-                _selected = val;
-                _checkboxInst.el.setChecked(val);
                 cardEl.classList.toggle('mpi-group-card--selected', val);
             };
 
-            // Click handling
+            // ── Click handling ───────────────────────────────────────────────
             cardEl.addEventListener('click', (e) => {
                 if (_generating) return;
-                if (e.target === checkbox) return;
                 if (favWrap.contains(e.target)) return;
                 if (reuseWrap.contains(e.target)) return;
 
-                if (_selectionMode) {
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    _rangeSelect(group.id);
+                } else if (e.ctrlKey || e.metaKey) {
+                    _toggleSelect(group.id);
+                } else if (_selectionMode) {
+                    _toggleSelect(group.id);
                 } else {
                     emit('open-group', { group });
                 }
             });
 
-            _checkboxInst.on('change', ({ checked }) => {
-                _selected = checked;
-                cardEl.classList.toggle('mpi-group-card--selected', _selected);
-                if (_selected) {
-                    _selectedIds.add(group.id);
-                } else {
-                    _selectedIds.delete(group.id);
+            // ── Right-click context menu ─────────────────────────────────────
+            cardEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+
+                if (!_selectedIds.has(group.id)) {
+                    _replaceSelectionWith(group.id);
                 }
-                emit('select', { group, selected: _selected });
+
+                const compareDisabled = _selectedIds.size !== 2;
+                MpiContextMenu.show({
+                    x: e.clientX,
+                    y: e.clientY,
+                    items: [
+                        { key: 'compare',  icon: 'compare',  label: 'Compare',  disabled: compareDisabled },
+                        { key: 'download', icon: 'download', label: 'Download' },
+                        { key: 'delete',   icon: 'trash',    label: 'Delete',   danger: true },
+                    ],
+                    onSelect: (key) => {
+                        const selected = Array.from(_selectedIds)
+                            .map(id => _groups.find(g => g.id === id))
+                            .filter(Boolean);
+                        if (key === 'compare')  emit('compare',  { groups: selected });
+                        if (key === 'download') emit('download', { groups: selected });
+                        if (key === 'delete')   emit('delete',   { groups: selected });
+                        _exitSelectionMode();
+                    },
+                });
             });
 
             // Apply initial selection state
-            if (_selectedIds.has(group.id)) {
-                cardEl.setSelected(true);
-            }
+            if (_selectedIds.has(group.id)) cardEl.setSelected(true);
 
-            // Public methods
+            // ── Public methods ───────────────────────────────────────────────
             cardEl.setGenerating = (previewUrl = null) => {
                 _generating = true;
                 cardEl.classList.add('mpi-group-card--generating');
@@ -383,7 +437,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.toggle('mpi-group-card--show-info', val);
             };
 
-            // Initial render
             _render();
 
             return { card: { el: cardEl }, wrapper };
@@ -391,12 +444,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         // ── Justified Layout helpers ─────────────────────────────────────────
 
-        const GAP = 2; // px, matches CSS gap (2px)
+        const GAP = 2;
 
-        /**
-         * Get aspect ratio for a group.
-         * Priority: loaded image naturalWidth/naturalHeight, then group.width/group.height
-         */
         function _getAspectRatio(group) {
             const cardEntry = _cardMap.get(group.id);
             if (cardEntry) {
@@ -413,19 +462,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
             return 1.0;
         }
 
-        /**
-         * Re-render the grid using the justified layout algorithm.
-         * Builds rows with correct dimensions upfront — no async resize snapping.
-         */
         let _renderTimeout = null;
 
         function _rerenderJustified() {
-            // Debounce rapid calls
             if (_renderTimeout) clearTimeout(_renderTimeout);
             _renderTimeout = setTimeout(() => {
                 const { order, filter } = state.gallerySort;
 
-                // Filter
                 let display = _groups.filter(g => {
                     if (filter === 'images')   return g.type === 'image';
                     if (filter === 'videos')    return g.type === 'video';
@@ -433,33 +476,30 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     return true;
                 });
 
-                // Sort
                 display.sort((a, b) => {
                     const ta = new Date(a.createdAt).getTime();
                     const tb = new Date(b.createdAt).getTime();
                     return order === 'newest' ? tb - ta : ta - tb;
                 });
 
-                // Get container width (grid.clientWidth includes padding, so subtract it)
-                const gridStyle = getComputedStyle(grid);
-                const paddingX = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
+                const generatingGroups = display.filter(g => g.isGenerating);
+                const normalGroups     = display.filter(g => !g.isGenerating);
+                const allGroups        = [...generatingGroups, ...normalGroups];
+
+                // Store rendered order for ID-based range selection
+                _renderedOrder = allGroups;
+
+                const gridStyle    = getComputedStyle(grid);
+                const paddingX     = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
                 const containerWidth = grid.clientWidth - paddingX;
 
-                // Separate generating groups from normal groups
-                const generatingGroups = display.filter(g => g.isGenerating);
-                const normalGroups = display.filter(g => !g.isGenerating);
-
-                // Build items with aspect ratios (generating first)
-                const allGroups = [...generatingGroups, ...normalGroups];
                 const items = allGroups.map(group => ({
                     id: group.id,
                     aspectRatio: _getAspectRatio(group),
                 }));
 
-                // Build justified rows
                 const rows = buildJustifiedRows(items, containerWidth, _cardWidth, GAP);
 
-                // Clear all rows
                 qsa('.mpi-gallery-grid__row', grid).forEach(row => row.remove());
 
                 const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
@@ -472,7 +512,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         const group = allGroupsMap.get(id);
                         const { card, wrapper } = _makeCard(group);
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
-                        wrapper.style.width = `${width}px`;
+                        wrapper.style.width  = `${width}px`;
                         wrapper.style.height = `${height}px`;
 
                         rowEl.appendChild(wrapper);
@@ -487,28 +527,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     grid.appendChild(rowEl);
                 });
 
-                // Sync info state to all cards
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
-            }, 16); // ~60fps debounce
+            }, 16);
         }
 
-        // ── ResizeObserver for window resize ──────────────────────────────────
+        // ── ResizeObserver ───────────────────────────────────────────────────
 
-        const resizeObserver = new ResizeObserver(() => {
-            _rerenderJustified();
-        });
+        const resizeObserver = new ResizeObserver(() => { _rerenderJustified(); });
         resizeObserver.observe(grid);
         _unsubs.push(() => resizeObserver.disconnect());
 
-        // ── Info toggle button ──────────────────────────────────────────────────
+        // ── Info toggle button ───────────────────────────────────────────────
+
         const infoBtnSlot = qs('.mpi-gallery-grid__info-btn-slot', el);
         const infoBtn = MpiButton.mount(infoBtnSlot, {
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
-            active: state.galleryShowInfo,
-            info: 'Show card info',
+            active: state.galleryShowInfo, info: 'Show card info',
         });
         infoBtn.on('click', () => { state.galleryShowInfo = !state.galleryShowInfo; });
-        // Sync active state and propagate to all cards when galleryShowInfo changes
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 'galleryShowInfo') {
                 infoBtn.el.classList.toggle('mpi-btn--active', state.galleryShowInfo);
@@ -516,16 +552,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
         }));
 
-        // ── Gallery organize tabs ───────────────────────────────────────────────
+        // ── Gallery organize tabs ────────────────────────────────────────────
 
         const tabsEl = qs('.mpi-gallery-grid__tabs', el);
-
-        // Mount tab buttons into slot divs; track instances for active-state sync
-        const _tabInstances = []; // { slot, btn, order?, filter? }
+        const _tabInstances = [];
 
         const _tabDefs = [
-            { order: 'newest', label: 'Newest' },
-            { order: 'oldest', label: 'Oldest' },
+            { order: 'newest',    label: 'Newest' },
+            { order: 'oldest',    label: 'Oldest' },
             { filter: 'all',       label: 'All' },
             { filter: 'images',    label: 'Images' },
             { filter: 'videos',    label: 'Videos' },
@@ -533,24 +567,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
         ];
 
         _tabDefs.forEach(({ order, filter, label }) => {
-            const key = order ? `[data-order="${order}"]` : `[data-filter="${filter}"]`;
+            const key  = order ? `[data-order="${order}"]` : `[data-filter="${filter}"]`;
             const slot = qs(key, tabsEl);
             if (!slot) return;
             const initialActive = order
                 ? state.gallerySort.order === order
                 : state.gallerySort.filter === filter;
             const btn = MpiButton.mount(slot, {
-                text: label,
-                variant: 'ghost',
-                size: 'sm',
+                text: label, variant: 'ghost', size: 'sm',
                 extraClasses: `mpi-gallery-grid__tab${initialActive ? ' mpi-gallery-grid__tab--active' : ''}`,
             });
             btn.on('click', () => {
-                if (order) {
-                    state.gallerySort = { ...state.gallerySort, order };
-                } else {
-                    state.gallerySort = { ...state.gallerySort, filter };
-                }
+                if (order) state.gallerySort = { ...state.gallerySort, order };
+                else       state.gallerySort = { ...state.gallerySort, filter };
             });
             _tabInstances.push({ btn, order, filter });
         });
@@ -563,27 +592,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             });
         }
 
-        // Subscribe to state.gallerySort changes
         _unsubs.push(Events.on('state:changed', ({ key }) => {
-            if (key === 'gallerySort') {
-                _syncTabActive();
-                _rerenderJustified();
-            }
+            if (key === 'gallerySort') { _syncTabActive(); _rerenderJustified(); }
         }));
 
-
-        // ── Render all groups ───────────────────────────────────────────────────
-        // (removed — replaced by _rerenderJustified for justified layout)
-
-        // Initial justified layout render
         _rerenderJustified();
 
-        // ── Public API ──────────────────────────────────────────────────────────
+        // ── Public API ───────────────────────────────────────────────────────
 
-        /**
-         * Replace the full group list and re-render.
-         * @param {import('../../../data/projectModel.js').ItemGroup[]} groups
-         */
         el.setGroups = (groups) => {
             _groups = groups;
             _selectedIds.clear();
@@ -591,19 +607,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _rerenderJustified();
         };
 
-        /**
-         * Push a latent preview image to a generating card.
-         * @param {string} tempId
-         * @param {string} previewUrl
-         */
         el.updatePreview = (tempId, previewUrl) => {
             _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
         };
 
-        /**
-         * Remove a card by group id (after deletion).
-         * @param {string} groupId
-         */
         el.removeCard = (groupId) => {
             const entry = _cardMap.get(groupId);
             if (!entry) return;
@@ -612,35 +619,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _groups = _groups.filter(g => g.id !== groupId);
         };
 
-        /**
-         * Set selection mode state (affects click behavior on cards).
-         * @param {boolean} val
-         */
         el.setSelectionMode = (val) => {
-            _selectionMode = val;
-            el.classList.toggle('mpi-gallery-grid--selecting', val);
+            if (val) _enterSelectionMode();
+            else     _exitSelectionMode();
         };
 
-        /**
-         * Display a generating card in a dedicated area above the normal grid.
-         * @param {HTMLElement} wrapper - pre-mounted card wrapper
-         * @param {number} width - card width in px
-         * @param {number} height - card height in px
-         */
         el.setGeneratingCard = (wrapper, width, height) => {
             const generatingSlot = qs('.mpi-gallery-grid__generating-slot', el);
             if (!generatingSlot) return;
-
-            wrapper.style.width = `${width}px`;
+            wrapper.style.width  = `${width}px`;
             wrapper.style.height = `${height}px`;
             generatingSlot.innerHTML = '';
             generatingSlot.appendChild(wrapper);
             generatingSlot.classList.add('mpi-gallery-grid__generating-slot--visible');
         };
 
-        /**
-         * Remove the generating card and restore normal grid.
-         */
         el.clearGeneratingCard = () => {
             const generatingSlot = qs('.mpi-gallery-grid__generating-slot', el);
             if (generatingSlot) {
@@ -649,9 +642,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
         };
 
-        // ── Cleanup ─────────────────────────────────────────────────────────────
+        // ── Cleanup ──────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            if (_escUnsub) { _escUnsub(); _escUnsub = null; }
             _cardMap.forEach(({ card }) => card.el.destroy?.());
             _cardMap.clear();
         };

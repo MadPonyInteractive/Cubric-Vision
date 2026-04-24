@@ -28,7 +28,6 @@ export const PRELOAD_COMPONENT_STYLES = [
 
   // Compounds
   'js/components/Compounds/MpiContextMenu/MpiContextMenu.css',
-  'js/components/Compounds/MpiSelectionBar/MpiSelectionBar.css',
   'js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css',
   'js/components/Compounds/MpiOptionSelector/MpiOptionSelector.css',
   'js/components/Compounds/MpiToolbar/MpiToolbar.css',

@@ -679,20 +679,6 @@
  */
 
 /**
- * @typedef {Object} MpiSelectionBarProps (Compound — js/components/Compounds/MpiSelectionBar)
- * @property {number} [count=0] - Initial selected item count
- *
- * Instance methods (on instance.el):
- *   setCount(n) — update count; auto-enables compare only when n === 2
- *
- * Emits:
- *   'compare'  {} — compare button clicked (only when count === 2)
- *   'download' {} — download button clicked
- *   'delete'   {} — delete button clicked
- *   'cancel'   {} — cancel/exit selection mode
- */
-
-/**
  * @typedef {Object} MpiGalleryGridProps (Compound — js/components/Compounds/MpiGalleryGrid)
  * @property {import('./data/projectModel.js').ItemGroup[]} [groups=[]] - Initial groups to render
  *

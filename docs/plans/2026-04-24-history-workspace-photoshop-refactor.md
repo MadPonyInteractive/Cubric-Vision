@@ -98,22 +98,39 @@ Wire the new events in `MpiGroupHistoryBlock`:
 
 **Verify:** Open an image group with ≥ 3 history entries. (a) Entries show `WxH` instead of date. (b) Click entry → viewer loads it. (c) Ctrl-click second entry → both highlighted. (d) Shift-click a later entry → range highlighted. (e) Right-click a highlighted entry with 2 selected → context menu shows Delete + Compare (both enabled). (f) Click Compare → `MpiCompareOverlay` opens with the 2 entries. (g) Right-click with 3 selected → Compare is disabled. (h) Click Delete → existing confirmation dialog opens; confirm → entries removed. Repeat on a video group; Compare disabled if video not supported.
 
-### [x] 4. Remove `MpiSelectionBar` from `MpiGroupHistoryBlock` only
+### [x] 4a. Remove `MpiSelectionBar` from `MpiGroupHistoryBlock` (done)
 
-**Scope:** `MpiSelectionBar` stays alive in `MpiGalleryBlock` / `MpiGalleryGrid` (gallery workspace is untouched per scope contract). This to-do removes it only from the Group History workspace.
+GroupHistory removal complete. See commit f03d0ff.
 
-In `MpiGroupHistoryBlock.js`:
-- Remove the `import { MpiSelectionBar }` line.
-- Remove `const selectionBar = MpiSelectionBar.mount(qs('#bottom-slot', el), ...)`.
-- Remove every `selectionBar.el.style.display` call and `selectionBar.el.setCount(...)` call.
-- Remove `selectionBar.on('delete', ...)` and `selectionBar.on('compare', ...)` handlers (these events are now driven by `MpiHistoryList`'s `delete-selected` / `compare-requested` emits wired in to-do 3; confirm wiring still present).
-- Remove `selectionBar.destroy?.()` from `el.destroy`.
-- Remove the `groupHistory` channel reducer lines that show/hide `selectionBar` (all `selectionBar.el.style.display = ''` / `'none'` paths).
-- Remove the `#bottom-slot` div from the Block template and delete the `.mpi-group-history-block__bottom` CSS rule if it only served the selection bar. Keep the floating `.mpi-group-history-block__bottom` container if it is also used for PromptBox positioning (check before deleting).
+### [ ] 4b. Replace `MpiSelectionBar` in Gallery with ctrl/shift/right-click pattern + delete `MpiSelectionBar` entirely
 
-Do NOT touch `preloadStyles.js`, `types.js`, `MpiGalleryBlock.js`, or `MpiGalleryGrid.js` — those remain intact.
+**Gallery new interaction model:**
+- Checkbox removed from cards completely (remove `MpiCheckbox` mount + `.mpi-group-card__select-wrap` slot from `MpiGalleryGrid`).
+- Normal click (no modifier, not in selection mode) → opens group (existing `open` emit, unchanged).
+- Ctrl/Cmd-click → toggle card in selection; if first selection enters selection mode.
+- Shift-click → range-select from anchor to clicked card (by rendered DOM order / index).
+- Plain click **in selection mode** → toggles card (does NOT open group).
+- Selection mode exits when: (A) selection count reaches 0 via toggles, OR (B) Escape key pressed — call `Hotkeys.register('Escape', exitFn)` on selection-mode enter, `Hotkeys.unregister` on exit.
+- Right-click on any card → `MpiContextMenu.show({ x, y, items, onSelect })` with:
+  - `Compare` — enabled only when exactly 2 cards selected; disabled otherwise.
+  - `Download` — always enabled.
+  - `Delete` — always enabled.
+  - If right-clicked card is not in selection, replace selection with it first (same pattern as `MpiHistoryList`).
+- `dev_mode` gate: read `dev_configs/app_config.js` flag (confirm key name). If truthy → skip `e.preventDefault()` on contextmenu so Electron inspect-element works. Else → `e.preventDefault()` + show `MpiContextMenu`.
+- `compare` action → existing `MpiCompareOverlay` path currently wired in `MpiGalleryBlock` via `selectionBar.on('compare')`.
+- `download` action → existing `downloadMediaFiles` path currently wired via `selectionBar.on('download')`.
+- `delete` action → existing delete flow currently wired via `selectionBar.on('delete')`.
+- `selection-start` / `selection-end` events on `MpiGalleryGrid` retained (still drive `PromptBoxService.hide/show` in `MpiGalleryBlock`).
+- Remove `mpi-gallery-grid__selectionbar-slot` div from `MpiGalleryGrid` template.
+- Remove `MpiSelectionBar` import, mount, and all `selectionBar.*` calls from `MpiGalleryBlock`.
+- Remove `MpiCheckbox` import from `MpiGalleryGrid` if no longer used elsewhere in that file.
 
-**Verify:** `grep -n "MpiSelectionBar\|selectionBar" js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` returns zero hits. App boots; navigating to gallery and then to group history does not throw. Deleting history entries still works via context menu (to-do 3 wiring). Gallery selection bar still renders and works correctly.
+**Delete `MpiSelectionBar` entirely:**
+- Delete `js/components/Compounds/MpiSelectionBar/` directory (both files).
+- Remove `'js/components/Compounds/MpiSelectionBar/MpiSelectionBar.css'` from `js/shell/preloadStyles.js`.
+- Remove `MpiSelectionBarProps` typedef block from `js/components/types.js`.
+
+**Verify:** `grep -r "MpiSelectionBar\|mpi-selection-bar\|selectionbar-slot" js/ styles/` returns zero hits. `ls js/components/Compounds/MpiSelectionBar/` returns not-found. Gallery: ctrl-click card → selected state visible (CSS highlight). Shift-click second card → both selected. Right-click → context menu appears. With 2 selected → Compare enabled; click → compare overlay opens. With 1 or 3 selected → Compare disabled. Download → files download. Delete → confirm dialog → cards removed. Escape exits selection. Plain click in selection mode toggles, not opens. App boots with no console errors.
 
 ### [ ] 5. Rework `MpiGroupHistoryBlock` layout — props-bar host + right-panel split + activeTool reducer
 

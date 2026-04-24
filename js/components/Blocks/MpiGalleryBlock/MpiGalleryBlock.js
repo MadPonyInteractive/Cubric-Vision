@@ -13,7 +13,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiGalleryGrid } from '../../Compounds/MpiGalleryGrid/MpiGalleryGrid.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
-import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
@@ -113,10 +112,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         window.addEventListener('dragover',  _onDragOver);
         window.addEventListener('drop',      _onDrop);
 
-        // ── Selection bar (mounted in grid's footer slot) ────────────────────────
-        const selectionSlot = qs('.mpi-gallery-grid__selectionbar-slot', grid.el);
-        const selectionBar = MpiSelectionBar.mount(selectionSlot, { count: 0 });
-
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
 
@@ -141,72 +136,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
         grid.on('favourite', ({ group }) => {
             updateGroup(group);
-        });
-
-        // ── Selection mode ──────────────────────────────────────────────────────
-
-        const _selectedIds = new Set();
-        let _selectionMode = false;
-
-        grid.on('select', ({ group: g, selected }) => {
-            if (selected) {
-                _selectedIds.add(g.id);
-                if (!_selectionMode) {
-                    _selectionMode = true;
-                    grid.el.setSelectionMode(true);
-                    selectionSlot.style.display = '';
-                    PromptBoxService.hide();
-                }
-            } else {
-                _selectedIds.delete(g.id);
-                if (_selectedIds.size === 0) {
-                    _selectionMode = false;
-                    grid.el.setSelectionMode(false);
-                    selectionSlot.style.display = 'none';
-                    PromptBoxService.show();
-                }
-            }
-            selectionBar.el.setCount(_selectedIds.size);
-        });
-
-        // Selection bar event handlers
-        selectionBar.on('cancel', () => {
-            _selectedIds.clear();
-            _selectionMode = false;
-            grid.el.setSelectionMode(false);
-            selectionSlot.style.display = 'none';
-            PromptBoxService.show();
-            grid.el.setGroups(state.currentProject?.itemGroups || []);
-        });
-
-        selectionBar.on('compare', () => {
-            const selected = Array.from(_selectedIds)
-                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
-                .filter(Boolean);
-            if (selected.length === 2) {
-                const itemA = getSelectedItem(selected[0]);
-                const itemB = getSelectedItem(selected[1]);
-                if (itemA && itemB) _compareOverlay.el.open(itemA, itemB);
-            }
-        });
-
-        selectionBar.on('download', () => {
-            const selected = Array.from(_selectedIds)
-                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
-                .filter(Boolean);
-            const items = selected.flatMap(g => {
-                const sel = getSelectedItem(g);
-                return sel ? [sel] : [];
-            });
-            downloadMediaFiles(state.currentProject, items);
-        });
-
-        selectionBar.on('delete', () => {
-            const selected = Array.from(_selectedIds)
-                .map(id => state.currentProject?.itemGroups?.find(g => g.id === id))
-                .filter(Boolean);
-            _pendingDeleteGroups = selected;
-            _deleteDialog.el.show();
         });
 
         // ── Reuse prompt ────────────────────────────────────────────────────────
@@ -272,17 +201,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             for (const group of g) removeGroup(group.id);
-            for (const group of g) {
-                _selectedIds.delete(group.id);
-                grid.el.removeCard(group.id);
-            }
-
-            if (_selectedIds.size === 0) {
-                _selectionMode = false;
-                grid.el.setSelectionMode(false);
-                selectionSlot.style.display = 'none';
-                PromptBoxService.show();
-            }
+            for (const group of g) grid.el.removeCard(group.id);
         });
 
         grid.on('delete', ({ groups: g }) => {
@@ -506,7 +425,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             dropOverlay.el.remove();
             dropOverlay.destroy?.();
             grid.destroy?.();
-            selectionBar.destroy?.();
             _compareOverlay.destroy?.();
             _deleteDialog.destroy?.();
             _settingsOverlay.destroy?.();
