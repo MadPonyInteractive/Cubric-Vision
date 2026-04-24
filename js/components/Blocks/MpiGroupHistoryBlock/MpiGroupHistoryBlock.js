@@ -14,8 +14,7 @@ import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js
 import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
-import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiNumberSelector } from '../../Compounds/MpiNumberSelector/MpiNumberSelector.js';
+import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
@@ -178,7 +177,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Mount video tool bars into bottom-slot
             const bottomSlot = qs('#bottom-slot', el);
 
-            _ratioSel = MpiRatioSelector.mount(document.createElement('div'), {
+            _ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
+                variant: 'ratio',
                 modelType: 'social',
                 value: SOCIAL_RATIOS[0].label,
             });
@@ -196,7 +196,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             });
 
             // ── Upscale bar: factor selector + model dropdown in leftSlot ────────
-            _upscaleFactorSel = MpiNumberSelector.mount(document.createElement('div'), {
+            _upscaleFactorSel = MpiOptionSelector.mount(document.createElement('div'), {
+                variant: 'number',
                 values: ['x1.5', 'x2', 'x3', 'x4'],
                 value: 'x2',
                 // icon: _universalToolIcons.videoUpscale.icon,
@@ -247,7 +248,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             });
 
             // ── Interpolate bar: multiplier selector in leftSlot ──────────────
-            _interpMultiplierSel = MpiNumberSelector.mount(document.createElement('div'), {
+            _interpMultiplierSel = MpiOptionSelector.mount(document.createElement('div'), {
+                variant: 'number',
                 values: ['x2', 'x3', 'x4'],
                 value: 'x2',
                 // icon: _universalToolIcons.interpolate.icon,

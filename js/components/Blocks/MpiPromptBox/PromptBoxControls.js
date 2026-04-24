@@ -11,8 +11,7 @@
  *   3. Add the control ID to the desired operation's components[] in commandRegistry.js
  */
 
-import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiNumberSelector } from '../../Compounds/MpiNumberSelector/MpiNumberSelector.js';
+import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -43,7 +42,8 @@ export const PROMPT_BOX_CONTROLS = {
             const initialQualityTier = savedRatioSettings.qualityTier || 'medium';
 
             // Mount selector with saved state
-            this._instance = MpiRatioSelector.mount(el, {
+            this._instance = MpiOptionSelector.mount(el, {
+                variant: 'ratio',
                 modelType,
                 initialOrientation,
                 value: initialValue,
@@ -122,7 +122,8 @@ export const PROMPT_BOX_CONTROLS = {
             const savedNum = Number(saved.batch ?? 1);
             const initialValue = String(Number.isFinite(savedNum) ? Math.min(4, Math.max(1, savedNum)) : 1);
 
-            this._instance = MpiNumberSelector.mount(hostEl, {
+            this._instance = MpiOptionSelector.mount(hostEl, {
+                variant: 'number',
                 values: ['1', '2', '3', '4'],
                 value: initialValue,
                 icon: 'layers',

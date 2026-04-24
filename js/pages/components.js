@@ -34,8 +34,7 @@ import { StatusBar } from '../shell/statusBar.js';
 // Compounds
 import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
-import { MpiRatioSelector } from '../components/Compounds/MpiRatioSelector/MpiRatioSelector.js';
-import { MpiNumberSelector } from '../components/Compounds/MpiNumberSelector/MpiNumberSelector.js';
+import { MpiOptionSelector } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
 import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCameraConfig.js';
 import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
@@ -681,9 +680,10 @@ function mountAll() {
         `);
     });
 
-    // ── MpiRatioSelector (Compound) ───────────────────────────────────────────
+    // ── MpiOptionSelector (Compound) ─────────────────────────────────────────
     mount('preview-ratio-flux', () => {
-        const sel = MpiRatioSelector.mount(slot('preview-ratio-flux'), {
+        const sel = MpiOptionSelector.mount(slot('preview-ratio-flux'), {
+            variant: 'ratio',
             modelType: 'flux',
             initialOrientation: 'portrait',
             value: '1:1'
@@ -693,17 +693,17 @@ function mountAll() {
     });
 
     mount('preview-ratio-video', () => {
-        const sel = MpiRatioSelector.mount(slot('preview-ratio-video'), {
+        const sel = MpiOptionSelector.mount(slot('preview-ratio-video'), {
+            variant: 'ratio',
             modelType: 'social',
             value: '16:9'
         });
         sel.on('change', (data) => console.log('[gallery] video ratio change:', data));
     });
 
-
-    // ── MpiNumberSelector (Compound) ─────────────────────────────────────────
     mount('preview-number-sel-batch', () => {
-        const sel = MpiNumberSelector.mount(slot('preview-number-sel-batch'), {
+        const sel = MpiOptionSelector.mount(slot('preview-number-sel-batch'), {
+            variant: 'number',
             values: ['1', '2', '3', '4'],
             value: '1',
             icon: 'layers',
@@ -714,7 +714,8 @@ function mountAll() {
     });
 
     mount('preview-number-sel-factor', () => {
-        const sel = MpiNumberSelector.mount(slot('preview-number-sel-factor'), {
+        const sel = MpiOptionSelector.mount(slot('preview-number-sel-factor'), {
+            variant: 'number',
             values: ['x1.5', 'x2', 'x3', 'x4'],
             value: 'x2',
             icon: 'rocket',

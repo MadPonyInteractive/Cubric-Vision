@@ -146,34 +146,36 @@
  */
 
 /**
- * @typedef {Object} MpiRatioSelectorProps (Compound — js/components/Compounds/MpiRatioSelector)
+ * @typedef {Object} MpiOptionSelectorProps (Compound — js/components/Compounds/MpiOptionSelector)
+ * @property {'ratio'|'number'} variant  - Selector variant (required)
+ *
+ * variant='ratio' props:
  * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social) — determines UI mode via RATIO_MODES
  * @property {'portrait'|'landscape'} [initialOrientation='portrait'] - Initial orientation (image models only)
  * @property {string} [value='1:1'] - Current selected ratio label
  * @property {'very_low'|'low'|'medium'|'high'|'very_high'} [qualityTier='medium'] - Active quality tier (video/speed-mode only)
  *
- * Emits:
+ * variant='ratio' emits:
  * 'change' { value, ratio, w, h, orientation }
  * 'orientation_change' { orientation }
  * 'quality_change' { qualityTier }
  * 'popup_toggle' { active }
- */
-
-/**
- * @typedef {Object} MpiNumberSelectorProps (Compound — js/components/Compounds/MpiNumberSelector)
+ * variant='ratio' instance methods:
+ *   getValue() — returns { value, w, h, orientation, qualityTier }
+ *
+ * variant='number' props:
  * @property {string[]} values           - Ordered list of selectable value strings
  * @property {string}   [value]          - Initially selected value (defaults to values[0])
- * @property {string}   [icon]           - Icon shown on trigger button (optional, none by default)
+ * @property {string}   [icon]           - Icon shown on trigger button (optional)
  * @property {string}   [popupTitle]     - Badge label at top of popup (optional)
  * @property {string}   [info]           - Tooltip on trigger button
  *
- * Instance methods (on instance.el):
+ * variant='number' emits:
+ * 'change'       { value: string }
+ * 'popup_toggle' { active: boolean }
+ * variant='number' instance methods:
  *   getValue()       — returns current selected string
  *   setValue(string) — imperatively set value; re-renders grid + trigger
- *
- * Emits:
- * 'change'       { value: string } — user picked a new value
- * 'popup_toggle' { active: boolean } — popup opened/closed
  */
 
 /**

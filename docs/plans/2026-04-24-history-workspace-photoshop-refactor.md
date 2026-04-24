@@ -51,16 +51,24 @@ Radio behaviour: exactly one tool active at a time. `activeTool` is block-local;
 
 ## To-dos
 
-### [ ] 1. Build `MpiOptionSelector` compound + migrate ratio/number consumers
+### [x] 1. Build `MpiOptionSelector` compound + migrate ratio/number consumers
 
-Merge `MpiRatioSelector` + `MpiNumberSelector` into a single reusable compound at `js/components/Compounds/MpiOptionSelector/`. Supports:
-- Generic `{ label, value, icon?, badge? }` option entries.
-- Trigger button rendering; popup portaled to body; outside-click dismiss; `ui:close-all-popups` self-close; MutationObserver body cleanup; viewport clamp; popup z-index contract (9999); selected-option icon reflected on trigger.
-- Modes/props sufficient to cover (a) ratio picker (preset list with orientation swap where needed — delegate orientation UI to caller via an optional `headerSlot`), (b) number picker (simple value list), (c) tool-group picker (icon + label list, used for mask manual/auto).
-- Migrate **every** existing `MpiRatioSelector` + `MpiNumberSelector` call site (gallery ratio, history video crop ratio, upscale factor, upscale model dropdown where it composed with NumberSelector, interpolate multiplier, PromptBoxControls `batch` entry) to `MpiOptionSelector`. Delete `MpiRatioSelector` + `MpiNumberSelector` directories and their preloadStyles + types.js entries. Grep-clean all imports.
-- Register CSS in `js/shell/preloadStyles.js`. Document props in `js/components/types.js`. Add to `js/pages/components.js` dev gallery with at least ratio, number, and tool-group demo instances.
+Merge `MpiRatioSelector` + `MpiNumberSelector` into a single reusable compound at `js/components/Compounds/MpiOptionSelector/` with **three variants**. One component, one CSS file, one set of popup behaviours — no forks.
 
-**Verify:** Dev gallery (`test_styles: true`) renders three `MpiOptionSelector` demos; each opens a popup, selects a value, fires `change`. Then open an existing image project → gallery ratio selector works. Open a video group → crop ratio, upscale factor, upscale model, interpolate multiplier all work. `grep -r "MpiRatioSelector\|MpiNumberSelector" js/` returns nothing outside the dev gallery history comment.
+**Three variants:**
+- `variant: 'ratio'` — preset ratio picker (replaces `MpiRatioSelector`). Preset list + orientation swap via optional `headerSlot`.
+- `variant: 'number'` — value list picker (replaces `MpiNumberSelector`). Accepts `values: string[]`.
+- `variant: 'buttons'` — generic button-list popup. Accepts `buttons: [{icon, label, value, info?}]`. Emits `change { value }` when any button is clicked. Consumed by `MpiHistoryTools` in to-do 7 for tool-group popups (mask manual/auto today, any future group later) and by anything else that needs trigger-button → popup-with-buttons.
+
+**Shared behaviour across all variants:**
+- Trigger button rendering; popup portaled to body; outside-click dismiss; `ui:close-all-popups` self-close; MutationObserver body cleanup; viewport clamp; popup z-index contract (9999); selected-option icon reflected on trigger (ratio + number) or last-used icon (buttons — persisted in-memory by caller, compound exposes `setTriggerIcon(icon)` imperative setter).
+
+**Migration:**
+- Migrate **every** existing `MpiRatioSelector` + `MpiNumberSelector` call site (gallery ratio, history video crop ratio, upscale factor, upscale model dropdown where it composed with NumberSelector, interpolate multiplier, PromptBoxControls `batch` entry) to the matching variant of `MpiOptionSelector`.
+- Delete `MpiRatioSelector` + `MpiNumberSelector` directories and their preloadStyles + types.js entries. Grep-clean all imports.
+- Register CSS in `js/shell/preloadStyles.js`. Document props in `js/components/types.js` (cover all three variants in the typedef). Add to `js/pages/components.js` dev gallery with demos for **all three variants** (ratio, number, buttons).
+
+**Verify:** Dev gallery (`test_styles: true`) renders all three `MpiOptionSelector` variants (ratio, number, buttons); each opens a popup, selects a value, fires `change`. Buttons variant demo should show 2–3 mock tool buttons. Then open an existing image project → gallery ratio selector works. Open a video group → crop ratio, upscale factor, upscale model, interpolate multiplier all work. `grep -r "MpiRatioSelector\|MpiNumberSelector" js/` returns nothing outside the dev gallery history comment.
 
 ### [ ] 2. Build `MpiContextMenu` compound
 
@@ -78,6 +86,7 @@ Replace the current checkbox-based list with a Photoshop-style entry list:
 - Right-click on an entry: if the clicked entry is not in the current selection, replace selection with it; then open `MpiContextMenu` at cursor with:
   - `Delete` — always enabled.
   - `Compare` — enabled only when exactly 2 entries are selected **and** both are images (verify `MpiCompareOverlay` rejects video; if video compare is not supported, disable for video groups).
+- **Dev-mode gating for native Electron menu:** right-click handler reads `dev_mode` flag from `dev_configs/app_config.js` (confirm exact key name — likely `test_styles` or `dev_mode`). If truthy → skip `preventDefault()`, let Electron's native context menu render so inspect-element keeps working. Else → `e.preventDefault()` and call `MpiContextMenu.show()`. Hook only on the `contextmenu` event; do NOT intercept `mousedown` or `dragstart` — preserves future history-card drag-to-PromptBox capability (deferred, see Deferred section).
 - Emits: `selection-changed { indices: number[], anchor: number }`, `open { index }` (unchanged open-on-click behaviour), `delete-selected { indices }`, `compare-requested { indices: [a, b] }`.
 - `MpiSelectionBar` is NOT deleted yet (next to-do) — simply stop mounting it from this component's callers in this step if needed to keep the app runnable, OR leave the selection bar present-but-unused for now; the Block still mounts it, but `MpiHistoryList` no longer feeds it. Decide at implementation time which minimises broken intermediate state. Prefer: leave `MpiSelectionBar` mounted but hidden via `display: none` until to-do 4 deletes it.
 - Update types.js props for the new emit shapes. Keep CSS in same file; rework BEM classes as needed.
@@ -120,8 +129,12 @@ Replace the placeholder from to-do 5. In `imageStrategy` and `videoStrategy`, im
 
 ### [ ] 7. Rework `MpiHistoryTools` — PromptBox toggle, mask tool-group, disabled-state reactivity
 
-Rework the compound:
-- Accept a tool definition list where one entry can be a group: `{ mode: 'mask', icon: 'mask', info: 'Mask', group: [{ mode: 'maskManual', icon: ..., label: 'Manual Mask' }, { mode: 'maskAuto', icon: ..., label: 'Auto Mask' }] }`. Clicking a grouped entry opens `MpiOptionSelector` as a popup anchored to the button; choosing an option activates that sub-mode, updates the button's rendered icon to the last-used sub-tool (Photoshop behaviour), and closes the popup.
+Rework the compound. **`MpiHistoryTools` drives tool-group popups by mounting `MpiOptionSelector` in `buttons` variant per grouped tool def — no new popup code, no `MpiPopup` primitive wiring.** Generic + scalable: future tool groups (crop variants, brush variants, selection variants, etc.) add themselves by declaring `group: [...]` and `MpiHistoryTools` forwards that array straight to the `buttons` variant.
+
+- Accept a tool definition list where one entry can be a group: `{ mode: 'mask', icon: 'mask', info: 'Mask', group: [{ mode: 'maskManual', icon: ..., label: 'Manual Mask', info?: '...' }, { mode: 'maskAuto', icon: ..., label: 'Auto Mask', info?: '...' }] }`.
+- For each grouped tool def, mount an `MpiOptionSelector` in `buttons` variant. Pass `group` entries as its `buttons` prop (map `mode` → `value`). Trigger button icon = last-used sub-tool's icon (defaults to first entry's icon). Subscribe to its `change` event: activate the selected sub-mode (same flow as a non-grouped activate), then call `optionSelector.el.setTriggerIcon(subTool.icon)` to persist the icon swap for the session.
+- For non-grouped tool defs, keep current `MpiButton` render path.
+- Activation state: when any sub-tool is active, the grouped `MpiOptionSelector` trigger renders as active (same visual as a non-grouped active tool). When deactivated (user clicks the grouped trigger again or activates another tool), trigger reverts to inactive visual but keeps last-used icon.
 - Accept per-tool `disabled: boolean` and `disabledReason?: string` on definitions; disabled buttons render grayed-out, are non-interactive, and show `disabledReason` as tooltip (fallback to normal `info` if absent).
 - Add a new top entry for `prompt` (before crop). Its activate/deactivate fire the same `activate`/`deactivate` emits with `mode: 'prompt'`, which the Block's reducer maps to PromptBox visibility.
 - `MpiGroupHistoryBlock` builds the tool list per group type and per model availability:
@@ -186,6 +199,10 @@ Ask the user explicitly: "Should I update `.claude/rules/*` and `docs/*` to refl
 - Compare tool for video groups: verified during to-do 3 when wiring `compare-requested`; if `MpiCompareOverlay` accepts two images only, the context menu disables Compare on video groups.
 - Props-bar host: decided as a Block-owned slot (`#right-top-slot`) + `strategy.mountPropsBar` contract, not a new Compound. Keeps the dynamic content logic co-located with existing strategies.
 - Disabled PromptBox button: gray + tooltip with reason text (`disabledReason`), not just gray.
+
+## Deferred (post-refactor)
+
+- **History card drag → PromptBox.** Additive capability, no structural conflict expected. `MpiHistoryList` entries already live DOM nodes — adding `draggable="true"` + `dragstart` handler works without rework. PromptBox already accepts media drops via `PromptBoxService.injectMedia()` + `MpiMediaDropOverlay` pattern. Selection model (ctrl/shift) from to-do 3 supports future multi-drag. Safety: to-do 3's right-click handler must only bind `contextmenu`, never `mousedown`/`dragstart`.
 
 ## Smoke Test Results
 

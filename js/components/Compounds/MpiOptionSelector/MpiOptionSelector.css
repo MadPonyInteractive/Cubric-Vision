@@ -1,0 +1,45 @@
+/* ── MpiOptionSelector — Compound Picker ─────────────────────────────────── */
+.mpi-opt-sel {
+    position: relative;
+    display: inline-block;
+}
+
+.mpi-opt-sel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding: 0 0.25rem;
+}
+
+.mpi-opt-sel__grid {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mpi-opt-sel--number .mpi-opt-sel__grid {
+    flex-direction: column;
+    gap: var(--space-1, 0.25rem);
+}
+
+.mpi-opt-sel__item {
+    display: flex;
+    justify-content: center;
+}
+
+/* Stroke icons in ratio variant */
+.mpi-opt-sel--ratio .mpi-icon--stroke {
+    stroke: currentColor;
+    stroke-width: 2.5;
+}
+
+/* Label above icon in ratio variant */
+.mpi-opt-sel--ratio .mpi-ibtn--label-top {
+    min-height: 80px;
+    padding-top: 0.75rem;
+}
+
+.mpi-opt-sel .mpi-ibtn__label {
+    font-size: 0.8rem;
+    font-weight: 800;
+}

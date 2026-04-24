@@ -25,7 +25,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiCanvas } from '../../Primitives/MpiCanvas/MpiCanvas.js';
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
-import { MpiRatioSelector } from '../../Compounds/MpiRatioSelector/MpiRatioSelector.js';
+import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiAutoMaskThumbs } from '../../Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
@@ -119,7 +119,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // ── Crop action bar ──────────────────────────────────────────────────
 
-        const ratioSel = MpiRatioSelector.mount(document.createElement('div'), {
+        const ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
+            variant: 'ratio',
             modelType: 'social',
             value: SOCIAL_RATIOS[0].label,
         });
