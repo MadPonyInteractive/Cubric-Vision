@@ -11,7 +11,6 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiCanvasViewer } from '../../Organisms/MpiCanvasViewer/MpiCanvasViewer.js';
 import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js';
-import { MpiSelectionBar } from '../../Compounds/MpiSelectionBar/MpiSelectionBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
@@ -161,8 +160,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const bar = Events.channel('groupHistory');
 
-        const selectionBar = MpiSelectionBar.mount(qs('#bottom-slot', el), { count: 0 });
-
         // Video action bars — only mounted for video strategy
         let _cropBar = null;
         let _ratioSel = null;
@@ -278,7 +275,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Channel reducer: all bottom-bar state driven by channel events
         _unsubs.push(bar.on('tool:activated', ({ mode }) => {
             PromptBoxService.hide();
-            selectionBar.el.style.display = 'none';
             _hideAllVideoBars();
             if (mode === 'crop' && _cropBar)         _cropBar.el.show();
             else if (mode === 'videoUpscale' && _upscaleBar)  _upscaleBar.el.show();
@@ -289,16 +285,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _hideAllVideoBars();
             if (strategy.supportsPromptBox()) {
                 PromptBoxService.show();
-                selectionBar.el.style.display = 'none';
             } else {
                 PromptBoxService.hide();
-                selectionBar.el.style.display = 'none';
             }
         }));
 
         _unsubs.push(bar.on('selection:enter', () => {
             PromptBoxService.hide();
-            selectionBar.el.style.display = '';
             _hideAllVideoBars();
         }));
 
@@ -309,7 +302,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             } else {
                 PromptBoxService.hide();
             }
-            selectionBar.el.style.display = 'none';
         }));
 
         _unsubs.push(bar.on('generation:running', () => {
@@ -321,10 +313,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const historyTools = MpiHistoryTools.mount(qs('#left-slot', el), {
             tools: strategy.toolsFor(),
         });
-
-        if (!strategy.supportsSelection()) {
-            selectionBar.el.style.display = 'none';
-        }
 
         const viewer = strategy.mountViewer(qs('#centre-slot', el), {
             resolveMediaUrl,
@@ -554,12 +542,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
                     // Show promptbox initially for image groups
                     PromptBoxService.show();
-                    selectionBar.el.style.display = 'none';
                 }
             }
         } else {
             PromptBoxService.hide();
-            selectionBar.el.style.display = 'none';
         }
 
         // ── Generation ───────────────────────────────────────────────────────
@@ -709,7 +695,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 return;
             }
             strategy.onSelectionChanged(viewer, historyTools);
-            selectionBar.el.setCount(indices.length);
             bar.emit('selection:enter', {});
         });
 
@@ -751,55 +736,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _currentIdx = _group.selectedIndex;
             _persistGroup();
             historyList.el.removeEntries(indices);
-            strategy.onSelectionDelete(viewer, _group, _currentIdx);
-        });
-
-        selectionBar.on('compare', () => {
-            if (_currentSelectionIndices.length !== 2) return;
-            const [idxA, idxB] = _currentSelectionIndices;
-            canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
-            canvasViewer.el.setMaskHidden(false);
-        });
-
-        selectionBar.on('download', () => {
-            const project = state.currentProject;
-            if (!project) return;
-            const items = _currentSelectionIndices.map(idx => _group.history[idx]).filter(Boolean);
-            downloadMediaFiles(project, items);
-        });
-
-        selectionBar.on('cancel', () => {
-            historyList.el.exitSelectMode();
-            strategy.onSelectionExited(viewer);
-            bar.emit('selection:exit', {});
-        });
-
-        selectionBar.on('delete', () => {
-            if (!_currentSelectionIndices.length) return;
-            historyList.el.exitSelectMode();
-            const sorted = [..._currentSelectionIndices].sort((a, b) => b - a);
-
-            const project = state.currentProject;
-            if (project?.folderPath) {
-                for (const idx of sorted) {
-                    const item = _group.history[idx];
-                    if (!item) continue;
-                    const filename = extractFilenameFromPath(item.filePath);
-                    if (filename) {
-                        fetch(
-                            `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
-                            { method: 'DELETE' }
-                        ).catch(err => clientLogger.warn('MpiGroupHistoryBlock', 'delete media failed:', err));
-                    }
-                }
-            }
-
-            for (const idx of sorted) {
-                _group = removeHistoryEntry(_group, idx);
-            }
-            _currentIdx = _group.selectedIndex;
-            _persistGroup();
-            historyList.el.removeEntries(_currentSelectionIndices);
             strategy.onSelectionDelete(viewer, _group, _currentIdx);
         });
 
@@ -909,7 +845,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             canvasViewer.el.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();
-            selectionBar.destroy?.();
             _cropBar?.destroy?.();
             _ratioSel?.destroy?.();
             _upscaleBar?.destroy?.();

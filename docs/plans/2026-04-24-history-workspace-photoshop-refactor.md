@@ -98,11 +98,22 @@ Wire the new events in `MpiGroupHistoryBlock`:
 
 **Verify:** Open an image group with ≥ 3 history entries. (a) Entries show `WxH` instead of date. (b) Click entry → viewer loads it. (c) Ctrl-click second entry → both highlighted. (d) Shift-click a later entry → range highlighted. (e) Right-click a highlighted entry with 2 selected → context menu shows Delete + Compare (both enabled). (f) Click Compare → `MpiCompareOverlay` opens with the 2 entries. (g) Right-click with 3 selected → Compare is disabled. (h) Click Delete → existing confirmation dialog opens; confirm → entries removed. Repeat on a video group; Compare disabled if video not supported.
 
-### [ ] 4. Delete `MpiSelectionBar` and purge all references
+### [x] 4. Remove `MpiSelectionBar` from `MpiGroupHistoryBlock` only
 
-Remove `js/components/Compounds/MpiSelectionBar/` directory, its CSS preload entry, its types.js typedef, and every import/mount in the codebase (gallery + group-history + anywhere else). Remove the `selectionBar` variable and the `#bottom-slot` selection-bar mount path from `MpiGroupHistoryBlock.js`. Remove the `groupHistory` channel reducer lines that show/hide `selectionBar`. Grep-verify nothing references `MpiSelectionBar`, `mpi-selection-bar`, or `selection-bar-slot` afterwards. If Gallery relied on `MpiSelectionBar` for its own selection UI, swap Gallery to the equivalent `MpiContextMenu` flow as part of this to-do (only if Gallery already relies on the bar — otherwise defer per scope contract). Verify first during implementation.
+**Scope:** `MpiSelectionBar` stays alive in `MpiGalleryBlock` / `MpiGalleryGrid` (gallery workspace is untouched per scope contract). This to-do removes it only from the Group History workspace.
 
-**Verify:** `grep -r "MpiSelectionBar\|mpi-selection-bar\|selectionbar-slot" js/ styles/` returns zero hits. App boots and navigating to both a gallery view and a group history view does not throw. Deleting entries from history still works via the context menu.
+In `MpiGroupHistoryBlock.js`:
+- Remove the `import { MpiSelectionBar }` line.
+- Remove `const selectionBar = MpiSelectionBar.mount(qs('#bottom-slot', el), ...)`.
+- Remove every `selectionBar.el.style.display` call and `selectionBar.el.setCount(...)` call.
+- Remove `selectionBar.on('delete', ...)` and `selectionBar.on('compare', ...)` handlers (these events are now driven by `MpiHistoryList`'s `delete-selected` / `compare-requested` emits wired in to-do 3; confirm wiring still present).
+- Remove `selectionBar.destroy?.()` from `el.destroy`.
+- Remove the `groupHistory` channel reducer lines that show/hide `selectionBar` (all `selectionBar.el.style.display = ''` / `'none'` paths).
+- Remove the `#bottom-slot` div from the Block template and delete the `.mpi-group-history-block__bottom` CSS rule if it only served the selection bar. Keep the floating `.mpi-group-history-block__bottom` container if it is also used for PromptBox positioning (check before deleting).
+
+Do NOT touch `preloadStyles.js`, `types.js`, `MpiGalleryBlock.js`, or `MpiGalleryGrid.js` — those remain intact.
+
+**Verify:** `grep -n "MpiSelectionBar\|selectionBar" js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` returns zero hits. App boots; navigating to gallery and then to group history does not throw. Deleting history entries still works via context menu (to-do 3 wiring). Gallery selection bar still renders and works correctly.
 
 ### [ ] 5. Rework `MpiGroupHistoryBlock` layout — props-bar host + right-panel split + activeTool reducer
 
