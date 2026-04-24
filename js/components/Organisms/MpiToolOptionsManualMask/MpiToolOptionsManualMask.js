@@ -69,21 +69,20 @@ export const MpiToolOptionsManualMask = ComponentFactory.create({
         const invertBtn = MpiButton.mount(document.createElement('div'), {
             icon: 'invert', size: 'sm', variant: 'ghost', info: 'Invert mask',
         });
-        const applyBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'check', label: 'Apply', size: 'sm', variant: 'primary',
-            info: 'Commit mask',
-        });
         actionsSlot.appendChild(clearBtn.el);
         actionsSlot.appendChild(invertBtn.el);
-        actionsSlot.appendChild(applyBtn.el);
 
         clearBtn.on('click', () => viewer.el.clearMask?.());
         invertBtn.on('click', () => viewer.el.invertMask?.());
-        applyBtn.on('click', () => emit('apply', {}));
 
-        _children.push(brushBtn, eraserBtn, clearBtn, invertBtn, applyBtn);
+        _children.push(brushBtn, eraserBtn, clearBtn, invertBtn);
 
+        // No Apply button. Mask compounds only create a mask; the PromptBox is
+        // the single place where the user picks what operation to run with it.
+        // On destroy (tool switch) we evaluate the mask so the Block's
+        // _canvasHasMask flag is current before the PromptBox reappears.
         el.destroy = () => {
+            viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _children.forEach(c => c.destroy?.());
         };

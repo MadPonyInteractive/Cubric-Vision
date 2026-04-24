@@ -420,6 +420,19 @@ export const MpiCanvasViewer = ComponentFactory.create({
         };
 
         /**
+         * Evaluate current mask content and emit mask-ready / mask-clear WITHOUT
+         * exiting the current tool mode. Used by MpiToolOptions* compounds on
+         * destroy to sync the Block's _canvasHasMask flag before switching tools,
+         * so the PromptBox sees the latest mask state when it reappears.
+         */
+        el.evaluateMask = () => {
+            const hasContent = hasMaskContent(canvas.maskCanvas);
+            _hasMask = hasContent;
+            if (hasContent) emit('mask-ready', { hasMask: true });
+            else            emit('mask-clear', {});
+        };
+
+        /**
          * Swap the YOLO detection model for auto-mask. Clears any in-progress
          * picks + painted mask to keep auto-mask state coherent.
          */

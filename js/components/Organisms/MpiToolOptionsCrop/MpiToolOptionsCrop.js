@@ -38,13 +38,19 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         if (isVideo) viewer.el.enterCropMode?.();
         else         viewer.el.enterMode?.('crop');
 
-        // Ratio selector
+        // Ratio selector — push initial ratio into the viewer so the crop
+        // overlay matches the selector's displayed value on first render.
+        // ratioSel only emits 'change' on user interaction; without this push
+        // the overlay defaults to the viewer's own ratio constant, producing
+        // a visible mismatch with the selector chip.
+        const initialRatio = SOCIAL_RATIOS[0];
         const ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
             variant: 'ratio',
             modelType: 'social',
-            value: SOCIAL_RATIOS[0].label,
+            value: initialRatio.label,
         });
         qs('#ratio-slot', el).appendChild(ratioSel.el);
+        viewer.el.setCropRatio?.(initialRatio.ratio);
         ratioSel.on('change', ({ ratio }) => {
             viewer.el.setCropRatio?.(ratio);
         });

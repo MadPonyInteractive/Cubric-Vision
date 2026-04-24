@@ -81,20 +81,22 @@ export const MpiToolOptionsAutoMask = ComponentFactory.create({
 
         const actionsSlot = qs('#actions-slot', el);
         const detectBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'search', label: 'Detect', size: 'sm', variant: 'ghost',
+            icon: 'search', label: 'Detect', size: 'sm', variant: 'primary',
             info: 'Run detection',
         });
-        const applyBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'check', label: 'Apply', size: 'sm', variant: 'primary',
-            info: 'Commit auto-mask',
+        const invertBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'invert', size: 'sm', variant: 'ghost', info: 'Invert mask',
         });
         actionsSlot.appendChild(detectBtn.el);
-        actionsSlot.appendChild(applyBtn.el);
+        actionsSlot.appendChild(invertBtn.el);
         detectBtn.on('click', () => viewer.el.runAutoMaskDetect?.());
-        applyBtn.on('click', () => emit('apply', {}));
-        _children.push(detectBtn, applyBtn);
+        invertBtn.on('click', () => viewer.el.invertMask?.());
+        _children.push(detectBtn, invertBtn);
 
+        // No Apply button. The PromptBox picks what to do with the mask.
+        // On destroy we evaluate the mask so _canvasHasMask is fresh for PromptBox.
         el.destroy = () => {
+            viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _children.forEach(c => c.destroy?.());
         };

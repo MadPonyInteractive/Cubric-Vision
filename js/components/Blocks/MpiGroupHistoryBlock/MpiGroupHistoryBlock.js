@@ -231,17 +231,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (payload.kind === 'video-save')       return _handleCropSaveVideo();
                 return;
             }
-            if (mode === 'maskManual' || mode === 'maskAuto') {
-                const maskDataUrl = viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null;
-                return _runGenerate({
-                    operation:     activeOperation,
-                    positive:      '',
-                    negative:      '',
-                    mediaItems:    [],
-                    maskDataUrl,
-                    injectionParams: {},
-                });
-            }
+            // Mask compounds have no apply button — they only create a mask.
+            // PromptBox runs the operation; this branch should never fire.
+            if (mode === 'maskManual' || mode === 'maskAuto') return;
             if (mode === 'videoUpscale') {
                 const injectionParams = { Upscale_Factor: payload.factor ?? 2 };
                 if (payload.model) injectionParams.Upscale_Model = payload.model;

@@ -235,7 +235,7 @@ Rewrite block template + CSS:
 
 > **PIVOT (2026-04-24):** The strategy + channel-bus + `setActiveTool` system built in to-dos 5–6 works but is over-complicated and has produced three bugs in two sessions. To-dos 7–9 are **rewritten below** around a simpler mediator + self-contained `MpiToolOptions*` compounds. Earlier to-do 7 text is preserved for history at the bottom under `## Superseded (pre-pivot) to-dos`. Do NOT implement the superseded version.
 
-### [ ] 7. PIVOT — Rip out strategies + channel bus; per-tool `MpiToolOptions*` compounds; `MpiHistoryTools` is the single source of truth for active mode
+### [X] 7. PIVOT — Rip out strategies + channel bus; per-tool `MpiToolOptions*` compounds; `MpiHistoryTools` is the single source of truth for active mode
 
 **Motivation:** "one of the main goals was less complicated." Current flow hops click → `historyTools.activate` → `strategy.onToolActivate` → `viewer.el.enterMode` → `mode-changed` event → `bar.tool:activated` channel → `setActiveTool` → maybe re-fires back to `tool:deactivated` → clobbers state. Three bugs came from this ping-pong. Replace with a flat mediator.
 
@@ -389,7 +389,7 @@ Where `TOOL_OPTIONS_REGISTRY`:
 - `grep -r "MpiToolActionBar\|imageStrategy\|videoStrategy\|supportsPromptBox\|supportsSelection\|groupHistory.*channel" js/` → zero hits.
 - Navigation in/out 5× — `_unsubs` count stable; no listener leaks.
 
-### [ ] 8. (superseded by pivoted to-do 7 — merged)
+### [X] 8. (superseded by pivoted to-do 7 — merged)
 
 Contents moved into to-do 7's §7 and §8. Keep this row marked done after to-do 7 lands.
 
@@ -405,7 +405,7 @@ Contents moved into to-do 7's §7 and §8. Keep this row marked done after to-do
 
 ---
 
-### [ ] 7-SUPERSEDED — Rework `MpiHistoryTools` — PromptBox toggle, mask tool-group, disabled-state reactivity (DO NOT IMPLEMENT — kept for history)
+### [-] 7-SUPERSEDED — Rework `MpiHistoryTools` — PromptBox toggle, mask tool-group, disabled-state reactivity (DO NOT IMPLEMENT — kept for history)
 
 Rework the compound. **`MpiHistoryTools` drives tool-group popups by mounting `MpiOptionSelector` in `buttons` variant per grouped tool def — no new popup code, no `MpiPopup` primitive wiring.** Generic + scalable: future tool groups (crop variants, brush variants, selection variants, etc.) add themselves by declaring `group: [...]` and `MpiHistoryTools` forwards that array straight to the `buttons` variant.
 
@@ -427,7 +427,7 @@ Rework the compound. **`MpiHistoryTools` drives tool-group popups by mounting `M
 
 **Verify:** Open image group with a model installed → prompt button highlighted/active on load; click crop → crop activates, PromptBox hides, props bar shows crop. Click prompt → PromptBox reappears, props bar collapses. Click mask → popup appears with Manual + Auto; pick Auto → button icon updates, mask-auto mode active, props bar shows auto-mask controls. Uninstall all image models (or open a video group with no video model) → prompt button grayed with tooltip; clicking does nothing. Switch between image and video groups → video-only tools visible but disabled on image and vice-versa.
 
-### [ ] 8-SUPERSEDED — Finalise PromptBox visibility toggle + bottom-slot cleanup (DO NOT IMPLEMENT — merged into pivoted to-do 7)
+### [-] 8-SUPERSEDED — Finalise PromptBox visibility toggle + bottom-slot cleanup (DO NOT IMPLEMENT — merged into pivoted to-do 7)
 
 The previous to-dos already toggle PromptBox via the `--prompt-active` class. In this step, make that the single source of truth:
 - Remove any remaining imperative `PromptBoxService.hide()` / `show()` calls inside `MpiGroupHistoryBlock` that were part of the old bottom-bar swap. PromptBox visibility is driven purely by the CSS class now.
@@ -437,7 +437,7 @@ The previous to-dos already toggle PromptBox via the `--prompt-active` class. In
 
 **Verify:** Open image group → PromptBox visible, prompt tool active. Switch tools → PromptBox hides crisply via CSS, no flicker. Navigate away (back to gallery) and back → no duplicate subscriptions (add a `console.log('[GroupHistoryBlock] destroy — unsubs:', _unsubs.length)` and confirm the count matches what was registered). Open a video group → crop is the default active tool; PromptBox stays hidden even when the user toggles tools off (prompt tool is disabled). Open image group with zero models → no tool active; PromptBox hidden; prompt button disabled with tooltip.
 
-### [ ] 9-SUPERSEDED — Cleanup sweep (DO NOT IMPLEMENT — replaced by pivoted to-do 9 above)
+### [-] 9-SUPERSEDED — Cleanup sweep (DO NOT IMPLEMENT — replaced by pivoted to-do 9 above)
 
 ### [ ] 10. Smoke test matrix + manual regression
 
