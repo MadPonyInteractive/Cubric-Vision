@@ -120,23 +120,29 @@
  */
 
 /**
- * @typedef {Object} MpiHistoryToolsDef
- * @property {string} mode - Canvas mode key ('crop'|'mask'|...)
- * @property {string} icon - Icon registry key
- * @property {string} [info] - Info bar / tooltip text
+ * @typedef {Object} MpiHistoryToolsDisabledEntry
+ * @property {boolean} disabled - Whether the tool button renders grayed / non-interactive.
+ * @property {string}  [reason] - Tooltip text explaining the disabled state.
  */
 
 /**
  * @typedef {Object} MpiHistoryToolsProps (Compound — js/components/Compounds/MpiHistoryTools)
- * @property {MpiHistoryToolsDef[]} tools - Ordered list of tool definitions to render
+ * @property {'image'|'video'} mode - Selects the built-in tool list for the workspace.
+ *
+ * Built-in image tools: prompt, crop, mask (group: maskManual, maskAuto).
+ * Built-in video tools: prompt, crop, videoUpscale, interpolate.
  *
  * Instance methods (on instance.el):
- *   syncMode(mode) — reflect an external modechange onto button states without emitting events.
- *                    Pass 'none' to deactivate all buttons.
+ *   setMode(mode)      — programmatically activate a mode; emits 'activate { mode }'.
+ *                        No-op if mode === current active mode, or mode not in the list.
+ *   setDisabled(map)   — bulk update disabled state. Shape:
+ *                        { [toolMode: string]: MpiHistoryToolsDisabledEntry }.
+ *                        Accepts top-level modes AND sub-modes (e.g. 'maskManual').
+ *   getActiveMode()    — read current active mode (null if none).
  *
  * Emits:
- *   'activate'   { mode: string } — user pressed an inactive tool button
- *   'deactivate' { mode: string } — user pressed the currently-active tool button (toggle off)
+ *   'activate' { mode: string } — fired on any mode change (user click or setMode).
+ *                                 Radio-style; no 'deactivate' event.
  */
 
 /**
