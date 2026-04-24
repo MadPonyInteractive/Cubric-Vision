@@ -76,7 +76,7 @@ New floating-UI compound at `js/components/Compounds/MpiContextMenu/`. Props: `{
 
 **Verify:** Dev gallery demo button opens a context menu at cursor with Delete + Compare entries; selecting an entry logs the chosen key to console; clicking outside closes; Escape closes. `console.log('[MpiContextMenu] select', key)` during `onSelect` is visible in devtools.
 
-### [ ] 3. Rework `MpiHistoryList` — dimensions, ctrl/shift multi-select, right-click menu
+### [x] 3. Rework `MpiHistoryList` — dimensions, ctrl/shift multi-select, right-click menu
 
 Replace the current checkbox-based list with a Photoshop-style entry list:
 - Each entry shows its dimensions (read from `item.width` / `item.height` if in memory; otherwise from sidecar via existing lookup — confirm path during implementation and add a `console.log('[MpiHistoryList] entry dims', { itemId, w, h, source })` for the first render). No date, no checkbox.

@@ -340,6 +340,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const historyList = MpiHistoryList.mount(qs('#right-slot', el), {
             history: _group.history,
             selectedIndex: _currentIdx,
+            isVideo: _group.type === 'video',
         });
 
         // ── Wire video bar events to viewer ───────────────────────────────────
@@ -715,6 +716,42 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         historyList.on('selection-exited', () => {
             strategy.onSelectionExited(viewer);
             bar.emit('selection:exit', {});
+        });
+
+        historyList.on('compare-requested', ({ indices }) => {
+            if (indices.length !== 2) return;
+            const [idxA, idxB] = indices;
+            canvasViewer.el.loadCompare(_group.history[idxA], _group.history[idxB]);
+            canvasViewer.el.setMaskHidden(false);
+        });
+
+        historyList.on('delete-selected', ({ indices }) => {
+            if (!indices.length) return;
+            historyList.el.exitSelectMode();
+            const sorted = [...indices].sort((a, b) => b - a);
+
+            const project = state.currentProject;
+            if (project?.folderPath) {
+                for (const idx of sorted) {
+                    const item = _group.history[idx];
+                    if (!item) continue;
+                    const filename = extractFilenameFromPath(item.filePath);
+                    if (filename) {
+                        fetch(
+                            `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
+                            { method: 'DELETE' }
+                        ).catch(err => clientLogger.warn('MpiGroupHistoryBlock', 'delete media failed:', err));
+                    }
+                }
+            }
+
+            for (const idx of sorted) {
+                _group = removeHistoryEntry(_group, idx);
+            }
+            _currentIdx = _group.selectedIndex;
+            _persistGroup();
+            historyList.el.removeEntries(indices);
+            strategy.onSelectionDelete(viewer, _group, _currentIdx);
         });
 
         selectionBar.on('compare', () => {

@@ -5,6 +5,7 @@
  *
  * @param {import('../../../data/projectModel.js').HistoryItem[]} [history=[]] - Initial history array
  * @param {number} [selectedIndex=0] - Initially active entry index
+ * @param {boolean} [isVideo=false] - Whether the group is a video group (disables Compare)
  *
  * Instance API (on el):
  *   el.setActiveIndex(idx)      — highlight active card (no events)
@@ -14,13 +15,16 @@
  *   el.exitSelectMode()         — programmatically exit select mode
  *
  * Emits:
- *   'entry-selected'   { idx, item }  — card clicked (not in select mode)
- *   'selection-changed' { indices }  — selection updated
- *   'selection-exited'  {}           — select mode ended
+ *   'entry-selected'    { idx, item }              — card clicked (single-select)
+ *   'selection-changed' { indices, anchor }         — selection updated
+ *   'selection-exited'  {}                          — select mode ended
+ *   'delete-selected'   { indices }                 — delete action from context menu
+ *   'compare-requested' { indices: [number, number] } — compare action from context menu
  */
 
 import { ComponentFactory } from '../../factory.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -28,6 +32,8 @@ function _resolveUrl(filePath) {
     if (p.startsWith('http') || p.startsWith('blob:') || p.startsWith('data:') || p.includes('project-file')) return p;
     return `/project-file?path=${encodeURIComponent(p.replace(/\\/g, '/'))}`;
 }
+
+let _dimsLogged = false;
 
 export const MpiHistoryList = ComponentFactory.create({
     name: 'MpiHistoryList',
@@ -43,70 +49,121 @@ export const MpiHistoryList = ComponentFactory.create({
         /** @type {import('../../../data/projectModel.js').HistoryItem[]} */
         let _history = props.history || [];
         let _selectedIdx = props.selectedIndex ?? 0;
+        const _isVideo = props.isVideo ?? false;
         let _selectMode = false;
+        let _devMode = false; // default: show custom menu; true = allow native (dev inspect-element)
+        import('../../../dev_configs/app_config.js')
+            .then(({ APP_CONFIG }) => { _devMode = APP_CONFIG.dev_mode ?? false; })
+            .catch(() => {});
         /** @type {Set<number>} */
         const _selection = new Set();
+        let _anchor = 0;
 
         /** @type {HTMLElement[]} */
         const _historyCards = [];
 
-        // ── URL resolver (same logic as groupHistory.js) ───────────────────────
+        // ── Dims helper ───────────────────────────────────────────────────────
+
+        function _dimsLabel(item, idx) {
+            const w = item.pixelDimensions?.w;
+            const h = item.pixelDimensions?.h;
+            if (!_dimsLogged) {
+                clientLogger.info('MpiHistoryList', 'entry dims', {
+                    itemId: item.id,
+                    w: w || 0,
+                    h: h || 0,
+                    source: 'pixelDimensions',
+                });
+                _dimsLogged = true;
+            }
+            return (w && w > 0) ? `${w}×${h}` : '?×?';
+        }
 
         // ── Card building ─────────────────────────────────────────────────────
 
+        function _makeCard(item, idx) {
+            const card = document.createElement('div');
+            card.className = 'mpi-history-list__card';
+
+            const thumb = document.createElement('img');
+            thumb.className = 'mpi-history-list__thumb';
+            thumb.alt = '';
+            const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
+            if (srcPath) thumb.src = _resolveUrl(srcPath);
+
+            const meta = document.createElement('div');
+            meta.className = 'mpi-history-list__meta';
+
+            const label = document.createElement('div');
+            label.className = 'mpi-history-list__label';
+            label.textContent = item.operation || item.type || '';
+
+            const dims = document.createElement('div');
+            dims.className = 'mpi-history-list__dims';
+            dims.textContent = _dimsLabel(item, idx);
+
+            meta.append(label, dims);
+            card.append(thumb, meta);
+
+            card.addEventListener('mousedown', (e) => {
+                if (e.shiftKey) e.preventDefault();
+            });
+
+            card.addEventListener('click', (e) => {
+                if (e.shiftKey) {
+                    _rangeSelect(idx);
+                } else if (e.ctrlKey || e.metaKey) {
+                    _toggleSelect(idx);
+                } else {
+                    _exitSelectMode();
+                    _anchor = idx;
+                    _selectEntry(idx);
+                }
+            });
+
+            card.addEventListener('contextmenu', (e) => {
+                if (_devMode) return;
+                e.preventDefault();
+
+                if (!_selection.has(idx)) {
+                    _exitSelectMode();
+                    _selection.add(idx);
+                    _anchor = idx;
+                    _selectMode = true;
+                    _applyCardStates();
+                    emit('selection-changed', { indices: [..._selection], anchor: _anchor });
+                }
+
+                const compareDisabled = _selection.size !== 2;
+                MpiContextMenu.show({
+                    x: e.clientX,
+                    y: e.clientY,
+                    items: [
+                        { key: 'delete',  icon: 'trash',   label: 'Delete',  danger: true },
+                        { key: 'compare', icon: 'compare', label: 'Compare', disabled: compareDisabled },
+                    ],
+                    onSelect: (key) => {
+                        if (key === 'delete') {
+                            emit('delete-selected', { indices: [..._selection] });
+                        } else if (key === 'compare') {
+                            const idxs = [..._selection];
+                            emit('compare-requested', { indices: idxs });
+                        }
+                    },
+                });
+            });
+
+            return card;
+        }
+
         function _buildHistoryCards() {
+            _dimsLogged = false;
             const container = el.querySelector('#cards-slot');
             container.innerHTML = '';
             _historyCards.length = 0;
 
             _history.forEach((item, idx) => {
-                const card = document.createElement('div');
-                card.className = 'mpi-history-list__card';
-
-                // Checkbox — checking one enters select mode
-                const cbWrap = document.createElement('label');
-                cbWrap.className = 'mpi-history-list__cb-wrap';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'mpi-history-list__cb';
-                cb.checked = _selection.has(idx);
-                cb.addEventListener('change', (e) => {
-                    e.stopPropagation();
-                    _toggleSelection(idx, cb.checked);
-                });
-                cbWrap.appendChild(cb);
-
-                const thumb = document.createElement('img');
-                thumb.className = 'mpi-history-list__thumb';
-                thumb.alt = '';
-                const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
-                if (srcPath) thumb.src = _resolveUrl(srcPath);
-
-                const meta = document.createElement('div');
-                meta.className = 'mpi-history-list__meta';
-
-                const label = document.createElement('div');
-                label.className = 'mpi-history-list__label';
-                label.textContent = item.operation || item.type || '';
-
-                const date = document.createElement('div');
-                date.className = 'mpi-history-list__date';
-                date.textContent = item.createdAt
-                    ? new Date(item.createdAt).toLocaleDateString()
-                    : '';
-
-                meta.append(label, date);
-                card.append(cbWrap, thumb, meta);
-
-                card.addEventListener('click', (e) => {
-                    if (e.target === cb || e.target === cbWrap) return;
-                    if (_selectMode) {
-                        _toggleSelection(idx, !_selection.has(idx));
-                    } else {
-                        _selectEntry(idx);
-                    }
-                });
-
+                const card = _makeCard(item, idx);
                 container.appendChild(card);
                 _historyCards.push(card);
             });
@@ -116,10 +173,8 @@ export const MpiHistoryList = ComponentFactory.create({
 
         function _applyCardStates() {
             _historyCards.forEach((card, idx) => {
-                card.classList.toggle('mpi-history-list__card--active', idx === _selectedIdx);
+                card.classList.toggle('mpi-history-list__card--active',   idx === _selectedIdx);
                 card.classList.toggle('mpi-history-list__card--selected', _selection.has(idx));
-                const cb = card.querySelector('.mpi-history-list__cb');
-                if (cb) cb.checked = _selection.has(idx);
             });
         }
 
@@ -129,27 +184,33 @@ export const MpiHistoryList = ComponentFactory.create({
             emit('entry-selected', { idx, item: _history[idx] });
         }
 
-        function _toggleSelection(idx, checked) {
-            if (checked) {
-                _selection.add(idx);
-            } else {
+        function _toggleSelect(idx) {
+            if (_selection.has(idx)) {
                 _selection.delete(idx);
+            } else {
+                _selection.add(idx);
+                _anchor = idx;
             }
 
-            if (_selection.size > 0 && !_selectMode) {
-                _enterSelectMode();
-            } else if (_selection.size === 0 && _selectMode) {
+            if (_selection.size > 0 && !_selectMode) _selectMode = true;
+            if (_selection.size === 0 && _selectMode) {
                 _exitSelectMode();
                 emit('selection-exited', {});
                 return;
             }
 
             _applyCardStates();
-            emit('selection-changed', { indices: [..._selection] });
+            emit('selection-changed', { indices: [..._selection], anchor: _anchor });
         }
 
-        function _enterSelectMode() {
+        function _rangeSelect(idx) {
+            const from = Math.min(_anchor, idx);
+            const to   = Math.max(_anchor, idx);
+            _selection.clear();
+            for (let i = from; i <= to; i++) _selection.add(i);
             _selectMode = true;
+            _applyCardStates();
+            emit('selection-changed', { indices: [..._selection], anchor: _anchor });
         }
 
         function _exitSelectMode() {
@@ -168,6 +229,7 @@ export const MpiHistoryList = ComponentFactory.create({
         el.setGroups = (history) => {
             _history = history;
             _selectedIdx = 0;
+            _anchor = 0;
             _buildHistoryCards();
         };
 
@@ -175,63 +237,18 @@ export const MpiHistoryList = ComponentFactory.create({
             _history = [..._history, item];
             const container = el.querySelector('#cards-slot');
             const idx = _history.length - 1;
-
-            const card = document.createElement('div');
-            card.className = 'mpi-history-list__card';
-
-            const cbWrap = document.createElement('label');
-            cbWrap.className = 'mpi-history-list__cb-wrap';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'mpi-history-list__cb';
-            cb.checked = false;
-            cb.addEventListener('change', (e) => {
-                e.stopPropagation();
-                _toggleSelection(idx, cb.checked);
-            });
-            cbWrap.appendChild(cb);
-
-            const thumb = document.createElement('img');
-            thumb.className = 'mpi-history-list__thumb';
-            thumb.alt = '';
-            const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
-            if (srcPath) thumb.src = _resolveUrl(srcPath);
-
-            const meta = document.createElement('div');
-            meta.className = 'mpi-history-list__meta';
-
-            const label = document.createElement('div');
-            label.className = 'mpi-history-list__label';
-            label.textContent = item.operation || item.type || '';
-
-            const date = document.createElement('div');
-            date.className = 'mpi-history-list__date';
-            date.textContent = item.createdAt
-                ? new Date(item.createdAt).toLocaleDateString()
-                : '';
-
-            meta.append(label, date);
-            card.append(cbWrap, thumb, meta);
-
-            card.addEventListener('click', (e) => {
-                if (e.target === cb || e.target === cbWrap) return;
-                if (_selectMode) {
-                    _toggleSelection(idx, !_selection.has(idx));
-                } else {
-                    _selectEntry(idx);
-                }
-            });
-
+            const card = _makeCard(item, idx);
             container.appendChild(card);
             _historyCards.push(card);
             _selectedIdx = idx;
+            _anchor = idx;
             _applyCardStates();
         };
 
         el.removeEntries = (indices) => {
-            // indices are sorted descending (plan guarantees this)
             const idxSet = new Set(indices);
             _history = _history.filter((_, i) => !idxSet.has(i));
+            _anchor = 0;
             _buildHistoryCards();
         };
 

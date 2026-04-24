@@ -729,6 +729,7 @@
  * @typedef {Object} MpiHistoryListProps (Compound — js/components/Compounds/MpiHistoryList)
  * @property {import('./data/projectModel.js').HistoryItem[]} [history=[]] - Initial history array
  * @property {number} [selectedIndex=0] - Initially active entry index
+ * @property {boolean} [isVideo=false] - Disables Compare in context menu for video groups
  *
  * Instance methods (on instance.el):
  *   setActiveIndex(idx)          — highlight active card (no events)
@@ -738,11 +739,11 @@
  *   exitSelectMode()             — programmatically exit select mode
  *
  * Emits:
- *   'entry-selected'    { idx, item }    — card clicked (not in select mode)
- *   'selection-changed' { indices }       — selection updated
- *   'selection-exited'  {}               — select mode ended
- *   'compare-requested' { idxA, idxB }  — two items ready to compare
- *   'delete-requested'  { indices }     — deletion confirmed
+ *   'entry-selected'    { idx, item }                  — card clicked (single-select)
+ *   'selection-changed' { indices, anchor }             — selection updated (ctrl/shift/right-click)
+ *   'selection-exited'  {}                              — select mode ended
+ *   'delete-selected'   { indices }                     — delete from context menu
+ *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
  */
 
 /**

@@ -31,22 +31,6 @@
     border-color: var(--neon-warm, #f90);
 }
 
-/* Always-visible checkbox */
-.mpi-history-list__cb-wrap {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    cursor: pointer;
-}
-
-.mpi-history-list__cb {
-    width: 1rem;
-    height: 1rem;
-    cursor: pointer;
-    accent-color: var(--neon-warm, #f90);
-    flex-shrink: 0;
-}
-
 .mpi-history-list__thumb {
     width: 3rem;
     height: 3rem;
@@ -73,7 +57,7 @@
     text-overflow: ellipsis;
 }
 
-.mpi-history-list__date {
+.mpi-history-list__dims {
     font-size: var(--font-xxs, 0.6rem);
     color: var(--text-muted);
 }
