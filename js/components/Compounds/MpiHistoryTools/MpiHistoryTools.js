@@ -57,22 +57,20 @@ export const MpiHistoryTools = ComponentFactory.create({
                 size: 'sm',
                 variant: 'ghost',
                 info: info || mode,
-                toggleable: true,
+                toggleable: false,
                 active: false,
             });
 
-            btn.on('toggle', ({ active }) => {
-                if (active) {
-                    // Deactivate whatever was previously active
-                    if (_activeMode !== 'none' && _activeMode !== mode) {
-                        _buttons.get(_activeMode)?.el.setActive(false);
-                    }
-                    _activeMode = mode;
-                    emit('activate', { mode });
-                } else {
-                    _activeMode = 'none';
-                    emit('deactivate', { mode });
+            btn.on('click', () => {
+                // Radio behaviour: re-click on active tool = no-op. Only a
+                // different tool deactivates the current one.
+                if (_activeMode === mode) return;
+                if (_activeMode !== 'none') {
+                    _buttons.get(_activeMode)?.el.setActive(false);
                 }
+                _buttons.get(mode)?.el.setActive(true);
+                _activeMode = mode;
+                emit('activate', { mode });
             });
 
             _buttons.set(mode, btn);

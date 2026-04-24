@@ -28,10 +28,15 @@ export function imageStrategy({ group, tools }) {
             ];
         },
 
-        mountViewer(slot, { resolveMediaUrl, MpiCanvasViewer, currentItem, currentIdx }) {
+        mountPropsBar() {
+            return null;
+        },
+
+        mountViewer(slot, { resolveMediaUrl, MpiCanvasViewer, barContainer, currentItem, currentIdx }) {
             return MpiCanvasViewer.mount(slot, {
                 initialImageUrl: resolveMediaUrl(currentItem?.filePath),
                 initialIdx: currentIdx,
+                barContainer,
             });
         },
 
@@ -67,7 +72,12 @@ export function imageStrategy({ group, tools }) {
         },
 
         onToolDeactivate(viewer, mode) {
-            viewer.el.exitMode();
+            // Canvas viewer exits its own mode when enterMode(newMode) is called.
+            // Only exit explicitly when switching to a non-canvas tool (e.g. prompt).
+            // Block's setActiveTool guards prevTool !== 'prompt' so this fires only
+            // between canvas tools or when going to prompt; calling exitMode here
+            // would emit mode-changed{none} which re-fires setActiveTool('prompt'),
+            // clobbering the just-activated tool. Skip explicit exit.
         },
 
         onSelectionChanged(viewer, historyTools) {

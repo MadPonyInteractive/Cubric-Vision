@@ -134,16 +134,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
         barContainer.appendChild(cropBarSlot);
 
         const cropBar = MpiToolActionBar.mount(cropBarSlot, {
+            inline: true,
             leftSlot: ratioSel,
             actions: [
                 { key: 'apply', icon: 'check', label: 'Apply', variant: 'primary', info: 'Save crop as a new history entry' },
-                { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel crop' },
             ],
         });
 
         cropBar.on('action', ({ key }) => {
             if (key === 'apply') _runCrop();
-            if (key === 'cancel') _exitMode();
         });
 
         // ── Mask action bar ──────────────────────────────────────────────────
@@ -153,12 +152,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         barContainer.appendChild(maskBarSlot);
 
         const maskBar = MpiToolActionBar.mount(maskBarSlot, {
+            inline: true,
             actions: [
                 { key: 'brush', icon: 'pencil', label: 'Brush', variant: 'ghost', toggleable: true, active: true, radioGroup: 'tool', info: 'Paint mask (B)' },
                 { key: 'eraser', icon: 'eraser', label: 'Eraser', variant: 'ghost', toggleable: true, radioGroup: 'tool', info: 'Erase mask (E)' },
                 { key: 'clear', icon: 'trash', label: 'Clear', variant: 'ghost', info: 'Clear entire mask' },
                 { key: 'invert', icon: 'swap', label: 'Invert', variant: 'ghost', info: 'Invert mask colours' },
-                { key: 'cancel', icon: 'close', label: 'Cancel', variant: 'ghost', info: 'Cancel mask and discard' },
                 { key: 'apply', icon: 'check', label: 'Apply Mask', variant: 'primary', info: 'Confirm mask for generation' },
             ],
         });
@@ -172,12 +171,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 emit('mask-clear', {});
             }
             if (key === 'invert') { canvas.flipMaskColor(); }
-            if (key === 'cancel') {
-                canvas.clearMask();
-                _hasMask = false;
-                _exitMode();
-                emit('mask-clear', {});
-            }
             if (key === 'apply') {
                 // Only mark as ready if mask has actual painted content
                 const hasContent = hasMaskContent(canvas.maskCanvas);
@@ -261,12 +254,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         barContainer.appendChild(autoMaskBarSlot);
 
         const autoMaskBar = MpiToolActionBar.mount(autoMaskBarSlot, {
+            inline: true,
             topSlot: autoMaskThumbs,
             leftSlot: autoMaskLeftSlotInst,
             actions: [
                 { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
                 { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary', info: 'Apply mask and exit' },
-                { key: 'cancel', icon: 'close',  label: 'Cancel', variant: 'ghost',   info: 'Cancel and clear mask' },
             ],
         });
 
@@ -279,7 +272,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _runAutoMaskWorkflow(true);
             }
             if (key === 'apply')  _exitAutoMaskMode(true);
-            if (key === 'cancel') _exitAutoMaskMode(false);
         });
 
         async function _maskUrlToTransparentDataUrl(maskUrl) {
@@ -396,6 +388,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 autoMaskBar.el.show();
             } else {
                 autoMaskBar.el.hide();
+            }
+
+            if (mode !== 'crop' && mode !== 'mask') {
+                canvas.activeMode = 'none';
             }
 
             emit('mode-changed', { mode: _currentMode });

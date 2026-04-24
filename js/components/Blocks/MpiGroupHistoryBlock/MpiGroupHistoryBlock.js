@@ -12,9 +12,6 @@ import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools
 import { MpiCanvasViewer } from '../../Organisms/MpiCanvasViewer/MpiCanvasViewer.js';
 import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
-import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
-import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -162,15 +159,58 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Active tool reducer ───────────────────────────────────────────────
 
         let _activeTool = null;
+        let _propsBarInstance = null;
+        let _prevTool = null;
+
+        function _buildPropsBarCtx() {
+            return {
+                viewer,
+                bar,
+                historyTools,
+                state,
+                loadAssets,
+                SOCIAL_RATIOS,
+                universalToolIcons: _universalToolIcons,
+                runVideoTool: (op, params) => _runVideoTool(op, params),
+                handleCropSnapshot: () => _handleCropSnapshot(),
+                handleCropSaveVideo: () => _handleCropSaveVideo(),
+            };
+        }
+
+        let _propsBarSlot = null;
 
         function setActiveTool(tool) {
+            if (_propsBarInstance) {
+                _propsBarInstance.destroy?.();
+                _propsBarInstance = null;
+            }
+            if (_propsBarSlot) {
+                _propsBarSlot.remove();
+                _propsBarSlot = null;
+            }
+            _prevTool = _activeTool;
+            // Exit previous viewer mode when switching to prompt or null. For
+            // canvas-tool → canvas-tool switches, canvas viewer's enterMode
+            // internally exits the previous mode — calling it again here would
+            // emit mode-changed{none} that clobbers state back to prompt.
+            if (_prevTool && _prevTool !== 'prompt' && _prevTool !== tool) {
+                if (tool === 'prompt' || tool === null) {
+                    strategy.onToolDeactivate?.(viewer, _prevTool, { bar });
+                }
+                // Video strategy still needs explicit exit between its own tools
+                // since MpiVideoViewer's enterXxxMode methods don't chain-exit.
+                else if (!strategy.supportsPromptBox()) {
+                    strategy.onToolDeactivate?.(viewer, _prevTool, { bar });
+                }
+            }
             _activeTool = tool;
             el.classList.toggle('mpi-group-history-block--prompt-active', tool === 'prompt');
             const rightTopSlot = qs('#right-top-slot', el);
-            rightTopSlot.innerHTML = '';
             if (tool && tool !== 'prompt') {
-                rightTopSlot.innerHTML = `<div class="mpi-group-history-block__props-placeholder">Props bar: ${tool}</div>`;
-                console.log('[strategy] mountPropsBar called for', tool);
+                _propsBarSlot = document.createElement('div');
+                _propsBarSlot.className = 'mpi-group-history-block__props-bar-slot';
+                rightTopSlot.appendChild(_propsBarSlot);
+                _propsBarInstance = strategy.mountPropsBar?.(tool, _propsBarSlot, _buildPropsBarCtx()) ?? null;
             }
             if (strategy.supportsPromptBox()) {
                 if (tool === 'prompt') PromptBoxService.show();
@@ -178,136 +218,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        // ── Channel bus + bottom-bar reducer ──────────────────────────────────
+        // ── Channel bus ───────────────────────────────────────────────────────
 
         const bar = Events.channel('groupHistory');
 
-        // Video action bars — only mounted for video strategy
-        let _cropBar = null;
-        let _ratioSel = null;
-        let _upscaleBar = null;
-        let _interpolateBar = null;
-        let _upscaleFactorSel = null;
-        let _upscaleModelDd = null;
-        let _upscaleModelValue = '';
-        let _interpMultiplierSel = null;
-
-        if (!strategy.supportsPromptBox()) {
-            // Temporary video bars container — removed in to-do 6 when bars move to #right-top-slot
-            const bottomSlot = document.createElement('div');
-            bottomSlot.id = 'bottom-slot';
-            bottomSlot.className = 'mpi-group-history-block__video-bars';
-            el.appendChild(bottomSlot);
-
-            _ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
-                variant: 'ratio',
-                modelType: 'social',
-                value: SOCIAL_RATIOS[0].label,
-            });
-
-            const cropBarSlot = document.createElement('div');
-            cropBarSlot.className = 'mpi-group-history-block__bar-slot';
-            bottomSlot.appendChild(cropBarSlot);
-            _cropBar = MpiToolActionBar.mount(cropBarSlot, {
-                leftSlot: _ratioSel,
-                actions: [
-                    { key: 'snapshot', icon: 'camera', label: 'Save Snapshot',      variant: 'ghost',   info: 'Save current frame as image' },
-                    { key: 'cancel',   icon: 'close',  label: 'Cancel',             variant: 'ghost',   info: 'Cancel crop' },
-                    { key: 'apply',    icon: 'check',  label: 'Save Cropped Video',  variant: 'primary', info: 'Encode cropped region to new video' },
-                ],
-            });
-
-            // ── Upscale bar: factor selector + model dropdown in leftSlot ────────
-            _upscaleFactorSel = MpiOptionSelector.mount(document.createElement('div'), {
-                variant: 'number',
-                values: ['x1.5', 'x2', 'x3', 'x4'],
-                value: 'x2',
-                // icon: _universalToolIcons.videoUpscale.icon,
-                popupTitle: 'FACTOR',
-                info: 'Upscale factor',
-            });
-
-            const _upscaleModelOptions = () =>
-                (state.upscaleModels || []).map(f => ({ label: f, value: f }));
-
-            const upscaleModelSlot = document.createElement('div');
-
-            const _mountUpscaleModelDd = () => {
-                upscaleModelSlot.innerHTML = '';
-                const opts = _upscaleModelOptions();
-                _upscaleModelDd = MpiDropdown.mount(upscaleModelSlot, {
-                    options: opts,
-                    value: opts[0]?.value ?? '',
-                    direction: 'up',
-                    info: 'Upscale model',
-                });
-                _upscaleModelValue = opts[0]?.value ?? '';
-                _upscaleModelDd.on('change', ({ value }) => { _upscaleModelValue = value; });
-            };
-
-            if (state.upscaleModels?.length) {
-                _mountUpscaleModelDd();
-            } else {
-                loadAssets().then(() => _mountUpscaleModelDd());
-            }
-
-            const upscaleLeftSlot = document.createElement('div');
-            upscaleLeftSlot.style.display = 'flex';
-            upscaleLeftSlot.style.gap = 'var(--space-2, 0.5rem)';
-            upscaleLeftSlot.style.alignItems = 'center';
-            upscaleLeftSlot.appendChild(_upscaleFactorSel.el);
-            upscaleLeftSlot.appendChild(upscaleModelSlot);
-
-            const upscaleBarSlot = document.createElement('div');
-            upscaleBarSlot.className = 'mpi-group-history-block__bar-slot';
-            bottomSlot.appendChild(upscaleBarSlot);
-            _upscaleBar = MpiToolActionBar.mount(upscaleBarSlot, {
-                leftSlot: { el: upscaleLeftSlot },
-                actions: [
-                    { key: 'cancel', icon: 'close',  label: 'Cancel',  variant: 'ghost',   info: 'Cancel upscale' },
-                    { key: 'run',    icon: _universalToolIcons.videoUpscale.icon,  label: 'Upscale', variant: 'primary', info: 'Run video upscale' },
-                ],
-            });
-
-            // ── Interpolate bar: multiplier selector in leftSlot ──────────────
-            _interpMultiplierSel = MpiOptionSelector.mount(document.createElement('div'), {
-                variant: 'number',
-                values: ['x2', 'x3', 'x4'],
-                value: 'x2',
-                // icon: _universalToolIcons.interpolate.icon,
-                popupTitle: 'MULTIPLIER',
-                info: 'Frame multiplier',
-            });
-
-            const interpolateBarSlot = document.createElement('div');
-            interpolateBarSlot.className = 'mpi-group-history-block__bar-slot';
-            bottomSlot.appendChild(interpolateBarSlot);
-            _interpolateBar = MpiToolActionBar.mount(interpolateBarSlot, {
-                leftSlot: _interpMultiplierSel,
-                actions: [
-                    { key: 'cancel', icon: 'close', label: 'Cancel',      variant: 'ghost',   info: 'Cancel interpolate' },
-                    { key: 'run',    icon: _universalToolIcons.interpolate.icon,  label: 'Interpolate',  variant: 'primary', info: 'Run frame interpolation' },
-                ],
-            });
-        }
-
-        function _hideAllVideoBars() {
-            if (_cropBar) _cropBar.el.hide();
-            if (_upscaleBar) _upscaleBar.el.hide();
-            if (_interpolateBar) _interpolateBar.el.hide();
-        }
-
-        // Channel reducer: tool state drives activeTool + legacy video bars (bars removed in to-do 6)
         _unsubs.push(bar.on('tool:activated', ({ mode }) => {
             setActiveTool(mode);
-            _hideAllVideoBars();
-            if (mode === 'crop' && _cropBar)              _cropBar.el.show();
-            else if (mode === 'videoUpscale' && _upscaleBar)   _upscaleBar.el.show();
-            else if (mode === 'interpolate' && _interpolateBar) _interpolateBar.el.show();
         }));
 
         _unsubs.push(bar.on('tool:deactivated', () => {
-            _hideAllVideoBars();
             if (strategy.supportsPromptBox()) {
                 setActiveTool('prompt');
             } else {
@@ -317,20 +236,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         _unsubs.push(bar.on('selection:enter', () => {
             PromptBoxService.hide();
-            _hideAllVideoBars();
         }));
 
         _unsubs.push(bar.on('selection:exit', () => {
-            _hideAllVideoBars();
             if (strategy.supportsPromptBox()) {
                 PromptBoxService.show();
             } else {
                 PromptBoxService.hide();
             }
-        }));
-
-        _unsubs.push(bar.on('generation:running', () => {
-            _hideAllVideoBars();
         }));
 
         // ── Mount sub-components ──────────────────────────────────────────────
@@ -343,6 +256,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             resolveMediaUrl,
             MpiCanvasViewer,
             MpiVideoViewer,
+            barContainer: qs('#right-top-slot', el),
             currentItem: _group.history[_currentIdx],
             currentIdx: _currentIdx,
         });
@@ -355,62 +269,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             selectedIndex: _currentIdx,
             isVideo: _group.type === 'video',
         });
-
-        // ── Wire video bar events to viewer ───────────────────────────────────
-
-        if (_cropBar) {
-            _ratioSel?.on('change', ({ ratio }) => {
-                viewer.el.setCropRatio?.(ratio);
-            });
-
-            _cropBar.on('action', ({ key }) => {
-                if (key === 'snapshot') _handleCropSnapshot();
-                if (key === 'apply')    _handleCropSaveVideo();
-                if (key === 'cancel') {
-                    viewer.el.exitCropMode();
-                    bar.emit('tool:deactivated', { mode: 'crop' });
-                    historyTools.el.syncMode('none');
-                }
-            });
-        }
-
-        if (_upscaleBar) {
-            _upscaleBar.on('action', ({ key }) => {
-                if (key === 'run') {
-                    viewer.el.exitUpscaleMode();
-                    bar.emit('tool:deactivated', { mode: 'videoUpscale' });
-                    historyTools.el.syncMode('none');
-                    const factorStr = _upscaleFactorSel?.el.getValue() ?? 'x2';
-                    const factor = parseFloat(factorStr.replace('x', '')) || 2;
-                    const injectionParams = { Upscale_Factor: factor };
-                    if (_upscaleModelValue) injectionParams.Upscale_Model = _upscaleModelValue;
-                    _runVideoTool('videoUpscale', injectionParams);
-                }
-                if (key === 'cancel') {
-                    viewer.el.exitUpscaleMode();
-                    bar.emit('tool:deactivated', { mode: 'videoUpscale' });
-                    historyTools.el.syncMode('none');
-                }
-            });
-        }
-
-        if (_interpolateBar) {
-            _interpolateBar.on('action', ({ key }) => {
-                if (key === 'run') {
-                    viewer.el.exitInterpolateMode();
-                    bar.emit('tool:deactivated', { mode: 'interpolate' });
-                    historyTools.el.syncMode('none');
-                    const multStr = _interpMultiplierSel?.el.getValue() ?? 'x2';
-                    const multiplier = parseFloat(multStr.replace('x', '')) || 2;
-                    _runVideoTool('interpolate', { Interp_Multiplier: multiplier });
-                }
-                if (key === 'cancel') {
-                    viewer.el.exitInterpolateMode();
-                    bar.emit('tool:deactivated', { mode: 'interpolate' });
-                    historyTools.el.syncMode('none');
-                }
-            });
-        }
 
         // ── Load initial entry ────────────────────────────────────────────────
 
@@ -571,6 +429,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         } else {
             PromptBoxService.hide();
+            // Video group: default to crop tool. onToolActivate emits
+            // bar.tool:activated → setActiveTool('crop') via channel reducer.
+            historyTools.el.syncMode?.('crop');
+            strategy.onToolActivate(viewer, 'crop', { bar });
         }
 
         // ── Generation ───────────────────────────────────────────────────────
@@ -873,13 +735,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             canvasViewer.el.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();
-            _cropBar?.destroy?.();
-            _ratioSel?.destroy?.();
-            _upscaleBar?.destroy?.();
-            _interpolateBar?.destroy?.();
-            _upscaleFactorSel?.destroy?.();
-            _upscaleModelDd?.destroy?.();
-            _interpMultiplierSel?.destroy?.();
+            _propsBarInstance?.destroy?.();
+            _propsBarInstance = null;
             _modelsModal.destroy?.();
             _settingsOverlay.destroy?.();
         };

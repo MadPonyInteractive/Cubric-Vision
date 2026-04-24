@@ -70,6 +70,12 @@ export const MpiToolActionBar = ComponentFactory.create({
         const leftEl    = el.querySelector('.mpi-tool-action-bar__left');
         const actionsEl = el.querySelector('.mpi-tool-action-bar__actions');
 
+        // ── Inline variant — bar sits inside its mount slot (no fixed float) ─
+        // Starts hidden; show()/hide() toggle --visible class which drives display.
+        if (props.inline) {
+            el.classList.add('mpi-tool-action-bar--inline');
+        }
+
         // ── Top slot (optional — e.g. thumbnail strip above the pill) ─────────
         if (props.topSlot?.el) {
             topEl.appendChild(props.topSlot.el);
