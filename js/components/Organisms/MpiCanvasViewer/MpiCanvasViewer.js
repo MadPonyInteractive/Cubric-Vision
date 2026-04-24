@@ -25,11 +25,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiCanvas } from '../../Primitives/MpiCanvas/MpiCanvas.js';
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
-import { MpiToolActionBar } from '../../Compounds/MpiToolActionBar/MpiToolActionBar.js';
 import { MpiAutoMaskThumbs } from '../../Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
-import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
-import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { hasMaskContent } from '../../../utils/maskUtils.js';
 import { runAutoMask } from '../../../services/commandExecutor.js';
@@ -52,14 +48,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         <div class="mpi-canvas-viewer">
             <div class="mpi-canvas-viewer__wrap" id="canvas-wrap"></div>
             <div class="mpi-canvas-viewer__spinner" id="spinner-wrap"></div>
-            <div class="mpi-canvas-viewer__crop-bar" id="crop-bar"></div>
         </div>
     `,
 
     setup: (el, props, emit) => {
         const initialImageUrl = props.initialImageUrl || '';
         const initialIdx = props.initialIdx ?? 0;
-        const barContainer = props.barContainer ?? el.querySelector('#crop-bar');
 
         // ── State ─────────────────────────────────────────────────────────────
 
@@ -77,7 +71,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         const canvasInst = MpiCanvas.mount(el.querySelector('#canvas-wrap'), {
             onBrushTypeChange: (type) => {
-                maskBar?.el.setActive(type === 'eraser' ? 'eraser' : 'brush');
+                emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
             },
         });
         const canvas = canvasInst.el;
@@ -117,74 +111,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             }
         }
 
-        // ── Crop action bar ──────────────────────────────────────────────────
-
-        const ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
-            variant: 'ratio',
-            modelType: 'social',
-            value: SOCIAL_RATIOS[0].label,
-        });
-        ratioSel.on('change', ({ ratio }) => {
-            _activeCropRatio = ratio;
-            canvas.setCropRatio(ratio);
-        });
-
-        const cropBarSlot = document.createElement('div');
-        cropBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        barContainer.appendChild(cropBarSlot);
-
-        const cropBar = MpiToolActionBar.mount(cropBarSlot, {
-            inline: true,
-            leftSlot: ratioSel,
-            actions: [
-                { key: 'apply', icon: 'check', label: 'Apply', variant: 'primary', info: 'Save crop as a new history entry' },
-            ],
-        });
-
-        cropBar.on('action', ({ key }) => {
-            if (key === 'apply') _runCrop();
-        });
-
-        // ── Mask action bar ──────────────────────────────────────────────────
-
-        const maskBarSlot = document.createElement('div');
-        maskBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        barContainer.appendChild(maskBarSlot);
-
-        const maskBar = MpiToolActionBar.mount(maskBarSlot, {
-            inline: true,
-            actions: [
-                { key: 'brush', icon: 'pencil', label: 'Brush', variant: 'ghost', toggleable: true, active: true, radioGroup: 'tool', info: 'Paint mask (B)' },
-                { key: 'eraser', icon: 'eraser', label: 'Eraser', variant: 'ghost', toggleable: true, radioGroup: 'tool', info: 'Erase mask (E)' },
-                { key: 'clear', icon: 'trash', label: 'Clear', variant: 'ghost', info: 'Clear entire mask' },
-                { key: 'invert', icon: 'swap', label: 'Invert', variant: 'ghost', info: 'Invert mask colours' },
-                { key: 'apply', icon: 'check', label: 'Apply Mask', variant: 'primary', info: 'Confirm mask for generation' },
-            ],
-        });
-
-        maskBar.on('action', ({ key }) => {
-            if (key === 'brush') { canvas.setBrushType('brush'); }
-            if (key === 'eraser') { canvas.setBrushType('eraser'); }
-            if (key === 'clear') {
-                canvas.clearMask();
-                _hasMask = false;
-                emit('mask-clear', {});
-            }
-            if (key === 'invert') { canvas.flipMaskColor(); }
-            if (key === 'apply') {
-                // Only mark as ready if mask has actual painted content
-                const hasContent = hasMaskContent(canvas.maskCanvas);
-                _hasMask = hasContent;
-                _exitMode();
-                if (hasContent) {
-                    emit('mask-ready', { hasMask: true });
-                } else {
-                    emit('mask-clear', {});
-                }
-            }
-        });
-
-        // ── Auto-mask ─────────────────────────────────────────────────────────
+        // ── Auto-mask state + thumbs (bars/dropdowns moved to MpiToolOptions*) ─
 
         /** @type {import('../../../services/commandExecutor.js').AutoMaskExec|null} */
         let _autoMaskExec = null;
@@ -198,80 +125,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
 
+        // Viewer retains ownership of the thumbs instance; MpiToolOptionsAutoMask
+        // re-parents the DOM node via getAutoMaskThumbsEl(). DO NOT destroy it
+        // from the options compound — detach only.
         const autoMaskThumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
         autoMaskThumbs.on('change', ({ picks }) => {
             _autoMaskPicks = picks;
-            // If no entries selected, clear mask immediately
             if (picks.size === 0) {
                 canvas.clearMask();
                 _hasMask = false;
             } else {
-                // Otherwise run workflow to generate combined mask
                 _runAutoMaskWorkflow(false);
             }
-        });
-
-        const autoMaskModelDropdown = MpiDropdown.mount(document.createElement('div'), {
-            options: DETECTION_MODELS,
-            value: _autoMaskModel,
-            info: 'Detection model',
-            direction: 'up',
-        });
-        autoMaskModelDropdown.on('change', ({ value }) => {
-            _autoMaskModel = value;
-            autoMaskThumbs.el.clear();
-            autoMaskThumbs.el.clearPicks?.();
-            _autoMaskPicks.clear();
-            canvas.clearMask();
-            _hasMask = false;
-        });
-
-        const autoMaskModeRadio = MpiRadioGroup.mount(document.createElement('div'), {
-            options: [
-                { label: 'Box',     value: 'box' },
-                { label: 'Segment', value: 'segment' },
-            ],
-            value: 'box',
-            name: 'auto-mask-mode',
-            info: 'Detection mode',
-        });
-        autoMaskModeRadio.on('select', ({ value }) => {
-            _autoMaskUseBox = value === 'box';
-            autoMaskThumbs.el.clear();
-            _autoMaskPicks.clear();
-            canvas.clearMask();
-            _hasMask = false;
-        });
-
-        const autoMaskLeftSlotEl = document.createElement('div');
-        autoMaskLeftSlotEl.className = 'mpi-canvas-viewer__auto-mask-controls';
-        autoMaskLeftSlotEl.appendChild(autoMaskModelDropdown.el);
-        autoMaskLeftSlotEl.appendChild(autoMaskModeRadio.el);
-        const autoMaskLeftSlotInst = { el: autoMaskLeftSlotEl };
-
-        const autoMaskBarSlot = document.createElement('div');
-        autoMaskBarSlot.className = 'mpi-canvas-viewer__bar-slot';
-        barContainer.appendChild(autoMaskBarSlot);
-
-        const autoMaskBar = MpiToolActionBar.mount(autoMaskBarSlot, {
-            inline: true,
-            topSlot: autoMaskThumbs,
-            leftSlot: autoMaskLeftSlotInst,
-            actions: [
-                { key: 'detect', icon: 'search', label: 'Detect', variant: 'primary', info: 'Run detection' },
-                { key: 'apply',  icon: 'check',  label: 'Apply',  variant: 'primary', info: 'Apply mask and exit' },
-            ],
-        });
-
-        autoMaskBar.on('action', ({ key }) => {
-            if (key === 'detect') {
-                autoMaskThumbs.el.clear();
-                _autoMaskPicks.clear();
-                canvas.clearMask();
-                _hasMask = false;
-                _runAutoMaskWorkflow(true);
-            }
-            if (key === 'apply')  _exitAutoMaskMode(true);
         });
 
         async function _maskUrlToTransparentDataUrl(maskUrl) {
@@ -371,26 +236,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (mode === 'crop') {
                 canvas.activeMode = 'crop';
                 canvas.setCropRatio(_activeCropRatio);
-                cropBar.el.show();
-            } else {
-                cropBar.el.hide();
-            }
-
-            if (mode === 'mask') {
+            } else if (mode === 'mask') {
                 canvas.activeMode = 'mask';
-                maskBar.el.show();
-                maskBar.el.setActive('brush');
-            } else {
-                maskBar.el.hide();
-            }
-
-            if (mode === 'automask') {
-                autoMaskBar.el.show();
-            } else {
-                autoMaskBar.el.hide();
-            }
-
-            if (mode !== 'crop' && mode !== 'mask') {
+            } else if (mode !== 'automask') {
                 canvas.activeMode = 'none';
             }
 
@@ -401,30 +249,16 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (_currentMode === 'none') return;
             _currentMode = 'none';
             canvas.activeMode = 'none';
-            cropBar.el.hide();
-            maskBar.el.hide();
-            autoMaskBar.el.hide();
             emit('mode-changed', { mode: 'none' });
         }
 
         // ── Canvas modechange → sync with our state machine ──────────────────
 
         canvasInst.on('modechange', ({ mode }) => {
-            if (mode !== 'crop' && _currentMode === 'crop') {
-                _currentMode = 'none';
-                cropBar.el.hide();
-            }
-            if (mode !== 'mask' && _currentMode === 'mask') {
-                _currentMode = 'none';
-                maskBar.el.hide();
-            }
-            if (mode !== 'automask' && _currentMode === 'automask') {
-                _currentMode = 'none';
-                autoMaskBar.el.hide();
-            }
-            if (mode !== 'compare' && _comparingActive) {
-                _comparingActive = false;
-            }
+            if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
+            if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
+            if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
+            if (mode !== 'compare' && _comparingActive)            _comparingActive = false;
 
             // Don't emit mode-changed while loading comparison — the intermediate
             // mode changes (back to 'none' from loadImage) shouldn't affect bottom bar
@@ -548,6 +382,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Promote _runCrop so MpiToolOptionsCrop can trigger it via onApply. */
         el.runCrop = () => _runCrop();
+
+        /** Forward crop ratio selection from MpiToolOptionsCrop to the canvas. */
+        el.setCropRatio = (ratio) => {
+            _activeCropRatio = ratio;
+            canvas.setCropRatio(ratio);
+        };
 
         /**
          * Switch active brush for manual-mask painting.
