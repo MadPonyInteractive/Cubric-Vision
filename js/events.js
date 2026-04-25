@@ -139,7 +139,7 @@ export const Events = new EventBus();
  * 'models:open'           —                                        — models modal opened
  * 'models:closed'         —                                        — models modal closed
  * 'models:checked'        { installedModelIds: string[] }          — model install state synced
- * 'models:all-installed'  —                                        — all models are now installed
+ * 'models:all-installed'  —                                        — all models (any mediaType) installed AND no active downloads. Emitted ONLY by `modelRegistry.syncModelInstalled()` — do not emit elsewhere.
  *
  * Project events (emitted by ProjectService):
  * 'project:group-added'   { group: Object }                        — new group added and persisted

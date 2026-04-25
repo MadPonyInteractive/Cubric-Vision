@@ -21,6 +21,7 @@ import { MODELS } from './modelConstants/models.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
+import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 // ── Per-dep status cache (populated by syncModelInstalled) ────────────────────
@@ -110,11 +111,14 @@ export async function syncModelInstalled() {
             .map(([id]) => id);
         Events.emit('models:checked', { installedModelIds });
 
-        // Auto-close model manager if all image models are now installed
-        const allImageInstalled = MODELS
-            .filter(m => m.mediaType === 'image')
-            .every(m => m.installed === true);
-        if (allImageInstalled) Events.emit('models:all-installed');
+        // Auto-close model manager when ALL models (any mediaType) are installed,
+        // and no download is mid-flight. Gating on `downloadQueueActive` prevents
+        // mid-install state churn from hiding the modal while the user is still
+        // installing other models.
+        const allInstalled = MODELS.every(m => m.installed === true);
+        if (allInstalled && !state.downloadQueueActive) {
+            Events.emit('models:all-installed');
+        }
 
         return true;
     } catch (err) {

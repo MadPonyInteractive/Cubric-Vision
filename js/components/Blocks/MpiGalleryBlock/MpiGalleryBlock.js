@@ -389,12 +389,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             const hasImageModels = getModelsByType('image').some(m => m.installed === true);
-            if (!hasImageModels) {
-                Events.emit('models:open');
-            } else {
-                Events.emit('models:all-installed');
-            }
+            if (!hasImageModels) Events.emit('models:open');
         }));
+        // Note: `models:all-installed` is emitted by `modelRegistry.syncModelInstalled()`
+        // — the canonical source of truth for installed-model state. Listeners (shell,
+        // MpiGroupHistoryBlock) hide their modal on that event. Do NOT emit it here.
 
         // ── Post-install PromptBox remount ─────────────────────────────────────
         // If models are installed while the modal is open, promptBox will be null.

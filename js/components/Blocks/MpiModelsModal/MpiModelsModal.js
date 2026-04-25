@@ -428,6 +428,9 @@ export const MpiModelsModal = ComponentFactory.create({
         _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
             const card = _cardInstances.get(modelId);
             if (card) card.display.el.setDownloadState('cancelled');
+            // Rebuild card so its handlers wire to `delete` (Install) again — the
+            // pause/resume/cancel handlers attached during downloading are dead now.
+            awaitReSync();
         }));
 
         _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
