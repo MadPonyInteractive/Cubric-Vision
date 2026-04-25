@@ -28,7 +28,7 @@ Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History 
 
 2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid`. Drives shell PromptBox via `PromptBoxService`. Navigate to group history on card open.
 
-3. **Group History Workspace** — `MpiGroupHistoryBlock`. Mounts `MpiHistoryTools` (left), `MpiCanvasViewer` (centre), `MpiHistoryList` (right). Drives shell PromptBox via `PromptBoxService`.
+3. **Group History Workspace** — `MpiGroupHistoryBlock`. Photoshop-style layout: left toolbar (`#left-slot`), centre viewer (`#centre-slot`), right panel split into props bar (`#right-top-slot`) + history list (`#right-bottom-slot`). PromptBox is shell-managed at `#prompt-box-mount` (centre-bottom, CSS class `--prompt-active` shows/hides it). Active tool controlled by block-local mediator `mountOptions(mode)` — NOT a `state` key. Drives shell PromptBox via `PromptBoxService`.
 
 ---
 

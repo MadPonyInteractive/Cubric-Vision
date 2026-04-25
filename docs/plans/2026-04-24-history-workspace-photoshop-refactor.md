@@ -452,7 +452,7 @@ Walk through every flow end-to-end and capture pass/fail in this plan file's `##
 
 **Verify:** Results appendix is populated with PASS for every row; any FAIL rows have a linked tracker or are resolved before this to-do is marked done.
 
-### [ ] 11. Documentation + rules updates (requires user approval)
+### [x] 11. Documentation + rules updates (requires user approval)
 
 Ask the user explicitly: "Should I update `.claude/rules/*` and `docs/*` to reflect this refactor?" (cardinal rule 3). On approval, edit:
 

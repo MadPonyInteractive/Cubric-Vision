@@ -128,17 +128,43 @@ EMITS:   `open`          `{ group: ItemGroup }`
          `media-missing` `{ group: ItemGroup, itemId: string }`
 LISTENS: (none)
 
+### MpiContextMenu
+EMITS:   (none — calls `props.onSelect(key)` callback then self-closes)
+LISTENS: `ui:close-all-popups` — self-close
+API:     Static `MpiContextMenu.show({ x, y, items, onSelect })` — portals to body, clamps to viewport, dismisses on outside-click / Escape
+NOTE:    `items` shape: `[{ key, icon?, label, disabled?, danger? }]`
+
+### MpiHistoryList
+EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
+         `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift/right-click updated selection
+         `selection-exited`  `{}` — selection mode ended (count → 0)
+         `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu
+         `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
+LISTENS: (none)
+API:     `el.setActiveIndex(idx)` · `el.setGroups(history)` · `el.appendEntry(item)` · `el.removeEntries(indices)` · `el.exitSelectMode()`
+NOTE:    Selection: plain-click single-selects; ctrl/cmd-click first-time seeds anchor+selection from current active entry then toggles clicked; shift-click range-selects. Right-click on unselected entry replaces selection. Dev-mode gate: if `APP_CONFIG.dev_mode` truthy, skips `e.preventDefault()` on contextmenu so Electron inspect-element works.
+
 ### MpiHistoryTools
-EMITS:   `activate`   `{ mode: string }`
-         `deactivate` `{ mode: string }`
-LISTENS: (none — callers call `el.syncMode(mode)` imperatively)
+EMITS:   `activate` `{ mode: string }` — any mode change (user click or `setMode`). No `deactivate` event.
+LISTENS: (none)
+API:     `el.setMode(mode)` — activate programmatically; re-activating current = no-op; emits `activate`
+         `el.setDisabled(map)` — bulk update `{ [toolMode]: { disabled: bool, reason?: string } }`; sub-modes accepted
+         `el.getActiveMode()` — read current mode
+NOTE:    Radio behaviour: re-click active tool = no-op. Grouped tools (mask) render MpiOptionSelector buttons variant; sub-tool pick fires `activate { mode: subMode }`. `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
 
 ### MpiNumberSelector
 EMITS:   `change`       `{ value: string }` — user picked a new value
          `popup_toggle` `{ active: boolean }` — popup opened/closed
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `instance.el.getValue()` → current string · `instance.el.setValue(string)` → imperatively set + re-render
-NOTE:    Generic replacement for MpiBatchSelector. Props: `values: string[]`, `value`, `icon`, `popupTitle`, `info`. Portals popup to body manually (MpiPopup.template() used as raw HTML, no setup() runs). Used by PromptBoxControls `batch` entry and MpiGroupHistoryBlock video bars.
+NOTE:    Generic replacement for MpiBatchSelector. Props: `values: string[]`, `value`, `icon`, `popupTitle`, `info`. Portals popup to body manually (MpiPopup.template() used as raw HTML, no setup() runs). Used by PromptBoxControls `batch` entry.
+
+### MpiOptionSelector
+EMITS:   `change` `{ value: string, def?: object }` — user picked a value (all variants)
+         `popup_toggle` `{ active: boolean }` — popup opened/closed
+LISTENS: `ui:close-all-popups` — closes popup if open
+API:     `el.getValue()` · `el.setValue(v)` · `el.setTriggerIcon(icon)` · `el.setTriggerActive(bool)` · `el.setButtons(buttons)` · `el.getButtons()`
+NOTE:    Three variants — `ratio`: preset ratio picker (replaces MpiRatioSelector); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup (used by MpiHistoryTools mask group). All share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
 
 ### MpiInstalledDisplay
 EMITS:   `delete`      `{}`     — Action button clicked (Install when idle)
@@ -202,14 +228,6 @@ EMITS:   `up`      `{}`
          `gallery` `{}`
 LISTENS: (none)
 
-### MpiRatioSelector
-EMITS:   `change`             `{ value: string, ratio: number|null, w: number|null, h: number|null, orientation: string|null }`
-         `orientation_change` `{ orientation: 'portrait'|'landscape' }`
-         `quality_change`     `{ qualityTier: string }`
-         `popup_toggle`       `{ active: boolean }`
-LISTENS: `ui:close-all-popups` — closes popup if open
-API:     `instance.el.getValue()` → `{ value, w, h, orientation, qualityTier }` — reads live props; use for injection instead of change-event cache
-
 ### MpiBatchSelector
 EMITS:   `change`        `{ value: 1|2|3|4 }` — batch size pick
          `popup_toggle`  `{ active: boolean }`
@@ -220,23 +238,12 @@ NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch
          Injects workflow param `Batch_Size` (ComfyUI node title "Batch_Size", MpiInt.inputs.int).
          N outputs → N cards in gallery; N placeholders shown from generation start.
 
-### MpiSelectionBar
-EMITS:   `compare`  `{}`
-         `download` `{}`
-         `delete`   `{}`
-         `cancel`   `{}`
-LISTENS: (none)
-
 ### MpiStartingComfy
 EMITS:   (none)
 LISTENS: (none — direct portal, bypasses Overlays queue intentionally)
 
 ### MpiStyleConfig
 EMITS:   `change` `{ values: Object }` — keys: color_grade, color_contrast, color_sat, color_sharp
-LISTENS: (none)
-
-### MpiToolActionBar
-EMITS:   `action` `{ key: string, active: boolean }`
 LISTENS: (none)
 
 ### MpiToolbar
@@ -300,8 +307,8 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
-LISTENS: (none — internal MpiSelectionBar/MpiCheckbox/MpiButton tab events handled internally)
-NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection driven by internal `MpiCheckbox` `on('change')`.
+LISTENS: (none — internal MpiButton tab events handled internally)
+NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection: ctrl/cmd-click toggles, shift-click range-selects, right-click opens `MpiContextMenu`. No `MpiSelectionBar` or `MpiCheckbox`.
 
 ### MpiPromptBox
 EMITS:   `input`            `{ positive: string, negative: string, activeMode: 'positive'|'negative' }`
@@ -320,7 +327,7 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
-Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, MpiSelectionBar, MpiPromptBox, and handles generation lifecycle.
+Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
@@ -414,4 +421,6 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
          MpiMediaDropOverlay onDrop: uploads file + calls PromptBoxService.injectMedia() only (no history card created)
-         **Video groups:** PromptBox hidden entirely. Tools: crop, videoUpscale, interpolate. MpiVideoViewer mounted instead of MpiCanvasViewer. Tool activate/deactivate flows through `_setBottomBar()` coordinator which calls `hideAllToolBars()` before showing new bar. Snapshot → `uploadMediaFile` → `addGroup` (gallery). Crop video → `POST /api/video/crop` → new video history entry. Upscale/interpolate → `_runVideoTool(operation)` → `commandExecutor` → universal workflow.
+         **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
+         **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
+         **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelId`, `s_installedModelIds`, `project:changed`.

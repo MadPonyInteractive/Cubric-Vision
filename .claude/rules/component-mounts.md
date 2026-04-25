@@ -9,45 +9,70 @@
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
 - `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags; `onDrop` uploads file, emits `media:imported`, then calls `PromptBoxService.injectMedia()`
-- `MpiSelectionBar`   props: `{ count: 0 }`   slot: `.mpi-gallery-grid__selectionbar-slot` (inside grid's footer) — hidden by default; shown when selection mode activates
 - `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
-- `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare'` event
+- `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare-requested'` event from MpiGalleryGrid
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 
 > **Note:** `MpiModelsModal` is NOT mounted here — it is a shell-level singleton in `shell.js`. `MpiGalleryBlock` emits `Events.emit('models:open')` to trigger it.
+> **Selection:** No `MpiSelectionBar`. Ctrl/Cmd-click toggles card into selection; shift-click range-selects; right-click opens `MpiContextMenu`. `MpiCheckbox` is also removed from cards.
 
 ---
 
 ## MpiGroupHistoryBlock
 
-**Image groups** (`_group.type !== 'video'`):
-- `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — image tools: crop, mask, autoMaskImg   slot: `#left-slot`
-- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask/compare tool modes internally
-- `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
-- `PromptBoxService.mount()`   config: `{ model, modelList: installedModels, operation: activeOperation, includeNegative: true }`   — shell-level PromptBox; only called when `activeModel` is non-null
+Photoshop-style layout: `grid-template-columns: 3.5rem 1fr 14rem`. Slots: `#left-slot` (toolbar), `#centre-slot` (viewer), `#right-top-slot` (active tool options), `#right-bottom-slot` (history list), `#prompt-box-mount` (shell PromptBox, centre-bottom floating).
 
-**Video groups** (`_group.type === 'video'`):
-- `MpiHistoryTools`   props: `{ tools: [{mode,icon,info}, ...] }` — video tools: crop (mode='crop'), videoUpscale (mode='videoUpscale'), interpolate (mode='interpolate')   slot: `#left-slot`
-- `MpiVideoViewer`   props: `{ fps, controls }` — no barContainer; viewer owns display + crop overlay only   slot: `#centre-slot`
-- Crop `MpiToolActionBar`   props: `{ leftSlot: ratioSel, actions: [snapshot, cancel, apply] }`   slot: `#bottom-slot` — mounted directly by Block
-- Upscale `MpiToolActionBar`   props: `{ leftSlot: { el: div[MpiNumberSelector + MpiDropdown] }, actions: [cancel, run] }`   slot: `#bottom-slot` — leftSlot contains `MpiNumberSelector` (upscale factor x1.5/x2/x3/x4) + `MpiDropdown` (upscale model from `state.upscaleModels`, direction:'up')
-- Interpolate `MpiToolActionBar`   props: `{ leftSlot: MpiNumberSelector(x2/x3/x4), actions: [cancel, run] }`   slot: `#bottom-slot` — leftSlot is `MpiNumberSelector` (frame multiplier)
-- `MpiHistoryList`   props: `{ history, selectedIndex }`   slot: `#right-slot`
-- PromptBox is **hidden** for video groups (no model-based operations); `strategy.supportsPromptBox()` returns false
+**Mediator pattern:** `mountOptions(mode)` destroys previous `MpiToolOptions*` instance and mounts the new one into `#right-top-slot`. `prompt` mode is special — no compound, toggles CSS class `mpi-group-history-block--prompt-active` which shows PromptBox and hides `#right-top-slot`.
+
+```js
+const TOOL_OPTIONS_REGISTRY = {
+    crop: MpiToolOptionsCrop,
+    maskManual: MpiToolOptionsManualMask,
+    maskAuto: MpiToolOptionsAutoMask,
+    videoUpscale: MpiToolOptionsUpscale,
+    interpolate: MpiToolOptionsInterpolate,
+};
+```
 
 **Both group types:**
-- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; `onDrop` uploads file and calls `PromptBoxService.injectMedia()` only (no card created); window drag-counter pattern same as GalleryBlock
+- `MpiHistoryTools`   props: `{ mode: 'image'|'video' }` — builds own tool list from `mode` prop   slot: `#left-slot`
+- `MpiHistoryList`   props: `{ history, selectedIndex, isVideo }` — ctrl/shift/right-click selection   slot: `#right-bottom-slot`
+- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el`
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero image models installed (separate instance from shell's modal; emits `models:all-installed` to hide)
+- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero models installed
+
+**Image groups** (`_group.type !== 'video'`):
+- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask/automask viewer modes internally; does NOT own any bars
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsManualMask`, `MpiToolOptionsAutoMask`
+- `PromptBoxService.mount()` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op)
+
+**Video groups** (`_group.type === 'video'`):
+- `MpiVideoViewer`   props: `{ fps, controls }`   slot: `#centre-slot`
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`
+- `PromptBoxService.mount()` — only when `_hasPromptOps()` true (video model exposes prompt ops)
+
+---
+
+## MpiToolOptions* (Organisms — js/components/Organisms/MpiToolOptions<Name>/)
+
+Five self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
+
+**Pattern:** `setup` enters viewer mode → owns controls + apply button → `destroy` exits viewer mode. No cancel buttons.
+
+- `MpiToolOptionsCrop`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (ratio) + apply/snapshot buttons. Works for both image and video viewers. Emits `apply { ratio }`.
+- `MpiToolOptionsManualMask`   props: `{ viewer, onApply }`   — brush/eraser/clear/invert buttons + apply. Emits `apply {}`.
+- `MpiToolOptionsAutoMask`   props: `{ viewer, onApply }`   — detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + thumbs strip + detect + apply. Emits `apply {}`.
+- `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
+- `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
 
 ---
 
 ## MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js)
 
-Wraps `MpiVideoPlayer` + crop overlay canvas + reserved timeline slot. Mounted by `MpiGroupHistoryBlock` for video groups.
-Tool action bars (crop, upscale, interpolate) are owned by the Block and mounted into `#bottom-slot` — NOT by the viewer.
+Wraps `MpiVideoPlayer` + crop overlay canvas. Mounted by `MpiGroupHistoryBlock` for video groups.
+Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 
 - `MpiVideoPlayer`   props: `{ fps, controls }`   slot: `[data-mount="player"]` inside viewer
 
@@ -155,12 +180,15 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ## MpiHistoryTools.js (internal mounts)
 
-- `MpiButton` (per tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:true, active:false }`   slot: fresh div appended to root
+Builds its own tool list from `mode: 'image'|'video'` prop. Flat tools render `MpiButton`; grouped tools (e.g. `mask`) render `MpiOptionSelector` (buttons variant) as the trigger.
 
----
+- `MpiButton` (flat tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled }`   slot: fresh div appended to root — `toggleable:false` enforces radio behaviour (re-click = no-op)
+- `MpiOptionSelector` (grouped tool)   props: `{ variant:'buttons', buttons:[{icon,label,value,info}], triggerIcon, triggerActive, popupTitle }`   slot: fresh div appended to root — sub-tool click activates sub-mode + updates trigger icon
 
-## MpiToolActionBar.js (internal mounts)
+**Image mode tools:** `prompt`, `crop`, `mask` (group: `maskManual`, `maskAuto`)
+**Video mode tools:** `prompt`, `crop`, `videoUpscale`, `interpolate`
 
-- (optional) `topSlot.el`   appended to `.mpi-tool-action-bar__top`
-- (optional) `leftSlot.el`   appended to `.mpi-tool-action-bar__left`
-- `MpiButton` (per action)   props: `{ icon, label, labelPosition:'top', size:'sm', variant, info, toggleable, active }`   slot: fresh div appended to `.mpi-tool-action-bar__actions`
+**Instance API (on `el`):**
+- `setMode(mode)` — activate programmatically; emits `activate { mode }`; re-activating current = no-op
+- `setDisabled(map)` — bulk update `{ [toolMode]: { disabled, reason? } }`; accepts top-level and sub-modes
+- `getActiveMode()` — read current mode

@@ -25,3 +25,5 @@
 | `galleryShowInfo`    | `boolean`                              | MpiGalleryGrid (info button active state, card sync)                                    | MpiGalleryGrid (info button click)                                                 |
 | `gallerySizeLevel`   | `number` (1–5)                         | MpiGalleryGrid (slider initial value, `_cardWidth` init)                                | MpiGalleryGrid (slider input handler)                                              |
 
+> **Block-local (NOT in `state`):** `MpiGroupHistoryBlock` tracks the active tool mode in block-local variable `_options` (the currently-mounted `MpiToolOptions*` instance). This is intentionally NOT a `state` key — it is workspace-scoped and must not persist across navigation. Do NOT add an `activeTool` key to `state.js`.
+
