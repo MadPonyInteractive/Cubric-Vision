@@ -93,6 +93,14 @@
     color: var(--text-3);
 }
 
+
+.mpi-help__shortcut-group p {
+    font-size: 0.6rem;
+    font-weight: 200;
+    color: var(--text-2);
+    letter-spacing: 0.05em;
+}    
+
 .mpi-help__subheading {
     padding-top: 0.4rem;
 }

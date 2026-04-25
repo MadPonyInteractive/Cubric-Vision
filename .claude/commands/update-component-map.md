@@ -25,7 +25,7 @@ Read these files:
 
 ## Step 3b — Read existing rule files (for diff reporting)
 
-Before overwriting, read the current content of each of these files if they exist:
+Read the current content of each of these files:
 - `.claude/rules/component-mounts.md`
 - `.claude/rules/component-events.md`
 - `.claude/rules/component-state.md`
@@ -33,9 +33,11 @@ Before overwriting, read the current content of each of these files if they exis
 
 Store the component names listed in each file. This baseline is used in Step 5 to report what changed.
 
-## Step 4 — Rewrite the 4 rule files
+## Step 4 — Update the 4 rule files
 
-Overwrite all 4 files using ONLY the terse formats below. No prose. Tables and structured lists only. Preserve the `## Sub-Agent Briefing` header in each file. The `## PromptBoxControls Registry` section in `component-comfy.md` is static — copy it verbatim from this template, do not regenerate it from source files.
+**Use the Edit tool only — never Write/overwrite.** Make targeted edits: add missing components, update changed entries, remove deleted ones. Do not touch lines that are still accurate. Preserve the `## Sub-Agent Briefing` header in each file. The `## PromptBoxControls Registry` section in `component-comfy.md` is static — never edit it.
+
+Format for new entries follows the terse patterns below. No prose. Tables and structured lists only.
 
 ### `.claude/rules/component-mounts.md` format:
 

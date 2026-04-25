@@ -42,6 +42,22 @@ Queue-based blocking overlay controller.
 2. In the component `setup()`, call `Hotkeys.bind(id, fn)` and push the returned unbind fn into `_unsubs`.
 3. `_unsubs` is called in `el.destroy()` — no manual `unbind` needed.
 
+### Help page — hand-authored HTML
+
+The Help overlay (`MpiHelp`) is **not** generated from `hotkeyRegistry.js`. Its layout is hand-authored static HTML inside `js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js` (the component's `template`). This is intentional: the user curates wording, grouping, ordering, and which entries appear, without writing custom display fields on every registry entry.
+
+**Authoring rule (mandatory):** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row in `MpiHelp.js`. Treat the two files as paired: a registry change without a help-page change is incomplete work.
+
+**Row format:**
+```html
+<li><span>KEY</span><span>Verb-first description</span></li>
+```
+- Key text uppercase (`F5`, `CTRL+F5`, `SHIFT`, `ESCAPE`).
+- Description in concise imperative phrasing ("Release Memory", "Pan canvas (hold)").
+- Group rows under an existing `<div class="mpi-help__shortcut-group"><h4>Group Name</h4><ul>…</ul></div>`, or add a new group following the same pattern.
+- Modifier variants of one concept become sibling rows (e.g. `F5` "Release Memory" + `CTRL+F5` "Release Memory + Cache").
+- Hold/release pairs collapse into a single "(hold)" row — do not list keyup mirrors separately.
+
 ### Gating model
 
 Keydown fires handlers only if all guards pass (in order):
