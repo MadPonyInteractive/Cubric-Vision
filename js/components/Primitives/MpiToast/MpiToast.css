@@ -6,7 +6,7 @@
     position: fixed;
     --toast-stack-offset: 70px;
     --toast-stack-index: 0;
-    top: calc(20px + var(--toast-stack-index) * var(--toast-stack-offset));
+    bottom: calc(20px + var(--toast-stack-index) * var(--toast-stack-offset));
     right: 20px;
     display: flex;
     align-items: center;
@@ -31,7 +31,7 @@
     /* Animation state */
     opacity: 0;
     transform: translateY(20px) scale(0.9);
-    transition: opacity 0.3s var(--bounce), transform 0.3s var(--bounce);
+    transition: opacity 0.3s var(--bounce), transform 0.3s var(--bounce), bottom 0.3s var(--bounce);
 }
 
 .mpi-toast--open {
@@ -41,7 +41,7 @@
 
 .mpi-toast--closing {
     opacity: 0;
-    transform: translateY(-20px) scale(0.9);
+    transform: translateY(20px) scale(0.9);
     pointer-events: none;
 }
 

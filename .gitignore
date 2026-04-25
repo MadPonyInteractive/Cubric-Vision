@@ -20,11 +20,11 @@ comfy_workflows/scripts/
 
 # agents
 .agent
-.agents
 .claude/playwright-cli
 .playwright
 .playwright-cli
 docs/superpowers/
+.kilo
 
 # Temporary files
 media-for-testing/

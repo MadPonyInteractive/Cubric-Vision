@@ -439,7 +439,7 @@ The previous to-dos already toggle PromptBox via the `--prompt-active` class. In
 
 ### [-] 9-SUPERSEDED — Cleanup sweep (DO NOT IMPLEMENT — replaced by pivoted to-do 9 above)
 
-### [ ] 10. Smoke test matrix + manual regression
+### [X] 10. Smoke test matrix + manual regression
 
 Walk through every flow end-to-end and capture pass/fail in this plan file's `## Smoke Test Results` appendix (added at the bottom during this step):
 
@@ -452,7 +452,7 @@ Walk through every flow end-to-end and capture pass/fail in this plan file's `##
 
 **Verify:** Results appendix is populated with PASS for every row; any FAIL rows have a linked tracker or are resolved before this to-do is marked done.
 
-### [x] 11. Documentation + rules updates (requires user approval)
+### [X] 11. Documentation + rules updates (requires user approval)
 
 Ask the user explicitly: "Should I update `.claude/rules/*` and `docs/*` to reflect this refactor?" (cardinal rule 3). On approval, edit:
 
