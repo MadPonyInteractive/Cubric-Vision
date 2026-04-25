@@ -66,6 +66,14 @@ export const MpiRadioGroup = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
+        const _emitSelect = (value) => {
+            const option = (props.options || []).find(o => {
+                const v = typeof o === 'string' ? o : o.value;
+                return v === value;
+            });
+            emit('select', { value, option });
+        };
+
         el.addEventListener('click', (e) => {
             const btn = e.target.closest('.mpi-radio-group__btn');
             if (!btn || btn.disabled) return;
@@ -75,11 +83,18 @@ export const MpiRadioGroup = ComponentFactory.create({
 
             const value = btn.dataset.value;
             props.value = value;
-            const option = (props.options || []).find(o => {
-                const v = typeof o === 'string' ? o : o.value;
-                return v === value;
-            });
-            emit('select', { value, option });
+            _emitSelect(value);
         });
+
+        el.setValue = (val) => {
+            const btn = el.querySelector(`.mpi-radio-group__btn[data-value="${val}"]`);
+            if (!btn) return;
+            if (btn.classList.contains('is-active')) return;
+
+            qsa('.mpi-radio-group__btn', el).forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+            props.value = val;
+            _emitSelect(val);
+        };
     }
 });

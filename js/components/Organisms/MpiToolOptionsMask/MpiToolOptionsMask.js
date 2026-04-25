@@ -63,12 +63,11 @@ export const MpiToolOptionsMask = ComponentFactory.create({
 
         const modeRadio = MpiRadioGroup.mount(qs('#auto-mode-slot', el), {
             options: [
-                { label: 'Box',     value: 'box' },
-                { label: 'Segment', value: 'segment' },
+                { label: 'Box',     value: 'box',     info: 'Create Selections with boxes - Less artifacts but larger area' },
+                { label: 'Segment', value: 'segment', info: 'Precise masking with possible artifacts' },
             ],
             value: 'box',
             name: 'mask-auto-mode',
-            info: 'Detection mode',
         });
         modeRadio.on('select', ({ value }) => viewer.el.setAutoMaskUseBox?.(value === 'box'));
         _children.push(modeRadio);
@@ -85,33 +84,20 @@ export const MpiToolOptionsMask = ComponentFactory.create({
 
         // ── Manual section ───────────────────────────────────────────────────
 
-        const brushSlot = qs('#brush-slot', el);
-
-        const brushBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'brush', size: 'sm', variant: 'ghost', info: 'Paint mask (B)',
-            toggleable: true, active: true,
+        const brushRadio = MpiRadioGroup.mount(qs('#brush-slot', el), {
+            options: [
+                { label: 'Paint', value: 'brush',  icon: 'brush',  info: 'Paint mask (B)' },
+                { label: 'Erase', value: 'eraser', icon: 'eraser', info: 'Erase mask (E)' },
+            ],
+            value: 'brush',
+            name: 'mask-brush-mode',
+            iconOnly: true,
         });
-        const eraserBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'eraser', size: 'sm', variant: 'ghost', info: 'Erase mask (E)',
-            toggleable: true, active: false,
-        });
-        brushSlot.appendChild(brushBtn.el);
-        brushSlot.appendChild(eraserBtn.el);
+        brushRadio.on('select', ({ value }) => viewer.el.setMaskBrushMode?.(value));
+        _children.push(brushRadio);
 
-        const _setBrush = () => {
-            brushBtn.el.setActive(true);
-            eraserBtn.el.setActive(false);
-            viewer.el.setMaskBrushMode?.('brush');
-        };
-        const _setEraser = () => {
-            eraserBtn.el.setActive(true);
-            brushBtn.el.setActive(false);
-            viewer.el.setMaskBrushMode?.('eraser');
-        };
-
-        brushBtn.on('click', _setBrush);
-        eraserBtn.on('click', _setEraser);
-        _children.push(brushBtn, eraserBtn);
+        const _setBrush  = () => brushRadio.el.setValue('brush');
+        const _setEraser = () => brushRadio.el.setValue('eraser');
 
         const _unsubB = Hotkeys.bind('mask.brush.toolbar', _setBrush);
         const _unsubE = Hotkeys.bind('mask.eraser.toolbar', _setEraser);

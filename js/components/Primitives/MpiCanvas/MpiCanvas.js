@@ -366,7 +366,7 @@ class _CanvasCore {
             this.ctx.save();
             this.ctx.beginPath();
             this.ctx.arc(x, y, (this.mask.brushSize * scale) / 2, 0, Math.PI * 2);
-            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            this.ctx.strokeStyle = this.mask.brushType === 'eraser' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
 
