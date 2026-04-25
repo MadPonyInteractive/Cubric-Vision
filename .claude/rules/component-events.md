@@ -78,8 +78,9 @@ LISTENS: Hotkeys 'tab' (open/close toggle), window keyup/mousemove (close on rel
 NOTE:    Reads `state.currentProject?.tutorialSeen` and calls `updateProject()` to mark tutorial seen.
 
 ### MpiRadioGroup
-EMITS:   `select` `{ value: string }`
+EMITS:   `select` `{ value: string, option: object|string }`
 LISTENS: (none)
+NOTE:    Options accept `string` or `{ label, value, icon?, info?, disabled? }`. Props: `iconOnly` (bool) hides labels and renders icon-only buttons; per-option `info` overrides group `info` for status-bar text.
 
 ### MpiScrollableBox
 EMITS:   `select` `{ value: string, selection: string[] }`
