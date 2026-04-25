@@ -30,9 +30,6 @@ Extract all of the following from conversation context — do NOT run git comman
 - Which plan file is active (if any)?
 - Which files were modified or created this session?
 
-**From Nimbalyst session (if available):**
-- Call `mcp__nimbalyst-session-naming__update_session_meta` to confirm current session name/tags
-
 ### Step 2: Identify the active plan
 
 If a plan file exists in `docs/plans/`, read its current state:
@@ -53,7 +50,7 @@ Use this exact JSON structure:
   "schema": "mpi-handoff/v1",
   "generated_at": "<ISO-8601 timestamp>",
   "session": {
-    "name": "<Nimbalyst session name or best description>",
+    "name": "<best description of session>",
     "branch": "<current git branch — from conversation or plan file, not git command>"
   },
   "goal": {
@@ -103,12 +100,6 @@ Read docs/handoffs/<filename>.json and continue from where we left off.
 The next action is: <next_action.description>
 ---
 ```
-
-### Step 5: Update Nimbalyst session metadata
-
-Call `mcp__nimbalyst-session-naming__update_session_meta` with:
-- `add: ["handoff-generated"]`
-- Leave `phase` unchanged — work is not done, just paused.
 
 ## Output format
 
