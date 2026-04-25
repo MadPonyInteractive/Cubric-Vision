@@ -14,8 +14,7 @@ import { MpiCanvasViewer } from '../../Organisms/MpiCanvasViewer/MpiCanvasViewer
 import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
-import { MpiToolOptionsManualMask } from '../../Organisms/MpiToolOptionsManualMask/MpiToolOptionsManualMask.js';
-import { MpiToolOptionsAutoMask } from '../../Organisms/MpiToolOptionsAutoMask/MpiToolOptionsAutoMask.js';
+import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
 import { PromptBoxService } from '../../../shell/promptBoxService.js';
@@ -48,13 +47,12 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
- * that owns the options UI for that mode. `prompt` and `mask` are handled
- * specially by the mediator (prompt → PromptBox; mask → sub-menu, never fires).
+ * that owns the options UI for that mode. `prompt` is handled specially by the
+ * mediator (→ PromptBox). `mask` mounts MpiToolOptionsMask; no apply button.
  */
 const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
-    maskManual:   MpiToolOptionsManualMask,
-    maskAuto:     MpiToolOptionsAutoMask,
+    mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
 };
@@ -233,7 +231,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
             // Mask compounds have no apply button — they only create a mask.
             // PromptBox runs the operation; this branch should never fire.
-            if (mode === 'maskManual' || mode === 'maskAuto') return;
+            if (mode === 'mask') return;
             if (mode === 'videoUpscale') {
                 const injectionParams = { Upscale_Factor: payload.factor ?? 2 };
                 if (payload.model) injectionParams.Upscale_Model = payload.model;

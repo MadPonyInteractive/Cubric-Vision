@@ -22,7 +22,7 @@
  *   setMode(mode)      — programmatically activate a mode; emits 'activate { mode }'.
  *                        Re-activating the current mode is a no-op.
  *   setDisabled(map)   — bulk update disabled state. Shape: { [toolMode]: { disabled, reason? } }.
- *                        Accepts top-level modes AND sub-modes (e.g. 'maskManual').
+ *                        Accepts top-level modes (e.g. 'mask', 'crop').
  *   getActiveMode()    — read current active mode (null if none).
  *
  * Emits:
@@ -40,15 +40,7 @@ import { qs } from '../../../utils/dom.js';
 const IMAGE_TOOLS = [
     { mode: 'prompt', icon: 'chat', info: 'Prompt' },
     { mode: 'crop',   icon: 'crop', info: 'Crop'   },
-    {
-        mode: 'mask',
-        icon: 'mask',
-        info: 'Mask',
-        group: [
-            { mode: 'maskManual', icon: 'edit',    label: 'Manual', info: 'Paint a mask by hand'            },
-            { mode: 'maskAuto',   icon: 'sparkle', label: 'Auto',   info: 'Auto-detect objects to mask'     },
-        ],
-    },
+    { mode: 'mask',   icon: 'mask', info: 'Mask'   },
 ];
 
 const VIDEO_TOOLS = [
@@ -79,7 +71,7 @@ export const MpiHistoryTools = ComponentFactory.create({
         /** Option-selector instances keyed by OUTER group mode (e.g. 'mask' -> MpiOptionSelector). */
         const _selectors = new Map();
 
-        /** Reverse lookup: subMode -> outer group mode (e.g. 'maskManual' -> 'mask'). */
+        /** Reverse lookup: subMode -> outer group mode (for grouped tool defs). */
         const _subToGroup = new Map();
 
         /** Per-def disabled state. Shape: { mode: { disabled: bool, reason?: string } } */

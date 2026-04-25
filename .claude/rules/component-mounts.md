@@ -28,11 +28,10 @@ Photoshop-style layout: `grid-template-columns: 3.5rem 1fr 14rem`. Slots: `#left
 
 ```js
 const TOOL_OPTIONS_REGISTRY = {
-    crop: MpiToolOptionsCrop,
-    maskManual: MpiToolOptionsManualMask,
-    maskAuto: MpiToolOptionsAutoMask,
+    crop:         MpiToolOptionsCrop,
+    mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
-    interpolate: MpiToolOptionsInterpolate,
+    interpolate:  MpiToolOptionsInterpolate,
 };
 ```
 
@@ -44,8 +43,8 @@ const TOOL_OPTIONS_REGISTRY = {
 - `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero models installed
 
 **Image groups** (`_group.type !== 'video'`):
-- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask/automask viewer modes internally; does NOT own any bars
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsManualMask`, `MpiToolOptionsAutoMask`
+- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`
 - `PromptBoxService.mount()` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op)
 
 **Video groups** (`_group.type === 'video'`):
@@ -57,13 +56,12 @@ const TOOL_OPTIONS_REGISTRY = {
 
 ## MpiToolOptions* (Organisms — js/components/Organisms/MpiToolOptions<Name>/)
 
-Five self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
+Four self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
 
-**Pattern:** `setup` enters viewer mode → owns controls + apply button → `destroy` exits viewer mode. No cancel buttons.
+**Pattern:** `setup` enters viewer mode → owns controls → `destroy` evaluates mask + exits viewer mode. No apply buttons on mask panel (PromptBox drives ops). No cancel buttons.
 
 - `MpiToolOptionsCrop`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (ratio) + apply/snapshot buttons. Works for both image and video viewers. Emits `apply { ratio }`.
-- `MpiToolOptionsManualMask`   props: `{ viewer, onApply }`   — brush/eraser/clear/invert buttons + apply. Emits `apply {}`.
-- `MpiToolOptionsAutoMask`   props: `{ viewer, onApply }`   — detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + thumbs strip + detect + apply. Emits `apply {}`.
+- `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
 
@@ -185,7 +183,7 @@ Builds its own tool list from `mode: 'image'|'video'` prop. Flat tools render `M
 - `MpiButton` (flat tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled }`   slot: fresh div appended to root — `toggleable:false` enforces radio behaviour (re-click = no-op)
 - `MpiOptionSelector` (grouped tool)   props: `{ variant:'buttons', buttons:[{icon,label,value,info}], triggerIcon, triggerActive, popupTitle }`   slot: fresh div appended to root — sub-tool click activates sub-mode + updates trigger icon
 
-**Image mode tools:** `prompt`, `crop`, `mask` (group: `maskManual`, `maskAuto`)
+**Image mode tools:** `prompt`, `crop`, `mask`
 **Video mode tools:** `prompt`, `crop`, `videoUpscale`, `interpolate`
 
 **Instance API (on `el`):**

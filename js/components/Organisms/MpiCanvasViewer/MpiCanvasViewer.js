@@ -126,7 +126,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
 
-        // Viewer retains ownership of the thumbs instance; MpiToolOptionsAutoMask
+        // Viewer retains ownership of the thumbs instance; MpiToolOptionsMask
         // re-parents the DOM node via getAutoMaskThumbsEl(). DO NOT destroy it
         // from the options compound — detach only.
         const autoMaskThumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
@@ -189,7 +189,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 if (_autoMaskPicks.size === 0) return;
                 try {
                     const dataUrl = await _maskUrlToTransparentDataUrl(maskUrl);
-                    await canvas.setMaskDataURL(dataUrl);
+                    await canvas.compositeMaskDataURL(dataUrl);
                     _hasMask = true;
                 } catch (err) {
                     console.warn('[MpiCanvasViewer] Failed to apply auto-mask:', err);
@@ -224,7 +224,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
-            _exitMode();
         }
 
         // ── Tool mode state machine ───────────────────────────────────────────
@@ -442,8 +441,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             autoMaskThumbs.el.clear();
             autoMaskThumbs.el.clearPicks?.();
             _autoMaskPicks.clear();
-            canvas.clearMask();
-            _hasMask = false;
         };
 
         /**
@@ -454,16 +451,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _autoMaskUseBox = !!useBox;
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
-            canvas.clearMask();
-            _hasMask = false;
         };
 
         /** Kick off an auto-mask detect run and populate the thumbs strip. */
         el.runAutoMaskDetect = () => {
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
-            canvas.clearMask();
-            _hasMask = false;
             _runAutoMaskWorkflow(true);
         };
 
@@ -472,7 +465,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /**
          * Return the internal MpiAutoMaskThumbs DOM node so a parent compound
-         * (e.g. MpiToolOptionsAutoMask) can re-parent it into its own template.
+         * (e.g. MpiToolOptionsMask) can re-parent it into its own template.
          * IMPORTANT: parent MUST NOT destroy the thumbs — detach only. The viewer
          * still owns the instance's lifecycle.
          */
@@ -480,6 +473,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Expose DETECTION_MODELS constant so options compounds don't fork it. */
         el.getDetectionModels = () => DETECTION_MODELS.slice();
+
+        /** Composite a mask dataUrl onto the existing canvas mask (OR, no clear). */
+        el.compositeMaskDataURL = (dataUrl) => canvas.compositeMaskDataURL(dataUrl);
 
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;

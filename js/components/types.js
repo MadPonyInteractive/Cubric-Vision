@@ -43,19 +43,14 @@
  */
 
 /**
- * @typedef {Object} MpiToolOptionsManualMaskProps (Organism — js/components/Organisms/MpiToolOptionsManualMask)
+ * @typedef {Object} MpiToolOptionsMaskProps (Organism — js/components/Organisms/MpiToolOptionsMask)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
- * Requires viewer.el: enterMode('mask'), exitMode(), setMaskBrushMode, clearMask, invertMask
- * Emits: 'apply' {}
- */
-
-/**
- * @typedef {Object} MpiToolOptionsAutoMaskProps (Organism — js/components/Organisms/MpiToolOptionsAutoMask)
- * @property {Object} viewer - MpiCanvasViewer instance
- *
- * Requires viewer.el: enterMode('automask'), exitMode(), setAutoMaskModel, setAutoMaskUseBox, runAutoMaskDetect, getAutoMaskThumbsEl?
- * Emits: 'apply' {}
+ * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
+ *   setMaskBrushMode('brush'|'eraser'), clearMask(), invertMask(),
+ *   getDetectionModels?(), setAutoMaskModel(), setAutoMaskUseBox(),
+ *   runAutoMaskDetect(), getAutoMaskThumbsEl?(), compositeMaskDataURL()
+ * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
  */
 
 /**
@@ -102,7 +97,7 @@
  * @typedef {Object} MpiHistoryToolsProps (Compound — js/components/Compounds/MpiHistoryTools)
  * @property {'image'|'video'} mode - Selects the built-in tool list for the workspace.
  *
- * Built-in image tools: prompt, crop, mask (group: maskManual, maskAuto).
+ * Built-in image tools: prompt, crop, mask.
  * Built-in video tools: prompt, crop, videoUpscale, interpolate.
  *
  * Instance methods (on instance.el):
@@ -110,7 +105,7 @@
  *                        No-op if mode === current active mode, or mode not in the list.
  *   setDisabled(map)   — bulk update disabled state. Shape:
  *                        { [toolMode: string]: MpiHistoryToolsDisabledEntry }.
- *                        Accepts top-level modes AND sub-modes (e.g. 'maskManual').
+ *                        Accepts top-level modes (e.g. 'mask', 'crop').
  *   getActiveMode()    — read current active mode (null if none).
  *
  * Emits:

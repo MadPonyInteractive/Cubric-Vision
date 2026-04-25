@@ -150,7 +150,7 @@ LISTENS: (none)
 API:     `el.setMode(mode)` — activate programmatically; re-activating current = no-op; emits `activate`
          `el.setDisabled(map)` — bulk update `{ [toolMode]: { disabled: bool, reason?: string } }`; sub-modes accepted
          `el.getActiveMode()` — read current mode
-NOTE:    Radio behaviour: re-click active tool = no-op. Grouped tools (mask) render MpiOptionSelector buttons variant; sub-tool pick fires `activate { mode: subMode }`. `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
+NOTE:    Radio behaviour: re-click active tool = no-op. `mask` is now a flat tool (no group/sub-modes). `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
 
 ### MpiNumberSelector
 EMITS:   `change`       `{ value: string }` — user picked a new value
@@ -288,7 +288,16 @@ EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
          `mask-ready`    `{ hasMask }` — mask painted or cleared
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
+         `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
 LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
+API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canvas mask (no clear). Used by auto-detect thumb-pick flow.
+         `setAutoMaskModel/setAutoMaskUseBox` — reset thumbs+picks only; do NOT clear existing paint.
+         `runAutoMaskDetect` — reset thumbs+picks, run detection; do NOT clear existing paint.
+
+### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
+EMITS:   (none)
+LISTENS: (none — Hotkeys.register 'b'/'e' while mounted; unregistered in destroy)
+NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
 
 ---
 
@@ -422,5 +431,6 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
          MpiMediaDropOverlay onDrop: uploads file + calls PromptBoxService.injectMedia() only (no history card created)
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
+         **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
          **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
          **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelId`, `s_installedModelIds`, `project:changed`.

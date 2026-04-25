@@ -155,6 +155,18 @@ class _CanvasCore {
         this.draw();
     }
 
+    async compositeMaskDataURL(dataUrl) {
+        const img = await new Promise((res, rej) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = rej;
+            i.src = dataUrl;
+        });
+        this.mask.maskCtx.globalCompositeOperation = 'source-over';
+        this.mask.maskCtx.drawImage(img, 0, 0);
+        this.draw();
+    }
+
     clearImage() {
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
@@ -419,7 +431,7 @@ export const MpiCanvas = ComponentFactory.create({
         });
 
         const _methods = [
-            'destroy','setMaskDataURL','clearImage','loadImage','loadComparisonImage',
+            'destroy','setMaskDataURL','compositeMaskDataURL','clearImage','loadImage','loadComparisonImage',
             'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
             'setMaskOpacity','clearMask','getMaskDataURL',

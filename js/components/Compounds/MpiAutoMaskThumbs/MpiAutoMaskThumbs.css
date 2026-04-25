@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    MpiAutoMaskThumbs — Segment detection thumbnail strip (Compound)
-   Displayed inside MpiToolOptionsAutoMask when auto-mask tool is active.
+   Displayed inside MpiToolOptionsMask when mask tool is active.
 ═══════════════════════════════════════════════════════════════ */
 
 .mpi-auto-mask-thumbs {
