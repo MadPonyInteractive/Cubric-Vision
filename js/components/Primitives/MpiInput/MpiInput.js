@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiInput — Form Input Primitive
@@ -77,7 +78,7 @@ export const MpiInput = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const input = el.querySelector('.mpi-input__field');
+        const input = qs('.mpi-input__field', el);
         const type = props.type || 'text';
 
         // Auto-height for textareas

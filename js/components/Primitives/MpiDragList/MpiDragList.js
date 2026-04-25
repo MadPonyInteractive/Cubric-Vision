@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { qs, qsa } from '../../../utils/dom.js';
 
 /**
  * MpiDragList — Primitive Component
@@ -47,8 +48,8 @@ export const MpiDragList = ComponentFactory.create({
     setup: (el, props, emit) => {
         let draggedEl = null;
 
-        const container = el.querySelector('.mpi-draglist__container');
-        const itemsEls = el.querySelectorAll('.mpi-draglist__item');
+        const container = qs('.mpi-draglist__container', el);
+        const itemsEls = qsa('.mpi-draglist__item', el);
 
         itemsEls.forEach(item => {
             item.addEventListener('dragstart', (e) => {
@@ -61,7 +62,7 @@ export const MpiDragList = ComponentFactory.create({
                 item.classList.remove('mpi-draglist__item--dragging');
 
                 // Get the final order from the DOM
-                const currentItems = Array.from(el.querySelectorAll('.mpi-draglist__item'));
+                const currentItems = qsa('.mpi-draglist__item', el);
                 const newOrderIndices = currentItems.map(node => parseInt(node.dataset.index, 10));
 
                 // Map back to original objects to emit the new list

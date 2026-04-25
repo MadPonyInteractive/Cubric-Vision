@@ -54,7 +54,7 @@ export const MpiNewProject = ComponentFactory.create({
         el.show = () => {
             // Reset fields each time the dialog is opened
             if (_nameField) _nameField.value = '';
-            const locField = locationInput.el.querySelector('input');
+            const locField = qs('input', locationInput.el);
             if (locField) locField.value = '';
             modal.el.show();
         };
@@ -66,7 +66,7 @@ export const MpiNewProject = ComponentFactory.create({
             label: 'Project Name',
             placeholder: 'My Project'
         });
-        _nameField = nameInput.el.querySelector('input');
+        _nameField = qs('input', nameInput.el);
         qs('#name-slot', el).appendChild(nameInput.el);
 
         // ── Location input ───────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export const MpiNewProject = ComponentFactory.create({
         browseBtn.on('click', async () => {
             const path = await chooseFolder();
             if (path) {
-                const input = locationInput.el.querySelector('input');
+                const input = qs('input', locationInput.el);
                 if (input) {
                     input.value = path;
                     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -112,8 +112,8 @@ export const MpiNewProject = ComponentFactory.create({
 
         // ── Enter key to create (via MpiModal's confirm event) ─────────────
         modal.on('confirm', () => {
-            const name     = nameInput.el.querySelector('input')?.value?.trim() || '';
-            const location = locationInput.el.querySelector('input')?.value?.trim() || '';
+            const name     = qs('input', nameInput.el)?.value?.trim() || '';
+            const location = qs('input', locationInput.el)?.value?.trim() || '';
             emit('create', { name, location: location || null });
             el.hide();
         });
@@ -125,8 +125,8 @@ export const MpiNewProject = ComponentFactory.create({
             size: 'md'
         });
         createBtn.on('click', () => {
-            const name     = nameInput.el.querySelector('input')?.value?.trim() || '';
-            const location = locationInput.el.querySelector('input')?.value?.trim() || '';
+            const name     = qs('input', nameInput.el)?.value?.trim() || '';
+            const location = qs('input', locationInput.el)?.value?.trim() || '';
             emit('create', { name, location: location || null });
             el.hide();
         });

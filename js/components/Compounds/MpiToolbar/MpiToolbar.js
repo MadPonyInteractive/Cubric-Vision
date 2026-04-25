@@ -82,7 +82,7 @@ export const MpiToolbar = ComponentFactory.create({
             });
             modelInput.on('change', ({ value }) => {
                 props.model.value = value;
-                modelInput.el.querySelector('[data-info]').setAttribute('data-info', `Model Strength: ${value}`);
+                qs('[data-info]', modelInput.el).setAttribute('data-info', `Model Strength: ${value}`);
                 emit('modelChange', { value });
             });
             modelContainer.appendChild(modelBadge.el);
@@ -111,7 +111,7 @@ export const MpiToolbar = ComponentFactory.create({
             });
             clipInput.on('change', ({ value }) => {
                 props.clip.value = value;
-                clipInput.el.querySelector('[data-info]').setAttribute('data-info', `Clip Strength: ${value}`);
+                qs('[data-info]', clipInput.el).setAttribute('data-info', `Clip Strength: ${value}`);
                 emit('clipChange', { value });
             });
             clipContainer.appendChild(clipBadge.el);

@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qsa } from '../../../utils/dom.js';
 
 /**
  * MpiRadioGroup — Horizontal Button-Style Selection Primitive
@@ -47,7 +48,7 @@ export const MpiRadioGroup = ComponentFactory.create({
             const btn = e.target.closest('.mpi-radio-group__btn');
             if (!btn) return;
 
-            el.querySelectorAll('.mpi-radio-group__btn').forEach(b => b.classList.remove('is-active'));
+            qsa('.mpi-radio-group__btn', el).forEach(b => b.classList.remove('is-active'));
             btn.classList.add('is-active');
 
             const value = btn.dataset.value;

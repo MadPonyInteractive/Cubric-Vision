@@ -25,19 +25,19 @@ Also invoke at the end of any completed plan execution to verify no new violatio
 
 ### Step 1: Run ESLint
 
-Execute the following command:
+Execute the following command (from project root `C:/AI/Mpi/MpiAiSuite`):
 
 ```bash
-npm run lint:components --format=json 2>/dev/null || eslint js/components/ --format=json --max-warnings=9999 2>/dev/null
+npx eslint js/components/ --format=json --max-warnings=9999 2>/dev/null
 ```
 
-If both fail, fall back to:
+If JSON format fails or produces no output, fall back to plain text:
 
 ```bash
-npm run lint 2>/dev/null
+npx eslint js/components/ 2>&1
 ```
 
-Redirect stderr to suppress warnings. Capture the full JSON output.
+Redirect stderr to suppress non-violation output. Capture full output for parsing.
 
 ### Step 2: Parse JSON Output
 

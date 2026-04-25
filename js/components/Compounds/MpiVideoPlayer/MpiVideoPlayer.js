@@ -3,6 +3,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { formatTime } from '../../../utils/string.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiVideoPlayer — Organism: Video + Custom Controls Overlay.
@@ -90,7 +91,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const video = el.querySelector('.mpi-video-player__video');
+        const video = qs('.mpi-video-player__video', el);
         const hasControls = props.controls !== false;
         const _unsubs = [];
 
@@ -102,16 +103,16 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
         // --- Sub-components (only if controls are enabled) ---
         if (hasControls) {
-            const playPauseWrapper = el.querySelector('.mpi-video-player__play-pause-wrapper');
-            const sliderWrapper = el.querySelector('.mpi-video-player__slider-wrapper');
-            const volumeMuteWrapper = el.querySelector('.mpi-video-player__volume-mute');
-            const volumeSliderWrapper = el.querySelector('.mpi-video-player__volume-slider');
-            const frameBackWrapper = el.querySelector('.mpi-video-player__frame-back-wrapper');
-            const frameForwardWrapper = el.querySelector('.mpi-video-player__frame-forward-wrapper');
-            const loopWrapper = el.querySelector('.mpi-video-player__loop-wrapper');
-            const fullscreenWrapper = el.querySelector('.mpi-video-player__fullscreen-wrapper');
-            const currentTimeEl = el.querySelector('.mpi-video-player__current');
-            const durationEl = el.querySelector('.mpi-video-player__duration');
+            const playPauseWrapper = qs('.mpi-video-player__play-pause-wrapper', el);
+            const sliderWrapper = qs('.mpi-video-player__slider-wrapper', el);
+            const volumeMuteWrapper = qs('.mpi-video-player__volume-mute', el);
+            const volumeSliderWrapper = qs('.mpi-video-player__volume-slider', el);
+            const frameBackWrapper = qs('.mpi-video-player__frame-back-wrapper', el);
+            const frameForwardWrapper = qs('.mpi-video-player__frame-forward-wrapper', el);
+            const loopWrapper = qs('.mpi-video-player__loop-wrapper', el);
+            const fullscreenWrapper = qs('.mpi-video-player__fullscreen-wrapper', el);
+            const currentTimeEl = qs('.mpi-video-player__current', el);
+            const durationEl = qs('.mpi-video-player__duration', el);
 
             const fps = props.fps || 24;
 
@@ -341,7 +342,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
         // --- External API ---
 
         /** Instance API: returns the raw video element (stable contract for parent organisms) */
-        el.getVideoElement = () => el.querySelector('.mpi-video-player__video');
+        el.getVideoElement = () => qs('.mpi-video-player__video', el);
 
         el._setSrc = (url) => {
             if (!url) return;

@@ -32,6 +32,7 @@ import { runAutoMask } from '../../../services/commandExecutor.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
 import { createImageItem } from '../../../data/projectModel.js';
+import { qs } from '../../../utils/dom.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -66,10 +67,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // ── Canvas + spinner ─────────────────────────────────────────────────
 
-        const spinnerWrap = el.querySelector('#spinner-wrap');
+        const spinnerWrap = qs('#spinner-wrap', el);
         MpiSpinner.mount(spinnerWrap, { size: 'lg', variant: 'primary' });
 
-        const canvasInst = MpiCanvas.mount(el.querySelector('#canvas-wrap'), {
+        const canvasInst = MpiCanvas.mount(qs('#canvas-wrap', el), {
             onBrushTypeChange: (type) => {
                 emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
             },

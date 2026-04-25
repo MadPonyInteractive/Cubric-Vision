@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qs } from '../../../utils/dom.js';
 
 export const MpiCheckbox = ComponentFactory.create({
     name: 'MpiCheckbox',
@@ -23,7 +24,7 @@ export const MpiCheckbox = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const input = el.querySelector('.mpi-checkbox__input');
+        const input = qs('.mpi-checkbox__input', el);
 
         input.addEventListener('change', () => {
             props.checked = input.checked;

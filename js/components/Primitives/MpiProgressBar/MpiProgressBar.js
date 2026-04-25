@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiProgressBar — Interactive range input or static progress bar.
@@ -57,9 +58,9 @@ export const MpiProgressBar = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const input = el.querySelector('.mpi-progress__input');
-        const trackFill = el.querySelector('.mpi-progress__track-fill');
-        const handleEl = el.querySelector('.mpi-progress__handle');
+        const input = qs('.mpi-progress__input', el);
+        const trackFill = qs('.mpi-progress__track-fill', el);
+        const handleEl = qs('.mpi-progress__handle', el);
 
         // Resolve info template once from props (supports prefix/suffix pattern too)
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;

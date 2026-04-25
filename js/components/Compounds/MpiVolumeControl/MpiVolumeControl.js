@@ -3,6 +3,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiVolumeControl — Compound: MpiButton (mute toggle) + MpiProgressBar popup.
@@ -47,7 +48,7 @@ export const MpiVolumeControl = ComponentFactory.create({
 
         /** Syncs the button icon and tooltip to current volume/muted state */
         const _syncIcon = () => {
-            const iconEl = muteBtn.el.querySelector('.mpi-ibtn__icon');
+            const iconEl = qs('.mpi-ibtn__icon', muteBtn.el);
             if (iconEl) iconEl.innerHTML = renderIcon(_volumeIcon(), 'md');
             muteBtn.el.setAttribute('data-info', muted ? 'Unmute' : 'Mute');
         };
@@ -63,7 +64,7 @@ export const MpiVolumeControl = ComponentFactory.create({
         // Create slot for slider inside popup
         const sliderSlot = document.createElement('div');
         sliderSlot.className = 'mpi-volume-control__slider-wrapper';
-        popup.el.querySelector('.mpi-popup__content').appendChild(sliderSlot);
+        qs('.mpi-popup__content', popup.el).appendChild(sliderSlot);
 
         // Mount Slider (0-100 for granularity, mapped to 0-1)
         const slider = MpiProgressBar.mount(sliderSlot, {
@@ -97,12 +98,12 @@ export const MpiVolumeControl = ComponentFactory.create({
             muted = !muted;
             if (muted) {
                 _prevVolume = volume > 0 ? volume : _prevVolume;
-                slider.el.querySelector('input').value = 0;
+                qs('input', slider.el).value = 0;
             } else {
                 volume = _prevVolume;
-                slider.el.querySelector('input').value = Math.round(volume * 100);
+                qs('input', slider.el).value = Math.round(volume * 100);
             }
-            slider.el.querySelector('input').dispatchEvent(new Event('input'));
+            qs('input', slider.el).dispatchEvent(new Event('input'));
             _syncIcon();
             emit('change', { volume: muted ? 0 : volume, muted });
         });
@@ -124,16 +125,16 @@ export const MpiVolumeControl = ComponentFactory.create({
         el._setVolume = (v) => {
             volume = v;
             if (!muted) {
-                slider.el.querySelector('input').value = Math.round(v * 100);
-                slider.el.querySelector('input').dispatchEvent(new Event('input'));
+                qs('input', slider.el).value = Math.round(v * 100);
+                qs('input', slider.el).dispatchEvent(new Event('input'));
             }
             _syncIcon();
         };
 
         el._setMuted = (m) => {
             muted = m;
-            slider.el.querySelector('input').value = m ? 0 : Math.round(volume * 100);
-            slider.el.querySelector('input').dispatchEvent(new Event('input'));
+            qs('input', slider.el).value = m ? 0 : Math.round(volume * 100);
+            qs('input', slider.el).dispatchEvent(new Event('input'));
             _syncIcon();
         };
     }

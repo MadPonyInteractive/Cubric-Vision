@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiMediaDropzone — Drag-and-Drop Media Upload Zone
@@ -72,7 +73,7 @@ export const MpiMediaDropzone = ComponentFactory.create({
         const allowedTypes = props.mediaType || ['image', 'video', 'audio'];
 
         // ── Remove Button Logic ──────────────────────────────────────
-        const removeBtn = el.querySelector('.mpi-media-dropzone__remove');
+        const removeBtn = qs('.mpi-media-dropzone__remove', el);
         if (removeBtn) {
             removeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();

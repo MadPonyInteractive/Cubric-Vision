@@ -1,7 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { ce } from '/js/utils/dom.js';
+import { ce, qs } from '/js/utils/dom.js';
 import { Hotkeys } from '/js/managers/hotkeyManager.js';
 
 /**
@@ -129,7 +129,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
          * @param {number} percent - 0–100
          */
         const _setBarValue = (barInst, percent) => {
-            const input = barInst.el.querySelector('.mpi-progress__input');
+            const input = qs('.mpi-progress__input', barInst.el);
             if (!input) return;
             input.value = percent;
             input.dispatchEvent(new Event('input'));

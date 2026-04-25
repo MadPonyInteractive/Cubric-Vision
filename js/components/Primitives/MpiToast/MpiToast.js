@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiToast — Brief floating notifications.
@@ -21,7 +22,7 @@ function _reassignStackPositions() {
 
 function _startTimer(el, duration, dismiss) {
     if (duration <= 0) return;
-    const progress = el.querySelector('.mpi-toast__progress');
+    const progress = qs('.mpi-toast__progress', el);
     if (progress) {
         progress.style.transition = `width ${duration}ms linear`;
         requestAnimationFrame(() => {
@@ -88,8 +89,8 @@ export const MpiToast = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const closeBtn = el.querySelector('.mpi-toast__close');
-        const progress = el.querySelector('.mpi-toast__progress');
+        const closeBtn = qs('.mpi-toast__close', el);
+        const progress = qs('.mpi-toast__progress', el);
         const duration = props.duration !== undefined ? props.duration : 3000;
 
         let item;

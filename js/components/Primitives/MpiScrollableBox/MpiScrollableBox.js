@@ -1,4 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
+import { qsa } from '../../../utils/dom.js';
 
 /**
  * MpiScrollableBox — Primitive Component
@@ -37,7 +38,7 @@ export const MpiScrollableBox = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const items = el.querySelectorAll('.mpi-scrollable-box__item');
+        const items = qsa('.mpi-scrollable-box__item', el);
         const mode = props.selectionMode || 'single';
         
         // Track selection in a local set for easy lookups

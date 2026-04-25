@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { Overlays } from '../../../managers/overlayManager.js';
 import { Events } from '../../../events.js';
-import { gid } from '../../../utils/dom.js';
+import { gid, qs } from '../../../utils/dom.js';
 
 /**
  * MpiOverlay — Page Overlay Primitive
@@ -154,11 +154,11 @@ export const MpiOverlay = ComponentFactory.create({
         };
 
         el.appendToContainer = (childEl) => {
-            const container = el.querySelector('.mpi-overlay__container');
+            const container = qs('.mpi-overlay__container', el);
             if (container && childEl) container.appendChild(childEl);
         };
 
-        const closeBtn = el.querySelector('.mpi-overlay__close');
+        const closeBtn = qs('.mpi-overlay__close', el);
         if (closeBtn) {
             closeBtn.addEventListener('click', () => el.hide());
         }

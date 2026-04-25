@@ -100,7 +100,7 @@ export const MpiOkCancel = ComponentFactory.create({
         // Helper to build ok payload
         const _okPayload = () => {
             const inputValue = inputComponent
-                ? inputComponent.el.querySelector('input')?.value
+                ? qs('input', inputComponent.el)?.value
                 : undefined;
             const checkboxChecked = checkboxComponent
                 ? checkboxComponent.el.isChecked()

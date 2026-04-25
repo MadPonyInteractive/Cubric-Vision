@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
-import { on } from '../../../utils/dom.js';
+import { on, qs, qsa } from '../../../utils/dom.js';
 import { ICONS } from '../../../utils/icons.js';
 import { updateProject } from '../../../services/projectService.js';
 import { state } from '../../../state.js';
@@ -290,12 +290,12 @@ export const MpiRadialMenu = ComponentFactory.create({
             if (index === _activeIndex) return;
             _activeIndex = index;
 
-            const items = el.querySelectorAll('.mpi-radial__item');
+            const items = qsa('.mpi-radial__item', el);
             items.forEach((btn, i) => {
                 btn.classList.toggle('mpi-radial__item--active', i === index);
             });
 
-            const cone = el.querySelector('.mpi-radial__cone');
+            const cone = qs('.mpi-radial__cone', el);
             if (!cone) return;
 
             if (index === -1) {
@@ -363,7 +363,7 @@ export const MpiRadialMenu = ComponentFactory.create({
                 // Snapshot active index before hide resets it
                 const idx = _activeIndex;
                 if (idx !== -1) {
-                    const btn = el.querySelector(`.mpi-radial__item[data-index="${idx}"]`);
+                    const btn = qs(`.mpi-radial__item[data-index="${idx}"]`, el);
                     const action = btn?.dataset?.action;
                     if (action) _selectItem(action);
                     else _hide();
