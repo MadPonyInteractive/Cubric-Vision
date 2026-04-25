@@ -381,7 +381,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             }
         };
 
-        Hotkeys.register('tab', _onTabDown);
+        const _unbindTab = Hotkeys.bind('radialMenu.toggle', _onTabDown);
         const _removeKeyUp = on(window, 'keyup', _onTabUp);
         const _removePointerMove = on(el, 'mousemove', _onPointerMove);
         const _removeLockChange = on(document, 'pointerlockchange', _onPointerLockChange);
@@ -416,7 +416,7 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         // ── Cleanup ─────────────────────────────────────────────────────────────
         _cleanups.push(_removeKeyUp, _removePointerMove, _removeLockChange);
-        _cleanups.push(() => Hotkeys.unregister('tab', _onTabDown));
+        _cleanups.push(_unbindTab);
 
         const observer = new MutationObserver(() => {
             if (!document.contains(el)) {

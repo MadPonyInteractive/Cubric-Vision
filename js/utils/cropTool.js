@@ -559,8 +559,8 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
             _normRect = initialRect;
             _applyRatioToRect();
             _setupEvents();
-            _unShiftDown = Hotkeys.register('shift',         () => { _shiftHeld = true;  });
-            _unShiftUp   = Hotkeys.registerKeyup('shift',    () => { _shiftHeld = false; });
+            _unShiftDown = Hotkeys.bind('crop.shift.video',    () => { _shiftHeld = true;  });
+            _unShiftUp   = Hotkeys.bind('crop.shift.video.up', () => { _shiftHeld = false; });
             _redraw();
         },
 

@@ -41,7 +41,7 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 5. **Title-based workflow injection** — target nodes by `_meta.title`, not ID.
 6. **Output node** is the canonical result capture point.
 7. **All blocking UI uses `Overlays.request/release`** — never bypass.
-8. **All hotkeys go through `Hotkeys.register/unregister`** — never raw `window.addEventListener`.
+8. **All hotkeys go through `Hotkeys.bind/unbind`** — declare in `hotkeyRegistry.js`, bind by id. Never raw `window.addEventListener`.
 
 ## How to Orient in an Unfamiliar File
 

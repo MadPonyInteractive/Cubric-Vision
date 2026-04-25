@@ -39,8 +39,8 @@ export class CropManager {
 
         // Shift-from-center modifier
         this._shiftHeld = false;
-        this._unShiftDown = Hotkeys.register('shift',      () => { this._shiftHeld = true;  });
-        this._unShiftUp   = Hotkeys.registerKeyup('shift', () => { this._shiftHeld = false; });
+        this._unShiftDown = Hotkeys.bind('crop.shift.canvas',    () => { this._shiftHeld = true;  });
+        this._unShiftUp   = Hotkeys.bind('crop.shift.canvas.up', () => { this._shiftHeld = false; });
     }
 
     /** Tear down hotkey subscriptions. Call on canvas dispose. */

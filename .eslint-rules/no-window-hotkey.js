@@ -2,7 +2,7 @@ module.exports = {
   meta: {
     type: 'suggestion',
     docs: {
-      description: 'Disallow window.addEventListener for hotkeys; use Hotkeys.register',
+      description: 'Disallow window.addEventListener for hotkeys; use Hotkeys.bind',
       category: 'Best Practices',
     },
   },
@@ -38,7 +38,7 @@ module.exports = {
         ) {
           context.report({
             node,
-            message: "Use 'Hotkeys.register' instead of 'window.addEventListener' for keyboard events",
+            message: "Use 'Hotkeys.bind' instead of 'window.addEventListener' for keyboard events",
           });
         }
       },

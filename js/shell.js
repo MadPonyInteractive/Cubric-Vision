@@ -31,6 +31,7 @@ import { StatusBar } from './shell/statusBar.js';
 import { initNavigation, handleNavigation, updateTitlebarProject } from './shell/navigation.js';
 import { initNotificationService } from './shell/notificationService.js';
 import { initFocusModeService } from './shell/focusModeService.js';
+import { Hotkeys } from './managers/hotkeyManager.js';
 
 // Internal references for communication
 let _projectNameInstance = null;
@@ -61,6 +62,9 @@ export function showError(title, message) {
  * Main initialization entry point called by init.js.
  */
 export async function initShell() {
+  // 0. Init hotkey manager (attaches window listeners, registers builtins)
+  Hotkeys.init();
+
   // 1. Performance: Preload all styles to prevent FOUC
   preloadComponentStyles();
 

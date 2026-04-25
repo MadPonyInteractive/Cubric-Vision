@@ -99,8 +99,8 @@ export const MpiMemoryMonitor = ComponentFactory.create({
             }
         };
 
-        const _unsubKeydown = Hotkeys.register('control', _onKeydown);
-        const _unsubKeyup   = Hotkeys.registerKeyup('control', _onKeyup);
+        const _unsubKeydown = Hotkeys.bind('memoryMonitor.ctrl.down', _onKeydown);
+        const _unsubKeyup   = Hotkeys.bind('memoryMonitor.ctrl.up', _onKeyup);
 
         unloadBtn.on('click', () => emit('release', { deep: _ctrlHeld }));
 

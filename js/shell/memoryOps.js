@@ -47,8 +47,7 @@ export async function triggerMemoryRelease(isDeep = false, monitorEl) {
  * @param {HTMLElement} monitorEl - The monitor element to update.
  */
 export function bindMemoryHotkeys(monitorEl) {
-  Hotkeys.register('f5', (e) => {
-    e.preventDefault();
+  Hotkeys.bind('memory.refresh', (e) => {
     triggerMemoryRelease(e.ctrlKey, monitorEl);
   });
 }

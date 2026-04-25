@@ -182,7 +182,7 @@ LISTENS: (none)
 ### MpiMemoryMonitor
 EMITS:   `release` `{ deep: boolean }`
 LISTENS: (none — uses raw `window.addEventListener('keydown/keyup')` for Ctrl detection)
-FLAG:    Uses raw `window.addEventListener` for Ctrl key — not using Hotkeys.register. Acceptable for modifier-key visual feedback only (not a registered hotkey action).
+FLAG:    Uses `Hotkeys.bind('memoryMonitor.ctrl.down/up', fn)` for Ctrl visual feedback.
 
 ### MpiModelSettings
 EMITS:   `saved` `{}`
@@ -297,7 +297,7 @@ API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canv
 
 ### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
 EMITS:   (none)
-LISTENS: (none — Hotkeys.register 'b'/'e' while mounted; unregistered in destroy)
+LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while mounted; unbound in destroy)
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
 
 ---

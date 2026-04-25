@@ -47,8 +47,8 @@ export const MyComponent = ComponentFactory.create({
 
 ## Hotkeys
 
-- `Hotkeys.register(key, fn)` to bind.
-- `Hotkeys.unregister(key, fn)` on `el.destroy()` or `el.hide()`.
+- `Hotkeys.bind(id, fn)` to bind — `id` is a stable registry id from `hotkeyRegistry.js`.
+- Store the returned unbind fn in `_unsubs`; called in `el.destroy()`.
 - Never use raw `window.addEventListener('keydown')`.
 
 ## Events

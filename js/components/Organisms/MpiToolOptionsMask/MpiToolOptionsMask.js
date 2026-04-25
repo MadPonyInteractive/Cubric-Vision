@@ -113,8 +113,8 @@ export const MpiToolOptionsMask = ComponentFactory.create({
         eraserBtn.on('click', _setEraser);
         _children.push(brushBtn, eraserBtn);
 
-        const _unsubB = Hotkeys.register('b', _setBrush);
-        const _unsubE = Hotkeys.register('e', _setEraser);
+        const _unsubB = Hotkeys.bind('mask.brush.toolbar', _setBrush);
+        const _unsubE = Hotkeys.bind('mask.eraser.toolbar', _setEraser);
 
         // ── Shared row ───────────────────────────────────────────────────────
 

@@ -1,0 +1,259 @@
+'use strict';
+
+import { APP_CONFIG } from '../../dev_configs/app_config.js';
+
+/** @enum {string} */
+export const KEY_TYPE = {
+    DOWN: 'down',
+    UP:   'up',
+};
+
+/**
+ * Declarative hotkey registry.
+ * Each entry shape:
+ *   { id, key, type, category, scopeLabel, description, when, allowWhileTyping }
+ *
+ * `type`            — KEY_TYPE.DOWN (default) or KEY_TYPE.UP
+ * `when`            — optional fn({ state, event, activeElement, isTyping }) → bool
+ * `allowWhileTyping`— if true, fires even when an input/textarea has focus
+ */
+export const HOTKEY_REGISTRY = [
+
+    // ── Overlay ──────────────────────────────────────────────────────────────
+    {
+        id:               'overlay.close',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'overlay',
+        scopeLabel:       'Overlay',
+        description:      'Close overlay',
+        allowWhileTyping: true,
+    },
+
+    // ── Focus Mode ────────────────────────────────────────────────────────────
+    {
+        id:               'focusMode.toggle',
+        key:              'f',
+        type:             KEY_TYPE.DOWN,
+        category:         'focusMode',
+        scopeLabel:       'Focus Mode',
+        description:      'Toggle focus mode',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'focusMode.exit',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'focusMode',
+        scopeLabel:       'Focus Mode',
+        description:      'Exit focus mode',
+        allowWhileTyping: true,
+    },
+
+    // ── Memory ────────────────────────────────────────────────────────────────
+    {
+        id:               'memory.refresh',
+        key:              'f5',
+        type:             KEY_TYPE.DOWN,
+        category:         'memory',
+        scopeLabel:       'Memory',
+        description:      'Refresh memory',
+        allowWhileTyping: true,
+    },
+
+    // ── Memory Monitor ────────────────────────────────────────────────────────
+    {
+        id:               'memoryMonitor.ctrl.down',
+        key:              'control',
+        type:             KEY_TYPE.DOWN,
+        category:         'memoryMonitor',
+        scopeLabel:       'Memory Monitor',
+        description:      'Show memory monitor details',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'memoryMonitor.ctrl.up',
+        key:              'control',
+        type:             KEY_TYPE.UP,
+        category:         'memoryMonitor',
+        scopeLabel:       'Memory Monitor',
+        description:      'Hide memory monitor details',
+        allowWhileTyping: true,
+    },
+
+    // ── Mask — Toolbar scope ──────────────────────────────────────────────────
+    {
+        id:               'mask.brush.toolbar',
+        key:              'b',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Toolbar',
+        description:      'Select brush tool',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'mask.eraser.toolbar',
+        key:              'e',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Toolbar',
+        description:      'Select eraser tool',
+        allowWhileTyping: false,
+    },
+
+    // ── Mask — Canvas scope ───────────────────────────────────────────────────
+    {
+        id:               'mask.brush.canvas',
+        key:              'b',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Canvas',
+        description:      'Select brush tool',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'mask.eraser.canvas',
+        key:              'e',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Canvas',
+        description:      'Select eraser tool',
+        allowWhileTyping: false,
+    },
+
+    // ── Gallery ───────────────────────────────────────────────────────────────
+    {
+        id:               'gallery.selection.exit',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Exit selection mode',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'gallery.size.inc',
+        key:              '+',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Increase thumbnail size',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'gallery.size.dec',
+        key:              '-',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Decrease thumbnail size',
+        allowWhileTyping: false,
+    },
+
+    // ── Radial Menu ───────────────────────────────────────────────────────────
+    {
+        id:               'radialMenu.toggle',
+        key:              'tab',
+        type:             KEY_TYPE.DOWN,
+        category:         'radialMenu',
+        scopeLabel:       'Radial Menu',
+        description:      'Toggle radial menu',
+        allowWhileTyping: false,
+    },
+
+    // ── Modal ─────────────────────────────────────────────────────────────────
+    {
+        id:               'modal.confirm',
+        key:              'enter',
+        type:             KEY_TYPE.DOWN,
+        category:         'modal',
+        scopeLabel:       'Modal',
+        description:      'Confirm modal action',
+        allowWhileTyping: true,
+    },
+
+    // ── Crop ──────────────────────────────────────────────────────────────────
+    {
+        id:               'crop.shift.canvas',
+        key:              'shift',
+        type:             KEY_TYPE.DOWN,
+        category:         'crop',
+        scopeLabel:       'Crop Canvas',
+        description:      'Constrain crop ratio (hold)',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'crop.shift.canvas.up',
+        key:              'shift',
+        type:             KEY_TYPE.UP,
+        category:         'crop',
+        scopeLabel:       'Crop Canvas',
+        description:      'Release crop ratio constraint',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'crop.shift.video',
+        key:              'shift',
+        type:             KEY_TYPE.DOWN,
+        category:         'crop',
+        scopeLabel:       'Crop Video',
+        description:      'Constrain crop ratio (hold)',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'crop.shift.video.up',
+        key:              'shift',
+        type:             KEY_TYPE.UP,
+        category:         'crop',
+        scopeLabel:       'Crop Video',
+        description:      'Release crop ratio constraint',
+        allowWhileTyping: false,
+    },
+
+    // ── Canvas ────────────────────────────────────────────────────────────────
+    {
+        id:               'canvas.pan.start',
+        key:              'space',
+        type:             KEY_TYPE.DOWN,
+        category:         'canvas',
+        scopeLabel:       'Canvas',
+        description:      'Start pan (hold)',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'canvas.pan.end',
+        key:              'space',
+        type:             KEY_TYPE.UP,
+        category:         'canvas',
+        scopeLabel:       'Canvas',
+        description:      'End pan',
+        allowWhileTyping: false,
+    },
+
+    // ── System / Built-ins ────────────────────────────────────────────────────
+    {
+        id:               'system.fullscreen',
+        key:              'f11',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Toggle fullscreen',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'devtools.toggle',
+        key:              'control+shift+i',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Toggle DevTools',
+        when:             () => APP_CONFIG.dev_mode,
+        allowWhileTyping: true,
+    },
+];
+
+/**
+ * @param {string} id
+ * @returns {object|undefined}
+ */
+export const getEntryById = (id) => HOTKEY_REGISTRY.find(e => e.id === id);

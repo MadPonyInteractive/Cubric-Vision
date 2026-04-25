@@ -89,8 +89,8 @@ Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 > - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
 > - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
 > - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`
-- `MpiProjectCard` (one per project)   props: `{ title, date, media }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`.
-- `MpiButton` (landing header actions + "+ New Project")   slot: `#landingActions` / `#newProjectBtn`.
+> - `MpiProjectCard` (one per project)   props: `{ title, date, media }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`.
+> - `MpiButton` (landing header actions + "+ New Project")   slot: `#landingActions` / `#newProjectBtn`.
 
 ---
 

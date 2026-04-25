@@ -19,7 +19,7 @@
 - **Never use raw \****`document.querySelector`**\*\*.** Use shorthands from `js/utils/dom.js` (`qs`, `qsa`, `gid`).
 - **Never use raw \****`addEventListener`***\* / \****`removeEventListener`**\*\* in components.** Use `on()` / `off()` from `js/utils/dom.js` — both return cleanup/re-add fns. Exception: inside `destroy()`.
 - **Never create global state outside \****`js/state.js`**\*\*.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
-- **Never use raw \****`window.addEventListener('keydown')`**\*\*.** Use `Hotkeys.register` / `Hotkeys.unregister`.
+- **Never use raw \****`window.addEventListener('keydown')`**\*\*.** Use `Hotkeys.bind` / `Hotkeys.unbind` with a registry id from `hotkeyRegistry.js`.
 - **BEM is mandatory.** Format: `.mpi-block__element--modifier`. No exceptions.
 - **All components MUST use \****`ComponentFactory.create()`**\*\*.** Never bypass the factory pattern.
 - **NEVER modify \****`js/components/factory.js`**\*\*.** The factory is locked.

@@ -32,7 +32,7 @@ class OverlayManager {
         this._queue = [];
 
         // Attach global Escape key listener via HotkeyManager
-        Hotkeys.register('escape', () => this.tryCloseActive());
+        Hotkeys.bind('overlay.close', () => this.tryCloseActive());
     }
 
     /**

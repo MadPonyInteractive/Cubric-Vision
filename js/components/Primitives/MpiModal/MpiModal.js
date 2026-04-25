@@ -72,7 +72,7 @@ export const MpiModal = ComponentFactory.create({
             if (_isShown) return;  // already visible — skip (idempotent)
             _overlayEntry = { show: _doShow, hide: el.hide, id: el };
             Overlays.request(_overlayEntry);
-            _unregisterEnter = Hotkeys.register('enter', _handleEnter);
+            _unregisterEnter = Hotkeys.bind('modal.confirm', _handleEnter);
         };
 
         el.hide = () => {

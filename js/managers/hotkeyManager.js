@@ -1,16 +1,9 @@
-/**
- * js/managers/hotkeyManager.js — Centralized Shortcut Registration for MpiAiSuite.
- *
- * TODO:
- * - [ ] Implement F5 / Ctrl+F5 for VRAM/Model Unloading
- * - [ ] Implement M, B, E for Masking Mode (Tool Specific)
- * - [ ] Implement Ctrl+Enter for main tool execution (Global)
- */
-
 'use strict';
 
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
-import { Events } from '../events.js';
+import { HOTKEY_REGISTRY, KEY_TYPE } from './hotkeyRegistry.js';
+import { on } from '../utils/dom.js';
+import { state } from '../state.js';
 
 let ipcRenderer = null;
 try {
@@ -21,163 +14,156 @@ try {
 
 class HotkeyManager {
     constructor() {
-        /** @type {Map<string, Function|null>} single handler per key; null = removed but prev was registered */
+        /** @type {Map<string, Set<Function>>} key = `${type}:${normalizedKey}` */
         this._handlers = new Map();
-        /** @type {Map<string, Function|null>} */
-        this._keyupHandlers = new Map();
-        this._init();
+        this._cleanupDown = null;
+        this._cleanupUp   = null;
     }
 
     /**
-     * Start global keydown + keyup listeners
-     * @private
+     * Call once at shell startup.
      */
-    _init() {
-        window.addEventListener('keydown', (e) => this._handleKeyDown(e), { capture: true });
-        window.addEventListener('keyup',   (e) => this._handleKeyUp(e),   { capture: true });
-        this._registerBuiltins();
-    }
+    init() {
+        this._cleanupDown = on(window, 'keydown', (e) => this._handle(e, KEY_TYPE.DOWN), { capture: true });
+        this._cleanupUp   = on(window, 'keyup',   (e) => this._handle(e, KEY_TYPE.UP),   { capture: true });
 
-    /**
-     * Register built-in system hotkeys.
-     * @private
-     */
-    _registerBuiltins() {
-        // F11 — Toggle fullscreen
-        this.register('f11', () => {
+        // Built-in: fullscreen
+        this.bind('system.fullscreen', () => {
             if (ipcRenderer) ipcRenderer.send('window-fullscreen');
         });
 
-        // Ctrl+Shift+I — Toggle DevTools (dev mode only)
-        this.register('control+shift+i', () => {
-            if (APP_CONFIG.dev_mode) {
-                if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
-            }
+        // Built-in: devtools (when gate in registry)
+        this.bind('devtools.toggle', () => {
+            if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
         });
     }
 
     /**
-     * Register a new hotkey callback, replacing any existing handler for this key.
-     * Returns an unsubscribe function that restores the previous handler.
-     * @param {string} keyString - Example: 'escape', 'control+enter', 'control+shift+i'
-     * @param {Function} callback - The function to execute on match
+     * Bind a handler to a registry entry by id.
+     * Multiple handlers per id are allowed — all are called in bind order.
+     * @param {string} id
+     * @param {Function} handler
+     * @returns {Function} unbind function
      */
-    register(keyString, callback) {
-        const key = keyString.toLowerCase();
-        const prev = this._handlers.get(key) ?? null;
-        this._handlers.set(key, callback);
-        return () => {
-            this._handlers.set(key, prev);
-        };
-    }
-
-    /**
-     * Unregister a hotkey callback. Only removes if it matches the currently registered handler.
-     * @param {string} keyString
-     * @param {Function} callback
-     */
-    unregister(keyString, callback) {
-        const key = keyString.toLowerCase();
-        if (this._handlers.get(key) === callback) {
-            this._handlers.delete(key);
+    bind(id, handler) {
+        const mapKey = this._mapKey(id);
+        if (!mapKey) {
+            console.warn(`[Hotkeys] bind: unknown id "${id}"`);
+            return () => {};
         }
+        if (!this._handlers.has(mapKey)) this._handlers.set(mapKey, new Set());
+        this._handlers.get(mapKey).add(handler);
+        return () => this.unbind(id, handler);
     }
 
     /**
-     * Register a keyup hotkey callback, replacing any existing handler for this key.
-     * Returns an unsubscribe function that restores the previous handler.
-     * @param {string} keyString - Example: 'space', 'control'
-     * @param {Function} callback
-     * @returns {() => void} Unsubscribe function
+     * @param {string} id
+     * @param {Function} handler
      */
-    registerKeyup(keyString, callback) {
-        const key = keyString.toLowerCase();
-        const prev = this._keyupHandlers.get(key) ?? null;
-        this._keyupHandlers.set(key, callback);
-        return () => {
-            this._keyupHandlers.set(key, prev);
-        };
+    unbind(id, handler) {
+        const mapKey = this._mapKey(id);
+        if (!mapKey) return;
+        this._handlers.get(mapKey)?.delete(handler);
     }
 
     /**
-     * Unregister a keyup hotkey callback. Only removes if it matches the currently registered handler.
-     * @param {string} keyString
-     * @param {Function} callback
+     * @returns {Array} full registry array (for MpiHelp)
      */
-    unregisterKeyup(keyString, callback) {
-        const key = keyString.toLowerCase();
-        if (this._keyupHandlers.get(key) === callback) {
-            this._keyupHandlers.delete(key);
-        }
+    getRegistry() {
+        return HOTKEY_REGISTRY;
+    }
+
+    // ── Private ──────────────────────────────────────────────────────────────
+
+    /**
+     * Build internal map key from registry id.
+     * @param {string} id
+     * @returns {string|null}
+     */
+    _mapKey(id) {
+        const entry = HOTKEY_REGISTRY.find(e => e.id === id);
+        if (!entry) return null;
+        return `${entry.type ?? KEY_TYPE.DOWN}:${entry.key}`;
     }
 
     /**
-     * Main event handler logic
      * @param {KeyboardEvent} e
-     * @private
+     * @param {string} type KEY_TYPE.DOWN | KEY_TYPE.UP
      */
-    _handleKeyDown(e) {
-        const key = this._getEventKeyString(e);
+    _handle(e, type) {
+        const key = this._normalizeKey(e);
+        const mapKey = `${type}:${key}`;
 
-        // Check for exact matches in the registry
-        if (this._handlers.has(key)) {
-            const handler = this._handlers.get(key);
-            if (handler) {
-                // Prevent defaults if we have registered handlers
-                e.preventDefault();
-                e.stopPropagation();
-                try { handler(e); }
-                catch (err) { console.error(`[Hotkeys] Error in "${key}" handler:`, err); }
+        const handlers = this._handlers.get(mapKey);
+        if (!handlers || handlers.size === 0) return;
+
+        // Find the matching registry entry for this key+type combo.
+        // There may be multiple entries with same key+type (e.g. mask.brush.toolbar + mask.brush.canvas).
+        // All bound handlers for this mapKey are eligible; we apply shared gating.
+        const entries = HOTKEY_REGISTRY.filter(e => e.key === key && (e.type ?? KEY_TYPE.DOWN) === type);
+        if (entries.length === 0) return;
+
+        const activeEl = document.activeElement;
+        const isTyping = !!(
+            activeEl &&
+            (activeEl.tagName === 'INPUT' ||
+             activeEl.tagName === 'TEXTAREA' ||
+             activeEl.isContentEditable)
+        );
+
+        const isSingleLetter = e.key.length === 1 && !e.ctrlKey && !e.metaKey;
+        const isBareModifier = ['Shift', 'Alt', 'Control', 'Meta'].includes(e.key);
+        const isFKey = /^F\d+$/.test(e.key);
+
+        // Determine if ANY bound handler should fire by checking at least one
+        // registry entry allows it under current conditions.
+        let shouldFire = false;
+        for (const entry of entries) {
+            // isTyping gate
+            if (isTyping && !entry.allowWhileTyping) {
+                if (isSingleLetter || (isBareModifier && !isFKey)) {
+                    continue; // blocked
+                }
             }
+
+            // when() gate
+            if (entry.when && !entry.when({ state, event: e, activeElement: activeEl, isTyping })) {
+                continue;
+            }
+
+            shouldFire = true;
+            break;
         }
 
-        // Bridge to Event Bus for broad observers
-        Events.emit(`hotkey:${key}`, e);
+        if (!shouldFire) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        handlers.forEach(fn => {
+            try { fn(e); }
+            catch (err) { console.error(`[Hotkeys] Error in "${mapKey}" handler:`, err); }
+        });
     }
 
     /**
-     * keyup handler — fires registered keyup callbacks and emits bus event.
+     * Normalize a KeyboardEvent to a lowercase key string.
      * @param {KeyboardEvent} e
-     * @private
+     * @returns {string}
      */
-    _handleKeyUp(e) {
-        const key = this._getEventKeyString(e);
-
-        const handler = this._keyupHandlers.get(key);
-        if (handler) {
-            e.preventDefault();
-            e.stopPropagation();
-            try { handler(e); }
-            catch (err) { console.error(`[Hotkeys] Error in keyup "${key}" handler:`, err); }
-        }
-
-        Events.emit(`hotkey:keyup:${key}`, e);
-    }
-
-    /**
-     * Normalizes KeyboardEvent into a standard string key.
-     * Bare modifier presses resolve to their canonical name so callers
-     * can register 'control', 'shift', etc. directly.
-     * @param {KeyboardEvent} e
-     * @returns {string} - e.g. 'control+shift+i', 'control', 'space'
-     * @private
-     */
-    _getEventKeyString(e) {
+    _normalizeKey(e) {
         const rawKey = e.key === ' ' ? 'space' : e.key.toLowerCase();
         const isBareModifier = ['control', 'shift', 'alt', 'meta'].includes(rawKey);
-
-        // Bare modifier press: return just the modifier name (no combo prefix)
         if (isBareModifier) return rawKey;
 
         const parts = [];
         if (e.ctrlKey || e.metaKey) parts.push('control');
-        if (e.shiftKey) parts.push('shift');
+        if (e.shiftKey && rawKey !== 'shift') parts.push('shift');
         if (e.altKey) parts.push('alt');
         parts.push(rawKey);
-
         return parts.join('+');
     }
 }
 
-/** @type {HotkeyManager} Singleton Manager instance */
+/** @type {HotkeyManager} Singleton */
 export const Hotkeys = new HotkeyManager();

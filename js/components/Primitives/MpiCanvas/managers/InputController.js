@@ -175,9 +175,7 @@ export class InputController {
         window.addEventListener('mouseup', this._boundHandlers.mouseup);
 
         // KeyDown: Space and Hotkeys
-        this._boundHandlers.keydownUnsub = Hotkeys.register('space', (e) => {
-            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-            if (isInput) return;
+        this._boundHandlers.keydownUnsub = Hotkeys.bind('canvas.pan.start', () => {
             if (this.isSpacePressed) return;
             this.isSpacePressed = true;
             // Cancel any in-progress mask stroke so Space+drag pans instead of paints
@@ -186,24 +184,22 @@ export class InputController {
             this.options.onDraw();
         });
 
-        this._boundHandlers.brushKeyUnsub = Hotkeys.register('b', (e) => {
-            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-            if (!mask.isMaskingMode || isInput) return;
+        this._boundHandlers.brushKeyUnsub = Hotkeys.bind('mask.brush.canvas', () => {
+            if (!mask.isMaskingMode) return;
             mask.brushType = 'brush';
             if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('brush');
             this.options.onDraw();
         });
 
-        this._boundHandlers.eraserKeyUnsub = Hotkeys.register('e', (e) => {
-            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-            if (!mask.isMaskingMode || isInput) return;
+        this._boundHandlers.eraserKeyUnsub = Hotkeys.bind('mask.eraser.canvas', () => {
+            if (!mask.isMaskingMode) return;
             mask.brushType = 'eraser';
             if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('eraser');
             this.options.onDraw();
         });
 
         // KeyUp: Space
-        this._boundHandlers.keyupUnsub = Hotkeys.registerKeyup('space', () => {
+        this._boundHandlers.keyupUnsub = Hotkeys.bind('canvas.pan.end', () => {
             this.isSpacePressed = false;
             this.updateCursor();
             this.options.onDraw();

@@ -12,7 +12,7 @@
 - **Use `js/utils/dom.js`** shorthands — never raw `document.querySelector`.
 - **Blocking UI (modals/overlays):** call `Overlays.request(...)` to show, `Overlays.release(el)` to hide. Portal to `document.body`. Self-close on `ui:close-all-popups`.
 - **Floating UI (dropdowns/popups):** No Overlays registration. Self-close on `ui:close-all-popups`. Use `MutationObserver` to clean up body portals when anchor is removed.
-- **Hotkeys:** `Hotkeys.register(key, fn)` to bind, `Hotkeys.unregister(key, fn)` on destroy/hide. Never use raw `window.addEventListener('keydown')`.
+- **Hotkeys:** `Hotkeys.bind(id, fn)` to bind (id from `hotkeyRegistry.js`), store returned unbind fn in `_unsubs`, call in `destroy()`. Never use raw `window.addEventListener('keydown')`.
 - **All state management, hotkeys, and overlay mounting MUST happen inside `setup()`.** Callers must never import `overlayManager`, `hotkeyManager`, or `Events` to manage a component.
 
 ## CRITICAL "NEVER FORGET" RULES
@@ -144,8 +144,8 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 * Seed live props from `initial*` fallbacks in `setup()` (e.g. `props.orientation = props.initialOrientation || 'portrait'`). Click handlers read `props.*` directly; if setup skips this seed, first-click handlers see `undefined` and diverge from the template's rendered state.
 
 ### Hotkeys
-* MUST use `Hotkeys.register(key, fn)` (Never use raw `window.addEventListener('keydown')`).
-* MUST use `Hotkeys.unregister(key, fn)` on `el.destroy()` or `el.hide()`.
+* MUST use `Hotkeys.bind(id, fn)` — `id` is a stable string from `hotkeyRegistry.js`. Never use raw `window.addEventListener('keydown')`.
+* Store the returned unbind fn in `_unsubs`. Call `_unsubs.forEach(fn => fn())` in `el.destroy()`.
 
 ---
 

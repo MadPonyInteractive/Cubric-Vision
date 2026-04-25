@@ -102,7 +102,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _selectionMode = true;
             el.classList.add('mpi-gallery-grid--selecting');
             emit('selection-start', {});
-            _escUnsub = Hotkeys.register('Escape', _exitSelectionMode);
+            _escUnsub = Hotkeys.bind('gallery.selection.exit', _exitSelectionMode);
         }
 
         function _exitSelectionMode() {
@@ -199,9 +199,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
             input.dispatchEvent(new Event('input'));
         };
 
-        _unsubs.push(Hotkeys.register('=', incrementSlider));
-        _unsubs.push(Hotkeys.register('+', incrementSlider));
-        _unsubs.push(Hotkeys.register('-', decrementSlider));
+        _unsubs.push(Hotkeys.bind('gallery.size.inc', incrementSlider));
+        _unsubs.push(Hotkeys.bind('gallery.size.dec', decrementSlider));
 
         // ── Card rendering helper ─────────────────────────────────────────────
 

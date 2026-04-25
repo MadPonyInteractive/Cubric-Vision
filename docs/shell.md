@@ -30,9 +30,25 @@ Queue-based blocking overlay controller.
 
 ## hotkeyManager.js (`js/managers/hotkeyManager.js`)
 
-- `Hotkeys.register(key, fn)`: Registers a hotkey. Modifier keys: `control+shift+i`, etc.
-- `Hotkeys.unregister(key, fn)`: Removes a registration.
-- F11 toggles fullscreen. Ctrl+Shift+I opens devtools (dev mode only).
+- `Hotkeys.init()`: Call once at shell startup — attaches window listeners and registers builtins.
+- `Hotkeys.bind(id, fn) → unbindFn`: Bind a handler to a registry entry by stable id (e.g. `'mask.brush.toolbar'`). Returns an unbind function — store and call in `destroy()`.
+- `Hotkeys.unbind(id, fn)`: Remove a specific handler.
+- `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array (used by MpiHelp).
+- F11 toggles fullscreen. Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
+
+### Adding a hotkey
+
+1. Declare an entry in `js/managers/hotkeyRegistry.js` — set `id`, `key`, `type`, `category`, `scopeLabel`, `description`, `allowWhileTyping`, and optionally `when(ctx)`.
+2. In the component `setup()`, call `Hotkeys.bind(id, fn)` and push the returned unbind fn into `_unsubs`.
+3. `_unsubs` is called in `el.destroy()` — no manual `unbind` needed.
+
+### Gating model
+
+Keydown fires handlers only if all guards pass (in order):
+1. Entry found in registry for normalized key + type.
+2. `isTyping` check — single-letter and bare-modifier keys blocked while `INPUT`/`TEXTAREA`/`[contenteditable]` focused, unless `allowWhileTyping: true`. F-keys and `Ctrl+`-chords always pass.
+3. `when(ctx)` optional gate — receives `{ state, event, activeElement, isTyping }`.
+4. `preventDefault`/`stopPropagation` called only after all guards pass.
 
 ## statusBar.js (`js/shell/statusBar.js`)
 

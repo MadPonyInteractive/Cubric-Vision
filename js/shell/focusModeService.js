@@ -16,7 +16,7 @@
  * Hotkey ownership:
  *   The `escape` key is normally owned by overlayManager. We only register an
  *   escape handler while focus mode is active, and we use the unsub closure
- *   returned by `Hotkeys.register` to restore the previous handler on exit.
+ *   returned by `Hotkeys.bind` to unbind the handler on exit.
  */
 
 'use strict';
@@ -88,12 +88,7 @@ function _syncHotkeyForPage(page) {
         return;
     }
 
-    _unregisterF = Hotkeys.register('f', () => {
-        // Don't toggle while typing in inputs, textareas, or contenteditable elements.
-        const t = document.activeElement;
-        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
-            return;
-        }
+    _unregisterF = Hotkeys.bind('focusMode.toggle', () => {
         state.focusMode = !state.focusMode;
     });
 }
@@ -107,7 +102,7 @@ function _applyFocusState(active) {
 
     if (active) {
         if (!_unregisterEscape) {
-            _unregisterEscape = Hotkeys.register('escape', () => {
+            _unregisterEscape = Hotkeys.bind('focusMode.exit', () => {
                 state.focusMode = false;
             });
         }
