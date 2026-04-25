@@ -165,7 +165,8 @@
 .mpi-video-player__volume-slider {
     flex: 1;
     min-width: 80px;
-    max-width: 140px;
+    max-width: 160px;
+    margin: 0px 6px 0px 3px;
 }
 
 .mpi-video-player__volume-slider .mpi-progress {

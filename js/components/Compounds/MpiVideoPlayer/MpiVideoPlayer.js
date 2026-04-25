@@ -121,7 +121,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 icon: 'play',
                 iconActive: 'pause',
                 active: !video.paused,
-                size: 'md',
+                size: 'sm',
                 info: 'Play/Pause'
             });
 
@@ -145,7 +145,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 icon: 'volumeHigh',
                 iconActive: 'volumeOff',
                 active: initialMuted,
-                size: 'md',
+                size: 'sm',
                 info: 'Mute/Unmute'
             });
 
@@ -167,14 +167,14 @@ export const MpiVideoPlayer = ComponentFactory.create({
             loopBtn = MpiButton.mount(loopWrapper, {
                 icon: 'loop',
                 active: video.loop,
-                size: 'md',
+                size: 'sm',
                 info: 'Loop'
             });
 
             // 7. Fullscreen Button
             fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
                 icon: 'fullscreen',
-                size: 'md',
+                size: 'sm',
                 info: 'Fullscreen'
             });
 

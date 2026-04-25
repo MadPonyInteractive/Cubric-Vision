@@ -63,7 +63,6 @@
 .mpi-btn--secondary:hover:not(:disabled),
 .mpi-btn--secondary.is-pressed:not(:disabled) {
     background: var(--surface-2);
-    transform: translateY(-1px);
 }
 
 /* danger — matches .btn.danger */
