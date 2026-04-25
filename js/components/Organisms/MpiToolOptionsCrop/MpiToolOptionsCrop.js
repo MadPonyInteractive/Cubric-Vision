@@ -1,23 +1,73 @@
 /**
  * MpiToolOptionsCrop — Organism: tool-options panel for Crop mode.
  *
- * Self-contained: owns ratio selector + apply (+ snapshot for video).
- * Mounted by MpiGroupHistoryBlock mediator into #right-top-slot when
- * active tool = 'crop'. Enters/exits viewer crop mode in setup/destroy.
+ * Self-contained: owns family dropdown + orientation + ratio picker + apply
+ * (+ snapshot for video). Mounted by MpiGroupHistoryBlock mediator into
+ * #right-top-slot when active tool = 'crop'. Enters/exits viewer crop mode
+ * in setup/destroy.
+ *
+ * Family options:
+ *   SDXL / FLUX  — orientation toggle + ratio icons (w,h derived)
+ *   SOCIAL       — flat ratio icons
+ *   FREE         — no ratio controls; viewer crop is unconstrained
  *
  * Props:
  * @param {object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
  * @param {'image'|'video'} kind - Determines which viewer API to call
  *
  * Emits:
- *   'apply'     { kind: 'image' | 'video-save' | 'video-snapshot', ratio? }
+ *   'apply' { kind: 'image' | 'video-save' | 'video-snapshot' }
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
+import { getModelRatios, SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { qs } from '../../../utils/dom.js';
+
+const FAMILIES = [
+    { label: 'SDXL',   value: 'sdxl'   },
+    { label: 'FLUX',   value: 'flux'   },
+    { label: 'SOCIAL', value: 'social' },
+    { label: 'FREE',   value: 'free'   },
+];
+
+const ORIENTATIONS = [
+    { label: 'Portrait',  value: 'portrait',  icon: 'ratio_9_16', info: 'Portrait orientation' },
+    { label: 'Landscape', value: 'landscape', icon: 'ratio_16_9', info: 'Landscape orientation' },
+];
+
+/** Build radio options for a family + orientation. icon-only with per-option info. */
+function _ratiosToOptions(family, orientation) {
+    if (family === 'social') {
+        return SOCIAL_RATIOS.map(r => ({
+            label: r.label,
+            value: r.label,
+            icon:  r.icon.replace('rect_', 'ratio_'),
+            info:  `Ratio ${r.label}`,
+        }));
+    }
+    const list = getModelRatios(family, orientation);
+    return list.map(r => ({
+        label: r.label,
+        value: r.label,
+        icon:  r.icon.replace('rect_', 'ratio_'),
+        info:  `Ratio ${r.label} (${r.w}×${r.h})`,
+    }));
+}
+
+/** Resolve numeric ratio float for a family/orientation/label. null = FREE. */
+function _resolveRatio(family, orientation, label) {
+    if (family === 'free') return null;
+    if (family === 'social') {
+        const r = SOCIAL_RATIOS.find(x => x.label === label) || SOCIAL_RATIOS[0];
+        return r.ratio;
+    }
+    const list = getModelRatios(family, orientation);
+    const r = list.find(x => x.label === label) || list[0];
+    return r.w / r.h;
+}
 
 export const MpiToolOptionsCrop = ComponentFactory.create({
     name: 'MpiToolOptionsCrop',
@@ -25,8 +75,10 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-tool-options-crop">
-            <div class="mpi-tool-options-crop__ratio" id="ratio-slot"></div>
-            <div class="mpi-tool-options-crop__actions" id="actions-slot"></div>
+            <div class="mpi-tool-options-crop__family"      id="family-slot"></div>
+            <div class="mpi-tool-options-crop__orientation" id="orient-slot"></div>
+            <div class="mpi-tool-options-crop__ratios"      id="ratios-slot"></div>
+            <div class="mpi-tool-options-crop__actions"     id="actions-slot"></div>
         </div>
     `,
 
@@ -34,31 +86,97 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         const { viewer, kind } = props;
         const isVideo = kind === 'video';
 
+        // Local state
+        let _family      = 'social';
+        let _orientation = 'portrait';
+        let _label       = SOCIAL_RATIOS[0].label;
+
+        const familySlot  = qs('#family-slot',  el);
+        const orientSlot  = qs('#orient-slot',  el);
+        const ratiosSlot  = qs('#ratios-slot',  el);
+        const actionsSlot = qs('#actions-slot', el);
+
         // Enter viewer crop mode on mount
         if (isVideo) viewer.el.enterCropMode?.();
         else         viewer.el.enterMode?.('crop');
 
-        // Ratio selector — push initial ratio into the viewer so the crop
-        // overlay matches the selector's displayed value on first render.
-        // ratioSel only emits 'change' on user interaction; without this push
-        // the overlay defaults to the viewer's own ratio constant, producing
-        // a visible mismatch with the selector chip.
-        const initialRatio = SOCIAL_RATIOS[0];
-        const ratioSel = MpiOptionSelector.mount(document.createElement('div'), {
-            variant: 'ratio',
-            modelType: 'social',
-            value: initialRatio.label,
-        });
-        qs('#ratio-slot', el).appendChild(ratioSel.el);
-        viewer.el.setCropRatio?.(initialRatio.ratio);
-        ratioSel.on('change', ({ ratio }) => {
-            viewer.el.setCropRatio?.(ratio);
-        });
+        // Push initial ratio so canvas overlay matches selector on first render
+        viewer.el.setCropRatio?.(_resolveRatio(_family, _orientation, _label));
 
-        // Actions
-        const actionsSlot = qs('#actions-slot', el);
+        // ── Children ─────────────────────────────────────────────────────────
         const _children = [];
 
+        // Family dropdown
+        const familyDD = MpiDropdown.mount(document.createElement('div'), {
+            options: FAMILIES,
+            value:   _family,
+            info:    'Aspect ratio family',
+        });
+        familySlot.appendChild(familyDD.el);
+        _children.push(familyDD);
+
+        // Orientation radio (only used by sdxl/flux)
+        let orientRadio = null;
+        // Ratio radio (icon-only)
+        let ratioRadio = null;
+
+        const _mountOrientation = () => {
+            if (orientRadio) { orientRadio.destroy?.(); orientRadio = null; orientSlot.innerHTML = ''; }
+            if (_family !== 'sdxl' && _family !== 'flux') return;
+            orientRadio = MpiRadioGroup.mount(document.createElement('div'), {
+                options: ORIENTATIONS,
+                value:   _orientation,
+                name:    'orientation',
+                iconOnly: true,
+            });
+            orientSlot.appendChild(orientRadio.el);
+            orientRadio.on('select', ({ value }) => {
+                _orientation = value;
+                // Keep current label if exists in new orientation, else first
+                const opts = _ratiosToOptions(_family, _orientation);
+                if (!opts.some(o => o.value === _label)) _label = opts[0].value;
+                _mountRatios();
+                _pushRatio();
+            });
+        };
+
+        const _mountRatios = () => {
+            if (ratioRadio) { ratioRadio.destroy?.(); ratioRadio = null; ratiosSlot.innerHTML = ''; }
+            if (_family === 'free') return;
+            const opts = _ratiosToOptions(_family, _orientation);
+            ratioRadio = MpiRadioGroup.mount(document.createElement('div'), {
+                options:  opts,
+                value:    _label,
+                name:     'ratio',
+                iconOnly: true,
+            });
+            ratiosSlot.appendChild(ratioRadio.el);
+            ratioRadio.on('select', ({ value }) => {
+                _label = value;
+                _pushRatio();
+            });
+        };
+
+        const _pushRatio = () => {
+            viewer.el.setCropRatio?.(_resolveRatio(_family, _orientation, _label));
+        };
+
+        familyDD.on('change', ({ value }) => {
+            _family = value;
+            if (_family === 'social') _label = SOCIAL_RATIOS[0].label;
+            else if (_family === 'sdxl' || _family === 'flux') {
+                const opts = _ratiosToOptions(_family, _orientation);
+                _label = opts[0].value;
+            }
+            _mountOrientation();
+            _mountRatios();
+            _pushRatio();
+        });
+
+        _mountOrientation();
+        _mountRatios();
+
+        // ── Actions ──────────────────────────────────────────────────────────
         if (isVideo) {
             const snapshotBtn = MpiButton.mount(document.createElement('div'), {
                 icon: 'camera', label: 'Snapshot', variant: 'ghost', size: 'sm',
@@ -88,7 +206,8 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         el.destroy = () => {
             if (isVideo) viewer.el.exitCropMode?.();
             else         viewer.el.exitMode?.();
-            ratioSel.destroy?.();
+            orientRadio?.destroy?.();
+            ratioRadio?.destroy?.();
             _children.forEach(c => c.destroy?.());
         };
     },

@@ -145,6 +145,7 @@ class _CanvasCore {
     destroy() {
         if (this.resizeObserver) this.resizeObserver.disconnect();
         this.input.destroy();
+        this.crop?.destroy?.();
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
         }

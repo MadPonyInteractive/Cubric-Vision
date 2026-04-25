@@ -24,10 +24,15 @@
  *   cropTool.destroy();
  */
 
+import { Hotkeys } from '../managers/hotkeyManager.js';
+
 export function createCropTool({ overlayCanvas, targetElement, onChange }) {
     let _isEnabled = false;
-    let _lockedRatio = 1;
+    let _lockedRatio = null; // null = FREE (no aspect lock)
     let _normRect = { x: 0, y: 0, w: 1, h: 1 }; // normalized [0..1]
+    let _shiftHeld = false; // scale from center when true
+    let _unShiftDown = null;
+    let _unShiftUp   = null;
 
     // Drag state
     let _isDragging = false;
@@ -39,7 +44,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
     const _boundHandlers = {};
 
     // Handle size in pixels (at 1:1 scale)
-    const HANDLE_SIZE = 10;
+    const HANDLE_SIZE = 16;
 
     /**
      * Get the bounding rect of the actual content (accounting for letterbox/pillarbox).
@@ -121,13 +126,19 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
      * Clamp and fit normalized rect to locked ratio and bounds.
      */
     function _applyRatioToRect(rect = _normRect) {
+        // FREE mode: full normalized rect, no constraint
+        if (_lockedRatio == null) {
+            _normRect = { x: 0, y: 0, w: 1, h: 1 };
+            return;
+        }
+
         const contentAspect = _contentAspect();
         // Pixel ratio → normalized-space ratio (account for anisotropic norm coords)
         const normRatio = _lockedRatio / contentAspect;
         let { x, y, w, h } = rect;
 
         // Fit by width first
-        w = Math.min(w, 1);
+        w = 1;
         h = w / normRatio;
 
         if (h > 1) {
@@ -136,13 +147,9 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
             w = h * normRatio;
         }
 
-        // Center if smaller than bounds
-        if (w < 1) x = (1 - w) / 2;
-        if (h < 1) y = (1 - h) / 2;
-
-        // Clamp to bounds
-        x = Math.max(0, Math.min(x, 1 - w));
-        y = Math.max(0, Math.min(y, 1 - h));
+        // Center
+        x = (1 - w) / 2;
+        y = (1 - h) / 2;
 
         _normRect = { x, y, w, h };
     }
@@ -197,80 +204,153 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
 
         const dx = normX - _dragStartMouse.x;
         const dy = normY - _dragStartMouse.y;
-        const r = _lockedRatio / _contentAspect();
         const sr = _dragStartNormRect;
+        const isFree = (_lockedRatio == null);
+        const minSize = 0.05;
 
-        let { x, y, w, h } = sr;
-        const minSize = 0.05; // minimum normalized rect size
+        // ── Body drag: translate only, clamp position ─────────────────────
+        if (_activeHandle === 'body') {
+            let x = sr.x + dx;
+            let y = sr.y + dy;
+            x = Math.max(0, Math.min(x, 1 - sr.w));
+            y = Math.max(0, Math.min(y, 1 - sr.h));
+            _normRect = { x, y, w: sr.w, h: sr.h };
+            return;
+        }
 
-        switch (_activeHandle) {
-            case 'body':
-                x = sr.x + dx;
-                y = sr.y + dy;
-                break;
+        // ── FREE mode: each handle moves its axis independently ──────────
+        if (isFree) {
+            let { x, y, w, h } = sr;
+            // Shift = mirror axis change across center → 2x axis delta, anchor = center
+            const m = _shiftHeld ? 2 : 1;
+            switch (_activeHandle) {
+                case 'tl': w = sr.w - m * dx; h = sr.h - m * dy; break;
+                case 'tr': w = sr.w + m * dx; h = sr.h - m * dy; break;
+                case 'bl': w = sr.w - m * dx; h = sr.h + m * dy; break;
+                case 'br': w = sr.w + m * dx; h = sr.h + m * dy; break;
+                case 't':  h = sr.h - m * dy; break;
+                case 'b':  h = sr.h + m * dy; break;
+                case 'l':  w = sr.w - m * dx; break;
+                case 'r':  w = sr.w + m * dx; break;
+            }
+            if (_shiftHeld) {
+                // Anchor = original center
+                const cx = sr.x + sr.w / 2;
+                const cy = sr.y + sr.h / 2;
+                x = cx - w / 2;
+                y = cy - h / 2;
+            } else {
+                // Original anchor logic
+                switch (_activeHandle) {
+                    case 'tl': x = sr.x + dx; y = sr.y + dy; break;
+                    case 'tr':                y = sr.y + dy; break;
+                    case 'bl': x = sr.x + dx;                break;
+                    case 't':  y = sr.y + dy; break;
+                    case 'l':  x = sr.x + dx; break;
+                }
+            }
+            if (w < minSize) { x = sr.x + sr.w - minSize; w = minSize; }
+            if (h < minSize) { y = sr.y + sr.h - minSize; h = minSize; }
+            x = Math.max(0, x);
+            y = Math.max(0, y);
+            w = Math.min(w, 1 - x);
+            h = Math.min(h, 1 - y);
+            _normRect = { x, y, w, h };
+            return;
+        }
 
-            // Corners: resize with ratio constraint
-            case 'tl': {
-                const newW = Math.max(minSize, sr.w - dx);
-                const newH = newW / r;
-                x = sr.x + sr.w - newW;
-                y = sr.y + sr.h - newH;
-                w = newW;
-                h = newH;
-                break;
-            }
-            case 'tr': {
-                w = Math.max(minSize, sr.w + dx);
-                h = w / r;
-                y = sr.y + sr.h - h;
-                break;
-            }
-            case 'bl': {
-                h = Math.max(minSize, sr.h + dy);
-                w = h * r;
-                x = sr.x + sr.w - w;
-                break;
-            }
-            case 'br': {
-                w = Math.max(minSize, sr.w + dx);
-                h = w / r;
-                break;
-            }
+        // ── Ratio-locked: anchor + sign + scale-fit, preserves ratio ─────
+        const r = _lockedRatio / _contentAspect();
 
-            // Edges: resize with ratio constraint, center opposite axis
-            case 't': {
-                h = Math.max(minSize, sr.h - dy);
-                w = h * r;
-                y = sr.y + sr.h - h;
-                x = sr.x + (sr.w - w) / 2;
-                break;
+        let anchorX, anchorY, signX, signY, targetW;
+
+        if (_shiftHeld) {
+            // Scale from center: anchor = rect center; targetW doubled (mirror)
+            anchorX = sr.x + sr.w / 2;
+            anchorY = sr.y + sr.h / 2;
+            signX = 0;
+            signY = 0;
+            switch (_activeHandle) {
+                case 'tl': targetW = sr.w - 2 * dx; break;
+                case 'tr': targetW = sr.w + 2 * dx; break;
+                case 'bl': targetW = sr.w - 2 * dx; break;
+                case 'br': targetW = sr.w + 2 * dx; break;
+                case 't':  targetW = (sr.h - 2 * dy) * r; break;
+                case 'b':  targetW = (sr.h + 2 * dy) * r; break;
+                case 'l':  targetW = sr.w - 2 * dx; break;
+                case 'r':  targetW = sr.w + 2 * dx; break;
             }
-            case 'b': {
-                h = Math.max(minSize, sr.h + dy);
-                w = h * r;
-                x = sr.x + (sr.w - w) / 2;
-                break;
-            }
-            case 'l': {
-                w = Math.max(minSize, sr.w - dx);
-                h = w / r;
-                x = sr.x + sr.w - w;
-                y = sr.y + (sr.h - h) / 2;
-                break;
-            }
-            case 'r': {
-                w = Math.max(minSize, sr.w + dx);
-                h = w / r;
-                y = sr.y + (sr.h - h) / 2;
-                break;
+        } else {
+            switch (_activeHandle) {
+                case 'tl':
+                    anchorX = sr.x + sr.w; anchorY = sr.y + sr.h; signX = -1; signY = -1;
+                    targetW = sr.w - dx;
+                    break;
+                case 'tr':
+                    anchorX = sr.x;        anchorY = sr.y + sr.h; signX = +1; signY = -1;
+                    targetW = sr.w + dx;
+                    break;
+                case 'bl':
+                    anchorX = sr.x + sr.w; anchorY = sr.y;        signX = -1; signY = +1;
+                    targetW = sr.w - dx;
+                    break;
+                case 'br':
+                    anchorX = sr.x;        anchorY = sr.y;        signX = +1; signY = +1;
+                    targetW = sr.w + dx;
+                    break;
+                case 't': {
+                    const newH = sr.h - dy;
+                    targetW = newH * r;
+                    anchorX = sr.x + sr.w / 2; anchorY = sr.y + sr.h; signX = 0; signY = -1;
+                    break;
+                }
+                case 'b': {
+                    const newH = sr.h + dy;
+                    targetW = newH * r;
+                    anchorX = sr.x + sr.w / 2; anchorY = sr.y; signX = 0; signY = +1;
+                    break;
+                }
+                case 'l': {
+                    targetW = sr.w - dx;
+                    anchorX = sr.x + sr.w; anchorY = sr.y + sr.h / 2; signX = -1; signY = 0;
+                    break;
+                }
+                case 'r': {
+                    targetW = sr.w + dx;
+                    anchorX = sr.x;        anchorY = sr.y + sr.h / 2; signX = +1; signY = 0;
+                    break;
+                }
             }
         }
 
-        // Clamp to bounds [0..1]
-        x = Math.max(0, Math.min(x, 1 - w));
-        y = Math.max(0, Math.min(y, 1 - h));
-        w = Math.min(w, 1 - x);
-        h = Math.min(h, 1 - y);
+        let w = Math.max(minSize, targetW);
+        let h = w / r;
+        if (h < minSize) { h = minSize; w = h * r; }
+
+        // Bound max w by horizontal space available from anchor
+        let maxW = w;
+        if (signX > 0)      maxW = Math.min(maxW, 1 - anchorX);
+        else if (signX < 0) maxW = Math.min(maxW, anchorX);
+        else                maxW = Math.min(maxW, 2 * Math.min(anchorX, 1 - anchorX));
+
+        // Bound by vertical space, converted to width via ratio
+        let maxH;
+        if (signY > 0)      maxH = 1 - anchorY;
+        else if (signY < 0) maxH = anchorY;
+        else                maxH = 2 * Math.min(anchorY, 1 - anchorY);
+        maxW = Math.min(maxW, maxH * r);
+
+        w = Math.max(minSize, maxW);
+        h = w / r;
+
+        let x, y;
+        if (signX > 0)      x = anchorX;
+        else if (signX < 0) x = anchorX - w;
+        else                x = anchorX - w / 2;
+
+        if (signY > 0)      y = anchorY;
+        else if (signY < 0) y = anchorY - h;
+        else                y = anchorY - h / 2;
 
         _normRect = { x, y, w, h };
     }
@@ -479,6 +559,8 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
             _normRect = initialRect;
             _applyRatioToRect();
             _setupEvents();
+            _unShiftDown = Hotkeys.register('shift',         () => { _shiftHeld = true;  });
+            _unShiftUp   = Hotkeys.registerKeyup('shift',    () => { _shiftHeld = false; });
             _redraw();
         },
 
@@ -489,15 +571,18 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
             if (!_isEnabled) return;
             _isEnabled = false;
             _removeEvents();
+            _unShiftDown?.(); _unShiftDown = null;
+            _unShiftUp?.();   _unShiftUp   = null;
+            _shiftHeld = false;
             const ctx = overlayCanvas.getContext('2d');
             ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         },
 
         /**
-         * Set aspect ratio (w/h). Pass null or 1 for free crop.
+         * Set aspect ratio (w/h). Pass null for FREE crop (no aspect lock).
          */
         setRatio(ratio) {
-            _lockedRatio = ratio || 1;
+            _lockedRatio = (ratio == null) ? null : ratio;
             _applyRatioToRect();
             _redraw();
         },

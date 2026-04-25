@@ -13,6 +13,8 @@
  *   null                  — no hit / not in crop mode
  */
 
+import { Hotkeys } from '../../../../managers/hotkeyManager.js';
+
 const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 
 export class CropManager {
@@ -34,6 +36,17 @@ export class CropManager {
         this._activeHandle   = null; // 'tl'|'tr'|'bl'|'br'|'t'|'b'|'l'|'r'|'body'|null
         this._dragStartRect  = null;
         this._dragStartMouse = null; // { x, y } in image coords at drag start
+
+        // Shift-from-center modifier
+        this._shiftHeld = false;
+        this._unShiftDown = Hotkeys.register('shift',      () => { this._shiftHeld = true;  });
+        this._unShiftUp   = Hotkeys.registerKeyup('shift', () => { this._shiftHeld = false; });
+    }
+
+    /** Tear down hotkey subscriptions. Call on canvas dispose. */
+    destroy() {
+        this._unShiftDown?.(); this._unShiftDown = null;
+        this._unShiftUp?.();   this._unShiftUp   = null;
     }
 
     /** Handle size in image pixels (scaled visually by draw) */
@@ -53,7 +66,8 @@ export class CropManager {
 
     /**
      * Set the locked ratio and immediately re-fit the crop rect.
-     * @param {number} ratio - width / height float (e.g. 4/5, 16/9)
+     * Pass `null` for FREE mode (no aspect lock).
+     * @param {number|null} ratio - width / height float, or null for free aspect
      */
     setRatio(ratio) {
         this.lockedRatio = ratio;
@@ -83,6 +97,13 @@ export class CropManager {
         if (!this._imgW || !this._imgH) return;
 
         const ratio = this.lockedRatio;
+
+        // FREE mode: full image rect, no ratio constraint
+        if (ratio == null) {
+            this.cropRect = { x: 0, y: 0, w: this._imgW, h: this._imgH };
+            return;
+        }
+
         let w, h;
 
         // Fit by width first
@@ -158,76 +179,158 @@ export class CropManager {
         const dy = imgY - this._dragStartMouse.y;
         const r  = this.lockedRatio;
         const sr = this._dragStartRect;
+        const isFree = (r == null);
 
-        let { x, y, w, h } = sr;
+        // ── Body drag: translate only, clamp position ─────────────────────
+        if (this._activeHandle === 'body') {
+            let x = sr.x + dx;
+            let y = sr.y + dy;
+            x = Math.max(0, Math.min(x, this._imgW - sr.w));
+            y = Math.max(0, Math.min(y, this._imgH - sr.h));
+            this.cropRect = { x, y, w: sr.w, h: sr.h };
+            return;
+        }
 
-        switch (this._activeHandle) {
-            case 'body':
-                x = sr.x + dx;
-                y = sr.y + dy;
-                break;
+        // ── FREE mode: each handle moves its axis independently ──────────
+        if (isFree) {
+            let { x, y, w, h } = sr;
+            const minSize = 20;
+            const m = this._shiftHeld ? 2 : 1;
+            switch (this._activeHandle) {
+                case 'tl': w = sr.w - m * dx; h = sr.h - m * dy; break;
+                case 'tr': w = sr.w + m * dx; h = sr.h - m * dy; break;
+                case 'bl': w = sr.w - m * dx; h = sr.h + m * dy; break;
+                case 'br': w = sr.w + m * dx; h = sr.h + m * dy; break;
+                case 't':  h = sr.h - m * dy; break;
+                case 'b':  h = sr.h + m * dy; break;
+                case 'l':  w = sr.w - m * dx; break;
+                case 'r':  w = sr.w + m * dx; break;
+            }
+            if (this._shiftHeld) {
+                const cx = sr.x + sr.w / 2;
+                const cy = sr.y + sr.h / 2;
+                x = cx - w / 2;
+                y = cy - h / 2;
+            } else {
+                switch (this._activeHandle) {
+                    case 'tl': x = sr.x + dx; y = sr.y + dy; break;
+                    case 'tr':                y = sr.y + dy; break;
+                    case 'bl': x = sr.x + dx;                break;
+                    case 't':  y = sr.y + dy; break;
+                    case 'l':  x = sr.x + dx; break;
+                }
+            }
+            // Min size + clamp inside image (each axis independent)
+            if (w < minSize) { x = sr.x + sr.w - minSize; w = minSize; }
+            if (h < minSize) { y = sr.y + sr.h - minSize; h = minSize; }
+            x = Math.max(0, x);
+            y = Math.max(0, y);
+            w = Math.min(w, this._imgW - x);
+            h = Math.min(h, this._imgH - y);
+            this.cropRect = { x, y, w, h };
+            return;
+        }
 
-            // Corners: drive one axis, derive the other from ratio
-            case 'tl': {
-                const newW = Math.max(20, sr.w - dx);
-                const newH = newW / r;
-                x = sr.x + sr.w - newW;
-                y = sr.y + sr.h - newH;
-                w = newW; h = newH;
-                break;
-            }
-            case 'tr': {
-                w = Math.max(20, sr.w + dx);
-                h = w / r;
-                y = sr.y + sr.h - h;
-                break;
-            }
-            case 'bl': {
-                h = Math.max(20, sr.h + dy);
-                w = h * r;
-                x = sr.x + sr.w - w;
-                break;
-            }
-            case 'br': {
-                w = Math.max(20, sr.w + dx);
-                h = w / r;
-                break;
-            }
+        // ── Ratio-locked: derive scale from active handle, then clamp scale
+        // by the tightest image-bound. Preserves ratio when hitting any edge.
+        const minSize = 20;
 
-            // Edges: one axis only, derive the other
-            case 't': {
-                h = Math.max(20, sr.h - dy);
-                w = h * r;
-                y = sr.y + sr.h - h;
-                x = sr.x + (sr.w - w) / 2;
-                break;
+        let anchorX, anchorY, signX, signY;
+        let targetW;
+
+        if (this._shiftHeld) {
+            // Scale from center: anchor = rect center; doubled deltas (mirror)
+            anchorX = sr.x + sr.w / 2;
+            anchorY = sr.y + sr.h / 2;
+            signX = 0;
+            signY = 0;
+            switch (this._activeHandle) {
+                case 'tl': targetW = sr.w - 2 * dx; break;
+                case 'tr': targetW = sr.w + 2 * dx; break;
+                case 'bl': targetW = sr.w - 2 * dx; break;
+                case 'br': targetW = sr.w + 2 * dx; break;
+                case 't':  targetW = (sr.h - 2 * dy) * r; break;
+                case 'b':  targetW = (sr.h + 2 * dy) * r; break;
+                case 'l':  targetW = sr.w - 2 * dx; break;
+                case 'r':  targetW = sr.w + 2 * dx; break;
             }
-            case 'b': {
-                h = Math.max(20, sr.h + dy);
-                w = h * r;
-                x = sr.x + (sr.w - w) / 2;
-                break;
-            }
-            case 'l': {
-                w = Math.max(20, sr.w - dx);
-                h = w / r;
-                x = sr.x + sr.w - w;
-                y = sr.y + (sr.h - h) / 2;
-                break;
-            }
-            case 'r': {
-                w = Math.max(20, sr.w + dx);
-                h = w / r;
-                y = sr.y + (sr.h - h) / 2;
-                break;
+        } else {
+            switch (this._activeHandle) {
+                case 'tl':
+                    anchorX = sr.x + sr.w; anchorY = sr.y + sr.h; signX = -1; signY = -1;
+                    targetW = sr.w - dx;
+                    break;
+                case 'tr':
+                    anchorX = sr.x;        anchorY = sr.y + sr.h; signX = +1; signY = -1;
+                    targetW = sr.w + dx;
+                    break;
+                case 'bl':
+                    anchorX = sr.x + sr.w; anchorY = sr.y;        signX = -1; signY = +1;
+                    targetW = sr.w - dx;
+                    break;
+                case 'br':
+                    anchorX = sr.x;        anchorY = sr.y;        signX = +1; signY = +1;
+                    targetW = sr.w + dx;
+                    break;
+                case 't': {
+                    const newH = sr.h - dy;
+                    targetW = newH * r;
+                    anchorX = sr.x + sr.w / 2; anchorY = sr.y + sr.h; signX = 0; signY = -1;
+                    break;
+                }
+                case 'b': {
+                    const newH = sr.h + dy;
+                    targetW = newH * r;
+                    anchorX = sr.x + sr.w / 2; anchorY = sr.y; signX = 0; signY = +1;
+                    break;
+                }
+                case 'l': {
+                    targetW = sr.w - dx;
+                    anchorX = sr.x + sr.w; anchorY = sr.y + sr.h / 2; signX = -1; signY = 0;
+                    break;
+                }
+                case 'r': {
+                    targetW = sr.w + dx;
+                    anchorX = sr.x;        anchorY = sr.y + sr.h / 2; signX = +1; signY = 0;
+                    break;
+                }
             }
         }
 
-        // Clamp inside image
-        x = Math.max(0, Math.min(x, this._imgW - w));
-        y = Math.max(0, Math.min(y, this._imgH - h));
-        w = Math.min(w, this._imgW - x);
-        h = Math.min(h, this._imgH - y);
+        // Min-size guard
+        let w = Math.max(minSize, targetW);
+        let h = w / r;
+        if (h < minSize) { h = minSize; w = h * r; }
+
+        // Clamp w/h together so the rect (anchored at anchor, growing in sign
+        // direction) stays inside [0..imgW] x [0..imgH]. Compute max allowed
+        // w, then refit h from w to keep ratio.
+        let maxW = w;
+
+        // Horizontal bound
+        if (signX > 0)      maxW = Math.min(maxW, this._imgW - anchorX);
+        else if (signX < 0) maxW = Math.min(maxW, anchorX);
+        else                maxW = Math.min(maxW, 2 * Math.min(anchorX, this._imgW - anchorX));
+
+        // Vertical bound — convert to width via ratio
+        let maxH;
+        if (signY > 0)      maxH = this._imgH - anchorY;
+        else if (signY < 0) maxH = anchorY;
+        else                maxH = 2 * Math.min(anchorY, this._imgH - anchorY);
+        maxW = Math.min(maxW, maxH * r);
+
+        w = Math.max(minSize, maxW);
+        h = w / r;
+
+        // Resolve x/y from anchor + sign
+        let x, y;
+        if (signX > 0)      x = anchorX;
+        else if (signX < 0) x = anchorX - w;
+        else                x = anchorX - w / 2;
+
+        if (signY > 0)      y = anchorY;
+        else if (signY < 0) y = anchorY - h;
+        else                y = anchorY - h / 2;
 
         this.cropRect = { x, y, w, h };
     }

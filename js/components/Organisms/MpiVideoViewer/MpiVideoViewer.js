@@ -117,7 +117,11 @@ export const MpiVideoViewer = ComponentFactory.create({
         _unsubs.push(() => _resizeObserver?.disconnect());
 
         _unsubs.push(on(_videoElement, 'loadedmetadata', () => {
-            if (_cropTool && _isInCropMode) _syncOverlayToVideo();
+            if (_cropTool && _isInCropMode) {
+                _syncOverlayToVideo();
+                // Re-apply ratio now that intrinsic videoWidth/Height are known
+                _cropTool.setRatio(_cropRatio);
+            }
         }));
 
         // ── Instance API ─────────────────────────────────────────────────
@@ -137,7 +141,7 @@ export const MpiVideoViewer = ComponentFactory.create({
 
             _syncOverlayToVideo();
 
-            if (_cropRatio !== null) _cropTool.setRatio(_cropRatio);
+            _cropTool.setRatio(_cropRatio);
         };
 
         el.exitCropMode = () => {

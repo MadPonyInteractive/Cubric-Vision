@@ -3,11 +3,20 @@
     flex-direction: column;
     gap: var(--space-2, 0.5rem);
     padding: var(--space-2, 0.5rem);
+    align-items: center;
 }
 
-.mpi-tool-options-crop__ratio {
+.mpi-tool-options-crop__family,
+.mpi-tool-options-crop__orientation,
+.mpi-tool-options-crop__ratios {
     display: flex;
     justify-content: center;
+}
+
+.mpi-tool-options-crop__family:empty,
+.mpi-tool-options-crop__orientation:empty,
+.mpi-tool-options-crop__ratios:empty {
+    display: none;
 }
 
 .mpi-tool-options-crop__actions {
