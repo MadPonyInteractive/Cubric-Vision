@@ -56,6 +56,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.css',
 
   // Organisms
+  'js/components/Organisms/MpiPromptBox/MpiPromptBox.css',
   'js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css',
   'js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css',
   'js/components/Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.css',
@@ -65,7 +66,6 @@ export const PRELOAD_COMPONENT_STYLES = [
 
   // Blocks
   'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',
-  'js/components/Blocks/MpiPromptBox/MpiPromptBox.css',
   'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css',
   'js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css',
 

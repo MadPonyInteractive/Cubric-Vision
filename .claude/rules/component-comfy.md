@@ -38,7 +38,7 @@ MpiPromptBox 'run' event
 
 ## PromptBoxControls Registry — static, do not regenerate
 
-**Location:** `js/components/Blocks/MpiPromptBox/PromptBoxControls.js`
+**Location:** `js/components/Organisms/MpiPromptBox/PromptBoxControls.js`
 
 **Current controls:**
 

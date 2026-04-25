@@ -3,7 +3,7 @@
  *
  * Thin coordinator. Mounts MpiHistoryTools, viewer (canvas or video), MpiHistoryList,
  * a per-tool MpiToolOptions* compound into #right-top-slot via a flat mediator,
- * and configures the shell-level PromptBox via PromptBoxService.
+ * and mounts MpiPromptBox directly into #prompt-box-mount.
  *
  * @param {string} groupId - ID of the ItemGroup to display (from router params)
  */
@@ -17,7 +17,7 @@ import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOp
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
-import { PromptBoxService } from '../../../shell/promptBoxService.js';
+import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
@@ -26,7 +26,7 @@ import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { startGeneration } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, gid } from '../../../utils/dom.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
@@ -69,7 +69,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 <div class="mpi-group-history-block__right-top"    id="right-top-slot"></div>
                 <div class="mpi-group-history-block__right-bottom" id="right-bottom-slot"></div>
             </div>
-            <div class="mpi-group-history-block__bottom" id="prompt-box-mount"></div>
+            <div class="mpi-group-history-block__bottom"></div>
         </div>
     `,
 
@@ -202,11 +202,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             el.classList.toggle('mpi-group-history-block--prompt-active', mode === 'prompt');
 
             if (mode === 'prompt') {
-                if (_hasPromptOps()) PromptBoxService.show();
+                if (_hasPromptOps()) _pb?.el?.show();
                 return;
             }
 
-            PromptBoxService.hide();
+            _pb?.el?.hide();
             if (!mode) return;
 
             const Compound = TOOL_OPTIONS_REGISTRY[mode];
@@ -323,7 +323,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     return;
                 }
                 const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
-                if (uploaded) PromptBoxService.injectMedia({ url: uploaded.filePath, mediaType });
+                if (uploaded) _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
             },
         });
         el.appendChild(_dropOverlay.el);
@@ -350,14 +350,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         window.addEventListener('dragover',  _onHistDragOver);
         window.addEventListener('drop',      _onHistDrop);
 
-        // ── PromptBox via PromptBoxService ────────────────────────────────────
+        // ── PromptBox ─────────────────────────────────────────────────────────
 
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
+        let _pb = null;
 
         /** Sync PromptBox operation list + preserve current choice when available. */
         function _refreshOpOptions() {
             const opts = _opOptions();
-            PromptBoxService.component?.updateContext({
+            _pb?.el?.updateContext({
                 ..._baseCtx,
                 hasMask: _canvasHasMask,
                 filterNoInputOps: true,
@@ -367,7 +368,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const fallback = opts.find(o => !o.disabled);
                 if (fallback) {
                     activeOperation = fallback.value;
-                    PromptBoxService.component?.setOperation(activeOperation);
+                    _pb?.el?.setOperation(activeOperation);
                 }
             }
         }
@@ -384,42 +385,41 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return has;
         }
 
-        let _promptBoxMounted = false;
         function _mountPromptBoxIfNeeded() {
-            if (_promptBoxMounted || !_hasPromptOps() || !activeModel) return false;
-            const promptBox = PromptBoxService.mount({
+            if (_pb?.el || !_hasPromptOps() || !activeModel) return false;
+
+            _pb?.el?.destroy?.();
+            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), {
                 model: activeModel,
                 modelList: installedModels,
                 operation: activeOperation,
                 includeNegative: true,
             });
-            if (!promptBox) return false;
+            _pb?.el?.hide();
 
-            _promptBoxMounted = true;
-
-            PromptBoxService.component?.updateContext({
+            _pb?.el?.updateContext({
                 ..._baseCtx,
                 hasMask: false,
                 filterNoInputOps: true,
             });
 
-            _unsubs.push(promptBox.on('settings', () => _settingsOverlay.el.open({ modelId: activeModel.id })));
-            _unsubs.push(promptBox.on('model-change', ({ model }) => {
+            _unsubs.push(_pb.on('settings', () => _settingsOverlay.el.open({ modelId: activeModel.id })));
+            _unsubs.push(_pb.on('model-change', ({ model }) => {
                 state.s_selectedModelId = model.id;
                 activeModelId = model.id;
                 activeModel = model;
-                PromptBoxService.component?.setModel(model);
+                _pb?.el?.setModel(model);
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
-            _unsubs.push(promptBox.on('operation-change', ({ operation }) => { activeOperation = operation; }));
-            _unsubs.push(promptBox.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
+            _unsubs.push(_pb.on('operation-change', ({ operation }) => { activeOperation = operation; }));
+            _unsubs.push(_pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
                 const maskDataUrl = viewer.el.hasMask?.()
                     ? viewer.el.getCurrentMaskDataURL?.()
                     : null;
                 _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams });
             }));
-            _unsubs.push(promptBox.on('cancel', () => {
+            _unsubs.push(_pb.on('cancel', () => {
                 _activeExec?.cancel();
                 _activeExec = null;
                 Events.emit('tool:cancelled', { tool: 'groupHistory' });
@@ -575,17 +575,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         historyList.on('selection-changed', ({ indices }) => {
             _currentSelectionIndices = indices;
             if (indices.length === 0) {
-                if (_hasPromptOps()) PromptBoxService.show();
+                if (_hasPromptOps()) _pb?.el?.show();
                 return;
             }
             // Any selection: ensure viewer is not in a tool mode.
             if (!isVideo) viewer.el.exitMode?.();
-            PromptBoxService.hide();
+            _pb?.el?.hide();
         });
 
         historyList.on('selection-exited', () => {
             if (!isVideo) viewer.el.clearCompare?.();
-            if (_hasPromptOps()) PromptBoxService.show();
+            if (_hasPromptOps()) _pb?.el?.show();
         });
 
         historyList.on('compare-requested', ({ indices }) => {
@@ -643,7 +643,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.on('entry-loaded', ({ idx, hasMask }) => {
                 _currentIdx = idx;
                 _canvasHasMask = hasMask;
-                PromptBoxService.component?.updateContext({
+                _pb?.el?.updateContext({
                     ..._baseCtx,
                     hasMask: _canvasHasMask,
                     filterNoInputOps: true,
@@ -657,12 +657,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Radial → operation sync ───────────────────────────────────────────
 
         _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
-            if (!PromptBoxService.component) return;
+            if (!_pb?.el) return;
             const opts = _opOptions();
             const match = opts.find(o => o.value === operation && !o.disabled);
             if (match) {
                 activeOperation = operation;
-                PromptBoxService.component?.setOperation(activeOperation);
+                _pb.el.setOperation(activeOperation);
             }
         }));
 
@@ -674,11 +674,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (newModel && newModel !== activeModel) {
                 activeModelId = value;
                 activeModel = newModel;
-                PromptBoxService.component?.setModel(newModel);
+                _pb?.el?.setModel(newModel);
                 _refreshOpOptions();
                 const nowHas = _syncPromptToolDisabled();
-                if (nowHas) _mountPromptBoxIfNeeded();
-                else        PromptBoxService.hide();
+                if (nowHas) {
+                    _mountPromptBoxIfNeeded();
+                    if (historyTools.el.getActiveMode() === 'prompt') _pb?.el?.show();
+                } else {
+                    _pb?.el?.hide();
+                }
             }
         }));
 
@@ -724,6 +728,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             historyTools.destroy?.();
             _modelsModal.destroy?.();
             _settingsOverlay.destroy?.();
+            _pb?.el?.destroy?.();
+            _pb = null;
         };
     },
 });

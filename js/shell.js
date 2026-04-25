@@ -20,7 +20,6 @@ import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDi
 import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiModelsModal } from './components/Blocks/MpiModelsModal/MpiModelsModal.js';
-import { PromptBoxService } from './shell/promptBoxService.js';
 import { getModelsByType } from './data/modelRegistry.js';
 
 // Shell Sub-modules
@@ -72,8 +71,6 @@ export async function initShell() {
   const radialMount = qs('#radial-mount');
   const monitorMount = qs('#memory-monitor-mount');
   const projectNameMount = qs('#project-name-mount');
-  const promptBoxMount = qs('#prompt-box-mount');
-  PromptBoxService.init(promptBoxMount);
 
   // 3. Mount Global HUD Components
   _projectNameInstance = MpiProjectName.mount(projectNameMount, {
@@ -198,12 +195,6 @@ async function _bootApp() {
   Events.on('models:all-installed', () => _modelsModal.el.hide());
   Events.on('models:closed', () => {
       _modelsModal.el.hide();
-      // Defer show() to next tick so overlay removal + stash restore
-      // settle first (avoids race where overlay is still in DOM when
-      // show() runs and immediate hide() from MpiGalleryBlock overrides it)
-      requestAnimationFrame(() => {
-          if (PromptBoxService.component) PromptBoxService.show();
-      });
   });
 
   // ComfyUI Auto-start (optional)

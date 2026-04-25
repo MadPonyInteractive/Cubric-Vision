@@ -10,8 +10,9 @@ import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
+import { getModelsByType } from '../../../data/modelRegistry.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, on } from '../../../utils/dom.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -21,8 +22,8 @@ import { qs } from '../../../utils/dom.js';
  * operation dropdown, op-specific controls) live inside a popup triggered by
  * the settings badge.
  *
- * Media chips render outside the box (above it) via PromptBoxService — the
- * component owns the media state and emits `media-change`, the service paints.
+ * Media chips render in a sibling `.mpi-prompt-box-media-strip` element above
+ * the box — the organism owns both the media state and the strip rendering.
  *
  * Instance API (on instance.el):
  *   el.imageCount / el.videoCount
@@ -43,7 +44,7 @@ import { qs } from '../../../utils/dom.js';
  */
 export const MpiPromptBox = ComponentFactory.create({
     name: 'MpiPromptBox',
-    css: ['js/components/Blocks/MpiPromptBox/MpiPromptBox.css'],
+    css: ['js/components/Organisms/MpiPromptBox/MpiPromptBox.css'],
 
     template: (props) => `
         <div class="mpi-prompt-box">
@@ -95,6 +96,9 @@ export const MpiPromptBox = ComponentFactory.create({
             ? model.supportedOps.some(op => (commands[op]?.requiresVideo  ?? 0) >= 1)
             : false;
 
+        /** @type {Array<Function>} Cleanup functions, all run in destroy. */
+        const _unsubs = [];
+
         // ── Media state ────────────────────────────────────────────────────────
         /** @type {Array<{id:string, url:string, file:File|null, mediaType:'image'|'video', source:'file'|'app'}>} */
         const _mediaItems = [];
@@ -134,6 +138,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 _refreshOpDropdown();
             }
 
+            _renderStrip([..._mediaItems]);
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, items: [..._mediaItems] });
         }
 
@@ -149,17 +154,17 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Drop events (on root el; overlay toggled via root modifier) ───────
         if (model) {
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev =>
-                el.addEventListener(ev, e => e.preventDefault())
+                _unsubs.push(on(el, ev, e => e.preventDefault()))
             );
 
-            el.addEventListener('dragenter', () => el.classList.add('mpi-prompt-box--drag-over'));
-            el.addEventListener('dragover',  () => el.classList.add('mpi-prompt-box--drag-over'));
-            el.addEventListener('dragleave', (e) => {
+            _unsubs.push(on(el, 'dragenter', () => el.classList.add('mpi-prompt-box--drag-over')));
+            _unsubs.push(on(el, 'dragover',  () => el.classList.add('mpi-prompt-box--drag-over')));
+            _unsubs.push(on(el, 'dragleave', (e) => {
                 if (!el.contains(e.relatedTarget))
                     el.classList.remove('mpi-prompt-box--drag-over');
-            });
+            }));
 
-            el.addEventListener('drop', async (e) => {
+            _unsubs.push(on(el, 'drop', async (e) => {
                 el.classList.remove('mpi-prompt-box--drag-over');
 
                 const appData = e.dataTransfer.getData('application/mpi-media');
@@ -196,7 +201,7 @@ export const MpiPromptBox = ComponentFactory.create({
                     emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
                     Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, thumbPath: uploaded.thumbPath, mediaType });
                 }
-            });
+            }));
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -226,6 +231,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.setModel = (newModel) => {
             model = newModel;
+            _currentModelType = newModel?.mediaType ?? _currentModelType;
             if (_modelDropdown) {
                 _modelDropdown.el.setOptions(
                     modelList.map(m => ({ value: m.id, label: m.name })),
@@ -248,6 +254,36 @@ export const MpiPromptBox = ComponentFactory.create({
             _refreshOpDropdown();
             _refreshOpSlot();
         };
+
+        // ── Show / hide ────────────────────────────────────────────────────────
+        el.show = () => { el.classList.remove('hide'); _stripEl?.classList.remove('hide'); };
+        el.hide = () => { el.classList.add('hide'); _stripEl?.classList.add('hide'); };
+
+        // ── Media strip rendering ──────────────────────────────────────────────
+        const _stripEl = document.createElement('div');
+        _stripEl.className = 'mpi-prompt-box-media-strip';
+        el.parentElement?.insertBefore(_stripEl, el);
+
+        function _renderStrip(items) {
+            if (!_stripEl) return;
+            _stripEl.innerHTML = '';
+            items.forEach(item => {
+                const chip = document.createElement('div');
+                chip.className = 'mpi-prompt-box-media-strip__chip';
+                chip.dataset.id = item.id;
+                chip.innerHTML = item.mediaType === 'image'
+                    ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="">
+                       <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`
+                    : `<div class="mpi-prompt-box-media-strip__video-thumb">${renderIcon('video', 'sm')}</div>
+                       <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`;
+                on(qs('.mpi-prompt-box-media-strip__remove', chip), 'click', (e) => {
+                    e.stopPropagation();
+                    el.removeMedia?.(item.id);
+                });
+                _stripEl.appendChild(chip);
+            });
+        }
+        _renderStrip([]);
 
         const _onSetOperation = ({ operation }) => el.setOperation(operation);
 
@@ -278,11 +314,18 @@ export const MpiPromptBox = ComponentFactory.create({
         };
         const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
 
-        /** @type {Array<Function>} */
-        const _unsubs = [
+        let _currentModelType = props.model?.mediaType ?? props.modelList?.[0]?.mediaType ?? null;
+
+        _unsubs.push(
             Events.on('workspace:set-operation', _onSetOperation),
             Events.on('workspace:inject-prompts', _onInjectPrompts),
-        ];
+            Events.on('promptbox:generation-end', () => el.setGenerating(false)),
+            Events.on('state:changed', ({ key }) => {
+                if (key !== 's_installedModelIds' || !_currentModelType) return;
+                const updated = getModelsByType(_currentModelType).filter(m => m.installed !== false);
+                el.setModelList(updated);
+            }),
+        );
 
         // ── Textarea ───────────────────────────────────────────────────────────
         const mainInput = MpiInput.mount(qs('#textarea-slot', el), {
@@ -299,12 +342,12 @@ export const MpiPromptBox = ComponentFactory.create({
             textareaEl.style.height = Math.min(Math.max(textareaEl.scrollHeight, 56), 224) + 'px';
         };
 
-        textareaEl.addEventListener('input', () => {
+        _unsubs.push(on(textareaEl, 'input', () => {
             updateHeight();
             if (isNegativeMode) negativeValue = textareaEl.value;
             else positiveValue = textareaEl.value;
             emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
-        });
+        }));
 
         setTimeout(updateHeight, 0);
 
@@ -413,7 +456,7 @@ export const MpiPromptBox = ComponentFactory.create({
             if (e.target.closest?.('.mpi-popup')) return;
             closePopup();
         };
-        document.addEventListener('click', onPopupOutsideClick);
+        _unsubs.push(on(document, 'click', onPopupOutsideClick));
         void cancelClose; void scheduleClose;
 
         _unsubs.push(Events.on('ui:close-all-popups', () => {
@@ -532,10 +575,10 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Negative mode toggle ───────────────────────────────────────────────
         if (props.includeNegative) {
-            MpiButton.mount(qs('#bottom-neg-slot', el), {
+            MpiButton.mount(qs('#bottom-right-slot', el), {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
-                size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
+                size: 'md', variant: 'primary', toggleable: true, active: isNegativeMode
             }).on('click', (data) => {
                 isNegativeMode = data.active;
                 textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
@@ -591,8 +634,9 @@ export const MpiPromptBox = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             domObserver.disconnect();
-            document.removeEventListener('click', onPopupOutsideClick);
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
+            _stripEl.remove();
+            el.remove();
         };
     }
 });

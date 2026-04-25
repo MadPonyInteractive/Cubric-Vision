@@ -2,12 +2,12 @@
  * MpiGalleryBlock — Block: project gallery workspace.
  *
  * Replaces gallery.js. Displays all ItemGroups as cards in an adaptive grid.
- * Drives the shell-level PromptBox via PromptBoxService — does NOT mount
- * MpiPromptBox itself. Running a generation creates a new ItemGroup.
+ * Mounts MpiPromptBox directly into #prompt-box-mount. Running a generation
+ * creates a new ItemGroup.
  *
  * Props: (none — reads from state.currentProject)
  *
- * Does NOT emit (communicates via Events and PromptBoxService).
+ * Does NOT emit (communicates via Events bus).
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -16,10 +16,10 @@ import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMed
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
-import { PromptBoxService } from '../../../shell/promptBoxService.js';
+import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
-import { ce, qs } from '../../../utils/dom.js';
+import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
@@ -81,7 +81,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     thumbPath: uploaded.thumbPath,
                     mediaType,
                 });
-                PromptBoxService.injectMedia({ url: uploaded.filePath, mediaType });
+                _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
             },
         });
         el.appendChild(dropOverlay.el);
@@ -209,7 +209,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _deleteDialog.el.show();
         });
 
-        // ── PromptBox setup via PromptBoxService ────────────────────────────────
+        // ── PromptBox setup ─────────────────────────────────────────────────────
         const { model: activeModelInit, modelId: activeModelIdInit, installedModels: installedImageModels } = resolveActiveModel('image');
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
@@ -218,6 +218,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
         let activeOperation = 't2i';
         let imageCount      = 0;
         let videoCount      = 0;
+
+        let _pb = null;
 
         function _wirePromptBox(pb) {
             if (!pb) return;
@@ -240,7 +242,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             pb.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
                 imageCount = ic;
                 videoCount = vc;
-                PromptBoxService.component?.updateContext({ imageCount, videoCount, hasMask: false });
+                _pb?.el?.updateContext({ imageCount, videoCount, hasMask: false });
                 refreshRadial({ imageCount, videoCount });
             });
 
@@ -278,6 +280,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const last = activeGenerations.listFor('gallery', null).at(-1);
                 if (last) activeGenerations.cancel(last.id);
             });
+        }
+
+        function _mountPb(props) {
+            _pb?.el?.destroy?.();
+            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), props);
+            return _pb;
         }
 
         // ── Registry event subscriptions (gallery-scoped) ─────────────────────
@@ -329,19 +337,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Model settings overlay
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-        // (Re)mount the shell-level PromptBox with this workspace's config
-        const promptBox = installedImageModels.length > 0
-            ? PromptBoxService.mount({
+        if (installedImageModels.length > 0) {
+            _pb = _mountPb({
                 model:           activeModel,
                 modelList:       installedImageModels,
                 operation:       activeOperation,
                 includeNegative: true,
-            })
-            : null;
-
-        if (promptBox) {
-            PromptBoxService.show();
-            _wirePromptBox(promptBox);
+            });
+            _pb?.el?.show();
+            _wirePromptBox(_pb);
         }
 
         // ── media:imported listener — registered unconditionally.
@@ -370,14 +374,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
 
-        // ── Selection mode: show/hide shell PromptBox ───────────────────────────
-        grid.on('selection-start', () => PromptBoxService.hide());
-        grid.on('selection-end',   () => PromptBoxService.show());
+        // ── Selection mode: show/hide PromptBox ────────────────────────────────
+        grid.on('selection-start', () => _pb?.el?.hide());
+        grid.on('selection-end',   () => _pb?.el?.show());
 
         // ── Radial → operation sync ─────────────────────────────────────────────
         _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
             activeOperation = operation;
-            PromptBoxService.component?.setOperation(activeOperation);
+            _pb?.el?.setOperation(activeOperation);
         }));
 
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
@@ -397,21 +401,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // When the modal closes (models:closed), check if PromptBox needs to be mounted.
         _unsubs.push(Events.on('models:closed', () => {
             const currentModels = getModelsByType('image').filter(m => m.installed !== false);
-            // Remount PromptBox if no component is mounted but models are available
-            if (!PromptBoxService.component && currentModels.length > 0) {
+            if (!_pb?.el && currentModels.length > 0) {
                 const newModel = currentModels.find(m => m.id === state.s_selectedModelId) || currentModels[0];
                 activeModel = newModel;
                 activeModelId = newModel.id;
                 state.s_selectedModelId = newModel.id;
-                const newPromptBox = PromptBoxService.mount({
+                _pb = _mountPb({
                     model: newModel,
                     modelList: currentModels,
                     operation: activeOperation,
                     includeNegative: true,
                 });
-
-                _wirePromptBox(newPromptBox);
-                PromptBoxService.show();
+                _wirePromptBox(_pb);
+                _pb?.el?.show();
             }
         }));
 
@@ -428,6 +430,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _compareOverlay.destroy?.();
             _deleteDialog.destroy?.();
             _settingsOverlay.destroy?.();
+            _pb?.el?.destroy?.();
+            _pb = null;
         };
     },
 });

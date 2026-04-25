@@ -9,7 +9,6 @@
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
 import { createImageItem, createVideoItem, createItemGroup, appendToHistory } from '../data/projectModel.js';
-import { PromptBoxService } from '../shell/promptBoxService.js';
 import { StatusBar } from '../shell/statusBar.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
@@ -85,7 +84,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     exec.onProgress = (value) => StatusBar.progress.update(value);
 
     exec.onComplete = async (urls) => {
-        PromptBoxService.component?.setGenerating(false);
+        Events.emit('promptbox:generation-end');
 
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
@@ -185,7 +184,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     };
 
     exec.onError = (err) => {
-        PromptBoxService.component?.setGenerating(false);
+        Events.emit('promptbox:generation-end');
         Events.emit('tool:cancelled', { tool: 'groupHistory' });
         const _errEntry = activeGenerations.get(_regId);
         const _errTempId = _errEntry?.tempId ?? null;

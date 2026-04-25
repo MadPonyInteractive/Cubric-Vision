@@ -8,8 +8,8 @@
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
-- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags; `onDrop` uploads file, emits `media:imported`, then calls `PromptBoxService.injectMedia()`
-- `PromptBoxService.mount()`   config: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   — mounts shell-level PromptBox; only called when `installedImageModels.length > 0`
+- `MpiMediaDropOverlay`   props: `{ onDrop({ file, mediaType }) }` callback   slot: `document.createElement('div')` appended to `el` — full-area OS-file drop target; shown/hidden via window `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); ignores internal `application/mpi-media` drags; `onDrop` uploads file, emits `media:imported`, then calls `_pb?.el?.injectMedia()` (Block-local handle)
+- `MpiPromptBox` (Organism)   props: `{ model, modelList: installedImageModels, operation: 't2i', includeNegative: true }`   slot: `gid('prompt-box-mount')` — Block keeps handle in `_pb`, destroys before remount AND in `el.destroy`; only mounted when `installedImageModels.length > 0`
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare-requested'` event from MpiGalleryGrid
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
@@ -45,12 +45,12 @@ const TOOL_OPTIONS_REGISTRY = {
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars
 - Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`
-- `PromptBoxService.mount()` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op)
+- `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 
 **Video groups** (`_group.type === 'video'`):
 - `MpiVideoViewer`   props: `{ fps, controls }`   slot: `#centre-slot`
 - Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`
-- `PromptBoxService.mount()` — only when `_hasPromptOps()` true (video model exposes prompt ops)
+- `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (video model exposes prompt ops); Block keeps handle in `_pb`
 
 ---
 
@@ -101,7 +101,7 @@ Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 - `MpiModelsModal`     props: `{ icon, title, text, footer, closable: true }`   slot: `document.createElement('div')` — shown on `models:open` event or when zero image models installed
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
-- `PromptBoxService`   initialized against `#prompt-box-mount` — workspaces claim via `PromptBoxService.mount(config)`
+- `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.
 
 > **Rule:** Never mount any of the above singletons inside workspace Blocks. Use Events to trigger them.
 

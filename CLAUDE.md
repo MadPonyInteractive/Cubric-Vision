@@ -105,8 +105,8 @@ If you need to know what gets injected into ComfyUI workflows, which component i
 **->** **MUST READ:** `.claude/rules/component-comfy.md`
 
 ### Shell Services & Managers
-If you are working with shell-level services (e.g., PromptBoxService) or managers (Overlays, Hotkeys, StatusBar):
-**->** **MUST READ:** `docs/shell.md` for service documentation AND `.claude/rules/components.md` section "Service Ownership & Reactive Behavior"
+If you are working with shell-level managers (Overlays, Hotkeys, StatusBar):
+**->** **MUST READ:** `docs/shell.md` for service documentation
 
 ### Debugging & Errors
 If you are trying to fix a bug, a server crash, or an issue with the python engine:

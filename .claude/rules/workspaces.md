@@ -11,7 +11,7 @@
 **Gallery Block:** `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` — lazy-loaded by `navigation.js`.
 **Group History Block:** `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` — lazy-loaded by `navigation.js`.
 
-**PromptBox:** NOT mounted directly by workspaces. Always use `PromptBoxService.mount(config)` to claim the shell-level PromptBox. Shell owns the `#prompt-box-mount` container.
+**PromptBox:** Mount the `MpiPromptBox` Organism directly into `#prompt-box-mount` (`gid('prompt-box-mount')`). Block keeps the handle in `_pb`; call `_pb?.destroy?.()` before remount AND in Block `el.destroy`. Slot is shell-owned (declared in `index.html`), persists across workspace switches.
 
 **Dev Components Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.
 
@@ -26,9 +26,9 @@ Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History 
 
 1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, Landing overlay pages (`MpiSettings`, `MpiHelp`, `MpiAbout`), and (under Electron only) `MpiProjectDropOverlay` for drag-and-drop project import — dropping a project folder or `project.json` registers the folder's parent in the extra project paths list and refreshes the grid (does not auto-open).
 
-2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid`. Drives shell PromptBox via `PromptBoxService`. Navigate to group history on card open.
+2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid` + `MpiPromptBox` (Organism) directly into `#prompt-box-mount`. Navigate to group history on card open.
 
-3. **Group History Workspace** — `MpiGroupHistoryBlock`. Photoshop-style layout: left toolbar (`#left-slot`), centre viewer (`#centre-slot`), right panel split into props bar (`#right-top-slot`) + history list (`#right-bottom-slot`). PromptBox is shell-managed at `#prompt-box-mount` (centre-bottom, CSS class `--prompt-active` shows/hides it). Active tool controlled by block-local mediator `mountOptions(mode)` — NOT a `state` key. Drives shell PromptBox via `PromptBoxService`.
+3. **Group History Workspace** — `MpiGroupHistoryBlock`. Photoshop-style layout: left toolbar (`#left-slot`), centre viewer (`#centre-slot`), right panel split into props bar (`#right-top-slot`) + history list (`#right-bottom-slot`). PromptBox (Organism) mounted by Block directly into `#prompt-box-mount` (centre-bottom, CSS class `--prompt-active` shows/hides it). Active tool controlled by block-local mediator `mountOptions(mode)` — NOT a `state` key.
 
 ---
 
@@ -41,7 +41,7 @@ Mounted once in `js/shell.js` — never re-mount these in workspace code:
 | `MpiErrorDialog` | `ui:error` event |
 | `MpiStartingComfy` | `comfy:starting` / `comfy:ready` events |
 | `MpiModelsModal` | `models:open` event / zero installed models |
-| `PromptBoxService` | initialized in `shell.js`, claimed by each workspace |
+| `#prompt-box-mount` slot | declared in `index.html`; Blocks mount `MpiPromptBox` Organism into it |
 
 ---
 

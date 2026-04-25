@@ -261,7 +261,7 @@
 
 
 /**
- * @typedef {Object} MpiPromptBoxProps (Block — js/components/Blocks/MpiPromptBox)
+ * @typedef {Object} MpiPromptBoxProps (Organism — js/components/Organisms/MpiPromptBox)
  * @property {import('./data/modelRegistry.js').ModelDef|null} [model=null]
  * @property {import('./data/modelRegistry.js').ModelDef[]} [modelList=[]]
  * @property {string} [operation='t2i']
@@ -725,8 +725,8 @@
  * @typedef {Object} MpiGalleryBlockProps
  * — No props. Reads state.currentProject directly.
  *
- * Emits: (none — uses Events bus and PromptBoxService)
- * Uses: state.currentProject, state.s_selectedModelId, PromptBoxService
+ * Emits: (none — uses Events bus)
+ * Uses: state.currentProject, state.s_selectedModelId
  */
 
 /**
@@ -775,8 +775,8 @@
  * @typedef {Object} MpiGroupHistoryBlockProps (Block — js/components/Blocks/MpiGroupHistoryBlock)
  * @property {string} groupId - ID of the ItemGroup to display (from router params)
  *
- * Emits: (none — uses Events bus and PromptBoxService)
- * Uses: state.currentProject, state.s_selectedModelId, PromptBoxService
+ * Emits: (none — uses Events bus)
+ * Uses: state.currentProject, state.s_selectedModelId
  */
 
 /**
@@ -938,15 +938,6 @@
  * Auto-hides on global `ui:close-all-popups` event (Escape key).
  *
  * Does NOT emit component-level events and does NOT upload — callers own side effects.
- */
-
-/**
- * PromptBoxService — Shell-level singleton wrapper around MpiPromptBox.
- *
- * Additional method (beyond existing):
- *   injectMedia({ url, mediaType }) → boolean
- *     — Delegates to mounted MpiPromptBox el.injectMedia(). Returns false if no
- *       instance is mounted or the model rejects the type (toast already fired).
  */
 
 /**

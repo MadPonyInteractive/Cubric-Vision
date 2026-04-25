@@ -11,6 +11,7 @@
     box-sizing: border-box;
     overflow: hidden;
     backdrop-filter: blur(12px);
+    min-width: 500px;
     bottom: 36px;
     left: 50%;
     transform: translate(-50%);
@@ -203,7 +204,7 @@
     flex-wrap: wrap;
 }
 
-/* ── External media strip (rendered by promptBoxService) ─────────────────── */
+/* ── Media strip (sibling element rendered by organism) ──────────────────── */
 
 .mpi-prompt-box-media-strip {
     position: fixed;
