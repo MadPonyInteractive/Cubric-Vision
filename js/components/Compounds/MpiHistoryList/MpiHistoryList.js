@@ -23,6 +23,7 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
+import { qs } from '../../../utils/dom.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 
@@ -113,6 +114,11 @@ export const MpiHistoryList = ComponentFactory.create({
                 if (e.shiftKey) {
                     _rangeSelect(idx);
                 } else if (e.ctrlKey || e.metaKey) {
+                    if (!_selectMode && _selection.size === 0) {
+                        _selection.add(_selectedIdx);
+                        _anchor = _selectedIdx;
+                        _selectMode = true;
+                    }
                     _toggleSelect(idx);
                 } else {
                     _exitSelectMode();
@@ -158,7 +164,7 @@ export const MpiHistoryList = ComponentFactory.create({
 
         function _buildHistoryCards() {
             _dimsLogged = false;
-            const container = el.querySelector('#cards-slot');
+            const container = qs('#cards-slot', el);
             container.innerHTML = '';
             _historyCards.length = 0;
 
@@ -235,7 +241,7 @@ export const MpiHistoryList = ComponentFactory.create({
 
         el.appendEntry = (item) => {
             _history = [..._history, item];
-            const container = el.querySelector('#cards-slot');
+            const container = qs('#cards-slot', el);
             const idx = _history.length - 1;
             const card = _makeCard(item, idx);
             container.appendChild(card);

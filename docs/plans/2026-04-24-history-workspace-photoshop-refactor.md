@@ -393,7 +393,7 @@ Where `TOOL_OPTIONS_REGISTRY`:
 
 Contents moved into to-do 7's §7 and §8. Keep this row marked done after to-do 7 lands.
 
-### [ ] 9. Cleanup sweep — dead code, dead events, `_unsubs` coverage, lint
+### [x] 9. Cleanup sweep — dead code, dead events, `_unsubs` coverage, lint
 
 - `grep -r "MpiSelectionBar\|MpiRatioSelector\|MpiNumberSelector\|MpiToolActionBar\|imageStrategy\|videoStrategy\|supportsPromptBox\|supportsSelection\|selectionbar-slot\|#bottom-slot\|_hideAllVideoBars" js/ styles/` returns zero hits outside intentional new code.
 - Run `/mpi-component-audit` (ESLint audit) on `js/components/`. Report violations — fix any in files touched during this refactor.
