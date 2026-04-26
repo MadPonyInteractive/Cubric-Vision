@@ -63,6 +63,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.css',
   'js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.css',
   'js/components/Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.css',
+  'js/components/Organisms/MpiToolOptionsRaw/MpiToolOptionsRaw.css',
 
   // Blocks
   'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',

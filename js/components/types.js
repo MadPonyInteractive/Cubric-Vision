@@ -66,6 +66,22 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsRawProps (Organism — js/components/Organisms/MpiToolOptionsRaw)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * Requires viewer.el: getCurrentEntry?() → { filePath, folderPath, groupId, id },
+ *   getImageEl?() → HTMLImageElement (for CSS filter preview),
+ *   setPreviewSrc?(base64) — swap canvas src with debounced Sharp preview.
+ *
+ * Params: exposure (-300..300 internal, ÷100 = EV), shadows, curve, whiteBalance,
+ *   saturation, dehaze, sharpening, noiseReduction, grain,
+ *   hueR/G/B, satR/G/Y (calibration, collapsible).
+ *
+ * Public API: el.reset() — zeroes all sliders + clears CSS filter.
+ * Emits: 'apply' { item } — full-res Sharp bake complete, item for appendToHistory.
+ */
+
+/**
  * MpiOptionSelector `buttons` variant (extends MpiOptionSelector):
  *   buttons: [{ icon, label?, value, info? }]
  *   triggerIcon?, triggerSize?, triggerVariant?, triggerActive?, popupTitle?, info?

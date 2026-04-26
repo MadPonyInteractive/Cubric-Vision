@@ -150,6 +150,20 @@
     }
 }
 
+/* ── Bipolar variant (center-origin fill) ─────────────────────────────────── */
+
+.mpi-progress--bipolar .mpi-progress__track-fill {
+    left: 50%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--neon-electric) 100%);
+    box-shadow: 0 0 10px var(--primary-glow-sm);
+}
+
+.mpi-progress--bipolar.mpi-progress--bipolar-neg .mpi-progress__track-fill {
+    background: linear-gradient(270deg, var(--primary) 0%, var(--neon-electric) 100%);
+    box-shadow: 0 0 10px var(--primary-glow-sm);
+}
+
 .mpi-progress--loading .mpi-progress__track-fill {
     background: linear-gradient(90deg,
         rgba(59, 130, 246, 0.3) 0%,

@@ -17,6 +17,7 @@ import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOp
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
+import { MpiToolOptionsRaw } from '../../Organisms/MpiToolOptionsRaw/MpiToolOptionsRaw.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -54,6 +55,7 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
+    raw:          MpiToolOptionsRaw,
 };
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
@@ -238,6 +240,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
             if (mode === 'interpolate') {
                 return _runVideoTool('interpolate', { Interp_Multiplier: payload.multiplier ?? 2 });
+            }
+            if (mode === 'raw') {
+                const { item } = payload;
+                _group = appendToHistory(_group, item);
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.appendEntry(item);
+                viewer.el.loadEntry?.(item, _currentIdx);
+                viewer.el.setMaskHidden?.(false);
+                return;
             }
         }
 

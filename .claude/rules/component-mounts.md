@@ -32,6 +32,7 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
+    raw:          MpiToolOptionsRaw,
 };
 ```
 
@@ -44,7 +45,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsRaw`
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 
 **Video groups** (`_group.type === 'video'`):
@@ -56,7 +57,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 ## MpiToolOptions* (Organisms — js/components/Organisms/MpiToolOptions<Name>/)
 
-Four self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
+Five self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
 
 **Pattern:** `setup` enters viewer mode → owns controls → `destroy` evaluates mask + exits viewer mode. No apply buttons on mask panel (PromptBox drives ops). No cancel buttons.
 
@@ -64,6 +65,7 @@ Four self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 - `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
+- `MpiToolOptionsRaw`   props: `{ viewer }`   — Light/Color/Detail/Calibration sections with `MpiProgressBar` bipolar sliders, canvas point-curve editor, `MpiRadioGroup` WB (As shot/Auto). Apply → POST `/api/image/adjust` → emits `apply { item }`. CSS preview on slider drag; Auto WB via client-side grey-world pixel sampling. `destroy` clears CSS filter.
 
 ---
 
