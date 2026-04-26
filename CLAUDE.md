@@ -114,8 +114,9 @@ If you are trying to fix a bug, a server crash, or an issue with the python engi
 
 ### Browser Automation (playwright-cli)
 If you need to run browser automation or test web interfaces:
-**->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`)
-http://127.0.0.1:3000/**->** **Important:** The app runs on http://127.0.0.1:3000/
+**->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`) — installed globally (`npm i -g @playwright/cli`); skill at `~/.claude/skills/playwright-cli` (all projects).
+**->** **Important:** App runs on http://127.0.0.1:3000/ (browser is dev-only — most features broken in browser; Electron desktop is the ship target).
+**->** **MANDATORY: Run HEADED, not headless.** Always pass `--headed` (or `headless: false` programmatically) so the user can see the browser window. Headless = silent failure for visual bugs. Capture screenshots on key steps + on every failure for evidence.
 
 ### Git and Commits
 NEVER commit to git unless user specifically asks for it
