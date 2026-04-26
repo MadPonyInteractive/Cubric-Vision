@@ -26,6 +26,7 @@
     "node-7z": "^3.0.0",
     "node-downloader-helper": "^2.1.11",
     "sharp": "^0.34.5",
+    "trash": "^8.1.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -38,6 +39,8 @@
     "lint-staged": "^16.4.0"
   },
   "lint-staged": {
-    "js/**/*.js": ["eslint --no-error-on-unmatched-pattern --max-warnings=9999"]
+    "js/**/*.js": [
+      "eslint --no-error-on-unmatched-pattern --max-warnings=9999"
+    ]
   }
 }
