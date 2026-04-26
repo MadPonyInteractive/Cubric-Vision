@@ -70,6 +70,7 @@ export const MpiOverlay = ComponentFactory.create({
         let _isHiding = false;  // Guard against double-call of hide()
         let _isShown = false;   // Guard against re-entrant show() during Overlays.request
         let _overlayEntry = null;
+        let _zIndex = null;
         const _overlayId = Math.random().toString(36).slice(2, 9);
 
         const _doShow = () => {
@@ -85,6 +86,7 @@ export const MpiOverlay = ComponentFactory.create({
             if (useBackdrop) {
                 _backdrop = document.createElement('div');
                 _backdrop.className = 'mpi-overlay-backdrop';
+                if (_zIndex !== null) _backdrop.style.zIndex = _zIndex - 1;
                 _target.appendChild(_backdrop);
             }
 
@@ -108,6 +110,7 @@ export const MpiOverlay = ComponentFactory.create({
             });
 
             _target.appendChild(_stash);
+            if (_zIndex !== null) el.style.zIndex = _zIndex;
             _target.appendChild(el);
             _isShown = true;
         };
@@ -115,7 +118,8 @@ export const MpiOverlay = ComponentFactory.create({
         el.show = () => {
             if (_isShown) return;
             _overlayEntry = { show: _doShow, hide: el.hide, id: el };
-            Overlays.request(_overlayEntry);
+            const { zIndex } = Overlays.request(_overlayEntry);
+            _zIndex = zIndex;
         };
 
         el.hide = () => {
@@ -147,6 +151,7 @@ export const MpiOverlay = ComponentFactory.create({
 
             _target = null;
             _isShown = false;
+            _zIndex = null;
             emit('close', {});
             Overlays.release(_overlayEntry);
             _overlayEntry = null;

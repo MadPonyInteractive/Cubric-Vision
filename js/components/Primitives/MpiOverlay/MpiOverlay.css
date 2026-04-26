@@ -15,7 +15,7 @@
 .mpi-overlay-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 400;
+    z-index: 10009; /* fallback; JS overrides via inline style */
     background: var(--bg);
 }
 
@@ -37,14 +37,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 200;
+    z-index: 10010; /* fallback; JS overrides via inline style */
     background: var(--bg);
 }
 
 /* ── Body mode — full viewport on top of backdrop ───────────── */
 .mpi-overlay--body {
     inset: 0;
-    z-index: 401;
+    z-index: 10010; /* fallback; JS overrides via inline style */
 }
 
 @keyframes mpi-overlay-fadein {

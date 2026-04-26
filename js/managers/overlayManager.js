@@ -1,16 +1,3 @@
-/**
- * js/managers/overlayManager.js — Queue-based Blocking UI Controller.
- * 
- * Ensures only one "blocking" overlay (Modal, Overlay, Dialog) is visible at a time.
- * If multiple requests occur, they are queued and shown sequentially.
- * This manager allows for a "priority"-agnostic flow where the user finishes one 
- * task before moving to the next.
- * 
- * Integration:
- * - Register via OverlayManager.request(instance)
- * - Release via OverlayManager.release(instance)
- */
-
 'use strict';
 
 import { Hotkeys } from './hotkeyManager.js';
@@ -23,109 +10,106 @@ import { Events } from '../events.js';
  * @property {HTMLElement} [el] - Root element (for focus management)
  */
 
+const BASE_Z = 10000;
+const STEP_Z = 10;
+
 class OverlayManager {
     constructor() {
-        /** @type {MpiOverlayInstance|null} Current visible overlay */
-        this._active = null;
-        
-        /** @type {MpiOverlayInstance[]} Pending overlays */
-        this._queue = [];
+        /** @type {MpiOverlayInstance[]} Stack of active overlays, top = last */
+        this._stack = [];
 
-        // Attach global Escape key listener via HotkeyManager
-        Hotkeys.bind('overlay.close', () => this.tryCloseActive());
+        /** @type {Array<function(): void>} Depth-change subscribers */
+        this._depthSubs = [];
+
+        Hotkeys.bind('overlay.close', () => this.closeTopOverlay());
     }
 
     /**
-     * Request an overlay to be shown. If another is already active, it will be queued.
-     * @param {MpiOverlayInstance} instance - Any component instance with show/hide methods
+     * Push instance onto stack and show it immediately.
+     * @param {MpiOverlayInstance} instance
+     * @returns {{ depth: number, zIndex: number }}
      */
     request(instance) {
         if (!instance || typeof instance.show !== 'function') {
-            console.error('[Overlays] Invalid instance requested. Must implement .show()');
-            return;
+            console.error('[Overlays] Invalid instance — must implement .show()');
+            return { depth: 0, zIndex: BASE_Z };
         }
 
-        if (this._active && this._active !== instance) {
-            this._queue.push(instance);
-        } else {
-            this._setActive(instance);
+        Events.emit('ui:close-all-popups');
+        this._stack.push(instance);
+        const depth = this._stack.length;
+        const zIndex = BASE_Z + depth * STEP_Z;
+
+        try {
+            instance.show();
+        } catch (err) {
+            console.error('[Overlays] Error showing overlay:', err);
+            this._stack.pop();
+            return { depth: 0, zIndex: BASE_Z };
         }
+
+        this._notifyDepthChange();
+        return { depth, zIndex };
     }
 
     /**
-     * Notifies the manager that an overlay has finished/closed.
-     * This will trigger the next item in the queue.
-     * @param {any} instance - The instance or its unique ID (el)
+     * Remove instance from stack (any position).
+     * @param {MpiOverlayInstance} instance
      */
     release(instance) {
-        const isActiveMatch = this._active === instance || (this._active && this._active.id === instance);
-
-        if (isActiveMatch) {
-            this._active = null;
-            this._checkQueue();
-        } else {
-            this._queue = this._queue.filter(i => (i !== instance && i.id !== instance));
+        const idx = this._stack.indexOf(instance);
+        if (idx !== -1) {
+            this._stack.splice(idx, 1);
+            this._notifyDepthChange();
         }
     }
 
     /**
-     * Force-clears all overlay state without calling hide().
-     * Call this before navigation tears down #tool-container so the queue
-     * doesn't get stuck thinking an overlay is still active.
+     * Close top-of-stack overlay (Escape).
+     * @returns {boolean}
      */
-    reset() {
-        Events.emit('ui:close-all-popups');
-        this._active = null;
-        this._queue = [];
-    }
-
-    /**
-     * Attempts to close the current active overlay (triggered by Escape or global logic).
-     * @returns {boolean} - True if an overlay was closed
-     */
-    tryCloseActive() {
-        if (this._active) {
-            // Check if the component allows immediate closure
-            // We follow the user request to "close immediately"
-            if (typeof this._active.hide === 'function') {
-                this._active.hide();
-                // Note: The component should call OverlayManager.release() during its hide() cleanup
-                // But as a safety guard, we ensure state here or call release
-                return true;
-            }
+    closeTopOverlay() {
+        if (!this._stack.length) return false;
+        const top = this._stack[this._stack.length - 1];
+        if (typeof top.hide === 'function') {
+            top.hide();
+            return true;
         }
         return false;
     }
 
     /**
-     * Show next item in the queue if available.
-     * @private
+     * Check if instance is the current top of stack.
+     * @param {MpiOverlayInstance} instance
+     * @returns {boolean}
      */
-    _checkQueue() {
-        if (this._queue.length > 0) {
-            this._setActive(this._queue.shift());
-        }
+    isTop(instance) {
+        return this._stack.length > 0 && this._stack[this._stack.length - 1] === instance;
     }
 
     /**
-     * Direct call to show an overlay
-     * @param {MpiOverlayInstance} instance 
-     * @private
+     * Subscribe to stack depth changes (fires after push/pop).
+     * @param {function(): void} cb
+     * @returns {function(): void} unsubscribe
      */
-    _setActive(instance) {
-        this._active = instance;
+    onDepthChange(cb) {
+        this._depthSubs.push(cb);
+        return () => { this._depthSubs = this._depthSubs.filter(s => s !== cb); };
+    }
 
-        // Force-close any unmanaged floating UI (Popups, Dropdowns, etc.)
+    /**
+     * Force-clear all overlay state without calling hide().
+     */
+    reset() {
         Events.emit('ui:close-all-popups');
+        this._stack = [];
+        this._notifyDepthChange();
+    }
 
-        try {
-            if (typeof instance.show === 'function') {
-                instance.show();
-            }
-        } catch (err) {
-            console.error('[Overlays] Error showing overlay:', err);
-            this._active = null;
-            this._checkQueue();
+    /** @private */
+    _notifyDepthChange() {
+        for (const cb of this._depthSubs) {
+            try { cb(); } catch (e) { console.error('[Overlays] depthChange subscriber error:', e); }
         }
     }
 }

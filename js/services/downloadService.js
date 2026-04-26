@@ -77,20 +77,22 @@ const downloadService = {
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
-    async uninstall(modelId, dependencies) {
+    async uninstall(modelId, dependencies, deleteFiles = true) {
         const res = await fetch('/comfy/models/uninstall', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId, dependencies }),
+            body: JSON.stringify({ modelId, dependencies, deleteFiles }),
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: 'Uninstall failed' }));
             Events.emit('ui:error', { title: 'Uninstall Failed', message: err.error });
             return;
         }
+        const json = await res.json();
+        const { removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = json;
+        Events.emit('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
-        Events.emit('download:uninstalled', { modelId });
     },
 
     _ensureSSE() {
@@ -247,9 +249,10 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:uninstalled', (e) => {
             const data = JSON.parse(e.data);
-            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
+            const { modelId, removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = data;
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
-            Events.emit('download:uninstalled', data);
+            Events.emit('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
             reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after uninstall failed:', err));
         });
 

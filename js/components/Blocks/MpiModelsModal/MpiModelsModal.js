@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiInstalledDisplay } from '../../Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
+import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { renderIcon } from '../../../utils/icons.js';
@@ -11,6 +12,7 @@ import { DEPS } from '../../../data/modelConstants/dependencies.js';
 import { downloadService } from '../../../services/downloadService.js';
 import { qs, qsa, ce, on } from '../../../utils/dom.js';
 import { formatBytes } from '../../../utils/formatBytes.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiModelsModal — Block: Zero-Installed State Overlay
@@ -105,6 +107,24 @@ export const MpiModelsModal = ComponentFactory.create({
         _unsubs.push(on(refreshBtn.el, 'click', () => {
             awaitReSync();
         }));
+
+        // ── Uninstall confirm dialog (shared across all cards) ────────────
+        let _pendingUninstall = null; // { modelId, deps, name }
+        const _uninstallDialog = MpiOkCancel.mount(document.createElement('div'), {
+            title:       'Uninstall model',
+            text:        'Delete this model?\n• Files shared with other installed models will be kept.',
+            okLabel:     'Uninstall',
+            cancelLabel: 'Cancel',
+            checkbox:    { label: 'Also delete model files from disk', checked: true },
+        });
+        _uninstallDialog.on('ok', async ({ checkboxChecked }) => {
+            const pending = _pendingUninstall;
+            _pendingUninstall = null;
+            if (!pending) return;
+            await downloadService.uninstall(pending.modelId, pending.deps, checkboxChecked);
+            await reSyncInstalledModels();
+        });
+        _uninstallDialog.on('cancel', () => { _pendingUninstall = null; });
 
         // ── Install a model (non-blocking via downloadService) ───────────────
         async function _installModel(model) {
@@ -248,9 +268,9 @@ export const MpiModelsModal = ComponentFactory.create({
                         card.on('cancel', cancelCb);
                         _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
                     } else {
-                        card.on('uninstall', async () => {
-                            await downloadService.uninstall(model.id, deps);
-                            await reSyncInstalledModels();
+                        card.on('uninstall', () => {
+                            _pendingUninstall = { modelId: model.id, deps, name: model.name };
+                            _uninstallDialog.el.show();
                         });
                     }
 
@@ -443,6 +463,29 @@ export const MpiModelsModal = ComponentFactory.create({
             awaitReSync();
         }));
 
+        _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
+            const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
+            const keptTotal = keptShared.length + keptModelFiles.length + keptPipInstalls.length;
+            if (removed.length > 0 && keptTotal === 0) {
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} removed` });
+            } else if (removed.length === 0) {
+                Events.emit('ui:warning', { title: 'Nothing removed', message: 'All files were kept (shared with other models, pip-installed, or inside your models folder).' });
+            } else {
+                const parts = [];
+                if (keptShared.length > 0) {
+                    const names = keptShared.flatMap(k => k.sharedWith || []);
+                    const unique = [...new Set(names)];
+                    const label = unique.length > 3
+                        ? `${unique.slice(0, 3).join(', ')} and ${unique.length - 3} more`
+                        : unique.join(', ');
+                    parts.push(`${keptShared.length} shared file(s)${label ? ` (used by ${label})` : ''}`);
+                }
+                if (keptPipInstalls.length > 0) parts.push(`${keptPipInstalls.length} pip-install(s)`);
+                if (keptModelFiles.length > 0) parts.push(`${keptModelFiles.length} model file(s)`);
+                Events.emit('ui:info', { title: 'Uninstalled with kept files', message: `Kept ${parts.join(', ')}.` });
+            }
+        }));
+
         _unsubs.push(Events.on('download:failed', () => {
             awaitReSync();
         }));
@@ -454,6 +497,7 @@ export const MpiModelsModal = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _destroyAllCards();
+            _uninstallDialog?.el?.destroy?.();
         };
     },
 });

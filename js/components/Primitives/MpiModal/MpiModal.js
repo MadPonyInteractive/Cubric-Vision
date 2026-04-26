@@ -46,8 +46,11 @@ export const MpiModal = ComponentFactory.create({
         let _overlayEntry = null; // store the queue entry so hide() can release correctly
         const _unsubs = [];
 
+        let _zIndex = null;
+        let _unDepthChange = null;
+
         const _handleEnter = () => {
-            emit('confirm', {});
+            if (Overlays.isTop(_overlayEntry)) emit('confirm', {});
         };
 
         const _doShow = () => {
@@ -56,11 +59,13 @@ export const MpiModal = ComponentFactory.create({
             if (props.backdropClose !== false) {
                 _backdrop.addEventListener('click', () => el.hide());
             }
+            if (_zIndex !== null) _backdrop.style.zIndex = _zIndex - 1;
             document.body.appendChild(_backdrop);
 
             _wrapper = document.createElement('div');
             _wrapper.className = 'mpi-modal-wrapper';
             if (props.width) _wrapper.style.width = props.width;
+            if (_zIndex !== null) _wrapper.style.zIndex = _zIndex;
             _wrapper.appendChild(el);
             document.body.appendChild(_wrapper);
 
@@ -71,15 +76,18 @@ export const MpiModal = ComponentFactory.create({
         el.show = () => {
             if (_isShown) return;  // already visible — skip (idempotent)
             _overlayEntry = { show: _doShow, hide: el.hide, id: el };
-            Overlays.request(_overlayEntry);
+            const { zIndex } = Overlays.request(_overlayEntry);
+            _zIndex = zIndex;
             _unregisterEnter = Hotkeys.bind('modal.confirm', _handleEnter);
         };
 
         el.hide = () => {
             _isShown = false; // reset first — needed for queued modals (hide may be called before _doShow ever ran)
             if (_unregisterEnter) { _unregisterEnter(); _unregisterEnter = null; }
+            if (_unDepthChange) { _unDepthChange(); _unDepthChange = null; }
             _backdrop?.remove(); _backdrop = null;
             _wrapper?.remove();  _wrapper  = null;
+            _zIndex = null;
             Overlays.release(_overlayEntry);
             _overlayEntry = null;
         };

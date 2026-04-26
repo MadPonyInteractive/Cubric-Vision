@@ -16,16 +16,34 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
+// trash@8 is ESM-only; lazy-load via dynamic import for CommonJS interop
+let _trashFn = null;
+async function _trash(p) {
+    if (!_trashFn) {
+        const mod = await import('trash');
+        _trashFn = mod.default;
+    }
+    return _trashFn(p);
+}
 const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs } = require('./shared');
 const { getComfyPath } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
 const sevenBin = require('7zip-bin');
 
 const _require = createRequire(__filename);
+
+// ── Shared-dep helper ─────────────────────────────────────────────────────────
+
+function _findOtherModelsUsingDep(depId, excludeModelId) {
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    return MODELS
+        .filter(m => m.id !== excludeModelId && m.installed === true && Array.isArray(m.dependencies) && m.dependencies.includes(depId))
+        .map(m => ({ modelId: m.id, modelName: m.name }));
+}
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
@@ -625,20 +643,25 @@ router.post('/comfy/models/download/cancel', (req, res) => {
 // ── Uninstall ─────────────────────────────────────────────────────────────────
 
 router.post('/comfy/models/uninstall', async (req, res) => {
-    const { modelId, dependencies } = req.body;
+    const { modelId, dependencies, deleteFiles = true } = req.body;
     if (!modelId || !Array.isArray(dependencies)) {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
 
     const customRoot = await getCustomRoot();
     const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
+    const modelsRoot = customRoot || path.join(ENGINE_ROOT, 'mpi_models');
     const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
+
+    const removed = [];
+    const keptShared = [];
+    const keptModelFiles = [];
+    const keptPipInstalls = [];
 
     for (const dep of dependencies) {
         let localPath;
         if (dep.type === 'custom_nodes') {
-            // GitHub archives download as .zip
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
             localPath = path.join(defaultCustomNodesRoot, zipName);
         } else if (customRoot) {
@@ -648,21 +671,44 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             localPath = path.join(defaultModelsRoot, dep.filename);
         }
 
+        const sharedWith = _findOtherModelsUsingDep(dep.id, modelId);
+        if (sharedWith.length > 0) {
+            keptShared.push({ depId: dep.id, depName: dep.name || dep.id, sharedWith: sharedWith.map(m => m.modelName) });
+            continue;
+        }
+
+        if (dep.type === 'custom_nodes' && dep.installRequirements === true) {
+            keptPipInstalls.push({ depId: dep.id, depName: dep.name || dep.id });
+            continue;
+        }
+
+        const isInModelsFolder = path.resolve(localPath).startsWith(path.resolve(modelsRoot) + path.sep);
+        if (!deleteFiles && isInModelsFolder) {
+            keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id });
+            continue;
+        }
+
         try {
-            if (dep.type === 'custom_nodes') {
-                await fs.remove(localPath);
-            } else {
-                await fs.remove(localPath);
+            if (await fs.pathExists(localPath)) {
+                await _trash(localPath);
+                await cleanEmptyDirs(localPath, modelsRoot);
+                logger.info('download', `uninstall: moved to trash ${localPath}`);
+            }
+            removed.push({ depId: dep.id, depName: dep.name || dep.id });
+            const depJob = _depJobs.get(dep.id);
+            if (depJob) {
+                depJob.refCount -= 1;
+                if (depJob.refCount <= 0) _depJobs.delete(dep.id);
             }
         } catch (err) {
-            logger.error('download', `uninstall: failed to remove ${localPath}`, err);
+            logger.error('download', `uninstall: failed to trash ${localPath}`, err);
         }
     }
 
-    // Remove the model job from tracking
+    logger.info('download', `uninstall ${modelId}: removed ${removed.length} kept ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
     _modelJobs.delete(modelId);
-    _broadcast('download:uninstalled', { modelId });
-    res.json({ success: true });
+    _broadcast('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
+    res.json({ success: true, removed, keptShared, keptModelFiles, keptPipInstalls });
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────

@@ -23,9 +23,12 @@ History-stack router. Key functions:
 
 ## overlayManager.js (`js/managers/overlayManager.js`)
 
-Queue-based blocking overlay controller.
-- `Overlays.request({ show, hide, id })`: Pushes overlay onto queue, shows it, blocks input.
-- `Overlays.release(el)`: Pops from queue, shows previous or resumes.
+Stack-based overlay controller. Multiple overlays can be visible simultaneously, each at its own z-index.
+- `Overlays.request({ show, hide, id })`: Pushes onto stack, calls `show()` immediately, returns `{ depth, zIndex }` — caller applies z-index to DOM nodes.
+- `Overlays.release(instance)`: Splices instance out of stack (any position).
+- `Overlays.closeTopOverlay()`: Calls `hide()` on top of stack only (Escape key).
+- `Overlays.isTop(instance)`: Returns true if instance is current top — use to gate Enter hotkeys.
+- `Overlays.onDepthChange(cb)`: Subscribe to stack depth changes; returns unsubscribe fn.
 - `Overlays.reset()`: Clears all overlays (used after navigation to fix stale state).
 
 ## hotkeyManager.js (`js/managers/hotkeyManager.js`)
