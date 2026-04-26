@@ -41,7 +41,7 @@ const llmRoutes     = require('./routes/llm');
 const engineRoutes  = require('./routes/engine');
 const comfyRoutes   = require('./routes/comfy');
 const videoCropRoutes = require('./routes/videoCrop');
-const imageAdjustRoutes = require('./routes/imageAdjust');
+const imageBakeRoutes   = require('./routes/imageBake');
 const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
 const { cleanComfyUITempFiles } = require('./routes/shared');
 
@@ -54,7 +54,7 @@ app.use(llmRoutes);
 app.use(engineRoutes);
 app.use(comfyRoutes);
 app.use(videoCropRoutes);
-app.use(imageAdjustRoutes);
+app.use(imageBakeRoutes);
 app.use(downloadManagerRoutes);
 
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });

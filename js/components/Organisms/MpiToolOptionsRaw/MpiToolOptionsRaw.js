@@ -2,8 +2,8 @@
  * MpiToolOptionsRaw — Organism: tool-options panel for Raw image adjustments.
  *
  * Mounted by MpiGroupHistoryBlock into #right-top-slot when active tool = 'raw'.
- * CSS preview via rawPreview.js (instant). Debounced Sharp preview for dehaze +
- * per-color calibration. Apply = full-res Sharp bake → new history entry.
+ * GPU preview via RawGpuPipeline (instant, rAF-throttled). No server round-trips
+ * during interaction. Apply = full-res GPU bake → POST /api/image/bake → new history entry.
  *
  * Props:
  * @param {object} viewer - MpiCanvasViewer instance
@@ -17,9 +17,9 @@ import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.j
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qs } from '../../../utils/dom.js';
-import { buildCSSFilter } from '../../../utils/rawPreview.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { state } from '../../../state.js';
+import { RawGpuPipeline } from '../../../utils/rawGpuPipeline.js';
 
 // ── Param definitions ────────────────────────────────────────────────────────
 
@@ -39,16 +39,16 @@ const SECTIONS = [
         params: [
             // whiteBalance handled by radio group — not a slider param
             { key: 'saturation',   label: 'Saturation',    min: -100, max: 100, step: 1, default: 0, suffix: '' },
-            { key: 'dehaze',       label: 'Dehaze',         min: -100, max: 100, step: 1, default: 0, suffix: '', debounced: true },
+            { key: 'dehaze',       label: 'Dehaze',         min: -100, max: 100, step: 1, default: 0, suffix: '' },
         ],
     },
     {
         id: 'detail',
         title: 'Detail',
         params: [
-            { key: 'sharpening',     label: 'Sharpening',      min: 0, max: 100, step: 1, default: 0, suffix: '', debounced: true },
+            { key: 'sharpening',     label: 'Sharpening',      min: 0, max: 100, step: 1, default: 0, suffix: '' },
             { key: 'noiseReduction', label: 'Noise Reduction',  min: 0, max: 100, step: 1, default: 0, suffix: '' },
-            { key: 'grain',          label: 'Grain',            min: 0, max: 100, step: 1, default: 0, suffix: '', debounced: true },
+            { key: 'grain',          label: 'Grain',            min: 0, max: 100, step: 1, default: 0, suffix: '' },
         ],
     },
     {
@@ -56,12 +56,12 @@ const SECTIONS = [
         title: 'Calibration',
         collapsible: true,
         params: [
-            { key: 'hueR', label: 'Hue R',   min: -180, max: 180, step: 1, default: 0, debounced: true },
-            { key: 'hueG', label: 'Hue G',   min: -180, max: 180, step: 1, default: 0, debounced: true },
-            { key: 'hueB', label: 'Hue B',   min: -180, max: 180, step: 1, default: 0, debounced: true },
-            { key: 'satR', label: 'Sat R',   min: -100, max: 100, step: 1, default: 0, debounced: true },
-            { key: 'satG', label: 'Sat G',   min: -100, max: 100, step: 1, default: 0, debounced: true },
-            { key: 'satY', label: 'Sat Y',   min: -100, max: 100, step: 1, default: 0, debounced: true },
+            { key: 'hueR', label: 'Hue R',   min: -180, max: 180, step: 1, default: 0 },
+            { key: 'hueG', label: 'Hue G',   min: -180, max: 180, step: 1, default: 0 },
+            { key: 'hueB', label: 'Hue B',   min: -180, max: 180, step: 1, default: 0 },
+            { key: 'satR', label: 'Sat R',   min: -100, max: 100, step: 1, default: 0 },
+            { key: 'satG', label: 'Sat G',   min: -100, max: 100, step: 1, default: 0 },
+            { key: 'satY', label: 'Sat Y',   min: -100, max: 100, step: 1, default: 0 },
         ],
     },
 ];
@@ -153,9 +153,37 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
         const _sliders = {};   // key → MpiProgressBar instance
         const _values = { ...DEFAULT_VALUES };
         let _applying = false;
+        const _pipeline = new RawGpuPipeline();
 
         // ── Curve canvas editor ───────────────────────────────────────────────
         let _curvePoint = { x: 0.5, y: 0.5 };
+        let _histogram = null; // Float32Array(256) normalized 0..1
+
+        function _computeHistogram() {
+            const imgEl = viewer.el?.img;
+            if (!imgEl?.naturalWidth) { _histogram = null; return; }
+            const SAMPLE = 256;
+            const off = document.createElement('canvas');
+            off.width = SAMPLE; off.height = SAMPLE;
+            const octx = off.getContext('2d');
+            try { octx.drawImage(imgEl, 0, 0, SAMPLE, SAMPLE); }
+            catch { _histogram = null; return; }
+            let data;
+            try { data = octx.getImageData(0, 0, SAMPLE, SAMPLE).data; }
+            catch { _histogram = null; return; }
+            const bins = new Uint32Array(256);
+            for (let i = 0; i < data.length; i += 4) {
+                const lum = (data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722) | 0;
+                bins[Math.min(255, lum)]++;
+            }
+            let max = 0;
+            for (let i = 0; i < 256; i++) if (bins[i] > max) max = bins[i];
+            const out = new Float32Array(256);
+            // Log scale to flatten spikes
+            const lmax = Math.log(1 + max);
+            if (lmax > 0) for (let i = 0; i < 256; i++) out[i] = Math.log(1 + bins[i]) / lmax;
+            _histogram = out;
+        }
 
         function _drawCurve() {
             const canvas = el.querySelector('#curve-canvas');
@@ -171,6 +199,21 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             // Background
             ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim() || '#1a1a1a';
             ctx.fillRect(0, 0, W, H);
+
+            // Histogram fill (behind grid)
+            if (_histogram) {
+                ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                ctx.beginPath();
+                ctx.moveTo(0, H);
+                for (let i = 0; i < 256; i++) {
+                    const x = (i / 255) * W;
+                    const y = H - _histogram[i] * H;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(W, H);
+                ctx.closePath();
+                ctx.fill();
+            }
 
             // Grid lines (4×4)
             ctx.strokeStyle = 'rgba(255,255,255,0.08)';
@@ -189,51 +232,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, 0); ctx.stroke();
             ctx.setLineDash([]);
 
-            // Natural cubic spline through 3 points in normalised [0,1] space:
-            //   p0=(0,0), p1=ctrl, p2=(1,1)
-            // Natural BC: second derivative = 0 at endpoints → tangents m0=m2=0
-            // For 3 knots the tridiagonal system solves to:
-            //   m1 = 3 * ( (y2-y1)/h1 / (h0+h1) - (y1-y0)/h0 / (h0+h1) ) * h0*h1
-            // Simplified exact formula (Thomas algorithm, 1 interior knot):
-            //   2*(h0+h1)*m1 = 3*( (y2-y1)/h1*h0 + (y1-y0)/h0*h1 ) — NO, use:
-            // Standard result: m1 = 3*( (y2-y1)/h1 - (y1-y0)/h0 ) / (h0+h1) * h0*h1/(h0+h1)...
-            // Cleanest form — natural spline 3-point exact solution:
-            //   [2h0, h0 ] [m0]   [3(y1-y0)]
-            //   [h0, 2(h0+h1), h1] [m1] = [3((y2-y1)/h1*h0 + (y1-y0)/h0*h1)] * correction
-            //   [h1, 2h1] [m2]   [3(y2-y1)]
-            // With natural BC m0=m2=0, interior row reduces to:
-            //   2*(h0+h1)*m1 = 3*( (y2-y1)/h1 - (y1-y0)/h0 ) * (h0+h1) ...
-            // Correct closed form for natural spline, 3 knots:
-            //   m1 = 3/2 * ( (y2-y1)/h1 - (y1-y0)/h0 ) / (h0+h1) * (h0*h1)
-            // Actually simplest verified form:
-            const y0 = 0, y1 = _curvePoint.y, y2 = 1;
-            const x0 = 0, x1 = _curvePoint.x, x2 = 1;
-            const h0 = x1 - x0;
-            const h1 = x2 - x1;
-
-            // Catmull-Rom: endpoint tangents = adjacent chord, interior = avg of chords
-            // Monotone when chords same sign → no oscillation ever
-            const s0 = (h0 > 0) ? (y1 - y0) / h0 : 0;
-            const s1 = (h1 > 0) ? (y2 - y1) / h1 : 0;
-            const m0 = s0;
-            const m2 = s1;
-            // Interior: harmonic-mean weighted avg — Catmull-Rom standard
-            const m1 = (h0 + h1 > 0) ? (s0 * h1 + s1 * h0) / (h0 + h1) : 1;
-
-            // Evaluate spline at normalised x, return normalised y
-            function _splineY(nx) {
-                if (nx <= x1 && h0 > 0) {
-                    const u = (nx - x0) / h0;
-                    // Hermite basis
-                    return (2*u*u*u - 3*u*u + 1)*y0 + (u*u*u - 2*u*u + u)*h0*m0
-                         + (-2*u*u*u + 3*u*u)*y1 + (u*u*u - u*u)*h0*m1;
-                } else if (h1 > 0) {
-                    const u = (nx - x1) / h1;
-                    return (2*u*u*u - 3*u*u + 1)*y1 + (u*u*u - 2*u*u + u)*h1*m1
-                         + (-2*u*u*u + 3*u*u)*y2 + (u*u*u - u*u)*h1*m2;
-                }
-                return nx; // fallback: identity
-            }
+            const _splineY = _makeSplineY(_curvePoint);
 
             // Sample curve at high resolution
             const STEPS = 240;
@@ -244,31 +243,59 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                 pts.push({ nx, raw, ny: Math.max(0, Math.min(1, raw)) });
             }
 
-            // Draw curve — when output at boundary (0 or 1), draw flat along edge
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            const EPS = 0.001;
             for (let i = 0; i <= STEPS; i++) {
                 const { nx, ny } = pts[i];
                 const px = nx * W;
                 const py = (1 - ny) * H;
-                if (i === 0) { ctx.moveTo(px, py); continue; }
-                const prevNy = pts[i - 1].ny;
-                const atBottom = ny < EPS && prevNy < EPS;
-                const atTop    = ny > 1 - EPS && prevNy > 1 - EPS;
-                // If both points on same edge, lineTo draws the flat clip line
-                ctx.lineTo(px, py);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
             }
             ctx.stroke();
 
-            // Control point dot
-            const dotX = x1 * W;
-            const dotY = (1 - y1) * H;
+            // Endpoint dots (hollow) — black point bottom-left, white point top-right
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(0,     H, 4, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(W,     0, 4, 0, Math.PI * 2); ctx.stroke();
+
+            // Control point dot (filled)
+            const dotX = _curvePoint.x * W;
+            const dotY = (1 - _curvePoint.y) * H;
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(dotX, dotY, 5, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        function _makeSplineY(cp) {
+            const y0 = 0, y1 = cp.y, y2 = 1;
+            const x0 = 0, x1 = cp.x, x2 = 1;
+            const h0 = x1 - x0;
+            const h1 = x2 - x1;
+            const s0 = h0 > 0 ? (y1 - y0) / h0 : 0;
+            const s1 = h1 > 0 ? (y2 - y1) / h1 : 0;
+            const m0 = s0, m2 = s1;
+            const m1 = (h0 + h1 > 0) ? (s0 * h1 + s1 * h0) / (h0 + h1) : 1;
+            return (nx) => {
+                if (nx <= x1 && h0 > 0) {
+                    const u = (nx - x0) / h0;
+                    return (2*u*u*u - 3*u*u + 1)*y0 + (u*u*u - 2*u*u + u)*h0*m0
+                         + (-2*u*u*u + 3*u*u)*y1 + (u*u*u - u*u)*h0*m1;
+                } else if (h1 > 0) {
+                    const u = (nx - x1) / h1;
+                    return (2*u*u*u - 3*u*u + 1)*y1 + (u*u*u - 2*u*u + u)*h1*m1
+                         + (-2*u*u*u + 3*u*u)*y2 + (u*u*u - u*u)*h1*m2;
+                }
+                return nx;
+            };
+        }
+
+        function _pushCurveLUT() {
+            const lut = _buildLUT(_makeSplineY(_curvePoint));
+            _pipeline.setParams({ curveLUT: { rgb: lut } });
         }
 
         function _initCurveDrag() {
@@ -289,7 +316,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                 const ny = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
                 _curvePoint = { x: nx, y: ny };
                 _values.curve = Math.round((_curvePoint.y - 0.5) * 200);
-                _applyPreview(_values, 'curve');
+                _pushCurveLUT();
                 _drawCurve();
             };
 
@@ -316,52 +343,50 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                 });
             });
 
-        // ── Debounced Sharp preview ───────────────────────────────────────────
-        const _sharpPreview = _debounce(async (values) => {
-            const entry = viewer.el.getCurrentEntry?.();
-            if (!entry?.filePath) return;
-            try {
-                const res = await fetch('/api/image/adjust', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imagePath: entry.filePath,
-                        folderPath: state.currentProject?.folderPath,
-                        params: _normalizeParams(values),
-                        preview: true,
-                    }),
-                });
-                const data = await res.json();
-                if (data.previewBase64) {
-                    viewer.el.setPreviewSrc?.(data.previewBase64);
-                }
-            } catch (err) {
-                clientLogger.error('raw', 'Sharp preview failed', err);
-            }
-        }, 300);
-
-        // Keys that always need Sharp preview (no CSS approximation)
-        const _SHARP_ONLY_KEYS = new Set();
-
-        // ── CSS preview (instant) ─────────────────────────────────────────────
-        function _applyPreview(values, triggerKey) {
-            const imgEl = viewer.el.getImageEl?.();
-            if (imgEl) {
-                imgEl.style.filter = buildCSSFilter(values);
-            }
-            // Debounced-only params and Sharp-only keys fire server preview
-            const def = SECTIONS.flatMap(s => s.params).find(p => p.key === triggerKey);
-            if (def?.debounced || _SHARP_ONLY_KEYS.has(triggerKey)) {
-                _sharpPreview(values);
-            }
+        // ── GPU pipeline mount ────────────────────────────────────────────────
+        async function _mountPipeline() {
+            const imgEl = viewer.el.img;
+            if (!imgEl?.naturalWidth) return;
+            await _pipeline.mount(imgEl, (bitmap) => {
+                viewer.el.setProcessedImage(bitmap);
+            });
+            _pipeline.setParams(_buildPipelineParams(_values));
+            _computeHistogram();
+            _drawCurve();
         }
 
-        // ── Normalize params for API (exposure = EV stops) ────────────────────
-        function _normalizeParams(values) {
+        // Map internal _values → pipeline param keys
+        function _buildPipelineParams(v) {
             return {
-                ...values,
-                exposure: _evFromInternal(values.exposure),
+                exposure:      _evFromInternal(v.exposure ?? 0),
+                shadows:       (v.shadows ?? 0) / 100,
+                saturation:    v.saturation ?? 0,
+                sharpening:    (v.sharpening ?? 0) / 100 * 3,       // 0–100 → 0–3
+                sharpenRadius: 1.5,
+                sharpenThresh: 0.05,
+                noiseReduction:(v.noiseReduction ?? 0) / 100 * 20,  // 0–100 → 0–20
+                nrThreshold:   30,
+                grain:         (v.grain ?? 0) / 100,
+                grainSize:     1.0,
+                grainColor:    0,
+                grainLumBias:  0.5,
+                grainMode:     0,
+                dehaze:        (v.dehaze ?? 0) / 100,                // -100..100 → -1..1
             };
+        }
+
+        // ── GPU preview (instant, rAF-throttled by pipeline) ─────────────────
+        function _applyPreview() {
+            _pipeline.setParams(_buildPipelineParams(_values));
+        }
+
+        // ── LUT helpers (curve canvas → pipeline) ────────────────────────────
+        function _buildLUT(splineY) {
+            const lut = new Float32Array(256);
+            for (let i = 0; i < 256; i++) {
+                lut[i] = Math.max(0, Math.min(1, splineY(i / 255)));
+            }
+            return lut;
         }
 
         // ── Mount sliders ─────────────────────────────────────────────────────
@@ -390,7 +415,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                     _values[p.key] = value;
                     const valEl = qs(`[data-value="${p.key}"]`, el);
                     if (valEl) valEl.textContent = value;
-                    _applyPreview(_values, p.key);
+                    _applyPreview();
                 });
             });
         });
@@ -462,14 +487,11 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             }
             ctx.putImageData(data, 0, 0);
 
-            // For <img>: swap src. For canvas viewer: load corrected image via setPreviewSrc.
-            const correctedDataUrl = offscreen.toDataURL('image/jpeg', 0.92);
-            if (srcEl.tagName === 'IMG') {
-                if (!srcEl.dataset.originalSrc) srcEl.dataset.originalSrc = srcEl.src;
-                srcEl.src = correctedDataUrl;
-            } else {
-                viewer.el.setPreviewSrc?.(correctedDataUrl);
-            }
+            // Re-mount pipeline against WB-corrected offscreen canvas (direct, no PNG roundtrip).
+            // Pipeline reads naturalWidth/naturalHeight — provide via shim object.
+            const canvasSrc = Object.assign(offscreen, { naturalWidth: W, naturalHeight: H });
+            await _pipeline.mount(canvasSrc, (bitmap) => { viewer.el.setProcessedImage(bitmap); });
+            _pipeline.setParams(_buildPipelineParams(_values));
 
             const wbVal = Math.round((scaleR - scaleB) * 50);
             _values.whiteBalance = wbVal;
@@ -480,17 +502,8 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             if (value === 'As shot') {
                 _values.whiteBalance = 0;
                 const ve = _wbValueEl(); if (ve) ve.textContent = '';
-                // Restore original src for <img> elements
-                const elRef = viewer.el.getImageEl?.();
-                if (elRef?.tagName === 'IMG' && elRef.dataset.originalSrc) {
-                    elRef.src = elRef.dataset.originalSrc;
-                    delete elRef.dataset.originalSrc;
-                } else if (elRef?.tagName !== 'IMG') {
-                    // For canvas viewer: reload current entry to restore original
-                    const entry = viewer.el.getCurrentEntry?.();
-                    if (entry) viewer.el.loadEntry?.(entry, undefined);
-                }
-                _applyPreview(_values, 'whiteBalance');
+                // Re-mount on original image to drop WB correction
+                await _mountPipeline();
                 return;
             }
             try {
@@ -514,6 +527,11 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
         })();
         _drawCurve();
         _initCurveDrag();
+
+        // Mount pipeline once image is ready; remount on every entry switch
+        const _offEntryLoaded = viewer.on('entry-loaded', () => _mountPipeline());
+        // Cover case where entry-loaded fired before this component mounted.
+        if (viewer.el.img?.naturalWidth) _mountPipeline();
 
         // ── Actions ───────────────────────────────────────────────────────────
         const actionsSlot = qs('#raw-actions-slot', el);
@@ -541,27 +559,23 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             _applying = true;
             applyBtn.el.setAttribute('disabled', '');
             try {
-                const res = await fetch('/api/image/adjust', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imagePath: entry.filePath,
-                        folderPath: state.currentProject?.folderPath,
-                        params: _normalizeParams(_values),
-                        preview: false,
-                        groupId: entry.groupId,
-                        itemId: entry.id,
-                    }),
-                });
+                const blob = await _pipeline.renderFullRes();
+                const form = new FormData();
+                form.append('image', blob, 'bake.png');
+                form.append('imagePath', entry.filePath);
+                form.append('folderPath', state.currentProject?.folderPath ?? '');
+                form.append('groupId', entry.groupId ?? '');
+                form.append('itemId', entry.id ?? '');
+                const res = await fetch('/api/image/bake', { method: 'POST', body: form });
                 const data = await res.json();
                 if (data.success && data.item) {
                     el.reset();
                     emit('apply', { item: data.item });
                 } else {
-                    clientLogger.error('raw', 'Apply failed', data);
+                    clientLogger.error('raw', 'Bake failed', data);
                 }
             } catch (err) {
-                clientLogger.error('raw', 'Apply request failed', err);
+                clientLogger.error('raw', 'Bake request failed', err);
             } finally {
                 _applying = false;
                 applyBtn.el.removeAttribute('disabled');
@@ -582,14 +596,14 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             const wbVe = _wbValueEl(); if (wbVe) wbVe.textContent = '';
             _curvePoint = { x: 0.5, y: 0.5 };
             _drawCurve();
-            const imgEl = viewer.el.getImageEl?.();
-            if (imgEl) imgEl.style.filter = '';
+            _mountPipeline();
         };
 
         el.destroy = () => {
+            _offEntryLoaded?.();
             _curveDragCleanup?.();
-            const imgEl = viewer.el.getImageEl?.();
-            if (imgEl) imgEl.style.filter = '';
+            _pipeline.destroy();
+            viewer.el.clearProcessedImage?.();
             _children.forEach(c => c.destroy?.());
         };
     },
