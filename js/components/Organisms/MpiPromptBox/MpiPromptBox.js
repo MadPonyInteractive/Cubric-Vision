@@ -10,7 +10,6 @@ import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
-import { getModelsByType } from '../../../data/modelRegistry.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { qs, on } from '../../../utils/dom.js';
 
@@ -245,6 +244,25 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.setModelList = (newModelList) => {
             modelList = newModelList;
+
+            // If current model no longer in list (e.g. uninstalled), pick first available
+            // and propagate change so badge, op dropdown, and consumers stay in sync.
+            const stillPresent = model && modelList.some(m => m.id === model.id);
+            if (!stillPresent) {
+                const next = modelList[0] ?? null;
+                model = next;
+                _currentModelType = next?.mediaType ?? _currentModelType;
+                if (next) {
+                    activeOperation = next.supportedOps?.[0] ?? activeOperation;
+                    emit('model-change', { model: next });
+                }
+            }
+
+            // Guard: activeOperation may be invalid for current model (e.g. mixed image/video lists)
+            if (model && !model.supportedOps?.includes(activeOperation)) {
+                activeOperation = model.supportedOps?.[0] ?? activeOperation;
+            }
+
             if (_modelDropdown) {
                 _modelDropdown.el.setOptions(
                     modelList.map(m => ({ value: m.id, label: m.name })),
@@ -253,6 +271,7 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             _refreshOpDropdown();
             _refreshOpSlot();
+            _renderBadge();
         };
 
         // ── Show / hide ────────────────────────────────────────────────────────
@@ -320,11 +339,9 @@ export const MpiPromptBox = ComponentFactory.create({
             Events.on('workspace:set-operation', _onSetOperation),
             Events.on('workspace:inject-prompts', _onInjectPrompts),
             Events.on('promptbox:generation-end', () => el.setGenerating(false)),
-            Events.on('state:changed', ({ key }) => {
-                if (key !== 's_installedModelIds' || !_currentModelType) return;
-                const updated = getModelsByType(_currentModelType).filter(m => m.installed !== false);
-                el.setModelList(updated);
-            }),
+            // Note: model list management is owned by the parent block (gallery /
+            // history workspace). They call el.setModelList() with the appropriate
+            // mediaType-scoped or all-installed list. Don't double-update here.
         );
 
         // ── Textarea ───────────────────────────────────────────────────────────

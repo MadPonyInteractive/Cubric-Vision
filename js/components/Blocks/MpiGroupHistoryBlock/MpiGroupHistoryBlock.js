@@ -38,7 +38,6 @@ import {
     createImageItem,
     createItemGroup,
 } from '../../../data/projectModel.js';
-import { MpiModelsModal } from '../MpiModelsModal/MpiModelsModal.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
@@ -691,24 +690,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncPromptToolDisabled();
         }));
 
-        // ── Zero-installed state modal ────────────────────────────────────────
-
-        const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
-            icon: 'download',
-            title: 'Model Manager',
-            text: 'Select a model pack to install. Required files will be fetched automatically.',
-            footer: 'Models are stored locally and never shared.',
-            closable: true,
-        });
-        _modelsModal.el.hide();
-
+        // ── Zero-installed state — delegated to shell-owned models modal ──────
+        // Shell mounts a single MpiModelsModal at app boot. Mounting another here
+        // causes duplicate `download:uninstalled` listeners and double toasts.
         const _hasInstalledImageModels = () => getModelsByType('image').some(m => m.installed === true);
-        const _onZeroInstalled = () => { if (!_hasInstalledImageModels()) _modelsModal.el.show(); };
+        const _onZeroInstalled = () => {
+            if (!_hasInstalledImageModels()) Events.emit('models:open', { auto: true });
+            _pb?.el?.setModelList?.(getModelsByType(modeKind).filter(m => m.installed !== false));
+        };
 
         _unsubs.push(Events.onState('s_installedModelIds', _onZeroInstalled));
-        _unsubs.push(Events.on('models:all-installed', () => _modelsModal.el.hide()));
 
-        if (!_hasInstalledImageModels()) _modelsModal.el.show();
+        if (!_hasInstalledImageModels()) Events.emit('models:open', { auto: true });
 
         // ── Cleanup ───────────────────────────────────────────────────────────
 
@@ -726,7 +719,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();
-            _modelsModal.destroy?.();
             _settingsOverlay.destroy?.();
             _pb?.el?.destroy?.();
             _pb = null;

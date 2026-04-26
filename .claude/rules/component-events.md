@@ -435,3 +435,4 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
          **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
          **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelId`, `s_installedModelIds`, `project:changed`.
+         **PromptBox model list:** `s_installedModelIds` listener also calls `_pb?.el?.setModelList?(getModelsByType(modeKind).filter(m => m.installed !== false))` — live dropdown refresh on install/uninstall.

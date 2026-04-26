@@ -467,23 +467,11 @@ export const MpiModelsModal = ComponentFactory.create({
             const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
             const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
             if (removed.length > 0 && keptTotal === 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} removed` });
-            } else if (removed.length === 0) {
-                Events.emit('ui:warning', { title: 'Nothing removed', message: 'All files were kept.' });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} uninstalled.` });
+            } else if (removed.length > 0) {
+                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} uninstalled (some shared files kept).` });
             } else {
-                const parts = [];
-                if (keptUniversal.length > 0) parts.push(`${keptUniversal.length} universal workflow file(s)`);
-                if (keptShared.length > 0) {
-                    const names = keptShared.flatMap(k => k.sharedWith || []);
-                    const unique = [...new Set(names)];
-                    const label = unique.length > 3
-                        ? `${unique.slice(0, 3).join(', ')} and ${unique.length - 3} more`
-                        : unique.join(', ');
-                    parts.push(`${keptShared.length} shared file(s)${label ? ` (used by ${label})` : ''}`);
-                }
-                if (keptPipInstalls.length > 0) parts.push(`${keptPipInstalls.length} pip-install(s)`);
-                if (keptModelFiles.length > 0) parts.push(`${keptModelFiles.length} model file(s)`);
-                Events.emit('ui:info', { title: 'Uninstalled with kept files', message: `Kept ${parts.join(', ')}.` });
+                Events.emit('ui:warning', { title: 'Not uninstalled', message: `${modelName} — no files removed.` });
             }
         }));
 

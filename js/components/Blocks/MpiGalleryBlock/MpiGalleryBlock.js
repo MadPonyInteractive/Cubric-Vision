@@ -24,7 +24,7 @@ import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { getModelsByType } from '../../../data/modelRegistry.js';
+import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration } from '../../../services/generationService.js';
@@ -210,7 +210,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
 
         // ── PromptBox setup ─────────────────────────────────────────────────────
-        const { model: activeModelInit, modelId: activeModelIdInit, installedModels: installedImageModels } = resolveActiveModel('image');
+        // Gallery is a mediaType-agnostic entry point — show ALL installed models
+        // in the dropdown (image + video). Initial active model still prefers
+        // image so default operation `t2i` is valid; user can switch via dropdown.
+        const { model: activeModelInit, modelId: activeModelIdInit } = resolveActiveModel('image');
+        let installedAllModels = MODELS.filter(m => m.installed !== false);
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
         if (activeModelId) state.s_selectedModelId = activeModelId;
@@ -229,6 +233,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 activeModelId   = model.id;
                 activeModel     = model;
                 activeOperation = model.supportedOps[0];
+                _pb?.el?.setOperation(activeOperation);
             });
 
             pb.on('operation-change', ({ operation }) => {
@@ -337,10 +342,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Model settings overlay
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
-        if (installedImageModels.length > 0) {
+        if (installedAllModels.length > 0) {
             _pb = _mountPb({
                 model:           activeModel,
-                modelList:       installedImageModels,
+                modelList:       installedAllModels,
                 operation:       activeOperation,
                 includeNegative: true,
             });
@@ -385,11 +390,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
-        if (installedImageModels.length === 0) Events.emit('models:open', { auto: true });
+        if (installedAllModels.length === 0) Events.emit('models:open', { auto: true });
 
         _unsubs.push(Events.onState('s_installedModelIds', () => {
-            const hasImageModels = getModelsByType('image').some(m => m.installed === true);
-            if (!hasImageModels) Events.emit('models:open', { auto: true });
+            installedAllModels = MODELS.filter(m => m.installed !== false);
+            if (installedAllModels.length === 0) Events.emit('models:open', { auto: true });
+            _pb?.el?.setModelList?.(installedAllModels);
         }));
         // Note: `models:all-installed` is emitted by `modelRegistry.syncModelInstalled()`
         // — the canonical source of truth for installed-model state. Listeners (shell,
@@ -399,12 +405,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // If models are installed while the modal is open, promptBox will be null.
         // When the modal closes (models:closed), check if PromptBox needs to be mounted.
         _unsubs.push(Events.on('models:closed', () => {
-            const currentModels = getModelsByType('image').filter(m => m.installed !== false);
+            const currentModels = MODELS.filter(m => m.installed !== false);
+            installedAllModels = currentModels;
             if (!_pb?.el && currentModels.length > 0) {
                 const newModel = currentModels.find(m => m.id === state.s_selectedModelId) || currentModels[0];
                 activeModel = newModel;
                 activeModelId = newModel.id;
                 state.s_selectedModelId = newModel.id;
+                activeOperation = newModel.supportedOps?.[0] ?? activeOperation;
                 _pb = _mountPb({
                     model: newModel,
                     modelList: currentModels,
@@ -413,6 +421,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 _wirePromptBox(_pb);
                 _pb?.el?.show();
+            } else if (_pb?.el) {
+                _pb.el.setModelList?.(currentModels);
             }
         }));
 
