@@ -22,7 +22,7 @@
         10px 0 15px var(--neon-glow-sm);
     color: var(--text);
     z-index: 20000;
-    max-width: 400px;
+    max-width: 600px;
     min-width: 280px;
     pointer-events: auto;
     overflow: hidden;
@@ -56,7 +56,7 @@
 }
 
 .mpi-toast__msg {
-    font-size: 0.95rem;
+    font-size: 0.7rem;
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
