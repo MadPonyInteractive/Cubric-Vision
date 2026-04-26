@@ -78,7 +78,16 @@ Bottom status bar. Shows ComfyUI engine status, active model, generation progres
 - On `tool:sampling-start`: updates label back to "Generating..." (KSampler steps begin)
 - On `tool:cancelled`: cancels progress bar instantly
 - On `tool:idle`: completes progress bar, fires success toast with "Generation finished"
+- On `ui:success` / `ui:warning` / `ui:info`: fires a standalone toast via `StatusBar.notify(message, variant)` — **this is the correct way to show toasts from anywhere in the app**
 - `progress.update(value)`: driven by KSampler step progress (called directly from blocks, not via events)
+
+**Showing a toast (non-progress):**
+```js
+Events.emit('ui:success', { message: 'Model removed.' });
+Events.emit('ui:warning', { message: 'Some files were kept.' });
+Events.emit('ui:info',    { message: 'No changes made.' });
+```
+Never call `MpiToast.mount()` directly from components — emit the event instead.
 
 ## windowControls.js (`js/shell/windowControls.js`)
 

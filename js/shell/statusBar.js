@@ -217,6 +217,18 @@ export const StatusBar = {
     },
 
     /**
+     * Fire a standalone toast without a progress job.
+     * @param {string} message
+     * @param {'success'|'info'|'warning'|'danger'} [variant='info']
+     */
+    notify(message, variant = 'info') {
+        const wrapper = document.createElement('div');
+        document.body.appendChild(wrapper);
+        const t = MpiToast.mount(wrapper, { message, variant, duration: 4000 });
+        t.on('close', () => { t.destroy(); wrapper.remove(); });
+    },
+
+    /**
      * Subscribe to tool lifecycle events emitted on the global event bus.
      * Called once by shell.js after init().
      */
@@ -239,5 +251,8 @@ export const StatusBar = {
         Events.on('tool:idle', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished', false);
         });
+        Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success'));
+        Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning'));
+        Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info'));
     },
 };

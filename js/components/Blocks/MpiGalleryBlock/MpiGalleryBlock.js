@@ -385,11 +385,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
         // ── Zero-installed check — emit models:open (shell handles the modal) ───
-        if (installedImageModels.length === 0) Events.emit('models:open');
+        if (installedImageModels.length === 0) Events.emit('models:open', { auto: true });
 
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             const hasImageModels = getModelsByType('image').some(m => m.installed === true);
-            if (!hasImageModels) Events.emit('models:open');
+            if (!hasImageModels) Events.emit('models:open', { auto: true });
         }));
         // Note: `models:all-installed` is emitted by `modelRegistry.syncModelInstalled()`
         // — the canonical source of truth for installed-model state. Listeners (shell,

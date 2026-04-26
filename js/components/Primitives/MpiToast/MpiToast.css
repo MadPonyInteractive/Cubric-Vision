@@ -21,7 +21,7 @@
         -10px 0 15px var(--primary-glow-sm),
         10px 0 15px var(--neon-glow-sm);
     color: var(--text);
-    z-index: 9999;
+    z-index: 20000;
     max-width: 400px;
     min-width: 280px;
     pointer-events: auto;

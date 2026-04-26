@@ -104,6 +104,9 @@ export const Events = new EventBus();
  * @typedef {Object} MpiEventMap — Canonical event names for MpiAiSuite
  *
  * 'ui:error'         { title: string, message: string } — show error dialog (shell listens)
+ * 'ui:success'       { message: string }              — success toast via StatusBar.notify()
+ * 'ui:warning'       { message: string }              — warning toast via StatusBar.notify()
+ * 'ui:info'          { message: string }              — info toast via StatusBar.notify()
  * 'media:updated'    { projectId: string }           — any tool saving to library
  * 'tool:running'     { tool: string, type: string }  — tool started a run
  * 'tool:loading-model' { tool: string }              — model loader node executing (VRAM load phase)

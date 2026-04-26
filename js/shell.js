@@ -58,6 +58,7 @@ export function showError(title, message) {
   _errorDialog.el.show();
 }
 
+
 /**
  * Main initialization entry point called by init.js.
  */
@@ -193,11 +194,15 @@ async function _bootApp() {
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
   // Show model manager when zero image models are installed
-  Events.on('models:open', () => {
+  let _modelsModalAutoOpened = false;
+  Events.on('models:open', ({ auto = false } = {}) => {
+    _modelsModalAutoOpened = auto;
     _modelsModal.el.show();
   });
-  Events.on('models:all-installed', () => _modelsModal.el.hide());
+  // Only auto-close when modal was opened by the system (zero-install gate), not by the user
+  Events.on('models:all-installed', () => { if (_modelsModalAutoOpened) _modelsModal.el.hide(); });
   Events.on('models:closed', () => {
+      _modelsModalAutoOpened = false;
       _modelsModal.el.hide();
   });
 

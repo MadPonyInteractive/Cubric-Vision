@@ -89,8 +89,8 @@ const downloadService = {
             return;
         }
         const json = await res.json();
-        const { removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = json;
-        Events.emit('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
+        const { removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = json;
+        Events.emit('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
@@ -249,10 +249,9 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:uninstalled', (e) => {
             const data = JSON.parse(e.data);
-            const { modelId, removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = data;
+            const { modelId } = data;
             state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
-            Events.emit('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
             reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after uninstall failed:', err));
         });
 

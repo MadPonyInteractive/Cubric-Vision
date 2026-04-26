@@ -463,15 +463,16 @@ export const MpiModelsModal = ComponentFactory.create({
             awaitReSync();
         }));
 
-        _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
+        _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
             const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
-            const keptTotal = keptShared.length + keptModelFiles.length + keptPipInstalls.length;
+            const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
             if (removed.length > 0 && keptTotal === 0) {
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} removed` });
             } else if (removed.length === 0) {
-                Events.emit('ui:warning', { title: 'Nothing removed', message: 'All files were kept (shared with other models, pip-installed, or inside your models folder).' });
+                Events.emit('ui:warning', { title: 'Nothing removed', message: 'All files were kept.' });
             } else {
                 const parts = [];
+                if (keptUniversal.length > 0) parts.push(`${keptUniversal.length} universal workflow file(s)`);
                 if (keptShared.length > 0) {
                     const names = keptShared.flatMap(k => k.sharedWith || []);
                     const unique = [...new Set(names)];

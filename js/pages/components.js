@@ -32,7 +32,7 @@ import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialM
 import { StatusBar } from '../shell/statusBar.js';
 
 // Compounds
-import { MpiPromptBox } from '../components/Blocks/MpiPromptBox/MpiPromptBox.js';
+import { MpiPromptBox } from '../components/Organisms/MpiPromptBox/MpiPromptBox.js';
 import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiOptionSelector } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';

@@ -28,7 +28,7 @@ async function _trash(p) {
 const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds } = require('./shared');
 const { getComfyPath } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
@@ -658,6 +658,9 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     const keptShared = [];
     const keptModelFiles = [];
     const keptPipInstalls = [];
+    const keptUniversal = [];
+
+    const _universalDepIds = new Set(getUniversalWorkflowDepIds());
 
     for (const dep of dependencies) {
         let localPath;
@@ -669,6 +672,12 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             localPath = lp;
         } else {
             localPath = path.join(defaultModelsRoot, dep.filename);
+        }
+
+        // Rule 1: always preserve universal workflow deps (installOnEngine)
+        if (_universalDepIds.has(dep.id)) {
+            keptUniversal.push({ depId: dep.id, depName: dep.name || dep.id });
+            continue;
         }
 
         const sharedWith = _findOtherModelsUsingDep(dep.id, modelId);
@@ -705,10 +714,10 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         }
     }
 
-    logger.info('download', `uninstall ${modelId}: removed ${removed.length} kept ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
+    logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
     _modelJobs.delete(modelId);
-    _broadcast('download:uninstalled', { modelId, removed, keptShared, keptModelFiles, keptPipInstalls });
-    res.json({ success: true, removed, keptShared, keptModelFiles, keptPipInstalls });
+    _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
+    res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
