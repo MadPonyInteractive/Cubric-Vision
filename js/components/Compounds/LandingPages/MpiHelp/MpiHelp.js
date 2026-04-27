@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
-import { qs } from '../../../utils/dom.js';
+import { qs } from '../../../../utils/dom.js';
 
 /**
  * MpiHelp — Help overlay compound for the landing page.
