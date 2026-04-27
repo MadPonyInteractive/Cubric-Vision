@@ -28,7 +28,8 @@
  *   setBrushSize(size), setBrushType(type), flipMaskColor(),
  *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
  *   setCropRatio(ratio), getCropRect()
- *   setProcessedImage(bitmap) — swap GPU-rendered ImageBitmap as base layer; preserves view/zoom/mask
+ *   setBaseCanvas(canvasEl)   — mount external canvas (e.g. Pixi) as base layer; preserves view/zoom/mask
+ *   clearBaseCanvas()         — remove external base canvas, revert to internal 2D base
  *   destroy()                 — remove canvas + detach all window listeners
  *
  * Emits:

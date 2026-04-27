@@ -134,7 +134,8 @@ export class InputController {
                 this.startPanY = e.clientY - view.offsetY;
             }
             this.updateCursor();
-            this.options.onDraw();
+            if (mask.isDrawingMask) this.options.onDrawFast?.();
+            else this.options.onDraw();
         };
         this.canvas.addEventListener('mousedown', this._boundHandlers.mousedown);
 
@@ -160,7 +161,9 @@ export class InputController {
             }
 
             this.updateCursor();
-            this.options.onDraw();
+            if (mask.isDrawingMask) this.options.onDrawFast?.();
+            else if (mask.isMaskingMode && !this.isPanning) this.options.onScreenUI?.();
+            else { if (crop.isDragging || comparison.isDraggingSlider) this.options.onMarkOverlayDirty?.(); this.options.onDraw(); }
         };
         window.addEventListener('mousemove', this._boundHandlers.mousemove);
 

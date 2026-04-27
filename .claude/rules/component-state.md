@@ -28,3 +28,5 @@
 | `focusMode`            | `boolean`                   | (shell + components that hide on focus)                                                 | focusModeService.js (F-key toggle)                                                 |
 
 > **Block-local (NOT in `state`):** `MpiGroupHistoryBlock` tracks the active tool mode in block-local variable `_options` (the currently-mounted `MpiToolOptions*` instance). This is intentionally NOT a `state` key — it is workspace-scoped and must not persist across navigation. Do NOT add an `activeTool` key to `state.js`.
+
+> **MpiCanvas pan/zoom (NOT in `state`):** `MpiCanvas` tracks pan/zoom as `ViewManager.scale/offsetX/offsetY` (plain object, not reactive state). These are applied as a CSS `transform` on `.mpi-canvas__stack` — not as `ctx.scale/translate`. Do NOT route view state through `state.js`; it is canvas-instance-local and must reset on `loadImage`.

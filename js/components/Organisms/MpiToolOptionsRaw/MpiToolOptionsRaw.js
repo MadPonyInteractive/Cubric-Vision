@@ -21,6 +21,18 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { state } from '../../../state.js';
 import { RawGpuPipeline } from '../../../utils/rawGpuPipeline.js';
 
+// ── Param key → pipeline stage index ─────────────────────────────────────────
+const PARAM_STAGE = {
+    dehaze: 0, dehazeOmega: 0, dehazeT0: 0,
+    exposure: 1,
+    shadows: 2,
+    saturation: 3, hue: 3, lightness: 3,
+    curveLUT: 4,
+    noiseReduction: 5, nrThreshold: 5,
+    sharpening: 6, sharpenRadius: 6, sharpenThresh: 6,
+    grain: 7, grainSize: 7, grainColor: 7, grainLumBias: 7, grainMode: 7,
+};
+
 // ── Param definitions ────────────────────────────────────────────────────────
 
 const SECTIONS = [
@@ -197,7 +209,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             ctx.clearRect(0, 0, W, H);
 
             // Background
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim() || '#1a1a1a';
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim() || 'transparent';
             ctx.fillRect(0, 0, W, H);
 
             // Histogram fill (behind grid)
@@ -307,6 +319,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             canvas.addEventListener('mousedown', (e) => {
                 _dragging = true;
                 e.preventDefault();
+                _pipeline.startDrag(PARAM_STAGE.curveLUT);
             });
 
             const onMove = (e) => {
@@ -320,7 +333,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                 _drawCurve();
             };
 
-            const onUp = () => { _dragging = false; };
+            const onUp = () => { _dragging = false; _pipeline.commitParams(); };
 
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
@@ -344,13 +357,16 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             });
 
         // ── GPU pipeline mount ────────────────────────────────────────────────
+        function _onPipelineCanvas(canvasEl) {
+            viewer.el.setBaseCanvas?.(canvasEl);
+        }
+
         async function _mountPipeline() {
             const imgEl = viewer.el.img;
             if (!imgEl?.naturalWidth) return;
-            await _pipeline.mount(imgEl, (bitmap) => {
-                viewer.el.setProcessedImage(bitmap);
-            });
+            await _pipeline.mount(imgEl, _onPipelineCanvas);
             _pipeline.setParams(_buildPipelineParams(_values));
+            _pipeline.commitParams();
             _computeHistogram();
             _drawCurve();
         }
@@ -415,8 +431,11 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                     _values[p.key] = value;
                     const valEl = qs(`[data-value="${p.key}"]`, el);
                     if (valEl) valEl.textContent = value;
+                    _pipeline.startDrag(PARAM_STAGE[p.key] ?? 0);
                     _applyPreview();
                 });
+
+                bar.on('change', () => { _pipeline.commitParams(); });
             });
         });
 
@@ -472,9 +491,9 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             }
             ctx.putImageData(data, 0, 0);
 
-            // Re-mount pipeline against WB-corrected offscreen canvas.
-            await _pipeline.mount(offscreen, (bitmap) => { viewer.el.setProcessedImage(bitmap); });
+            await _pipeline.mount(offscreen, _onPipelineCanvas);
             _pipeline.setParams(_buildPipelineParams(_values));
+            _pipeline.commitParams();
 
             const wbVal = Math.round((scaleR - scaleB) * 50);
             _values.whiteBalance = wbVal;
@@ -586,7 +605,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             _offEntryLoaded?.();
             _curveDragCleanup?.();
             _pipeline.destroy();
-            viewer.el.clearProcessedImage?.();
+            viewer.el.clearBaseCanvas?.();
             _children.forEach(c => c.destroy?.());
         };
     },

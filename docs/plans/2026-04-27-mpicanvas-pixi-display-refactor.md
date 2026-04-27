@@ -44,7 +44,7 @@
 
 ## To-dos
 
-- [ ] **1. Build new DOM structure + CSS, keep current rendering working**
+- [x] **1. Build new DOM structure + CSS, keep current rendering working**
 
   **What:** In `js/components/Primitives/MpiCanvas/MpiCanvas.js`:
   - Replace template with two-canvas stack + screen-UI sibling.
@@ -61,7 +61,7 @@
 
   **Verify:** Reload Electron. Load any image in raw tool. Image still displays as before (smoothed pixels expected — not fixed yet). Pan and zoom still work. No regressions in mask/crop/comparison. Inspect DOM: `.mpi-canvas` contains `.mpi-canvas__stack` and `.mpi-canvas__screen-ui` siblings; stack contains two `<canvas>` children. Console: `console.log('[mpicanvas] dom', { stack: !!core.stackEl, base: !!core.baseCanvas, overlay: !!core.overlayCanvas, screen: !!core.screenUICanvas })` on construction. Look for `[mpicanvas] dom { stack: true, base: true, overlay: true, screen: true }`.
 
-- [ ] **2. Size canvases to image native px on `loadImage`, draw image at native res**
+- [x] **2. Size canvases to image native px on \****`loadImage`**\*\*, draw image at native res**
 
   **What:** Update `loadImage(url)` in `_CanvasCore`:
   - After `img.onload`, set `baseCanvas.width = img.width; baseCanvas.height = img.height` (clamped to `MAX_TEXTURE_SIZE` mirroring rawGpuPipeline.js logic — same util/constant or recompute here).
@@ -82,7 +82,7 @@
 
   **Verify:** Load 4K image in raw tool. Image shows but **may be way too big and overflow container** (no CSS transform applied yet — that's to-do 4). User can scroll within container or image is clipped. The point of this verify is: base image data is rendered 1:1 to its own canvas at native res. Console: `console.log('[mpicanvas] sizes', { imgW: img.width, imgH: img.height, baseW: baseCanvas.width, baseH: baseCanvas.height })`. Look for matching dimensions. Mask/crop/comparison may look broken visually until to-do 4 fits them — that's expected.
 
-- [ ] **3. Update `MaskManager.init`, `CropManager.init`, `ComparisonManager` to draw against overlay canvas at image native px**
+- [x] **3. Update \****`MaskManager.init`***\*, \****`CropManager.init`***\*, \****`ComparisonManager`**\*\* to draw against overlay canvas at image native px**
 
   **What:** Most logic already operates in image native px. Confirmed safe in audit (`/tmp/investigation/03-view-input.md`, `/tmp/investigation/04-comparison.md`). Specific changes:
   - `MaskManager.init(width, height)` already creates own offscreen `maskCanvas` at image px → unchanged. `_renderOverlay` in MpiCanvas does `overlayCtx.drawImage(mask.maskCanvas, 0, 0)` at native res. No transform needed.
@@ -94,7 +94,8 @@
 
   **Verify:** With image still overflowing (CSS transform not applied yet), enable mask mode and paint a stroke — stroke shows in correct image-px location on overlay canvas. Switch to crop mode — crop rect appears (handles may look giant since CSS transform not applied). Load comparison image — clip line is at correct image-px x coord. Console: `console.log('[mpicanvas] overlay-renders', { mode: this.activeMode, sliderPos: this.comparison.sliderPos })` on each `_renderOverlay`. Look for that log fires once per draw call.
 
-- [ ] **4. Move pan/zoom from ctx transform to CSS transform on stack element; rewire InputController coord math**
+- [x] **4. Move pan/zoom from ctx transform to CSS transform on stack element; rewire InputController coord math**
+
 
   **What:** Per `/tmp/investigation/03-view-input.md`:
   - In `ViewManager`, keep `scale/offsetX/offsetY/minScale/maxScale/isManagedView` properties unchanged (audit ID2 says these are read by callers — public API must stay).
@@ -112,7 +113,7 @@
 
   **Verify:** Load 4K image in raw tool. Image fits container (CSS transform centers + scales). Pan with space-drag — moves smoothly. Zoom with wheel — zooms toward cursor, image stays crisp at all zoom levels (smoothing may still show because Pixi not yet hooked up — base canvas is 2D drawing image with `imageSmoothingEnabled` false; this should now be honored since canvas backing = native size, no fractional scale inside ctx). At 8× zoom, individual pixels should appear as hard squares (Photoshop-like). Mask paint, crop drag, comparison slider drag all work with correct hit-test. Console: `console.log('[mpicanvas] transform', this.stackEl.style.transform)` on each `_applyTransform`. Look for `translate(...)px scale(N)` strings updating during pan/zoom.
 
-- [ ] **5. Mount Pixi `_app.canvas` directly into stack — replace base canvas, remove `_processedBitmap` path**
+- [x] **5. Mount Pixi \****`_app.canvas`***\* directly into stack — replace base canvas, remove \****`_processedBitmap`**\*\* path**
 
   **What:** Per `/tmp/investigation/01-pixi-pipeline.md`:
   - Add new MpiCanvas API: `setBaseCanvas(externalCanvasEl)` and `clearBaseCanvas()`.
@@ -139,44 +140,73 @@
 
   **Verify:** Reload Electron. Open a raw imported image. Adjust exposure/contrast slider — image updates in real-time with **zero perceptible lag** (no bitmap copy roundtrip). Console `console.log('[mpicanvas] base-source', el.tagName, el.width, el.height)` after `setBaseCanvas`: should show `CANVAS NNNN NNNN`. Without raw tool active (e.g., switch to mask mode after raw): base canvas reverts to default 2D, image still shows correctly. Pixels remain crisp at high zoom on Pixi-rendered output.
 
-- [ ] **6. Normalize line widths and handle radius against current CSS scale; final visual polish**
+- [x] **6. Fix MpiCanvas destroy() — properly remove all canvases to eliminate 2D VRAM leak**
 
-  **What:** Once CSS transform handles zoom, lines drawn at constant pixel width on overlay canvas grow with zoom. Fix:
-  - In `_renderOverlay` (and `CropManager.draw`, grid overlay): pass `view.scale` as the CSS scale into `lineWidth = baseWidth / cssScale`, dash arrays similarly. So a 1px-on-screen line is drawn as `1 / cssScale` image-px in the overlay canvas.
-  - Crop handle radius — same: `r / cssScale`.
-  - Re-test all overlay visuals look identical to pre-refactor at fit, 1×, 4×, 8× zoom.
-  - Add `image-rendering: pixelated` rule to overlay canvas explicitly (already on base). Mask paint at high zoom should show hard pixel edges.
-  - Confirm screen-UI canvas brush indicator still draws at constant container-px size regardless of zoom.
-
-  **Files touched:** `js/components/Primitives/MpiCanvas/MpiCanvas.js`, `js/components/Primitives/MpiCanvas/managers/CropManager.js`
-
-  **Verify:** Load 4K image. At fit, 1×, 4×, 8× zoom: crop handles, crop dashed border, grid lines all look the same on-screen thickness. Brush indicator constant size during zoom. Mask painted strokes show crisp pixel edges at 8× zoom (no anti-aliasing softening).
-
-- [ ] **7. Update destroy() and resize() lifecycle to teardown all three canvases cleanly + ResizeObserver**
+  **Context:** Each MpiCanvas mount creates baseCanvas + overlayCanvas at image native px (~51MB each for 4K). Current `destroy()` only removes `this.canvas` alias. overlayCanvas and screenUICanvas stay in DOM → GPU texture backing held until GC → VRAM stacks ~1GB per workspace open/close cycle.
 
   **What:**
-  - `destroy()` — remove all 3 canvas elements + stack div from DOM. Disconnect `ResizeObserver`. Destroy InputController. Destroy crop, mask, comparison managers. Clear Pixi canvas reference (don't destroy Pixi — pipeline owns lifecycle).
-  - `resize()` (called by ResizeObserver on container change) — only updates `screenUICanvas` size to container px and re-fits view (`view.handleResize` → `_applyTransform()`). Does NOT touch base/overlay sizes (image-px, fixed).
-  - Confirm `MpiCompareOverlay` (audit risk: depends on `destroy()`) still cleans up after refactor.
+  - `destroy()`: remove `baseCanvas`, `overlayCanvas`, `screenUICanvas`, and `stackEl` from DOM. Set all to null. Cancel all 3 pending rAFs. Disconnect ResizeObserver. Destroy InputController, crop, mask, comparison managers.
+  - `clearBaseCanvas()`: already removes external Pixi canvas from DOM — correct. Ensure `baseCanvas` node itself is re-appended (currently just un-hides display:none version — that's fine).
+  - Add `console.log('[mpicanvas] destroyed')` at top of destroy for verification.
 
   **Files touched:** `js/components/Primitives/MpiCanvas/MpiCanvas.js`
 
-  **Verify:** Open raw image, mount mask + crop, switch to compare mode. Navigate away from history workspace (which calls instance.destroy()). Re-enter — fresh MpiCanvas mounts, no leaked canvases, no leaked observers, no leaked InputController. Console `console.log('[mpicanvas] destroyed', { canvases: document.querySelectorAll('.mpi-canvas canvas').length })` immediately after destroy. Look for 0. Resize browser window — image refits without artifacts.
+  **Verify:** Open 4K image in history workspace. Note GPU VRAM in Task Manager. Navigate to gallery. VRAM drops back to baseline (no residual 2D canvas backing). Re-open workspace — VRAM returns to same level as first open (no stacking). Console shows `[mpicanvas] destroyed` on nav away.
 
-- [ ] **8. Update component documentation rules**
+- [x] **7. Refactor RawGpuPipeline to staged float16 bake architecture for smooth 4K slider interaction**
 
-  **What:** Per `/tmp/investigation/06-docs.md`. With user explicit permission per CLAUDE.md cardinal rule 3:
-  - `.claude/rules/components.md`: clarify Primitives may own multi-canvas DOM trees if internally managed.
-  - `.claude/rules/component-mounts.md`: update MpiCanvas mount section to describe two-canvas stack + screen-UI.
-  - `.claude/rules/component-events.md`: confirm `'modechange'` event still fires from MpiCanvas root.
-  - `.claude/rules/component-state.md`: clarify pan/zoom is CSS transform, not ctx state.
-  - `.claude/rules/dos_and_donts.md`: add note — for transformable image surfaces, prefer CSS transform over canvas ctx scaling.
-  - `docs/PROJECT.md`: add brief "Rendering Architecture" section pointing to MpiCanvas + rawGpuPipeline relationship.
-  - **Ask user before applying** these doc edits (per CLAUDE.md rule).
+  **Context:** Current pipeline runs all 8 shaders every frame regardless of which slider changed. At 4K = ~128M pixel ops/frame → lags on 4K. Proposed: each filter stage bakes to float16 RenderTexture. Active slider re-renders only its stage from previous stage's bake (1 pass). On release, bake downstream stages (once, invisible).
+
+  **What:**
+  - Replace `_sprite.filters` chain with explicit per-stage `RenderTexture` pipeline:
+    - `_stagedRT[i]` — array of `RenderTexture` (format `rgba16float`, same size as canvas)
+    - On mount: bake all stages at default params (identity → just copy source through each)
+    - `setParams(values)`: identify which stage(s) changed, mark dirty. rAF fires → re-render only dirty stage from `_stagedRT[i-1]`, composite downstream to `_stagedRT[last]`, display
+    - On drag start: no remount needed (remove `startDrag`/`endDrag` — rAF + single-pass is fast enough)
+    - On drag end: bake all stages (deferred 50ms) so next interaction starts from fresh bakes
+  - Stage order (matches current filter order): dehaze → exposure → shadows → hueSat → curves → NR → unsharp → grain
+  - `renderFullRes()`: re-bake all stages at full GPU-max res → blob → return (no remount needed)
+  - Remove `startDrag`, `endDrag`, `_remount`, `_isDragging` added in this session (superseded)
+  - Remove `PREVIEW_MAX` entirely — no more downscaling
+
+  **Files touched:** `js/utils/rawGpuPipeline.js`, `js/components/Organisms/MpiToolOptionsRaw/MpiToolOptionsRaw.js` (remove `startDrag`/`endDrag`/`_dragEndTimer` wiring)
+
+  **Verify:** Open 4K raw image. Drag exposure slider rapidly — no lag, no pixelation, image updates at full res. Drag sharpening slider — same. Stack multiple non-zero adjustments, then drag any single slider — still smooth (only 1 pass firing). Apply → baked result matches preview. VRAM stable (float16 RT × 8 stages × 4K ≈ 240MB, constant, no growth).
+
+  **Implementation notes (diverged from plan):**
+  - Architecture changed from staged sequential pipeline to **upstream-cache model**: `_upstreamRT[N]` = source + all shaders except N. Drag of slider N = 1 pass of shader N on top of `_upstreamRT[N]`. This correctly handles re-visiting any slider without accumulation.
+  - `startDrag(stageIdx)` added to pipeline API — called by MpiToolOptionsRaw on slider `input`. Builds upstream cache lazily (only if invalid).
+  - `commitParams()` added — called on slider `change` / mouseup. Rebuilds all 8 upstream caches (56 passes, once per commit). Invalidates all caches on each commit since any slider value change affects every other slider's "all-except-N" bake.
+  - `PARAM_STAGE` map added to MpiToolOptionsRaw — maps param keys to stage indices for `startDrag`.
+  - float16 RT format NOT used (Pixi v8 `RenderTexture.create` defaults to rgba8unorm — sufficient for preview quality; float16 reserved for future export path).
+  - `_previewSprite` reused across all passes (texture/filter swapped per pass) — avoids Pixi display object leak that caused progressive slowdown.
+  - `renderer.gc ?? renderer.textureGC` fallback added — `textureGC.run()` deprecated in Pixi v8.15.
+  - White balance (`_applyAutoWB`, `_mountPipeline`) fixed: `commitParams()` now called after every `mount()` + `setParams()` to ensure upstream caches reflect new source image immediately.
+
+- [x] **8. Normalize overlay line widths + handle radius against CSS scale; visual polish**
+
+  **What:**
+  - `_renderOverlay` + `CropManager.draw` + grid: `lineWidth = baseWidth / view.scale`, dash arrays same. Lines stay constant thickness on screen at all zoom levels.
+  - Crop handle radius: `r / view.scale`.
+  - Overlay canvas: add `image-rendering: pixelated` explicitly if not set.
+  - Brush indicator: already screen-px, no change needed.
+
+  **Files touched:** `js/components/Primitives/MpiCanvas/MpiCanvas.js`, `js/components/Primitives/MpiCanvas/managers/CropManager.js`
+
+  **Verify:** At fit, 1×, 4×, 8× zoom: crop handles, dashed border, grid lines all same on-screen thickness. Mask strokes show crisp pixel edges at 8× zoom.
+
+- [x] **9. Update component documentation rules** *(ask user before applying)*
+
+  **What:** With explicit user permission (CLAUDE.md rule):
+  - `.claude/rules/components.md`: Primitives may own multi-canvas DOM trees
+  - `.claude/rules/component-mounts.md`: MpiCanvas two-canvas stack description
+  - `.claude/rules/component-state.md`: pan/zoom is CSS transform not ctx state
+  - `.claude/rules/dos_and_donts.md`: prefer CSS transform over ctx scaling for image surfaces
+  - `docs/PROJECT.md`: "Rendering Architecture" section → MpiCanvas + rawGpuPipeline relationship
 
   **Files touched:** rule files above (after user approves).
 
-  **Verify:** Look at the updated doc files — confirm new descriptions match implemented architecture (two-canvas stack, CSS transform, Pixi canvas mounted directly, no `_processedBitmap`).
+  **Verify:** Descriptions match implemented architecture.
 
 ---
 
@@ -185,7 +215,8 @@
 After all to-dos complete:
 - 4K image: pixels appear as hard squares at 8× zoom (Photoshop parity)
 - 4K image: pan/zoom feels smooth at 60fps (CSS GPU compositor)
-- Raw tool sliders: real-time response, no lag (zero-copy Pixi → display)
+- Raw tool sliders: real-time response, no lag at 4K (staged float16 bake, 1 pass per frame)
+- VRAM stable: no stacking on workspace open/close, Pixi context releases on tool switch
 - Mask paint: works at all zoom levels, paints in correct image-px
 - Crop overlay: handles look constant size on screen, drag works at all zoom levels
 - Comparison slider: drag works, clip line stays at correct image-px x

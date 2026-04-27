@@ -160,6 +160,28 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ---
 
+## MpiCanvas (Primitive — js/components/Primitives/MpiCanvas/)
+
+Two-canvas stack architecture. DOM structure inside `.mpi-canvas` root:
+
+```
+<div class="mpi-canvas">                        ← container (100% × 100%, overflow:hidden)
+  <div class="mpi-canvas__stack"                ← image-native-px, CSS-transformed for pan/zoom
+       style="transform: translate(x,y) scale(s); transform-origin: 0 0">
+    <canvas data-role="base"/>                  ← Pixi WebGL canvas (via setBaseCanvas) OR 2D fallback; image-rendering: pixelated
+    <canvas data-role="overlay"/>               ← 2D, mask + crop + grid at native px; image-rendering: pixelated
+  </div>
+  <canvas class="mpi-canvas__screen-ui"/>       ← 2D, container-px; brush indicator + comparison slider drag handle
+</div>
+```
+
+- **Pan/zoom** = CSS `transform` on `.mpi-canvas__stack` via `ViewManager` — NOT `ctx.scale/translate`.
+- **Overlay line widths** = `baseWidth / view.scale` so on-screen thickness stays constant at all zoom levels.
+- **Pixi pipeline** (`rawGpuPipeline.js`) mounts its `_app.canvas` directly into the stack via `canvas.el.setBaseCanvas(pixiCanvas)`. No bitmap copy.
+- **Callers** use the public API on `instance.el` (`loadImage`, `setMaskingMode`, `getCropRect`, `setBaseCanvas`, `clearBaseCanvas`, etc.). Internal canvas structure is an implementation detail.
+
+---
+
 ## MpiModelSettings.js (internal mounts)
 
 - `MpiOverlay`   props: `{ closable: true }`   slot: `document.createElement('div')`
