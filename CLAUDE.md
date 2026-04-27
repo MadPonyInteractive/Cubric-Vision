@@ -122,7 +122,7 @@ If you need to run browser automation or test web interfaces:
 NEVER commit to git unless user specifically asks for it
 ---
 
-## MPI Skills 
+## MPI Skills `C:\Users\Fabio\.claude\skills\mpi\`
 
 Four skills manage a human-in-the-loop execution system:
 

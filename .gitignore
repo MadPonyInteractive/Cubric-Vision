@@ -20,6 +20,7 @@ comfy_workflows/scripts/
 
 # agents
 .agent
+.claude/settings.local.json
 .claude/playwright-cli
 .playwright
 .playwright-cli
