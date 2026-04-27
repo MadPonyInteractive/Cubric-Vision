@@ -42,7 +42,6 @@
 .mpi-group-history-block__right {
     grid-area: right;
     display: grid;
-    grid-template-rows: auto 1fr;
     overflow: hidden;
     background: var(--surface-2);
     border-left: 1px solid var(--border);

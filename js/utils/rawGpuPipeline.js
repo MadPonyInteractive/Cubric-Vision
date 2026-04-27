@@ -1,4 +1,4 @@
-import { Application, Assets, Sprite, Filter, Texture, RenderTexture, BufferImageSource, GlProgram, UniformGroup } from 'pixi.js';
+import { Application, Sprite, Filter, Texture, BufferImageSource, GlProgram, UniformGroup } from 'pixi.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 // ---------------------------------------------------------------------------
@@ -473,13 +473,6 @@ function lutToTexture(app, lut) {
 }
 
 // ---------------------------------------------------------------------------
-// Filter factories
-// ---------------------------------------------------------------------------
-
-function makeFilter(frag, uniforms) {
-    return new Filter({ glProgram: { vertex: VERT, fragment: frag }, resources: uniforms });
-}
-
 // ---------------------------------------------------------------------------
 // RawGpuPipeline
 // ---------------------------------------------------------------------------
@@ -521,40 +514,46 @@ export class RawGpuPipeline {
 
         this._onBitmap = onBitmap;
 
-        // Diagnostic: capture WebGL shader compile errors verbatim.
-        if (!RawGpuPipeline._glPatched) {
-            const patch = (proto) => {
-                const orig = proto.compileShader;
-                proto.compileShader = function(shader) {
-                    const ret = orig.call(this, shader);
-                    if (!this.getShaderParameter(shader, this.COMPILE_STATUS)) {
-                        const log = this.getShaderInfoLog(shader);
-                        const src = this.getShaderSource(shader);
-                        clientLogger.error('rawGpu', `GLSL compile FAIL:\n${log}\n--- source ---\n${src}`);
-                    }
-                    return ret;
-                };
-            };
-            patch(WebGLRenderingContext.prototype);
-            if (window.WebGL2RenderingContext) patch(WebGL2RenderingContext.prototype);
-            RawGpuPipeline._glPatched = true;
-        }
+        // Determine GPU max texture size before init to avoid OOM on large sources.
+        const maxTex = (() => {
+            try {
+                const c = document.createElement('canvas');
+                const g = c.getContext('webgl2') || c.getContext('webgl');
+                return g ? g.getParameter(g.MAX_TEXTURE_SIZE) : 4096;
+            } catch { return 4096; }
+        })();
+        const srcW = srcImg.naturalWidth  || srcImg.width  || 512;
+        const srcH = srcImg.naturalHeight || srcImg.height || 512;
+        const scale = Math.min(1, maxTex / Math.max(srcW, srcH));
+        const canvasW = Math.floor(srcW * scale);
+        const canvasH = Math.floor(srcH * scale);
 
         this._app = new Application();
         await this._app.init({
-            width:            srcImg.naturalWidth,
-            height:           srcImg.naturalHeight,
+            width:            canvasW,
+            height:           canvasH,
             backgroundAlpha:  0,
             antialias:        false,
             autoDensity:      false,
             preference:       'webgl',
-            autoStart:        false,    // suppress continuous render loop — we render manually per setParams
+            autoStart:        false,
             sharedTicker:     false,
         });
         this._app.ticker?.stop();
         // offscreen — never inserted into DOM
 
-        this._srcTexture = Texture.from(srcImg);
+        // Extract pixels into a Uint8Array immediately so the texture source is a plain
+        // buffer — never a live <img> or canvas element that can become invalid between
+        // mount() and a later renderFullRes() call.
+        const pixCanvas = document.createElement('canvas');
+        pixCanvas.width  = canvasW;
+        pixCanvas.height = canvasH;
+        pixCanvas.getContext('2d').drawImage(srcImg, 0, 0, canvasW, canvasH);
+        const pixData = pixCanvas.getContext('2d').getImageData(0, 0, canvasW, canvasH);
+        const pixBuf  = new Uint8Array(pixData.data.buffer);
+        this._srcTexture = new Texture({
+            source: new BufferImageSource({ resource: pixBuf, width: canvasW, height: canvasH, format: 'rgba8unorm' }),
+        });
         this._sprite     = new Sprite(this._srcTexture);
         this._app.stage.addChild(this._sprite);
 

@@ -437,28 +437,13 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
 
         // Grey-world auto WB: client-side pixel sampling on <img> or <canvas>
         async function _applyAutoWB() {
-            const elRef = viewer.el.getImageEl?.();
-            if (!elRef) return;
+            // Always sample from the original <img> — canvas.width/height is display size
+            // (zoom-dependent) and produces wrong dims when used as pipeline source.
+            const srcEl = viewer.el.img;
+            if (!srcEl?.naturalWidth) return;
 
-            // Resolve the drawable source: <img>, <canvas> inside wrapper, or elRef itself
-            let srcEl = elRef;
-            if (elRef.tagName !== 'IMG' && elRef.tagName !== 'CANVAS') {
-                srcEl = elRef.querySelector('canvas') || elRef.querySelector('img');
-            }
-            if (!srcEl) return;
-
-            let W, H;
-            if (srcEl.tagName === 'IMG') {
-                if (!srcEl.complete || !srcEl.naturalWidth) {
-                    await new Promise((resolve, reject) => { srcEl.onload = resolve; srcEl.onerror = reject; });
-                }
-                W = srcEl.naturalWidth;
-                H = srcEl.naturalHeight;
-            } else {
-                W = srcEl.width;
-                H = srcEl.height;
-            }
-            if (!W || !H) return;
+            const W = srcEl.naturalWidth;
+            const H = srcEl.naturalHeight;
 
             const offscreen = document.createElement('canvas');
             offscreen.width = W;
@@ -487,10 +472,8 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             }
             ctx.putImageData(data, 0, 0);
 
-            // Re-mount pipeline against WB-corrected offscreen canvas (direct, no PNG roundtrip).
-            // Pipeline reads naturalWidth/naturalHeight — provide via shim object.
-            const canvasSrc = Object.assign(offscreen, { naturalWidth: W, naturalHeight: H });
-            await _pipeline.mount(canvasSrc, (bitmap) => { viewer.el.setProcessedImage(bitmap); });
+            // Re-mount pipeline against WB-corrected offscreen canvas.
+            await _pipeline.mount(offscreen, (bitmap) => { viewer.el.setProcessedImage(bitmap); });
             _pipeline.setParams(_buildPipelineParams(_values));
 
             const wbVal = Math.round((scaleR - scaleB) * 50);
