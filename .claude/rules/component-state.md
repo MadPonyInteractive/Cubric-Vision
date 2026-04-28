@@ -30,3 +30,7 @@
 > **Block-local (NOT in `state`):** `MpiGroupHistoryBlock` tracks the active tool mode in block-local variable `_options` (the currently-mounted `MpiToolOptions*` instance). This is intentionally NOT a `state` key — it is workspace-scoped and must not persist across navigation. Do NOT add an `activeTool` key to `state.js`.
 
 > **MpiCanvas pan/zoom is NOT in `state`:** `scale`, `offsetX`, `offsetY` live inside `ViewManager` (instance-local). Pan/zoom is applied as a CSS `transform` on `.mpi-canvas__stack` — not via `ctx.translate/scale`. Never reach into `state` for canvas view parameters.
+
+> **MpiCanvas VRAM lifecycle:** When prompt tool is active, `MpiCanvasViewer` destroys `MpiCanvas` completely (`_cv.inst.el.destroy()` zeros canvas dims → immediate GPU texture release) and mounts `MpiMaskedImagePreview` (zero GPU backing). On switch back, a fresh `MpiCanvas` is remounted. The internal `_cv` mutable ref + `canvas` Proxy ensure all `canvas.*` calls in `MpiCanvasViewer` transparently forward to the current live instance. Do NOT hold a direct ref to the `MpiCanvas` instance from outside `MpiCanvasViewer` — the instance is replaced on every prompt↔tool swap.
+
+> **MpiCanvas pan/zoom is NOT in `state`:** `scale`, `offsetX`, `offsetY` live inside `ViewManager` (instance-local). Pan/zoom is applied as a CSS `transform` on `.mpi-canvas__stack` — not via `ctx.translate/scale`. Never reach into `state` for canvas view parameters.

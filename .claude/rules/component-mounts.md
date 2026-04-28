@@ -11,6 +11,24 @@ Props: `{ onBrushSizeChange?: fn, onBrushTypeChange?: fn }`
 
 ---
 
+## MpiMaskedImagePreview (Primitive: lightweight prompt-mode image preview)
+
+DOM structure: `.mpi-masked-preview` root (overflow:hidden) → `.mpi-masked-preview__stack` (CSS-transform pan/zoom, sized to image-native px) → `img.mpi-masked-preview__base` + `img.mpi-masked-preview__masked` (CSS `mask-image` overlay).
+
+No canvas, no GPU texture backing. Zero VRAM beyond the two `<img>` decode buffers.
+
+Props: none
+
+**Instance API (on `el`):**
+- `loadImage(url)` — load image; resets view to contain
+- `setMaskDataURL(dataUrl)` — show PNG mask as CSS `mask-image` tinted overlay
+- `clearMask()` — hide overlay
+- `destroy()` — remove listeners, disconnect ResizeObserver
+
+**Mounted by:** `MpiCanvasViewer` (`swapToPreview`) into `_previewWrap` (absolute-positioned sibling of `#canvas-wrap`)
+
+---
+
 ## MpiGalleryBlock
 
 - `MpiGalleryGrid`   props: `{ groups: ItemGroup[] }`   slot: top-level workspace container
@@ -30,7 +48,7 @@ Props: `{ onBrushSizeChange?: fn, onBrushTypeChange?: fn }`
 
 Photoshop-style layout: `grid-template-columns: 3.5rem 1fr 14rem`. Slots: `#left-slot` (toolbar), `#centre-slot` (viewer), `#right-top-slot` (active tool options), `#right-bottom-slot` (history list), `#prompt-box-mount` (shell PromptBox, centre-bottom floating).
 
-**Mediator pattern:** `mountOptions(mode)` destroys previous `MpiToolOptions*` instance and mounts the new one into `#right-top-slot`. `prompt` mode is special — no compound, toggles CSS class `mpi-group-history-block--prompt-active` which shows PromptBox and hides `#right-top-slot`.
+**Mediator pattern:** `mountOptions(mode)` is `async`. Destroys previous `MpiToolOptions*` instance and mounts the new one into `#right-top-slot`. `prompt` mode is special — no compound, toggles CSS class `mpi-group-history-block--prompt-active` which shows PromptBox and hides `#right-top-slot`. For image groups, `prompt` mode also calls `await viewer.el.swapToPreview()` (destroys `MpiCanvas`, mounts `MpiMaskedImagePreview`). Switching away from prompt calls `await viewer.el.swapToCanvas()` (destroys preview, remounts fresh `MpiCanvas`, reloads image + mask) before mounting the tool compound. Always `await` both swaps — tool compounds must not mount before canvas is ready.
 
 ```js
 const TOOL_OPTIONS_REGISTRY = {

@@ -191,7 +191,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
          * viewer mode in its setup). `prompt` is special — no compound; toggles
          * PromptBox visibility via the `--prompt-active` CSS class.
          */
-        function mountOptions(mode) {
+        async function mountOptions(mode) {
             _options?.destroy?.();
             _options = null;
 
@@ -201,9 +201,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             el.classList.toggle('mpi-group-history-block--prompt-active', mode === 'prompt');
 
             if (mode === 'prompt') {
+                if (!isVideo) await viewer.el.swapToPreview?.();
                 if (_hasPromptOps()) _pb?.el?.show();
                 return;
             }
+
+            // Leaving prompt mode — await canvas remount before mounting tool compound
+            if (!isVideo) await viewer.el.swapToCanvas?.();
 
             _pb?.el?.hide();
             if (!mode) return;

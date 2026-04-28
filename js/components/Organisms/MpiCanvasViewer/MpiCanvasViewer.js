@@ -24,6 +24,7 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiCanvas } from '../../Primitives/MpiCanvas/MpiCanvas.js';
+import { MpiMaskedImagePreview } from '../../Primitives/MpiMaskedImagePreview/MpiMaskedImagePreview.js';
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiAutoMaskThumbs } from '../../Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
@@ -70,12 +71,28 @@ export const MpiCanvasViewer = ComponentFactory.create({
         const spinnerWrap = qs('#spinner-wrap', el);
         MpiSpinner.mount(spinnerWrap, { size: 'lg', variant: 'primary' });
 
-        const canvasInst = MpiCanvas.mount(qs('#canvas-wrap', el), {
-            onBrushTypeChange: (type) => {
-                emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
+        /** MpiMaskedImagePreview instance while prompt mode is active, null otherwise */
+        let _previewInst = null;
+
+        // Mutable canvas ref — replaced on swapToCanvas remount.
+        // All internal code accesses canvas via _cv.el so remount is transparent.
+        const _cv = {
+            inst: MpiCanvas.mount(qs('#canvas-wrap', el), {
+                onBrushTypeChange: (type) => {
+                    emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
+                },
+            }),
+        };
+        Object.defineProperty(_cv, 'el', { get() { return this.inst.el; }, configurable: true });
+
+        // Convenience alias — always resolves via _cv.el; methods auto-bound to current _cv.el
+        const canvas = new Proxy({}, {
+            get(_, k) {
+                const v = _cv.el[k];
+                return (typeof v === 'function') ? v.bind(_cv.el) : v;
             },
+            set(_, k, v) { _cv.el[k] = v; return true; },
         });
-        const canvas = canvasInst.el;
 
         function _setGeneratingSpinner(on) {
             spinnerWrap.classList.toggle('mpi-canvas-viewer__spinner--visible', on);
@@ -254,7 +271,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // ── Canvas modechange → sync with our state machine ──────────────────
 
-        canvasInst.on('modechange', ({ mode }) => {
+        _cv.inst.on('modechange', ({ mode }) => {
             if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
             if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
             if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
@@ -480,12 +497,94 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;
 
+        // ── Prompt-tool preview swap ─────────────────────────────────────────
+
+        // Preview container — sibling to #canvas-wrap inside .mpi-canvas-viewer (position:relative)
+        const _previewWrap = document.createElement('div');
+        _previewWrap.style.cssText = 'position:absolute;inset:0;display:none;';
+        el.appendChild(_previewWrap);
+
+        /**
+         * Swap to MpiMaskedImagePreview for prompt mode.
+         * Destroys MpiCanvas — releases all GPU texture backing immediately.
+         * Remounted on swapToCanvas.
+         */
+        el.swapToPreview = async () => {
+            if (_previewInst) return;
+
+            const maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
+            const imageUrl    = _currentItem ? _resolveUrl(_currentItem.filePath) : null;
+
+            // Destroy canvas — zeros canvas dims, removes from DOM, releases GPU textures
+            _cv.inst.el.destroy?.();
+            const wrap = qs('#canvas-wrap', el);
+            wrap.innerHTML = '';
+            wrap.style.display = 'none';
+            _previewWrap.style.display = '';
+
+            _previewInst = MpiMaskedImagePreview.mount(_previewWrap);
+
+            if (imageUrl) await _previewInst.el.loadImage(imageUrl);
+            if (maskDataUrl) _previewInst.el.setMaskDataURL(maskDataUrl);
+
+            console.log('[canvas-viewer] swapped to preview (canvas destroyed)', { hasImage: !!imageUrl, hasMask: !!maskDataUrl });
+        };
+
+        /**
+         * Swap back to MpiCanvas from preview mode.
+         * Remounts a fresh MpiCanvas, reloads current image + mask.
+         */
+        el.swapToCanvas = async () => {
+            if (!_previewInst) return;
+
+            _previewInst.el.destroy?.();
+            _previewInst = null;
+            _previewWrap.innerHTML = '';
+            _previewWrap.style.display = 'none';
+
+            const wrap = qs('#canvas-wrap', el);
+            wrap.innerHTML = '';
+            wrap.style.display = '';
+
+            // Remount fresh canvas, update mutable ref
+            _cv.inst = MpiCanvas.mount(wrap, {
+                onBrushTypeChange: (type) => {
+                    emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
+                },
+            });
+            _cv.inst.on('modechange', ({ mode }) => {
+                if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
+                if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
+                if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
+                if (mode !== 'compare' && _comparingActive)             _comparingActive = false;
+                if (_loadingComparison) return;
+                emit('mode-changed', { mode: _currentMode });
+            });
+
+            // Reload image + restore mask from store
+            if (_currentItem?.filePath) {
+                await _cv.el.loadImage(_resolveUrl(_currentItem.filePath));
+                const saved = _maskStore.get(_currentIdx);
+                if (saved) {
+                    await _cv.el.setMaskDataURL(saved);
+                    _hasMask = true;
+                } else {
+                    _cv.el.clearMask();
+                    _hasMask = false;
+                }
+            }
+
+            console.log('[canvas-viewer] swapped back to canvas (remounted)');
+        };
+
         // ── Lifecycle: destroy ───────────────────────────────────────────────
         // Block calls viewer.el.destroy?.() on workspace teardown. Without this
         // the inner MpiCanvas + its 3 image-px canvases leak GPU texture backing
         // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
         el.destroy = () => {
-            canvasInst?.el?.destroy?.();
+            _previewInst?.el?.destroy?.();
+            _previewInst = null;
+            _cv.inst?.el?.destroy?.();
             autoMaskThumbs?.el?.destroy?.();
         };
 

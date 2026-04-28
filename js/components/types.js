@@ -35,6 +35,20 @@
  */
 
 /**
+ * @typedef {Object} MpiMaskedImagePreviewProps (Primitive — js/components/Primitives/MpiMaskedImagePreview)
+ * No props required.
+ *
+ * Lightweight image + mask preview for Prompt tool mode. Two <img> elements in a
+ * CSS-transform stack. Pan/zoom via ViewManager. No GPU canvas backing.
+ *
+ * Instance methods (on instance.el):
+ *   loadImage(url)          — load image; resets view to contain
+ *   setMaskDataURL(dataUrl) — show painted mask as CSS mask-image overlay (PNG dataURL)
+ *   clearMask()             — hide mask overlay
+ *   destroy()               — remove event listeners, disconnect ResizeObserver
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsCropProps (Organism — js/components/Organisms/MpiToolOptionsCrop)
  * @property {Object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
  * @property {'image'|'video'} kind
