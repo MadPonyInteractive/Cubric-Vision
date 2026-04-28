@@ -41,7 +41,6 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { clientLogger }     from '../../../services/clientLogger.js';
-import { qs }               from '../../../utils/dom.js';
 import { ViewManager }       from './managers/ViewManager.js';
 import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
@@ -56,28 +55,9 @@ const getCSSColor = (varName) => getComputedStyle(document.documentElement).getP
 class _CanvasCore {
     constructor(container, options = {}, onModeChange) {
         this.container = container;
-
-        // DOM structure: stack holds base + overlay (image-px); screen-ui is container-px
-        this.stackEl = qs('.mpi-canvas__stack', container);
-
-        this.baseCanvas = document.createElement('canvas');
-        this.baseCanvas.style.cssText = 'position:absolute;left:0;top:0;image-rendering:pixelated;';
-        this.baseCtx = this.baseCanvas.getContext('2d');
-        this.stackEl.appendChild(this.baseCanvas);
-
-        this.overlayCanvas = document.createElement('canvas');
-        this.overlayCanvas.style.cssText = 'position:absolute;left:0;top:0;image-rendering:pixelated;';
-        this.overlayCtx = this.overlayCanvas.getContext('2d');
-        this.stackEl.appendChild(this.overlayCanvas);
-
-        this.screenUICanvas = qs('.mpi-canvas__screen-ui', container);
-        this.screenUICtx = this.screenUICanvas.getContext('2d');
-
-        // Alias for all existing code — unchanged behaviour until to-do 2+
-        this.canvas = this.baseCanvas;
-        this.ctx    = this.baseCtx;
-
-
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.container.appendChild(this.canvas);
 
         // State Managers
         this.view       = new ViewManager();
@@ -90,9 +70,7 @@ class _CanvasCore {
 
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
-        this._externalBase = null; // set via setBaseCanvas; null = use internal 2D base
-        this._baseDirty    = false; // true only when base pixel content changed
-        this._overlayDirty = false; // true when mask/crop/grid/comparison overlay changed
+        this._processedBitmap = null;
 
         // Grid state
         this.gridH = 1;
@@ -100,27 +78,15 @@ class _CanvasCore {
 
         this.options = { onDraw: options.onDraw || null, ...options };
 
-        // rAF throttle: one pending frame per draw tier
-        this._rafFull    = null;
-        this._rafFast    = null;
-        this._rafScreen  = null;
-
-        const _schedFull   = () => { if (this._rafFull)   return; this._overlayDirty = true; this._rafFull   = requestAnimationFrame(() => { this._rafFull   = null; this.draw(); }); };
-        const _schedFast   = () => { if (this._rafFast)   return; this._rafFast   = requestAnimationFrame(() => { this._rafFast   = null; this._overlayDirty = true; this._renderOverlay(); this._renderScreenUI(); }); };
-        const _schedScreen = () => { if (this._rafScreen) return; this._rafScreen = requestAnimationFrame(() => { this._rafScreen = null; this._renderScreenUI(); }); };
-
         // Orchestrate Input
         this.input = new InputController(
-            this.screenUICanvas,
+            this.canvas,
             this.container,
             { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop },
             {
-                onDraw:     _schedFull,
-                onDrawFast: _schedFast,
-                onScreenUI: _schedScreen,
+                onDraw: () => this.draw(),
                 onResetView: () => this.resetView(),
-                onMarkOverlayDirty: () => { this._overlayDirty = true; },
-                onSliderChange: (pos) => { this.canvas.dataset.sliderPos = pos; this._overlayDirty = true; },
+                onSliderChange: (pos) => { this.canvas.dataset.sliderPos = pos; },
                 onBrushSizeChange: this.options.onBrushSizeChange,
                 onBrushTypeChange: this.options.onBrushTypeChange
             }
@@ -141,7 +107,6 @@ class _CanvasCore {
         this.crop.isCroppingMode         = v === 'crop';
         this.comparison.isComparisonMode = v === 'compare';
         this.input.updateCursor();
-        this._overlayDirty = true;
         this.draw();
         if (this._onModeChange) this._onModeChange(v);
     }
@@ -176,35 +141,20 @@ class _CanvasCore {
     get sliderPos()      { return this.comparison.sliderPos; }
     set sliderPos(v)     { this.comparison.sliderPos = v; }
     get maskHidden()     { return this._maskHidden; }
-    set maskHidden(v)    { this._maskHidden = v; this._overlayDirty = true; this.draw(); }
+    set maskHidden(v)    { this._maskHidden = v; this.draw(); }
 
     destroy() {
-        console.log('[mpicanvas] destroyed');
-        if (this._rafFull)   { cancelAnimationFrame(this._rafFull);   this._rafFull   = null; }
-        if (this._rafFast)   { cancelAnimationFrame(this._rafFast);   this._rafFast   = null; }
-        if (this._rafScreen) { cancelAnimationFrame(this._rafScreen); this._rafScreen = null; }
-        if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-        this.input?.destroy();
+        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
+        if (this.resizeObserver) this.resizeObserver.disconnect();
+        this.input.destroy();
         this.crop?.destroy?.();
-        this.mask?.destroy?.();
-        this.comparison?.destroy?.();
-        if (this._externalBase && this._externalBase.parentNode) {
-            this._externalBase.parentNode.removeChild(this._externalBase);
+        if (this.canvas && this.canvas.parentNode) {
+            this.canvas.parentNode.removeChild(this.canvas);
         }
-        this._externalBase = null;
-        if (this.baseCanvas && this.baseCanvas.parentNode)     { this.baseCanvas.parentNode.removeChild(this.baseCanvas); }
-        if (this.overlayCanvas && this.overlayCanvas.parentNode) { this.overlayCanvas.parentNode.removeChild(this.overlayCanvas); }
-        if (this.screenUICanvas && this.screenUICanvas.parentNode) { this.screenUICanvas.parentNode.removeChild(this.screenUICanvas); }
-        if (this.stackEl && this.stackEl.parentNode)           { this.stackEl.parentNode.removeChild(this.stackEl); }
-        this.baseCanvas = this.baseCtx = this.canvas = this.ctx = null;
-        this.overlayCanvas = this.overlayCtx = null;
-        this.screenUICanvas = this.screenUICtx = null;
-        this.stackEl = null;
     }
 
     async setMaskDataURL(dataUrl) {
         await this.mask.setFromURL(dataUrl);
-        this._overlayDirty = true;
         this.draw();
     }
 
@@ -217,47 +167,28 @@ class _CanvasCore {
         });
         this.mask.maskCtx.globalCompositeOperation = 'source-over';
         this.mask.maskCtx.drawImage(img, 0, 0);
-        this._overlayDirty = true;
         this.draw();
     }
 
-    setBaseCanvas(externalCanvasEl) {
-        // Remove previous external base if present
-        if (this._externalBase && this._externalBase.parentNode) {
-            this._externalBase.parentNode.removeChild(this._externalBase);
-        }
-        // Hide the internal 2D base canvas
-        this.baseCanvas.style.display = 'none';
-        this._externalBase = externalCanvasEl;
-        externalCanvasEl.style.cssText = 'position:absolute;left:0;top:0;image-rendering:pixelated;';
-        if (this.img.width) {
-            externalCanvasEl.style.width  = this.img.width  + 'px';
-            externalCanvasEl.style.height = this.img.height + 'px';
-        }
-        this.stackEl.insertBefore(externalCanvasEl, this.overlayCanvas);
-        console.log('[mpicanvas] base-source', externalCanvasEl.tagName, externalCanvasEl.width, externalCanvasEl.height);
+    setProcessedImage(bitmap) {
+        if (this._processedBitmap) this._processedBitmap.close?.();
+        this._processedBitmap = bitmap;
+        this.draw();
     }
 
-    clearBaseCanvas() {
-        if (this._externalBase && this._externalBase.parentNode) {
-            this._externalBase.parentNode.removeChild(this._externalBase);
-        }
-        this._externalBase = null;
-        this.baseCanvas.style.display = '';
-        this._baseDirty = true;
-        console.log('[mpicanvas] base-source', this.baseCanvas.tagName, this.baseCanvas.width, this.baseCanvas.height, '(2D fallback)');
+    clearProcessedImage() {
+        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
         this.draw();
     }
 
     clearImage() {
+        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
         this._activeMode = 'none';
         this.mask.isMaskingMode          = false;
         this.crop.isCroppingMode         = false;
         this.comparison.isComparisonMode = false;
-        this._baseDirty = true;
-        this._overlayDirty = true;
         this.draw();
         if (this._onModeChange) this._onModeChange('none');
     }
@@ -281,17 +212,7 @@ class _CanvasCore {
 
             this.mask.init(this.img.width, this.img.height);
             this.crop.init(this.img.width, this.img.height);
-
-            const iw = this.img.width;
-            const ih = this.img.height;
-            this.baseCanvas.width  = iw;  this.baseCanvas.height  = ih;
-            this.overlayCanvas.width = iw; this.overlayCanvas.height = ih;
-            this.baseCanvas.style.width    = iw + 'px'; this.baseCanvas.style.height    = ih + 'px';
-            this.overlayCanvas.style.width = iw + 'px'; this.overlayCanvas.style.height = ih + 'px';
-            this.stackEl.style.width  = iw + 'px';
-            this.stackEl.style.height = ih + 'px';
-            this._baseDirty = true;
-                await this.resetView();
+            await this.resetView();
         } catch (err) {
             clientLogger.error('canvas', 'Failed to load image', err);
             throw err;
@@ -305,98 +226,82 @@ class _CanvasCore {
         this._activeMode = 'compare';
         this.canvas.dataset.comparisonUrl = url;
         this.input.updateCursor();
-        this._overlayDirty = true;
         this.draw();
         if (this._onModeChange) this._onModeChange('compare');
-    }
-
-    _applyTransform() {
-        const { scale, offsetX, offsetY } = this.view;
-        this.stackEl.style.transform = `translate(${offsetX}px,${offsetY}px) scale(${scale})`;
     }
 
     async resetView() {
         await this.view.reset(this.container, this.img);
         this.resize();
-        this._applyTransform();
-        this._overlayDirty = true;
         this.draw();
     }
 
     setGrid(h, v) {
         this.gridH = Math.max(1, h);
         this.gridV = Math.max(1, v);
-        this._overlayDirty = true;
         this.draw();
     }
 
     resize() {
         const rect = this.container.getBoundingClientRect();
-        const oldW = this.screenUICanvas.width;
-        const oldH = this.screenUICanvas.height;
-        this.screenUICanvas.width  = rect.width;
-        this.screenUICanvas.height = rect.height;
-        this.view.handleResize(oldW, oldH, this.screenUICanvas.width, this.screenUICanvas.height);
-        if (this.img && this.img.width) {
-            this.view.getViewState(this.screenUICanvas.width, this.screenUICanvas.height, this.img.width, this.img.height);
-        }
-        this._applyTransform();
+        const oldW = this.canvas.width;
+        const oldH = this.canvas.height;
+        this.canvas.width  = rect.width;
+        this.canvas.height = rect.height;
+        this.view.handleResize(oldW, oldH, this.canvas.width, this.canvas.height);
         this.draw();
     }
 
     draw() {
         if (!this.img || !this.img.width) return;
-        this._applyTransform();
-        this._renderBase();
-        this._renderOverlay();
-        this._renderScreenUI();
-    }
+        if (this.canvas.width === 0 || this.canvas.height === 0) return;
 
-    _renderBase() {
-        if (this._externalBase) return; // Pixi self-renders; nothing to do
-        if (!this._baseDirty) return;   // pixel content unchanged — skip redraw
-        this._baseDirty = false;
-        this.baseCtx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
-        this.baseCtx.drawImage(this.img, 0, 0);
-    }
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    _renderOverlay() {
-        if (!this._overlayDirty) return;
-        this._overlayDirty = false;
-        this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        const { scale, offsetX, offsetY } = this.view.getViewState(
+            this.canvas.width, this.canvas.height, this.img.width, this.img.height
+        );
 
+        this.ctx.save();
+        this.ctx.translate(offsetX, offsetY);
+        this.ctx.scale(scale, scale);
+
+        // 1. Base Image
+        this.ctx.drawImage(this._processedBitmap ?? this.img, 0, 0);
+
+        // 2. Comparison Layer
         if (this.comparison.isComparisonMode && this.comparison.imgAfter.width) {
-            this._drawComparisonLayer();
+            this._drawComparisonLayer(scale, offsetX);
         }
 
+        // 3. Mask Layer (skip if hidden, e.g. during latent previews)
         if (!this._maskHidden) {
-            this.overlayCtx.globalAlpha = this.mask.maskOpacity;
-            this.overlayCtx.drawImage(this.mask.maskCanvas, 0, 0);
-            this.overlayCtx.globalAlpha = 1;
+            this.ctx.globalAlpha = this.mask.maskOpacity;
+            this.ctx.drawImage(this.mask.maskCanvas, 0, 0);
+            this.ctx.globalAlpha = 1;
         }
 
-        this.crop.draw(this.overlayCtx, this.img.width, this.img.height, this.view.scale);
+        // 4. Crop Overlay
+        this.crop.draw(this.ctx, this.img.width, this.img.height, scale);
 
+        // 5. Grid Overlay
         if (this.gridH > 1 || this.gridV > 1) {
-            this._drawGridOverlay();
+            this._drawGridOverlay(scale);
         }
 
-    }
+        this.ctx.restore();
 
-    _renderScreenUI() {
-        const w = this.screenUICanvas.width;
-        const h = this.screenUICanvas.height;
-        if (w === 0 || h === 0) return;
-        this.screenUICtx.clearRect(0, 0, w, h);
-
+        // 6. Slider UI
         if (this.comparison.isComparisonMode) {
             this._drawSliderUI();
         }
-        this._drawBrushIndicator();
+
+        // 7. Brush Indicator
+        this._drawBrushIndicator(scale);
     }
 
-    _drawComparisonLayer() {
-        this.overlayCtx.save();
+    _drawComparisonLayer(scale, offsetX) {
+        this.ctx.save();
         const imgAfter = this.comparison.imgAfter;
         const relScale = Math.max(this.img.width / imgAfter.width, this.img.height / imgAfter.height);
 
@@ -405,89 +310,85 @@ class _CanvasCore {
         const compX = (this.img.width  - compW) / 2;
         const compY = (this.img.height - compH) / 2;
 
-        const clipX = (this.comparison.sliderPos * this.screenUICanvas.width - this.view.offsetX) / this.view.scale;
+        const clipX = ((this.comparison.sliderPos * this.canvas.width) - offsetX) / scale;
 
-        this.overlayCtx.beginPath();
-        this.overlayCtx.rect(clipX, 0, this.img.width - clipX, this.img.height);
-        this.overlayCtx.clip();
-        this.overlayCtx.drawImage(imgAfter, compX, compY, compW, compH);
-        this.overlayCtx.restore();
+        this.ctx.beginPath();
+        this.ctx.rect(clipX, 0, this.img.width - clipX, this.img.height);
+        this.ctx.clip();
+        this.ctx.drawImage(imgAfter, compX, compY, compW, compH);
+        this.ctx.restore();
     }
 
-    _drawGridOverlay() {
-        const s = this.view.scale;
-        this.overlayCtx.save();
-        this.overlayCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        this.overlayCtx.lineWidth = 2 / s;
-        this.overlayCtx.setLineDash([5 / s, 5 / s]);
-        this.overlayCtx.beginPath();
+    _drawGridOverlay(scale) {
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.lineWidth = 2 / scale;
+        this.ctx.setLineDash([5 / scale, 5 / scale]);
+        this.ctx.beginPath();
 
         for (let i = 1; i < this.gridH; i++) {
             const y = (this.img.height / this.gridH) * i;
-            this.overlayCtx.moveTo(0, y);
-            this.overlayCtx.lineTo(this.img.width, y);
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.img.width, y);
         }
         for (let i = 1; i < this.gridV; i++) {
             const x = (this.img.width / this.gridV) * i;
-            this.overlayCtx.moveTo(x, 0);
-            this.overlayCtx.lineTo(x, this.img.height);
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.img.height);
         }
-        this.overlayCtx.stroke();
+        this.ctx.stroke();
 
-        this.overlayCtx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        this.overlayCtx.lineDashOffset = 5 / s;
-        this.overlayCtx.stroke();
-        this.overlayCtx.restore();
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.lineDashOffset = 5 / scale;
+        this.ctx.stroke();
+        this.ctx.restore();
     }
 
     _drawSliderUI() {
-        const w = this.screenUICanvas.width;
-        const h = this.screenUICanvas.height;
-        const barX = this.comparison.sliderPos * w;
-        this.screenUICtx.save();
-        this.screenUICtx.strokeStyle = getCSSColor('--primary');
-        this.screenUICtx.lineWidth = 2;
-        this.screenUICtx.beginPath();
-        this.screenUICtx.moveTo(barX, 0);
-        this.screenUICtx.lineTo(barX, h);
-        this.screenUICtx.stroke();
+        const barX = this.comparison.sliderPos * this.canvas.width;
+        this.ctx.save();
+        this.ctx.strokeStyle = getCSSColor('--primary');
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(barX, 0);
+        this.ctx.lineTo(barX, this.canvas.height);
+        this.ctx.stroke();
 
-        this.screenUICtx.beginPath();
-        this.screenUICtx.arc(barX, h / 2, 16, 0, Math.PI * 2);
-        this.screenUICtx.fillStyle = getCSSColor('--primary');
-        this.screenUICtx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(barX, this.canvas.height / 2, 16, 0, Math.PI * 2);
+        this.ctx.fillStyle = getCSSColor('--primary');
+        this.ctx.fill();
 
-        this.screenUICtx.fillStyle = getCSSColor('--text-2');
-        this.screenUICtx.beginPath();
-        this.screenUICtx.moveTo(barX - 8, h / 2);
-        this.screenUICtx.lineTo(barX - 2, h / 2 - 5);
-        this.screenUICtx.lineTo(barX - 2, h / 2 + 5);
-        this.screenUICtx.fill();
+        this.ctx.fillStyle = getCSSColor('--text-2');
+        this.ctx.beginPath();
+        this.ctx.moveTo(barX - 8, this.canvas.height / 2);
+        this.ctx.lineTo(barX - 2, this.canvas.height / 2 - 5);
+        this.ctx.lineTo(barX - 2, this.canvas.height / 2 + 5);
+        this.ctx.fill();
 
-        this.screenUICtx.beginPath();
-        this.screenUICtx.moveTo(barX + 8, h / 2);
-        this.screenUICtx.lineTo(barX + 2, h / 2 - 5);
-        this.screenUICtx.lineTo(barX + 2, h / 2 + 5);
-        this.screenUICtx.fill();
-        this.screenUICtx.restore();
+        this.ctx.beginPath();
+        this.ctx.moveTo(barX + 8, this.canvas.height / 2);
+        this.ctx.lineTo(barX + 2, this.canvas.height / 2 - 5);
+        this.ctx.lineTo(barX + 2, this.canvas.height / 2 + 5);
+        this.ctx.fill();
+        this.ctx.restore();
     }
 
-    _drawBrushIndicator() {
+    _drawBrushIndicator(scale) {
         const { x, y } = this.input.getMousePosition();
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
-            const scale = this.view.scale;
-            this.screenUICtx.save();
-            this.screenUICtx.beginPath();
-            this.screenUICtx.arc(x, y, (this.mask.brushSize * scale) / 2, 0, Math.PI * 2);
-            this.screenUICtx.strokeStyle = this.mask.brushType === 'eraser' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-            this.screenUICtx.lineWidth = 2;
-            this.screenUICtx.stroke();
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, (this.mask.brushSize * scale) / 2, 0, Math.PI * 2);
+            this.ctx.strokeStyle = this.mask.brushType === 'eraser' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
 
-            this.screenUICtx.beginPath();
-            this.screenUICtx.arc(this.input.currentMouseX, this.input.currentMouseY, 1, 0, Math.PI * 2);
-            this.screenUICtx.fillStyle = 'white';
-            this.screenUICtx.fill();
-            this.screenUICtx.restore();
+            this.ctx.beginPath();
+            this.ctx.arc(this.input.currentMouseX, this.input.currentMouseY, 1, 0, Math.PI * 2);
+            this.ctx.fillStyle = 'white';
+            this.ctx.fill();
+            this.ctx.restore();
         }
     }
 
@@ -495,13 +396,13 @@ class _CanvasCore {
     setMaskingMode(enabled) { this.activeMode = enabled ? 'mask' : 'none'; }
     setBrushSize(size)      { this.mask.brushSize = Math.max(1, size); this.draw(); }
     setBrushType(type)      { this.mask.brushType = type; }
-    flipMaskColor()         { const c = this.mask.flipColor(); this._overlayDirty = true; this.draw(); return c; }
-    setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this._overlayDirty = true; this.draw(); }
-    clearMask()             { this.mask.clear(); this._overlayDirty = true; this.draw(); }
+    flipMaskColor()         { const c = this.mask.flipColor(); this.draw(); return c; }
+    setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
+    clearMask()             { this.mask.clear(); this.draw(); }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
 
     // ── Crop API ──────────────────────────────────────────────────────────────
-    setCropRatio(ratio) { this.crop.setRatio(ratio); this._overlayDirty = true; this.draw(); }
+    setCropRatio(ratio) { this.crop.setRatio(ratio); this.draw(); }
     getCropRect()       { return this.crop.getCropRect(); }
 }
 
@@ -512,7 +413,10 @@ export const MpiCanvas = ComponentFactory.create({
     // No CSS — the canvas fills its container via JS sizing; callers style the wrapper.
     css: [],
 
-    template: () => `<div class="mpi-canvas" style="width:100%;height:100%;display:block;overflow:hidden;position:relative;"><div class="mpi-canvas__stack" style="position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;"></div><canvas class="mpi-canvas__screen-ui" style="position:absolute;left:0;top:0;width:100%;height:100%;"></canvas></div>`,
+    // A single wrapper div; _CanvasCore appends the <canvas> element inside it.
+    // width/height:100% ensures the wrapper is sized by its parent, not by its child
+    // canvas element — prevents a ResizeObserver feedback loop.
+    template: () => `<div class="mpi-canvas" style="width:100%;height:100%;display:block;overflow:hidden;"></div>`,
 
     setup: (el, props, emit) => {
         const core = new _CanvasCore(el, props, (mode) => emit('modechange', { mode }));
@@ -543,7 +447,7 @@ export const MpiCanvas = ComponentFactory.create({
 
         const _methods = [
             'destroy','setMaskDataURL','compositeMaskDataURL','clearImage','loadImage','loadComparisonImage',
-            'resetView','setGrid','resize','draw','setBaseCanvas','clearBaseCanvas',
+            'resetView','setGrid','resize','draw','setProcessedImage','clearProcessedImage',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'setCropRatio','getCropRect'

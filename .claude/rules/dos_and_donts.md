@@ -11,7 +11,6 @@
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
 - **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
 - **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `seed.js`, `ratios.js`, `promptOptions.js` may already do what you need.
-- **Prefer CSS `transform` over `ctx.scale/translate` for image surfaces.** When displaying a native-resolution canvas (e.g. image at full px), apply pan/zoom as `stackEl.style.transform = 'translate(x,y) scale(s)'` on a wrapper and let the GPU compositor handle it. `ctx.scale` re-rasterizes on every frame and bypasses `image-rendering: pixelated` on fractional scales in Chromium/Electron. Use `ctx` transforms only for drawing elements that must be measured in container pixels (brush indicator, slider UI).
 - **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
 - **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
 

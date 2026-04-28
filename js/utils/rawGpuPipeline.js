@@ -1,4 +1,4 @@
-import { Application, Sprite, Filter, Texture, RenderTexture, BufferImageSource, GlProgram, UniformGroup } from 'pixi.js';
+import { Application, Sprite, Filter, Texture, BufferImageSource, GlProgram, UniformGroup } from 'pixi.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 // ---------------------------------------------------------------------------
@@ -473,46 +473,19 @@ function lutToTexture(app, lut) {
 }
 
 // ---------------------------------------------------------------------------
-// Stage index constants — order matches filter chain
 // ---------------------------------------------------------------------------
-const STAGE_DEHAZE    = 0;
-const STAGE_EXPOSURE  = 1;
-const STAGE_SHADOWS   = 2;
-const STAGE_HUESAT    = 3;
-const STAGE_CURVES    = 4;
-const STAGE_NR        = 5;
-const STAGE_UNSHARP   = 6;
-const STAGE_GRAIN     = 7;
-const NUM_STAGES      = 8;
-
-const RAF_INTERVAL = 1000 / 60;
-
-// ---------------------------------------------------------------------------
-// RawGpuPipeline — upstream-cache architecture
-//
-// _upstreamRT[N] = pixels after shaders 0..N-1 applied (input for shader N).
-// During drag of slider N: 1 GPU pass shader[N](_upstreamRT[N]) → display.
-// On commit: invalidate _upstreamRT[M] for all M > N (lazy rebuild on next startDrag).
-// Cost: 8 RTs × ~50MB (4K) ≈ 400MB VRAM constant. Zero per-frame overhead
-// from upstream shaders regardless of how heavy they are.
+// RawGpuPipeline
 // ---------------------------------------------------------------------------
 
 export class RawGpuPipeline {
     constructor() {
-        this._app          = null;
-        this._srcTexture   = null;
-        this._upstreamRT   = [];    // RenderTexture[NUM_STAGES] — upstream cache per stage
-        this._upstreamValid = [];   // bool[NUM_STAGES] — cache validity flags
-        this._previewRT    = null;  // RenderTexture — output of active stage during drag
-        this._previewSprite = null; // Sprite — reused for 1-pass preview render
-        this._finalSprite  = null;  // Sprite — displays _previewRT to screen
-        this._activeStage  = -1;    // stage currently being dragged (-1 = none)
-        this._rafId        = null;
-        this._rafLastTs    = 0;
-        this._dirty        = false;
-        this._params       = {};
-        this._srcImgRef    = null;
-        this._onCanvas     = null;
+        this._app       = null;
+        this._sprite    = null;
+        this._srcTexture = null;
+        this._rafId     = null;
+        this._dirty     = false;
+        this._params    = {};
+        this._onBitmap  = null; // callback(ImageBitmap)
 
         // filters (created in mount)
         this._fExposure   = null;
@@ -533,15 +506,22 @@ export class RawGpuPipeline {
 
     /**
      * Initialize pipeline against an HTMLImageElement.
-     * @param {HTMLImageElement|HTMLCanvasElement} srcImg
-     * @param {function(HTMLCanvasElement): void} [onCanvas] — called with Pixi canvas after mount
+     * @param {HTMLImageElement} srcImg
+     * @param {function(ImageBitmap): void} onBitmap  — called after each render
      */
-    async mount(srcImg, onCanvas) {
+    async mount(srcImg, onBitmap) {
         if (this._app) this.destroy();
-        this._srcImgRef = srcImg;
-        if (onCanvas) this._onCanvas = onCanvas;
 
-        const maxTex = _getMaxTexSize();
+        this._onBitmap = onBitmap;
+
+        // Determine GPU max texture size before init to avoid OOM on large sources.
+        const maxTex = (() => {
+            try {
+                const c = document.createElement('canvas');
+                const g = c.getContext('webgl2') || c.getContext('webgl');
+                return g ? g.getParameter(g.MAX_TEXTURE_SIZE) : 4096;
+            } catch { return 4096; }
+        })();
         const srcW = srcImg.naturalWidth  || srcImg.width  || 512;
         const srcH = srcImg.naturalHeight || srcImg.height || 512;
         const scale = Math.min(1, maxTex / Math.max(srcW, srcH));
@@ -550,21 +530,21 @@ export class RawGpuPipeline {
 
         this._app = new Application();
         await this._app.init({
-            width:           canvasW,
-            height:          canvasH,
-            backgroundAlpha: 0,
-            antialias:       false,
-            autoDensity:     false,
-            preference:      'webgl',
-            autoStart:       false,
-            sharedTicker:    false,
+            width:            canvasW,
+            height:           canvasH,
+            backgroundAlpha:  0,
+            antialias:        false,
+            autoDensity:      false,
+            preference:       'webgl',
+            autoStart:        false,
+            sharedTicker:     false,
         });
         this._app.ticker?.stop();
-        // Flush filter swap textures immediately after each bake — prevents unbounded pool growth
-        const gc = this._app.renderer.gc ?? this._app.renderer.textureGC;
-        if (gc) { gc.maxIdle = 1; gc.checkCountMax = 1; }
+        // offscreen — never inserted into DOM
 
-        // Extract pixels into buffer so source survives remounts
+        // Extract pixels into a Uint8Array immediately so the texture source is a plain
+        // buffer — never a live <img> or canvas element that can become invalid between
+        // mount() and a later renderFullRes() call.
         const pixCanvas = document.createElement('canvas');
         pixCanvas.width  = canvasW;
         pixCanvas.height = canvasH;
@@ -574,8 +554,11 @@ export class RawGpuPipeline {
         this._srcTexture = new Texture({
             source: new BufferImageSource({ resource: pixBuf, width: canvasW, height: canvasH, format: 'rgba8unorm' }),
         });
+        this._sprite     = new Sprite(this._srcTexture);
+        this._app.stage.addChild(this._sprite);
 
-        // Identity LUTs
+        // Identity LUTs (each gets its own buffer; sharing a single Uint8Array
+        // across BufferImageSources causes texture state conflicts).
         const mkIdent = () => new Texture({
             source: new BufferImageSource({ resource: makeIdentityLUT(), width: 256, height: 1, format: 'rgba8unorm' }),
         });
@@ -585,20 +568,7 @@ export class RawGpuPipeline {
         this._lutB   = mkIdent();
 
         this._buildFilters();
-        this._buildUpstreamRTs(canvasW, canvasH);
-
-        // _previewRT: output of the active stage 1-pass render
-        this._previewRT = RenderTexture.create({ width: canvasW, height: canvasH });
-        this._previewSprite = new Sprite(this._srcTexture); // texture swapped per startDrag
-        this._finalSprite = new Sprite(this._previewRT);
-        this._app.stage.addChild(this._finalSprite);
-
-        // Bake all upstream caches at current params, show full result
-        this._rebuildAllUpstream();
-        this._renderFinalStageToPreview();
-        this._display();
-
-        if (this._onCanvas) this._onCanvas(this._app.canvas);
+        this._applyFilters();
     }
 
     _buildFilters() {
@@ -663,121 +633,21 @@ export class RawGpuPipeline {
         });
     }
 
-    _filterForStage(i) {
-        return [this._fDehaze, this._fExposure, this._fShadows, this._fHueSat,
-                this._fCurves, this._fNR, this._fUnsharp, this._fGrain][i];
-    }
-
-    _buildUpstreamRTs(w, h) {
-        for (const rt of this._upstreamRT) rt?.destroy(true);
-        this._upstreamRT = [];
-        this._upstreamValid = [];
-        for (let i = 0; i < NUM_STAGES; i++) {
-            this._upstreamRT.push(RenderTexture.create({ width: w, height: h }));
-            this._upstreamValid.push(false);
-        }
-    }
-
-    // Build _upstreamRT[stageIdx] = source with ALL shaders EXCEPT stageIdx applied in order.
-    // This is the base image the active slider drags on top of.
-    _buildUpstream(stageIdx) {
-        if (!this._app) return;
-        const renderer = this._app.renderer;
-        let inputTex = this._srcTexture;
-        let lastRT = null;
-        for (let i = 0; i < NUM_STAGES; i++) {
-            if (i === stageIdx) continue; // skip active stage
-            // Find a temp RT to render into — reuse _upstreamRT slots not needed for this build
-            // Use _upstreamRT[stageIdx] as the accumulation target (it's the one we're building)
-            // Need a ping-pong: use _upstreamRT[stageIdx] and _previewRT alternately
-            const targetRT = (lastRT === this._upstreamRT[stageIdx]) ? this._previewRT : this._upstreamRT[stageIdx];
-            this._previewSprite.texture = inputTex;
-            this._previewSprite.filters = [this._filterForStage(i)];
-            renderer.render({ container: this._previewSprite, target: targetRT, clear: true });
-            inputTex = targetRT;
-            lastRT = targetRT;
-        }
-        // If no shaders ran (all stages === stageIdx, impossible but guard), use src
-        if (lastRT === null) {
-            this._previewSprite.texture = this._srcTexture;
-            this._previewSprite.filters = [];
-            renderer.render({ container: this._previewSprite, target: this._upstreamRT[stageIdx], clear: true });
-        } else if (lastRT !== this._upstreamRT[stageIdx]) {
-            // Final result landed in _previewRT — copy into _upstreamRT[stageIdx]
-            this._previewSprite.texture = lastRT;
-            this._previewSprite.filters = [];
-            renderer.render({ container: this._previewSprite, target: this._upstreamRT[stageIdx], clear: true });
-        }
-        (renderer.gc ?? renderer.textureGC)?.run();
-        this._upstreamValid[stageIdx] = true;
-    }
-
-    // Rebuild all upstream caches (all-except-N for each N). Used on mount only.
-    // On commit, only affected caches are invalidated and rebuilt lazily on next startDrag.
-    _rebuildAllUpstream() {
-        for (let i = 0; i < NUM_STAGES; i++) {
-            this._buildUpstream(i);
-        }
-    }
-
-    // Run shader[activeStage] on _upstreamRT[activeStage] → _previewRT → display.
-    // 1 GPU pass. Upstream already has all other effects baked.
-    _renderActiveStage() {
-        if (!this._app || this._activeStage < 0) return;
-        const renderer = this._app.renderer;
-        this._previewSprite.texture = this._upstreamRT[this._activeStage];
-        this._previewSprite.filters = [this._filterForStage(this._activeStage)];
-        renderer.render({ container: this._previewSprite, target: this._previewRT, clear: true });
-        (renderer.gc ?? renderer.textureGC)?.run();
-        this._display();
-    }
-
-    // Render all shaders in order to previewRT — used for final display after commit.
-    _renderFinalStageToPreview() {
-        if (!this._app) return;
-        const renderer = this._app.renderer;
-        let inputTex = this._srcTexture;
-        // Ping-pong between upstreamRT[0] and previewRT to avoid needing extra buffers
-        const rts = [this._upstreamRT[0], this._previewRT];
-        let rtIdx = 0;
-        for (let i = 0; i < NUM_STAGES; i++) {
-            const targetRT = rts[rtIdx % 2];
-            this._previewSprite.texture = inputTex;
-            this._previewSprite.filters = [this._filterForStage(i)];
-            renderer.render({ container: this._previewSprite, target: targetRT, clear: true });
-            inputTex = targetRT;
-            rtIdx++;
-        }
-        // Ensure final result is in _previewRT
-        if (inputTex !== this._previewRT) {
-            this._previewSprite.texture = inputTex;
-            this._previewSprite.filters = [];
-            renderer.render({ container: this._previewSprite, target: this._previewRT, clear: true });
-        }
-        (renderer.gc ?? renderer.textureGC)?.run();
-    }
-
-    _display() {
-        if (!this._app || !this._finalSprite) return;
-        this._finalSprite.texture = this._previewRT;
-        try { this._app.render(); } catch(e) { clientLogger.error('rawGpu', 'render', e); }
+    _applyFilters() {
+        this._sprite.filters = [
+            this._fDehaze,
+            this._fExposure,
+            this._fShadows,
+            this._fHueSat,
+            this._fCurves,
+            this._fNR,
+            this._fUnsharp,
+            this._fGrain,
+        ];
     }
 
     /**
-     * Call when a slider starts being dragged. Builds upstream cache for that stage
-     * (runs shaders 0..N-1 once). Subsequent setParams calls cost 1 pass only.
-     * @param {number} stageIdx — STAGE_* constant
-     */
-    startDrag(stageIdx) {
-        if (!this._app) return;
-        this._activeStage = stageIdx;
-        if (!this._upstreamValid[stageIdx]) {
-            this._buildUpstream(stageIdx);
-        }
-    }
-
-    /**
-     * Push new param values during drag. Schedules rAF-throttled 1-pass render.
+     * Push new param values. Schedules rAF-throttled render.
      *
      * Param keys (all optional):
      *   exposure       number  EV stops (-5 to +5)
@@ -797,73 +667,57 @@ export class RawGpuPipeline {
      *   grainMode      number  0 or 1
      *   curveLUT       { rgb, r, g, b }  each Float32Array[256]
      *   dehaze         number  -1.0 to 1.0 (negative = add haze)
-     *   dehazeOmega    number  0.0 to 1.0
-     *   dehazeT0       number  0.0 to 0.5
+     *   dehazeOmega    number  0.0 to 1.0  (haze removal aggressiveness, default 0.95)
+     *   dehazeT0       number  0.0 to 0.5  (min transmission floor, default 0.1)
      */
     setParams(values) {
         Object.assign(this._params, values);
-        if (!this._app || !this._fExposure) return;
-        this._pushUniforms(values);
+        if (!this._app || !this._fExposure) return; // not mounted yet — defer
+        this._pushUniforms();
+
         if (!this._dirty) {
             this._dirty = true;
-            const _attempt = (ts) => {
-                if (ts - this._rafLastTs < RAF_INTERVAL) {
-                    this._rafId = requestAnimationFrame(_attempt);
-                    return;
-                }
-                this._rafLastTs = ts;
+            this._rafId = requestAnimationFrame(() => {
                 this._dirty = false;
-                this._rafId = null;
-                this._renderActiveStage();
-            };
-            this._rafId = requestAnimationFrame(_attempt);
+                this._render();
+            });
         }
     }
 
-    /**
-     * Call on slider release. Invalidates downstream upstream caches, rebuilds all, displays full result.
-     */
-    commitParams() {
-        if (!this._app) return;
-        if (this._rafId !== null) { cancelAnimationFrame(this._rafId); this._rafId = null; this._dirty = false; }
-        this._activeStage = -1;
-        // All upstream caches stale — committed value must be included in every other stage's "all except N" bake
-        for (let i = 0; i < NUM_STAGES; i++) this._upstreamValid[i] = false;
-        this._rebuildAllUpstream();
-        this._renderFinalStageToPreview();
-        this._display();
-    }
+    _pushUniforms() {
+        const p = this._params;
 
-    // Apply uniform values, return lowest dirty stage index.
-    _pushUniforms(values) {
-        const p = values;
-        let dirtyStage = NUM_STAGES;
-
-        if (p.dehaze !== undefined || p.dehazeOmega !== undefined || p.dehazeT0 !== undefined) {
-            const dh = this._fDehaze.resources.dehazeUniforms.uniforms;
-            if (p.dehaze      !== undefined) dh.uStrength = p.dehaze;
-            if (p.dehazeOmega !== undefined) dh.uOmega    = p.dehazeOmega;
-            if (p.dehazeT0    !== undefined) dh.uT0       = p.dehazeT0;
-            dirtyStage = Math.min(dirtyStage, STAGE_DEHAZE);
-        }
-
-        if (p.exposure !== undefined) {
+        if (p.exposure !== undefined)
             this._fExposure.resources.exposureUniforms.uniforms.uEV = p.exposure;
-            dirtyStage = Math.min(dirtyStage, STAGE_EXPOSURE);
-        }
 
-        if (p.shadows !== undefined) {
+        if (p.shadows !== undefined)
             this._fShadows.resources.shadowsUniforms.uniforms.uLift = p.shadows;
-            dirtyStage = Math.min(dirtyStage, STAGE_SHADOWS);
-        }
 
-        if (p.saturation !== undefined || p.hue !== undefined || p.lightness !== undefined) {
-            const hu = this._fHueSat.resources.hueSatUniforms.uniforms;
-            if (p.saturation !== undefined) hu.uSaturation = p.saturation;
-            if (p.hue        !== undefined) hu.uHue        = p.hue;
-            if (p.lightness  !== undefined) hu.uLightness  = p.lightness;
-            dirtyStage = Math.min(dirtyStage, STAGE_HUESAT);
-        }
+        const hu = this._fHueSat.resources.hueSatUniforms.uniforms;
+        if (p.saturation !== undefined) hu.uSaturation = p.saturation;
+        if (p.hue        !== undefined) hu.uHue        = p.hue;
+        if (p.lightness  !== undefined) hu.uLightness  = p.lightness;
+
+        const sh = this._fUnsharp.resources.unsharpUniforms.uniforms;
+        if (p.sharpening    !== undefined) sh.uAmount    = p.sharpening;
+        if (p.sharpenRadius !== undefined) sh.uRadius    = p.sharpenRadius;
+        if (p.sharpenThresh !== undefined) sh.uThreshold = p.sharpenThresh;
+
+        const nr = this._fNR.resources.nrUniforms.uniforms;
+        if (p.noiseReduction !== undefined) nr.uRadius        = p.noiseReduction;
+        if (p.nrThreshold    !== undefined) nr.uEdgeThreshold = p.nrThreshold;
+
+        const gr = this._fGrain.resources.grainUniforms.uniforms;
+        if (p.grain        !== undefined) gr.uAmount  = p.grain;
+        if (p.grainSize    !== undefined) gr.uSize    = p.grainSize;
+        if (p.grainColor   !== undefined) gr.uColor   = p.grainColor;
+        if (p.grainLumBias !== undefined) gr.uLumBias = p.grainLumBias;
+        if (p.grainMode    !== undefined) gr.uMode    = p.grainMode;
+
+        const dh = this._fDehaze.resources.dehazeUniforms.uniforms;
+        if (p.dehaze       !== undefined) dh.uStrength = p.dehaze;
+        if (p.dehazeOmega  !== undefined) dh.uOmega    = p.dehazeOmega;
+        if (p.dehazeT0     !== undefined) dh.uT0       = p.dehazeT0;
 
         if (p.curveLUT) {
             const c = p.curveLUT;
@@ -871,102 +725,38 @@ export class RawGpuPipeline {
             if (c.r)   { this._lutR.destroy();   this._lutR   = lutToTexture(this._app, c.r);   this._fCurves.resources.uCurveR   = this._lutR.source;   }
             if (c.g)   { this._lutG.destroy();   this._lutG   = lutToTexture(this._app, c.g);   this._fCurves.resources.uCurveG   = this._lutG.source;   }
             if (c.b)   { this._lutB.destroy();   this._lutB   = lutToTexture(this._app, c.b);   this._fCurves.resources.uCurveB   = this._lutB.source;   }
-            dirtyStage = Math.min(dirtyStage, STAGE_CURVES);
         }
-
-        if (p.noiseReduction !== undefined || p.nrThreshold !== undefined) {
-            const nr = this._fNR.resources.nrUniforms.uniforms;
-            if (p.noiseReduction !== undefined) nr.uRadius        = p.noiseReduction;
-            if (p.nrThreshold    !== undefined) nr.uEdgeThreshold = p.nrThreshold;
-            dirtyStage = Math.min(dirtyStage, STAGE_NR);
-        }
-
-        if (p.sharpening !== undefined || p.sharpenRadius !== undefined || p.sharpenThresh !== undefined) {
-            const sh = this._fUnsharp.resources.unsharpUniforms.uniforms;
-            if (p.sharpening    !== undefined) sh.uAmount    = p.sharpening;
-            if (p.sharpenRadius !== undefined) sh.uRadius    = p.sharpenRadius;
-            if (p.sharpenThresh !== undefined) sh.uThreshold = p.sharpenThresh;
-            dirtyStage = Math.min(dirtyStage, STAGE_UNSHARP);
-        }
-
-        if (p.grain !== undefined || p.grainSize !== undefined || p.grainColor !== undefined ||
-            p.grainLumBias !== undefined || p.grainMode !== undefined) {
-            const gr = this._fGrain.resources.grainUniforms.uniforms;
-            if (p.grain        !== undefined) gr.uAmount  = p.grain;
-            if (p.grainSize    !== undefined) gr.uSize    = p.grainSize;
-            if (p.grainColor   !== undefined) gr.uColor   = p.grainColor;
-            if (p.grainLumBias !== undefined) gr.uLumBias = p.grainLumBias;
-            if (p.grainMode    !== undefined) gr.uMode    = p.grainMode;
-            dirtyStage = Math.min(dirtyStage, STAGE_GRAIN);
-        }
-
-        return dirtyStage;
     }
 
-    getCanvas() {
-        return this._app?.canvas ?? null;
+    _render() {
+        if (!this._app) return;
+        try {
+            this._app.render();
+            if (this._onBitmap) {
+                createImageBitmap(this._app.canvas).then(bitmap => {
+                    if (this._onBitmap) this._onBitmap(bitmap);
+                }).catch(err => {
+                    clientLogger.error('rawGpu', 'createImageBitmap failed', err);
+                });
+            }
+        } catch (err) {
+            clientLogger.error('rawGpu', 'Render failed', err);
+        }
     }
 
     /**
      * Render at full source resolution and return a Blob (PNG).
-     * Remounts pipeline at full res, renders all stages, blobs, then remounts preview.
      * @returns {Promise<Blob>}
      */
     async renderFullRes() {
-        if (!this._srcImgRef) throw new Error('RawGpuPipeline: not mounted');
-        const savedParams = { ...this._params };
-        const onCanvas = this._onCanvas;
-        const srcImg = this._srcImgRef;
-
-        // Destroy preview pipeline, init at full res
-        if (this._app) this.destroy();
-        this._srcImgRef = srcImg;
-        this._onCanvas  = onCanvas;
-
-        const maxTex = _getMaxTexSize();
-        const srcW = srcImg.naturalWidth  || srcImg.width  || 512;
-        const srcH = srcImg.naturalHeight || srcImg.height || 512;
-        const scale = Math.min(1, maxTex / Math.max(srcW, srcH));
-        const canvasW = Math.floor(srcW * scale);
-        const canvasH = Math.floor(srcH * scale);
-
-        this._app = new Application();
-        await this._app.init({ width: canvasW, height: canvasH, backgroundAlpha: 0, antialias: false, autoDensity: false, preference: 'webgl', autoStart: false, sharedTicker: false });
-        this._app.ticker?.stop();
-
-        const pixCanvas = document.createElement('canvas');
-        pixCanvas.width = canvasW; pixCanvas.height = canvasH;
-        pixCanvas.getContext('2d').drawImage(srcImg, 0, 0, canvasW, canvasH);
-        const pixData = pixCanvas.getContext('2d').getImageData(0, 0, canvasW, canvasH);
-        this._srcTexture = new Texture({ source: new BufferImageSource({ resource: new Uint8Array(pixData.data.buffer), width: canvasW, height: canvasH, format: 'rgba8unorm' }) });
-
-        const mkIdent = () => new Texture({ source: new BufferImageSource({ resource: makeIdentityLUT(), width: 256, height: 1, format: 'rgba8unorm' }) });
-        this._lutRGB = mkIdent(); this._lutR = mkIdent(); this._lutG = mkIdent(); this._lutB = mkIdent();
-        this._buildFilters();
-        this._buildUpstreamRTs(canvasW, canvasH);
-        this._previewRT = RenderTexture.create({ width: canvasW, height: canvasH });
-        this._previewSprite = new Sprite(this._srcTexture);
-        this._finalSprite = new Sprite(this._previewRT);
-        this._app.stage.addChild(this._finalSprite);
-        this._params = savedParams;
-        this._pushUniforms(savedParams);
-        this._rebuildAllUpstream();
-        this._renderFinalStageToPreview();
-        this._display();
-
-        const blob = await new Promise((resolve, reject) => {
-            this._app.canvas.toBlob(b => b ? resolve(b) : reject(new Error('RawGpuPipeline: toBlob returned null')), 'image/png');
+        if (!this._app) throw new Error('RawGpuPipeline: not mounted');
+        this._app.render();
+        return new Promise((resolve, reject) => {
+            this._app.canvas.toBlob(blob => {
+                if (blob) resolve(blob);
+                else reject(new Error('RawGpuPipeline: toBlob returned null'));
+            }, 'image/png');
         });
-
-        // Remount preview so interactive editing continues
-        await this.mount(srcImg, onCanvas);
-        this._params = savedParams;
-        this._pushUniforms(savedParams);
-        this._rebuildAllUpstream();
-        this._renderFinalStageToPreview();
-        this._display();
-
-        return blob;
     }
 
     /**
@@ -977,14 +767,7 @@ export class RawGpuPipeline {
             cancelAnimationFrame(this._rafId);
             this._rafId = null;
         }
-
-        for (const rt of this._upstreamRT) { if (rt) rt.destroy(true); }
-        this._upstreamRT = [];
-        this._upstreamValid = [];
-        if (this._previewRT) { this._previewRT.destroy(true); this._previewRT = null; }
-        this._previewSprite = null;
-        this._finalSprite = null;
-        this._activeStage = -1;
+        this._onBitmap = null;
 
         for (const lut of [this._lutRGB, this._lutR, this._lutG, this._lutB]) {
             if (lut) lut.destroy();
@@ -992,25 +775,11 @@ export class RawGpuPipeline {
         this._lutRGB = this._lutR = this._lutG = this._lutB = null;
 
         if (this._srcTexture) { this._srcTexture.destroy(); this._srcTexture = null; }
-        if (this._app) {
-            try {
-                const gl = this._app.renderer?.context?.gl ?? this._app.renderer?.gl;
-                gl?.getExtension('WEBGL_lose_context')?.loseContext();
-            } catch {}
-            this._app.destroy(true, { children: true, texture: true });
-            this._app = null;
-        }
+        if (this._app)        { this._app.destroy(true, { children: true, texture: true }); this._app = null; }
 
+        this._sprite   = null;
         this._fExposure = this._fShadows = this._fHueSat = this._fCurves =
         this._fNR = this._fUnsharp = this._fGrain = this._fDehaze = null;
         this._params = {};
     }
-}
-
-function _getMaxTexSize() {
-    try {
-        const c = document.createElement('canvas');
-        const g = c.getContext('webgl2') || c.getContext('webgl');
-        return g ? g.getParameter(g.MAX_TEXTURE_SIZE) : 4096;
-    } catch { return 4096; }
 }

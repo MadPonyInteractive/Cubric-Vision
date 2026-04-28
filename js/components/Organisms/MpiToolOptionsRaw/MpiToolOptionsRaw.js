@@ -21,18 +21,6 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { state } from '../../../state.js';
 import { RawGpuPipeline } from '../../../utils/rawGpuPipeline.js';
 
-// ── Param key → pipeline stage index ─────────────────────────────────────────
-const PARAM_STAGE = {
-    dehaze: 0, dehazeOmega: 0, dehazeT0: 0,
-    exposure: 1,
-    shadows: 2,
-    saturation: 3, hue: 3, lightness: 3,
-    curveLUT: 4,
-    noiseReduction: 5, nrThreshold: 5,
-    sharpening: 6, sharpenRadius: 6, sharpenThresh: 6,
-    grain: 7, grainSize: 7, grainColor: 7, grainLumBias: 7, grainMode: 7,
-};
-
 // ── Param definitions ────────────────────────────────────────────────────────
 
 const SECTIONS = [
@@ -145,7 +133,6 @@ function _buildTemplate() {
 
     return `
         <div class="mpi-tool-options-raw">
-            <div class="mpi-tool-options-raw__header" id="raw-header-slot"></div>
             ${sections}
             <div class="mpi-tool-options-raw__actions" id="raw-actions-slot"></div>
         </div>
@@ -210,7 +197,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             ctx.clearRect(0, 0, W, H);
 
             // Background
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim() || 'transparent';
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim() || '#1a1a1a';
             ctx.fillRect(0, 0, W, H);
 
             // Histogram fill (behind grid)
@@ -320,7 +307,6 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             canvas.addEventListener('mousedown', (e) => {
                 _dragging = true;
                 e.preventDefault();
-                _pipeline.startDrag(PARAM_STAGE.curveLUT);
             });
 
             const onMove = (e) => {
@@ -334,28 +320,15 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                 _drawCurve();
             };
 
-            const onUp = () => { _dragging = false; _pipeline.commitParams(); };
+            const onUp = () => { _dragging = false; };
 
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
-
-            const onDblClick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                _curvePoint = { x: 0.5, y: 0.5 };
-                _values.curve = 0;
-                _pipeline.startDrag(PARAM_STAGE.curveLUT);
-                _pushCurveLUT();
-                _drawCurve();
-                _pipeline.commitParams();
-            };
-            canvas.addEventListener('dblclick', onDblClick);
 
             // Store cleanup
             _curveDragCleanup = () => {
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onUp);
-                canvas.removeEventListener('dblclick', onDblClick);
             };
         }
 
@@ -371,16 +344,13 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             });
 
         // ── GPU pipeline mount ────────────────────────────────────────────────
-        function _onPipelineCanvas(canvasEl) {
-            viewer.el.setBaseCanvas?.(canvasEl);
-        }
-
         async function _mountPipeline() {
             const imgEl = viewer.el.img;
             if (!imgEl?.naturalWidth) return;
-            await _pipeline.mount(imgEl, _onPipelineCanvas);
+            await _pipeline.mount(imgEl, (bitmap) => {
+                viewer.el.setProcessedImage(bitmap);
+            });
             _pipeline.setParams(_buildPipelineParams(_values));
-            _pipeline.commitParams();
             _computeHistogram();
             _drawCurve();
         }
@@ -445,23 +415,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
                     _values[p.key] = value;
                     const valEl = qs(`[data-value="${p.key}"]`, el);
                     if (valEl) valEl.textContent = value;
-                    _pipeline.startDrag(PARAM_STAGE[p.key] ?? 0);
                     _applyPreview();
-                });
-
-                bar.on('change', () => { _pipeline.commitParams(); });
-
-                // Double-click slider to reset this control to default
-                bar.el.addEventListener('dblclick', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    _values[p.key] = p.default;
-                    bar.el.setValueQuiet?.(p.default);
-                    const valEl = qs(`[data-value="${p.key}"]`, el);
-                    if (valEl) valEl.textContent = p.default;
-                    _pipeline.startDrag(PARAM_STAGE[p.key] ?? 0);
-                    _applyPreview();
-                    _pipeline.commitParams();
                 });
             });
         });
@@ -518,23 +472,14 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             }
             ctx.putImageData(data, 0, 0);
 
-            await _pipeline.mount(offscreen, _onPipelineCanvas);
+            // Re-mount pipeline against WB-corrected offscreen canvas.
+            await _pipeline.mount(offscreen, (bitmap) => { viewer.el.setProcessedImage(bitmap); });
             _pipeline.setParams(_buildPipelineParams(_values));
-            _pipeline.commitParams();
 
             const wbVal = Math.round((scaleR - scaleB) * 50);
             _values.whiteBalance = wbVal;
             const ve = _wbValueEl(); if (ve) ve.textContent = wbVal;
         }
-
-        wbRadio.el.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            _values.whiteBalance = 0;
-            wbRadio.el.setValue?.('As shot');
-            const ve = _wbValueEl(); if (ve) ve.textContent = '';
-            _mountPipeline();
-        });
 
         wbRadio.on('select', async ({ value }) => {
             if (value === 'As shot') {
@@ -571,44 +516,15 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
         // Cover case where entry-loaded fired before this component mounted.
         if (viewer.el.img?.naturalWidth) _mountPipeline();
 
-        // ── Header (Reset + Bypass) ───────────────────────────────────────────
-        const headerSlot = qs('#raw-header-slot', el);
-
-        const resetBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'refresh_stroke', label: 'Reset', variant: 'ghost', size: 'sm',
-            info: 'Reset all adjustments to default',
-        });
-        headerSlot.appendChild(resetBtn.el);
-        _children.push(resetBtn);
-
-        let _bypassed = false;
-        let _stashedPipelineCanvas = null;
-
-        const bypassBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'bypass_stroke', label: 'Bypass', variant: 'ghost', size: 'sm',
-            toggleable: true, active: false,
-            info: 'Show original image (keeps GPU pipeline loaded)',
-        });
-        headerSlot.appendChild(bypassBtn.el);
-        _children.push(bypassBtn);
-
-        function _setBypass(on) {
-            if (on === _bypassed) return;
-            _bypassed = on;
-            if (on) {
-                // Stash pipeline output canvas ref then detach via clearBaseCanvas.
-                // Pipeline (RawGpuPipeline) stays alive — only DOM is swapped.
-                _stashedPipelineCanvas = _pipeline.getCanvas?.() || null;
-                viewer.el.clearBaseCanvas?.();
-            } else if (_stashedPipelineCanvas) {
-                viewer.el.setBaseCanvas?.(_stashedPipelineCanvas);
-            }
-        }
-
-        bypassBtn.on('toggle', ({ active }) => _setBypass(active));
-
         // ── Actions ───────────────────────────────────────────────────────────
         const actionsSlot = qs('#raw-actions-slot', el);
+
+        const resetBtn = MpiButton.mount(document.createElement('div'), {
+            label: 'Reset', variant: 'ghost', size: 'sm',
+            info: 'Reset all adjustments to default',
+        });
+        actionsSlot.appendChild(resetBtn.el);
+        _children.push(resetBtn);
 
         const applyBtn = MpiButton.mount(document.createElement('div'), {
             icon: 'check', label: 'Apply', variant: 'primary', size: 'sm',
@@ -663,10 +579,6 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             const wbVe = _wbValueEl(); if (wbVe) wbVe.textContent = '';
             _curvePoint = { x: 0.5, y: 0.5 };
             _drawCurve();
-            if (_bypassed) {
-                _setBypass(false);
-                bypassBtn.el.setActive?.(false);
-            }
             _mountPipeline();
         };
 
@@ -674,7 +586,7 @@ export const MpiToolOptionsRaw = ComponentFactory.create({
             _offEntryLoaded?.();
             _curveDragCleanup?.();
             _pipeline.destroy();
-            viewer.el.clearBaseCanvas?.();
+            viewer.el.clearProcessedImage?.();
             _children.forEach(c => c.destroy?.());
         };
     },

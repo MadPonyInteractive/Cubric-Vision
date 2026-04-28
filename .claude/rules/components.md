@@ -27,7 +27,7 @@
 
 ## The 4-Tier Hierarchy
 You MUST follow Atomic Design principles. **NEVER "import up".**
-* **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything). Primitives may own multi-canvas DOM trees internally (e.g. `MpiCanvas` owns a base canvas + overlay canvas + screen-UI canvas stacked via CSS transform). This is internal implementation — callers see only the public API on `instance.el`.
+* **Tier 1 (Primitives):** Buttons, inputs, icons. (Cannot import anything).
 * **Tier 2 (Compounds):** Cards, forms, toolbars. (Can only import Primitives).
 * **Tier 3 (Organisms):** Rich widgets that compose multiple Compounds. (Can import Primitives + Compounds). Examples: `MpiCanvasViewer`, `MpiVideoViewer`.
 * **Tier 4 (Blocks):** Sidebars, grids, workspace coordinators. (Can import Primitives, Compounds, and Organisms).

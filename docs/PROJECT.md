@@ -49,21 +49,6 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 2. Check `.claude/rules/<subsystem>.md` for behavioral constraints.
 3. Skim the actual file — patterns should now make sense.
 
-## Rendering Architecture
-
-### MpiCanvas + rawGpuPipeline
-
-`MpiCanvas` (Primitive) is the interactive image viewer used in the history workspace. It uses a **two-canvas stack** inside a CSS-transformed container:
-
-- `.mpi-canvas__stack` — sized to image native px, panned/zoomed via CSS `transform: translate(x,y) scale(s)`. GPU compositor handles pan/zoom; no per-frame rasterization.
-- `baseCanvas` — displays the image. In raw tool mode, Pixi's `_app.canvas` is mounted here directly (via `setBaseCanvas`). In other modes, a 2D canvas draws the loaded image at 1:1.
-- `overlayCanvas` — 2D canvas (image-native px) for mask, crop, grid, and comparison clip layer. Line widths are normalized by `/ view.scale` so on-screen thickness stays constant.
-- `screenUICanvas` — 2D canvas (container px) for the brush indicator and comparison slider drag handle. Not affected by CSS transform.
-
-`rawGpuPipeline.js` (`js/utils/`) owns the Pixi v8 WebGL application. It uses an **upstream-cache model**: `_upstreamRT[N]` = source rendered through all shaders except shader N. Dragging slider N composites shader N on top of `_upstreamRT[N]` in a single pass (~1ms at 4K). On commit (`commitParams()`), all 8 upstream caches are rebuilt. This eliminates the old `createImageBitmap` GPU→CPU→GPU roundtrip.
-
-**Key rule:** Never pass the Pixi canvas through a bitmap copy. Call `canvas.el.setBaseCanvas(pipeline.getCanvas())` once at mount, then `pipeline.render()` updates the display automatically.
-
 ## ComfyUI Portability
 
 ComfyUI portable engine lives at `engine/ComfyUI_windows_portable/`. Projects are self-contained in `documents/MpiAiSuite/projects/`. Model files are stored separately under `documents/MpiAiSuite/models/`. This split allows projects to be portable while model files stay on the user's fast storage.
