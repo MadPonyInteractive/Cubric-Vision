@@ -1,5 +1,5 @@
 /**
- * js/components/types.js — Shared Component Type Definitions for MpiAiSuite.
+ * js/components/types.js — Shared Component Type Definitions for Cubric Studio.
  * 
  * This file acts as the single source of truth for component properties, 
  * variants, and state. Use these Types in JSDoc to help AI agents (and 

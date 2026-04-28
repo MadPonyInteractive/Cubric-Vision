@@ -34,7 +34,7 @@ export const MpiSettings = ComponentFactory.create({
         content.innerHTML = `
             <div class="mpi-settings__header">
                 <h2 class="mpi-settings__title">Settings</h2>
-                <p class="mpi-settings__desc">Configure Mpi AI Suite preferences and manage local models.</p>
+                <p class="mpi-settings__desc">Configure Cubric Studio preferences and manage local models.</p>
             </div>
 
             <div class="mpi-settings__section">

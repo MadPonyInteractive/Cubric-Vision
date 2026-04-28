@@ -102,7 +102,7 @@ function createWindow() {
     },
     // Use the horse logo if available
     icon: path.join(__dirname, 'favicon.png'),
-    title: 'Mpi AI Suite',
+    title: require('./js/core/appName.cjs').APP_NAME,
     backgroundColor: '#0a0a0c', // Matches the design language
     show: false // Show once ready to avoid white flash
   });

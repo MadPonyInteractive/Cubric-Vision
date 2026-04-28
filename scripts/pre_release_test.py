@@ -452,7 +452,7 @@ def main():
                 comfy_version = m.group(1)
 
     # Run tests
-    print('=== MpiAiSuite Pre-Release Test ===')
+    print('=== Cubric Studio Pre-Release Test ===')
     print(f'App Version: {app_version} | ComfyUI: {comfy_version}')
     res_str = 'full' if args.full_quality else '288x288 (image) / 256x144x2f (video)'
     print(f'Resolution: {res_str}\n')

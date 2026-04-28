@@ -1,6 +1,6 @@
 # Component System Architecture & Rules
 
-> **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in MpiAiSuite.
+> **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in Cubric Studio.
 
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves creating or modifying components.

@@ -1,6 +1,6 @@
 # App Versioning System
 
-This document explains how MpiAiSuite tracks and manages versions of the application, its bundled ComfyUI engine, the project data schema, and individual operations.
+This document explains how Cubric Studio tracks and manages versions of the application, its bundled ComfyUI engine, the project data schema, and individual operations.
 
 ---
 
@@ -30,7 +30,7 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 ### APP_VERSION
 
-- **Purpose:** Identifies the MpiAiSuite release. Bumped on every public release.
+- **Purpose:** Identifies the Cubric Studio release. Bumped on every public release.
 - **Format:** Semantic versioning (`MAJOR.MINOR.PATCH`).
 - **When to bump:**
   - **Patch** (0.0.x → 0.0.y): Bug fixes, no new operations, no schema change.

@@ -1,5 +1,5 @@
 /**
- * js/utils/async.js — Async/timing utilities for MpiAiSuite.
+ * js/utils/async.js — Async/timing utilities for Cubric Studio.
  */
 
 'use strict';

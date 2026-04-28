@@ -1,10 +1,10 @@
-# MpiAiSuite — Project Documentation
+# Cubric Studio — Project Documentation
 
 > Orientation hub for new agents. Start here, then drill into subsystem docs.
 
 ## What Is This App?
 
-MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as its generation engine. Users manage projects containing image/video generation history, configure models and LoRAs, and run generation workflows through a 3-workspace UI.
+Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as its generation engine. Users manage projects containing image/video generation history, configure models and LoRAs, and run generation workflows through a 3-workspace UI.
 
 ## 3-Workspace Flow
 
@@ -31,6 +31,7 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 | Shell | [shell.md](shell.md) | navigation, overlayManager, hotkeyManager, shell.js |
 | Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, seed.js, and all js/utils/ |
 | Events | [events.md](events.md) | EventBus, canonical event names, cross-component communication |
+| Worktrees | [worktrees.md](worktrees.md) | Git worktree setup, `.engine-config.json` for sharing engine/llama/models, post-checkout hook |
 
 ## Rendering Architecture (MpiCanvas)
 

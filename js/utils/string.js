@@ -1,5 +1,5 @@
 /**
- * js/utils/string.js — String utilities for MpiAiSuite.
+ * js/utils/string.js — String utilities for Cubric Studio.
  */
 
 'use strict';

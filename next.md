@@ -53,7 +53,7 @@ Toast (brief notifications that disappear)
 
 
 
-Prompting MpiAiSuite Agents — Gemini Flash Guide
+Prompting Cubric Studio Agents — Gemini Flash Guide
 Flash is fast but context-light. These patterns get the best results:
 
 Start every session with the slash command

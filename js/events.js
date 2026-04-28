@@ -1,7 +1,7 @@
 import { clientLogger } from './services/clientLogger.js';
 
 /**
- * js/events.js — Centralized Event Bus for MpiAiSuite.
+ * js/events.js — Centralized Event Bus for Cubric Studio.
  *
  * Usage:
  *   import { Events } from './events.js';
@@ -101,7 +101,7 @@ class EventBus {
 export const Events = new EventBus();
 
 /**
- * @typedef {Object} MpiEventMap — Canonical event names for MpiAiSuite
+ * @typedef {Object} MpiEventMap — Canonical event names for Cubric Studio
  *
  * 'ui:error'         { title: string, message: string } — show error dialog (shell listens)
  * 'ui:success'       { message: string }              — success toast via StatusBar.notify()

@@ -1,6 +1,6 @@
 # Release Notes
 
-MpiAiSuite release notes are stored here, one file per release.
+Cubric Studio release notes are stored here, one file per release.
 
 ## Naming Convention
 

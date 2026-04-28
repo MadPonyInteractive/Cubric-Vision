@@ -1,5 +1,5 @@
 /**
- * js/components/factory.js — Core Component Factory for MpiAiSuite.
+ * js/components/factory.js — Core Component Factory for Cubric Studio.
  * 
  * Provides a standardized way to create, mount, update, and destroy 
  * UI components in a vanilla JS environment without a bundler.

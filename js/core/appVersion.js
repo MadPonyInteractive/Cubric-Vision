@@ -1,7 +1,7 @@
 /**
  * js/core/appVersion.js — Application version constants.
  *
- * APP_VERSION: Semantic version of the MpiAiSuite application. Bump on every release.
+ * APP_VERSION: Semantic version of the Cubric Studio application. Bump on every release.
  * SCHEMA_VERSION: Project schema version (integer). Increment whenever project.json
  *                 structure changes in a way that requires migration.
  *
@@ -9,7 +9,7 @@
  * dev_configs/system_dependencies.json via routes/platformEngine.js
  */
 
-/** Semantic version of the MpiAiSuite application. Bump on every release. */
+/** Semantic version of the Cubric Studio application. Bump on every release. */
 export const APP_VERSION = '0.0.1';
 
 /**

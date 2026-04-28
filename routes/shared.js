@@ -81,7 +81,7 @@ function streamDownload(url, localPath, onProgress) {
     const request = (targetUrl) => {
         return new Promise((resolve, reject) => {
             const protocol = targetUrl.startsWith('https') ? https : http;
-            protocol.get(targetUrl, { headers: { 'User-Agent': 'MpiAiSuite/1.0' } }, async (response) => {
+            protocol.get(targetUrl, { headers: { 'User-Agent': 'CubricStudio/1.0' } }, async (response) => {
                 if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
                     const nextUrl = new URL(response.headers.location, targetUrl).href;
                     resolve(request(nextUrl));

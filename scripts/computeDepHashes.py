@@ -32,7 +32,7 @@ class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 def compute_sha256(url: str) -> str:
     """Try HEAD request first for X-Linked-ETag, otherwise stream-download and compute SHA256."""
     try:
-        req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'MpiAiSuite/1.0'})
+        req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'CubricStudio/1.0'})
         opener = urllib.request.build_opener(NoRedirectHandler())
         try:
             with opener.open(req) as response:
@@ -48,7 +48,7 @@ def compute_sha256(url: str) -> str:
         print(f"  HEAD fast-path failed: {exc}")
 
     print("  Falling back to stream download...")
-    req = urllib.request.Request(url, headers={'User-Agent': 'MpiAiSuite/1.0'})
+    req = urllib.request.Request(url, headers={'User-Agent': 'CubricStudio/1.0'})
     with urllib.request.urlopen(req) as response:
         h = hashlib.sha256()
         while chunk := response.read(1024 * 1024):  # 1 MB chunks

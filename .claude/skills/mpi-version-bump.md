@@ -5,7 +5,7 @@ description: Interactive release workflow — bump app version, update operation
 
 This skill guides you through a complete release: bumping the app version, updating engine versions, registering new operations, updating all related files, generating release notes, and optionally running pre-release tests.
 
-Use this skill whenever you're ready to cut a new release of MpiAiSuite.
+Use this skill whenever you're ready to cut a new release of Cubric Studio.
 
 ---
 
@@ -216,7 +216,7 @@ You fill in the actual migration logic.
 I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 
 ```markdown
-# MpiAiSuite vX.Y.Z — YYYY-MM-DD
+# Cubric Studio vX.Y.Z — YYYY-MM-DD
 
 ## Changelog
 

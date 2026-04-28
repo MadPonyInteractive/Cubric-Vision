@@ -1,5 +1,5 @@
 /**
- * js/utils/dom.js — Lightweight DOM utilities for MpiAiSuite.
+ * js/utils/dom.js — Lightweight DOM utilities for Cubric Studio.
  * Import these instead of writing querySelector boilerplate.
  */
 

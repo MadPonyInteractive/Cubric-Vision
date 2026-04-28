@@ -1,5 +1,5 @@
 /**
- * js/utils/file.js — File/media type utilities for MpiAiSuite.
+ * js/utils/file.js — File/media type utilities for Cubric Studio.
  */
 
 'use strict';
