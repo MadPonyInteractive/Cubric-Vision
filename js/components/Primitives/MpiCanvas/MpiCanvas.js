@@ -70,7 +70,6 @@ class _CanvasCore {
 
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
-        this._processedBitmap = null;
 
         // Grid state
         this.gridH = 1;
@@ -144,7 +143,6 @@ class _CanvasCore {
     set maskHidden(v)    { this._maskHidden = v; this.draw(); }
 
     destroy() {
-        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
         if (this.resizeObserver) this.resizeObserver.disconnect();
         this.input.destroy();
         this.crop?.destroy?.();
@@ -170,19 +168,7 @@ class _CanvasCore {
         this.draw();
     }
 
-    setProcessedImage(bitmap) {
-        if (this._processedBitmap) this._processedBitmap.close?.();
-        this._processedBitmap = bitmap;
-        this.draw();
-    }
-
-    clearProcessedImage() {
-        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
-        this.draw();
-    }
-
     clearImage() {
-        if (this._processedBitmap) { this._processedBitmap.close?.(); this._processedBitmap = null; }
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
         this._activeMode = 'none';
@@ -267,7 +253,7 @@ class _CanvasCore {
         this.ctx.scale(scale, scale);
 
         // 1. Base Image
-        this.ctx.drawImage(this._processedBitmap ?? this.img, 0, 0);
+        this.ctx.drawImage(this.img, 0, 0);
 
         // 2. Comparison Layer
         if (this.comparison.isComparisonMode && this.comparison.imgAfter.width) {
@@ -447,7 +433,7 @@ export const MpiCanvas = ComponentFactory.create({
 
         const _methods = [
             'destroy','setMaskDataURL','compositeMaskDataURL','clearImage','loadImage','loadComparisonImage',
-            'resetView','setGrid','resize','draw','setProcessedImage','clearProcessedImage',
+            'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'setCropRatio','getCropRect'

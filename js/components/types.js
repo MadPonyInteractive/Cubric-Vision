@@ -28,7 +28,6 @@
  *   setBrushSize(size), setBrushType(type), flipMaskColor(),
  *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
  *   setCropRatio(ratio), getCropRect()
- *   setProcessedImage(bitmap) — swap GPU-rendered ImageBitmap as base layer; preserves view/zoom/mask
  *   destroy()                 — remove canvas + detach all window listeners
  *
  * Emits:

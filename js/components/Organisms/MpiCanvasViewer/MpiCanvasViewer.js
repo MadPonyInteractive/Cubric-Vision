@@ -489,15 +489,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Returns the canvas component root el — CSS filter applied here affects rendered image. */
         el.getImageEl = () => canvasInst.el;
 
-        /** Swap a GPU-rendered ImageBitmap as the canvas base layer. */
-        el.setProcessedImage = (bitmap) => canvasInst.el.setProcessedImage?.(bitmap);
-
-        /** Drop GPU-processed bitmap, revert to source image. */
-        el.clearProcessedImage = () => canvasInst.el.clearProcessedImage?.();
-
-        /** Direct image element ref (HTMLImageElement) for pipeline source. */
-        Object.defineProperty(el, 'img', { get: () => canvasInst.el.img });
-
         /** Load a preview image (base64 or URL) into the canvas without touching history. */
         el.setPreviewSrc = (src) => { canvas.loadImage(src); };
 
