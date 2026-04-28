@@ -49,7 +49,6 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
 
         function _applyTransform() {
             stackEl.style.transform = view.getCSSTransform();
-            console.log('[masked-preview] transform', stackEl.style.transform);
         }
 
         // ── Pan / zoom ────────────────────────────────────────────────────────
@@ -57,7 +56,6 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
         let _isPanning   = false;
         let _panStartX   = 0;
         let _panStartY   = 0;
-        let _isSpace     = false;
 
         function _onWheel(e) {
             e.preventDefault();
@@ -74,11 +72,12 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
         }
 
         function _onMouseDown(e) {
-            if (e.button === 1 || (e.button === 0 && _isSpace)) {
+            // Match MpiCanvas pan UX: left or middle click pans. Cursor → 'move' while panning.
+            if (e.button === 0 || e.button === 1) {
                 _isPanning  = true;
                 _panStartX  = e.clientX - view.offsetX;
                 _panStartY  = e.clientY - view.offsetY;
-                el.style.cursor = 'grabbing';
+                el.style.cursor = 'move';
             }
         }
 
@@ -93,22 +92,17 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
         function _onMouseUp() {
             if (_isPanning) {
                 _isPanning = false;
-                el.style.cursor = _isSpace ? 'grab' : 'default';
+                el.style.cursor = 'default';
             }
         }
 
-        function _onKeyDown(e) {
-            if (e.code === 'Space' && !_isSpace) {
-                _isSpace = true;
-                el.style.cursor = 'grab';
-            }
-        }
-
-        function _onKeyUp(e) {
-            if (e.code === 'Space') {
-                _isSpace = false;
-                if (!_isPanning) el.style.cursor = 'default';
-            }
+        function _onDblClick() {
+            // Reset view to fit, like MpiCanvas dblclick.
+            // Must set isManagedView=true BEFORE refit — refit bails early if false.
+            view.isManagedView = true;
+            const rect = el.getBoundingClientRect();
+            view.refit(rect.width, rect.height, _imgNaturalW, _imgNaturalH);
+            _applyTransform();
         }
 
         el.addEventListener('wheel',     _onWheel,    { passive: false });
@@ -116,8 +110,7 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
         el.addEventListener('mousemove', _onMouseMove);
         el.addEventListener('mouseup',   _onMouseUp);
         el.addEventListener('mouseleave',_onMouseUp);
-        window.addEventListener('keydown', _onKeyDown);
-        window.addEventListener('keyup',   _onKeyUp);
+        el.addEventListener('dblclick',  _onDblClick);
 
         // ── Resize ────────────────────────────────────────────────────────────
 
@@ -159,16 +152,18 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
             await view.reset(el, baseImg);
             view.isManagedView = true;
             _applyTransform();
-
-            console.log('[masked-preview] loaded', { w: _imgNaturalW, h: _imgNaturalH });
         };
 
         el.setMaskDataURL = (dataUrl) => {
             if (!dataUrl) { el.clearMask(); return; }
+            // Mask data URL is opaque PNG: black = unpainted, white = painted.
+            // Use luminance mode so white reveals overlay, black hides it.
             maskedImg.style.webkitMaskImage = `url("${dataUrl}")`;
             maskedImg.style.maskImage       = `url("${dataUrl}")`;
             maskedImg.style.webkitMaskSize  = '100% 100%';
             maskedImg.style.maskSize        = '100% 100%';
+            maskedImg.style.webkitMaskMode  = 'luminance';
+            maskedImg.style.maskMode        = 'luminance';
             maskedImg.style.display         = '';
         };
 
@@ -187,8 +182,7 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
             el.removeEventListener('mousemove', _onMouseMove);
             el.removeEventListener('mouseup',   _onMouseUp);
             el.removeEventListener('mouseleave',_onMouseUp);
-            window.removeEventListener('keydown', _onKeyDown);
-            window.removeEventListener('keyup',   _onKeyUp);
+            el.removeEventListener('dblclick',  _onDblClick);
         };
     },
 });

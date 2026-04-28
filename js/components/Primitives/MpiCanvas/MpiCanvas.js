@@ -270,9 +270,10 @@ class _CanvasCore {
 
     async loadImage(url) {
         try {
+            if (!this.img) throw new Error(`loadImage called on destroyed canvas (url=${url})`);
             await new Promise((resolve, reject) => {
                 this.img.onload = resolve;
-                this.img.onerror = reject;
+                this.img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
                 this.img.src = url;
                 // Reset all modes atomically before image loads
                 this._activeMode = 'none';
@@ -283,6 +284,8 @@ class _CanvasCore {
                 delete this.canvas.dataset.comparisonUrl;
                 this.canvas.dataset.sliderPos = '0.5';
             });
+            // Bail if canvas was destroyed during async image load (navigation/teardown race)
+            if (!this.img || !this.baseCanvas) return;
             if (this._onModeChange) this._onModeChange('none');
 
             // Clamp to GPU MAX_TEXTURE_SIZE — prevents lost-context on huge images.

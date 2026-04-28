@@ -6,6 +6,7 @@
     display: block;
     background: var(--bg-base);
     user-select: none;
+    cursor: default;
 }
 
 .mpi-masked-preview__stack {
@@ -28,7 +29,8 @@
     -webkit-user-drag: none;
 }
 
-/* Mask overlay: same image, clipped to painted mask, tinted via CSS filter */
+/* Mask overlay: image flattened to white via filter, clipped to painted mask shape.
+   Matches the on-canvas mask look: wide see-through white tint over painted area. */
 .mpi-masked-preview__masked {
     position: absolute;
     top: 0;
@@ -38,8 +40,8 @@
     pointer-events: none;
     user-select: none;
     -webkit-user-drag: none;
-    /* Tint: hue-rotate + saturate to show "selected area" in primary accent color */
-    filter: hue-rotate(260deg) saturate(8) brightness(0.9) opacity(0.5);
+    /* brightness(0) → fully black, invert(1) → fully white. opacity(0.5) → see-through tint. */
+    filter: brightness(0) invert(1) opacity(0.5);
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
 }

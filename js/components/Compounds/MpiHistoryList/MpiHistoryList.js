@@ -53,7 +53,7 @@ export const MpiHistoryList = ComponentFactory.create({
         const _isVideo = props.isVideo ?? false;
         let _selectMode = false;
         let _devMode = false; // default: show custom menu; true = allow native (dev inspect-element)
-        import('../../../dev_configs/app_config.js')
+        import('../../../../dev_configs/app_config.js')
             .then(({ APP_CONFIG }) => { _devMode = APP_CONFIG.dev_mode ?? false; })
             .catch(() => {});
         /** @type {Set<number>} */

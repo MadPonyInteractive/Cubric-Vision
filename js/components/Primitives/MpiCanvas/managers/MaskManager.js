@@ -30,6 +30,7 @@ export class MaskManager {
      * Clears the mask buffer.
      */
     clear() {
+        if (!this.maskCtx || !this.maskCanvas) return;
         this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
     }
 

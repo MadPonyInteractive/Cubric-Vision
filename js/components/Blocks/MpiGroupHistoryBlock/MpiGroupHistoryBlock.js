@@ -558,7 +558,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── History list wiring ──────────────────────────────────────────────
 
-        historyList.on('entry-selected', ({ idx, item }) => {
+        historyList.on('entry-selected', async ({ idx, item }) => {
             if (isVideo) {
                 viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
                     fps:        item.fps || _group.fps || 24,
@@ -567,8 +567,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     hasAudio:   item.hasAudio,
                 });
             } else {
-                viewer.el.loadEntry?.(item, idx);
+                await viewer.el.loadEntry?.(item, idx);
                 viewer.el.setMaskHidden?.(false);
+                // Re-apply active tool mode so crop box / mask brush re-attach to new image.
+                const activeMode = historyTools.el.getActiveMode?.();
+                if (activeMode && activeMode !== 'prompt') {
+                    viewer.el.enterMode?.(activeMode);
+                }
             }
             _currentIdx = idx;
             _group = promoteHistoryEntry(_group, idx);
@@ -591,10 +596,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (_hasPromptOps()) _pb?.el?.show();
         });
 
-        historyList.on('compare-requested', ({ indices }) => {
+        historyList.on('compare-requested', async ({ indices }) => {
             if (indices.length !== 2 || isVideo) return;
             const [idxA, idxB] = indices;
-            viewer.el.loadCompare?.(_group.history[idxA], _group.history[idxB]);
+            // Compare needs MpiCanvas alive. If in prompt mode (preview swapped),
+            // remount canvas first so loadCompare doesn't hit a destroyed canvas.
+            if (historyTools.el.getActiveMode?.() === 'prompt') {
+                await viewer.el.swapToCanvas?.();
+            }
+            await viewer.el.loadCompare?.(_group.history[idxA], _group.history[idxB]);
             viewer.el.setMaskHidden?.(false);
         });
 

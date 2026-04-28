@@ -339,16 +339,37 @@ export const MpiCanvasViewer = ComponentFactory.create({
         let _currentItem = null;
 
         el.loadEntry = async (item, idx) => {
-            // Save current mask before switching away
-            if (_hasMask) {
+            // Save current mask before switching away — only if canvas alive
+            if (_hasMask && !_previewInst) {
                 _maskStore.set(_currentIdx, canvas.getMaskDataURL());
-            } else {
+            } else if (!_previewInst) {
                 _maskStore.delete(_currentIdx);
             }
 
             _currentIdx = idx;
             _currentItem = item;
             _exitMode();
+
+            // Preview mode: route through MpiMaskedImagePreview, skip canvas calls
+            if (_previewInst) {
+                if (item?.filePath) {
+                    try {
+                        await _previewInst.el.loadImage(_resolveUrl(item.filePath));
+                    } catch (err) {
+                        console.warn('[MpiCanvasViewer] Failed to load image into preview:', err);
+                    }
+                }
+                const savedPreview = _maskStore.get(idx);
+                if (savedPreview) {
+                    _previewInst.el.setMaskDataURL(savedPreview);
+                    _hasMask = true;
+                } else {
+                    _previewInst.el.clearMask();
+                    _hasMask = false;
+                }
+                emit('entry-loaded', { idx, hasMask: _hasMask });
+                return;
+            }
 
             await _showEntry(item);
 
@@ -527,7 +548,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (imageUrl) await _previewInst.el.loadImage(imageUrl);
             if (maskDataUrl) _previewInst.el.setMaskDataURL(maskDataUrl);
 
-            console.log('[canvas-viewer] swapped to preview (canvas destroyed)', { hasImage: !!imageUrl, hasMask: !!maskDataUrl });
         };
 
         /**
@@ -574,7 +594,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 }
             }
 
-            console.log('[canvas-viewer] swapped back to canvas (remounted)');
         };
 
         // ── Lifecycle: destroy ───────────────────────────────────────────────
