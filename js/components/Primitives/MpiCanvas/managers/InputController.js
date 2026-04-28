@@ -30,9 +30,10 @@ export class InputController {
      * @param {Managers} managers
      * @param {InputOptions} options
      */
-    constructor(canvas, container, managers, options) {
-        this.canvas = canvas;
+    constructor(canvas, container, managers, options, stackEl) {
+        this.canvas = canvas;        // baseCanvas — kept for back-compat dataset access
         this.container = container;
+        this.stackEl = stackEl || canvas; // image-px transform target
         this.managers = managers;
         this.options = options;
 
@@ -49,9 +50,9 @@ export class InputController {
     }
 
     destroy() {
-        this.canvas.removeEventListener('wheel', this._boundHandlers.wheel);
-        this.canvas.removeEventListener('mousedown', this._boundHandlers.mousedown);
-        this.canvas.removeEventListener('dblclick', this._boundHandlers.dblclick);
+        this.container.removeEventListener('wheel', this._boundHandlers.wheel);
+        this.container.removeEventListener('mousedown', this._boundHandlers.mousedown);
+        this.container.removeEventListener('dblclick', this._boundHandlers.dblclick);
         window.removeEventListener('mousemove', this._boundHandlers.mousemove);
         window.removeEventListener('mouseup', this._boundHandlers.mouseup);
         this._boundHandlers.keydownUnsub?.();
@@ -90,35 +91,38 @@ export class InputController {
 
                 view.scale = Math.max(view.minScale, Math.min(view.maxScale, view.scale * factor));
 
-                const imgX = (e.offsetX - view.offsetX) / oldScale;
-                const imgY = (e.offsetY - view.offsetY) / oldScale;
+                // Cursor in container px (CSS pixels, not backing-buffer).
+                const cRect = this.container.getBoundingClientRect();
+                const cx = e.clientX - cRect.left;
+                const cy = e.clientY - cRect.top;
+                const imgX = (cx - view.offsetX) / oldScale;
+                const imgY = (cy - view.offsetY) / oldScale;
 
-                view.offsetX = e.offsetX - imgX * view.scale;
-                view.offsetY = e.offsetY - imgY * view.scale;
+                view.offsetX = cx - imgX * view.scale;
+                view.offsetY = cy - imgY * view.scale;
             }
             this.options.onDraw();
         };
-        this.canvas.addEventListener('wheel', this._boundHandlers.wheel, { passive: false });
+        this.container.addEventListener('wheel', this._boundHandlers.wheel, { passive: false });
 
         // MouseDown: Pan, Mask, Crop, or Slider
         this._boundHandlers.mousedown = (e) => {
             if (e.button !== 0) return;
             e.preventDefault();
 
-            const { x, y } = this._getCanvasCoords(e);
+            const c = this._getContainerCoords(e);
+            const i = this._getImageCoords(e);
             const { view, mask, comparison, crop } = this.managers;
+            const imgW = this.canvas.width || 1;
 
-            if (comparison.isOverSlider(x, this.canvas.width)) {
+            if (comparison.isOverSlider(i.x, imgW)) {
                 comparison.isDraggingSlider = true;
-                comparison.sliderPos = x / this.canvas.width;
+                comparison.sliderPos = Math.max(0, Math.min(1, i.x / imgW));
             } else if (crop.isCroppingMode && !this.isSpacePressed) {
-                const imgX = (x - view.offsetX) / view.scale;
-                const imgY = (y - view.offsetY) / view.scale;
-                const handle = crop.hitTest(imgX, imgY, view.scale);
+                const handle = crop.hitTest(i.x, i.y, view.scale);
                 if (handle) {
-                    crop.startDrag(handle, imgX, imgY);
+                    crop.startDrag(handle, i.x, i.y);
                 } else {
-                    // Clicked outside crop rect — start pan
                     this.isPanning = true;
                     view.isManagedView = false;
                     this.startPanX = e.clientX - view.offsetX;
@@ -126,7 +130,7 @@ export class InputController {
                 }
             } else if (mask.isMaskingMode && !this.isSpacePressed) {
                 mask.isDrawingMask = true;
-                this._paintMaskAt(x, y);
+                mask.paint(i.x, i.y);
             } else {
                 this.isPanning = true;
                 view.isManagedView = false;
@@ -136,24 +140,26 @@ export class InputController {
             this.updateCursor();
             this.options.onDraw();
         };
-        this.canvas.addEventListener('mousedown', this._boundHandlers.mousedown);
+        this.container.addEventListener('mousedown', this._boundHandlers.mousedown);
 
         // MouseMove: Global listener
         this._boundHandlers.mousemove = (e) => {
-            const { x, y } = this._getCanvasCoords(e);
-            this.currentMouseX = x;
-            this.currentMouseY = y;
+            const c = this._getContainerCoords(e);
+            this.currentMouseX = c.x;   // container px (used by brush indicator + slider)
+            this.currentMouseY = c.y;
             const { view, mask, comparison, crop } = this.managers;
 
             if (comparison.isDraggingSlider) {
-                comparison.updateSlider(x, this.canvas.width);
+                const imgW = this.canvas.width || 1;
+                const i = this._getImageCoords(e);
+                comparison.updateSlider(i.x, imgW);
                 if (this.options.onSliderChange) this.options.onSliderChange(comparison.sliderPos);
             } else if (crop.isDragging) {
-                const imgX = (x - view.offsetX) / view.scale;
-                const imgY = (y - view.offsetY) / view.scale;
-                crop.drag(imgX, imgY);
+                const i = this._getImageCoords(e);
+                crop.drag(i.x, i.y);
             } else if (mask.isDrawingMask) {
-                this._paintMaskAt(x, y);
+                const i = this._getImageCoords(e);
+                mask.paint(i.x, i.y);
             } else if (this.isPanning) {
                 view.offsetX = e.clientX - this.startPanX;
                 view.offsetY = e.clientY - this.startPanY;
@@ -211,46 +217,48 @@ export class InputController {
                 this.options.onResetView();
             }
         };
-        this.canvas.addEventListener('dblclick', this._boundHandlers.dblclick);
+        this.container.addEventListener('dblclick', this._boundHandlers.dblclick);
     }
 
-    _getCanvasCoords(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        return {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
+    /** Cursor in container px (CSS). Used by slider hit-test + brush indicator. */
+    _getContainerCoords(e) {
+        const rect = this.container.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    _paintMaskAt(mouseX, mouseY) {
-        const { view, mask } = this.managers;
-        const imgX = (mouseX - view.offsetX) / view.scale;
-        const imgY = (mouseY - view.offsetY) / view.scale;
-        mask.paint(imgX, imgY);
+    /**
+     * Cursor in image-native px via stack rect (CSS transform applies to getBoundingClientRect).
+     * Equivalent to `(container.x - view.offsetX) / view.scale`.
+     */
+    _getImageCoords(e) {
+        const rect = this.stackEl.getBoundingClientRect();
+        const s = this.managers.view.scale || 1;
+        return { x: (e.clientX - rect.left) / s, y: (e.clientY - rect.top) / s };
     }
 
     updateCursor() {
-        const { mask, comparison, crop } = this.managers;
+        const { mask, comparison, crop, view } = this.managers;
         const x = this.currentMouseX;
         const y = this.currentMouseY;
+        const target = this.container;
         if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode)) {
-            this.canvas.style.cursor = 'move';
+            target.style.cursor = 'move';
         } else if (crop.isCroppingMode && !this.isSpacePressed) {
-            const { view } = this.managers;
+            // Convert container-px cursor → image-px for crop hit-test.
             const imgX = x !== undefined ? (x - view.offsetX) / view.scale : -1;
             const imgY = y !== undefined ? (y - view.offsetY) / view.scale : -1;
             const handle = crop.isDragging
                 ? crop._activeHandle
                 : crop.hitTest(imgX, imgY, view.scale);
-            this.canvas.style.cursor = CropManager.getCursor(handle);
+            target.style.cursor = CropManager.getCursor(handle);
         } else if (mask.isMaskingMode) {
-            this.canvas.style.cursor = 'none';
-        } else if (comparison.isOverSlider(x, this.canvas.width)) {
-            this.canvas.style.cursor = 'ew-resize';
+            target.style.cursor = 'none';
+        } else if (x !== undefined) {
+            const imgX = (x - view.offsetX) / (view.scale || 1);
+            target.style.cursor = comparison.isOverSlider(imgX, this.canvas.width || 1)
+                ? 'ew-resize' : 'default';
         } else {
-            this.canvas.style.cursor = 'default';
+            target.style.cursor = 'default';
         }
     }
 }

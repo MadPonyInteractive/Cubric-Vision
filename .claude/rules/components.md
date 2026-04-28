@@ -7,7 +7,7 @@
 
 - **All components MUST use `ComponentFactory.create()`** — never build a component by hand.
 - **NEVER modify `js/components/factory.js`** — it is locked. Fix your component, not the factory.
-- **4-Tier hierarchy (never import up):** Primitives → Compounds → Organisms → Blocks. Primitives import nothing. Compounds import Primitives only. Organisms import Primitives + Compounds. Blocks import all tiers.
+- **4-Tier hierarchy (never import up):** Primitives → Compounds → Organisms → Blocks. Primitives import nothing. Compounds import Primitives only. Organisms import Primitives + Compounds. Blocks import all tiers. Primitives may own multi-canvas DOM trees (e.g. `MpiCanvas` owns base + overlay + screen-UI canvases).
 - **Every new component checklist:** (1) register `.css` in `js/shell/preloadStyles.js`, (2) document props in `js/components/types.js`, (3) ask user about gallery addition.
 - **Use `js/utils/dom.js`** shorthands — never raw `document.querySelector`.
 - **Blocking UI (modals/overlays):** call `Overlays.request(...)` to show, `Overlays.release(el)` to hide. Portal to `document.body`. Self-close on `ui:close-all-popups`.

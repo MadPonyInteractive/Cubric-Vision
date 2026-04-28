@@ -3,6 +3,12 @@
 
 > **Scope:** Lists only components that perform internal sub-mounts. Components absent from this file have no internal mounts.
 
+## MpiCanvas (Primitive: interactive image canvas)
+
+DOM structure: `.mpi-canvas` root → `.mpi-canvas__stack` (CSS-transform pan/zoom target) → `canvas[data-role=base]` + `canvas[data-role=overlay]` (both image-native px) + `canvas[data-role=screen-ui]` (container px, sibling of stack).
+
+Props: `{ onBrushSizeChange?: fn, onBrushTypeChange?: fn }`
+
 ---
 
 ## MpiGalleryBlock

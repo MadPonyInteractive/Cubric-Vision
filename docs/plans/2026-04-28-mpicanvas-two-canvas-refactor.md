@@ -70,7 +70,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
 ## To-Dos
 
-- [ ] **1. Audit `setProcessedImage` / `clearProcessedImage` consumers**
+- [x] **1. Audit `setProcessedImage` / `clearProcessedImage` consumers**
 
   **What:** Confirm which components call these methods on the post-revert MpiCanvas. Document the call sites so the new arch preserves them.
 
@@ -81,7 +81,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Look at the grep output — confirm a complete list of callers exists, each annotated with what it passes (HTMLImageElement, ImageBitmap, Canvas, or null). Save annotation as a comment block at the top of `js/components/Primitives/MpiCanvas/MpiCanvas.js` for the implementing agent to reference in later to-dos.
 
-- [ ] **2. Build new DOM template + CSS, keep current rendering working**
+- [x] **2. Build new DOM template + CSS, keep current rendering working**
 
   **What:** In `js/components/Primitives/MpiCanvas/MpiCanvas.js`:
   - Replace template with two-canvas stack + screen-UI sibling.
@@ -98,7 +98,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Reload Electron. Load any image in history workspace. Image still displays as before. Pan/zoom still work. Mask/crop/comparison unchanged. In dev tools console, look for `[mpicanvas] dom { stack: true, base: true, overlay: true, screen: true }` on workspace open. Inspect DOM: `.mpi-canvas` contains `.mpi-canvas__stack` + `.mpi-canvas__screen-ui` siblings; stack contains 2 canvas children.
 
-- [ ] **3. Size canvases to image native px on `loadImage` (clamp to MAX_TEXTURE_SIZE)**
+- [x] **3. Size canvases to image native px on `loadImage` (clamp to MAX_TEXTURE_SIZE)**
 
   **What:** Update `loadImage(url)` in `_CanvasCore`:
   - After `img.onload`, compute clamped dimensions against GPU `MAX_TEXTURE_SIZE` (probe via `gl.getParameter(gl.MAX_TEXTURE_SIZE)` once at module load, fallback `4096`).
@@ -114,7 +114,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Load 4K image. Console shows `[mpicanvas] sizes { imgW: ..., imgH: ..., clampedW: ..., clampedH: ... }` with clampedW/H matching imgW/H if under limit, or clamped to MAX_TEXTURE_SIZE if over. Inspect base canvas in DOM — `width`/`height` attributes match clamped dims. Image may visually overflow — that is expected at this stage.
 
-- [ ] **4. Split `draw()` into `_renderBase` / `_renderOverlay` / `_renderScreenUI`**
+- [x] **4. Split `draw()` into `_renderBase` / `_renderOverlay` / `_renderScreenUI`**
 
   **What:** Replace `draw()` body:
   - `_renderBase()` — clears `baseCtx`, draws `_processedBitmap ?? img` at `(0,0)` with no transform (1:1 to native canvas). Called on image load + on `setProcessedImage`.
@@ -130,7 +130,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Load image. Console shows the `[mpicanvas] split-render` log once on first draw. Image renders (may still visually overflow until to-do 5). Switch to mask mode → mask paints in correct location on overlay canvas. Comparison clip line shows at correct image-px x.
 
-- [ ] **5. Move pan/zoom from ctx transform to CSS transform on stackEl; rewire InputController**
+- [x] **5. Move pan/zoom from ctx transform to CSS transform on stackEl; rewire InputController**
 
   **What:**
   - In `ViewManager`, keep `scale/offsetX/offsetY/minScale/maxScale/isManagedView` properties unchanged (public API).
@@ -149,7 +149,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Load 4K image. Image fits container (CSS transform centers + scales). Pan with space-drag — moves smoothly. Zoom with wheel — zooms toward cursor, image stays crisp at all zoom levels. At 8× zoom: individual pixels appear as hard squares (Photoshop parity). Mask paint, crop drag, comparison slider drag all hit-test correctly. Console shows `[mpicanvas] transform translate(...)px scale(N)` on each pan/zoom.
 
-- [ ] **6. Update MaskManager / CropManager / ComparisonManager to draw at image-native px on overlay canvas**
+- [x] **6. Update MaskManager / CropManager / ComparisonManager to draw at image-native px on overlay canvas**
 
   **What:** Most logic already operates in image native px. Specific changes:
   - `MaskManager.init(width, height)` already creates own offscreen `maskCanvas` at image px → unchanged. `_renderOverlay` does `overlayCtx.drawImage(mask.maskCanvas, 0, 0)` at native res. No transform needed.
@@ -161,7 +161,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Mask: paint a stroke at fit + 4× zoom — stroke shows in correct image-px location. Crop: rect appears, drag corner — corner moves to mouse position at all zoom levels. Comparison: clip line at correct image-px x at all zoom levels. Console: `console.log('[mpicanvas] overlay-renders', { mode: this.activeMode, sliderPos: this.comparison.sliderPos })` fires once per draw call.
 
-- [ ] **7. Normalize line widths + handle radius by `view.scale`**
+- [x] **7. Normalize line widths + handle radius by `view.scale`**
 
   **What:**
   - `_renderOverlay` + `CropManager.draw` + grid: `lineWidth = baseWidth / view.scale`, dash arrays scaled the same way. Lines stay constant thickness on screen at all zoom levels.
@@ -173,7 +173,41 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** At fit, 1×, 4×, 8× zoom: crop handles look identical size on screen, dashed border same on-screen thickness, grid lines same on-screen thickness. Mask strokes show crisp pixel edges at 8× zoom.
 
-- [ ] **8. Fix `destroy()` — remove all 3 canvases + stackEl, cancel rAFs, disconnect ResizeObserver**
+- [x] **8. Fix `destroy()` — remove all 3 canvases + stackEl, cancel rAFs, disconnect ResizeObserver**
+
+  *(Initial pass done — VRAM still leaks. Split follow-up into 8a + 8b.)*
+
+- [x] **8a. Audit workspace teardown — confirm `MpiCanvas.destroy()` actually fires on history workspace exit**
+
+  **What:** VRAM increases every history workspace load → either (a) destroy never called, (b) destroy called but element not removed, (c) destroy called but GPU texture backing never released.
+
+  - Add `console.log('[mpicanvas] destroyed', { hadBase: !!this.baseCanvas })` at top of `destroy()`.
+  - Grep `MpiCanvasViewer.js` + workspace mount/unmount logic for `instance.destroy()` calls. Confirm CLAUDE.md cardinal rule "Navigation MUST call `instance.destroy()`" is honored.
+  - If destroy never fires → fix by adding `instance.destroy()` to the workspace teardown path.
+  - If destroy fires but VRAM still leaks → record finding, hand off to 8b.
+
+  **Files touched:** `js/components/Primitives/MpiCanvas/MpiCanvas.js` (log only), possibly workspace mount file (TBD by audit).
+
+  **Verify:** Open history workspace, navigate away, console shows `[mpicanvas] destroyed { hadBase: true }`. If no log → destroy not wired up; fix the wiring. If log fires but VRAM still grows → 8b takes over.
+
+- [x] **8b. Force GPU texture release on destroy — zero canvas dims + close ImageBitmaps + add MaskManager.destroy**
+
+  **Context:** Removing canvas from DOM + nulling refs is not enough. Chromium retains GPU texture backing for canvas elements until GC. ImageBitmap holds GPU memory until `.close()`. MaskManager owns own offscreen canvas (~50MB at 4K) that's never destroyed.
+
+  **What:** In `MpiCanvas.destroy()`:
+  - Before removing each canvas: `canvas.width = 0; canvas.height = 0` — forces immediate texture release.
+  - If `_processedBitmap` is `ImageBitmap`: call `.close()` before nulling.
+  - If `comparison.imgAfter` is `ImageBitmap`: call `.close()`.
+
+  Add `MaskManager.destroy()`:
+  - Set `maskCanvas.width = 0; height = 0`, null refs.
+
+  Add `ComparisonManager.destroy()`:
+  - Close `imgAfter` if ImageBitmap, null ref.
+
+  **Files touched:** `js/components/Primitives/MpiCanvas/MpiCanvas.js`, `js/components/Primitives/MpiCanvas/managers/MaskManager.js`, `js/components/Primitives/MpiCanvas/managers/ComparisonManager.js`
+
+  **Verify:** Open 4K image, note VRAM. Navigate away. Console: `[mpicanvas] destroyed`. VRAM drops to baseline. Repeat 5× — VRAM stable, no stacking.
 
   **Context:** Each MpiCanvas mount creates baseCanvas + overlayCanvas at image native px (~51MB each for 4K). Without proper destroy, GPU texture backing held until GC → VRAM stacks ~1GB per workspace open/close cycle.
 
@@ -185,7 +219,7 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Open 4K image in history workspace. Note GPU VRAM in Task Manager. Navigate to gallery (or any other workspace). Console shows `[mpicanvas] destroyed`. VRAM drops back to baseline. Re-open workspace — VRAM returns to same level as first open (no stacking). Repeat 3× — VRAM stable.
 
-- [ ] **9. Update component documentation rules** *(ASK USER FIRST per CLAUDE.md cardinal rule 3)*
+- [x] **11. Update component documentation rules** *(ASK USER FIRST per CLAUDE.md cardinal rule 3)*
 
   **What:** With explicit user permission only:
   - `.claude/rules/components.md`: Primitives may own multi-canvas DOM trees
@@ -198,7 +232,24 @@ Reverted `0e5a130` mixed two concerns: (a) two-canvas display refactor + (b) Pix
 
   **Verify:** Look at the changed sections — confirm descriptions match the implemented architecture. Ask user to spot-check.
 
-- [ ] **10. Cross-cutting validation at fit/1×/4×/8× zoom**
+- [ ] **9. Prompt-tool: drop canvas, swap to CSS `mask-image` preview**
+
+  **Context:** When user selects Prompt tool, MpiCanvas is overkill — only need image display + painted-mask overlay + pan/zoom. Two image-px canvases (~100MB GPU) wasted. CSS `mask-image` composites mask on GPU with cheap `<img>` elements. Mask painting still needs a canvas, but only mounted while user is actively painting.
+
+  **What:** New primitive `MpiMaskedImagePreview`:
+  - DOM: `.mpi-masked-preview` root → `.mpi-masked-preview__stack` (CSS-transform pan/zoom) → 2× `<img>`:
+    - `<img class="base">` — the source image
+    - `<img class="masked">` with CSS `-webkit-mask-image: url(...)` + `mask-image: url(...)` — the same image clipped by painted mask. Tinted with CSS filter or sits over a colored layer to show "selected" effect.
+  - Reuse `ViewManager` from MpiCanvas managers folder (or thin port) for pan/zoom state + `getCSSTransform()`.
+  - Mask source = PNG dataURL exported from `MaskManager.maskCanvas.toDataURL()` whenever mask changes.
+  - Workspace logic: when `activeTool === 'prompt'` → unmount MpiCanvas (destroy releases GPU), mount MpiMaskedImagePreview. When tool switches back → reverse.
+  - Mask paint mode: temporarily mount a small mask-paint canvas only while painting; on commit, export PNG → feed back to overlay `<img>`. Canvas torn down between paints.
+
+  **Files touched:** `js/components/Primitives/MpiMaskedImagePreview/` (new), `js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js` (tool switch wiring), workspace mount file.
+
+  **Verify:** Select Prompt tool with image loaded. VRAM drops vs Crop/Mask tool (2 image-px canvases gone). Image visible + painted mask shows as "selected area" effect. Pan/zoom smooth. Switch back to Mask tool → MpiCanvas re-mounts, painting works as before. Run a ComfyUI workflow → mask included correctly.
+
+- [x] **10. Cross-cutting validation at fit/1×/4×/8× zoom**
 
   **What:** Final end-to-end smoke test in Electron desktop.
 

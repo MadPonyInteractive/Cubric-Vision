@@ -32,6 +32,14 @@ MpiAiSuite is a desktop application (Electron) that wraps [ComfyUI](https://gith
 | Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, seed.js, and all js/utils/ |
 | Events | [events.md](events.md) | EventBus, canonical event names, cross-component communication |
 
+## Rendering Architecture (MpiCanvas)
+
+`MpiCanvas` uses a two-canvas stack + CSS-transform pan/zoom model:
+- `.mpi-canvas__stack` is sized to image-native px and moved/scaled via `style.transform = translate(x,y) scale(s)` — no `ctx.translate/scale` for image surfaces.
+- `canvas[data-role=base]` + `canvas[data-role=overlay]` — both image-native px; draw at `(0,0)` with no ctx transform.
+- `canvas[data-role=screen-ui]` — container px sibling (not inside stack); draws brush indicator and comparison slider UI.
+- Coord conversion: image-px = `(clientX - stackRect.left) / view.scale`.
+
 ## Key Architectural Invariants
 
 1. **Never hardcode colors** — CSS variables from `styles/01_base.css` only.

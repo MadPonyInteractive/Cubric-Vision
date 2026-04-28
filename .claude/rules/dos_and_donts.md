@@ -10,6 +10,7 @@
 - **Icon stroke is auto-detected — never pass `stroke: true` to `MpiButton`.** Name icons with `ratio_` prefix or `_stroke` suffix and `renderIcon()` handles stroke automatically.
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
 - **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
+- **For image surfaces: prefer CSS `transform` on a stack element over `ctx.translate/scale`.** CSS transform uses the GPU compositor — no re-rasterize per frame. `ctx` transforms belong only to screen-UI overlays drawn in container px.
 - **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `seed.js`, `ratios.js`, `promptOptions.js` may already do what you need.
 - **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
 - **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
