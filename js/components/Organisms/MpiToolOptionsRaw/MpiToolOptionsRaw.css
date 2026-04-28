@@ -8,6 +8,18 @@
     height: 100%;
 }
 
+/* ── Header (Reset + Bypass) ────────────────────────────────────────────────── */
+
+.mpi-tool-options-raw__header {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.mpi-tool-options-raw__header > * {
+    flex: 1;
+}
+
 /* ── Section group ──────────────────────────────────────────────────────────── */
 
 .mpi-tool-options-raw__section {
