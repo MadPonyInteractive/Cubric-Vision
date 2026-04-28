@@ -480,6 +480,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;
 
+        // ── Lifecycle: destroy ───────────────────────────────────────────────
+        // Block calls viewer.el.destroy?.() on workspace teardown. Without this
+        // the inner MpiCanvas + its 3 image-px canvases leak GPU texture backing
+        // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
+        el.destroy = () => {
+            canvasInst?.el?.destroy?.();
+            autoMaskThumbs?.el?.destroy?.();
+        };
+
         // ── Init: load initial image ─────────────────────────────────────────
 
         if (initialImageUrl) {

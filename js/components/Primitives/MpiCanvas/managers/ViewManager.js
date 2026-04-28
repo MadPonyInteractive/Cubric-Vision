@@ -85,4 +85,28 @@ export class ViewManager {
             offsetY: this.offsetY
         };
     }
+
+    /**
+     * Re-fits the view if managed (called after container resize).
+     * @param {number} containerW
+     * @param {number} containerH
+     * @param {number} imgW
+     * @param {number} imgH
+     */
+    refit(containerW, containerH, imgW, imgH) {
+        if (!this.isManagedView) return;
+        if (!imgW || !imgH || !containerW || !containerH) return;
+        this.scale = Math.min(containerW / imgW, containerH / imgH);
+        this.minScale = this.scale;
+        this.offsetX = (containerW - imgW * this.scale) / 2;
+        this.offsetY = (containerH - imgH * this.scale) / 2;
+    }
+
+    /**
+     * CSS transform string for the stack element.
+     * @returns {string}
+     */
+    getCSSTransform() {
+        return `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.scale})`;
+    }
 }

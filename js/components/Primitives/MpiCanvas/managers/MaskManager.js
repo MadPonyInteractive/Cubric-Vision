@@ -102,6 +102,14 @@ export class MaskManager {
      * @param {string} fg 
      * @returns {string}
      */
+    destroy() {
+        if (!this.maskCanvas) return;
+        this.maskCanvas.width = 0;
+        this.maskCanvas.height = 0;
+        this.maskCanvas = null;
+        this.maskCtx = null;
+    }
+
     getURL(bg = null, fg = null) {
         if (!bg && !fg) {
             return this.maskCanvas.toDataURL('image/png');
