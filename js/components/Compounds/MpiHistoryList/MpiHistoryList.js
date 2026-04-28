@@ -145,8 +145,8 @@ export const MpiHistoryList = ComponentFactory.create({
                     x: e.clientX,
                     y: e.clientY,
                     items: [
-                        { key: 'delete',  icon: 'trash',   label: 'Delete',  danger: true },
                         { key: 'compare', icon: 'compare', label: 'Compare', disabled: compareDisabled },
+                        { key: 'delete',  icon: 'trash',   label: 'Delete',  danger: true },
                     ],
                     onSelect: (key) => {
                         if (key === 'delete') {
