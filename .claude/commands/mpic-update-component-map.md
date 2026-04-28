@@ -1,4 +1,4 @@
-Regenerate all 4 component map rule files in `.claude/rules/` by exploring the current codebase. Follow these steps exactly.
+Update all 4 component map rule files in `.claude/rules/` by exploring the current codebase. Follow these steps exactly.
 
 ## Step 1 — Explore components
 

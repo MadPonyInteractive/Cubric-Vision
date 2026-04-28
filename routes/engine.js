@@ -15,8 +15,11 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig, getEngineRoot, getLlamaEngineRoot } = require('./platformEngine');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
+
+const ENGINE_ROOT = getEngineRoot();
+const LLAMA_ENGINE_ROOT = getLlamaEngineRoot();
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -25,10 +28,9 @@ router.get('/engine/status', async (req, res) => {
             return res.json({ success: true, exists: false });
         }
         if (type === 'llama') {
-            const serverPath = path.join(__dirname, '..', 'llama_engine', getLlamaBin());
+            const serverPath = path.join(LLAMA_ENGINE_ROOT, getLlamaBin());
             res.json({ success: true, exists: await fs.pathExists(serverPath) });
         } else {
-            const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
             const pythonPath = getPythonBin(ENGINE_ROOT);
             res.json({ success: true, exists: await fs.pathExists(pythonPath) });
         }
@@ -68,14 +70,14 @@ async function _runEngineDownload(type) {
                 filename: downloadConfig.llama.filename,
                 url: downloadConfig.llama.url,
             };
-            targetDir = path.join(__dirname, '..', 'llama_engine');
+            targetDir = LLAMA_ENGINE_ROOT;
         } else {
             engineInfo = {
                 version: config.engine.version,
                 filename: downloadConfig.comfy.filename,
                 url: downloadConfig.comfy.url,
             };
-            targetDir = path.join(__dirname, '..', 'engine');
+            targetDir = ENGINE_ROOT;
         }
 
         if (!engineInfo) throw new Error('Engine info not found in configs');
@@ -309,7 +311,6 @@ router.post('/engine/download', async (req, res) => {
 
 router.get('/engine/version-check', async (req, res) => {
     try {
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const versionFile = path.join(ENGINE_ROOT, '.mpi_engine_version');
         const requiredVersion = COMFY_VERSION; // from platformEngine.js (reads system_dependencies.json)
 
@@ -374,7 +375,6 @@ router.post('/engine/repair-deps', async (req, res) => {
 
 router.post('/engine/upgrade', async (req, res) => {
     try {
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const portableDir = path.join(ENGINE_ROOT, COMFY_DIR);
         const mpiModelsDir = path.join(ENGINE_ROOT, 'mpi_models');
         const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');

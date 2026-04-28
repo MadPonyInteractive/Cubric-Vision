@@ -28,8 +28,10 @@ const {
     cleanEmptyDirs,
     getCustomRoot,
 } = require('./shared');
-const { getPythonBin, getComfyPath } = require('./platformEngine');
+const { getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
+
+const ENGINE_ROOT = getEngineRoot();
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -78,7 +80,6 @@ router.post('/comfy/start', async (req, res) => {
 
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
 
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const pythonPath = getPythonBin(ENGINE_ROOT);
         const mainPath = getComfyPath(ENGINE_ROOT, 'main.py');
 
@@ -168,7 +169,6 @@ router.post('/comfy/unload', async (req, res) => {
 router.post('/comfy/set-path', async (req, res) => {
     const { path: customPath } = req.body;
     try {
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
         await fs.ensureDir(path.dirname(extraConfigPath));
 
@@ -201,7 +201,6 @@ router.post('/comfy/models/check', async (req, res) => {
 
     try {
         const customRoot = await getCustomRoot();
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
         const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 

@@ -217,6 +217,63 @@ async function resolveDownloadConfig() {
     return result;
 }
 
+/**
+ * Read .engine-config.json (gitignored, per-worktree). Returns parsed config or null.
+ * Lets git worktrees share engine/llama_engine folders instead of duplicating.
+ */
+function _readEngineConfig() {
+    try {
+        const configPath = path.join(__dirname, '..', '.engine-config.json');
+        if (require('fs').existsSync(configPath)) {
+            return require(configPath);
+        }
+    } catch (error) {
+        // Ignore — fall back to defaults
+    }
+    return null;
+}
+
+/**
+ * Get the configured engine root path, with fallback to default.
+ * Reads `enginePath` key from .engine-config.json.
+ * @returns {string} engine root directory path
+ */
+function getEngineRoot() {
+    const config = _readEngineConfig();
+    if (config && config.enginePath && require('fs').existsSync(config.enginePath)) {
+        return config.enginePath;
+    }
+    return path.join(__dirname, '..', 'engine');
+}
+
+/**
+ * Get the configured llama engine root path, with fallback to default.
+ * Reads `llamaPath` key from .engine-config.json. Independent of `enginePath`
+ * so a worktree can share llama, comfy, both, or neither.
+ * @returns {string} llama engine root directory path
+ */
+function getLlamaEngineRoot() {
+    const config = _readEngineConfig();
+    if (config && config.llamaPath && require('fs').existsSync(config.llamaPath)) {
+        return config.llamaPath;
+    }
+    return path.join(__dirname, '..', 'llama_engine');
+}
+
+/**
+ * Get the configured llama models root path, with fallback to default.
+ * Reads `llamaModelsPath` key from .engine-config.json. Lets worktrees share
+ * downloaded LLM model files (often multi-GB) instead of duplicating.
+ * @returns {string} llama models directory path
+ */
+function getLlamaModelsRoot() {
+    const config = _readEngineConfig();
+    if (config && config.llamaModelsPath && require('fs').existsSync(config.llamaModelsPath)) {
+        return config.llamaModelsPath;
+    }
+    return path.join(__dirname, '..', 'llama_models');
+}
+
 module.exports = {
     COMFY_DIR,
     COMFY_VERSION,
@@ -225,4 +282,7 @@ module.exports = {
     getComfyPath,
     getLlamaBin,
     resolveDownloadConfig,
+    getEngineRoot,
+    getLlamaEngineRoot,
+    getLlamaModelsRoot,
 };

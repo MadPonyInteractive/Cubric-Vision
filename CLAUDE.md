@@ -1,6 +1,6 @@
 # Master Agent Context Rules
 
-> **AI SYSTEM INSTRUCTION:** This is the master routing file for MpiAiSuite. Whenever you begin a task, you MUST check this file and read the corresponding rule files in the `.claude/rules/` directory BEFORE writing any code.
+> **AI SYSTEM INSTRUCTION:** This is the master routing file for Cubric Studio. Whenever you begin a task, you MUST check this file and read the corresponding rule files in the `.claude/rules/` directory BEFORE writing any code.
 
 ## THE CARDINAL RULES
 1. **NEVER assume architectural patterns.** Check the rules below.

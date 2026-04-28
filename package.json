@@ -1,7 +1,7 @@
 {
   "name": "cubric-studio",
   "version": "0.0.1",
-  "description": "Cubric Studio Desktop app — Local Open Source Image Generator",
+  "description": "Cubric Studio Desktop app — Local Open Source Image and Video Generator",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

@@ -8,11 +8,12 @@ out/
 # Engine binaries and embedded Python (huge, gitignored)
 engine/
 llama_engine/
+llama_models/
+.engine-config.json
 
 # User data
 projects/
 resources/
-/data/
 comfy_workflows/scripts/
 
 # Worktrees

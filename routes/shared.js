@@ -18,14 +18,16 @@ const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
 const { exec, spawn } = require('child_process');
-const { COMFY_DIR, getPythonBin, getComfyPath } = require('./platformEngine');
+const { COMFY_DIR, getPythonBin, getComfyPath, getEngineRoot, getLlamaEngineRoot, getLlamaModelsRoot } = require('./platformEngine');
 
 const _require = createRequire(__filename);
 
+const ENGINE_ROOT = getEngineRoot();
+
 const DEFAULT_PROJECTS_ROOT = path.join(__dirname, '..', 'projects');
-const MODELS_ROOT = path.join(__dirname, '..', 'data', 'models');
+const MODELS_ROOT = getLlamaModelsRoot();
 const LLM_CONFIG_PATH = path.join(__dirname, '..', 'dev_configs', 'llm_models.json');
-const LLAMA_ENGINE_ROOT = path.join(__dirname, '..', 'llama_engine');
+const LLAMA_ENGINE_ROOT = getLlamaEngineRoot();
 const SYS_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'system_dependencies.json');
 const LLAMA_SERVER_PORT = 8080;
 const COMFYUI_PORT = 8188;
@@ -149,7 +151,6 @@ function _formatSpeed(bytesPerSec) {
  * Executes a pip command using the embedded Python environment.
  */
 async function runPipCommand(args) {
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const pythonPath = getPythonBin(ENGINE_ROOT);
     if (!(await fs.pathExists(pythonPath))) {
         throw new Error('Embedded Python not found. Cannot run pip.');
@@ -171,7 +172,6 @@ async function runPipCommand(args) {
  * Automatically replaces `python` with the embedded Python path.
  */
 async function runCustomCommand(commandStr, cwd) {
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const pythonPath = getPythonBin(ENGINE_ROOT);
     const parts = commandStr.split(' ');
     const exe = parts[0].toLowerCase() === 'python' ? pythonPath : parts[0];
@@ -227,7 +227,6 @@ async function resolveComfyPath(dep, customRoot, config) {
             localPath = customRoot;
         }
     } else {
-        const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
         let baseDir;
         if (isCustomNode) {
             baseDir = config.local_custom_nodes_path
@@ -268,7 +267,6 @@ async function cleanEmptyDirs(filePath, stopAt) {
  * Helper: read the custom ComfyUI models root from extra_model_paths.yaml if present.
  */
 async function getCustomRoot() {
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
     if (await fs.pathExists(extraConfigPath)) {
         const content = await fs.readFile(extraConfigPath, 'utf8');
@@ -380,7 +378,6 @@ async function getUniversalWorkflowDepsTotalSize(missingDepIds) {
  * Empties ComfyUI's input/ and output/ temp folders.
  */
 async function cleanComfyUITempFiles() {
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const inputDir = getComfyPath(ENGINE_ROOT, 'input');
     const outputDir = getComfyPath(ENGINE_ROOT, 'output');
     for (const dir of [inputDir, outputDir]) {

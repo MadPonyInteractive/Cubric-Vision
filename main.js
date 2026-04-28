@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
 const logger = require('./routes/logger');
-const { getComfyPath } = require('./routes/platformEngine');
+const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 
 // Required on Windows to show the app icon (not Electron's) when launched via .bat.
 // Use exe path as model ID — recommended for unpackaged Electron apps on Windows.
@@ -378,7 +378,7 @@ app.on('window-all-closed', () => {
 
 // Clean ComfyUI temp folders on quit (cross-platform, synchronous)
 app.on('before-quit', () => {
-  const ENGINE_ROOT = path.join(__dirname, 'engine');
+  const ENGINE_ROOT = getEngineRoot();
   const inputDir = getComfyPath(ENGINE_ROOT, 'input');
   const outputDir = getComfyPath(ENGINE_ROOT, 'output');
   for (const dir of [inputDir, outputDir]) {

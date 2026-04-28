@@ -29,12 +29,14 @@ const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds } = require('./shared');
-const { getComfyPath } = require('./platformEngine');
+const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
 const sevenBin = require('7zip-bin');
 
 const _require = createRequire(__filename);
+
+const ENGINE_ROOT = getEngineRoot();
 
 // ── Shared-dep helper ─────────────────────────────────────────────────────────
 
@@ -285,7 +287,6 @@ router.post('/comfy/models/download/start', async (req, res) => {
     }
 
     const customRoot = await getCustomRoot();
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
@@ -649,7 +650,6 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     }
 
     const customRoot = await getCustomRoot();
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const modelsRoot = customRoot || path.join(ENGINE_ROOT, 'mpi_models');
     const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
@@ -756,7 +756,6 @@ function cancelAllDownloads() {
 async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, skipCustomNodeInstall = false) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const customRoot = await getCustomRoot();
-    const ENGINE_ROOT = path.join(__dirname, '..', 'engine');
     const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
