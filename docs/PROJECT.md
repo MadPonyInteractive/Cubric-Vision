@@ -60,4 +60,4 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 
 ## ComfyUI Portability
 
-ComfyUI portable engine lives at `engine/ComfyUI_windows_portable/`. Projects are self-contained in `documents/MpiAiSuite/projects/`. Model files are stored separately under `documents/MpiAiSuite/models/`. This split allows projects to be portable while model files stay on the user's fast storage.
+ComfyUI portable engine lives at `engine/ComfyUI_windows_portable/`. Projects are self-contained in `documents/CubricStudio/projects/`. Model files are stored separately under `documents/CubricStudio/models/`. This split allows projects to be portable while model files stay on the user's fast storage.

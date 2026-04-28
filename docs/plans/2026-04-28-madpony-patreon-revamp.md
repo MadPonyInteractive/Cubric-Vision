@@ -140,15 +140,26 @@ Don't migrate Gumroad. Two reasons:
 
 **Action items:**
 
-1. **Add a banner/note to your Gumroad bio:** *"Looking for my latest work? I now build Cubric Studio + AI creator tools. Get them at patreon.com/madponyinteractive"*
+1. **Add a banner/note to your Gumroad bio** ✅ DRAFTED:
+   > Looking for my latest work? I now build Cubric Studio — a 1-click local AI desktop app.
+   > Get early access + all new tools at: patreon.com/madponyinteractive
 
-2. **In every product description, add at the bottom:**
-   > **New from Mad Pony:** Cubric Studio — local AI desktop app. Free version on YouTube. Early access on Patreon.
+2. **In every product description, add at the bottom** ✅ DRAFTED (paste into all 17 products):
+   > ---
+   > 🔧 New from Mad Pony: Cubric Studio — local AI desktop app for image, video, audio & text generation.
+   > Runs fully local on your PC. Free version on YouTube. Early access + Day-1 builds on Patreon.
+   > → patreon.com/madponyinteractive
 
-3. **Update Gumroad bio** to match new direction:
-   > Solo developer building tools for creators. Yesterday: ZBrush macros, Blender add-ons, IClone plugins. Today: local AI desktop apps and ComfyUI tooling. Latest builds on Patreon.
+3. **Update Gumroad bio** to match new direction ✅ DRAFTED:
+   > Solo developer building tools for creators.
+   >
+   > Started with ZBrush macros, Blender add-ons, and IClone/Unreal Engine plugins — all still available in this store.
+   >
+   > Now building Cubric Studio: a frictionless 1-click local AI desktop app (ComfyUI-powered, fully local, zero API fees).
+   >
+   > Latest builds + tutorials → patreon.com/madponyinteractive
 
-4. **Pro tier "all paid tools free" promise** — inventory the Gumroad/ArtStation/FlippedNormals paid items. Generate one-time discount codes (Gumroad supports this) and DM them to active Pro subscribers monthly. Or upload zips to a private Patreon post visible only to Pro role.
+4. **Pro tier "all paid tools free" promise** — ⚠️ DECISION NEEDED (see Section 10, Q1): inventory the Gumroad/ArtStation/FlippedNormals paid items. Generate one-time discount codes (Gumroad supports this) and DM them to active Pro subscribers monthly. Or upload zips to a private Patreon post visible only to Pro role.
 
 ---
 

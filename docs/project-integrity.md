@@ -32,7 +32,7 @@ Located at `<projectFolder>/project.json`. Example structure:
 {
   "id": "proj-12345abc",
   "name": "My Project",
-  "folderPath": "C:\\Users\\Fabio\\Documents\\MpiAiSuite\\projects\\my-project",
+  "folderPath": "C:\\Users\\Fabio\\Documents\\CubricStudio\\projects\\my-project",
   "createdAt": "2026-04-15T10:30:00Z",
   "updatedAt": "2026-04-17T14:22:15Z",
   "thumbnail": null,
@@ -74,7 +74,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 {
   "id": "6e409682-8b95-4ff7-aa77-e24e7656cbf8",
   "type": "image",
-  "filePath": "/project-file?path=C%3A%5CUsers%5CFabio%5CDocuments%5CMpiAiSuite%5Cprojects%5Cmy-project%5CMedia%5Ct2i_001.png",
+  "filePath": "/project-file?path=C%3A%5CUsers%5CFabio%5CDocuments%5CCubricStudio%5Cprojects%5Cmy-project%5CMedia%5Ct2i_001.png",
   "operation": "t2i",
   "prompt": "a hamster in the snow",
   "negativePrompt": "",

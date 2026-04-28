@@ -1,0 +1,79 @@
+#!/bin/bash
+# .git/hooks/post-checkout
+#
+# Fires after `git checkout` and `git worktree add`.
+# Args: $1 = previous HEAD ref, $2 = new HEAD ref, $3 = flag (1 = branch checkout, 0 = file checkout)
+#
+# Responsibilities:
+#   1. Install node_modules if missing (per-worktree, gitignored, platform-specific).
+#   2. Bootstrap .engine-config.json on new worktree creation so the worktree
+#      points back at the master worktree's shared engine/llama/models folders
+#      instead of triggering a fresh ~10GB engine download.
+#
+# See docs/worktrees.md for full context.
+
+set -e
+
+# Only act on branch checkouts, not file checkouts.
+if [ "$3" != "1" ]; then
+    exit 0
+fi
+
+# ── 1. node_modules install ─────────────────────────────────────────────────
+if [ ! -d "node_modules" ]; then
+    echo "[post-checkout] Installing node_modules via npm ci..."
+    npm ci
+fi
+
+# ── 2. .engine-config.json bootstrap ────────────────────────────────────────
+# Skip if config already exists (don't clobber user edits).
+CONFIG_FILE=".engine-config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    exit 0
+fi
+
+# Determine the main worktree path. `git worktree list --porcelain` lists all
+# worktrees; the FIRST entry is always the main worktree (the original repo).
+# Format: `worktree <absolute-path>` then blank line, etc.
+MAIN_WORKTREE=$(git worktree list --porcelain | awk '/^worktree / { print $2; exit }')
+
+# Current worktree (CWD at hook fire time).
+CURRENT_WORKTREE=$(pwd)
+
+# If we ARE the main worktree, nothing to bootstrap — defaults already point at
+# local engine/llama_engine/llama_models folders.
+if [ "$CURRENT_WORKTREE" = "$MAIN_WORKTREE" ]; then
+    exit 0
+fi
+
+# Build absolute paths to main worktree's shared folders.
+# Convert forward-slash POSIX path to Windows-style backslashes for JSON
+# (Node's require/JSON.parse handles either, but matching existing convention).
+ENGINE_PATH="$MAIN_WORKTREE/engine"
+LLAMA_PATH="$MAIN_WORKTREE/llama_engine"
+LLAMA_MODELS_PATH="$MAIN_WORKTREE/llama_models"
+
+# Escape backslashes for JSON (Windows paths). On *nix this is a no-op since
+# the paths use forward slashes already, which JSON accepts as-is.
+escape_json() {
+    # Replace single backslash with double backslash.
+    echo "$1" | sed 's/\\/\\\\/g'
+}
+
+ENGINE_PATH_JSON=$(escape_json "$ENGINE_PATH")
+LLAMA_PATH_JSON=$(escape_json "$LLAMA_PATH")
+LLAMA_MODELS_PATH_JSON=$(escape_json "$LLAMA_MODELS_PATH")
+
+cat > "$CONFIG_FILE" <<EOF
+{
+    "enginePath": "$ENGINE_PATH_JSON",
+    "llamaPath": "$LLAMA_PATH_JSON",
+    "llamaModelsPath": "$LLAMA_MODELS_PATH_JSON"
+}
+EOF
+
+echo "[post-checkout] Bootstrapped $CONFIG_FILE pointing at main worktree:"
+echo "    enginePath:      $ENGINE_PATH"
+echo "    llamaPath:       $LLAMA_PATH"
+echo "    llamaModelsPath: $LLAMA_MODELS_PATH"
+echo "    (Edit or delete this file to change. See docs/worktrees.md.)"

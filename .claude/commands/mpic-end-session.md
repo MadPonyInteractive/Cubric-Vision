@@ -24,7 +24,7 @@ Ensures `.claude/rules/`, `docs/`, and project memory stay in sync with shipped 
    - Per CLAUDE.md cardinal rule: ask user before modifying any architectural rule file.
 3. Edits MUST be concise. Short bullets, no prose bloat. No new headings unless required.
 4. Memory pass (per `~/.claude/CLAUDE.md` rules):
-   - Anything learned worth keeping? Write to right file in `~/.claude/projects/C--AI-Mpi-MpiAiSuite/memory/` or `~/.claude/memory/`.
+   - Anything learned worth keeping? Write to right file in `~/.claude/projects/C--AI-Mpi-CubricStudio/memory/` or `~/.claude/memory/`.
    - Update `MEMORY.md` index entry (one line, dated).
    - Use `AskUserQuestion` before removing/modifying existing memory entries.
 5. Stage and commit touched files with descriptive message (follow repo conventional style — see recent commits). Do NOT use `git add -A`. Stage by name.

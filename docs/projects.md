@@ -8,7 +8,7 @@
 {
   "id": "proj-uuid",
   "name": "My Project",
-  "folderPath": "C:\\Users\\Fabio\\Documents\\MpiAiSuite\\projects\\my-project",
+  "folderPath": "C:\\Users\\Fabio\\Documents\\CubricStudio\\projects\\my-project",
   "createdAt": "2026-04-15T10:30:00Z",
   "updatedAt": "2026-04-17T14:22:15Z",
   "thumbnail": null,
