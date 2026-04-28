@@ -57,7 +57,6 @@ import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/Mpi
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 
 // Organisms
-import { MpiToolOptionsRaw } from '../components/Organisms/MpiToolOptionsRaw/MpiToolOptionsRaw.js';
 
 // Blocks
 
@@ -488,34 +487,6 @@ function mountAll() {
             variant: 'danger',
             interactive: false,
             info: 'System Error: 33%'
-        });
-    });
-
-    mount('preview-progress-bipolar', () => {
-        MpiProgressBar.mount(slot('preview-progress-bipolar'), {
-            min: -100,
-            max: 100,
-            value: 40,
-            step: 1,
-            bipolar: true,
-            interactive: true,
-            handle: true,
-            wheel: true,
-            prefix: 'Exposure: ',
-        });
-    });
-
-    mount('preview-progress-bipolar-neg', () => {
-        MpiProgressBar.mount(slot('preview-progress-bipolar-neg'), {
-            min: -100,
-            max: 100,
-            value: -60,
-            step: 1,
-            bipolar: true,
-            interactive: true,
-            handle: true,
-            wheel: true,
-            prefix: 'Shadows: ',
         });
     });
 
@@ -1241,45 +1212,6 @@ function mountAll() {
         });
     });
 
-    // ── MpiToolOptionsRaw (Organism) ──────────────────────────────────────────
-    mount('preview-raw-panel', () => {
-        // Mock viewer: exposes the API surface MpiToolOptionsRaw calls
-        const imgEl = document.createElement('img');
-        imgEl.src = 'media-for-testing/img (1).png';
-        imgEl.style.cssText = 'width:100%;max-height:180px;object-fit:cover;display:block;';
-
-        const mockEntry = {
-            filePath: 'media-for-testing/img (1).png',
-            folderPath: 'media-for-testing',
-            groupId: 'gallery-test',
-            id: 'gallery-item-1',
-        };
-
-        const mockViewer = {
-            el: {
-                getCurrentEntry: () => mockEntry,
-                getImageEl: () => imgEl,
-                setPreviewSrc: (src) => { imgEl.src = src; },
-            }
-        };
-
-        const slotEl = slot('preview-raw-panel');
-        slotEl.style.cssText = 'display:flex;flex-direction:row;gap:12px;align-items:flex-start;';
-
-        const panelWrap = document.createElement('div');
-        panelWrap.style.cssText = 'width:260px;flex-shrink:0;overflow:hidden;display:flex;flex-direction:column;';
-        slotEl.appendChild(panelWrap);
-
-        const imgWrap = document.createElement('div');
-        imgWrap.style.cssText = 'flex:1;min-width:0;';
-        imgEl.style.cssText = 'width:100%;height:auto;display:block;border-radius:var(--radius-2);';
-        imgWrap.appendChild(imgEl);
-        slotEl.appendChild(imgWrap);
-
-        const raw = MpiToolOptionsRaw.mount(panelWrap, { viewer: mockViewer });
-        raw.on('apply', ({ item }) => console.log('[gallery] MpiToolOptionsRaw apply:', item));
-    });
-
     // ── MpiAutoMaskThumbs (Compound) ──────────────────────────────────────────
     mount('preview-auto-mask-thumbs', () => {
         const thumbs = MpiAutoMaskThumbs.mount(slot('preview-auto-mask-thumbs'));
@@ -1324,7 +1256,7 @@ function filterComponents(q) {
         const match = (c.dataset.name || '').includes(q) || (c.dataset.label || '').includes(q);
         c.style.display = match ? 'flex' : 'none';
     });
-    ['Primitives', 'MpiIcon', 'Compounds', 'Organisms', 'Blocks'].forEach(tier => {
+    ['Primitives', 'MpiIcon', 'Compounds', 'Blocks'].forEach(tier => {
         const section = gid(`section-${tier}`);
         const grid = gid(`grid-${tier}`);
         if (!section || !grid) return;

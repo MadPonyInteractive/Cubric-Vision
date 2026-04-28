@@ -14,9 +14,6 @@
  *   el.getCurrentMaskDataURL()         — returns current mask as data URL, or null
  *   el.hasMask()                      — returns boolean
  *   el.setGenerating(bool)             — show/hide generating spinner
- *   el.getCurrentEntry()              — returns the current HistoryItem (set by loadEntry)
- *   el.getImageEl()                   — returns canvas component root el (apply CSS filter here)
- *   el.setPreviewSrc(src)             — load a preview image (base64/URL) without touching history
  *
  * Emits:
  *   'mode-changed'  { mode }          — tool mode changed (from any source)
@@ -482,15 +479,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // Expose canvas for checking comparison mode from parent block
         el.canvas = canvas;
-
-        /** Returns the current history item (set by loadEntry). */
-        el.getCurrentEntry = () => _currentItem;
-
-        /** Returns the canvas component root el — CSS filter applied here affects rendered image. */
-        el.getImageEl = () => canvasInst.el;
-
-        /** Load a preview image (base64 or URL) into the canvas without touching history. */
-        el.setPreviewSrc = (src) => { canvas.loadImage(src); };
 
         // ── Init: load initial image ─────────────────────────────────────────
 

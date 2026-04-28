@@ -300,11 +300,6 @@ EMITS:   (none)
 LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while mounted; unbound in destroy)
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
 
-### MpiToolOptionsRaw (Organism — js/components/Organisms/MpiToolOptionsRaw/)
-EMITS:   `apply` `{ item }` — full-res Sharp bake complete; item shaped for appendToHistory
-LISTENS: (none)
-NOTE:    Raw image adjustments panel. Light/Color/Detail/Calibration sections. CSS filter preview on slider drag. Auto WB via client-side grey-world pixel sampling. Apply → POST `/api/image/adjust` → new history entry. `destroy` clears CSS filter on viewer canvas.
-
 ---
 
 ## Blocks

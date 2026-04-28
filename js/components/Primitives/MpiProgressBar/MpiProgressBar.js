@@ -37,28 +37,10 @@ export const MpiProgressBar = ComponentFactory.create({
         const isDisabledAttr = isInteractive ? '' : 'disabled';
         const stateClass = isInteractive ? 'mpi-progress--interactive' : 'mpi-progress--disabled';
 
-        const isBipolar = props.bipolar === true;
-        let fillStyle, handlePos;
-        if (isBipolar) {
-            const center = (min + max) / 2;
-            const halfRange = (max - min) / 2;
-            const isNeg = value < center;
-            handlePos = ((value - min) / (max - min)) * 100;
-            if (isNeg) {
-                fillStyle = `left: ${handlePos}%; width: ${50 - handlePos}%`;
-            } else {
-                const dist = (value - center) / halfRange * 50;
-                fillStyle = `left: 50%; width: ${dist}%`;
-            }
-        } else {
-            const fillPercent = ((value - min) / (max - min)) * 100;
-            fillStyle = `width: ${fillPercent}%`;
-            handlePos = fillPercent;
-        }
-        const bipolarClass = isBipolar ? ' mpi-progress--bipolar' : '';
-        const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="left: ${handlePos}%"></div>` : '';
+        const fillPercent = ((value - min) / (max - min)) * 100;
+        const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="left: ${fillPercent}%"></div>` : '';
 
-        return `<div class="mpi-progress mpi-progress--${variant}${bipolarClass} ${stateClass}" data-info="${info}">
+        return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" data-info="${info}">
             <div class="mpi-progress__track-container">
                 <input
                     type="range"
@@ -69,7 +51,7 @@ export const MpiProgressBar = ComponentFactory.create({
                     value="${value}"
                     ${isDisabledAttr}
                 >
-                <div class="mpi-progress__track-fill" style="${fillStyle}"></div>
+                <div class="mpi-progress__track-fill" style="width: ${fillPercent}%"></div>
                 ${handleHtml}
             </div>
         </div>`;
@@ -86,31 +68,9 @@ export const MpiProgressBar = ComponentFactory.create({
         const updateVisuals = (val) => {
             const min = props.min !== undefined ? props.min : 0;
             const max = props.max !== undefined ? props.max : 100;
-
-            if (props.bipolar === true) {
-                const center = (min + max) / 2;
-                const halfRange = (max - min) / 2;
-                const dist = Math.abs(val - center) / halfRange * 50;
-                const isNeg = val < center;
-                if (trackFill) {
-                    trackFill.style.right = 'auto';
-                    if (isNeg) {
-                        const handlePct = ((val - min) / (max - min)) * 100;
-                        trackFill.style.left = `${handlePct}%`;
-                        trackFill.style.width = `${50 - handlePct}%`;
-                    } else {
-                        trackFill.style.left = '50%';
-                        trackFill.style.width = `${dist}%`;
-                    }
-                }
-                el.classList.toggle('mpi-progress--bipolar-neg', isNeg);
-                const handlePos = ((val - min) / (max - min)) * 100;
-                if (handleEl) handleEl.style.left = `${handlePos}%`;
-            } else {
-                const percent = ((val - min) / (max - min)) * 100;
-                if (trackFill) trackFill.style.width = `${percent}%`;
-                if (handleEl) handleEl.style.left = `${percent}%`;
-            }
+            const percent = ((val - min) / (max - min)) * 100;
+            if (trackFill) trackFill.style.width = `${percent}%`;
+            if (handleEl) handleEl.style.left = `${percent}%`;
 
             if (infoTpl.includes('{value}')) {
                 el.dataset.info = infoTpl.replace('{value}', val);

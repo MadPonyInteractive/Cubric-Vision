@@ -38,10 +38,9 @@ import { qs } from '../../../utils/dom.js';
 // ── Built-in tool lists ─────────────────────────────────────────────────────
 
 const IMAGE_TOOLS = [
-    { mode: 'prompt', icon: 'chat',    info: 'Prompt' },
-    { mode: 'crop',   icon: 'crop',    info: 'Crop'   },
-    { mode: 'mask',   icon: 'mask',    info: 'Mask'   },
-    { mode: 'raw',    icon: 'sliders', info: 'Raw'    },
+    { mode: 'prompt', icon: 'chat', info: 'Prompt' },
+    { mode: 'crop',   icon: 'crop', info: 'Crop'   },
+    { mode: 'mask',   icon: 'mask', info: 'Mask'   },
 ];
 
 const VIDEO_TOOLS = [
