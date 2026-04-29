@@ -204,7 +204,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 7 — Editor surface port (PORTING.md Phase 3)
 
-- [ ] **7.1 — Port Editor surface (image + mask sub-mode + video) to Stage spec**
+- [x] **7.1 — Port Editor surface (image + mask sub-mode + video) to Stage spec**
 
     Files: `js/components/Blocks/MpiGroupHistoryBlock/`, `js/components/Organisms/MpiCanvasViewer/`, `js/components/Organisms/MpiVideoViewer/`, `js/components/Organisms/MpiToolOptions*/`, three-pane shell CSS in `styles/shell/workspace.css`.
 

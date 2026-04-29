@@ -168,6 +168,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 initialIdx:      _currentIdx,
             });
 
+        const _mascotEl = document.createElement('img');
+        _mascotEl.className = 'mascot-peek';
+        _mascotEl.id = 'mascot-peek';
+        _mascotEl.src = 'assets/mascot/mascot.png';
+        _mascotEl.alt = '';
+        centreSlot.appendChild(_mascotEl);
+
         const historyList = MpiHistoryList.mount(qs('#right-bottom-slot', el), {
             history: _group.history,
             selectedIndex: _currentIdx,
@@ -265,7 +272,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Active-generation registry / spinner ──────────────────────────────
 
         const _myGenIds = new Set();
-        const _setGenerating = (flag) => { viewer.el.setGenerating?.(flag); };
+        let _mascotLingerTimer = null;
+
+        const _mascotShow = (src) => {
+            clearTimeout(_mascotLingerTimer);
+            _mascotEl.src = src;
+            _mascotEl.classList.add('mascot-peek--visible');
+        };
+        const _mascotHide = (delay = 0) => {
+            clearTimeout(_mascotLingerTimer);
+            if (delay > 0) {
+                _mascotLingerTimer = setTimeout(() => _mascotEl.classList.remove('mascot-peek--visible'), delay);
+            } else {
+                _mascotEl.classList.remove('mascot-peek--visible');
+            }
+        };
+
+        const _setGenerating = (flag) => {
+            viewer.el.setGenerating?.(flag);
+            if (flag) _mascotShow('assets/mascot/mascot.png');
+            // hide handled per-event below
+        };
 
         for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
             if (entry.status !== 'running') continue;
@@ -297,14 +324,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
-            _setGenerating(false);
+            viewer.el.setGenerating?.(false);
+            // keep mascot visible — generation still running (latents incoming)
             _applyPreview(url);
         }));
 
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
-            _setGenerating(false);
+            viewer.el.setGenerating?.(false);
+            _mascotShow('assets/mascot/mascot-arms.png');
+            _mascotHide(2000);
             _canvasHasMask = false;
             _refreshOpOptions();
             _group = group;
@@ -325,8 +355,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }));
 
-        _unsubs.push(Events.on('generation:error',     ({ id }) => { if (_myGenIds.delete(id)) _setGenerating(false); }));
-        _unsubs.push(Events.on('generation:cancelled', ({ id }) => { if (_myGenIds.delete(id)) _setGenerating(false); }));
+        _unsubs.push(Events.on('generation:error',     ({ id }) => { if (_myGenIds.delete(id)) { viewer.el.setGenerating?.(false); _mascotHide(0); } }));
+        _unsubs.push(Events.on('generation:cancelled', ({ id }) => { if (_myGenIds.delete(id)) { viewer.el.setGenerating?.(false); _mascotHide(0); } }));
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
 
@@ -746,6 +776,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Cleanup ───────────────────────────────────────────────────────────
 
         el.destroy = () => {
+            clearTimeout(_mascotLingerTimer);
             _unsubs.forEach(fn => fn?.());
             window.removeEventListener('dragenter', _onHistDragEnter);
             window.removeEventListener('dragleave', _onHistDragLeave);

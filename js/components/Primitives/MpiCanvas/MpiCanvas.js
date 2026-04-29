@@ -8,6 +8,16 @@
  * _renderBase() will draw (_processedBitmap ?? img) at (0,0), 1:1 native.
  */
 
+/* Stage canvas color constants — JS cannot use CSS vars in per-frame draws.
+ * Values mirror MAPPING.md §9. Update here if tokens change in 01_base.css. */
+const BRUSH_CURSOR         = 'oklch(0.72 0.20 6)';        /* --accent-heat */
+const BRUSH_CURSOR_OUTLINE = 'oklch(0.72 0.20 6 / 0.8)';  /* --accent-heat 80% */
+const BRUSH_ERASER         = 'oklch(0.20 0.020 350 / 0.8)'; /* --surface-canvas 80% */
+const BRUSH_DOT            = 'oklch(0.72 0.20 6)';         /* --accent-heat */
+const SLIDER_ARROW         = 'oklch(0.66 0.014 80)';       /* --ink-3 */
+const GRID_LINE            = 'oklch(0.95 0.005 80 / 0.8)'; /* --ink-1 80% */
+const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50% */
+
 /**
  * MpiCanvas — Interactive image viewer / editor canvas (Primitive)
  *
@@ -435,7 +445,7 @@ class _CanvasCore {
         const ctx = this.overlayCtx;
         const scale = this.view.scale || 1;
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.strokeStyle = GRID_LINE;
         ctx.lineWidth = 2 / scale;
         ctx.setLineDash([5 / scale, 5 / scale]);
         ctx.beginPath();
@@ -452,7 +462,7 @@ class _CanvasCore {
         }
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = GRID_LINE_SHADOW;
         ctx.lineDashOffset = 5 / scale;
         ctx.stroke();
         ctx.restore();
@@ -464,7 +474,7 @@ class _CanvasCore {
         const H = this.screenUICanvas.height;
         const barX = this.view.offsetX + this.comparison.sliderPos * this.img.width * this.view.scale;
         ctx.save();
-        ctx.strokeStyle = getCSSColor('--primary');
+        ctx.strokeStyle = BRUSH_CURSOR;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(barX, 0);
@@ -473,10 +483,10 @@ class _CanvasCore {
 
         ctx.beginPath();
         ctx.arc(barX, H / 2, 16, 0, Math.PI * 2);
-        ctx.fillStyle = getCSSColor('--primary');
+        ctx.fillStyle = BRUSH_CURSOR;
         ctx.fill();
 
-        ctx.fillStyle = getCSSColor('--text-2');
+        ctx.fillStyle = SLIDER_ARROW;
         ctx.beginPath();
         ctx.moveTo(barX - 8, H / 2);
         ctx.lineTo(barX - 2, H / 2 - 5);
@@ -496,18 +506,46 @@ class _CanvasCore {
         const scale = this.view.scale || 1;
         const { x, y } = this.input.getMousePosition();
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(x, y, (this.mask.brushSize * scale) / 2, 0, Math.PI * 2);
-            ctx.strokeStyle = this.mask.brushType === 'eraser' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(this.input.currentMouseX, this.input.currentMouseY, 1, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-            ctx.restore();
+            const r = (this.mask.brushSize * scale) / 2;
+            if (this.mask.brushType === 'eraser') {
+                // Eraser: ink radial gradient (60%→25%→0%) + dashed ink outline
+                ctx.save();
+                const eraserGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+                eraserGrad.addColorStop(0,   'oklch(0.20 0.020 350 / 0.60)');
+                eraserGrad.addColorStop(0.5, 'oklch(0.20 0.020 350 / 0.25)');
+                eraserGrad.addColorStop(1,   'oklch(0.20 0.020 350 / 0.00)');
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = eraserGrad;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.strokeStyle = 'oklch(0.20 0.020 350 / 0.85)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            } else {
+                // Brush: heat radial gradient (60%→25%→0%) + dashed outline
+                ctx.save();
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+                grad.addColorStop(0,   'oklch(0.72 0.20 6 / 0.60)');
+                grad.addColorStop(0.5, 'oklch(0.72 0.20 6 / 0.25)');
+                grad.addColorStop(1,   'oklch(0.72 0.20 6 / 0.00)');
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.strokeStyle = 'oklch(0.72 0.20 6 / 0.85)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
         }
     }
 
