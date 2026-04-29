@@ -128,8 +128,6 @@
       <div id="workspace-topbar" class="workspace-topbar">
         <!-- MpiProjectName mounts here (top-left) -->
         <div id="project-name-mount"></div>
-        <!-- MpiMemoryMonitor mounts here (top-right) -->
-        <div id="memory-monitor-mount"></div>
       </div>
 
       <!-- Radial menu lives here — persists across tool/page switches -->
@@ -142,11 +140,13 @@
       <!-- Shell-level PromptBox — mounted once, persists across workspace navigation -->
       <div id="prompt-box-mount"></div>
 
-      <!-- Status Info Bar -->
+      <!-- Status Info Bar — global telemetry footer (Stage spec) -->
       <footer id="shell-info-bar">
         <div class="shell-info__fill" id="shell-info-fill"></div>
         <div class="shell-info__left" id="shell-info-text">Ready</div>
         <div class="shell-info__right" id="shell-info-process"></div>
+        <!-- MpiMemoryMonitor mounts here (status bar right slot) -->
+        <div id="memory-monitor-mount"></div>
       </footer>
     </div>
 

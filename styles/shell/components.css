@@ -1,17 +1,20 @@
 /* ── Shell Info / Status Bar ────────────────────────────────────────────────── */
+/* Stage spec: footer-only telemetry host. Identity lives in titlebar; VRAM/RAM/queue/ETA
+ * live here. Solid surface (no glass, no backdrop-filter), mono font, tabular-nums. */
 #shell-info-bar {
   flex-shrink: 0;
-  height: 26px;
+  height: 32px;
   display: flex;
   align-items: center;
   padding: 0 1.25rem;
   border-top: 1px solid var(--line-soft);
-  background: var(--surface-1);
+  background: var(--surface-bar);
   position: sticky;
   bottom: 0;
   z-index: 50;
   gap: 0.6rem;
   overflow: hidden;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Progress fill layer — sits behind content */
@@ -69,8 +72,8 @@
 
 /* Left text slot */
 .shell-info__left {
-  font-family: var(--font-main);
-  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--t-xs);
   letter-spacing: 0.01em;
   color: var(--ink-3);
   flex: 1;
@@ -111,8 +114,8 @@
 }
 
 .shell-info__process-label {
-  font-family: var(--font-main);
-  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--t-xs);
   letter-spacing: 0.01em;
   color: var(--accent-warn);
   white-space: nowrap;
@@ -129,4 +132,14 @@
 
 .shell-info__process-label--primary {
   color: var(--accent-heat);
+}
+
+/* Status-bar mount slot for MpiMemoryMonitor (right side of footer) */
+#shell-info-bar #memory-monitor-mount {
+  margin-left: auto;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
 }

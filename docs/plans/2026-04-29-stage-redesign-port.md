@@ -216,11 +216,13 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 8 — Cross-cutting (PORTING.md Phase 4)
 
-- [ ] **8.1 — Port titlebar, status bar info, focus mode**
+- [x] **8.1 — Port titlebar, status bar info, focus mode**
 
     Files: `styles/shell/titlebar.css`, `styles/shell/components.css` (status bar selectors), `styles/shell/focus-mode.css`. Plus any shell JS wiring needed for live VRAM/RAM/queue/ETA values in status bar (likely already exists — restyle only).
 
     Translate intent from any titlebar/footer fragments visible across `landing.html`, `gallery.html`, `editor.html`. Titlebar: identity + window controls only (no telemetry per PRODUCT.md principle 5). Status footer: VRAM gauge, RAM gauge, queue depth pill, ETA tabular-nums. Focus mode: hides chrome, leaves canvas + minimal status. Glass surfaces are already gone (swept in 2.5) — confirm no `backdrop-filter` resurrected.
+
+    > **Note for future agents:** `#shell-info-bar` lives inside `#app-shell`, which carries class `hide` while on the landing/project-picker page. Status bar is intentionally NOT visible on landing — it only appears once a project is loaded and `#app-shell.hide` is removed. If a verification step shows status bar with `offsetHeight: 0` on landing, that is correct, not a regression. Test status bar visibility on a project workspace (gallery/editor) instead.
 
     **Verify:** boot Electron, observe titlebar across all surfaces — identity + window controls only, no VRAM/RAM in titlebar. Status footer shows live VRAM/RAM/queue/ETA. Toggle focus mode (hotkey or shortcut) — chrome retracts cleanly. No console errors. Side-by-side with mockup footer regions.
 

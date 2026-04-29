@@ -10,20 +10,15 @@
   justify-content: space-between;
   padding: 0 1rem;
 
-  /* Glassmorphism background for legibility while floating over canvas */
-  /* background: var(--surface-glass);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border-bottom: 1px solid var(--border-soft); */
+  /* Stage spec: no glass, no backdrop-filter. Topbar floats transparent;
+   * mount slots re-enable pointer events for their own content. */
 
-  /* passthrough clicks to canvas by default */
   pointer-events: none;
   z-index: 50;
 }
 
-/* Both mount slots re-enable pointer events for their own content */
-#project-name-mount,
-#memory-monitor-mount {
+/* Topbar mount slot re-enables pointer events for its content */
+#project-name-mount {
   pointer-events: auto;
 }
 

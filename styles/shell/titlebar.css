@@ -39,7 +39,7 @@
 .titlebar-text {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--t-xs);
   letter-spacing: 0.02em;
   color: var(--ink-1);
 }
@@ -58,18 +58,18 @@
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--ink-1);
+  color: var(--ink-2);
   transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
 }
 
 .control-btn:hover {
-  background: var(--surface-bar);
+  background: var(--surface-2);
   color: var(--ink-1);
 }
 
 .control-btn.close:hover {
   background: var(--accent-heat);
-  color: var(--ink-1);
+  color: oklch(0.16 0.02 0);
 }
 
 .control-btn svg {
