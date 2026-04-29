@@ -240,7 +240,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 10 — Component renames/removals (PORTING.md Phase 5)
 
-- [ ] **10.1 — Execute PORTING.md Phase 5 renames/removals**
+- [x] **10.1 — Execute PORTING.md Phase 5 renames/removals**
 
     Read `docs/redesign/PORTING.md` Phase 5 at execution time (the list may have evolved). Rename or remove components per spec. Update every consumer + `preloadStyles.js` + `js/components/types.js` + any docs in `.claude/rules/component-mounts.md` / `component-events.md` / `component-state.md` if a renamed component appears there.
 

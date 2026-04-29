@@ -352,6 +352,7 @@
  * @property {boolean} [disabled=false] - Whether the button is interactable
  * @property {boolean} [loading=false] - Whether the button is in a loading state (shows spinner)
  * @property {'button' | 'submit' | 'reset'} [type='button'] - HTML button type
+ * @property {'sharp' | 'pill'} [shape='sharp'] - Corner shape; 'sharp' = 0px radius (Stage default), 'pill' = rounded
  *
  * Icon Button properties (optional - activates icon mode if 'icon' is provided):
  * @property {string} [icon] - MpiIcon registry key (e.g. 'play', 'trash', 'settings')
