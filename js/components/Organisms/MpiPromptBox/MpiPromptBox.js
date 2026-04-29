@@ -304,8 +304,6 @@ export const MpiPromptBox = ComponentFactory.create({
         }
         _renderStrip([]);
 
-        const _onSetOperation = ({ operation }) => el.setOperation(operation);
-
         function _showIncompatibleToast() {
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
@@ -336,7 +334,11 @@ export const MpiPromptBox = ComponentFactory.create({
         let _currentModelType = props.model?.mediaType ?? props.modelList?.[0]?.mediaType ?? null;
 
         _unsubs.push(
-            Events.on('workspace:set-operation', _onSetOperation),
+            // Operation changes are driven by the parent block's
+            // `workspace:set-operation` handler — the block validates the op
+            // against the active model + context (mask, media counts) and then
+            // calls `el.setOperation()`. PromptBox does NOT subscribe directly,
+            // to avoid two sources of truth (block-validated vs raw event).
             Events.on('workspace:inject-prompts', _onInjectPrompts),
             Events.on('promptbox:generation-end', () => el.setGenerating(false)),
             // Note: model list management is owned by the parent block (gallery /

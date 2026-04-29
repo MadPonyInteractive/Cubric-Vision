@@ -112,7 +112,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
          */
         function _opOptions(ctx = _baseCtx) {
             if (!activeModel) return [];
-            const maskCtx = { ..._baseCtx, hasMask: _canvasHasMask };
+            // Live mask check beats stale _canvasHasMask cache. mask-ready fires
+            // on stroke end; radial pick mid-draw saw stale false.
+            // Wrapped in try/catch for TDZ — _opOptions is called before
+            // `viewer` is initialized (during initial activeOperation resolve).
+            let liveMask = _canvasHasMask;
+            try {
+                if (typeof viewer?.el?.hasMask === 'function') {
+                    liveMask = !!viewer.el.hasMask();
+                }
+            } catch (_) { /* viewer not yet initialized — fall back to cache */ }
+            const maskCtx = { ..._baseCtx, hasMask: liveMask };
             return getAvailableCommands(activeModel.mediaType, activeModel, { ...maskCtx, ...ctx })
                 .filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));
@@ -202,6 +212,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             if (mode === 'prompt') {
                 if (!isVideo) await viewer.el.swapToPreview?.();
+                // Lazy-mount in case model became available after boot.
+                if (!_pb?.el) _mountPromptBoxIfNeeded();
                 if (_hasPromptOps()) _pb?.el?.show();
                 return;
             }
@@ -567,13 +579,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     hasAudio:   item.hasAudio,
                 });
             } else {
+                // Viewer's loadEntry restores active tool mode internally.
                 await viewer.el.loadEntry?.(item, idx);
                 viewer.el.setMaskHidden?.(false);
-                // Re-apply active tool mode so crop box / mask brush re-attach to new image.
-                const activeMode = historyTools.el.getActiveMode?.();
-                if (activeMode && activeMode !== 'prompt') {
-                    viewer.el.enterMode?.(activeMode);
-                }
             }
             _currentIdx = idx;
             _group = promoteHistoryEntry(_group, idx);
@@ -663,19 +671,37 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 });
             });
 
-            viewer.on('mask-ready', () => { _canvasHasMask = true;  _refreshOpOptions(); });
-            viewer.on('mask-clear', () => { _canvasHasMask = false; _refreshOpOptions(); });
+            viewer.on('mask-ready', () => {
+                _canvasHasMask = true;
+                _refreshOpOptions();
+                _syncPromptToolDisabled();
+                _mountPromptBoxIfNeeded();
+            });
+            viewer.on('mask-clear', () => {
+                _canvasHasMask = false;
+                _refreshOpOptions();
+                _syncPromptToolDisabled();
+                _mountPromptBoxIfNeeded();
+            });
         }
 
         // ── Radial → operation sync ───────────────────────────────────────────
 
         _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
+            // Lazy-mount PromptBox if model became available mid-session.
+            if (!_pb?.el) _mountPromptBoxIfNeeded();
             if (!_pb?.el) return;
             const opts = _opOptions();
             const match = opts.find(o => o.value === operation && !o.disabled);
-            if (match) {
-                activeOperation = operation;
-                _pb.el.setOperation(activeOperation);
+            if (!match) return;
+            activeOperation = operation;
+            _pb.el.setOperation(activeOperation);
+            if (historyTools.el.getActiveMode?.() !== 'prompt') {
+                historyTools.el.setMode('prompt');
+            } else {
+                // Already in prompt mode — setMode no-ops, so explicitly show
+                // PromptBox in case it was hidden by mask-state churn.
+                _pb.el.show();
             }
         }));
 

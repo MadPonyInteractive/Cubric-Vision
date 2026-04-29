@@ -272,6 +272,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // ── Canvas modechange → sync with our state machine ──────────────────
 
         _cv.inst.on('modechange', ({ mode }) => {
+            // While loading an entry, ignore canvas mode resets — loadEntry
+            // restores the active tool mode after image load. Without this,
+            // queued modechange('none') events from loadImage clobber the
+            // restored mode (crop/mask/future tools).
+            if (_loadingEntry) return;
+
             if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
             if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
             if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
@@ -346,6 +352,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _maskStore.delete(_currentIdx);
             }
 
+            // Capture active tool mode so it can be restored after image swap.
+            // canvas.loadImage internally resets mode → without this, any tool
+            // (crop, mask, future) would silently disappear on entry switch.
+            const _modeToRestore = _currentMode;
+
             _currentIdx = idx;
             _currentItem = item;
             _exitMode();
@@ -382,6 +393,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _hasMask = false;
             }
 
+            if (_modeToRestore && _modeToRestore !== 'none') {
+                _enterMode(_modeToRestore);
+            }
+
             emit('entry-loaded', { idx, hasMask: _hasMask });
         };
 
@@ -407,7 +422,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
             return canvas.getMaskDataURL('black', 'white');
         };
 
-        el.hasMask = () => _hasMask;
+        // Live check: paint strokes don't flip _hasMask flag (only commit/evaluate
+        // does). Radial menu picks during active paint saw stale false. Compute
+        // from canvas pixels when available; fall back to flag for preview mode.
+        el.hasMask = () => {
+            try {
+                if (canvas?.maskCanvas) return hasMaskContent(canvas.maskCanvas);
+            } catch (_) { /* canvas torn down — fall back */ }
+            return _hasMask;
+        };
 
         el.setGenerating = (on) => _setGeneratingSpinner(on);
 

@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
-import { qsa } from '../../../utils/dom.js';
+import { qs, qsa } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
 
 /**
@@ -87,7 +87,7 @@ export const MpiRadioGroup = ComponentFactory.create({
         });
 
         el.setValue = (val) => {
-            const btn = el.querySelector(`.mpi-radio-group__btn[data-value="${val}"]`);
+            const btn = qs(`.mpi-radio-group__btn[data-value="${val}"]`, el);
             if (!btn) return;
             if (btn.classList.contains('is-active')) return;
 

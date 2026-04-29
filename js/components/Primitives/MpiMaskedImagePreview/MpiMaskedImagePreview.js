@@ -22,6 +22,7 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { ViewManager }       from '../MpiCanvas/managers/ViewManager.js';
+import { qs }                from '../../../utils/dom.js';
 
 export const MpiMaskedImagePreview = ComponentFactory.create({
     name: 'MpiMaskedImagePreview',
@@ -37,9 +38,9 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
     `,
 
     setup: (el, _props, _emit) => {
-        const stackEl   = el.querySelector('#stack');
-        const baseImg   = el.querySelector('#base-img');
-        const maskedImg = el.querySelector('#masked-img');
+        const stackEl   = qs('#stack', el);
+        const baseImg   = qs('#base-img', el);
+        const maskedImg = qs('#masked-img', el);
 
         const view = new ViewManager();
         let _imgNaturalW = 0;

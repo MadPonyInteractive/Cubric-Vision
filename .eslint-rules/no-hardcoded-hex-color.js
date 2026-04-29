@@ -7,7 +7,11 @@ module.exports = {
     },
   },
   create(context) {
-    const HEX_COLOR_REGEX = /#[0-9a-fA-F]{3,8}/;
+    // Match real hex colors only: #RGB, #RGBA, #RRGGBB, #RRGGBBAA.
+    // Reject CSS selectors like '#factor-slot' (hyphen after id) or '#myId'
+    // (id chars beyond hex range) by requiring the next char to NOT be an
+    // ident-continuation char.
+    const HEX_COLOR_REGEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/;
 
     return {
       Literal(node) {

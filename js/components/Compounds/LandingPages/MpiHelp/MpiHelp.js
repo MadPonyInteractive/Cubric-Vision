@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
+import { qs } from '../../../../utils/dom.js';
 
 /**
  * MpiHelp — Help overlay compound for the landing page.
@@ -144,7 +145,7 @@ export const MpiHelp = ComponentFactory.create({
     setup: (el, props, emit) => {
         // The template is fully static. The overlay is mounted to body so the
         // help layout can render full-width independent of the landing page.
-        const content = el.querySelector('.mpi-help__content');
+        const content = qs('.mpi-help__content', el);
 
         const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
         overlay.el.appendToContainer(content);

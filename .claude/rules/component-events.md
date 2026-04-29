@@ -334,7 +334,9 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
          `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers
-LISTENS: `workspace:set-operation` `{ operation: string }` — syncs internal active operation; cleanup via `_unsubs` array
+LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
+         `promptbox:generation-end` — clears generating state
+         (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
