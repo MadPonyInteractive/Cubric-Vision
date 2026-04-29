@@ -1,12 +1,9 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
-import { qs } from '../../../../utils/dom.js';
 
 /**
- * MpiHelp — Help overlay compound for the landing page.
+ * MpiHelp — Help content for the MpiSlideOver panel.
  *
- * Wraps MpiOverlay (body-mount) and renders keyboard shortcuts and app guidance.
- * Callers only call show()/hide().
+ * No longer owns overlay chrome. Renders body content only.
  *
  * IMPORTANT: The shortcuts list below is hand-authored static HTML — it is NOT
  * generated from `hotkeyRegistry.js`. The user maintains the visible help
@@ -14,12 +11,8 @@ import { qs } from '../../../../utils/dom.js';
  * a hotkey is added/changed/removed in the registry, the corresponding row
  * here MUST also be added/changed/removed.
  *
- * Usage:
- *   const help = MpiHelp.mount(document.createElement('div'));
- *   help.el.show();
- *
- * Emits:
- *   'close' {} — overlay closed
+ * Usage (via slide-over event):
+ *   Events.emit('slide-over:open', { title: 'Help', component: MpiHelp });
  */
 export const MpiHelp = ComponentFactory.create({
     name: 'MpiHelp',
@@ -28,11 +21,6 @@ export const MpiHelp = ComponentFactory.create({
     template: () => `
         <div class="mpi-help">
             <div class="mpi-help__content">
-                <div class="mpi-help__header">
-                    <h2 class="mpi-help__title">Help</h2>
-                    <p class="mpi-help__desc">Support and accessibility guide.</p>
-                </div>
-
                 <div class="mpi-help__shortcuts">
                     <h3 class="mpi-help__shortcuts-title">Keyboard Shortcuts</h3>
 
@@ -64,7 +52,6 @@ export const MpiHelp = ComponentFactory.create({
                                 <li><span>CTRL+F5</span><span>Release Memory + Cache</span></li>
                             </ul>
                         </div>
-
 
                         <!-- Image Canvas -->
                         <div class="mpi-help__shortcut-group">
@@ -107,7 +94,6 @@ export const MpiHelp = ComponentFactory.create({
                                 <li><span>ESCAPE</span><span>Deselect all</span></li>
                                 <li><span>Click+Drag</span><span>Drag to Prompt Box</span></li>
                                 <p><span>Note: When only 2 items are selected you have access to the compare overlay.</span></p>
-
                             </ul>
                         </div>
 
@@ -116,8 +102,8 @@ export const MpiHelp = ComponentFactory.create({
                             <h4>Radial Menu</h4>
                             <ul>
                                 <li><span>TAB</span><span>Toggle radial menu</span></li>
-                                <p><span>Hold TAB, move to a desired operation and release TAB</span></li>
-                                <p><span>Release TAB at center for no selection</span></li>
+                                <p><span>Hold TAB, move to a desired operation and release TAB</span></p>
+                                <p><span>Release TAB at center for no selection</span></p>
                             </ul>
                         </div>
 
@@ -143,15 +129,6 @@ export const MpiHelp = ComponentFactory.create({
         </div>`,
 
     setup: (el, props, emit) => {
-        // The template is fully static. The overlay is mounted to body so the
-        // help layout can render full-width independent of the landing page.
-        const content = qs('.mpi-help__content', el);
-
-        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
-        overlay.el.appendToContainer(content);
-        overlay.on('close', () => emit('close', {}));
-
-        el.show = () => overlay.el.show();
-        el.hide = () => overlay.el.hide();
-    }
+        // Static content — no setup logic needed.
+    },
 });

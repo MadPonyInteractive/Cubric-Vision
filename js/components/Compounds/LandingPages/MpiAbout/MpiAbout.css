@@ -23,9 +23,9 @@
 }
 
 .mpi-about__name {
-    font-size: var(--t-lg);
-    font-weight: 600;
-    color: var(--ink-1);
+    height: 24px;
+    width: auto;
+    display: block;
     margin: 0;
 }
 

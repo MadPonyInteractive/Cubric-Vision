@@ -164,7 +164,13 @@
 /* ── Folder row ──────────────────────────────────────────────── */
 .mpi-settings__folder-row {
     display: flex;
+    align-items: flex-end;
     gap: 0.5rem;
+}
+
+.mpi-settings__folder-input {
+    flex: 1;
+    min-width: 0;
 }
 
 .mpi-settings__folder-row input[type="text"] {

@@ -228,7 +228,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 9 — Settings/Help/About → MpiSlideOver (PORTING.md Phase 8)
 
-- [ ] **9.1 — Build \****`MpiSlideOver`**\*\* component and migrate Settings/Help/About**
+- [x] **9.1 — Build \****`MpiSlideOver`**\*\* component and migrate Settings/Help/About**
 
     New shared component at `js/components/Organisms/MpiSlideOver/` (or appropriate tier). Slide-over panel anchored right edge, glide-in via `var(--t-base) var(--ease)`. Contract per PORTING.md Phase 8: `Overlays.request()` registration, dismiss on outside click + Escape (via `Hotkeys.bind` with a registry id added to `hotkeyRegistry.js`), self-close on `ui:close-all-popups`. Document props in `js/components/types.js`. Register CSS in `js/shell/preloadStyles.js`.
 

@@ -18,6 +18,7 @@ import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOv
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
+import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
 let projectGrid = null;
@@ -28,11 +29,6 @@ let projectGrid = null;
 // Delete-confirm dialog is NOT a singleton — a fresh instance is created per
 // confirmation. The factory's .on() accumulates listeners with no unsub, so
 // reusing a singleton would fire all prior handlers on every confirmation.
-
-/** Lazily created landing-action overlay instances (reused across opens). */
-let _settingsOverlay = null;
-let _helpOverlay     = null;
-let _aboutOverlay    = null;
 
 /**
  * Initializes the project management UI: trigger button and grid loading.
@@ -48,18 +44,9 @@ export function initProjectUI() {
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
-      { label: 'Settings', handler: () => {
-          if (!_settingsOverlay) _settingsOverlay = MpiSettings.mount(document.createElement('div'));
-          _settingsOverlay.el.show();
-      }},
-      { label: 'Help', handler: () => {
-          if (!_helpOverlay) _helpOverlay = MpiHelp.mount(document.createElement('div'));
-          _helpOverlay.el.show();
-      }},
-      { label: 'About', handler: () => {
-          if (!_aboutOverlay) _aboutOverlay = MpiAbout.mount(document.createElement('div'));
-          _aboutOverlay.el.show();
-      }},
+      { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
+      { label: 'Help',     handler: () => Events.emit('slide-over:open', { title: 'Help',     component: MpiHelp     }) },
+      { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
     ];
     defs.forEach(({ label, handler }) => {
       const a = document.createElement('a');

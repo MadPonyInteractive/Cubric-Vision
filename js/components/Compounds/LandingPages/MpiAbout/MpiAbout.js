@@ -1,42 +1,31 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 
 /**
- * MpiAbout — About overlay compound for the landing page.
+ * MpiAbout — About content for the MpiSlideOver panel.
  *
- * Wraps MpiOverlay (body-mount) and renders app info and version.
- * Callers only call show()/hide().
+ * No longer owns overlay chrome. Renders body content only.
  *
- * Usage:
- *   const about = MpiAbout.mount(document.createElement('div'));
- *   about.el.show();
- *
- * Emits:
- *   'close' {} — overlay closed
+ * Usage (via slide-over event):
+ *   Events.emit('slide-over:open', { title: 'About', component: MpiAbout });
  */
 export const MpiAbout = ComponentFactory.create({
     name: 'MpiAbout',
     css: ['js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css'],
 
-    template: () => `<div class="mpi-about"></div>`,
+    template: () => `
+        <div class="mpi-about">
+            <div class="mpi-about__content">
+                <img src="assets/mascot/logo.png" alt="Cubric Studio" class="mpi-about__logo">
+                <img src="assets/lettering.png" alt="Cubric Studio" class="mpi-about__name">
+                <p class="mpi-about__desc">
+                    A local AI workstation for image, video and audio generation, prompt engineering,
+                    and creative workflows.
+                </p>
+                <span class="mpi-about__version">Alpha v0.0.1</span>
+            </div>
+        </div>`,
 
     setup: (el, props, emit) => {
-        const content = document.createElement('div');
-        content.className = 'mpi-about__content';
-        content.innerHTML = `
-            <img src="favicon.png" alt="Cubric Studio" class="mpi-about__logo">
-            <img src="lettering.png" alt="Cubric Studio" class="mpi-about__name" style="height: 32px; display: block; margin: 1rem auto;">
-            <p class="mpi-about__desc">
-                A local AI workstation for image, video and audio generation, prompt engineering,
-                and creative workflows.
-            </p>
-            <span class="mpi-about__version">Alpha v0.0.1</span>`;
-
-        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
-        overlay.el.appendToContainer(content);
-        overlay.on('close', () => emit('close', {}));
-
-        el.show = () => overlay.el.show();
-        el.hide = () => overlay.el.hide();
-    }
+        // Static content — no setup logic needed.
+    },
 });
