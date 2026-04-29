@@ -179,7 +179,12 @@
 
 /**
  * @typedef {Object} MpiOptionSelectorProps (Compound — js/components/Compounds/MpiOptionSelector)
- * @property {'ratio'|'number'} variant  - Selector variant (required)
+ * @property {'ratio'|'number'|'buttons'} variant  - Selector variant (required)
+ *
+ * The ratio popup panel renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors
+ * (defined in MpiOptionSelector.css) instead of generic MpiButton items.
+ * To show the ratio as a compact visual picker, use variant='ratio' — the popup
+ * automatically uses the Stage ratio-pick grid layout.
  *
  * variant='ratio' props:
  * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social) — determines UI mode via RATIO_MODES
@@ -700,6 +705,8 @@
  * @property {string}   key           - Unique identifier emitted to onSelect
  * @property {string}   [icon]        - Optional icon name from icons.js
  * @property {string}   label         - Display text
+ * @property {string}   [kbd]         - Optional keyboard hint shown right-aligned (e.g. '⌘Z')
+ * @property {boolean}  [separator]   - If true, renders a divider line; other fields ignored
  * @property {boolean}  [disabled]    - Grays out item; click does nothing
  * @property {boolean}  [danger]      - Renders item in danger color
  *

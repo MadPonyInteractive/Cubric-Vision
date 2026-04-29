@@ -34,18 +34,21 @@ function show({ x, y, items, onSelect }) {
     const menuEl = document.createElement('div');
     menuEl.className = 'mpi-ctx-menu';
 
-    menuEl.innerHTML = items.map(item => `
-        <button
+    const sepHtml = '<div class="mpi-ctx-menu__sep"></div>';
+    menuEl.innerHTML = items.map(item => {
+        if (item.separator) return sepHtml;
+        return `<button
             class="mpi-ctx-menu__item${item.danger ? ' mpi-ctx-menu__item--danger' : ''}${item.disabled ? ' mpi-ctx-menu__item--disabled' : ''}"
             data-key="${item.key}"
             ${item.disabled ? 'disabled' : ''}
             ${item.info ? `data-info="${item.info}"` : ''}
             type="button"
         >
-            ${item.icon ? `<span class="mpi-ctx-menu__icon">${renderIcon(item.icon, 'sm')}</span>` : ''}
+            <span class="mpi-ctx-menu__icon">${item.icon ? renderIcon(item.icon, 'sm') : ''}</span>
             <span class="mpi-ctx-menu__label">${item.label}</span>
-        </button>
-    `).join('');
+            <span class="mpi-ctx-menu__kbd">${item.kbd ?? ''}</span>
+        </button>`;
+    }).join('');
 
     document.body.appendChild(menuEl);
 
