@@ -4,7 +4,6 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-    right: 8px;
 }
 
 /* ── Tab bar ─────────────────────────────────────────────────────────────── */
@@ -121,7 +120,7 @@
     padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 8px;
 }
 
 /* ── Row (justified layout row) ─────────────────────────────────────────── */
@@ -130,23 +129,12 @@
     display: flex;
     flex-direction: row;
     align-items: flex-end;
-    gap: 2px;
+    gap: 8px;
     width: 100%;
 }
 
 .mpi-gallery-grid__row-wrap {
-    /* wrapper per card within a row — width set by JS */
     flex-shrink: 0;
-}
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-
-.mpi-gallery-grid__footer {
-    position: fixed;
-    bottom: 30px;
-    /* min-width: 600px; */
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 /* ── Selection mode ──────────────────────────────────────────────────────── */

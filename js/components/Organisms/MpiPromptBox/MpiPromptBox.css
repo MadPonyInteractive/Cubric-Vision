@@ -20,6 +20,26 @@
     border-color: oklch(0.72 0.20 6 / 0.3);
 }
 
+/* ── Gallery dock variant — sticky bottom band ───────────────────────────── */
+
+.mpi-prompt-box--gallery {
+    position: fixed;
+    bottom: 26px; /* above shell-info-bar */
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - calc(var(--s-6) * 2));
+    max-width: 1280px;
+    min-width: unset;
+    border-radius: var(--r-2);
+    padding: var(--s-3) var(--s-6) var(--s-4);
+    background: var(--surface-bar);
+    border-color: var(--line);
+}
+
+.mpi-prompt-box--gallery:hover {
+    border-color: var(--line-soft);
+}
+
 .mpi-prompt-box__prompts {
     position: relative;
     display: flex;
@@ -205,7 +225,7 @@
 
 .mpi-prompt-box-media-strip {
     position: fixed;
-    bottom: calc(36px + 10rem);
+    bottom: calc(26px + 10rem);
     left: 50%;
     transform: translateX(-50%);
     display: flex;

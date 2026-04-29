@@ -442,8 +442,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         // ── Justified Layout helpers ─────────────────────────────────────────
+        // REDESIGN-DEVIATION: Stage spec calls for asymmetric 7-5/4-4-4/5-7 strip
+        // cycle, but justified layout retained — slider/+- hotkeys are a core UX
+        // feature users rely on. Strip layout makes card size non-interactive.
+        // Gap bumped 2px→8px for visual breathing room per Stage intent.
 
-        const GAP = 2;
+        const GAP = 8;
 
         function _getAspectRatio(group) {
             const cardEntry = _cardMap.get(group.id);

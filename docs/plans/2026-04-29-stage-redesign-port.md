@@ -192,7 +192,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 6 — Gallery surface port (PORTING.md Phase 2)
 
-- [ ] **6.1 — Port Gallery surface to Stage spec**
+- [x] **6.1 — Port Gallery surface to Stage spec**
 
     Files: `js/components/Blocks/MpiGalleryBlock/`, `js/components/Compounds/MpiGalleryGrid/`, `js/components/Organisms/MpiPromptBox/`, status bar wiring.
 
