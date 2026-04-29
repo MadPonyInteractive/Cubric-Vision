@@ -6,9 +6,9 @@
     width: 100%;
     min-width: 160px;
     overscroll-behavior: contain;
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     border-radius: 2px; /* Sharp geometry as requested */
-    background: var(--bg-recessed);
+    background: var(--surface-bar);
 }
 
 /* Custom scrollbar to match the workstation theme */
@@ -21,7 +21,7 @@
 }
 
 .mpi-scrollable-box::-webkit-scrollbar-thumb {
-    background: var(--border);
+    background: var(--line);
     border-radius: 2px;
 }
 
@@ -37,25 +37,25 @@
     align-items: center;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--ink-3);
     cursor: pointer;
     border-radius: 1px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
     user-select: none;
     border-left: 2px solid transparent;
 }
 
 .mpi-scrollable-box__item:hover {
-    background: var(--bg-recessed);
-    color: var(--text);
+    background: var(--surface-bar);
+    color: var(--ink-1);
 }
 
 .mpi-scrollable-box__item:active {
-    background: var(--bg-recessed);
+    background: var(--surface-bar);
 }
 
 .mpi-scrollable-box__item.is-selected {
-    background: var(--bg-recessed);
-    color: var(--accent);
-    border-left-color: var(--accent);
+    background: var(--surface-bar);
+    color: var(--accent-heat);
+    border-left-color: var(--accent-heat);
 }

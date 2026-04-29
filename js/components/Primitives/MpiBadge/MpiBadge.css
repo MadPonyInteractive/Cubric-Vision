@@ -15,7 +15,7 @@
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .mpi-badge--pill {

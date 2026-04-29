@@ -106,51 +106,6 @@
   --titlebar-h: 32px;
 }
 
-/* compat — remove in Phase 3 */
-:root {
-  /* Color */
-  --bg:            var(--surface-0);
-  --bg-light:      var(--surface-0);
-  --bg-dark:       var(--surface-canvas);
-  --bg-elevated:   var(--surface-1);
-  --bg-recessed:   var(--surface-bar);
-  --bg-modal:      var(--surface-bar);
-  --surface:       var(--surface-1);
-  --surface-glass: var(--surface-1);
-  --neon-electric: var(--accent-heat);
-  --neon-accent:   var(--accent-heat);
-  --neon-glow:     oklch(0.72 0.20 6 / 0.3);
-  --neon-glow-sm:  oklch(0.72 0.20 6 / 0.15);
-  --neon-border:   oklch(0.72 0.20 6 / 0.3);
-  --primary:       var(--accent-heat);
-  --primary-dim:   var(--accent-heat);
-  --text:          var(--ink-1);
-  --text-2:        var(--ink-1);
-  --text-3:        var(--ink-3);
-  --text-muted:    var(--ink-3);
-  --success:       var(--accent-ok);
-  --info:          var(--accent-frost);
-  --warning:       var(--accent-warn);
-  --danger:        var(--accent-heat);
-  --border:        var(--line);
-  --border-color:  var(--line);
-  --border-soft:   var(--line-soft);
-  --border-glass:  var(--line);
-  /* Radius */
-  --radius-sm: var(--r-2);
-  --radius:    var(--r-2);
-  --radius-lg: var(--r-3);
-  --radius-xl: var(--r-3);
-  /* Motion */
-  --transition: var(--t-base) var(--ease);
-  --bounce:     var(--t-base) var(--ease);
-  /* Font */
-  --font-main:    'JetBrains Mono', monospace;
-  --font-display: 'JetBrains Mono', monospace;
-}
-
-
-
 
 /* ── Reset ──────────────────────────────────────────────────────────────────── */
 *,
@@ -316,13 +271,13 @@ h4 {
 
   0%,
   100% {
-    box-shadow: 0 0 5px var(--neon-glow-sm), 0 0 10px var(--neon-glow-sm);
-    border-color: var(--neon-border);
+    box-shadow: 0 0 5px oklch(0.72 0.20 6 / 0.15), 0 0 10px oklch(0.72 0.20 6 / 0.15);
+    border-color: oklch(0.72 0.20 6 / 0.3);
   }
 
   50% {
-    box-shadow: 0 0 12px var(--neon-glow), 0 0 20px var(--neon-glow-sm);
-    border-color: var(--neon-electric);
+    box-shadow: 0 0 12px oklch(0.72 0.20 6 / 0.3), 0 0 20px oklch(0.72 0.20 6 / 0.15);
+    border-color: var(--accent-heat);
   }
 }
 

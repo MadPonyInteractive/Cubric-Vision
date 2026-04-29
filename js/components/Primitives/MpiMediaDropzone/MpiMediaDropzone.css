@@ -118,7 +118,7 @@
 }
 
 .mpi-media-dropzone__title {
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-xs);
     font-weight: 700;
     text-transform: uppercase;

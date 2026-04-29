@@ -5,7 +5,7 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 .mpi-btn {
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
     border: none;
     border-radius: var(--r-2);

@@ -179,7 +179,7 @@
 }
 
 .mpi-radial__item-label {
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-size: 0.62em;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -197,7 +197,7 @@
     left: 50%;
     transform: translateX(-50%) scale(0.85);
     z-index: 4;
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-xs);
     color: var(--ink-3);
     letter-spacing: 0.04em;

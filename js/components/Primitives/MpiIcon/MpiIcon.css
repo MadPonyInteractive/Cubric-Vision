@@ -43,21 +43,21 @@
 
 /* ── Color Modifiers ─────────────────────────────────────────────────────── */
 .mpi-icon--muted {
-    color: var(--text-3);
+    color: var(--ink-3);
 }
 
 .mpi-icon--accent {
-    color: var(--neon-accent);
+    color: var(--accent-heat);
 }
 
 .mpi-icon--primary {
-    color: var(--primary);
+    color: var(--accent-heat);
 }
 
 .mpi-icon--danger {
-    color: var(--danger);
+    color: var(--accent-heat);
 }
 
 .mpi-icon--success {
-    color: var(--success);
+    color: var(--accent-ok);
 }

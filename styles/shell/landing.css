@@ -268,7 +268,6 @@
 }
 
 .mpi-landing__pl-row:hover {
-  background: color-mix(in oklch, var(--ink-1) 4%, transparent);
   padding-left: calc(var(--s-4) + 10px);
 }
 
