@@ -8,7 +8,7 @@
     max-width: 560px;
     width: 100%;
     margin: 0 auto;
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* ── Header block: icon + title + text ────────────────────────── */
@@ -33,18 +33,18 @@
 
 /* ── Title ────────────────────────────────────────────────────── */
 .mpi-model-settings__title {
-    font-family: var(--font-display);
-    font-size: 2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-xl);
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink-1);
     margin: 0;
     line-height: 1.2;
 }
 
 /* ── Text ─────────────────────────────────────────────────────── */
 .mpi-model-settings__text {
-    font-size: 1rem;
-    color: var(--text-2);
+    font-size: var(--t-md);
+    color: var(--ink-1);
     line-height: 1.65;
     margin: 0;
 }
@@ -52,7 +52,7 @@
 /* ── Separator ───────────────────────────────────────────────── */
 .mpi-model-settings__separator {
     height: 1px;
-    background: var(--border);
+    background: var(--line);
     margin: 0;
     width: 100%;
     flex-shrink: 0;
@@ -61,11 +61,11 @@
 /* ── Section ─────────────────────────────────────────────────────────── */
 
 .mpi-model-settings__section-title {
-    font-size: 0.75rem;
+    font-size: var(--t-xs);
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text-2);
+    color: var(--ink-1);
     margin: 0 0 12px 0;
 }
 
@@ -90,9 +90,9 @@
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
-    background: var(--bg-recessed);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
 }
 
 .mpi-model-settings__lora-slot--empty .mpi-model-settings__lora-strengths {
@@ -107,7 +107,7 @@
 }
 
 .mpi-model-settings__strength-label {
-    font-size: 0.7rem;
-    color: var(--text-3);
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
     white-space: nowrap;
 }

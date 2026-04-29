@@ -35,18 +35,18 @@
 
 /* ── Title ────────────────────────────────────────────────────── */
 .mpi-models-modal__title {
-    font-family: var(--font-display);
-    font-size: 2rem;
+    font-family: var(--font-wordmark);
+    font-size: var(--t-xl);
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink-1);
     margin: 0;
     line-height: 1.2;
 }
 
 /* ── Text (above body) ─────────────────────────────────────────── */
 .mpi-models-modal__text {
-    font-size: 1rem;
-    color: var(--text-2);
+    font-size: var(--t-md);
+    color: var(--ink-1);
     line-height: 1.65;
     margin: 0;
 }
@@ -59,7 +59,7 @@
 /* ── Separator ───────────────────────────────────────────────── */
 .mpi-models-modal__separator {
     height: 1px;
-    background: var(--border);
+    background: var(--line);
     margin: 0;
     width: 100%;
     flex-shrink: 0;
@@ -84,15 +84,15 @@
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
-    color: var(--text-3);
-    font-size: 0.9rem;
+    color: var(--ink-3);
+    font-size: var(--t-md);
     text-align: center;
 }
 
 /* ── Footer text (below slot) ────────────────────────────────── */
 .mpi-models-modal__footer {
-    font-size: 0.82rem;
-    color: var(--text-3);
+    font-size: var(--t-sm);
+    color: var(--ink-3);
     line-height: 1.5;
     margin: 0;
     text-align: center;

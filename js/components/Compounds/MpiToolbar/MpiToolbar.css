@@ -23,8 +23,8 @@
     align-items: center;
     gap: 0.15rem;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    background: var(--bg-recessed);
+    border-radius: var(--r-2);
+    background: var(--surface-bar);
 }
 
 .mpi-toolbar__strength-group .mpi-badge {

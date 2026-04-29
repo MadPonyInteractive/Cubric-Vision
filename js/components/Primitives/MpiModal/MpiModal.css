@@ -4,8 +4,7 @@
 .mpi-modal-backdrop {
     position: fixed;
     inset: 0;
-    background: var(--bg-modal);
-    backdrop-filter: blur(4px);
+    background: oklch(0.16 0.02 350 / 0.7);
     z-index: 10009; /* fallback; JS overrides via inline style */
 }
 
@@ -21,7 +20,7 @@
 
 /* Shell — content is rendered inside by the consuming compound */
 .mpi-modal {
-    background: var(--bg-dark);
-    border-radius: 8px;
+    background: var(--surface-canvas);
+    border-radius: var(--r-2);
     overflow: hidden;
 }

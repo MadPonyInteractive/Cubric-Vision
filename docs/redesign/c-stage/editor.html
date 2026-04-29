@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cubric Studio — Stage · Editor</title>
+    <link rel="stylesheet" href="../_base.css" />
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      html,
+      body {
+        height: 100vh;
+        overflow: hidden;
+        background: var(--surface-canvas);
+      }
+      .titlebar .wordmark {
+        font-size: 18px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        -webkit-app-region: no-drag;
+      }
+      .brand-logo {
+        width: 18px;
+        height: 18px;
+        filter: hue-rotate(-50deg) saturate(0.78) brightness(1.05);
+      }
+      .brand-lettering {
+        height: 13px;
+        width: auto;
+        filter: hue-rotate(-30deg) saturate(0.85) brightness(1.08);
+      }
+      .mascot-peek {
+        position: absolute;
+        bottom: 88px;
+        right: 22px;
+        width: 56px;
+        height: 56px;
+        opacity: 0.92;
+        pointer-events: none;
+        filter: hue-rotate(-50deg) saturate(0.78) brightness(1.05);
+        animation: peek 4s ease-in-out infinite;
+      }
+      @keyframes peek {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+
+      .head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: var(--s-5);
+        padding: var(--s-3) var(--s-6);
+      }
+      .head .crumb {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        font-size: var(--t-xs);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .head .crumb a {
+        color: var(--ink-2);
+      }
+      .head .crumb a:hover {
+        color: var(--ink-1);
+      }
+      .head h1 {
+        font-size: var(--t-md);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+      .head .gen {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--accent-heat);
+        font-size: var(--t-xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .head .ring {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        border: 1.5px solid var(--accent-heat);
+        border-top-color: transparent;
+        animation: spin 1.2s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 64px 1fr 360px;
+        height: calc(100vh - 36px - 56px - 32px);
+      }
+
+      /* tools — drenched: spaced glyphs, big tap area */
+      aside.tools {
+        background: var(--surface-canvas);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: var(--s-4) 0;
+        border-right: 1px solid var(--line);
+      }
+      aside.tools .tool {
+        width: 50px;
+        height: 50px;
+        margin: 2px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink-3);
+        position: relative;
+        cursor: pointer;
+        transition: color var(--t-base) var(--ease);
+      }
+      aside.tools .tool:hover {
+        color: var(--ink-1);
+      }
+      aside.tools .tool[aria-current="true"] {
+        color: var(--accent-heat);
+      }
+      aside.tools .tool[aria-current="true"]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: var(--accent-heat);
+      }
+      aside.tools .tool .glyph {
+        width: 20px;
+        height: 20px;
+      }
+      aside.tools .grp-sep {
+        height: 1px;
+        background: var(--line);
+        margin: 8px 14px;
+      }
+      aside.tools .label {
+        text-align: center;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        margin: 14px 0 6px;
+      }
+
+      /* canvas — drenched, theatrical vignette */
+      .canvas {
+        position: relative;
+        background: radial-gradient(
+            ellipse at 50% 45%,
+            var(--surface-bar) 0%,
+            oklch(0.20 0.020 350) 100%
+          );
+        overflow: hidden;
+      }
+      .canvas::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at 50% 45%,
+          transparent 60%,
+          color-mix(in oklch, var(--surface-canvas) 90%, transparent) 100%
+        );
+      }
+      .canvas-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--s-6);
+      }
+      .frame {
+        position: relative;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        overflow: hidden;
+        box-shadow: 0 40px 100px -30px oklch(0.12 0.02 350 / 0.85),
+          0 0 0 1px var(--line);
+      }
+      .frame img {
+        max-width: 70vw;
+        max-height: calc(100vh - 240px);
+        display: block;
+      }
+      .mask-shape {
+        position: absolute;
+        top: 22%;
+        left: 25%;
+        width: 24%;
+        height: 38%;
+        border-radius: 50%;
+        background: radial-gradient(
+          ellipse at center,
+          color-mix(in oklch, var(--accent-heat) 60%, transparent) 0%,
+          color-mix(in oklch, var(--accent-heat) 25%, transparent) 60%,
+          transparent 78%
+        );
+        outline: 1.5px dashed
+          color-mix(in oklch, var(--accent-heat) 80%, transparent);
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+
+      .canvas-info {
+        position: absolute;
+        top: var(--s-4);
+        left: var(--s-4);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .canvas-info strong {
+        color: var(--ink-1);
+        font-weight: 500;
+      }
+
+      .compare-toggle {
+        position: absolute;
+        top: var(--s-4);
+        right: var(--s-4);
+        display: flex;
+        gap: 16px;
+        font-size: var(--t-xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .compare-toggle .t {
+        cursor: pointer;
+      }
+      .compare-toggle .t:hover {
+        color: var(--ink-1);
+      }
+      .compare-toggle .t[aria-selected="true"] {
+        color: var(--ink-1);
+      }
+      .compare-toggle .t[aria-selected="true"]::after {
+        content: " ●";
+        color: var(--accent-heat);
+      }
+
+      /* canvas dock — theatrical, anchored bottom of canvas */
+      .canvas-dock {
+        position: absolute;
+        left: 50%;
+        bottom: var(--s-4);
+        transform: translateX(-50%);
+        background: oklch(0.30 0.022 350);
+        border: 1px solid var(--ink-3);
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 580px;
+      }
+      .canvas-dock input {
+        background: transparent;
+        border: 0;
+        outline: none;
+        flex: 1;
+        font-size: var(--t-sm);
+        color: var(--ink-1);
+      }
+      .canvas-dock input::placeholder {
+        color: var(--ink-4);
+      }
+      .canvas-dock .pill {
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent-heat);
+      }
+      .canvas-dock .gen {
+        padding: 8px 18px;
+        background: var(--accent-heat);
+        color: oklch(0.16 0.02 0);
+        font-size: var(--t-xs);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      /* inspector */
+      aside.insp {
+        background: var(--surface-canvas);
+        border-left: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .insp-tabs {
+        display: flex;
+        padding: var(--s-4) var(--s-4) var(--s-3);
+        gap: var(--s-5);
+        border-bottom: 1px solid var(--line);
+      }
+      .insp-body {
+        overflow: auto;
+        flex: 1;
+        padding: var(--s-4);
+      }
+      .insp-section {
+        margin-bottom: var(--s-5);
+      }
+      .insp-section h4 {
+        font-size: var(--t-2xs);
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        margin-bottom: var(--s-3);
+      }
+      .pill-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        padding: 8px 14px;
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        border: 1px solid var(--line);
+        cursor: pointer;
+        transition: all var(--t-base) var(--ease);
+      }
+      .pill:hover {
+        border-color: var(--ink-2);
+        color: var(--ink-1);
+      }
+      .pill[aria-pressed="true"] {
+        background: var(--accent-heat);
+        border-color: var(--accent-heat);
+        color: oklch(0.16 0.02 0);
+      }
+
+      .detect {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: var(--s-3);
+        padding: 12px;
+        border: 1px solid var(--ink-3);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-1);
+        cursor: pointer;
+        transition: background var(--t-base) var(--ease);
+      }
+      .detect:hover {
+        background: var(--ink-1);
+        color: var(--surface-canvas);
+      }
+
+      .slider .lbl {
+        display: flex;
+        justify-content: space-between;
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+      }
+      .slider .lbl .v {
+        color: var(--ink-1);
+        text-transform: none;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .track {
+        height: 2px;
+        background: var(--line);
+        position: relative;
+        margin: 8px 0 14px;
+      }
+      .track .fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--accent-heat);
+      }
+      .track .knob {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: var(--ink-1);
+      }
+
+      .layer-list {
+        margin-top: 6px;
+      }
+      .layer {
+        display: grid;
+        grid-template-columns: 64px 1fr auto;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        align-items: center;
+        cursor: pointer;
+      }
+      .layer .thm {
+        width: 64px;
+        height: 44px;
+        background: var(--surface-bar);
+        overflow: hidden;
+      }
+      .layer .thm img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .layer .name {
+        font-size: var(--t-sm);
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .layer .meta {
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        margin-top: 2px;
+      }
+      .layer[aria-current="true"] .name {
+        color: var(--accent-heat);
+      }
+      .layer[aria-current="true"]::after {
+        content: "active";
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent-heat);
+      }
+
+      footer.bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: var(--s-5);
+        padding: 8px 24px;
+        background: oklch(0.30 0.020 350);
+        border-top: 1px solid var(--line);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="titlebar">
+      <span class="brand">
+        <img class="brand-logo" src="assets/logo.png" alt="" />
+        <img class="brand-lettering" src="assets/lettering.png" alt="Cubric Studio" />
+      </span>
+      <span class="controls">— ▢ ×</span>
+    </header>
+
+    <div class="head">
+      <div class="crumb">
+        <a href="gallery.html">← Gallery</a>
+        <h1>imported_002 / crop_002</h1>
+        <span>768 × 768 · MASK</span>
+      </div>
+      <span></span>
+      <div class="gen"><span class="ring"></span>Generating · 38%</div>
+    </div>
+
+    <main class="shell">
+      <aside class="tools">
+        <span class="label">View</span>
+        <div class="tool" title="Move">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4" />
+          </svg>
+        </div>
+        <div class="tool" title="Marquee">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              stroke-dasharray="3 3"
+            />
+          </svg>
+        </div>
+        <div class="grp-sep"></div>
+        <span class="label">Mask</span>
+        <div class="tool" aria-current="true" title="Brush">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M5 19l4-1 9-9-3-3-9 9-1 4z" />
+          </svg>
+        </div>
+        <div class="tool" title="Eraser">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M4 18l8 4 8-8L12 6 4 14z" />
+          </svg>
+        </div>
+        <div class="grp-sep"></div>
+        <span class="label">Edit</span>
+        <div class="tool" title="Inpaint">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8" />
+            <path d="M9 11h6M9 14h4" />
+          </svg>
+        </div>
+        <div class="tool" title="Crop">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M6 2v16h16M2 6h16v16" />
+          </svg>
+        </div>
+        <div class="tool" title="Transform">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" />
+          </svg>
+        </div>
+      </aside>
+
+      <section class="canvas">
+        <span class="canvas-info"
+          >Canvas · <strong>crop_002</strong> · 100%</span
+        >
+        <div class="compare-toggle">
+          <span class="t" aria-selected="true">Image</span>
+          <span class="t">Mask</span>
+          <span class="t">Compare</span>
+        </div>
+        <div class="canvas-inner">
+          <div class="frame">
+            <img src="https://picsum.photos/seed/stg-canvas/1100/720" alt="" />
+            <div class="mask-shape"></div>
+          </div>
+        </div>
+
+        <div class="canvas-dock">
+          <span class="pill">SDXL · Inpaint</span>
+          <input
+            placeholder="freckled face, soft daylight, 50mm photoreal…"
+          />
+          <button class="gen">▶ Generate</button>
+        </div>
+
+        <img
+          class="mascot-peek"
+          src="assets/mascot-hi.png"
+          alt=""
+          title="Cubric is thinking…"
+        />
+      </section>
+
+      <aside class="insp">
+        <div class="insp-tabs">
+          <span class="tag" aria-selected="true">Mask</span>
+          <span class="tag">Layers</span>
+          <span class="tag">Params</span>
+          <span class="tag">History</span>
+        </div>
+
+        <div class="insp-body">
+          <div class="insp-section">
+            <h4>Selection target</h4>
+            <div class="pill-row">
+              <span class="pill" aria-pressed="true">Face</span>
+              <span class="pill">Hair</span>
+              <span class="pill">Body</span>
+              <span class="pill">Hands</span>
+              <span class="pill">Custom</span>
+            </div>
+            <div class="pill-row" style="margin-top: 10px">
+              <span class="pill" aria-pressed="true">Box</span>
+              <span class="pill">Segment</span>
+            </div>
+            <div class="detect">
+              <svg class="glyph" viewBox="0 0 24 24" style="
+                width:14px;height:14px;stroke:currentColor;fill:none;
+                stroke-width:1.5;
+              ">
+                <circle cx="11" cy="11" r="6" />
+                <path d="M20 20l-4-4" />
+              </svg>
+              Detect faces
+            </div>
+          </div>
+
+          <div class="insp-section">
+            <h4>Brush</h4>
+            <div class="slider">
+              <div class="lbl">
+                <span>Size</span><span class="v">28 px</span>
+              </div>
+              <div class="track">
+                <div class="fill" style="width: 28%"></div>
+                <div class="knob" style="left: 28%"></div>
+              </div>
+            </div>
+            <div class="slider">
+              <div class="lbl">
+                <span>Feather</span><span class="v">12 px</span>
+              </div>
+              <div class="track">
+                <div class="fill" style="width: 14%"></div>
+                <div class="knob" style="left: 14%"></div>
+              </div>
+            </div>
+            <div class="slider">
+              <div class="lbl">
+                <span>Opacity</span><span class="v">85%</span>
+              </div>
+              <div class="track">
+                <div class="fill" style="width: 85%"></div>
+                <div class="knob" style="left: 85%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="insp-section">
+            <h4>Layers · 3</h4>
+            <div class="layer-list">
+              <div class="layer">
+                <div class="thm">
+                  <img src="https://picsum.photos/seed/stg-l1/120/80" alt="" />
+                </div>
+                <div>
+                  <div class="name">imported</div>
+                  <div class="meta">Source · 768</div>
+                </div>
+                <span style="color: var(--ink-3)">●</span>
+              </div>
+              <div class="layer">
+                <div class="thm">
+                  <img src="https://picsum.photos/seed/stg-l2/120/80" alt="" />
+                </div>
+                <div>
+                  <div class="name">crop_001</div>
+                  <div class="meta">Crop · 1024</div>
+                </div>
+                <span style="color: var(--ink-3)">●</span>
+              </div>
+              <div class="layer" aria-current="true">
+                <div class="thm">
+                  <img src="https://picsum.photos/seed/stg-l3/120/80" alt="" />
+                </div>
+                <div>
+                  <div class="name">crop_002</div>
+                  <div class="meta">Mask · Face</div>
+                </div>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="bar">
+      <span style="display: flex; align-items: center; gap: 8px"
+        ><span style="
+          width:6px;height:6px;border-radius:999px;background:var(--accent-heat);
+        "></span>
+        Generating · 38% · 0:42 left</span
+      >
+      <span></span>
+      <span class="gauge"
+        ><span>VRAM</span
+        ><span class="bar"><span style="width: 8%"></span></span>1.3 / 16</span
+      >
+      <span class="gauge"
+        ><span>RAM</span
+        ><span class="bar"><span style="width: 27%"></span></span>17.5 /
+        64</span
+      >
+    </footer>
+  </body>
+</html>

@@ -32,10 +32,10 @@
 /* ── Project name ───────────────────────────────────────── */
 
 .mpi-project-name__project {
-    font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-xs);
     font-weight: 600;
-    color: var(--text);
+    color: var(--ink-1);
     letter-spacing: 0.01em;
     white-space: nowrap;
     overflow: hidden;
@@ -55,8 +55,8 @@
 /* ── Shared segment styles ──────────────────────────────── */
 
 .mpi-project-name__segment {
-    font-family: var(--font-main);
-    font-size: 0.62rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
     font-weight: 600;
     letter-spacing: 0.08em;
     white-space: nowrap;
@@ -70,19 +70,19 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    color: var(--text-3);
-    transition: color 0.15s ease;
+    color: var(--ink-3);
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-project-name__segment--link:hover {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* ── Separator › ────────────────────────────────────────── */
 
 .mpi-project-name__separator {
-    font-size: 0.62rem;
-    color: var(--text-3);
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
     opacity: 0.5;
     user-select: none;
 }
@@ -90,7 +90,7 @@
 /* ── Current page segment (plain text) ──────────────────── */
 
 .mpi-project-name__segment--current {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* ── Hidden state ───────────────────────────────────────── */

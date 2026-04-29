@@ -40,6 +40,6 @@
 }
 
 .mpi-opt-sel .mpi-ibtn__label {
-    font-size: 0.8rem;
+    font-size: var(--t-sm);
     font-weight: 800;
 }

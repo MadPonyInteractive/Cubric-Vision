@@ -5,9 +5,9 @@
     flex-direction: column;
     gap: 1.25rem;
     padding: 1.25rem;
-    background: var(--surface);
-    border-radius: var(--radius);
-    border-top: 2px solid var(--danger);
+    background: var(--surface-1);
+    border-radius: var(--r-2);
+    border-top: 2px solid var(--accent-heat);
 }
 
 /* Header — icon + title side by side */
@@ -22,22 +22,22 @@
 }
 
 .mpi-error-dialog__title {
-    font-size: 1.2rem;
+    font-size: var(--t-lg);
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink-1);
     line-height: 1.3;
 }
 
 /* Message */
 .mpi-error-dialog__message {
-    font-size: 0.9rem;
-    color: var(--text-2);
+    font-size: var(--t-md);
+    color: var(--ink-1);
     line-height: 1.6;
     word-break: break-word;
     padding: 0.75rem;
-    background: var(--bg-recessed);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
+    background: var(--surface-bar);
+    border-radius: var(--r-2);
+    border: 1px solid var(--line);
     min-height: 2.5rem;
     white-space: pre-wrap;
 }
@@ -54,5 +54,5 @@
     gap: 0.75rem;
     justify-content: flex-end;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
 }

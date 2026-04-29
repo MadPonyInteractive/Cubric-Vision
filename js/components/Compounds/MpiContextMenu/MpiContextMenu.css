@@ -4,10 +4,10 @@
     z-index: 9999;
     min-width: 10rem;
     padding: 0.25rem;
-    background: var(--bg-modal);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    box-shadow: 0 8px 32px oklch(0.16 0.02 350 / 0.7);
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
@@ -21,13 +21,13 @@
     padding: 0.4rem 0.75rem;
     background: transparent;
     border: none;
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-family: var(--font-main);
-    font-size: 0.8rem;
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-xs);
     cursor: pointer;
     text-align: left;
-    transition: background 0.1s ease;
+    transition: background var(--t-fast) var(--ease);
     white-space: nowrap;
 }
 
@@ -36,11 +36,11 @@
 }
 
 .mpi-ctx-menu__item--danger {
-    color: var(--danger, #ff4d4d);
+    color: var(--accent-heat);
 }
 
 .mpi-ctx-menu__item--danger:hover:not(:disabled) {
-    background: rgba(255, 77, 77, 0.12);
+    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
 }
 
 .mpi-ctx-menu__item--disabled,

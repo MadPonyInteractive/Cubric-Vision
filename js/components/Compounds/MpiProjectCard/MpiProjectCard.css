@@ -3,28 +3,27 @@
     width: 100%;
     max-width: 320px;
     aspect-ratio: 4 / 3.2;
-    background: var(--surface);
-    border-radius: var(--radius-lg);
+    background: var(--surface-1);
+    border-radius: var(--r-3);
     overflow: hidden;
     cursor: pointer;
-    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    border: 1px solid var(--border-soft);
+    transition: transform var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+    border: 1px solid var(--line-soft);
     display: flex;
     flex-direction: column;
     user-select: none;
 }
 
 .mpi-project-card:hover {
-    border-color: var(--neon-border);
-    box-shadow: 0 0 20px var(--neon-glow-sm), 0 10px 25px var(--bg-recessed);
+    border-color: oklch(0.72 0.20 6 / 0.3);
+    box-shadow: 0 0 20px oklch(0.72 0.20 6 / 0.15), 0 10px 25px var(--surface-bar);
     transform: translateY(-4px);
 }
 
 .mpi-project-card__preview {
     position: relative;
     flex: 1;
-    /* background: var(--bg-elevated); */
-    display: flex;
+display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -42,7 +41,7 @@
     backface-visibility: hidden;
     will-change: transform, opacity;
     image-rendering: -webkit-optimize-contrast;
-    transition: opacity var(--transition), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity var(--t-base) var(--ease), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mpi-project-card:hover .mpi-project-card__media {
@@ -55,19 +54,18 @@
     z-index: 1;
     width: 56px;
     height: 56px;
-    background: var(--bg-recessed);
+    background: var(--surface-bar);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 30px var(--bg-recessed);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--border);
+    box-shadow: 0 0 30px var(--surface-bar);
+    border: 1px solid var(--line);
 }
 
 .mpi-project-card__icon-wrap .mpi-icon {
-    color: var(--text-2);
-    filter: drop-shadow(0 2px 4px var(--bg-recessed));
+    color: var(--ink-3);
+    filter: drop-shadow(0 2px 4px var(--surface-bar));
 }
 
 .mpi-project-card__delete-mount {
@@ -76,7 +74,7 @@
     right: 14px;
     opacity: 0;
     transform: scale(0.8);
-    transition: opacity var(--transition), transform var(--transition);
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
     z-index: 2;
 }
 
@@ -92,27 +90,27 @@
     bottom: 0;
     z-index: 1;
     padding: 28px 11px 9px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.7) 45%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(to top, oklch(0.16 0.02 350 / 0.92) 0%, oklch(0.16 0.02 350 / 0.7) 45%, oklch(0.16 0.02 350 / 0) 100%);
     pointer-events: none;
 }
 
 .mpi-project-card__title {
-    color: var(--text);
+    color: var(--ink-1);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .mpi-project-card__date {
     font-size: 0.85rem;
-    color: var(--text-3);
+    color: var(--ink-3);
     font-weight: 500;
     max-height: 0;
     opacity: 0;
     overflow: hidden;
     transform: translateY(-4px);
-    transition: max-height var(--transition), opacity var(--transition), transform var(--transition);
+    transition: max-height var(--t-base) var(--ease), opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
 }
 
 .mpi-project-card:hover .mpi-project-card__date {

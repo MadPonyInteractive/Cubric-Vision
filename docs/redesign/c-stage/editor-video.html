@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cubric Studio — Stage · Editor (Video)</title>
+    <link rel="stylesheet" href="../_base.css" />
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      html,
+      body {
+        height: 100vh;
+        overflow: hidden;
+        background: var(--surface-canvas);
+      }
+      .titlebar .wordmark {
+        font-size: 18px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        -webkit-app-region: no-drag;
+      }
+      .brand-logo {
+        width: 18px;
+        height: 18px;
+        filter: hue-rotate(-50deg) saturate(0.78) brightness(1.05);
+      }
+      .brand-lettering {
+        height: 13px;
+        width: auto;
+        filter: hue-rotate(-30deg) saturate(0.85) brightness(1.08);
+      }
+
+      .head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: var(--s-5);
+        padding: var(--s-3) var(--s-6);
+        border-bottom: 1px solid var(--line);
+      }
+      .head .crumb {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        font-size: var(--t-xs);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .head .crumb a { color: var(--ink-2); }
+      .head .crumb a:hover { color: var(--ink-1); }
+      .head h1 {
+        font-size: var(--t-md);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+      .head .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 64px 1fr 360px;
+        height: calc(100vh - 36px - 52px - 144px - 32px);
+      }
+
+      aside.tools {
+        background: var(--surface-canvas);
+        border-right: 1px solid var(--line);
+        padding: var(--s-4) 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      aside.tools .label {
+        text-align: center;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        margin: 14px 0 6px;
+      }
+      aside.tools .grp-sep {
+        height: 1px;
+        background: var(--line);
+        margin: 8px 14px;
+      }
+      aside.tools .tool {
+        width: 50px;
+        height: 50px;
+        margin: 2px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink-3);
+        position: relative;
+        cursor: pointer;
+        transition: color var(--t-base) var(--ease);
+      }
+      aside.tools .tool:hover { color: var(--ink-1); }
+      aside.tools .tool[aria-current="true"] { color: var(--accent-heat); }
+      aside.tools .tool[aria-current="true"]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: var(--accent-heat);
+      }
+      aside.tools .tool .glyph { width: 20px; height: 20px; }
+
+      .canvas {
+        position: relative;
+        background: radial-gradient(
+            ellipse at 50% 45%,
+            var(--surface-bar) 0%,
+            oklch(0.20 0.020 350) 100%
+          );
+        overflow: hidden;
+      }
+      .canvas-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--s-6);
+      }
+      .frame {
+        position: relative;
+        max-width: 80vw;
+        max-height: calc(100vh - 360px);
+        aspect-ratio: 9 / 16;
+        background: var(--surface-2);
+        overflow: hidden;
+        box-shadow: 0 40px 100px -30px oklch(0.12 0.02 350 / 0.85),
+          0 0 0 1px var(--line);
+      }
+      .frame video, .frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* crop rig — 9 handles, theatrical */
+      .crop-rig {
+        position: absolute;
+        inset: 8% 12%;
+        outline: 1px solid var(--ink-1);
+        pointer-events: none;
+      }
+      .crop-rig::before,
+      .crop-rig::after {
+        content: "";
+        position: absolute;
+      }
+      /* rule-of-thirds */
+      .crop-rig::before {
+        inset: 0;
+        background:
+          linear-gradient(to right, transparent 33.33%, color-mix(in oklch, var(--ink-1) 30%, transparent) 33.33%, color-mix(in oklch, var(--ink-1) 30%, transparent) calc(33.33% + 1px), transparent calc(33.33% + 1px)),
+          linear-gradient(to right, transparent 66.66%, color-mix(in oklch, var(--ink-1) 30%, transparent) 66.66%, color-mix(in oklch, var(--ink-1) 30%, transparent) calc(66.66% + 1px), transparent calc(66.66% + 1px)),
+          linear-gradient(to bottom, transparent 33.33%, color-mix(in oklch, var(--ink-1) 30%, transparent) 33.33%, color-mix(in oklch, var(--ink-1) 30%, transparent) calc(33.33% + 1px), transparent calc(33.33% + 1px)),
+          linear-gradient(to bottom, transparent 66.66%, color-mix(in oklch, var(--ink-1) 30%, transparent) 66.66%, color-mix(in oklch, var(--ink-1) 30%, transparent) calc(66.66% + 1px), transparent calc(66.66% + 1px));
+      }
+      /* darkening mask outside crop */
+      .crop-mask {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 0 9999px transparent;
+      }
+      .crop-mask::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: oklch(0.18 0.02 350 / 0.55);
+        clip-path: polygon(
+          0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%,
+          12% 8%, 12% 92%, 88% 92%, 88% 8%, 12% 8%
+        );
+      }
+      .handle {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent-heat);
+        outline: 2px solid oklch(0.96 0.008 80);
+        transform: translate(-50%, -50%);
+      }
+      .handle.tl { top: 8%; left: 12%; }
+      .handle.tr { top: 8%; left: 88%; }
+      .handle.bl { top: 92%; left: 12%; }
+      .handle.br { top: 92%; left: 88%; }
+      .handle.tc { top: 8%; left: 50%; }
+      .handle.bc { top: 92%; left: 50%; }
+      .handle.lc { top: 50%; left: 12%; }
+      .handle.rc { top: 50%; left: 88%; }
+
+      .canvas-info {
+        position: absolute;
+        top: var(--s-4);
+        left: var(--s-4);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .canvas-info strong { color: var(--ink-1); font-weight: 500; }
+
+      .ratio-readout {
+        position: absolute;
+        top: var(--s-4);
+        right: var(--s-4);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-1);
+        background: oklch(0.30 0.02 350 / 0.85);
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+      }
+      .ratio-readout em { font-style: normal; color: var(--accent-heat); }
+
+      /* timeline — promoted to real, sits ABOVE the global footer bar */
+      .timeline {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 32px; /* footer height */
+        height: 144px;
+        background: oklch(0.30 0.020 350);
+        border-top: 1px solid var(--line);
+        display: grid;
+        grid-template-rows: 44px 1fr 24px;
+        z-index: 4;
+      }
+      .tl-controls {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        gap: var(--s-4);
+        align-items: center;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .tl-play {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .tl-play button {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink-2);
+      }
+      .tl-play button:hover { color: var(--ink-1); }
+      .tl-play button.play {
+        background: var(--accent-heat);
+        color: oklch(0.16 0.02 0);
+        border-radius: 999px;
+        width: 32px;
+        height: 32px;
+      }
+      .tl-time {
+        font-variant-numeric: tabular-nums;
+        font-size: var(--t-xs);
+        color: var(--ink-2);
+        letter-spacing: 0.06em;
+      }
+      .tl-time .total { color: var(--ink-4); }
+      .tl-misc {
+        display: flex;
+        gap: 14px;
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+
+      .tl-track-row {
+        position: relative;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+      }
+      .tl-track {
+        position: relative;
+        width: 100%;
+        height: 44px;
+        background: var(--surface-bar);
+        border: 1px solid var(--line);
+        /* no overflow:hidden — trim handles + playhead arrow extend above/below */
+      }
+      .tl-track .wave-clip {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      /* waveform fake */
+      .tl-track .wave {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right,
+            color-mix(in oklch, var(--accent-frost) 35%, transparent) 0,
+            color-mix(in oklch, var(--accent-frost) 35%, transparent) 1px,
+            transparent 1px,
+            transparent 4px);
+        background-size: 4px 100%;
+        mask-image: radial-gradient(ellipse at center, black 0%, transparent 80%);
+        opacity: 0.7;
+      }
+      .tl-track .wave::before {
+        /* fake amplitude */
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg,
+          transparent 30%,
+          color-mix(in oklch, var(--accent-frost) 40%, transparent) 50%,
+          transparent 70%);
+      }
+      .tl-trim-in,
+      .tl-trim-out {
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+        width: 4px;
+        background: var(--accent-heat);
+        z-index: 3;
+      }
+      .tl-trim-in::before,
+      .tl-trim-out::before {
+        content: "";
+        position: absolute;
+        top: -3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 12px;
+        height: 4px;
+        background: var(--accent-heat);
+      }
+      .tl-trim-in::after,
+      .tl-trim-out::after {
+        content: "";
+        position: absolute;
+        bottom: -3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 12px;
+        height: 4px;
+        background: var(--accent-heat);
+      }
+      .tl-trim-in { left: 6%; }
+      .tl-trim-out { left: 88%; }
+      .tl-selection {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 6%;
+        right: 12%;
+        background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
+        border-top: 1px solid var(--accent-heat);
+        border-bottom: 1px solid var(--accent-heat);
+      }
+      .tl-playhead {
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+        left: 32%;
+        width: 2px;
+        background: var(--ink-1);
+        z-index: 2;
+      }
+      .tl-playhead::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, 0);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid var(--ink-1);
+      }
+      .tl-ruler {
+        height: 22px;
+        margin: 0 16px 0;
+        padding-top: 4px;
+        position: relative;
+        font-size: 9px;
+        color: var(--ink-4);
+        letter-spacing: 0.06em;
+        font-variant-numeric: tabular-nums;
+      }
+      .tl-ruler::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--line);
+      }
+      .tl-ruler span {
+        position: absolute;
+        top: 4px;
+        transform: translateX(-50%);
+      }
+
+      /* inspector */
+      aside.insp {
+        background: var(--surface-canvas);
+        border-left: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .insp-tabs {
+        display: flex;
+        padding: var(--s-4) var(--s-4) var(--s-3);
+        gap: var(--s-5);
+        border-bottom: 1px solid var(--line);
+      }
+      .insp-body {
+        overflow: auto;
+        flex: 1;
+        padding: var(--s-4);
+      }
+      .insp-section { margin-bottom: var(--s-5); }
+      .insp-section h4 {
+        font-size: var(--t-2xs);
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        margin-bottom: var(--s-3);
+      }
+
+      /* preset picker — replaces tiny chips */
+      .preset-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .preset {
+        position: relative;
+        padding: 12px 12px 10px;
+        border: 1px solid var(--line);
+        cursor: pointer;
+        transition: border-color var(--t-base) var(--ease),
+          background var(--t-base) var(--ease);
+      }
+      .preset:hover { border-color: var(--ink-2); }
+      .preset[aria-pressed="true"] {
+        border-color: var(--accent-heat);
+        background: color-mix(in oklch, var(--accent-heat) 10%, transparent);
+      }
+      .preset .ar-icon {
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .preset .ar-icon i {
+        display: block;
+        background: var(--ink-3);
+        border: 1px solid var(--ink-3);
+        background: transparent;
+      }
+      .preset[aria-pressed="true"] .ar-icon i {
+        border-color: var(--accent-heat);
+      }
+      .preset .ar-name {
+        margin-top: 8px;
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      .preset .ar-dim {
+        margin-top: 2px;
+        font-size: 10px;
+        color: var(--ink-4);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ar-9-16 i { width: 18px; height: 32px; }
+      .ar-1-1 i { width: 26px; height: 26px; }
+      .ar-4-5 i { width: 22px; height: 28px; }
+      .ar-16-9 i { width: 36px; height: 20px; }
+      .ar-3-4 i { width: 22px; height: 30px; }
+      .ar-custom i { width: 28px; height: 22px; border-style: dashed; }
+
+      .source-meta {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 6px 10px;
+        font-size: var(--t-2xs);
+      }
+      .source-meta .k {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+      }
+      .source-meta .v {
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .insp-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: var(--s-4);
+        padding-top: var(--s-4);
+        border-top: 1px solid var(--line);
+      }
+      .insp-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+        font-size: var(--t-2xs);
+      }
+
+      .pip {
+        margin-top: var(--s-3);
+        position: relative;
+        aspect-ratio: 9 / 16;
+        max-height: 180px;
+        margin-left: auto;
+        margin-right: auto;
+        background: var(--surface-bar);
+        border: 1px solid var(--line);
+        overflow: hidden;
+      }
+      .pip img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.7;
+      }
+      .pip .pip-crop {
+        position: absolute;
+        inset: 8% 12%;
+        outline: 2px solid var(--accent-heat);
+        background: color-mix(in oklch, var(--accent-heat) 6%, transparent);
+      }
+
+      footer.bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: var(--s-5);
+        padding: 8px 24px;
+        background: oklch(0.30 0.020 350);
+        border-top: 1px solid var(--line);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="titlebar">
+      <span class="brand">
+        <img class="brand-logo" src="assets/logo.png" alt="" />
+        <img class="brand-lettering" src="assets/lettering.png" alt="Cubric Studio" />
+      </span>
+      <span class="controls">— ▢ ×</span>
+    </header>
+
+    <div class="head">
+      <div class="crumb">
+        <a href="gallery.html">← Gallery</a>
+        <h1>imported_001 · clip</h1>
+        <span>576 × 1024 · 14.74s · 30 fps</span>
+      </div>
+      <span></span>
+      <div class="actions">
+        <button class="btn">Capture frame</button>
+        <button class="btn btn-primary">Apply crop</button>
+      </div>
+    </div>
+
+    <main class="shell">
+      <aside class="tools">
+        <span class="label">View</span>
+        <div class="tool" title="Move">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4" />
+          </svg>
+        </div>
+        <div class="grp-sep"></div>
+        <span class="label">Edit</span>
+        <div class="tool" aria-current="true" title="Crop">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <path d="M6 2v16h16M2 6h16v16" />
+          </svg>
+        </div>
+        <div class="tool" title="Trim">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <circle cx="6" cy="6" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M9 8l11 11M9 16l11-11" />
+          </svg>
+        </div>
+        <div class="tool" title="Speed">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        </div>
+        <div class="tool" title="Vid2Vid">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <rect x="3" y="6" width="13" height="12" rx="1" />
+            <path d="M16 10l5-3v10l-5-3z" />
+          </svg>
+        </div>
+        <div class="grp-sep"></div>
+        <span class="label">Export</span>
+        <div class="tool" title="Snapshot">
+          <svg class="glyph" viewBox="0 0 24 24">
+            <rect x="3" y="6" width="18" height="13" rx="2" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M9 6l2-2h2l2 2" />
+          </svg>
+        </div>
+      </aside>
+
+      <section class="canvas">
+        <span class="canvas-info"
+          >Video · <strong>imported_001</strong> · 100%</span
+        >
+        <span class="ratio-readout">crop · <em>9 : 16</em> · reel</span>
+
+        <div class="canvas-inner">
+          <div class="frame">
+            <img
+              src="https://picsum.photos/seed/stg-vid/576/1024"
+              alt=""
+            />
+            <div class="crop-mask"></div>
+            <div class="crop-rig"></div>
+            <div class="handle tl"></div>
+            <div class="handle tr"></div>
+            <div class="handle bl"></div>
+            <div class="handle br"></div>
+            <div class="handle tc"></div>
+            <div class="handle bc"></div>
+            <div class="handle lc"></div>
+            <div class="handle rc"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="insp">
+        <div class="insp-tabs">
+          <span class="tag" aria-selected="true">Crop</span>
+          <span class="tag">Timeline</span>
+          <span class="tag">Audio</span>
+          <span class="tag">Export</span>
+        </div>
+
+        <div class="insp-body">
+          <div class="insp-section">
+            <h4>Preset · social</h4>
+            <div class="preset-grid">
+              <div class="preset ar-9-16" aria-pressed="true">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Reel</div>
+                <div class="ar-dim">9:16 · 1080×1920</div>
+              </div>
+              <div class="preset ar-1-1">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Square</div>
+                <div class="ar-dim">1:1 · 1080×1080</div>
+              </div>
+              <div class="preset ar-4-5">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Portrait</div>
+                <div class="ar-dim">4:5 · 1080×1350</div>
+              </div>
+              <div class="preset ar-16-9">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Wide</div>
+                <div class="ar-dim">16:9 · 1920×1080</div>
+              </div>
+              <div class="preset ar-3-4">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Story</div>
+                <div class="ar-dim">3:4 · 1080×1440</div>
+              </div>
+              <div class="preset ar-custom">
+                <div class="ar-icon"><i></i></div>
+                <div class="ar-name">Custom</div>
+                <div class="ar-dim">free</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="insp-section">
+            <h4>Source</h4>
+            <div class="source-meta">
+              <span class="k">Codec</span><span class="v">H.264 · yuv420p</span>
+              <span class="k">Frame</span><span class="v">576 × 1024</span>
+              <span class="k">FPS</span><span class="v">30.000</span>
+              <span class="k">Length</span><span class="v">14.74 s</span>
+              <span class="k">Audio</span><span class="v">stereo · 48 kHz</span>
+            </div>
+          </div>
+
+          <div class="insp-section">
+            <h4>Crop preview</h4>
+            <div class="pip">
+              <img src="https://picsum.photos/seed/stg-pip/300/520" alt="" />
+              <div class="pip-crop"></div>
+            </div>
+          </div>
+
+          <div class="insp-actions">
+            <button class="btn">Reset</button>
+            <button class="btn btn-primary">Save</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="timeline" aria-label="Video timeline">
+      <div class="tl-controls">
+        <div class="tl-play">
+          <button title="prev frame">
+            <svg class="glyph" viewBox="0 0 24 24">
+              <path d="M19 5L9 12l10 7zM5 5v14" />
+            </svg>
+          </button>
+          <button class="play" title="play">
+            <svg class="glyph" viewBox="0 0 24 24" style="
+              width:14px;height:14px;fill:currentColor;stroke:none;
+            ">
+              <path d="M7 5l12 7-12 7z" />
+            </svg>
+          </button>
+          <button title="next frame">
+            <svg class="glyph" viewBox="0 0 24 24">
+              <path d="M5 5l10 7-10 7zM19 5v14" />
+            </svg>
+          </button>
+        </div>
+        <div class="tl-time">
+          <span>00:04.27</span>
+          <span class="total"> / 00:14.74</span>
+        </div>
+        <div class="tl-misc">
+          <span>loop · on</span>
+          <span>audio · −12 dB</span>
+        </div>
+        <div class="tl-misc">
+          <span style="cursor: pointer">Fit</span>
+          <span style="cursor: pointer">Snap</span>
+          <span style="cursor: pointer">In/Out</span>
+        </div>
+      </div>
+      <div class="tl-track-row">
+        <div class="tl-track">
+          <div class="wave-clip"><div class="wave"></div></div>
+          <div class="tl-selection"></div>
+          <div class="tl-trim-in"></div>
+          <div class="tl-trim-out"></div>
+          <div class="tl-playhead"></div>
+        </div>
+      </div>
+      <div class="tl-ruler">
+        <span style="left: 0%">00:00</span>
+        <span style="left: 25%">00:03</span>
+        <span style="left: 50%">00:07</span>
+        <span style="left: 75%">00:11</span>
+        <span style="left: 100%">00:14</span>
+      </div>
+    </section>
+
+    <footer class="bar">
+      <span style="display: flex; align-items: center; gap: 8px"
+        ><span style="
+          width:6px;height:6px;border-radius:999px;background:var(--accent-ok);
+        "></span>
+        Ready</span
+      >
+      <span></span>
+      <span class="gauge"
+        ><span>VRAM</span
+        ><span class="bar"><span style="width: 8%"></span></span>1.2 / 16</span
+      >
+      <span class="gauge"
+        ><span>RAM</span
+        ><span class="bar"><span style="width: 27%"></span></span>17.4 /
+        64</span
+      >
+    </footer>
+  </body>
+</html>

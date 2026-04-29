@@ -1,14 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiDragList.css — Premium Draggable Reorderable List
+   MpiDragList.css — Draggable Reorderable List
    ═══════════════════════════════════════════════════════════════ */
 
 .mpi-draglist {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    background: var(--bg-recessed);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-soft);
+    background: var(--surface-bar);
+    border-radius: var(--r-2);
+    border: 1px solid var(--line-soft);
     position: relative;
     scrollbar-width: thin;
 }
@@ -26,17 +26,17 @@
     gap: 12px;
     padding: 10px 14px;
     background: var(--surface-2);
-    border: 1px solid var(--border-soft);
-    border-radius: calc(var(--radius-sm) - 2px);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2);
     cursor: grab;
     user-select: none;
-    transition: background var(--transition), border var(--transition), opacity 0.2s, transform 0.2s;
+    transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
     outline: none;
 }
 
 .mpi-draglist__item:hover {
     background: var(--surface-3);
-    border-color: var(--primary-glow);
+    border-color: var(--accent-heat);
 }
 
 .mpi-draglist__item:active {
@@ -46,8 +46,8 @@
 /* Modifier: Visual state during dragging */
 .mpi-draglist__item--dragging {
     opacity: 0.4;
-    border: 1px dashed var(--primary);
-    background: var(--surface-glass) !important;
+    border: 1px dashed var(--accent-heat);
+    background: var(--surface-1) !important;
     transform: scale(0.98);
 }
 
@@ -59,21 +59,21 @@
     width: 24px;
     height: 24px;
     opacity: 0.4;
-    transition: opacity var(--transition), transform 0.2s;
-    color: var(--text-muted);
+    transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+    color: var(--ink-3);
 }
 
 .mpi-draglist__item:hover .mpi-draglist__handle {
     opacity: 1;
-    color: var(--primary);
+    color: var(--accent-heat);
     transform: scale(1.1);
 }
 
 /* Item label text */
 .mpi-draglist__label {
     flex-grow: 1;
-    font-size: 0.92rem;
-    color: var(--text);
+    font-size: var(--t-sm);
+    color: var(--ink-1);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -84,8 +84,8 @@
 .mpi-draglist__empty {
     padding: 40px 20px;
     text-align: center;
-    color: var(--text-muted);
-    font-size: 0.88rem;
+    color: var(--ink-3);
+    font-size: var(--t-sm);
     font-style: italic;
     background: transparent;
     display: flex;

@@ -15,7 +15,6 @@ import { Events } from '../events.js';
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { gid } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
-import { initShaderBackground, stopShaderBackground } from '../components/shaderBackground.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
 import { getAvailableCommands } from '../data/commandRegistry.js';
@@ -129,14 +128,12 @@ export function handleNavigation(page, params = {}) {
         _showLanding();
         loadProjectGrid();
         updateTitlebarProject();
-        initShaderBackground();
         return;
     }
 
     if (page === PAGE_GALLERY) {
         _showShell();
         updateTitlebarProject();
-        stopShaderBackground();
         _loadView(PAGE_GALLERY, params);
         return;
     }
@@ -144,7 +141,6 @@ export function handleNavigation(page, params = {}) {
     if (page === PAGE_GROUP_HISTORY) {
         _showShell();
         updateTitlebarProject();
-        stopShaderBackground();
         _loadView(PAGE_GROUP_HISTORY, params);
     }
 }

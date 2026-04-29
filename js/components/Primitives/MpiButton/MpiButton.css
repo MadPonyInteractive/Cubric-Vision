@@ -8,9 +8,9 @@
     font-family: var(--font-display);
     font-weight: 600;
     border: none;
-    border-radius: var(--radius);
+    border-radius: var(--r-2);
     cursor: pointer;
-    transition: all var(--bounce);
+    transition: all var(--t-fast) var(--ease);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -23,41 +23,39 @@
 /* ── Sizes ────────────────────────────────────────────────────────────────── */
 .mpi-btn--sm {
     padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
+    font-size: var(--t-xs);
 }
 
 .mpi-btn--md {
     padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    font-size: var(--t-sm);
 }
 
 .mpi-btn--lg {
     padding: 0.8rem 1.50rem;
-    font-size: 1rem;
+    font-size: var(--t-md);
 }
 
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 
-/* primary — neon electric fill, matches .btn.primary */
+/* primary — heat fill */
 .mpi-btn--primary {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
-    color: #fff;
+    background: var(--accent-heat);
+    color: var(--ink-1);
 }
 
 .mpi-btn--primary:hover:not(:disabled),
 .mpi-btn--primary.is-pressed:not(:disabled) {
-    background: linear-gradient(135deg, var(--primary-dim) 0%, var(--neon-accent) 100%);
-    color: #fff;
-    box-shadow: 0 8px 25px var(--neon-glow);
+    background: var(--accent-heat);
+    color: var(--ink-1);
+    box-shadow: 0 8px 25px oklch(0.72 0.20 6 / 0.3);
     transform: translateY(-2px);
 }
 
-/* secondary — glass surface, matches .btn.secondary */
+/* secondary — solid surface */
 .mpi-btn--secondary {
-    background: var(--surface);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    color: var(--text);
+    background: var(--surface-1);
+    color: var(--ink-1);
 }
 
 .mpi-btn--secondary:hover:not(:disabled),
@@ -65,40 +63,40 @@
     background: var(--surface-2);
 }
 
-/* danger — matches .btn.danger */
+/* danger */
 .mpi-btn--danger {
-    background: var(--danger);
-    color: #fff;
+    background: var(--accent-heat);
+    color: var(--ink-1);
 }
 
 .mpi-btn--danger:hover:not(:disabled),
 .mpi-btn--danger.is-pressed:not(:disabled) {
-    background: #f87171;
+    background: var(--accent-heat);
     transform: translateY(-1px);
 }
 
-/* outline — transparent + border, matches .btn.outline */
+/* outline — transparent + border */
 .mpi-btn--outline {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
+    border: 1px solid var(--line);
+    color: var(--ink-1);
 }
 
 .mpi-btn--outline:hover:not(:disabled) {
-    background: var(--bg-recessed);
-    border-color: var(--border);
+    background: var(--surface-bar);
+    border-color: var(--line);
     transform: translateY(-1px);
 }
 
 /* ghost — text-only, no bg or border */
 .mpi-btn--ghost {
     background: transparent;
-    color: var(--text-2);
+    color: var(--ink-2);
 }
 
 .mpi-btn--ghost:hover:not(:disabled) {
-    background: var(--bg-recessed);
-    color: var(--text);
+    background: var(--surface-bar);
+    color: var(--ink-1);
 }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
@@ -113,7 +111,7 @@
 
 /* No focus ring — removed: buttons retain their default look unconditionally */
 
-/* Loading — matches .btn.loading + .btn.loading::after */
+/* Loading */
 .mpi-btn--loading {
     color: transparent !important;
     pointer-events: none;
@@ -124,20 +122,20 @@
     position: absolute;
     width: 18px;
     height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: #fff;
+    border: 2px solid var(--line);
+    border-top-color: var(--ink-1);
     border-radius: 50%;
     animation: mpi-btn-spin 0.6s linear infinite;
 }
 
 .mpi-btn--primary.mpi-btn--loading::after {
-    border-color: rgba(0, 0, 0, 0.2);
-    border-top-color: #000;
+    border-color: oklch(0.16 0.02 350 / 0.2);
+    border-top-color: var(--surface-canvas);
 }
 
 .mpi-btn--secondary.mpi-btn--loading::after {
-    border-color: var(--border);
-    border-top-color: #fff;
+    border-color: var(--line);
+    border-top-color: var(--ink-1);
 }
 
 @keyframes mpi-btn-spin {
@@ -196,15 +194,15 @@
 /* ── Label & Layout ────────────────────────────────────────────────────────── */
 .mpi-ibtn__label {
     pointer-events: none;
-    font-size: 0.75rem;
+    font-size: var(--t-xs);
     font-weight: 500;
-    color: var(--text-2);
-    transition: color var(--bounce);
+    color: var(--ink-2);
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-ibtn:hover .mpi-ibtn__label,
 .mpi-ibtn.is-active .mpi-ibtn__label {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* Position modifiers */
@@ -234,7 +232,7 @@
 .mpi-ibtn__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--line);
     border-top-color: currentColor;
     border-radius: 50%;
     animation: mpi-ibtn-spin 0.7s linear infinite;
@@ -251,23 +249,23 @@
 /* .mpi-btn.mpi-ibtn ensures this never bleeds onto plain MpiButton--secondary. */
 .mpi-btn.mpi-ibtn:active:not(:disabled),
 .mpi-btn.mpi-ibtn.is-pressed:not(:disabled) {
-    background: var(--neon-electric) !important;
-    border-color: var(--neon-electric) !important;
-    color: #fff !important;
-    box-shadow: 0 0 12px var(--neon-glow-sm);
+    background: var(--accent-heat) !important;
+    border-color: var(--accent-heat) !important;
+    color: var(--ink-1) !important;
+    box-shadow: 0 0 12px oklch(0.72 0.20 6 / 0.3);
     transform: scale(0.96);
 }
 
 /* Committed active state (toggleable) */
 .mpi-btn.mpi-ibtn.is-active {
-    background: var(--neon-electric);
-    border-color: var(--neon-electric);
-    color: #fff;
-    box-shadow: 0 0 10px var(--neon-glow-sm);
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: var(--ink-1);
+    box-shadow: 0 0 10px oklch(0.72 0.20 6 / 0.3);
 }
 
 .mpi-btn.mpi-ibtn.is-active:hover:not(:disabled) {
-    background: var(--neon-accent);
-    border-color: var(--neon-accent);
-    color: #000;
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: var(--surface-canvas);
 }

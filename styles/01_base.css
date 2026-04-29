@@ -28,6 +28,12 @@
   font-weight: 700;
   font-style: normal;
 }
+@font-face {
+  font-family: 'VT323';
+  src: url('../assets/fonts/VT323.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    Cubric Studio — styles.css
@@ -36,63 +42,111 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Brand Colors */
-  --primary: #55b3f1;
-  --primary-dim: #7198d1;
+  /* Surfaces — chrome warmer than canvas; canvas is the deep stage */
+  --surface-0:       oklch(0.50 0.022 350);  /* outermost chrome */
+  --surface-1:       oklch(0.46 0.022 350);  /* panels */
+  --surface-2:       oklch(0.42 0.022 350);  /* raised, inputs */
+  --surface-3:       oklch(0.55 0.024 350);  /* hover */
+  --surface-bar:     oklch(0.34 0.022 350);  /* status, quiet zones */
+  --surface-canvas:  oklch(0.28 0.020 350);  /* editor canvas, vignette base */
 
-  --neon-electric: #c68bcde3;
-  --neon-glow: rgba(182, 120, 255, 0.35);
-  --neon-glow-sm: rgba(182, 120, 255, 0.15);
-  --neon-accent: #d17ddb;
-  --neon-border: rgba(182, 120, 255, 0.4);
+  /* Ink — warm whites */
+  --ink-1:           oklch(0.98 0.008 80);   /* primary text */
+  --ink-2:           oklch(0.85 0.012 80);   /* secondary */
+  --ink-3:           oklch(0.66 0.014 80);   /* labels, kickers */
+  --ink-4:           oklch(0.50 0.018 80);   /* muted, almost-disappearing */
 
-  /* Neutral Dark Background */
-  --bg-light: #4a4e59;
-  --bg-dark: #352a3b;
-  --bg: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-dark) 100%);
-  --bg-elevated: #425462f7;
+  /* Lines — translucent so they sit ON the surface */
+  --line:            oklch(0.72 0.018 350 / 0.16);
+  --line-soft:       oklch(0.72 0.015 350 / 0.08);
 
-  /* Glass Surfaces */
-  --surface: rgba(255, 255, 255, 0.05);
-  /* --surface-1: rgba(255, 255, 255, 0.05); */
-  --surface-2: rgba(255, 255, 255, 0.08);
-  --surface-3: rgba(255, 255, 255, 0.12);
+  /* Accents */
+  --accent-heat:     oklch(0.72 0.20 6);     /* pink-magenta — primary actions, active states */
+  --accent-frost:    oklch(0.82 0.13 220);   /* cyan — generative state, focus rings, frost lines */
+  --accent-ok:       oklch(0.78 0.13 150);   /* success, ready */
+  --accent-warn:     oklch(0.78 0.14 60);    /* warning */
 
-  /* Sophisticated inner borders and highlights */
-  --border: rgba(255, 255, 255, 0.1);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-soft: rgba(255, 255, 255, 0.04);
-  /* Highlight specular borders for glass edges */
-  --border-glass: inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  /* Type scale */
+  --t-2xs:     10px;
+  --t-xs:      11px;
+  --t-sm:      13px;
+  --t-md:      15px;
+  --t-lg:      19px;
+  --t-xl:      32px;
+  --t-2xl:     64px;
+  --t-3xl:     96px;
+  --t-display: 144px;
 
-  --text: #f8f8f2;
-  --text-2: #ffffff;
-  --text-3: #71717a;
-  --text-muted: #71717a;
+  /* Spacing */
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   14px;
+  --s-4:   22px;
+  --s-5:   32px;
+  --s-6:   48px;
+  --s-7:   72px;
+  --s-8:   112px;
 
-  --success: #2ef093;
-  --danger: #d76ead;
-  --warning: #f0c36b;
-  --info: #4deeea;
+  /* Radius */
+  --r-1:    0px;     /* sharp — Stage prefers angular over rounded */
+  --r-2:    4px;     /* small affordances */
+  --r-3:    12px;    /* large containers when softness is needed */
+  --r-pill: 999px;   /* status pills, accent dots */
 
-  --surface-glass: rgb(22 29 34 / 72%);
-  /* Frost base */
+  /* Motion — cinematic, exponential ease-out */
+  --ease:   cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 200ms;
+  --t-base: 280ms;
+  --t-slow: 480ms;
 
+  /* Fonts */
+  --font-wordmark: 'VT323', monospace;
+
+  /* Shell */
   --titlebar-h: 32px;
+}
 
-  /* Smooth, modern container radii */
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 16px;
-
-  --font-main: 'JetBrains Mono', monospace;
-  --font-display: 'Fira Code', monospace;
-
-  --bg-recessed: rgba(20, 20, 20, 0.2);
-  --bg-modal: rgb(19 15 20 / 91%);
-  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --bounce: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+/* compat — remove in Phase 3 */
+:root {
+  /* Color */
+  --bg:            var(--surface-0);
+  --bg-light:      var(--surface-0);
+  --bg-dark:       var(--surface-canvas);
+  --bg-elevated:   var(--surface-1);
+  --bg-recessed:   var(--surface-bar);
+  --bg-modal:      var(--surface-bar);
+  --surface:       var(--surface-1);
+  --surface-glass: var(--surface-1);
+  --neon-electric: var(--accent-heat);
+  --neon-accent:   var(--accent-heat);
+  --neon-glow:     oklch(0.72 0.20 6 / 0.3);
+  --neon-glow-sm:  oklch(0.72 0.20 6 / 0.15);
+  --neon-border:   oklch(0.72 0.20 6 / 0.3);
+  --primary:       var(--accent-heat);
+  --primary-dim:   var(--accent-heat);
+  --text:          var(--ink-1);
+  --text-2:        var(--ink-1);
+  --text-3:        var(--ink-3);
+  --text-muted:    var(--ink-3);
+  --success:       var(--accent-ok);
+  --info:          var(--accent-frost);
+  --warning:       var(--accent-warn);
+  --danger:        var(--accent-heat);
+  --border:        var(--line);
+  --border-color:  var(--line);
+  --border-soft:   var(--line-soft);
+  --border-glass:  var(--line);
+  /* Radius */
+  --radius-sm: var(--r-2);
+  --radius:    var(--r-2);
+  --radius-lg: var(--r-3);
+  --radius-xl: var(--r-3);
+  /* Motion */
+  --transition: var(--t-base) var(--ease);
+  --bounce:     var(--t-base) var(--ease);
+  /* Font */
+  --font-main:    'JetBrains Mono', monospace;
+  --font-display: 'JetBrains Mono', monospace;
 }
 
 
@@ -114,15 +168,14 @@ body {
 }
 
 body {
-  background: var(--bg);
-  background-attachment: fixed;
-  color: var(--text);
-  font-family: var(--font-main);
+  background: var(--surface-0);
+  color: var(--ink-1);
+  font-family: 'JetBrains Mono', monospace;
   line-height: 1.6;
 }
 
 a {
-  color: var(--primary);
+  color: var(--accent-frost);
   text-decoration: none;
 }
 
@@ -149,22 +202,22 @@ button:focus-visible {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: var(--surface-0);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--surface-3);
-  border: 2px solid var(--bg);
+  border: 2px solid var(--surface-0);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-dim);
+  background: var(--accent-heat);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--surface-3) var(--bg);
+  scrollbar-color: var(--surface-3) var(--surface-0);
 }
 
 h1,
@@ -173,8 +226,8 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--text);
-  font-family: var(--font-display);
+  color: var(--ink-1);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 0.75rem;
@@ -205,7 +258,7 @@ h4 {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
+  background: linear-gradient(100deg, var(--accent-heat) 0%, var(--accent-frost) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -280,11 +333,10 @@ h4 {
 .spinner {
   width: 36px;
   height: 36px;
-  border: 2.5px solid var(--border-soft);
-  border-top-color: var(--primary);
+  border: 2.5px solid var(--line-soft);
+  border-top-color: var(--accent-heat);
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
   will-change: transform;
-  /* prevent backdrop-filter parent from pausing the animation */
   margin: 0 auto;
 }

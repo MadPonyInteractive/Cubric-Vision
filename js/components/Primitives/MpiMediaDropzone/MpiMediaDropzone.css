@@ -1,13 +1,12 @@
-/* MpiMediaDropzone.css — Modern Drag-and-Drop Media Box Styling */
+/* MpiMediaDropzone.css — Drag-and-Drop Media Box Styling */
 
 .mpi-media-dropzone {
     --mz-width: 250px;
-    /* Default fixed width */
     --mz-bg: var(--surface-2);
-    --mz-border: var(--border);
-    --mz-color: var(--text-3);
-    --mz-accent: var(--primary);
-    --mz-radius: var(--radius-lg);
+    --mz-border: var(--line);
+    --mz-color: var(--ink-3);
+    --mz-accent: var(--accent-heat);
+    --mz-radius: var(--r-3);
 
     width: var(--mz-width);
     min-height: 180px;
@@ -21,7 +20,7 @@
     border: 1px dashed var(--mz-border);
     border-radius: var(--mz-radius);
     cursor: pointer;
-    transition: all var(--transition);
+    transition: all var(--t-fast) var(--ease);
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -31,12 +30,10 @@
 
 .mpi-media-dropzone--has-value {
     padding: 0 !important;
-    /* Force override */
     min-height: 0 !important;
     height: auto !important;
     border-style: solid;
     justify-content: flex-start;
-    /* Important to keep media at the top */
 }
 
 /* Internal Elements */
@@ -66,7 +63,6 @@
     width: 100%;
     height: auto;
     max-height: none;
-    /* Let it grow */
     object-fit: contain;
     border-radius: 0;
 }
@@ -91,21 +87,20 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--surface-glass);
-    border: 1px solid var(--border-soft);
-    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--line-soft);
+    color: var(--ink-1);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    backdrop-filter: blur(4px);
-    transition: all var(--transition);
+    transition: all var(--t-fast) var(--ease);
     z-index: 10;
 }
 
 .mpi-media-dropzone__remove:hover {
-    background: var(--danger);
-    border-color: var(--danger);
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
     transform: scale(1.1);
 }
 
@@ -114,7 +109,7 @@
     align-items: center;
     justify-content: center;
     color: var(--mz-color);
-    transition: color 0.15s ease;
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-media-dropzone:hover .mpi-media-dropzone__icon,
@@ -124,16 +119,16 @@
 
 .mpi-media-dropzone__title {
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: var(--t-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--text-2);
+    color: var(--ink-2);
 }
 
 .mpi-media-dropzone__text {
-    font-size: 0.85rem;
-    color: var(--text-3);
+    font-size: var(--t-sm);
+    color: var(--ink-3);
     line-height: 1.3;
 }
 
@@ -142,9 +137,9 @@
     width: 100%;
     margin-top: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--border-soft);
-    font-size: 0.75rem;
-    color: var(--text-3);
+    border-top: 1px solid var(--line-soft);
+    font-size: var(--t-xs);
+    color: var(--ink-3);
     font-weight: 600;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
 }

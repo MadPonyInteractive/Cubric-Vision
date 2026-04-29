@@ -5,8 +5,8 @@
     flex-direction: column;
     gap: 1.5rem;
     padding: 1rem;
-    background: var(--surface);
-    border-radius: 8px;
+    background: var(--surface-1);
+    border-radius: var(--r-3);
 }
 
 /* Content Container — Title, Text, and Optional Input */
@@ -18,16 +18,16 @@
 
 /* Large Title */
 .mpi-ok-cancel__title {
-    font-size: 1.5rem;
+    font-size: var(--t-lg);
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink-1);
     line-height: 1.2;
 }
 
 /* Text Area */
 .mpi-ok-cancel__text {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
+    font-size: var(--t-sm);
+    color: var(--ink-3);
     line-height: 1.5;
     word-wrap: break-word;
 }
@@ -45,11 +45,11 @@
 
 .mpi-ok-cancel__input .mpi-input input {
     padding: 0.5rem 0.75rem;
-    background: var(--bg-recessed);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-size: 0.9rem;
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-size: var(--t-sm);
 }
 
 /* Optional Checkbox Slot */
@@ -64,7 +64,7 @@
     gap: 0.75rem;
     justify-content: flex-end;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
 }
 
 .mpi-ok-cancel__actions .mpi-button {

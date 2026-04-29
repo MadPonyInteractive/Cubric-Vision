@@ -6,8 +6,8 @@
     gap: 0.75rem;
     padding: 1rem;
     background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
 }
 
 /* ── Header row: Title left, Meta right ─────────────────────────────────── */
@@ -21,14 +21,14 @@
 .mpi-installed-display__title {
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink-1);
     line-height: 1.2;
 }
 
 .mpi-installed-display__meta {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-3);
+    color: var(--ink-3);
     letter-spacing: 0.04em;
     white-space: nowrap;
     text-transform: uppercase;
@@ -37,13 +37,13 @@
 /* ── Text body ───────────────────────────────────────────────────────────── */
 .mpi-installed-display__text {
     font-size: 0.875rem;
-    color: var(--text-2);
+    color: var(--ink-3);
     line-height: 1.5;
 }
 
 /* ── Image preview ───────────────────────────────────────────────────────── */
 .mpi-installed-display__image {
-    border-radius: var(--radius-sm);
+    border-radius: var(--r-2);
     overflow: hidden;
 }
 
@@ -68,7 +68,7 @@
 .mpi-installed-display__icon-text {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-3);
+    color: var(--ink-3);
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
@@ -87,7 +87,7 @@
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.06em;
-    border-radius: var(--radius-sm);
+    border-radius: var(--r-2);
 }
 
 /* ── Actions row ─────────────────────────────────────────────────────────── */
@@ -109,13 +109,13 @@
 
 .mpi-installed-display__progress-label {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--ink-3);
     margin-top: 2px;
 }
 
 .mpi-installed-display__installing-label {
     font-size: 14px;
-    color: var(--primary);
+    color: var(--accent-heat);
     padding: 4px 0;
     animation: mpi-installing-pulse 1.4s ease-in-out infinite;
 }

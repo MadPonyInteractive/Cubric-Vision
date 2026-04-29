@@ -8,9 +8,9 @@
     flex-direction: row;
     gap: 3px;
     padding: 3px;
-    background: var(--bg-recessed);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
 }
 
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
@@ -24,20 +24,20 @@
     padding: 0.35rem 0.8rem;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: calc(var(--radius) - 2px);
-    color: var(--text-3);
+    border-radius: var(--r-2);
+    color: var(--ink-3);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: var(--t-xs);
     font-weight: 600;
     cursor: pointer;
-    transition: all var(--bounce);
+    transition: all var(--t-fast) var(--ease);
     white-space: nowrap;
     outline: none;
 }
 
 .mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
-    background: var(--bg-recessed);
-    color: var(--text-2);
+    background: var(--surface-bar);
+    color: var(--ink-2);
 }
 
 .mpi-radio-group__btn:disabled {
@@ -72,8 +72,7 @@
 /* ── Active state ─────────────────────────────────────────────────────────── */
 
 .mpi-radio-group__btn.is-active {
-    background: var(--bg-recessed);
-    border-color: var(--neon-electric);
-    color: var(--neon-electric);
-    box-shadow: 0 0 8px var(--neon-glow-sm);
+    background: var(--surface-bar);
+    border-color: var(--accent-heat);
+    color: var(--accent-heat);
 }
