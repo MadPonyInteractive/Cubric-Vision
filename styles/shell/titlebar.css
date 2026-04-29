@@ -1,7 +1,7 @@
 /* ── Titlebar (Custom Window Controls) ────────────────────────────────────────── */
 .titlebar {
   height: var(--titlebar-h);
-  background: var(--surface-1);
+  background: var(--surface-bar);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,10 +12,7 @@
   z-index: 9999;
   border-bottom: 1px solid var(--line-soft);
   color: var(--ink-1);
-  box-shadow:
-    0 4px 20px var(--surface-bar),
-    -40px 2px 40px color-mix(in oklch, var(--accent-heat) 15%, transparent),
-    40px 2px 40px oklch(0.72 0.20 6 / 0.15);
+  box-shadow: 0 1px 0 var(--line-soft);
 }
 
 .titlebar-drag-region {
@@ -40,7 +37,7 @@
 }
 
 .titlebar-text {
-  font-family: var(--font-display);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
   font-size: 0.75rem;
   letter-spacing: 0.02em;

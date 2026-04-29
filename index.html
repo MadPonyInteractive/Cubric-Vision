@@ -16,8 +16,8 @@
   <div id="titlebar" class="titlebar">
     <div class="titlebar-drag-region">
       <div class="titlebar-logo">
-        <img src="favicon.png" alt="Cubric Studio Logo" class="titlebar-logo-img">
-        <img src="lettering.png" alt="Cubric Studio" class="titlebar-text" style="height: 12px; margin-top: 2px;">
+        <img src="assets/mascot/logo.png" alt="Cubric Studio Logo" class="titlebar-logo-img">
+        <img src="assets/lettering.png" alt="Cubric Studio" class="titlebar-text" style="height: 12px; margin-top: 2px;">
       </div>
     </div>
     <div class="window-controls">
@@ -55,30 +55,64 @@
   <!-- ══════════════════════════════════════════════════════════════════════════
        LANDING PAGE
   ══════════════════════════════════════════════════════════════════════════════ -->
-<div id="page-landing" class="page-landing">
-    <div class="landing-header">
-      <div class="landing-logo">
-        <img src="favicon.png" alt="Cubric Studio Logo" class="logo-img">
-        <img src="lettering.png" alt="Cubric Studio" class="landing-wordmark" style="height: 24px;">
-      </div>
-      <div id="landingActions" class="landing-actions"></div>
-    </div>
+  <div id="page-landing" class="mpi-landing">
+    <div class="mpi-landing__stage">
 
-    <div class="landing-hero">
-      <h1 class="hero-title">Your Local AI <span class="gradient-text">Workstation</span></h1>
-      <p class="hero-subtitle">Generate, enhance, and refine AI images and videos. <br> All running locally on your
-        machine.</p>
-      <div id="newProjectBtn"></div>
-    </div>
+      <!-- ── Hero (left 7fr) ──────────────────────────────────────────────── -->
+      <section class="mpi-landing__hero">
+        <div class="mpi-landing__hero-bg" aria-hidden="true"></div>
+        <div class="mpi-landing__hero-grad" aria-hidden="true"></div>
+        <div class="mpi-landing__hero-inner">
 
-    <div class="landing-recent">
-      <div class="section-label">Recent Projects</div>
-      <div id="projectGrid" class="project-grid">
-        <!-- Populated by JS -->
-        <div class="projects-loading">
-          <div class="spinner"></div>
+          <!-- top bar: version left, nav right -->
+          <div class="mpi-landing__hero-top">
+            <span class="mpi-landing__kicker" id="heroVersion">Cubric Studio</span>
+            <nav class="mpi-landing__hero-nav" id="landingActions"></nav>
+          </div>
+
+          <!-- headline + CTA -->
+          <div class="mpi-landing__headline">
+            <span class="mpi-landing__kicker">your machine, your studio</span>
+            <h1>Generate.<br>Refine. <em>Own it.</em></h1>
+            <p>A workstation for AI imagery and video that runs on your hardware. Models you choose. Files you keep. No quotas, no uploads, no surprises.</p>
+            <div class="mpi-landing__cta">
+              <div id="newProjectBtn"></div>
+              <div id="openFolderHeroBtn"></div>
+            </div>
+          </div>
+
+          <!-- bottom stats -->
+          <div class="mpi-landing__hero-foot">
+            <div class="mpi-landing__stat">
+              <span>local · offline</span>
+              <span class="mpi-landing__stat-v" id="heroStatGpu">—</span>
+            </div>
+            <div class="mpi-landing__stat">
+              <span>models</span>
+              <span class="mpi-landing__stat-v" id="heroStatModels">—</span>
+            </div>
+            <div class="mpi-landing__stat">
+              <span>last session</span>
+              <span class="mpi-landing__stat-v" id="heroStatSession">—</span>
+            </div>
+          </div>
+
         </div>
-      </div>
+      </section>
+
+      <!-- ── Picker (right 5fr) ───────────────────────────────────────────── -->
+      <aside class="mpi-landing__picker">
+        <div class="mpi-landing__picker-head">
+          <h2>Pick up where<br>you left off.</h2>
+          <span class="mpi-landing__kicker" id="pickerCount"></span>
+        </div>
+        <div id="projectGrid" class="mpi-landing__picker-list">
+          <!-- Populated by JS -->
+          <div class="mpi-landing__loading"><div class="spinner"></div></div>
+        </div>
+        <div class="mpi-landing__picker-foot" id="openFolderBtn"></div>
+      </aside>
+
     </div>
   </div>
 

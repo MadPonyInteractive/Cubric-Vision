@@ -180,7 +180,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 5 — Landing surface port (PORTING.md Phase 1)
 
-- [ ] **5.1 — Port Landing surface to Stage spec**
+- [x] **5.1 — Port Landing surface to Stage spec**
 
     Files: `index.html`, `styles/shell/landing.css`, `js/shell/projectUI.js`. Component touchpoints: `MpiProjectCard`, `MpiNewProject`, `MpiMemoryMonitor`, `MpiProjectName`, `LandingPages/*` (preparation for Phase 9 slide-over migration — leave CSS in place but route any direct landing-page renders through the existing shell mounting; no slide-over wrapping yet).
 
