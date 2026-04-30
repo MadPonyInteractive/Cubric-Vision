@@ -5,9 +5,11 @@
  */
 
 import { listProjects, createProject, deleteProject, openProject, addProjectByFolder } from '../services/projectService.js';
+import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
 import { clientLogger } from '../services/clientLogger.js';
+import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
 import { APP_VERSION } from '../core/appVersion.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
@@ -22,6 +24,10 @@ import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
 let projectGrid = null;
+
+// Aborts in-flight per-row stats fetches when the grid rebuilds, so late
+// responses don't write into rows that no longer exist.
+let _statsBatchAC = null;
 
 // MpiNewProject is NOT a singleton — fresh mount per open.
 // factory.on() accumulates listeners with no unsub, so reusing would stack handlers.
@@ -155,6 +161,9 @@ async function handleProjectDrop(folderPath) {
  */
 export async function loadProjectGrid() {
   if (!projectGrid) return;
+  // Cancel any in-flight per-row stats fetches from the previous render.
+  if (_statsBatchAC) _statsBatchAC.abort();
+  _statsBatchAC = new AbortController();
   projectGrid.innerHTML = '<div class="mpi-landing__loading"><div class="spinner"></div></div>';
   try {
     const projects = await listProjects();
@@ -223,8 +232,6 @@ function _showDeleteConfirm(projectName, onConfirm) {
 function _buildProjectRow(project) {
   const date = new Date(project.updatedAt);
   const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-  const assetCount = project.assetCount ?? 0;
-  const assetSize  = project.assetSizeLabel ?? '';
 
   const row = document.createElement('div');
   row.className = 'mpi-landing__pl-row';
@@ -260,18 +267,31 @@ function _buildProjectRow(project) {
   meta.appendChild(titleRow);
   meta.appendChild(sub);
 
-  // Count
+  // Count — placeholder until /project-stats resolves
   const ct = document.createElement('div');
   ct.className = 'mpi-landing__pl-count';
   const n = document.createElement('span');
   n.className = 'mpi-landing__pl-n';
-  n.textContent = assetCount;
+  n.textContent = '—';
+  const sizeNode = document.createTextNode('assets');
   ct.appendChild(n);
-  ct.appendChild(document.createTextNode(assetSize ? `assets · ${assetSize}` : 'assets'));
+  ct.appendChild(sizeNode);
 
   row.appendChild(thumb);
   row.appendChild(meta);
   row.appendChild(ct);
+
+  // Live stats fetch — independent per row, aborted on grid rebuild.
+  const signal = _statsBatchAC?.signal;
+  fetchStats({ projectId: project.id, folderPath: project.folderPath, signal })
+    .then(({ count, bytes }) => {
+      if (signal?.aborted) return;
+      n.textContent = String(count);
+      sizeNode.textContent = bytes > 0 ? `assets · ${formatBytes(bytes)}` : 'assets';
+    })
+    .catch(err => {
+      if (err?.name !== 'AbortError') clientLogger.warn('projectUI', 'fetchStats failed', err);
+    });
 
   row.addEventListener('click', async (e) => {
     if (deleteSlot.contains(e.target)) return;

@@ -25,7 +25,7 @@
 ## Investigation snapshot (do not redo)
 
 - 30+ hardcoded hex literals in component CSS (`MpiButton`, `MpiBadge`, `MpiProgressBar`, `MpiCheckbox`, `MpiMemoryMonitor`, `MpiSettings`, etc.).
-- ~10 `var()` fallback hex (e.g. `var(--primary, ``````#9a82bb``````)`) — must die.
+- ~10 `var()` fallback hex (e.g. `var(--primary, ``````````#9a82bb``````````)`) — must die.
 - 8 files with hardcoded `font-size` (px/rem). No type scale token exists in current `01_base.css`.
 - ~30 hardcoded `border-radius` values (mostly legit `50%`/`999px`, plus `4px`/`6px`/`8px`/`10px`/`12px` that should map to `--r-*`).
 - 29 hardcoded `transition` timings ignoring `--transition`/`--bounce`.
@@ -97,7 +97,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
   - **Color mapping** — context-aware table. `--primary` → `--accent-heat` (default for buttons/active states) OR `--accent-frost` (for focus rings, generative state, cyan moments). Sub-agent must read usage context per file. List every legacy color var with its target.
   - **Hardcoded color elimination** — `#fff`/`#000`/`#f87171`/etc → tokens. `#fff` → `--ink-1`. `#000` → `--surface-canvas`. Named brand colors → mapped per role.
-  - **Var fallback elimination** — `var(--primary, ``````#9a82bb``````)` → `var(--accent-heat)` (drop fallback, compat aliases catch breakage in Phase 0).
+  - **Var fallback elimination** — `var(--primary, ``````````#9a82bb``````````)` → `var(--accent-heat)` (drop fallback, compat aliases catch breakage in Phase 0).
   - **Type scale conversion** — px/rem → `--t-2xs` (10) / `--t-xs` (11) / `--t-sm` (13) / `--t-md` (15) / `--t-lg` (19) / `--t-xl` (32) / `--t-2xl` (64) / `--t-3xl` (96) / `--t-display` (144). Include rounding rules (e.g. 14-15px → `--t-md`).
   - **Spacing scale** — px → `--s-1` (4) / `--s-2` (8) / `--s-3` (14) / `--s-4` (22) / `--s-5` (32) / `--s-6` (48) / `--s-7` (72) / `--s-8` (112).
   - **Radius scale** — `4-6px` → `--r-2`; `10-16px` → `--r-3`; `0px` → `--r-1`; `50%`/`999px` → keep literal (circle/pill semantics).
@@ -151,7 +151,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
 ### Phase 3 — Compat alias removal
 
-- [x] **3.1 — Strip compat alias block from `styles/01_base.css`**
+- [x] **3.1 — Strip compat alias block from \****`styles/01_base.css`**
 
     Delete the `/* compat — remove in Phase 3 */` block added in 0.1. `:root` should now contain only the new OKLCH tokens — no legacy var names.
 
@@ -222,7 +222,7 @@ Use `/mpi-brief-rule <name>` to fetch each briefing at dispatch time.
 
     Translate intent from any titlebar/footer fragments visible across `landing.html`, `gallery.html`, `editor.html`. Titlebar: identity + window controls only (no telemetry per PRODUCT.md principle 5). Status footer: VRAM gauge, RAM gauge, queue depth pill, ETA tabular-nums. Focus mode: hides chrome, leaves canvas + minimal status. Glass surfaces are already gone (swept in 2.5) — confirm no `backdrop-filter` resurrected.
 
-    > **Note for future agents:** `#shell-info-bar` lives inside `#app-shell`, which carries class `hide` while on the landing/project-picker page. Status bar is intentionally NOT visible on landing — it only appears once a project is loaded and `#app-shell.hide` is removed. If a verification step shows status bar with `offsetHeight: 0` on landing, that is correct, not a regression. Test status bar visibility on a project workspace (gallery/editor) instead.
+    > **Note for future agents:** `#shell-info-bar` lives inside `````#app````-shell`, which carries class `hide` while on the landing/project-picker page. Status bar is intentionally NOT visible on landing — it only appears once a project is loaded and `#app-shell.hide` is removed. If a verification step shows status bar with `offsetHeight: 0` on landing, that is correct, not a regression. Test status bar visibility on a project workspace (gallery/editor) instead.
 
     **Verify:** boot Electron, observe titlebar across all surfaces — identity + window controls only, no VRAM/RAM in titlebar. Status footer shows live VRAM/RAM/queue/ETA. Toggle focus mode (hotkey or shortcut) — chrome retracts cleanly. No console errors. Side-by-side with mockup footer regions.
 

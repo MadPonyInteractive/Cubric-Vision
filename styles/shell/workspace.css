@@ -17,9 +17,19 @@
   z-index: 50;
 }
 
-/* Topbar mount slot re-enables pointer events for its content */
+/* Topbar mount slot re-enables pointer events for its content + spans full width
+ * so the stats slot can push to the right via margin-left: auto. */
 #project-name-mount {
   pointer-events: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Prompt Box Mount ───────────────────────────────────────────────────────── */
+#prompt-box-mount {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
 /* ── Tool Container ─────────────────────────────────────────────────────────── */

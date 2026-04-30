@@ -340,6 +340,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _group = group;
             _currentIdx = _group.selectedIndex;
             historyList.el.appendEntry(item);
+            Events.emit('history:stats-dirty', { group: _group });
             if (isVideo) {
                 viewer.el.exitCropMode?.();
                 viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
@@ -677,6 +678,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24 });
                 else         viewer.el.loadEntry?.(cur, _currentIdx);
             }
+
+            Events.emit('media:deleted', { count: indices.length });
+            Events.emit('history:stats-dirty', { group: _group });
         });
 
         // ── Canvas-viewer-only events (image groups) ─────────────────────────

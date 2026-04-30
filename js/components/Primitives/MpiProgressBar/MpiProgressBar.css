@@ -16,9 +16,9 @@
 .mpi-progress__track-container {
     position: relative;
     width: 100%;
-    height: 8px;
+    height: 4px;
     background: var(--surface-3);
-    border-radius: var(--r-2);
+    border-radius: 999px;
     overflow: visible;
 }
 
@@ -27,7 +27,7 @@
     left: 0;
     top: 0;
     height: 100%;
-    border-radius: var(--r-2);
+    border-radius: 999px;
     pointer-events: none;
     z-index: 1;
 }
@@ -69,23 +69,24 @@
     cursor: default;
 }
 
-/* Hide Thumb — WebKit */
+/* Invisible Thumb — WebKit (sized for click hit-area, transparent so visual handle takes over) */
 .mpi-progress__input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
 
-/* Hide Thumb — Firefox */
+/* Invisible Thumb — Firefox */
 .mpi-progress__input::-moz-range-thumb {
-    width: 0;
-    height: 0;
-    opacity: 0;
+    width: 24px;
+    height: 24px;
+    background: transparent;
     border: none;
-    pointer-events: none;
+    cursor: pointer;
 }
 
 /* ── Handle (optional thumb) ──────────────────────────────────────────────── */
@@ -93,11 +94,12 @@
 .mpi-progress__handle {
     position: absolute;
     top: 50%;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: var(--ink-1);
-    border: 2px solid var(--accent-heat);
+    border: none;
+    box-shadow: 0 0 0 0.5px oklch(0 0 0 / 0.3);
     transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 3;

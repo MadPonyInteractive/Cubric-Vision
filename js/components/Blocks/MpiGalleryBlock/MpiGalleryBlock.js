@@ -214,6 +214,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             for (const group of g) removeGroup(group.id);
             for (const group of g) grid.el.removeCard(group.id);
+            Events.emit('media:deleted', { count: g.length });
         });
 
         grid.on('delete', ({ groups: g }) => {
@@ -302,7 +303,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         function _mountPb(props) {
             _pb?.el?.destroy?.();
             _pb = MpiPromptBox.mount(gid('prompt-box-mount'), props);
-            _pb?.el?.classList.add('mpi-prompt-box--gallery');
             return _pb;
         }
 

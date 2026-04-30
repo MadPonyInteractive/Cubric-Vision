@@ -12,6 +12,7 @@
 
 import { state } from '../state.js';
 import { Events } from '../events.js';
+import { refreshProject as refreshProjectStats, refreshGroup as refreshGroupStats } from '../services/projectStatsService.js';
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { gid } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
@@ -28,6 +29,8 @@ let _radialMount      = null;   // dedicated persistent container for the radial
 let _projectNameInst  = null;
 let _toolContainer    = null;
 let _appShell         = null;
+let _currentPage      = null;
+let _currentGroupId   = null;
 let _pageLanding      = null;
 let _currentBlock     = null;   // track mounted view Block for teardown
 
@@ -196,15 +199,39 @@ async function _loadView(page, params = {}) {
 }
 
 function _updateBreadcrumb(page, params) {
+    _currentPage = page;
+    _currentGroupId = params?.groupId || null;
     if (page === PAGE_GALLERY) {
+        _projectNameInst.el.setBackLabel('Projects');
         _projectNameInst.el.setGalleryLabel('');
         _projectNameInst.el.setGroupLabel('');
+        const ps = state.projectStats || { count: 0, bytes: 0 };
+        _projectNameInst.el.setStats({ count: ps.count, bytes: ps.bytes, label: 'ASSETS' });
+        refreshProjectStats();
     } else if (page === PAGE_GROUP_HISTORY) {
         const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
-        _projectNameInst.el.setGalleryLabel('Gallery');
+        _projectNameInst.el.setBackLabel('Gallery');
+        _projectNameInst.el.setGalleryLabel('');
         _projectNameInst.el.setGroupLabel(group?.name || 'Group');
+        const hs = state.historyStats || { count: 0, bytes: 0 };
+        const initialCount = (hs.groupId === group?.id) ? hs.count : (group?.history?.length || 0);
+        const initialBytes = (hs.groupId === group?.id) ? hs.bytes : 0;
+        _projectNameInst.el.setStats({ count: initialCount, bytes: initialBytes, label: 'ENTRIES' });
+        if (group) refreshGroupStats(group);
     }
 }
+
+// React to stats updates pushed by the stats service.
+Events.on('state:changed', ({ key, value }) => {
+    if (!_projectNameInst) return;
+    if (key === 'projectStats' && _currentPage === PAGE_GALLERY) {
+        _projectNameInst.el.setStats({ count: value.count, bytes: value.bytes, label: 'ASSETS' });
+    } else if (key === 'historyStats' && _currentPage === PAGE_GROUP_HISTORY) {
+        if (value.groupId === _currentGroupId) {
+            _projectNameInst.el.setStats({ count: value.count, bytes: value.bytes, label: 'ENTRIES' });
+        }
+    }
+});
 
 /**
  * Syncs the radial menu to the current page context.

@@ -24,7 +24,7 @@ body::before {
   height: 100%;
   background: radial-gradient(ellipse at 60% -10%, color-mix(in oklch, var(--accent-heat) 15%, transparent) 0%, transparent 60%),
     radial-gradient(ellipse at -10% 80%, oklch(0.72 0.20 6 / 0.15) 0%, transparent 50%),
-    var(--surface-0);
+    var(--surface-canvas);
   z-index: -3;
   pointer-events: none;
   transition: background var(--t-slow) var(--ease);

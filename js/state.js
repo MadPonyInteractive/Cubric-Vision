@@ -41,6 +41,10 @@ const _state = {
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
     gallerySizeLevel: 3,             // 1–5; survives gallery navigation within session
 
+    // ── Project stats (asset count + bytes on disk) ────────────────────────────
+    projectStats: { count: 0, bytes: 0 },   // Whole-project totals; refreshed on media add/delete
+    historyStats: { groupId: null, count: 0, bytes: 0 }, // Currently-viewed group totals
+
     // ── Focus mode ─────────────────────────────────────────────────────────────
     focusMode: false,                // F-key toggle: hides app chrome (sidebar, promptbox,
                                      // statusbar, tools/history panels) so the user can focus
