@@ -1,5 +1,4 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
@@ -9,75 +8,53 @@ import { clientLogger } from '../../../../services/clientLogger.js';
 import { qs } from '../../../../utils/dom.js';
 
 /**
- * MpiSettings — Settings overlay compound for the landing page.
+ * MpiSettings — Settings content for the MpiSlideOver panel.
  *
- * Wraps MpiOverlay (body-mount) and renders the full settings UI.
- * All settings logic is self-contained; callers only call show()/hide().
+ * No longer owns overlay chrome. Renders body content only.
+ * MpiSlideOver calls el.onOpen() each time the panel opens so fields
+ * are initialised with fresh values.
  *
- * Usage:
- *   const settings = MpiSettings.mount(document.createElement('div'));
- *   settings.el.show();
- *
- * Emits:
- *   'close' {} — overlay closed
+ * Usage (via slide-over event):
+ *   Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings });
  */
 export const MpiSettings = ComponentFactory.create({
     name: 'MpiSettings',
     css: ['js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css'],
 
-    template: () => `<div class="mpi-settings"></div>`,
+    template: () => `
+        <div class="mpi-settings">
+            <div class="mpi-settings__content">
+                <div class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">App Behavior</h3>
+                    <div class="mpi-settings__form-group">
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsAutoStartSlot"></div>
+                        <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
+                    </div>
+                </div>
+
+                <div class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">External Connections</h3>
+                    <div class="mpi-settings__form-group">
+                        <div id="mpiSettingsOllamaUrlSlot"></div>
+                    </div>
+                    <div class="mpi-settings__form-group">
+                        <div id="mpiSettingsComfyUrlSlot"></div>
+                    </div>
+                    <div class="mpi-settings__form-group">
+                        <div class="mpi-settings__folder-row">
+                            <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
+                            <div id="mpiSettingsBrowseBtnSlot"></div>
+                        </div>
+                        <span class="mpi-settings__hint">Optional: path to an external ComfyUI models folder.</span>
+                    </div>
+                </div>
+            </div>
+        </div>`,
 
     setup: (el, props, emit) => {
-        // ── Build content ────────────────────────────────────────────────────
-        const content = document.createElement('div');
-        content.className = 'mpi-settings__content';
-        content.innerHTML = `
-            <div class="mpi-settings__header">
-                <h2 class="mpi-settings__title">Settings</h2>
-                <p class="mpi-settings__desc">Configure Cubric Studio preferences and manage local models.</p>
-            </div>
+        // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
+        el.onOpen = () => _initFields(el);
 
-            <div class="mpi-settings__section">
-                <h3 class="mpi-settings__section-title">App Behavior</h3>
-                <div class="mpi-settings__form-group">
-                    <div class="mpi-settings__checkbox-slot" id="mpiSettingsAutoStartSlot"></div>
-                    <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
-                </div>
-            </div>
-
-            <div class="mpi-settings__section">
-                <h3 class="mpi-settings__section-title">External Connections</h3>
-                <div class="mpi-settings__form-group">
-                    <div id="mpiSettingsOllamaUrlSlot"></div>
-                </div>
-                <div class="mpi-settings__form-group">
-                    <div id="mpiSettingsComfyUrlSlot"></div>
-                </div>
-                <div class="mpi-settings__form-group">
-                    <div class="mpi-settings__folder-row">
-                        <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
-                        <div id="mpiSettingsBrowseBtnSlot"></div>
-                    </div>
-                    <span class="mpi-settings__hint">Optional: path to an external ComfyUI models folder.</span>
-                </div>
-            </div>
-
-            `;
-
-        // ── Mount overlay ────────────────────────────────────────────────────
-        const overlay = MpiOverlay.mount(el, { closable: true, mountTarget: 'body' });
-        overlay.el.appendToContainer(content);
-
-        overlay.on('close', () => emit('close', {}));
-
-        el.show = () => {
-            _initFields(content);
-            overlay.el.show();
-        };
-        el.hide = () => overlay.el.hide();
-
-        // ── Field initialisation (called each show so values are fresh) ──────
-        // Primitive instances are created once per show; slots are cleared first.
         function _initFields(root) {
             // ── Auto-start checkbox ──────────────────────────────────────────
             const autoStartSlot = qs('#mpiSettingsAutoStartSlot', root);
@@ -179,6 +156,5 @@ export const MpiSettings = ComponentFactory.create({
                 clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }
         }
-
-    }
+    },
 });

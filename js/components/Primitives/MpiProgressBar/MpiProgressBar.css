@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
    MpiProgressBar — Scoped BEM Styles
-   (Converted from MpiSlider)
    ═══════════════════════════════════════════════════════════════ */
 
 .mpi-progress {
@@ -17,9 +16,9 @@
 .mpi-progress__track-container {
     position: relative;
     width: 100%;
-    height: 8px;
+    height: 4px;
     background: var(--surface-3);
-    border-radius: 10px;
+    border-radius: 999px;
     overflow: visible;
 }
 
@@ -28,7 +27,7 @@
     left: 0;
     top: 0;
     height: 100%;
-    border-radius: 10px;
+    border-radius: 999px;
     pointer-events: none;
     z-index: 1;
 }
@@ -36,20 +35,19 @@
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 
 .mpi-progress--primary .mpi-progress__track-fill {
-    background: linear-gradient(90deg, var(--primary) 0%, var(--neon-electric) 100%);
-    box-shadow: 0 0 10px var(--primary-glow-sm);
+    background: var(--accent-heat);
 }
 
 .mpi-progress--secondary .mpi-progress__track-fill {
-    background: var(--text-2);
+    background: var(--ink-2);
 }
 
 .mpi-progress--success .mpi-progress__track-fill {
-    background: #10b981;
+    background: var(--accent-ok);
 }
 
 .mpi-progress--danger .mpi-progress__track-fill {
-    background: var(--danger);
+    background: var(--accent-heat);
 }
 
 .mpi-progress__input {
@@ -71,23 +69,24 @@
     cursor: default;
 }
 
-/* Hide Thumb — WebKit */
+/* Invisible Thumb — WebKit (sized for click hit-area, transparent so visual handle takes over) */
 .mpi-progress__input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
 
-/* Hide Thumb — Firefox */
+/* Invisible Thumb — Firefox */
 .mpi-progress__input::-moz-range-thumb {
-    width: 0;
-    height: 0;
-    opacity: 0;
+    width: 24px;
+    height: 24px;
+    background: transparent;
     border: none;
-    pointer-events: none;
+    cursor: pointer;
 }
 
 /* ── Handle (optional thumb) ──────────────────────────────────────────────── */
@@ -95,43 +94,36 @@
 .mpi-progress__handle {
     position: absolute;
     top: 50%;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: #ffffff;
-    border: 2px solid var(--mpi-color-accent, var(--primary));
+    background: var(--ink-1);
+    border: none;
+    box-shadow: 0 0 0 0.5px oklch(0 0 0 / 0.3);
     transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 3;
-    transition: transform 0.1s ease;
+    transition: transform var(--t-fast) var(--ease);
 }
 
 .mpi-progress:not(.mpi-progress--disabled):hover .mpi-progress__handle {
     transform: translate(-50%, -50%) scale(1.2);
 }
 
-/* Hover effects */
-.mpi-progress:not(.mpi-progress--disabled):hover .mpi-progress__track-fill {
-    box-shadow: 0 0 12px var(--primary-glow-sm), 0 0 20px var(--primary-glow-sm);
-}
-
 /* ── Memory Monitor variants (used by MpiMemoryMonitor) ───────────────────── */
 
 .mpi-progress--vram .mpi-progress__track-fill {
-    background: linear-gradient(90deg, #bf00ff, #ff00ff);
-    box-shadow: 0 0 10px rgba(191, 0, 255, 0.4);
+    background: var(--accent-heat);
 }
 
 .mpi-progress--ram .mpi-progress__track-fill {
-    background: linear-gradient(90deg, #00d2ff, #3a7bd5);
-    box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+    background: var(--accent-frost);
 }
 
-/* Warning state > 85% — overrides the variant gradient */
+/* Warning state > 85% — overrides the variant */
 .mpi-progress--vram.mpi-progress--warning .mpi-progress__track-fill,
 .mpi-progress--ram.mpi-progress--warning .mpi-progress__track-fill {
-    background: linear-gradient(90deg, #f59e0b, #ef4444) !important;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+    background: var(--accent-warn) !important;
     animation: mpi-progress-warn-pulse 1.8s ease-in-out infinite;
 }
 
@@ -152,12 +144,12 @@
 
 .mpi-progress--loading .mpi-progress__track-fill {
     background: linear-gradient(90deg,
-        rgba(59, 130, 246, 0.3) 0%,
-        rgba(59, 130, 246, 0.6) 20%,
-        rgba(59, 130, 246, 0.3) 40%,
-        rgba(59, 130, 246, 0.3) 100%
+        color-mix(in oklch, var(--accent-frost) 30%, transparent) 0%,
+        color-mix(in oklch, var(--accent-frost) 60%, transparent) 20%,
+        color-mix(in oklch, var(--accent-frost) 30%, transparent) 40%,
+        color-mix(in oklch, var(--accent-frost) 30%, transparent) 100%
     );
     background-size: 200% 100%;
     animation: mpi-progress-loading 1.5s ease-in-out infinite;
     width: 100% !important;
-}
+}

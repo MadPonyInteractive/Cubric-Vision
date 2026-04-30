@@ -4,7 +4,7 @@
     height: 100%;
     overflow: hidden;
     display: block;
-    background: var(--bg-base);
+    background: var(--surface-canvas);
     user-select: none;
     cursor: default;
 }

@@ -179,7 +179,12 @@
 
 /**
  * @typedef {Object} MpiOptionSelectorProps (Compound — js/components/Compounds/MpiOptionSelector)
- * @property {'ratio'|'number'} variant  - Selector variant (required)
+ * @property {'ratio'|'number'|'buttons'} variant  - Selector variant (required)
+ *
+ * The ratio popup panel renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors
+ * (defined in MpiOptionSelector.css) instead of generic MpiButton items.
+ * To show the ratio as a compact visual picker, use variant='ratio' — the popup
+ * automatically uses the Stage ratio-pick grid layout.
  *
  * variant='ratio' props:
  * @property {string} [modelType='flux'] - Model type (flux, sdxl, wan, social) — determines UI mode via RATIO_MODES
@@ -347,6 +352,7 @@
  * @property {boolean} [disabled=false] - Whether the button is interactable
  * @property {boolean} [loading=false] - Whether the button is in a loading state (shows spinner)
  * @property {'button' | 'submit' | 'reset'} [type='button'] - HTML button type
+ * @property {'sharp' | 'pill'} [shape='sharp'] - Corner shape; 'sharp' = 0px radius (Stage default), 'pill' = rounded
  *
  * Icon Button properties (optional - activates icon mode if 'icon' is provided):
  * @property {string} [icon] - MpiIcon registry key (e.g. 'play', 'trash', 'settings')
@@ -525,36 +531,43 @@
  * @typedef {Object} MpiSettingsProps (Compound — js/components/Compounds/MpiSettings)
  * No props required — all state is read from localStorage / app state internally.
  *
- * Instance methods (on instance.el):
- *   show() — opens the full-page settings overlay, initialises fields with current values
- *   hide() — closes the overlay
+ * Content component for MpiSlideOver. el.onOpen() re-initialises fields with fresh values.
  *
- * Emits:
- * 'close' {} — overlay closed
+ * Trigger via: Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })
  */
 
 /**
  * @typedef {Object} MpiHelpProps (Compound — js/components/Compounds/MpiHelp)
- * No props required.
+ * No props required. Static content.
  *
- * Instance methods (on instance.el):
- *   show() — opens the full-page help overlay
- *   hide() — closes the overlay
+ * Content component for MpiSlideOver.
  *
- * Emits:
- * 'close' {} — overlay closed
+ * Trigger via: Events.emit('slide-over:open', { title: 'Help', component: MpiHelp })
  */
 
 /**
  * @typedef {Object} MpiAboutProps (Compound — js/components/Compounds/MpiAbout)
  * No props required.
  *
+ * Emits: (none — content only, chrome owned by MpiSlideOver)
+ */
+
+/**
+ * @typedef {Object} MpiSlideOverProps (Compound — js/components/Compounds/MpiSlideOver)
+ * @property {string} title       - UPPERCASE label shown in panel header
+ * @property {Object} component   - ComponentFactory blueprint to mount in the body slot
+ *                                  (MpiSettings | MpiHelp | MpiAbout).
+ *                                  If component.el.onOpen exists, it is called on open.
+ *
+ * Opened via event (do not mount directly):
+ *   Events.emit('slide-over:open', { title, component })
+ *
  * Instance methods (on instance.el):
- *   show() — opens the full-page about overlay
- *   hide() — closes the overlay
+ *   open()  — slide in, append to body
+ *   close() — slide out, remove from DOM
  *
  * Emits:
- * 'close' {} — overlay closed
+ * 'close' {} — panel dismissed (close button, outside click, ui:close-all-popups)
  */
 
 /**
@@ -700,6 +713,8 @@
  * @property {string}   key           - Unique identifier emitted to onSelect
  * @property {string}   [icon]        - Optional icon name from icons.js
  * @property {string}   label         - Display text
+ * @property {string}   [kbd]         - Optional keyboard hint shown right-aligned (e.g. '⌘Z')
+ * @property {boolean}  [separator]   - If true, renders a divider line; other fields ignored
  * @property {boolean}  [disabled]    - Grays out item; click does nothing
  * @property {boolean}  [danger]      - Renders item in danger color
  *

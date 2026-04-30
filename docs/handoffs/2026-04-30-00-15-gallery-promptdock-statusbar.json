@@ -1,0 +1,105 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-04-30T00:15:00Z",
+  "session": {
+    "name": "Gallery stats port resume",
+    "branch": "worktree/quiet-shale"
+  },
+  "goal": {
+    "original": "Resume plan to-do 11.1 (visual diff verification). Wire /project-stats backend into landing/project-picker; iterate on remaining gallery surface drift (header, breadcrumb, slider, asset tile metadata) until user signs off; then editor + editor-video + popups.",
+    "status": "in_progress",
+    "summary": "Landing project-picker now shows live asset count + size via shared fetchStats() helper (Option A — refresh on every grid rebuild, no per-row event subs). MpiProjectName redesigned to single-row layout: text back-link (← PREVIOUS_WORKSPACE) + project name + breadcrumb + right-aligned stats (white text, only rule pink). Gallery header bg dropped (line-only), tabs/sort font weight reduced, hover bg removed, sort line pink+longer. MpiProgressBar handle white 16px with sub-pixel ring + 24×24 transparent native thumb (fixes hit-area). Asset tile rebuilt: top-left badge (MODEL · OPERATION / IMPORTED / VIDEO · 14.74S), bottom-left overlay (name + dims · time · \"prompt snippet\"), top-right pink fav-dot (persistent when fav) + hover-revealed heart + reuse buttons, hover-only top/bottom black gradient scrims for legibility (no permanent shadow on text), selected state = 2px pink outline + pink text on name/sub/top-badge. Pending: prompt dock restructure, status bar restyle, then editor + editor-video + popups visual diffs."
+  },
+  "plan": {
+    "file": "docs/plans/2026-04-29-stage-redesign-port.md",
+    "completed": [
+      "0.1–0.4 (token foundation)",
+      "1.1 (mapping table)",
+      "2.1–2.6 (hardcode sweep waves)",
+      "3.1 (compat alias removal)",
+      "4.1 (popup primitives)",
+      "5.1 (landing port)",
+      "6.1 (gallery port — initial pass)",
+      "7.1 (editor port)",
+      "8.1 (titlebar/status/focus)",
+      "9.1 (slide-overs)",
+      "10.1 (renames/removals)"
+    ],
+    "pending": [
+      "11.1 — Visual diff verification (in progress; gallery surface mostly aligned; prompt dock + status bar still pending; editor + editor-video + popups not yet diffed)"
+    ]
+  },
+  "next_action": {
+    "description": "Boot Electron, ask the user to verify the latest gallery card changes (top badge, bottom overlay, fav dot, hover scrims, pink-on-select text). Once accepted, move to PROMPT DOCK restructure (E): image stack ABOVE prompt box (NOT inline; anticipates multi-image future), model chip + solid pink GENERATE button on right side. Then STATUS BAR restyle (F): job state '● IDLE' or '◌ UPSCALING CROP_002 · 38% · 0:42 left' on the left, gauges 'VRAM ─── X/Y' 'RAM ─── X/Y' on the right with tabular-nums. After gallery is fully signed off, move to editor.html visual diff (G), editor-video.html (H), popups.html (I) — one surface at a time, ask user to report drift, fix, repeat. Use the human-in-the-loop brief gate before writing any code (Gate 1 of /mpi-execute-next). Caveman mode is active — keep responses terse. Do NOT modify mockups or redesign docs to match implementation; spec → code is one-way.",
+    "command": "/mpi-execute-next docs/plans/2026-04-29-stage-redesign-port.md"
+  },
+  "context": {
+    "key_decisions": [
+      "Landing stats wiring: Option A (refresh on grid rebuild) chosen over Option B (per-row event subs). Rows are only mounted while landing visible; navigating away → back rebuilds rows → fetches fresh stats. No event listeners on rows. AbortController batched per loadProjectGrid() call cancels stale fetches when grid rebuilds.",
+      "Shared utility: extracted fetchStats({ projectId, folderPath, groupId, itemIds, signal }) into js/services/projectStatsService.js — pure helper, no state writes. refreshProject + refreshGroup now call it. projectUI.js _buildProjectRow calls it directly for landing rows (no state coupling — state.projectStats stays for currently-open project only).",
+      "MpiProjectName back link is plain text (not MpiButton) showing '← PREVIOUS_WORKSPACE' (PROJECTS in gallery, GALLERY in history). Stats text + dot are white (--ink-1), only the leading rule is pink (--accent-heat). font-weight removed from .mpi-project-name__stats per user.",
+      "Gallery breadcrumb: history page no longer shows the inline 'GALLERY ›' segment because the back link '← GALLERY' already covers it. setGalleryLabel('') in navigation.js handles this.",
+      "MpiProjectName mount slot in workspace.css gets flex: 1 + min-width: 0 so the component spans the full topbar — required for margin-left: auto on stats to push to the right.",
+      "Slider hit-area: native input thumb is now 24×24 transparent (Webkit + Moz) so click anywhere near the visual handle works. Visible handle is 16px white with 0.5px sub-pixel ring (no thick border).",
+      "Asset tile overlay: NO permanent text-shadow / NO paint-order stroke — user rejected those. Pure white text + hover-only gradient scrims (top 35% + bottom 45%) on .__media::before/::after. Scrims also fade in on --selected and --show-info. Missing state repurposes ::before as solid grey cover, hides ::after.",
+      "Selected state: 2px pink outline-offset:-2px + pink text on .__name, .__sub, .__top-badge (replaces old pink footer-bar treatment).",
+      "Card icons (heart + reuse) moved from top-left to top-right. Selection checkbox moved to top-left. Persistent pink fav dot lives top-right and hides on hover (heart button takes its place).",
+      "Top-left badge data: 'IMPORTED' if uploaded, 'VIDEO · {duration.toFixed(2)}S' if video, else 'MODEL_NAME · OPERATION' (uppercased). Sub-line: '{w} × {h} · HH:MM · \"prompt snippet (≤30 chars)\"' — each piece optional, joined by ' · '."
+    ],
+    "constraints": [
+      "Critical Rules Snapshot from CLAUDE.md still applies: BEM mandatory, ComponentFactory.create(), no hardcoded colors (CSS vars only), no raw SVG (icons.js), no raw addEventListener in components (on/off from utils/dom.js), Events.on/emit for cross-component, Hotkeys.bind w/ registry id, ComponentFactory locked, register CSS in preloadStyles.js + types.js for new components.",
+      "Stage banned glassmorphism (no backdrop-filter), banned bouncy easing (--bounce dropped), banned neon glow.",
+      "Test on Electron desktop only (browser broken for most features per memory). User boots Electron and reports drift; agent does not run dev server / playwright unless user asks.",
+      "Mockups path is docs/redesign/c-stage/*.html. Mockups are spec, not source. One-way: spec → code. Do NOT modify any docs/redesign/c-stage/*.html or docs/redesign/*.md to match implementation.",
+      "Stats service is started once at boot in shell.js (startProjectStats). It listens to media:imported, generation:complete, media:deleted, project:stats-dirty, history:stats-dirty, project:changed. Refetches via fetch() and writes results to state.projectStats / state.historyStats. Landing rows do NOT subscribe to state.projectStats — they have their own per-row fetch.",
+      "When implementing prompt dock (E), the IMAGE STACK ABOVE prompt box decision is INTENTIONAL — diverges from mockup which shows inline-left image. Reason: future multi-image support shouldn't shrink the prompt textarea. Leave a // REDESIGN-DEVIATION: comment at the call site noting this.",
+      "Status bar (F) lives in shell-level component — likely js/components/.../MpiStatusBar or equivalent. Verify mount + connection to job state events before restyling. Use tabular-nums for gauge numbers."
+    ],
+    "files_modified": [
+      "routes/projects.js",
+      "js/state.js",
+      "js/services/projectStatsService.js",
+      "js/shell.js",
+      "js/shell/navigation.js",
+      "js/shell/projectUI.js",
+      "js/components/Compounds/MpiProjectName/MpiProjectName.js",
+      "js/components/Compounds/MpiProjectName/MpiProjectName.css",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Primitives/MpiProgressBar/MpiProgressBar.js",
+      "js/components/Primitives/MpiProgressBar/MpiProgressBar.css",
+      "js/events.js",
+      "styles/shell/landing.css",
+      "styles/shell/workspace.css"
+    ],
+    "files_to_read_first": [
+      "docs/handoffs/2026-04-30-00-15-gallery-promptdock-statusbar.json",
+      "docs/plans/2026-04-29-stage-redesign-port.md",
+      "docs/redesign/c-stage/gallery.html",
+      "docs/redesign/c-stage/editor.html",
+      "docs/redesign/c-stage/editor-video.html",
+      "docs/redesign/c-stage/popups.html",
+      "docs/redesign/PRODUCT.md",
+      "docs/redesign/DESIGN.md",
+      "docs/redesign/PORTING.md",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md (Critical Rules Snapshot)",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-state.md",
+    "docs/redesign/PRODUCT.md",
+    "docs/redesign/DESIGN.md",
+    "docs/redesign/PORTING.md"
+  ],
+  "resume_prompt": "Read docs/handoffs/2026-04-30-00-15-gallery-promptdock-statusbar.json end-to-end before doing anything. We are mid-execution of plan to-do 11.1 in docs/plans/2026-04-29-stage-redesign-port.md. Stage redesign port has aligned the GALLERY surface card overlays (top-left badge, bottom-left name + sub-line with dims · time · \"prompt snippet\", top-right pink fav-dot + hover heart/reuse, hover-only top/bottom black gradient scrims, pink-on-select text) and the project-name topbar (text back-link '← PROJECTS' / '← GALLERY', white stats with pink rule, full-width mount). Landing project-picker rows now show live asset count + size via a shared fetchStats() helper that re-runs on every grid rebuild. Slider has a 16px white handle with a 24×24 transparent native thumb hit-area. Gallery header is line-only (no bg), tabs/sort font weight reduced, sort line pink+longer, hover backgrounds removed. THE FIRST THING TO DO: greet the user, confirm you have read the handoff, the plan, and the gallery + editor + editor-video + popups mockups, and ASK the user to boot Electron and report any remaining drift on the gallery surface. THEN, the two remaining gallery slices the user already approved but are NOT YET DONE: (E) PROMPT DOCK restructure — image stack ABOVE prompt box (NOT inline; anticipates multi-image future), model chip + solid pink GENERATE button on right side; (F) STATUS BAR restyle — job state '● IDLE' / '◌ UPSCALING CROP_002 · 38% · 0:42 left' on the left, 'VRAM ─── X/Y' 'RAM ─── X/Y' tabular-nums on the right. After gallery is signed off, move sequentially through editor.html → editor-video.html → popups.html visual diffs. Use the human-in-the-loop brief gate before writing any code (Gate 1 of /mpi-execute-next). Caveman mode is active — keep responses terse. Mockups are SPEC, not source — translate intent into BEM + ComponentFactory + CSS variables + events bus + Hotkeys + icons.js patterns. Test on Electron desktop only. Do NOT modify mockups or redesign docs to match implementation."
+}

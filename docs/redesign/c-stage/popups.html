@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cubric Studio — Stage · Dropdowns &amp; Popups</title>
+    <link rel="stylesheet" href="../_base.css" />
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      html,
+      body {
+        background: var(--surface-canvas);
+        min-height: 100vh;
+      }
+      .titlebar .wordmark {
+        font-size: 18px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        -webkit-app-region: no-drag;
+      }
+      .brand-logo {
+        width: 18px;
+        height: 18px;
+        filter: hue-rotate(-50deg) saturate(0.78) brightness(1.05);
+      }
+      .brand-lettering {
+        height: 13px;
+        width: auto;
+        filter: hue-rotate(-30deg) saturate(0.85) brightness(1.08);
+      }
+
+      .head {
+        padding: var(--s-5) var(--s-6) var(--s-3);
+        display: flex;
+        align-items: baseline;
+        gap: var(--s-4);
+      }
+      .head h1 {
+        font-size: var(--t-xl);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .head .sub {
+        font-size: var(--t-xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+      }
+
+      main {
+        padding: 0 var(--s-6) var(--s-7);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--s-5);
+      }
+
+      .card {
+        background: var(--surface-1);
+        border: 1px solid var(--line);
+        padding: var(--s-5);
+        position: relative;
+      }
+      .card h2 {
+        font-size: var(--t-2xs);
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        font-weight: 500;
+        margin-bottom: var(--s-4);
+      }
+      .card .desc {
+        font-size: var(--t-sm);
+        color: var(--ink-3);
+        line-height: 1.5;
+        max-width: 56ch;
+        margin-bottom: var(--s-4);
+      }
+      .stage-row {
+        position: relative;
+        padding: 60px 24px 80px;
+        background: var(--surface-canvas);
+        border: 1px solid var(--line);
+      }
+      .stage-row + .stage-row {
+        margin-top: var(--s-3);
+      }
+
+      /* mock prompt dock — gives the dropdowns realistic context */
+      .mock-dock {
+        background: oklch(0.30 0.022 350);
+        border: 1px solid var(--ink-3);
+        padding: 14px;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-top: 36px;
+      }
+      .mock-dock input {
+        background: transparent;
+        border: 0;
+        outline: none;
+        flex: 1;
+        font-size: var(--t-sm);
+        color: var(--ink-1);
+      }
+      .mock-dock input::placeholder {
+        color: var(--ink-4);
+      }
+      .gen {
+        padding: 10px 22px;
+        background: var(--accent-heat);
+        color: oklch(0.16 0.02 0);
+        font-size: var(--t-2xs);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 700;
+        border: 0;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="titlebar">
+      <span class="brand">
+        <img class="brand-logo" src="assets/logo.png" alt="" />
+        <img class="brand-lettering" src="assets/lettering.png" alt="Cubric Studio" />
+      </span>
+      <span class="controls">— ▢ ×</span>
+    </header>
+
+    <div class="head">
+      <h1>Dropdowns &amp; popups</h1>
+      <span class="sub">Stage primitives</span>
+    </div>
+
+    <main>
+      <!-- Closed dropdown (default state) -->
+      <section class="card">
+        <h2>1 · Dropdown · closed</h2>
+        <p class="desc">
+          Default state. Mauve surface, 1px ink-3 border, mono label, chevron
+          right. Hover lifts the border to ink-2; opening switches it to
+          heat and rotates the chevron.
+        </p>
+        <div class="stage-row">
+          <div class="dropdown">
+            <button class="dropdown-trigger" aria-expanded="false">
+              <span>SDXL Realistic</span>
+              <svg class="chev" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Open dropdown (model picker) -->
+      <section class="card">
+        <h2>2 · Dropdown · open · selected highlighted</h2>
+        <p class="desc">
+          Active item shows heat left bar + heat color + 12% heat tint.
+          Other items are mono ink-2; hover lifts them to ink-1 with
+          surface-2 fill. Panel sits above the trigger by default
+          (suits a bottom-anchored prompt dock).
+        </p>
+        <div class="stage-row" style="min-height: 380px">
+          <div class="dropdown" data-open="true" style="position: absolute; bottom: 24px; left: 24px;">
+            <button class="dropdown-trigger" aria-expanded="true">
+              <span>SDXL Realistic</span>
+              <svg class="chev" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="dropdown-panel">
+              <div class="dropdown-item" aria-selected="true">
+                <span>SDXL Realistic</span>
+                <span class="meta">photo</span>
+              </div>
+              <div class="dropdown-item">
+                <span>ILL Anime Beauty</span>
+                <span class="meta">anime</span>
+              </div>
+              <div class="dropdown-item">
+                <span>ILL Anime</span>
+                <span class="meta">anime</span>
+              </div>
+              <div class="dropdown-item">
+                <span>PONY Mix</span>
+                <span class="meta">photo · stylized</span>
+              </div>
+              <div class="dropdown-item">
+                <span>Wan 2.2 Smooth</span>
+                <span class="meta">video</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Compact dropdown (chip variant) -->
+      <section class="card">
+        <h2>3 · Compact dropdown · operation chip</h2>
+        <p class="desc">
+          Smaller variant for inline use in toolbars and prompt docks.
+          Adds a heat dot to the left of the label, UPPERCASE mono.
+        </p>
+        <div class="stage-row">
+          <div class="dropdown dropdown-compact">
+            <button class="dropdown-trigger" aria-expanded="false">
+              <span class="dot"></span>
+              <span>Text to image</span>
+              <svg class="chev" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ratio popup -->
+      <section class="card">
+        <h2>4 · Popup · ratio picker</h2>
+        <p class="desc">
+          Floating panel anchored to its trigger. Header band carries
+          the title and a close affordance. Body holds the picker. The
+          active option fills heat; others stay outlined.
+        </p>
+        <div class="stage-row" style="min-height: 320px">
+          <div style="position: absolute; bottom: 24px; left: 24px;">
+            <button class="dropdown-trigger" style="min-width: 90px">
+              <i style="
+                display:inline-block;width:14px;height:14px;
+                border:1.5px solid var(--ink-1);margin-right:8px;
+              "></i>
+              <span>1:1</span>
+              <svg class="chev" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+
+            <div class="popup" data-open="true" style="left: 0; bottom: calc(100% + 8px); width: 340px;">
+              <div class="popup-h">
+                <span>Ratio</span>
+                <span class="x">×</span>
+              </div>
+              <div class="ratio-row">
+                <button class="ratio-pick r-1-1" aria-pressed="true">
+                  <i></i>1:1
+                </button>
+                <button class="ratio-pick r-3-4">
+                  <i></i>3:4
+                </button>
+                <button class="ratio-pick r-4-5">
+                  <i></i>4:5
+                </button>
+                <button class="ratio-pick r-5-8">
+                  <i></i>5:8
+                </button>
+                <button class="ratio-pick r-9-16">
+                  <i></i>9:16
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dropdowns inside the prompt dock context -->
+      <section class="card" style="grid-column: 1 / -1">
+        <h2>5 · In-context · prompt dock with model + op pickers</h2>
+        <p class="desc">
+          Same primitives composed where they actually appear in the app.
+          Model picker (compact) on the left, op picker next to it,
+          ratio button (opens popup) and batch count, then prompt + Generate.
+        </p>
+        <div class="stage-row">
+          <div class="mock-dock">
+            <div class="dropdown dropdown-compact">
+              <button class="dropdown-trigger" aria-expanded="false">
+                <span class="dot"></span>
+                <span>SDXL Realistic</span>
+                <svg class="chev" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </div>
+            <div class="dropdown dropdown-compact">
+              <button class="dropdown-trigger" aria-expanded="false">
+                <span>Text to image</span>
+                <svg class="chev" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </div>
+            <button class="dropdown-trigger" style="
+              min-width:0;gap:8px;padding:8px 12px;
+              font-size:var(--t-2xs);letter-spacing:0.18em;
+              text-transform:uppercase;
+            ">
+              <i style="
+                display:inline-block;width:12px;height:12px;
+                border:1.5px solid currentColor;
+              "></i>
+              <span>1:1</span>
+              <svg class="chev" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <button class="dropdown-trigger" style="
+              min-width:0;gap:8px;padding:8px 12px;
+              font-size:var(--t-2xs);letter-spacing:0.18em;
+              text-transform:uppercase;
+            ">
+              <svg class="chev" viewBox="0 0 24 24" style="transform: rotate(0deg)">
+                <path d="M3 4h18M3 12h18M3 20h18" />
+              </svg>
+              <span>×4</span>
+            </button>
+            <input placeholder="freckled face, soft daylight, photorealistic…" />
+            <button class="gen">▶ Generate</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right-click context menu -->
+      <section class="card" style="grid-column: 1 / -1">
+        <h2>6 · Context menu · right-click on a gallery asset</h2>
+        <p class="desc">
+          Same surface as dropdowns. 3-column grid: leading icon space,
+          label, trailing keyboard hint. Soft separator between groups.
+        </p>
+        <div class="stage-row" style="min-height: 360px">
+          <div class="menu" style="left: 24px; top: 24px;">
+            <div class="menu-item">
+              <span></span><span>Open</span><span class="kbd">↵</span>
+            </div>
+            <div class="menu-item">
+              <span></span><span>Open in editor</span><span class="kbd">⌘ E</span>
+            </div>
+            <div class="menu-item">
+              <span></span><span>Reveal in folder</span><span class="kbd">⌘ R</span>
+            </div>
+            <div class="menu-sep"></div>
+            <div class="menu-item">
+              <span></span><span>Duplicate</span><span class="kbd">⌘ D</span>
+            </div>
+            <div class="menu-item">
+              <span></span><span>Add to favorites</span><span class="kbd">F</span>
+            </div>
+            <div class="menu-item">
+              <span></span><span>Use as input</span><span class="kbd">⌘ I</span>
+            </div>
+            <div class="menu-sep"></div>
+            <div class="menu-item">
+              <span></span><span>Export…</span><span class="kbd">⌘ ⇧ E</span>
+            </div>
+            <div class="menu-item" style="color: var(--accent-heat)">
+              <span></span><span>Delete</span><span class="kbd">⌫</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

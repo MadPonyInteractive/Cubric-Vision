@@ -38,7 +38,7 @@ import { qs, on } from '../../../utils/dom.js';
  *   el.setModelList(list)
  *
  * Emits:
- *   'input' | 'copy' | 'mode-change' | 'media-change' | 'media-imported'
+ *   'input' | 'mode-change' | 'media-change' | 'media-imported'
  *   'run' | 'cancel' | 'model-change' | 'operation-change' | 'settings'
  */
 export const MpiPromptBox = ComponentFactory.create({
@@ -56,18 +56,10 @@ export const MpiPromptBox = ComponentFactory.create({
             </div>
             ` : ''}
 
-            <div class="mpi-prompt-box__prompts">
-                <div id="textarea-slot" class="mpi-prompt-box__main-textarea"></div>
-                <div class="mpi-prompt-box__copy-wrapper" id="copy-btn-slot"></div>
-            </div>
-
-            <div class="mpi-prompt-box__separator"></div>
-
-            <div class="mpi-prompt-box__bottom">
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--left"  id="settings-badge-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--neg"   id="bottom-neg-slot"></div>
-                <div class="mpi-prompt-box__area mpi-prompt-box__area--right" id="bottom-right-slot"></div>
-            </div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
     `,
 
@@ -356,9 +348,9 @@ export const MpiPromptBox = ComponentFactory.create({
         const textareaEl = qs('textarea', mainInput.el);
 
         const updateHeight = () => {
-            if (isExpansionLocked) { textareaEl.style.height = '3.5rem'; return; }
+            if (isExpansionLocked) { textareaEl.style.height = '2rem'; return; }
             textareaEl.style.height = 'auto';
-            textareaEl.style.height = Math.min(Math.max(textareaEl.scrollHeight, 56), 224) + 'px';
+            textareaEl.style.height = Math.min(Math.max(textareaEl.scrollHeight, 32), 224) + 'px';
         };
 
         _unsubs.push(on(textareaEl, 'input', () => {
@@ -376,14 +368,6 @@ export const MpiPromptBox = ComponentFactory.create({
             info: 'Toggle Expanding Height',
             size: 'sm', variant: 'ghost', toggleable: true, active: !isExpansionLocked
         }).on('click', (data) => { isExpansionLocked = !data.active; updateHeight(); });
-
-        // ── Copy button ────────────────────────────────────────────────────────
-        MpiButton.mount(qs('#copy-btn-slot', el), {
-            icon: 'copy', variant: 'ghost', size: 'sm', info: 'Copy current Text to Clipboard'
-        }).on('click', () => {
-            navigator.clipboard.writeText(textareaEl.value);
-            emit('copy', { text: textareaEl.value });
-        });
 
         // ── Settings popup (portaled) ──────────────────────────────────────────
         const popupEl = document.createElement('div');
@@ -440,7 +424,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Settings badge (trigger) ───────────────────────────────────────────
         const badgeSlot = qs('#settings-badge-slot', el);
         const badgeBtn = MpiButton.mount(badgeSlot, {
-            variant: 'ghost', size: 'sm',
+            variant: 'secondary', size: 'sm',
             toggleable: true,
             info: 'Open model & operation settings',
             extraClasses: 'mpi-prompt-box__settings-trigger',
@@ -451,13 +435,23 @@ export const MpiPromptBox = ComponentFactory.create({
         badgeBtn.el.appendChild(badgeHost);
 
         function _renderBadge() {
-            const modelName = model?.name ?? '—';
-            const opLabel   = commands[activeOperation]?.label ?? activeOperation;
-            badgeHost.innerHTML = MpiBadge.template({
-                label: `${modelName} · ${opLabel}`,
-                variant: 'secondary',
-            });
+            const modelName  = model?.name ?? '—';
+            const opLabel    = commands[activeOperation]?.label ?? activeOperation;
+            const batchCtrl  = _activeControls.get('batch');
+            const batchCount = batchCtrl ? parseInt(batchCtrl.getValue(), 10) : 1;
+            const batchTag   = batchCount > 1
+                ? `<span class="mpi-prompt-box__badge-batch">×${batchCount}</span>`
+                : '';
+            badgeHost.innerHTML = `
+                <span class="mpi-prompt-box__badge-stack">
+                    <span class="mpi-prompt-box__badge-model">${modelName}</span>
+                    <span class="mpi-prompt-box__badge-op">${opLabel}</span>
+                </span>
+                ${batchTag}
+            `;
         }
+
+        _unsubs.push(Events.on('settings:model:update', ({ key }) => { if (key === 'batch') _renderBadge(); }));
 
         badgeBtn.on('click', () => {
             if (popupActive) closePopup(); else openPopup();
@@ -594,10 +588,10 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Negative mode toggle ───────────────────────────────────────────────
         if (props.includeNegative) {
-            MpiButton.mount(qs('#bottom-right-slot', el), {
+            MpiButton.mount(qs('#bottom-neg-slot', el), {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
-                size: 'md', variant: 'primary', toggleable: true, active: isNegativeMode
+                size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
             }).on('click', (data) => {
                 isNegativeMode = data.active;
                 textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
@@ -614,7 +608,8 @@ export const MpiPromptBox = ComponentFactory.create({
         const runBtn = MpiButton.mount(runBtnSlot, {
             icon: 'play', iconActive: 'stop',
             info: 'Generate / Stop',
-            size: 'md', variant: 'primary',
+            size: 'sm', variant: 'primary',
+            label: 'Run',
             toggleable: true, active: isGenerating,
         });
 

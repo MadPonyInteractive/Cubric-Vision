@@ -11,9 +11,9 @@
 }
 
 .mpi-input__label {
-    font-size: 0.8rem;
+    font-size: var(--t-xs);
     font-weight: 600;
-    color: var(--text-2);
+    color: var(--ink-2);
     margin-left: 2px;
 }
 
@@ -21,34 +21,31 @@
     position: relative;
     display: flex;
     align-items: center;
-    /* background: var(--surface-glass); */
 }
 
 .mpi-input__field {
     width: 100%;
     background: var(--surface-3);
-    border: 1px solid var(--border-soft);
-    border-top: 1px solid var(--bg-recessed);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-soft);
+    border-top: 1px solid var(--surface-bar);
+    border-radius: var(--r-2);
     padding: 0.6rem 0.8rem;
-    color: var(--text);
+    color: var(--ink-1);
     font-family: inherit;
-    font-size: 0.9rem;
-    transition: all var(--bounce);
-    box-shadow: inset 0 2px 6px var(--bg-recessed);
+    font-size: var(--t-sm);
+    transition: all var(--t-fast) var(--ease);
+    box-shadow: inset 0 2px 6px oklch(0.16 0.02 350 / 0.2);
 }
 
 .mpi-input__field:focus {
     outline: none;
-    background: var(--surface);
-    border-color: var(--neon-electric);
-    box-shadow:
-        inset 0 2px 6px rgba(0, 0, 0, 0.2),
-        0 0 12px var(--neon-glow);
+    background: var(--surface-1);
+    border-color: var(--accent-frost);
+    box-shadow: inset 0 2px 6px oklch(0.16 0.02 350 / 0.2);
 }
 
 .mpi-input__field::placeholder {
-    color: var(--text-2);
+    color: var(--ink-2);
 }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
@@ -63,16 +60,16 @@
 }
 
 .mpi-input--error .mpi-input__field {
-    border-color: var(--danger);
+    border-color: var(--accent-heat);
 }
 
 .mpi-input--error .mpi-input__field:focus {
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 10px color-mix(in oklch, var(--accent-heat) 20%, transparent);
 }
 
 .mpi-input__error-msg {
-    font-size: 0.75rem;
-    color: var(--danger);
+    font-size: var(--t-xs);
+    color: var(--accent-heat);
     margin-left: 2px;
 }
 
@@ -80,15 +77,15 @@
 
 .mpi-input--readonly .mpi-input__field {
     cursor: default;
-    background: var(--bg-recessed);
-    border-color: var(--border-soft);
-    color: var(--text-2);
+    background: var(--surface-bar);
+    border-color: var(--line-soft);
+    color: var(--ink-2);
 }
 
 .mpi-input--readonly .mpi-input__field:focus {
-    border-color: var(--border-soft);
+    border-color: var(--line-soft);
     box-shadow: none;
-    background: var(--bg-recessed);
+    background: var(--surface-bar);
 }
 
 /* ── Sizes ────────────────────────────────────────────────────────────────── */
@@ -99,7 +96,7 @@
 
 .mpi-input--sm .mpi-input__field {
     padding: 0.3rem 0.4rem;
-    font-size: 0.8rem;
+    font-size: var(--t-xs);
     width: 6ch;
     text-align: center;
 }

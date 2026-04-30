@@ -1089,4 +1089,80 @@ router.get('/project-media/temp', async (req, res) => {
     }
 });
 
+/**
+ * GET /project-stats/:projectId
+ * Returns count + total bytes of media files in the project, or for a single
+ * group when `groupId` is supplied (sums sizes of that group's history items
+ * by reading their .meta/<itemId>.json sidecars and stat-ing the referenced
+ * media file).
+ *
+ * Query:
+ *   folderPath  {string} — required; absolute project folder path
+ *   groupId     {string} — optional; when set, sums only that group's items
+ *
+ * For groupId mode, the caller must POST or pass `itemIds` via query
+ * (comma-separated) — server has no project.json access path here without
+ * re-reading the file. We accept `itemIds` query for that case.
+ *
+ * Response: { success, count, bytes }
+ */
+router.get('/project-stats/:projectId', async (req, res) => {
+    try {
+        const { folderPath, groupId, itemIds } = req.query;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+
+        const mediaDir = path.join(folderPath, 'Media');
+        if (!(await fs.pathExists(mediaDir))) {
+            return res.json({ success: true, count: 0, bytes: 0 });
+        }
+
+        // Group mode: sum sizes for an explicit list of item IDs.
+        if (groupId && itemIds) {
+            const ids = itemIds.split(',').map(s => s.trim()).filter(Boolean);
+            const metaDir = path.join(mediaDir, '.meta');
+            let count = 0;
+            let bytes = 0;
+            for (const id of ids) {
+                const metaPath = path.join(metaDir, `${id}.json`);
+                if (!(await fs.pathExists(metaPath))) continue;
+                let meta;
+                try { meta = await fs.readJson(metaPath); } catch { continue; }
+                let mediaPath = null;
+                if (meta.filePath) {
+                    const m = meta.filePath.match(/path=(.+)$/);
+                    if (m) mediaPath = decodeURIComponent(m[1]);
+                }
+                if (!mediaPath || !(await fs.pathExists(mediaPath))) continue;
+                const stat = await fs.stat(mediaPath);
+                if (!stat.isFile()) continue;
+                count++;
+                bytes += stat.size;
+            }
+            return res.json({ success: true, count, bytes });
+        }
+
+        // Project mode: count + sum all media files (skip sidecars).
+        const entries = await fs.readdir(mediaDir);
+        const mediaExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'mp4', 'webm', 'mov', 'avi', 'mp3', 'wav', 'ogg', 'flac', 'm4a']);
+        let count = 0;
+        let bytes = 0;
+        for (const name of entries) {
+            if (name === '.meta' || name.endsWith('.json') || name.endsWith('.meta.json')) continue;
+            const ext = path.extname(name).toLowerCase().slice(1);
+            if (!mediaExts.has(ext)) continue;
+            const filePath = path.join(mediaDir, name);
+            try {
+                const stat = await fs.stat(filePath);
+                if (!stat.isFile()) continue;
+                count++;
+                bytes += stat.size;
+            } catch { /* skip */ }
+        }
+        res.json({ success: true, count, bytes });
+    } catch (err) {
+        logger.error('project', 'project-stats error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

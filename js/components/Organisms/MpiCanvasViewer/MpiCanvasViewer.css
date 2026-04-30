@@ -5,7 +5,7 @@
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: var(--surface-1);
+    background: transparent;
 }
 
 /* Canvas container fills entire viewer */
@@ -13,6 +13,65 @@
     width: 100%;
     height: 100%;
     position: relative;
+}
+
+/* Radial vignette — darkens corners, keeps canvas centre clean */
+.mpi-canvas-viewer__wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, var(--surface-canvas, var(--surface-0)) 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* ── Canvas dock — sticky bottom action band ─────────────────────────────── */
+.mpi-canvas-viewer__dock {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--s-2) var(--s-3);
+    background: linear-gradient(to bottom, transparent 0%, var(--surface-bar) 100%);
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    pointer-events: none;
+    z-index: 4;
+}
+
+.mpi-canvas-viewer__dock > * {
+    pointer-events: auto;
+}
+
+/* ── Mask overlay layer — heat radial gradient + dashed outline ─────────── */
+.mpi-canvas-viewer__mask-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    z-index: 3;
+}
+
+.mask-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center,
+        oklch(0.72 0.20 6 / 0.60) 0%,
+        oklch(0.72 0.20 6 / 0.25) 50%,
+        oklch(0.72 0.20 6 / 0.00) 100%
+    );
+    outline: 1.5px dashed oklch(0.72 0.20 6 / 0.85);
+    outline-offset: 0;
+}
+
+.mask-shape--frost {
+    background: radial-gradient(ellipse at center,
+        oklch(0.78 0.14 220 / 0.60) 0%,
+        oklch(0.78 0.14 220 / 0.25) 50%,
+        oklch(0.78 0.14 220 / 0.00) 100%
+    );
+    outline-color: oklch(0.78 0.14 220 / 0.85);
 }
 
 /* ── Generation spinner — centred over the canvas ────────────────────────── */
@@ -45,4 +104,51 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
+}
+
+/* ── Compare overlay — top-right: "[Tool] · Compare" ────────────────────── */
+
+.mpi-canvas-viewer__compare-overlay {
+    position: absolute;
+    top: var(--s-4);
+    right: var(--s-4);
+    display: flex;
+    gap: 16px;
+    font-size: var(--t-xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    z-index: 6;
+    pointer-events: none;
+}
+
+.mpi-canvas-viewer__compare-tool {
+    color: var(--ink-3);
+}
+
+.mpi-canvas-viewer__compare-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    color: var(--ink-3);
+    transition: color var(--t-fast) var(--ease);
+    background: none;
+    border: none;
+    font-size: inherit;
+    font-family: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    padding: 0;
+}
+
+.mpi-canvas-viewer__compare-btn:hover:not(:disabled) {
+    color: var(--ink-1);
+}
+
+.mpi-canvas-viewer__compare-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.mpi-canvas-viewer__compare-btn--active {
+    color: var(--ink-1);
 }

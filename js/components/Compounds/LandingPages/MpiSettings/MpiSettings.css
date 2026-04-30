@@ -19,23 +19,23 @@
 }
 
 .mpi-settings__title {
-    font-size: 1.75rem;
+    font-size: var(--t-lg);
     font-weight: 600;
-    color: var(--text-1);
+    color: var(--ink-1);
     margin: 0 0 0.4rem;
 }
 
 .mpi-settings__desc {
-    color: var(--text-3);
+    color: var(--ink-3);
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--t-sm);
 }
 
 /* ── Section ─────────────────────────────────────────────────── */
 .mpi-settings__section {
     background: var(--surface-1);
-    border: 1px solid var(--border-1);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
     padding: 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
@@ -43,11 +43,11 @@
 }
 
 .mpi-settings__section-title {
-    font-size: 0.8rem;
+    font-size: var(--t-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-3);
+    color: var(--ink-3);
     margin: 0 0 0.25rem;
 }
 
@@ -59,34 +59,34 @@
 }
 
 .mpi-settings__form-group label {
-    font-size: 0.875rem;
-    color: var(--text-2);
+    font-size: var(--t-sm);
+    color: var(--ink-1);
 }
 
 .mpi-settings__form-group input[type="text"] {
     background: var(--surface-2);
-    border: 1px solid var(--border-1);
-    border-radius: var(--radius-sm);
-    color: var(--text-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
     padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+    font-size: var(--t-sm);
     width: 100%;
     outline: none;
-    transition: border-color var(--transition);
+    transition: border-color var(--t-base) var(--ease);
 }
 
 .mpi-settings__form-group input[type="text"]:focus {
-    border-color: var(--accent);
+    border-color: var(--accent-heat);
 }
 
 .mpi-settings__hint {
-    font-size: 0.78rem;
-    color: var(--text-3);
+    font-size: var(--t-xs);
+    color: var(--ink-3);
 }
 
 .mpi-settings__error {
-    font-size: 0.875rem;
-    color: var(--danger);
+    font-size: var(--t-sm);
+    color: var(--accent-heat);
 }
 
 /* ── Checkbox pill ───────────────────────────────────────────── */
@@ -95,12 +95,12 @@
     align-items: center;
     gap: 0.6rem;
     cursor: pointer;
-    font-size: 0.875rem;
-    color: var(--text-2);
+    font-size: var(--t-sm);
+    color: var(--ink-1);
 }
 
 .mpi-settings__checkbox-pill input[type="checkbox"] {
-    accent-color: var(--accent);
+    accent-color: var(--accent-heat);
     width: 1rem;
     height: 1rem;
     cursor: pointer;
@@ -111,8 +111,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.875rem;
-    color: var(--text-2);
+    font-size: var(--t-sm);
+    color: var(--ink-1);
 }
 
 /* ── Toggle switch ───────────────────────────────────────────── */
@@ -136,7 +136,7 @@
     background: var(--surface-2);
     border-radius: 999px;
     cursor: pointer;
-    transition: background var(--transition);
+    transition: background var(--t-base) var(--ease);
 }
 
 .mpi-settings__toggle-slider::before {
@@ -147,44 +147,33 @@
     left: 0.18rem;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--text-3);
+    background: var(--ink-3);
     border-radius: 50%;
-    transition: transform var(--transition), background var(--transition);
+    transition: transform var(--t-base) var(--ease), background var(--t-base) var(--ease);
 }
 
 .mpi-settings__toggle input:checked + .mpi-settings__toggle-slider {
-    background: var(--accent);
+    background: var(--accent-heat);
 }
 
 .mpi-settings__toggle input:checked + .mpi-settings__toggle-slider::before {
     transform: translate(1.1rem, -50%);
-    background: #fff;
+    background: var(--ink-1);
 }
 
 /* ── Folder row ──────────────────────────────────────────────── */
 .mpi-settings__folder-row {
     display: flex;
+    align-items: flex-end;
     gap: 0.5rem;
+}
+
+.mpi-settings__folder-input {
+    flex: 1;
+    min-width: 0;
 }
 
 .mpi-settings__folder-row input[type="text"] {
     flex: 1;
-}
-
-.mpi-settings__browse-btn {
-    background: var(--surface-2);
-    border: 1px solid var(--border-1);
-    border-radius: var(--radius-sm);
-    color: var(--text-2);
-    padding: 0.5rem 0.85rem;
-    font-size: 0.875rem;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: border-color var(--transition), color var(--transition);
-}
-
-.mpi-settings__browse-btn:hover {
-    border-color: var(--accent);
-    color: var(--text-1);
 }
 

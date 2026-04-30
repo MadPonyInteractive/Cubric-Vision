@@ -169,5 +169,50 @@ Four skills manage a human-in-the-loop execution system:
 | App versioning system | `docs/versioning.md` | No briefing section — provide context inline |
 | Project data model | `docs/project-integrity.md` | No briefing section — provide context inline |
 | Download system | `.claude/rules/downloads.md` | `## Sub-Agent Briefing` |
+| **REDESIGN — Stage UI port** | `docs/redesign/PORTING.md` (+ `PRODUCT.md`, `DESIGN.md`, `RECOLOR.md`) | Read all four end-to-end before touching any redesign code |
+
+---
+
+## Active redesign — `docs/redesign/`
+
+This worktree carries a full UI redesign ("Stage" direction). Source of truth for the redesign:
+
+| File | Purpose |
+|---|---|
+| `docs/redesign/PRODUCT.md` | Persona, register, tone, anti-references. Read first. |
+| `docs/redesign/DESIGN.md` | OKLCH tokens, type scale, component primitives, motion, banned patterns. **Token block here is the new `:root`.** |
+| `docs/redesign/PORTING.md` | Phase-by-phase port plan with file-level mappings. Execute one phase at a time. |
+| `docs/redesign/RECOLOR.md` | Photoshop hex-replace recipe for mascot + logo PNGs. |
+| `docs/redesign/c-stage/*.html` | The five Stage mockups: `landing`, `gallery`, `editor`, `editor-video`, `popups`. **Visual ground truth.** |
+| `docs/redesign/c-stage/tokens.css` | Stage tokens + primitive selectors (dropdowns, popups, menu, gauge, frame, etc.). Copy values, not class names. |
+| `docs/redesign/_base.css` | Mockup base reset. Reference only — do not import into the app. |
+
+### How to consume the redesign docs
+
+1. Mockups are **spec**, not source. Do NOT copy markup verbatim. Translate visual intent into the app's existing patterns:
+   - BEM (`.mpi-block__element--modifier`)
+   - `ComponentFactory.create()`
+   - `js/utils/dom.js` (`qs`, `qsa`, `gid`, `on`, `off`)
+   - `js/utils/icons.js` (no raw SVG inline — register missing icons there first)
+   - CSS variables only (no hardcoded hex). New variables go in `styles/01_base.css`.
+   - `Events.on()` / `Events.emit()` for cross-component communication.
+   - `Hotkeys.bind` with a `hotkeyRegistry.js` id (no raw `window.addEventListener('keydown')`).
+2. Token swap (PORTING.md Phase 0) lands first. Replace the `:root` block in `styles/01_base.css` with the OKLCH block from `docs/redesign/DESIGN.md`. Map legacy variable names (`--bg`, `--neon-glow`, etc.) to the new tokens via compat aliases — see PORTING.md Phase 0.3.
+3. Each phase ships in its own commit. After each phase: open the matching mockup at `docs/redesign/c-stage/<surface>.html` in a browser, run the app, visually diff. If they don't match in a way the spec doesn't cover, **ask before deviating**.
+4. Do NOT modify any file under `docs/redesign/*.md` or `docs/redesign/c-stage/*` to "match implementation." The relationship is one-way: spec → code. If a real-app constraint forces a deviation, leave a `// REDESIGN-DEVIATION:` comment at the call site and note it in the PR description.
+5. Mascot + logo PNGs ship recolored per `RECOLOR.md` (Photoshop pass at the source). Until that pass lands, mockups use the original blue PNGs with a CSS hue-rotate filter — **do not ship the filter to the app**, recolor at the source.
+
+### First task in any redesign session
+
+Before editing any file, read in this order:
+
+1. `docs/redesign/PRODUCT.md` (full)
+2. `docs/redesign/DESIGN.md` (full)
+3. `docs/redesign/PORTING.md` (full)
+4. The mockup matching the surface you're about to touch
+5. The "Critical Rules Snapshot" above
+6. Any `.claude/rules/*.md` referenced by the routing table for the area you're modifying (components, events, state, etc.)
+
+Confirm in your first message that you've read them. Then propose which PORTING.md phase to run, and wait for approval before writing code.
 
 ---

@@ -1,28 +1,35 @@
 import { ComponentFactory } from '../../factory.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { ce } from '/js/utils/dom.js';
 
 /**
- * MpiProjectName — Project title bar with 2-level breadcrumb.
+ * MpiProjectName — Project title bar with 2-level breadcrumb + right-side stats.
  *
- * Layout:  ↑  |  PROJECT NAME  ›  GROUP NAME
+ * Layout:  ← PREVIOUS  PROJECT NAME  ›  GROUP NAME           ___  N ASSETS · X.X GB
  *
- * The up-arrow is always an up-link (not a history back):
- *   - In group history  → emits 'up' (navigation goes to gallery)
- *   - In gallery        → emits 'up' (navigation goes to project picker / landing)
+ * The back link names the previous workspace (e.g. 'PROJECTS' in gallery,
+ * 'GALLERY' in group history) — caller controls via `setBackLabel`.
  *
  * The "Gallery" segment is a clickable link shown only when inside a group.
  * The group name segment is plain text — the current location.
  *
+ * Stats slot (right-aligned, pink) shows asset count + size on disk. Caller
+ * passes `statsLabel` ('ASSETS' / 'ENTRIES') to suit the surface.
+ *
  * Props:
+ * @param {string} [backLabel='']    - Previous workspace name (e.g. 'PROJECTS', 'GALLERY')
  * @param {string} [projectName='']  - Active project name shown above breadcrumb
  * @param {string} [galleryLabel=''] - e.g. 'Gallery' — shown as clickable link; empty = hidden
  * @param {string} [groupLabel='']   - e.g. 'My Group' — shown as current location; empty = hidden
+ * @param {number} [statsCount=0]    - count value rendered before label
+ * @param {number} [statsBytes=0]    - bytes-on-disk; rendered as KB/MB/GB
+ * @param {string} [statsLabel='ASSETS'] - noun for the count (ASSETS, ENTRIES, etc.)
  *
  * Instance methods (on instance.el):
- *   setProjectName(name)    — update project name
- *   setGalleryLabel(label)  — pass '' to hide (we are at gallery root)
- *   setGroupLabel(label)    — pass '' to hide (we are not inside a group)
+ *   setBackLabel(label)                — update back-link text (e.g. 'PROJECTS')
+ *   setProjectName(name)               — update project name
+ *   setGalleryLabel(label)             — pass '' to hide (we are at gallery root)
+ *   setGroupLabel(label)               — pass '' to hide (we are not inside a group)
+ *   setStats({ count, bytes, label })  — update stats; any field optional
  *
  * Emits:
  *   'up'      {} — up-arrow clicked (navigate up one level)
@@ -36,16 +43,20 @@ export const MpiProjectName = ComponentFactory.create({
 
     setup: (el, props, emit) => {
 
-        // ── Up button ───────────────────────────────────────────────────────────
+        // ── Back link (← PREVIOUS_WORKSPACE) ────────────────────────────────────
 
-        const upWrap = ce('div', { className: 'mpi-project-name__back' });
-        const upBtn = MpiButton.mount(upWrap, {
-            icon: 'back',
-            size: 'sm',
-            variant: 'ghost',
-            info: 'Go up',
+        const backBtn = ce('button', {
+            className: 'mpi-project-name__back',
+            type: 'button',
+            title: 'Go up',
         });
-        upBtn.on('click', () => emit('up', {}));
+        const backArrow = ce('span', { className: 'mpi-project-name__back-arrow', textContent: '←', 'aria-hidden': 'true' });
+        const backLabelEl = ce('span', {
+            className: 'mpi-project-name__back-label',
+            textContent: (props.backLabel || '').toUpperCase(),
+        });
+        backBtn.append(backArrow, backLabelEl);
+        backBtn.addEventListener('click', () => emit('up', {}));
 
         // ── Text block ──────────────────────────────────────────────────────────
 
@@ -82,7 +93,36 @@ export const MpiProjectName = ComponentFactory.create({
 
         breadcrumb.append(galleryEl, sepEl, groupEl);
         textBlock.append(projectNameEl, breadcrumb);
-        el.append(upWrap, textBlock);
+
+        // ── Stats (right-aligned: rule + count + label · size) ─────────────────
+        const statsEl = ce('div', { className: 'mpi-project-name__stats' });
+        const statsRule  = ce('span', { className: 'mpi-project-name__stats-rule', 'aria-hidden': 'true' });
+        const statsCount = ce('span', { className: 'mpi-project-name__stats-count' });
+        const statsLabel = ce('span', { className: 'mpi-project-name__stats-label' });
+        const statsSep   = ce('span', { className: 'mpi-project-name__stats-sep', textContent: '·', 'aria-hidden': 'true' });
+        const statsSize  = ce('span', { className: 'mpi-project-name__stats-size' });
+        statsEl.append(statsRule, statsCount, statsLabel, statsSep, statsSize);
+
+        let _statsCount = Number(props.statsCount) || 0;
+        let _statsBytes = Number(props.statsBytes) || 0;
+        let _statsLabel = (props.statsLabel || 'ASSETS').toUpperCase();
+
+        function _formatBytes(b) {
+            if (!b || b < 1) return '0 KB';
+            const KB = 1024, MB = KB * 1024, GB = MB * 1024;
+            if (b >= GB) return `${(b / GB).toFixed(1)} GB`;
+            if (b >= MB) return `${(b / MB).toFixed(1)} MB`;
+            return `${Math.max(1, Math.round(b / KB))} KB`;
+        }
+
+        function _renderStats() {
+            statsCount.textContent = String(_statsCount);
+            statsLabel.textContent = ` ${_statsLabel}`;
+            statsSize.textContent  = _formatBytes(_statsBytes);
+        }
+        _renderStats();
+
+        el.append(backBtn, textBlock, statsEl);
 
         // ── Visibility ──────────────────────────────────────────────────────────
 
@@ -118,6 +158,19 @@ export const MpiProjectName = ComponentFactory.create({
         el.setGroupLabel = (label) => {
             groupEl.textContent = label.toUpperCase();
             _update();
+        };
+
+        /** @param {string} label — name of previous workspace (e.g. 'PROJECTS', 'GALLERY') */
+        el.setBackLabel = (label) => {
+            backLabelEl.textContent = String(label || '').toUpperCase();
+        };
+
+        /** @param {{ count?: number, bytes?: number, label?: string }} stats */
+        el.setStats = (stats = {}) => {
+            if (typeof stats.count === 'number')  _statsCount = stats.count;
+            if (typeof stats.bytes === 'number')  _statsBytes = stats.bytes;
+            if (stats.label) _statsLabel = String(stats.label).toUpperCase();
+            _renderStats();
         };
 
         // ── Cleanup ─────────────────────────────────────────────────────────────

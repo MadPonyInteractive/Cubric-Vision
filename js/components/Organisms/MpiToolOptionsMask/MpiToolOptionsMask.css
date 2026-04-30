@@ -1,14 +1,14 @@
 .mpi-tool-options-mask {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2, 0.5rem);
-    padding: var(--space-2, 0.5rem);
+    gap: var(--s-2);
+    padding: var(--s-2);
 }
 
 .mpi-tool-options-mask__section {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2, 0.5rem);
+    gap: var(--s-2);
     justify-content: center;
 }
 
@@ -21,12 +21,105 @@
 .mpi-tool-options-mask__row {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2, 0.5rem);
+    gap: var(--s-2);
     justify-content: center;
 }
 
 .mpi-tool-options-mask__divider {
     height: 1px;
-    background: var(--border-1);
-    margin: var(--space-1, 0.25rem) 0;
+    background: var(--line);
+    margin: var(--s-1) 0;
+}
+
+/* ── Pill picker — Face / Hair / Body / Hands / Custom ───────────────────── */
+.mpi-tool-options-mask__pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1);
+    justify-content: center;
+    padding: var(--s-1) 0;
+}
+
+.mpi-tool-options-mask__pill {
+    padding: 4px 10px;
+    font-size: var(--t-2xs);
+    font-family: var(--font-main);
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+
+.mpi-tool-options-mask__pill:hover {
+    color: var(--ink-2);
+    border-color: var(--ink-2);
+}
+
+.mpi-tool-options-mask__pill--active {
+    color: var(--ink-deep, var(--surface-0));
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+}
+
+/* ── Detect button — full-width outline, hover fills ────────────────────── */
+.mpi-tool-options-mask__detect-btn {
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--t-xs);
+    font-family: var(--font-main);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.mpi-tool-options-mask__detect-btn:hover {
+    color: var(--surface-0);
+    background: var(--ink-1);
+    border-color: var(--ink-1);
+}
+
+/* ── Sliders — Size / Feather / Opacity ──────────────────────────────────── */
+.mpi-tool-options-mask__slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    padding: var(--s-1) 0;
+}
+
+.mpi-tool-options-mask__slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+}
+
+.mpi-tool-options-mask__slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: oklch(0.78 0.14 220 / 0.25);
+    border-radius: var(--r-1);
+    outline: none;
+    cursor: pointer;
+}
+
+.mpi-tool-options-mask__slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink-1);
+    border: none;
+    cursor: pointer;
 }

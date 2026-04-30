@@ -18,29 +18,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    background: var(--bg-recessed);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.55rem 0.75rem 0.55rem 0.8rem;
-    color: var(--text);
+    gap: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    padding: 10px 14px;
+    color: var(--ink-1);
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: var(--t-sm);
     cursor: pointer;
-    transition: all var(--bounce);
+    transition: background var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
     outline: none;
     text-align: left;
 }
 
 .mpi-dropdown__trigger:hover {
-    background: var(--bg-recessed);
-    border-color: var(--border-soft);
+    background: var(--surface-3);
+    border-color: var(--ink-2);
 }
 
 .mpi-dropdown.is-open .mpi-dropdown__trigger {
-    border-color: var(--neon-electric);
-    background: var(--bg-recessed);
-    box-shadow: 0 0 10px var(--neon-glow-sm);
+    border-color: var(--accent-heat);
+    background: var(--surface-2);
 }
 
 .mpi-dropdown__label {
@@ -56,17 +55,17 @@
     flex-shrink: 0;
     width: 8px;
     height: 8px;
-    border-right: 2px solid var(--text-3);
-    border-bottom: 2px solid var(--text-3);
+    border-right: 1.5px solid var(--ink-3);
+    border-bottom: 1.5px solid var(--ink-3);
     rotate: 45deg;
-    transition: rotate var(--transition), border-color var(--transition);
+    transition: rotate var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
     margin-bottom: 2px;
 }
 
 .mpi-dropdown.is-open .mpi-dropdown__chevron {
     rotate: 225deg;
     margin-bottom: -2px;
-    border-color: var(--neon-electric);
+    border-color: var(--accent-heat);
 }
 
 /* ── Option list ───────────────────────────────────────────────────────────── */
@@ -80,11 +79,11 @@
 .mpi-dropdown__list {
     position: fixed;
     z-index: 10001;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.2rem;
-    box-shadow: 0 8px 24px var(--bg-recessed);
+    background: oklch(0.30 0.022 350);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    padding: 4px 0;
+    box-shadow: 0 24px 48px -16px oklch(0.16 0.02 350 / 0.6);
     overflow-y: auto;
     max-height: 220px;
     transform-origin: top center;
@@ -92,15 +91,14 @@
     /* Hidden by default */
     opacity: 0;
     pointer-events: none;
-    transform: scaleY(0.9);
-    transition: opacity var(--transition), transform var(--transition);
+    transform: scaleY(0.95);
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
 }
 
 .mpi-dropdown__list.is-open {
     opacity: 1;
     pointer-events: auto;
     transform: scaleY(1);
-    background: var(--bg-modal);
 }
 
 /* Direction-aware transform-origin — class is on the portal list via JS
@@ -112,31 +110,54 @@
 /* ── Option items ──────────────────────────────────────────────────────────── */
 
 .mpi-dropdown__option {
-    padding: 0.45rem 0.75rem;
-    border-radius: calc(var(--radius) - 2px);
-    font-size: 0.88rem;
-    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: var(--t-sm);
+    color: var(--ink-2);
     cursor: pointer;
-    transition: background var(--transition), color var(--transition);
+    border-left: 2px solid transparent;
+    transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .mpi-dropdown__option:hover {
-    background: var(--bg-recessed);
-    color: var(--text);
+    background: var(--surface-2);
+    color: var(--ink-1);
 }
 
 .mpi-dropdown__option.is-active {
-    background: rgba(var(--neon-electric-rgb, 0, 200, 255), 0.12);
-    color: var(--neon-electric);
+    color: var(--accent-heat);
+    border-left-color: var(--accent-heat);
+    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
 }
 
 .mpi-dropdown__option.is-disabled {
     opacity: 0.35;
     cursor: not-allowed;
     pointer-events: none;
+}
+
+/* ── Compact modifier — model chip usage ───────────────────────────────────── */
+
+.mpi-dropdown--compact .mpi-dropdown__trigger {
+    min-width: 0;
+    padding: 8px 12px;
+    gap: 10px;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.mpi-dropdown--compact .mpi-dropdown__trigger .mpi-dropdown__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-heat);
+    flex-shrink: 0;
 }
 
 /* ── Disabled state ────────────────────────────────────────────────────────── */

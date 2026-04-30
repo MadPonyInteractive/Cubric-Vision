@@ -17,7 +17,7 @@
 
 .mpi-video-scene__empty {
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--ink-3);
     text-align: center;
     padding: 0.75rem 0;
     margin: 0;
@@ -26,8 +26,8 @@
 /* ── Shot card ───────────────────────────────────────────────────────────── */
 
 .mpi-video-scene__card {
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
     overflow: hidden;
 }
 
@@ -36,7 +36,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.35rem 0.5rem 0.35rem 0.75rem;
-    border-bottom: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--line-soft);
     background: var(--surface-2);
 }
 
@@ -45,7 +45,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-3);
 }
 
 .mpi-video-scene__card-body {
@@ -79,7 +79,7 @@
     flex-shrink: 0;
     width: 5.5rem;
     font-size: 0.75rem;
-    color: var(--text-2);
+    color: var(--ink-3);
     text-align: right;
 }
 

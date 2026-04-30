@@ -5,10 +5,13 @@
  */
 
 import { listProjects, createProject, deleteProject, openProject, addProjectByFolder } from '../services/projectService.js';
+import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
 import { clientLogger } from '../services/clientLogger.js';
+import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
+import { APP_VERSION } from '../core/appVersion.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -17,9 +20,14 @@ import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOv
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
+import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
 let projectGrid = null;
+
+// Aborts in-flight per-row stats fetches when the grid rebuilds, so late
+// responses don't write into rows that no longer exist.
+let _statsBatchAC = null;
 
 // MpiNewProject is NOT a singleton — fresh mount per open.
 // factory.on() accumulates listeners with no unsub, so reusing would stack handlers.
@@ -28,72 +36,75 @@ let projectGrid = null;
 // confirmation. The factory's .on() accumulates listeners with no unsub, so
 // reusing a singleton would fire all prior handlers on every confirmation.
 
-/** Lazily created landing-action overlay instances (reused across opens). */
-let _settingsOverlay = null;
-let _helpOverlay     = null;
-let _aboutOverlay    = null;
-
 /**
  * Initializes the project management UI: trigger button and grid loading.
  */
 export function initProjectUI() {
   projectGrid = gid('projectGrid');
 
-  // ── Landing action buttons (top-right of header) ──────────────────────────
-  const actionsSlot = gid('landingActions');
-  if (actionsSlot) {
-    const defs = [
-      { icon: 'settings', label: 'Settings', handler: () => {
-          if (!_settingsOverlay) _settingsOverlay = MpiSettings.mount(document.createElement('div'));
-          _settingsOverlay.el.show();
-      }},
-      { icon: 'help',     label: 'Help',     handler: () => {
-          if (!_helpOverlay) _helpOverlay = MpiHelp.mount(document.createElement('div'));
-          _helpOverlay.el.show();
-      }},
-      { icon: 'info',     label: 'About',    handler: () => {
-          if (!_aboutOverlay) _aboutOverlay = MpiAbout.mount(document.createElement('div'));
-          _aboutOverlay.el.show();
-      }},
-    ];
+  // ── Hero version label ─────────────────────────────────────────────────────
+  const versionEl = gid('heroVersion');
+  if (versionEl) versionEl.textContent = `Cubric Studio · v${APP_VERSION}`;
 
-    defs.forEach(({ icon, label, handler }) => {
-      const slot = document.createElement('div');
-      actionsSlot.appendChild(slot);
-      const btn = MpiButton.mount(slot, {
-        icon,
-        label,
-        labelPosition: 'right',
-        variant: 'ghost',
-        size: 'sm',
-      });
-      btn.on('click', handler);
+  // ── Hero nav: plain text links (Settings · Help · About) ─────────────────
+  const navSlot = gid('landingActions');
+  if (navSlot) {
+    const defs = [
+      { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
+      { label: 'Help',     handler: () => Events.emit('slide-over:open', { title: 'Help',     component: MpiHelp     }) },
+      { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
+    ];
+    defs.forEach(({ label, handler }) => {
+      const a = document.createElement('a');
+      a.className = 'mpi-landing__hero-nav-item';
+      a.textContent = label;
+      a.addEventListener('click', handler);
+      navSlot.appendChild(a);
     });
   }
 
-  // ── New Project button ─────────────────────────────────────────────────────
-  const btnSlot = gid('newProjectBtn');
-  if (btnSlot) {
-    const triggerBtn = MpiButton.mount(btnSlot, {
-      text: '+ New Project',
+  // ── "+ New project" CTA in hero ────────────────────────────────────────────
+  const ctaSlot = gid('newProjectBtn');
+  if (ctaSlot) {
+    const triggerBtn = MpiButton.mount(ctaSlot, {
+      text: '+ New project',
       variant: 'primary',
-      size: 'lg',
+      size: 'md',
     });
+    triggerBtn.on('click', _openNewProjectDialog);
+  }
 
-    triggerBtn.on('click', () => {
-      const newProjectDialog = MpiNewProject.mount(document.createElement('div'));
-      newProjectDialog.on('create', async ({ name, location }) => {
-        try {
-          const project = await createProject(name || 'Untitled Project', location);
-          await openProject(project);
-          navigate(PAGE_GALLERY);
-        } catch (err) {
-          clientLogger.error('projectUI', 'createProject failed', err);
-          window.MpiAlert('Could not create project: ' + err.message);
-        }
+  // ── "Open folder" — hero CTA (secondary) + picker footer ─────────────────
+  const _openFolder = async () => {
+    try {
+      const { ipcRenderer } = window.require('electron');
+      const result = await ipcRenderer.invoke('dialog:openFolder');
+      if (result?.folderPath) await handleProjectDrop(result.folderPath);
+    } catch (err) {
+      clientLogger.error('projectUI', 'openFolder failed', err);
+    }
+  };
+
+  if (typeof window.require === 'function') {
+    const heroFolderSlot = gid('openFolderHeroBtn');
+    if (heroFolderSlot) {
+      const heroFolderBtn = MpiButton.mount(heroFolderSlot, {
+        text: 'Open folder',
+        variant: 'outline',
+        size: 'md',
       });
-      newProjectDialog.el.show();
-    });
+      heroFolderBtn.on('click', _openFolder);
+    }
+
+    const pickerFolderSlot = gid('openFolderBtn');
+    if (pickerFolderSlot) {
+      const pickerFolderBtn = MpiButton.mount(pickerFolderSlot, {
+        text: 'Open folder…',
+        variant: 'outline',
+        size: 'md',
+      });
+      pickerFolderBtn.on('click', _openFolder);
+    }
   }
 
   // ── Drag-and-drop project import (Electron only) ──────────────────────────
@@ -146,27 +157,48 @@ async function handleProjectDrop(folderPath) {
 }
 
 /**
- * Loads and renders the projects into the grid.
+ * Loads and renders the projects as Stage picker rows.
  */
 export async function loadProjectGrid() {
   if (!projectGrid) return;
-  projectGrid.innerHTML = '<div class="projects-loading"><div class="spinner"></div></div>';
+  // Cancel any in-flight per-row stats fetches from the previous render.
+  if (_statsBatchAC) _statsBatchAC.abort();
+  _statsBatchAC = new AbortController();
+  projectGrid.innerHTML = '<div class="mpi-landing__loading"><div class="spinner"></div></div>';
   try {
     const projects = await listProjects();
+    const countEl = gid('pickerCount');
+    if (countEl) countEl.textContent = projects.length > 0 ? `Recent · ${String(projects.length).padStart(2, '0')}` : '';
     if (projects.length === 0) {
       projectGrid.innerHTML = `
-        <div class="projects-empty">
+        <div class="mpi-landing__empty">
+          <img class="mpi-landing__empty-mascot" src="assets/mascot/mascot-hi.png" alt="">
           <strong>No projects yet</strong>
-          Click "New Project" to create your first AI project.
+          <p>Click "+ New project" to create your first AI project.</p>
         </div>`;
       return;
     }
     projectGrid.innerHTML = '';
-    projects.forEach(p => projectGrid.appendChild(_buildProjectCard(p)));
+    projects.forEach(p => projectGrid.appendChild(_buildProjectRow(p)));
   } catch (err) {
-    console.error('[shell/projectUI] loadProjectGrid failed:', err);
-    projectGrid.innerHTML = `<div class="projects-empty"><strong>Could not load projects.</strong></div>`;
+    clientLogger.error('projectUI', 'loadProjectGrid failed', err);
+    projectGrid.innerHTML = `<div class="mpi-landing__empty"><strong>Could not load projects.</strong></div>`;
   }
+}
+
+function _openNewProjectDialog() {
+  const newProjectDialog = MpiNewProject.mount(document.createElement('div'));
+  newProjectDialog.on('create', async ({ name, location }) => {
+    try {
+      const project = await createProject(name || 'Untitled Project', location);
+      await openProject(project);
+      navigate(PAGE_GALLERY);
+    } catch (err) {
+      clientLogger.error('projectUI', 'createProject failed', err);
+      window.MpiAlert('Could not create project: ' + err.message);
+    }
+  });
+  newProjectDialog.el.show();
 }
 
 /**
@@ -192,30 +224,82 @@ function _showDeleteConfirm(projectName, onConfirm) {
 }
 
 /**
- * Builds a single project card using the MpiProjectCard compound component.
- * @param {Object} project - Project data from projectManager.
- * @returns {HTMLElement} Mounted card wrapper element.
+ * Builds a Stage picker row for one project.
+ * Layout: thumbnail | name + date | asset count + size
+ * @param {Object} project
+ * @returns {HTMLElement}
  */
-function _buildProjectCard(project) {
+function _buildProjectRow(project) {
   const date = new Date(project.updatedAt);
   const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
-  /** @type {import('../components/Compounds/MpiProjectCard/MpiProjectCard.js').MpiProjectCardProps} */
-  const props = {
-    title: project.name,
-    date: dateStr,
-    media: project.recentThumbnail ? { type: 'image', src: project.recentThumbnail } : null,
-  };
+  const row = document.createElement('div');
+  row.className = 'mpi-landing__pl-row';
 
-  const wrapper = document.createElement('div');
-  const card = MpiProjectCard.mount(wrapper, props);
+  // Thumbnail
+  const thumb = document.createElement('div');
+  thumb.className = 'mpi-landing__pl-thumb' + (project.recentThumbnail ? '' : ' mpi-landing__pl-thumb--empty');
+  if (project.recentThumbnail) {
+    const img = document.createElement('img');
+    img.src = project.recentThumbnail;
+    img.alt = project.name;
+    thumb.appendChild(img);
+  }
 
-  card.on('click', async () => {
+  // Meta
+  const meta = document.createElement('div');
+  meta.className = 'mpi-landing__pl-meta';
+
+  // Title row: h3 + inline delete
+  const titleRow = document.createElement('div');
+  titleRow.className = 'mpi-landing__pl-title-row';
+  const h3 = document.createElement('h3');
+  h3.textContent = project.name;
+  const deleteSlot = document.createElement('div');
+  deleteSlot.className = 'mpi-landing__pl-delete';
+  const deleteBtn = MpiButton.mount(deleteSlot, { icon: 'trash', variant: 'ghost', size: 'sm' });
+  titleRow.appendChild(h3);
+  titleRow.appendChild(deleteSlot);
+
+  const sub = document.createElement('span');
+  sub.className = 'mpi-landing__pl-sub';
+  sub.textContent = dateStr;
+  meta.appendChild(titleRow);
+  meta.appendChild(sub);
+
+  // Count — placeholder until /project-stats resolves
+  const ct = document.createElement('div');
+  ct.className = 'mpi-landing__pl-count';
+  const n = document.createElement('span');
+  n.className = 'mpi-landing__pl-n';
+  n.textContent = '—';
+  const sizeNode = document.createTextNode('assets');
+  ct.appendChild(n);
+  ct.appendChild(sizeNode);
+
+  row.appendChild(thumb);
+  row.appendChild(meta);
+  row.appendChild(ct);
+
+  // Live stats fetch — independent per row, aborted on grid rebuild.
+  const signal = _statsBatchAC?.signal;
+  fetchStats({ projectId: project.id, folderPath: project.folderPath, signal })
+    .then(({ count, bytes }) => {
+      if (signal?.aborted) return;
+      n.textContent = String(count);
+      sizeNode.textContent = bytes > 0 ? `assets · ${formatBytes(bytes)}` : 'assets';
+    })
+    .catch(err => {
+      if (err?.name !== 'AbortError') clientLogger.warn('projectUI', 'fetchStats failed', err);
+    });
+
+  row.addEventListener('click', async (e) => {
+    if (deleteSlot.contains(e.target)) return;
     await openProject(project);
     navigate(PAGE_GALLERY);
   });
 
-  card.on('delete', () => {
+  deleteBtn.on('click', () => {
     _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
       try {
         await deleteProject(project, { deleteFiles });
@@ -226,5 +310,5 @@ function _buildProjectCard(project) {
     });
   });
 
-  return card.el;
+  return row;
 }

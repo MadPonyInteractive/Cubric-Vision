@@ -38,13 +38,14 @@ export const MpiButton = ComponentFactory.create({
             const type = props.type || 'button';
             const isDisabled = props.disabled || props.loading ? 'disabled' : '';
             const isLoading = props.loading ? 'mpi-btn--loading' : '';
+            const shapeClass = props.shape === 'pill' ? 'mpi-btn--pill' : '';
             const extraClasses = props.extraClasses || '';
             const dataAttrs = props.info ? `data-info="${props.info}"` : '';
             const textHtml = props.text ? `<span class="mpi-btn__text">${props.text}</span>` : '';
 
             return `
                 <button type="${props.type || 'button'}"
-                        class="mpi-btn mpi-btn--${variant} mpi-btn--${size} ${isLoading} ${extraClasses}"
+                        class="mpi-btn mpi-btn--${variant} mpi-btn--${size} ${shapeClass} ${isLoading} ${extraClasses}"
                         ${isDisabled} ${dataAttrs}>
                     ${textHtml}
                     ${children || ''}
@@ -64,8 +65,8 @@ export const MpiButton = ComponentFactory.create({
         const isLoading = variant === 'loading';
         const isDisabled = variant === 'disabled' || props.disabled;
 
-        // Map variant — danger stays danger, everything else → secondary (glass)
-        const btnVariant = variant === 'danger' ? 'danger' : 'secondary';
+        // Map variant — danger/ghost pass through; everything else → secondary
+        const btnVariant = (variant === 'danger' || variant === 'ghost') ? variant : 'secondary';
 
         const extraClasses = [
             'mpi-ibtn',
@@ -74,6 +75,7 @@ export const MpiButton = ComponentFactory.create({
             isToggleable ? 'is-toggleable' : '',
             isActive ? 'is-active' : '',
             iconActive ? 'has-icon-swap' : '',
+            props.shape === 'pill' ? 'mpi-btn--pill' : '',
             props.extraClasses || '',
         ].filter(Boolean).join(' ');
 

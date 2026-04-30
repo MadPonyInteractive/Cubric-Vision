@@ -7,3 +7,41 @@
     overflow: hidden;
     position: relative;
 }
+
+/* ── Sticky top header (crumb / filters / sort) ──────────────────────────── */
+
+.mpi-gallery-block__header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--s-5);
+    padding: var(--s-3) var(--s-6);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-0);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.mpi-gallery-block__crumb {
+    font-size: var(--t-xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+.mpi-gallery-block__filters {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    justify-content: center;
+}
+
+.mpi-gallery-block__sort {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+

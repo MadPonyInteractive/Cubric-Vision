@@ -1,9 +1,7 @@
 /* ── Titlebar (Custom Window Controls) ────────────────────────────────────────── */
 .titlebar {
   height: var(--titlebar-h);
-  background: var(--surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface-bar);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,12 +10,9 @@
   left: 0;
   right: 0;
   z-index: 9999;
-  border-bottom: 1px solid var(--border-soft);
-  color: var(--text-2);
-  box-shadow: 
-    0 4px 20px var(--bg-recessed),
-    -40px 2px 40px var(--primary-glow-sm),
-    40px 2px 40px var(--neon-glow-sm);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-1);
+  box-shadow: 0 1px 0 var(--line-soft);
 }
 
 .titlebar-drag-region {
@@ -38,15 +33,15 @@
 .titlebar-logo-img {
   width: 16px;
   height: 16px;
-  filter: drop-shadow(0 0 8px var(--neon-glow));
+  filter: drop-shadow(0 0 8px oklch(0.72 0.20 6 / 0.3));
 }
 
 .titlebar-text {
-  font-family: var(--font-display);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--t-xs);
   letter-spacing: 0.02em;
-  color: var(--text-2);
+  color: var(--ink-1);
 }
 
 .window-controls {
@@ -63,18 +58,18 @@
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-2);
-  transition: background var(--transition), color var(--transition);
+  color: var(--ink-2);
+  transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
 }
 
 .control-btn:hover {
-  background: var(--bg-recessed);
-  color: var(--text);
+  background: var(--surface-2);
+  color: var(--ink-1);
 }
 
 .control-btn.close:hover {
-  background: var(--danger);
-  color: #fff;
+  background: var(--accent-heat);
+  color: oklch(0.16 0.02 0);
 }
 
 .control-btn svg {

@@ -2,45 +2,46 @@
 .mpi-ctx-menu {
     position: fixed;
     z-index: 9999;
-    min-width: 10rem;
-    padding: 0.25rem;
-    background: var(--bg-modal);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    min-width: 220px;
+    padding: 4px 0;
+    background: oklch(0.30 0.022 350);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    box-shadow: 0 24px 48px -16px oklch(0.16 0.02 350 / 0.6);
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
 }
 
 .mpi-ctx-menu__item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    gap: 10px;
     align-items: center;
-    gap: 0.5rem;
     width: 100%;
-    padding: 0.4rem 0.75rem;
+    padding: 8px 14px;
     background: transparent;
     border: none;
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-family: var(--font-main);
-    font-size: 0.8rem;
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: var(--t-sm);
     cursor: pointer;
     text-align: left;
-    transition: background 0.1s ease;
+    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
     white-space: nowrap;
 }
 
 .mpi-ctx-menu__item:hover:not(:disabled) {
-    background: var(--surface-3);
+    background: var(--surface-2);
+    color: var(--ink-1);
 }
 
 .mpi-ctx-menu__item--danger {
-    color: var(--danger, #ff4d4d);
+    color: var(--accent-heat);
 }
 
 .mpi-ctx-menu__item--danger:hover:not(:disabled) {
-    background: rgba(255, 77, 77, 0.12);
+    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
+    color: var(--accent-heat);
 }
 
 .mpi-ctx-menu__item--disabled,
@@ -52,9 +53,10 @@
 .mpi-ctx-menu__icon {
     display: flex;
     align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    width: 1rem;
-    height: 1rem;
+    width: 18px;
+    height: 18px;
 }
 
 .mpi-ctx-menu__icon svg {
@@ -65,4 +67,16 @@
 
 .mpi-ctx-menu__label {
     flex: 1;
+}
+
+.mpi-ctx-menu__kbd {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.06em;
+    color: var(--ink-4);
+}
+
+.mpi-ctx-menu__sep {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0;
 }

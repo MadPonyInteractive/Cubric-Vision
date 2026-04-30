@@ -12,15 +12,11 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: var(--surface-glass);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow:
-        0 10px 30px var(--bg-recessed),
-        -10px 0 15px var(--primary-glow-sm),
-        10px 0 15px var(--neon-glow-sm);
-    color: var(--text);
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    box-shadow: 0 10px 30px oklch(0.16 0.02 350 / 0.4);
+    color: var(--ink-1);
     z-index: 20000;
     max-width: 600px;
     min-width: 280px;
@@ -31,7 +27,7 @@
     /* Animation state */
     opacity: 0;
     transform: translateY(20px) scale(0.9);
-    transition: opacity 0.3s var(--bounce), transform 0.3s var(--bounce), bottom 0.3s var(--bounce);
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease), bottom var(--t-base) var(--ease);
 }
 
 .mpi-toast--open {
@@ -45,18 +41,12 @@
     pointer-events: none;
 }
 
-/* Variant Modifiers */
-/* .mpi-toast--info {    border-left: 4px solid var(--info);    }
-.mpi-toast--success { border-left: 4px solid var(--success); }
-.mpi-toast--warning { border-left: 4px solid var(--warning); }
-.mpi-toast--danger {  border-left: 4px solid var(--danger);  } */
-
 .mpi-toast__content {
     flex: 1;
 }
 
 .mpi-toast__msg {
-    font-size: 0.7rem;
+    font-size: var(--t-xs);
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -66,8 +56,8 @@
 .mpi-toast__close {
     background: none;
     border: none;
-    color: var(--text-2);
-    font-size: 1.4rem;
+    color: var(--ink-2);
+    font-size: var(--t-xl);
     cursor: pointer;
     line-height: 1;
     padding: 4px;
@@ -76,12 +66,12 @@
     height: 28px;
     display: grid;
     place-items: center;
-    transition: var(--transition);
+    transition: var(--t-fast) var(--ease);
 }
 
 .mpi-toast__close:hover {
     background: var(--surface-2);
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* Progress bar at the bottom */
@@ -91,24 +81,24 @@
     left: 0;
     height: 3px;
     width: 100%;
-    background: var(--primary);
-    border-radius: 0 50px 50px 0;
+    background: var(--accent-heat);
+    border-radius: 0 var(--r-pill) var(--r-pill) 0;
 }
 
 .mpi-toast--info .mpi-toast__progress {
-    background: var(--info);
+    background: var(--accent-frost);
 }
 
 .mpi-toast--success .mpi-toast__progress {
-    background: var(--success);
+    background: var(--accent-ok);
 }
 
 .mpi-toast--warning .mpi-toast__progress {
-    background: var(--warning);
+    background: var(--accent-warn);
 }
 
 .mpi-toast--danger .mpi-toast__progress {
-    background: var(--danger);
+    background: var(--accent-heat);
 }
 
 /* Simple Icon Placeholder */
@@ -125,20 +115,20 @@
 
 .mpi-toast--info .mpi-toast__icon::before {
     content: 'i';
-    color: var(--info);
+    color: var(--accent-frost);
 }
 
 .mpi-toast--success .mpi-toast__icon::before {
     content: '✓';
-    color: var(--success);
+    color: var(--accent-ok);
 }
 
 .mpi-toast--warning .mpi-toast__icon::before {
     content: '!';
-    color: var(--warning);
+    color: var(--accent-warn);
 }
 
 .mpi-toast--danger .mpi-toast__icon::before {
     content: '✕';
-    color: var(--danger);
+    color: var(--accent-heat);
 }

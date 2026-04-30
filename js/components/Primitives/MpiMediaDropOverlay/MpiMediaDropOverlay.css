@@ -5,12 +5,11 @@
     display: none;
     align-items: center;
     justify-content: center;
-    background: var(--bg-modal);
-    backdrop-filter: blur(4px);
-    border: 3px dashed var(--primary);
+    background: var(--surface-bar);
+    border: 3px dashed var(--accent-heat);
     box-sizing: border-box;
     pointer-events: auto;
-    animation: mpi-media-drop-overlay-fade 120ms ease-out;
+    animation: mpi-media-drop-overlay-fade 120ms var(--ease);
 }
 
 .mpi-media-drop-overlay--visible {
@@ -23,22 +22,22 @@
     align-items: center;
     gap: 1rem;
     padding: 2rem 3rem;
-    color: var(--text);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    color: var(--ink-1);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    box-shadow: 0 10px 40px oklch(0.16 0.02 350 / 0.35);
     pointer-events: none;
 }
 
 .mpi-media-drop-overlay__icon {
-    color: var(--primary);
+    color: var(--accent-heat);
 }
 
 .mpi-media-drop-overlay__text {
-    font-size: 1.125rem;
+    font-size: var(--t-lg);
     font-weight: 500;
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 @keyframes mpi-media-drop-overlay-fade {

@@ -1,8 +1,8 @@
-/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    MpiRadialMenu — Radial navigation primitive
    BEM: .mpi-radial / .mpi-radial__item / .mpi-radial__hint
         .mpi-radial__dot / .mpi-radial__cone
-═══════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════ */
 
 /* ── Container ─────────────────────────────────────────── */
 
@@ -14,17 +14,17 @@
     justify-content: center;
     pointer-events: none;
     z-index: 500;
-    font-size: 1rem;
+    font-size: var(--t-md);
 }
 
-/* Full-screen dark overlay — flat, no blur, gives ghost items contrast */
+/* Full-screen dark overlay — flat, no blur */
 .mpi-radial::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(11, 10, 16, 0.90);
+    background: oklch(0.16 0.02 350 / 0.90);
     opacity: 0;
-    transition: opacity 0.25s ease;
+    transition: opacity var(--t-base) var(--ease);
     pointer-events: none;
     z-index: 0;
 }
@@ -59,16 +59,15 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--neon-electric);
-    box-shadow: 0 0 8px var(--neon-glow), 0 0 16px var(--neon-glow-sm);
+    background: var(--accent-heat);
     z-index: 2;
     pointer-events: none;
 
     opacity: 0;
     transform: scale(0);
     transition:
-        opacity 0.2s ease,
-        transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        opacity var(--t-fast) var(--ease),
+        transform var(--t-base) var(--ease);
 }
 
 .mpi-radial--visible .mpi-radial__dot {
@@ -99,7 +98,7 @@
     z-index: 1;
 
     opacity: 0;
-    transition: opacity 0.18s ease;
+    transition: opacity var(--t-fast) var(--ease);
 }
 
 .mpi-radial__cone--visible {
@@ -113,7 +112,7 @@
        CSS rotate() is applied to the parent .mpi-radial__cone via JS. */
     transform: rotate(var(--cone-angle, 0deg));
     transform-origin: 50% 50%;
-    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--t-fast) var(--ease);
 }
 
 /* ── Items ─────────────────────────────────────────────── */
@@ -137,17 +136,17 @@
     /* Ghost — no background, no border */
     background: transparent;
     border: none;
-    border-radius: var(--radius);
-    color: var(--text-3);
+    border-radius: var(--r-2);
+    color: var(--ink-3);
     cursor: default;
     user-select: none;
     z-index: 3;
 
     opacity: 0;
     transition:
-        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-        color 0.15s ease;
+        opacity var(--t-base) var(--ease),
+        transform var(--t-base) var(--ease),
+        color var(--t-fast) var(--ease);
 
     transition-delay: calc(var(--ri, 0) * 0.035s);
 }
@@ -158,9 +157,9 @@
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* Active / selected item — blue, no scale change */
+/* Active / selected item */
 .mpi-radial__item--active {
-    color: var(--primary) !important;
+    color: var(--accent-heat) !important;
     transition-delay: 0s;
 }
 
@@ -180,7 +179,7 @@
 }
 
 .mpi-radial__item-label {
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-size: 0.62em;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -198,9 +197,9 @@
     left: 50%;
     transform: translateX(-50%) scale(0.85);
     z-index: 4;
-    font-family: var(--font-display);
-    font-size: 0.78rem;
-    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
     letter-spacing: 0.04em;
     pointer-events: none;
     text-align: center;
@@ -208,8 +207,8 @@
 
     opacity: 0;
     transition:
-        opacity 0.3s ease 0.15s,
-        transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s;
+        opacity var(--t-base) var(--ease) 0.15s,
+        transform var(--t-base) var(--ease) 0.15s;
 }
 
 .mpi-radial__hint--top {
@@ -233,12 +232,11 @@
 /* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-
     .mpi-radial__item,
     .mpi-radial__hint--top,
     .mpi-radial__hint--bottom,
     .mpi-radial__dot,
     .mpi-radial__cone-svg {
-        transition: opacity 0.1s ease;
+        transition: opacity var(--t-fast) var(--ease);
     }
 }

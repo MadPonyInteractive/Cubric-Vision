@@ -8,18 +8,18 @@
     align-items: center;
     justify-content: center;
     padding: 0.2rem 0.6rem;
-    font-size: 0.75rem;
+    font-size: var(--t-xs);
     font-weight: 700;
     line-height: 1;
-    border-radius: 4px;
+    border-radius: var(--r-2);
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .mpi-badge--pill {
-    border-radius: 100px;
+    border-radius: var(--r-pill);
     padding-left: 0.8rem;
     padding-right: 0.8rem;
 }
@@ -27,36 +27,36 @@
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 
 .mpi-badge--primary {
-    background: var(--neon-electric);
-    color: #000;
+    background: var(--accent-heat);
+    color: var(--surface-canvas);
 }
 
 .mpi-badge--secondary {
-    background: var(--bg-recessed);
-    color: var(--text);
-    border: 1px solid var(--border);
+    background: var(--surface-bar);
+    color: var(--ink-1);
+    border: 1px solid var(--line);
 }
 
 .mpi-badge--success {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: color-mix(in oklch, var(--accent-ok) 12%, transparent);
+    color: var(--accent-ok);
+    border: 1px solid color-mix(in oklch, var(--accent-ok) 30%, transparent);
 }
 
 .mpi-badge--warning {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: color-mix(in oklch, var(--accent-warn) 12%, transparent);
+    color: var(--accent-warn);
+    border: 1px solid color-mix(in oklch, var(--accent-warn) 30%, transparent);
 }
 
 .mpi-badge--danger {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
+    color: var(--accent-heat);
+    border: 1px solid color-mix(in oklch, var(--accent-heat) 30%, transparent);
 }
 
 .mpi-badge--info {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: color-mix(in oklch, var(--accent-frost) 12%, transparent);
+    color: var(--accent-frost);
+    border: 1px solid color-mix(in oklch, var(--accent-frost) 30%, transparent);
 }

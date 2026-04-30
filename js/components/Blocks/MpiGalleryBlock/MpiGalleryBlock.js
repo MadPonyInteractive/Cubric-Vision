@@ -45,11 +45,23 @@ export const MpiGalleryBlock = ComponentFactory.create({
     name: 'MpiGalleryBlock',
     css: ['js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css'],
 
-    template: () => `<div class="mpi-gallery-block"></div>`,
+    template: () => `
+        <div class="mpi-gallery-block">
+            <div class="mpi-gallery-block__header">
+                <div class="mpi-gallery-block__crumb"></div>
+                <div class="mpi-gallery-block__filters"></div>
+                <div class="mpi-gallery-block__sort"></div>
+            </div>
+        </div>
+    `,
 
     setup: (el, props, emit) => {
         // ── Cleanup array ─────────────────────────────────────────────────────
         const _unsubs = [];
+
+        // ── Header crumb ──────────────────────────────────────────────────────
+        const crumbEl = qs('.mpi-gallery-block__crumb', el);
+        if (crumbEl) crumbEl.textContent = state.currentProject?.name || '';
 
         let groups = state.currentProject?.itemGroups || [];
 
@@ -202,6 +214,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             for (const group of g) removeGroup(group.id);
             for (const group of g) grid.el.removeCard(group.id);
+            Events.emit('media:deleted', { count: g.length });
         });
 
         grid.on('delete', ({ groups: g }) => {

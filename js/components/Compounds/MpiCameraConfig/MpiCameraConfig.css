@@ -15,13 +15,13 @@
 }
 
 .mpi-cfg__label {
-    font-size: 0.65rem;
+    font-size: var(--t-2xs);
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-3);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--line-soft);
     margin-bottom: 0.15rem;
 }
 
@@ -34,8 +34,8 @@
 .mpi-cfg__field-label {
     flex-shrink: 0;
     width: 7rem;
-    font-size: 0.75rem;
-    color: var(--text-2);
+    font-size: var(--t-xs);
+    color: var(--ink-3);
     text-align: right;
 }
 

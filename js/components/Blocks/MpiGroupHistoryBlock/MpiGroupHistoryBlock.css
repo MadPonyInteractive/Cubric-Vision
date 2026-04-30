@@ -2,7 +2,7 @@
 
 .mpi-group-history-block {
     display: grid;
-    grid-template-columns: 3.5rem 1fr 14rem;
+    grid-template-columns: 64px 1fr 360px;
     grid-template-rows: 0px 1fr;
     grid-template-areas:
         "header header header"
@@ -23,11 +23,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 0.25rem;
-    background: var(--surface-2);
-    border-right: 1px solid var(--border);
+    gap: var(--s-2);
+    padding: var(--s-3) 0;
+    background: var(--surface-canvas);
+    border-right: 1px solid var(--line);
     z-index: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Tool-rail active marker — 2px heat left-bar on the active ghost ibtn */
+.mpi-group-history-block__left .mpi-btn.mpi-ibtn.is-active {
+    box-shadow: inset 2px 0 0 var(--accent-heat);
 }
 
 /* ── Centre viewer ────────────────────────────────────────────────────────── */
@@ -35,7 +42,11 @@
     grid-area: centre;
     position: relative;
     overflow: hidden;
-    background: var(--surface-1);
+    background: radial-gradient(
+        ellipse at 50% 45%,
+        var(--surface-bar) 0%,
+        oklch(0.20 0.020 350) 100%
+    );
 }
 
 /* ── Right panel — split into props bar (top) + history list (bottom) ──────── */
@@ -44,8 +55,51 @@
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
-    background: var(--surface-2);
-    border-left: 1px solid var(--border);
+    background: var(--surface-canvas);
+    border-left: 1px solid var(--line);
+}
+
+/* ── Inspector tab strip ─────────────────────────────────────────────────── */
+.mpi-group-history-block__tabs {
+    display: flex;
+    gap: var(--s-5);
+    border-bottom: 1px solid var(--line);
+    padding: var(--s-4) var(--s-4) var(--s-3);
+}
+
+.mpi-group-history-block__tab {
+    padding: 0;
+    font-size: var(--t-2xs);
+    font-family: var(--font-main);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: color var(--t-fast) var(--ease);
+}
+
+.mpi-group-history-block__tab:hover {
+    color: var(--ink-2);
+}
+
+.mpi-group-history-block__tab--active {
+    color: var(--accent-heat);
+}
+
+/* ── Inspector panel-h section header ───────────────────────────────────── */
+.panel-h {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--surface-canvas);
+    border-bottom: 1px solid var(--line);
 }
 
 /* ── Right-top: props bar host — hidden when prompt tool active ─────────────── */
@@ -54,10 +108,11 @@
     flex-direction: column;
     height: auto;
     min-height: 0;
-    padding: 0.5rem;
-    gap: 0.5rem;
-    border-bottom: 1px solid var(--border);
+    padding: var(--s-2);
+    gap: var(--s-2);
+    border-bottom: 1px solid var(--line);
     overflow: hidden;
+    background: var(--surface-canvas);
 }
 
 .mpi-group-history-block--prompt-active .mpi-group-history-block__right-top {
@@ -85,12 +140,35 @@
     pointer-events: none;
 }
 
+/* ── Mascot peek — shown during generation ───────────────────────────────── */
+.mascot-peek {
+    position: absolute;
+    bottom: 76px;
+    right: 18px;
+    width: 44px;
+    height: 44px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease);
+    z-index: 6;
+}
+
+.mascot-peek--visible {
+    opacity: 0.85;
+    animation: mascot-float 4s var(--ease) infinite;
+}
+
+@keyframes mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-3px); }
+}
+
 /* ── Error state ─────────────────────────────────────────────────────────── */
 .mpi-group-history-block__error {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: var(--text-muted);
-    font-size: var(--font-sm);
+    color: var(--ink-3);
+    font-size: var(--t-xs);
 }

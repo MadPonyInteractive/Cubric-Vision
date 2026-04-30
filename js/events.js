@@ -157,6 +157,11 @@ export const Events = new EventBus();
  *
  * Media events:
  * 'media:imported'        { url: string, filename: string, mediaType: string } — file imported via PromptBox drop
+ * 'media:deleted'         { count: number }                                    — media files removed from disk
+ *
+ * Project stats events (consumed by projectStatsService):
+ * 'project:stats-dirty'   —                                                    — request a refetch of whole-project stats
+ * 'history:stats-dirty'   { group: Object }                                    — request a refetch of a single group's stats
  *
  * Generation lifecycle events (emitted by generationService / activeGenerations):
  * 'generation:started'    { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }

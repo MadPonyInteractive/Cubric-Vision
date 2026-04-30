@@ -16,10 +16,11 @@
  *   el.setGenerating(bool)             — show/hide generating spinner
  *
  * Emits:
- *   'mode-changed'  { mode }          — tool mode changed (from any source)
- *   'crop-applied'  { item }          — crop completed; item is the new HistoryItem
- *   'mask-ready'    { hasMask }       — mask painted or cleared
- *   'entry-loaded'  { idx, hasMask }  — image loaded for index
+ *   'mode-changed'    { mode }        — tool mode changed (from any source)
+ *   'crop-applied'    { item }        — crop completed; item is the new HistoryItem
+ *   'mask-ready'      { hasMask }     — mask painted or cleared
+ *   'entry-loaded'    { idx, hasMask } — image loaded for index
+ *   'compare-clicked'               — user clicked the Compare overlay button
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -50,6 +51,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         <div class="mpi-canvas-viewer">
             <div class="mpi-canvas-viewer__wrap" id="canvas-wrap"></div>
             <div class="mpi-canvas-viewer__spinner" id="spinner-wrap"></div>
+            <div class="mpi-canvas-viewer__compare-overlay" id="compare-overlay">
+                <span class="mpi-canvas-viewer__compare-tool" id="compare-tool-label"></span>
+                <button class="mpi-canvas-viewer__compare-btn" id="compare-btn" disabled>Compare</button>
+            </div>
         </div>
     `,
 
@@ -435,6 +440,28 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.setGenerating = (on) => _setGeneratingSpinner(on);
 
         el.setMaskHidden = (hidden) => { canvas.maskHidden = hidden; };
+
+        // ── Compare overlay API ───────────────────────────────────────────────
+
+        const _compareOverlay = qs('#compare-overlay', el);
+        const _compareToolLabel = qs('#compare-tool-label', el);
+        const _compareBtn = qs('#compare-btn', el);
+
+        /** Enable/disable the Compare button. Called by MpiGroupHistoryBlock on selection-changed. */
+        el.setCompareEnabled = (enabled) => {
+            _compareBtn.disabled = !enabled;
+            _compareBtn.classList.toggle('mpi-canvas-viewer__compare-btn--active', enabled);
+        };
+
+        /** Update the active tool label shown before "Compare". */
+        el.setActiveToolLabel = (label) => {
+            _compareToolLabel.textContent = label ? `${label} ·` : '';
+        };
+
+        _compareBtn.addEventListener('click', () => {
+            if (_compareBtn.disabled) return;
+            emit('compare-clicked');
+        });
 
         // ── Tool-driver surface (consumed by MpiToolOptions* compounds) ─────
         // These methods expose the canvas-viewer's internal tool actions so that

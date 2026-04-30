@@ -79,6 +79,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
         const unloadBtn = MpiButton.mount(buttonWrap, {
             icon: 'unload',
             size: 'md',
+            variant: 'ghost',
             info: props.info ?? 'Release VRAM — F5 standard · Ctrl+F5 deep clean',
         });
 

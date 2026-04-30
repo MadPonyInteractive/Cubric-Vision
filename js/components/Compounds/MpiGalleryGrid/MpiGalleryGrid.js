@@ -51,19 +51,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
     template: () => `
         <div class="mpi-gallery-grid">
             <div class="mpi-gallery-grid__tabs">
-                <div class="mpi-gallery-grid__tab-group">
+                <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--left">
+                    <span class="mpi-gallery-grid__zone-label">SORT</span>
                     <div class="mpi-gallery-grid__tab-slot" data-order="newest"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-order="oldest"></div>
                 </div>
-                <div class="mpi-gallery-grid__tab-sep"></div>
-                <div class="mpi-gallery-grid__tab-group">
+                <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--center">
+                    <div class="mpi-gallery-grid__slider-wrap"></div>
+                </div>
+                <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--right">
                     <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="images"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="videos"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="favorites"></div>
                     <div class="mpi-gallery-grid__info-btn-slot"></div>
                 </div>
-                <div class="mpi-gallery-grid__slider-wrap"></div>
             </div>
             <div class="mpi-gallery-grid__grid"></div>
         </div>
@@ -171,6 +173,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             min: 1, max: 5, step: 1, value: state.gallerySizeLevel,
             interactive: true,
             wheel: true,
+            handle: true,
             info: 'Size: {value}',
         });
 
@@ -216,12 +219,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         <img class="mpi-group-card__preview-img" alt="">
                     </div>
                 </div>
+                <div class="mpi-group-card__top-badge"></div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
-                <div class="mpi-group-card__footer">
+                <div class="mpi-group-card__overlay">
                     <span class="mpi-group-card__name"></span>
-                    <span class="mpi-group-card__badge"></span>
-                    <span class="mpi-group-card__type"></span>
+                    <span class="mpi-group-card__sub"></span>
                 </div>
             `;
 
@@ -232,8 +235,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
             const previewImg = qs('.mpi-group-card__preview-img', cardEl);
             const nameEl     = qs('.mpi-group-card__name', cardEl);
-            const badgeEl    = qs('.mpi-group-card__badge', cardEl);
-            const typeEl     = qs('.mpi-group-card__type', cardEl);
+            const subEl      = qs('.mpi-group-card__sub', cardEl);
+            const topBadgeEl = qs('.mpi-group-card__top-badge', cardEl);
             const favWrap    = qs('.mpi-group-card__fav-wrap', cardEl);
             const reuseWrap  = qs('.mpi-group-card__reuse-wrap', cardEl);
 
@@ -336,10 +339,41 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     thumb.removeAttribute('src');
                 }
 
-                nameEl.textContent = selected?.operation || group.name;
+                nameEl.textContent = selected?.name || group.name || '';
+
+                // Top-left badge: SDXL · UPSCALE / IMPORTED / VIDEO · 14.74S / FLUX · MASK
                 const model = getModelById(selected?.modelId);
-                badgeEl.textContent = model?.name || '';
-                typeEl.textContent = group.type.toUpperCase();
+                let badgeText = '';
+                if (selected?.uploaded) {
+                    badgeText = 'IMPORTED';
+                } else if (group.type === 'video') {
+                    const dur = selected?.duration ? `${selected.duration.toFixed(2)}S` : '';
+                    badgeText = ['VIDEO', dur].filter(Boolean).join(' · ');
+                } else {
+                    badgeText = [model?.name, selected?.operation]
+                        .filter(Boolean)
+                        .map(s => String(s).toUpperCase())
+                        .join(' · ');
+                }
+                topBadgeEl.textContent = badgeText;
+                topBadgeEl.classList.toggle('mpi-group-card__top-badge--hidden', !badgeText);
+
+                // Bottom-left sub-line: dims · time · "prompt snippet"
+                const dims = selected?.pixelDimensions;
+                const dimStr = (dims?.w && dims?.h) ? `${dims.w} × ${dims.h}` : '';
+                let timeStr = '';
+                if (selected?.createdAt) {
+                    const d = new Date(selected.createdAt);
+                    if (!isNaN(d)) timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                let snippet = '';
+                if (selected?.prompt) {
+                    const trimmed = selected.prompt.trim();
+                    if (trimmed) {
+                        snippet = trimmed.length > 30 ? `"${trimmed.slice(0, 30)}…"` : `"${trimmed}"`;
+                    }
+                }
+                subEl.textContent = [dimStr, timeStr, snippet].filter(Boolean).join(' · ');
 
                 thumb.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('application/mpi-media', JSON.stringify({
@@ -442,8 +476,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         // ── Justified Layout helpers ─────────────────────────────────────────
+        // REDESIGN-DEVIATION: Stage spec calls for asymmetric 7-5/4-4-4/5-7 strip
+        // cycle, but justified layout retained — slider/+- hotkeys are a core UX
+        // feature users rely on. Strip layout makes card size non-interactive.
+        // Gap bumped 2px→8px for visual breathing room per Stage intent.
 
-        const GAP = 2;
+        const GAP = 8;
 
         function _getAspectRatio(group) {
             const cardEntry = _cardMap.get(group.id);

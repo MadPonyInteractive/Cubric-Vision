@@ -19,29 +19,29 @@
 .mpi-about__logo {
     width: 80px;
     height: 80px;
-    filter: drop-shadow(0 0 20px rgba(154, 130, 187, 0.5));
+    filter: drop-shadow(0 0 20px oklch(0.72 0.20 6 / 0.5));
 }
 
 .mpi-about__name {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--text-1);
+    height: 24px;
+    width: auto;
+    display: block;
     margin: 0;
 }
 
 .mpi-about__desc {
-    color: var(--text-3);
-    font-size: 0.95rem;
+    color: var(--ink-3);
+    font-size: var(--t-sm);
     max-width: 380px;
     line-height: 1.6;
     margin: 0;
 }
 
 .mpi-about__version {
-    font-size: 0.8rem;
-    color: var(--text-3);
+    font-size: var(--t-xs);
+    color: var(--ink-3);
     background: var(--surface-1);
-    border: 1px solid var(--border-1);
+    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 0.25rem 0.75rem;
 }

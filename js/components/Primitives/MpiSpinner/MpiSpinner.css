@@ -6,7 +6,7 @@
 
 .mpi-spinner {
     display: inline-block;
-    border: 2px solid var(--border);
+    border: 2px solid var(--line);
     border-radius: 50%;
     animation: mpi-spinner-rotate 0.8s linear infinite;
     vertical-align: middle;
@@ -33,19 +33,19 @@
 
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 .mpi-spinner--primary {
-    border-top-color: var(--neon-electric);
+    border-top-color: var(--accent-heat);
 }
 
 .mpi-spinner--secondary {
-    border-top-color: var(--text-2);
+    border-top-color: var(--ink-2);
 }
 
 .mpi-spinner--light {
-    border-top-color: #fff;
+    border-top-color: var(--ink-1);
 }
 
 .mpi-spinner--dark {
-    border-top-color: #000;
+    border-top-color: var(--surface-canvas);
 }
 
 @keyframes mpi-spinner-rotate {

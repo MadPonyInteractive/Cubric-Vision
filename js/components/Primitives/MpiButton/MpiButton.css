@@ -1,16 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    MpiButton — Primitive Button Component
    BEM block: .mpi-btn
+   Stage direction: sharp corners, uppercase mono, no lift, no glow.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 .mpi-btn {
-    font-family: var(--font-display);
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
-    border: none;
-    border-radius: var(--radius);
+    border: 1px solid transparent;
+    border-radius: var(--r-1);
     cursor: pointer;
-    transition: all var(--bounce);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: background var(--t-base) var(--ease),
+                color var(--t-base) var(--ease),
+                border-color var(--t-base) var(--ease);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -20,100 +25,100 @@
     user-select: none;
 }
 
+/* ── Shape modifier ───────────────────────────────────────────────────────── */
+.mpi-btn--pill { border-radius: var(--r-pill); }
+
 /* ── Sizes ────────────────────────────────────────────────────────────────── */
 .mpi-btn--sm {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
+    padding: 8px 14px;
+    font-size: var(--t-2xs);
 }
 
 .mpi-btn--md {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 14px 24px;
+    font-size: var(--t-sm);
 }
 
 .mpi-btn--lg {
-    padding: 0.8rem 1.50rem;
-    font-size: 1rem;
+    padding: 18px 32px;
+    font-size: var(--t-md);
 }
 
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 
-/* primary — neon electric fill, matches .btn.primary */
+/* primary — heat fill */
 .mpi-btn--primary {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--neon-electric) 100%);
-    color: #fff;
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
 }
 
 .mpi-btn--primary:hover:not(:disabled),
 .mpi-btn--primary.is-pressed:not(:disabled) {
-    background: linear-gradient(135deg, var(--primary-dim) 0%, var(--neon-accent) 100%);
-    color: #fff;
-    box-shadow: 0 8px 25px var(--neon-glow);
-    transform: translateY(-2px);
+    background: oklch(0.78 0.20 6);
+    border-color: oklch(0.78 0.20 6);
+    color: oklch(0.12 0.02 0);
 }
 
-/* secondary — glass surface, matches .btn.secondary */
+/* secondary — solid surface */
 .mpi-btn--secondary {
-    background: var(--surface);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--ink-3);
+    color: var(--ink-1);
 }
 
 .mpi-btn--secondary:hover:not(:disabled),
 .mpi-btn--secondary.is-pressed:not(:disabled) {
-    background: var(--surface-2);
+    background: var(--surface-3);
+    border-color: var(--ink-2);
 }
 
-/* danger — matches .btn.danger */
+/* danger — same heat fill (semantic alias) */
 .mpi-btn--danger {
-    background: var(--danger);
-    color: #fff;
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
 }
 
 .mpi-btn--danger:hover:not(:disabled),
 .mpi-btn--danger.is-pressed:not(:disabled) {
-    background: #f87171;
-    transform: translateY(-1px);
+    background: oklch(0.78 0.20 6);
+    border-color: oklch(0.78 0.20 6);
 }
 
-/* outline — transparent + border, matches .btn.outline */
+/* outline — transparent + ink border, fills on hover */
 .mpi-btn--outline {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
+    border-color: var(--ink-1);
+    color: var(--ink-1);
 }
 
 .mpi-btn--outline:hover:not(:disabled) {
-    background: var(--bg-recessed);
-    border-color: var(--border);
-    transform: translateY(-1px);
+    background: var(--ink-1);
+    color: var(--surface-bar);
 }
 
 /* ghost — text-only, no bg or border */
 .mpi-btn--ghost {
     background: transparent;
-    color: var(--text-2);
+    border-color: transparent;
+    color: var(--ink-2);
 }
 
 .mpi-btn--ghost:hover:not(:disabled) {
-    background: var(--bg-recessed);
-    color: var(--text);
+    background: var(--surface-2);
+    color: var(--ink-1);
 }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
 
-/* Disabled */
 .mpi-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
     filter: grayscale(0.4);
-    transform: none !important;
 }
 
-/* No focus ring — removed: buttons retain their default look unconditionally */
-
-/* Loading — matches .btn.loading + .btn.loading::after */
+/* Loading */
 .mpi-btn--loading {
     color: transparent !important;
     pointer-events: none;
@@ -124,29 +129,26 @@
     position: absolute;
     width: 18px;
     height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: #fff;
+    border: 2px solid var(--line);
+    border-top-color: var(--ink-1);
     border-radius: 50%;
     animation: mpi-btn-spin 0.6s linear infinite;
 }
 
-.mpi-btn--primary.mpi-btn--loading::after {
-    border-color: rgba(0, 0, 0, 0.2);
-    border-top-color: #000;
+.mpi-btn--primary.mpi-btn--loading::after,
+.mpi-btn--danger.mpi-btn--loading::after {
+    border-color: oklch(0.16 0.02 350 / 0.3);
+    border-top-color: oklch(0.16 0.02 0);
 }
 
 .mpi-btn--secondary.mpi-btn--loading::after {
-    border-color: var(--border);
-    border-top-color: #fff;
+    border-color: var(--line);
+    border-top-color: var(--ink-1);
 }
 
 @keyframes mpi-btn-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
-
-/* ── Loader ───────────────────────────────────────────────────────────────── */
 
 /* ══════════════════════════════════════════════════════════════════════════════
    Icon Button Mode — .mpi-ibtn
@@ -196,78 +198,88 @@
 /* ── Label & Layout ────────────────────────────────────────────────────────── */
 .mpi-ibtn__label {
     pointer-events: none;
-    font-size: 0.75rem;
+    font-size: var(--t-xs);
     font-weight: 500;
-    color: var(--text-2);
-    transition: color var(--bounce);
+    color: var(--ink-2);
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-ibtn:hover .mpi-ibtn__label,
 .mpi-ibtn.is-active .mpi-ibtn__label {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* Position modifiers */
-.mpi-ibtn--label-right {
-    flex-direction: row;
-}
-
-.mpi-ibtn--label-left {
-    flex-direction: row-reverse;
-}
-
-.mpi-ibtn--label-bottom {
-    flex-direction: column;
-}
-
-.mpi-ibtn--label-top {
-    flex-direction: column-reverse;
-    gap: 0.1rem;
-}
+.mpi-ibtn--label-right { flex-direction: row; }
+.mpi-ibtn--label-left  { flex-direction: row-reverse; }
+.mpi-ibtn--label-bottom { flex-direction: column; }
+.mpi-ibtn--label-top    { flex-direction: column-reverse; gap: 0.1rem; }
 
 /* No gap for icon-only buttons */
-.mpi-btn--icon-only.mpi-ibtn {
-    gap: 0;
-}
+.mpi-btn--icon-only.mpi-ibtn { gap: 0; }
 
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 .mpi-ibtn__spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--line);
     border-top-color: currentColor;
     border-radius: 50%;
-    animation: mpi-ibtn-spin 0.7s linear infinite;
+    animation: mpi-btn-spin 0.7s linear infinite;
     flex-shrink: 0;
-}
-
-@keyframes mpi-ibtn-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* ── Press / Active (compound selector — only for icon buttons) ───────────── */
 /* .mpi-btn.mpi-ibtn ensures this never bleeds onto plain MpiButton--secondary. */
-.mpi-btn.mpi-ibtn:active:not(:disabled),
-.mpi-btn.mpi-ibtn.is-pressed:not(:disabled) {
-    background: var(--neon-electric) !important;
-    border-color: var(--neon-electric) !important;
-    color: #fff !important;
-    box-shadow: 0 0 12px var(--neon-glow-sm);
-    transform: scale(0.96);
+
+/* Non-ghost (secondary/danger/etc) icon button — heat fill on press */
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost):active:not(:disabled),
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost).is-pressed:not(:disabled) {
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
 }
 
-/* Committed active state (toggleable) */
-.mpi-btn.mpi-ibtn.is-active {
-    background: var(--neon-electric);
-    border-color: var(--neon-electric);
-    color: #fff;
-    box-shadow: 0 0 10px var(--neon-glow-sm);
+/* Non-ghost committed active state */
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost).is-active {
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
 }
 
-.mpi-btn.mpi-ibtn.is-active:hover:not(:disabled) {
-    background: var(--neon-accent);
-    border-color: var(--neon-accent);
-    color: #000;
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost).is-active:hover:not(:disabled) {
+    background: oklch(0.78 0.20 6);
+    border-color: oklch(0.78 0.20 6);
+    color: oklch(0.12 0.02 0);
+}
+
+/* ── Ghost icon button — never fills background.
+   Hover/press = ink-1 color shift. Active (toggled) = heat color + 2px heat left-bar.
+   Used for: tool rails, favourite hearts, toolbar trash, mask brush, etc. ── */
+.mpi-btn.mpi-ibtn.mpi-btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ink-3);
+}
+
+.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink-1);
+}
+
+.mpi-btn.mpi-ibtn.mpi-btn--ghost:active:not(:disabled),
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.is-pressed:not(:disabled) {
+    background: transparent;
+    color: var(--accent-heat);
+}
+
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.is-active {
+    background: transparent;
+    border-color: transparent;
+    color: var(--accent-heat);
+}
+
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.is-active:hover:not(:disabled) {
+    background: transparent;
+    color: var(--accent-heat);
 }

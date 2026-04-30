@@ -11,11 +11,21 @@
  * ────────────────────────────────────────────────────────────────────────── */
 
 /* ── Universal chrome hiding (all non-landing workspaces) ─────────────────── */
+/* Stage spec: hide topbar / radial / prompt dock. KEEP status bar visible at
+ * reduced opacity — user still wants to see VRAM/RAM/queue while focusing. */
 body.mpi-focus-mode #workspace-topbar,
 body.mpi-focus-mode #radial-mount,
-body.mpi-focus-mode #prompt-box-mount,
-body.mpi-focus-mode #shell-info-bar {
+body.mpi-focus-mode #prompt-box-mount {
     display: none !important;
+}
+
+body.mpi-focus-mode #shell-info-bar {
+    opacity: 0.3;
+    transition: opacity var(--t-base) var(--ease);
+}
+
+body.mpi-focus-mode #shell-info-bar:hover {
+    opacity: 1;
 }
 
 /* App-shell is a flex column. With chrome rows removed, #tool-container
@@ -66,7 +76,10 @@ body.mpi-focus-mode.page-gallery .mpi-gallery-block {
 /* ── Safety: never engage focus chrome on landing ────────────────────────── */
 body.mpi-focus-mode.page-landing #workspace-topbar,
 body.mpi-focus-mode.page-landing #radial-mount,
-body.mpi-focus-mode.page-landing #prompt-box-mount,
-body.mpi-focus-mode.page-landing #shell-info-bar {
+body.mpi-focus-mode.page-landing #prompt-box-mount {
     display: revert !important;
+}
+
+body.mpi-focus-mode.page-landing #shell-info-bar {
+    opacity: 1;
 }

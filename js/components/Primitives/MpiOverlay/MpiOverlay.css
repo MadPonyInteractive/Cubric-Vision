@@ -16,7 +16,7 @@
     position: fixed;
     inset: 0;
     z-index: 10009; /* fallback; JS overrides via inline style */
-    background: var(--bg);
+    background: var(--surface-0);
 }
 
 /* ── Root: shared layout ─────────────────────────────────────── */
@@ -38,7 +38,7 @@
     right: 0;
     bottom: 0;
     z-index: 10010; /* fallback; JS overrides via inline style */
-    background: var(--bg);
+    background: var(--surface-0);
 }
 
 /* ── Body mode — full viewport on top of backdrop ───────────── */
@@ -59,20 +59,20 @@
     right: 1.5rem;
     background: none;
     border: none;
-    color: var(--text-3);
+    color: var(--ink-3);
     cursor: pointer;
     padding: 0.45rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--r-2);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color var(--transition), background var(--transition);
+    transition: color var(--t-base) var(--ease), background var(--t-base) var(--ease);
     line-height: 1;
 }
 
 .mpi-overlay__close:hover {
-    color: var(--danger);
-    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-heat);
+    background: color-mix(in oklch, var(--accent-heat) 10%, transparent);
 }
 
 /* ── Container slot (children) ───────────────────────────────── */

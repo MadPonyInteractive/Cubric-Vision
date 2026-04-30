@@ -1,0 +1,190 @@
+/* Cubric Studio mockups — shared base (reset + mono primitives)
+   Direction-specific tokens + visual personality live in each direction's tokens.css.
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=VT323&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo,
+    Consolas, monospace;
+  font-feature-settings: "ss01", "ss02", "calt", "liga";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-1);
+  background: var(--surface-0);
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  font-variant-ligatures: contextual;
+}
+
+/* Headings inherit; we set display sizing per-component */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+}
+
+p {
+  color: var(--ink-2);
+  max-width: 65ch;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Wordmark — pixel font reserved for the Cubric Studio logo only */
+.wordmark {
+  font-family: "VT323", monospace;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  background: linear-gradient(
+    100deg,
+    var(--accent-heat) 0%,
+    var(--accent-frost) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* NOTE: gradient text is reserved for THIS wordmark only — banned elsewhere. */
+}
+
+/* Selection */
+::selection {
+  background: color-mix(in oklch, var(--accent-heat) 35%, transparent);
+  color: var(--ink-1);
+}
+
+/* Scrollbars (subtle, mid-toned) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-4, var(--surface-3));
+  background-clip: padding-box;
+}
+
+/* Utilities */
+.mono-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75em;
+  color: var(--ink-3);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap, 12px);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 12px);
+}
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+}
+
+/* Focus ring — frost outline */
+:focus-visible {
+  outline: 2px solid var(--accent-frost);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* App chrome (Electron-like top bar, all directions) */
+.titlebar {
+  -webkit-app-region: drag;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+  background: var(--surface-bar, var(--surface-0));
+  border-bottom: 1px solid var(--line);
+  user-select: none;
+}
+.titlebar .controls {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+  color: var(--ink-3);
+}
+
+/* Generic icon glyph using inline svg */
+.glyph {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

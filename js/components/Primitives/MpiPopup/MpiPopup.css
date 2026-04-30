@@ -1,19 +1,16 @@
-/* ── MpiPopup — Floating Glass Container ─────────────────────────────────── */
+/* ── MpiPopup — Floating Container ─────────────────────────────────────────── */
 .mpi-popup {
     position: fixed;
-    background: var(--surface-glass);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
     padding: 1rem;
-    box-shadow: 0 10px 40px var(--bg-recessed),
-        inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 40px oklch(0.16 0.02 350 / 0.4);
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
-    transition: all var(--bounce);
+    transition: all var(--t-fast) var(--ease);
     width: max-content;
-    /* min-width: 120px; */
 }
 
 .mpi-popup.is-active {
@@ -74,21 +71,21 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0.75rem;
-    border-radius: calc(var(--radius) / 1.5);
+    border-radius: var(--r-2);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background var(--t-fast) var(--ease);
     white-space: nowrap;
-    color: var(--text-muted);
-    font-size: 0.9rem;
+    color: var(--ink-3);
+    font-size: var(--t-sm);
 }
 
 .mpi-popup__item:hover {
-    background: var(--bg-recessed);
-    color: var(--text-bright);
+    background: var(--surface-bar);
+    color: var(--ink-1);
 }
 
 .mpi-popup--glass {
-    background: var(--surface-glass);
+    background: var(--surface-2);
 }
 
 /* ── Arrow / Caret ─────────────────────────────────────────────────────── */
@@ -104,26 +101,26 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border-top-color: var(--border);
+    border-top-color: var(--line);
 }
 
 .mpi-popup--bottom::after {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border-bottom-color: var(--border);
+    border-bottom-color: var(--line);
 }
 
 .mpi-popup--left::after {
     left: 100%;
     top: 50%;
     transform: translateY(-50%);
-    border-left-color: var(--border);
+    border-left-color: var(--line);
 }
 
 .mpi-popup--right::after {
     right: 100%;
     top: 50%;
     transform: translateY(-50%);
-    border-right-color: var(--border);
+    border-right-color: var(--line);
 }

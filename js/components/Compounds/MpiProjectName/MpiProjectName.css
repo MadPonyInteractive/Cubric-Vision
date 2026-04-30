@@ -8,39 +8,67 @@
 .mpi-project-name {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    width: 100%;
     /* No background — floats over canvas */
 }
 
-/* ── Back button wrapper ────────────────────────────────── */
+/* ── Back link (← PREVIOUS_WORKSPACE) ──────────────────── */
 
 .mpi-project-name__back {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    gap: 0.4rem;
     flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    transition: color var(--t-fast) var(--ease);
+}
+
+.mpi-project-name__back:hover {
+    color: var(--ink-1);
+}
+
+.mpi-project-name__back-arrow {
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+.mpi-project-name__back-label {
+    line-height: 1;
 }
 
 /* ── Text block (project name + breadcrumb stacked) ────── */
 
 .mpi-project-name__text {
     display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
     line-height: 1;
 }
 
 /* ── Project name ───────────────────────────────────────── */
 
 .mpi-project-name__project {
-    font-family: var(--font-display);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-md);
+    font-weight: 700;
+    color: var(--ink-1);
     letter-spacing: 0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 240px;
+    line-height: 1;
 }
 
 /* ── Breadcrumb row ─────────────────────────────────────── */
@@ -55,8 +83,8 @@
 /* ── Shared segment styles ──────────────────────────────── */
 
 .mpi-project-name__segment {
-    font-family: var(--font-main);
-    font-size: 0.62rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
     font-weight: 600;
     letter-spacing: 0.08em;
     white-space: nowrap;
@@ -70,19 +98,19 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    color: var(--text-3);
-    transition: color 0.15s ease;
+    color: var(--ink-3);
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-project-name__segment--link:hover {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* ── Separator › ────────────────────────────────────────── */
 
 .mpi-project-name__separator {
-    font-size: 0.62rem;
-    color: var(--text-3);
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
     opacity: 0.5;
     user-select: none;
 }
@@ -90,11 +118,45 @@
 /* ── Current page segment (plain text) ──────────────────── */
 
 .mpi-project-name__segment--current {
-    color: var(--text);
+    color: var(--ink-1);
 }
 
 /* ── Hidden state ───────────────────────────────────────── */
 
 .mpi-project-name--hidden {
     display: none;
+}
+
+/* ── Stats slot (right-aligned: rule + N LABEL · X.X UNIT) ─ */
+
+.mpi-project-name__stats {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.mpi-project-name__stats-rule {
+    width: 48px;
+    height: 1px;
+    background: var(--accent-heat);
+    margin-right: 0.5rem;
+}
+
+.mpi-project-name__stats-count,
+.mpi-project-name__stats-label,
+.mpi-project-name__stats-size {
+    color: var(--ink-1);
+}
+
+.mpi-project-name__stats-sep {
+    color: var(--ink-1);
+    opacity: 0.6;
 }

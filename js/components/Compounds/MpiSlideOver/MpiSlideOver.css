@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiSlideOver — Right-edge slide-over panel (Stage Phase 8)
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-slide-over {
+    position: fixed;
+    top: var(--titlebar-h, 36px);
+    left: 58.33vw;
+    right: 0;
+    bottom: 0;
+    background: var(--surface-1);
+    border-left: 1px solid var(--line);
+    box-shadow: -24px 0 60px -30px oklch(0.16 0.02 350 / 0.55);
+    transform: translateX(100%);
+    transition: transform var(--t-base) var(--ease);
+    z-index: 100;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    pointer-events: none;
+}
+
+.mpi-slide-over[aria-expanded="true"] {
+    transform: translateX(0);
+    pointer-events: all;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.mpi-slide-over__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.mpi-slide-over__title {
+    font-size: var(--t-xs);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+}
+
+.mpi-slide-over__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: none;
+    border-radius: var(--r-2);
+    color: var(--ink-3);
+    cursor: pointer;
+    padding: 0;
+    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+
+.mpi-slide-over__close:hover {
+    color: var(--ink-1);
+    background: var(--surface-3);
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+.mpi-slide-over__body {
+    padding: 20px;
+    overflow: auto;
+    min-height: 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.mpi-slide-over__footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mpi-slide-over__footer:empty {
+    display: none;
+}
+

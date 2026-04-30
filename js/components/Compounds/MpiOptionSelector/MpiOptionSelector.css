@@ -40,6 +40,60 @@
 }
 
 .mpi-opt-sel .mpi-ibtn__label {
-    font-size: 0.8rem;
+    font-size: var(--t-sm);
     font-weight: 800;
 }
+
+/* ── Stage ratio popup — .ratio-row / .ratio-pick ──────────────────────────
+   Used inside the ratio variant popup to replace MpiButton-based ratio items.
+   Applied when the popup panel has the .mpi-opt-sel--ratio-stage modifier.   */
+
+.mpi-opt-sel--ratio .mpi-opt-sel__grid {
+    flex-wrap: wrap;
+}
+
+.ratio-row {
+    display: flex;
+    gap: 6px;
+}
+
+.ratio-pick {
+    position: relative;
+    width: 56px;
+    padding: 10px 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.06em;
+    text-align: center;
+    transition: border-color var(--t-base) var(--ease), color var(--t-base) var(--ease), background var(--t-base) var(--ease);
+}
+
+.ratio-pick:hover {
+    border-color: var(--ink-2);
+    color: var(--ink-1);
+}
+
+.ratio-pick[aria-pressed="true"],
+.ratio-pick.is-active {
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
+}
+
+.ratio-pick i {
+    display: block;
+    margin: 0 auto 6px;
+    border: 1.5px solid currentColor;
+    background: transparent;
+}
+
+.ratio-pick.r-1-1 i  { width: 18px; height: 18px; }
+.ratio-pick.r-3-4 i  { width: 14px; height: 18px; }
+.ratio-pick.r-4-5 i  { width: 14px; height: 18px; }
+.ratio-pick.r-5-8 i  { width: 12px; height: 18px; }
+.ratio-pick.r-9-16 i { width: 10px; height: 18px; }
+.ratio-pick.r-16-9 i { width: 22px; height: 12px; }
