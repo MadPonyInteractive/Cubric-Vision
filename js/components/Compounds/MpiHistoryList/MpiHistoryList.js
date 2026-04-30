@@ -103,8 +103,11 @@ export const MpiHistoryList = ComponentFactory.create({
             dims.className = 'mpi-history-list__dims';
             dims.textContent = _dimsLabel(item, idx);
 
+            const status = document.createElement('span');
+            status.className = 'mpi-history-list__status';
+
             meta.append(label, dims);
-            card.append(thumb, meta);
+            card.append(thumb, meta, status);
 
             card.addEventListener('mousedown', (e) => {
                 if (e.shiftKey) e.preventDefault();

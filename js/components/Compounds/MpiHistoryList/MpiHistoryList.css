@@ -1,63 +1,102 @@
-/* ── MpiHistoryList — history card panel ─────────────────────────────────── */
+/* ── MpiHistoryList — layer-row panel ────────────────────────────────────── */
 
 .mpi-history-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem 0.5rem;
+    padding: var(--s-2) 0;
 }
 
-.mpi-history-list__card {
+.mpi-history-list__cards {
     display: flex;
+    flex-direction: column;
+}
+
+/* Layer row — grid: thumbnail | meta | status dot */
+.mpi-history-list__card {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 12px;
+    padding: 10px var(--s-3);
+    border-bottom: 1px solid var(--line);
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.5rem;
-    border-radius: var(--r-2);
     cursor: pointer;
-    border: 2px solid transparent;
-    transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
-    background: var(--surface-3);
+    background: transparent;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    transition: background var(--t-fast) var(--ease);
 }
 
 .mpi-history-list__card:hover {
-    filter: brightness(1.1);
+    background: oklch(0.32 0.020 350 / 0.5);
 }
 
+/* Active: heat name, "active" kicker via pseudo on the dot column */
 .mpi-history-list__card--active {
-    border-color: var(--accent-heat);
+    background: transparent;
 }
 
+.mpi-history-list__card--active .mpi-history-list__label {
+    color: var(--accent-heat);
+}
+
+.mpi-history-list__card--active .mpi-history-list__status::after {
+    content: "active";
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-heat);
+}
+
+/* Select mode highlight */
 .mpi-history-list__card--selected {
-    border-color: var(--accent-warn);
+    background: oklch(0.72 0.20 6 / 0.08);
 }
 
+.mpi-history-list__card--selected .mpi-history-list__status {
+    color: var(--accent-warn);
+}
+
+/* Thumbnail — wide rectangle, no border-radius */
 .mpi-history-list__thumb {
-    width: 3rem;
-    height: 3rem;
+    width: 64px;
+    height: 44px;
     object-fit: cover;
-    border-radius: var(--r-2);
+    border-radius: 0;
     flex-shrink: 0;
-    background: var(--surface-1);
+    background: var(--surface-bar);
+    display: block;
 }
 
+/* Meta column */
 .mpi-history-list__meta {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 2px;
     overflow: hidden;
-    flex: 1;
+    min-width: 0;
 }
 
 .mpi-history-list__label {
-    font-size: var(--t-xs);
+    font-size: var(--t-sm);
     color: var(--ink-1);
-    text-transform: uppercase;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color var(--t-fast) var(--ease);
 }
 
 .mpi-history-list__dims {
     font-size: var(--t-2xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+/* Status dot / kicker column */
+.mpi-history-list__status {
+    font-size: var(--t-2xs);
     color: var(--ink-3);
+    flex-shrink: 0;
 }

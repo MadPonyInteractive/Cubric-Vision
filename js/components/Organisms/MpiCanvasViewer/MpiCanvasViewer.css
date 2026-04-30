@@ -5,7 +5,7 @@
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: var(--surface-1);
+    background: transparent;
 }
 
 /* Canvas container fills entire viewer */
@@ -104,4 +104,51 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
+}
+
+/* ── Compare overlay — top-right: "[Tool] · Compare" ────────────────────── */
+
+.mpi-canvas-viewer__compare-overlay {
+    position: absolute;
+    top: var(--s-4);
+    right: var(--s-4);
+    display: flex;
+    gap: 16px;
+    font-size: var(--t-xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    z-index: 6;
+    pointer-events: none;
+}
+
+.mpi-canvas-viewer__compare-tool {
+    color: var(--ink-3);
+}
+
+.mpi-canvas-viewer__compare-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    color: var(--ink-3);
+    transition: color var(--t-fast) var(--ease);
+    background: none;
+    border: none;
+    font-size: inherit;
+    font-family: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    padding: 0;
+}
+
+.mpi-canvas-viewer__compare-btn:hover:not(:disabled) {
+    color: var(--ink-1);
+}
+
+.mpi-canvas-viewer__compare-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.mpi-canvas-viewer__compare-btn--active {
+    color: var(--ink-1);
 }

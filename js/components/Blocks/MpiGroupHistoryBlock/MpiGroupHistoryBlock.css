@@ -25,17 +25,24 @@
     align-items: center;
     gap: var(--s-2);
     padding: var(--s-3) 0;
-    background: var(--surface-2);
+    background: var(--surface-canvas);
     border-right: 1px solid var(--line);
     z-index: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
-/* Tool buttons in rail — heat 2px left-bar on active, no fill */
-.mpi-group-history-block__left .mpi-button--active,
-.mpi-group-history-block__left [data-active="true"] {
-    color: var(--accent-heat);
-    box-shadow: inset 2px 0 0 var(--accent-heat);
+/* Tool buttons in rail — heat 2px left-bar on active, no fill, no hover bg */
+.mpi-group-history-block__left .mpi-btn--ghost:hover:not(:disabled) {
     background: transparent;
+    color: var(--ink-1);
+}
+
+.mpi-group-history-block__left .is-active,
+.mpi-group-history-block__left [data-active="true"] {
+    color: var(--accent-heat) !important;
+    box-shadow: inset 2px 0 0 var(--accent-heat) !important;
+    background: transparent !important;
 }
 
 /* ── Centre viewer ────────────────────────────────────────────────────────── */
@@ -43,7 +50,11 @@
     grid-area: centre;
     position: relative;
     overflow: hidden;
-    background: var(--surface-1);
+    background: radial-gradient(
+        ellipse at 50% 45%,
+        var(--surface-bar) 0%,
+        oklch(0.20 0.020 350) 100%
+    );
 }
 
 /* ── Right panel — split into props bar (top) + history list (bottom) ──────── */
@@ -52,24 +63,23 @@
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
-    background: var(--surface-2);
+    background: var(--surface-canvas);
     border-left: 1px solid var(--line);
 }
 
 /* ── Inspector tab strip ─────────────────────────────────────────────────── */
 .mpi-group-history-block__tabs {
     display: flex;
-    gap: 0;
+    gap: var(--s-5);
     border-bottom: 1px solid var(--line);
-    padding: 0 var(--s-2);
+    padding: var(--s-4) var(--s-4) var(--s-3);
 }
 
 .mpi-group-history-block__tab {
-    position: relative;
-    padding: var(--s-2) var(--s-3);
+    padding: 0;
     font-size: var(--t-2xs);
     font-family: var(--font-main);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--ink-3);
     cursor: pointer;
@@ -83,18 +93,7 @@
 }
 
 .mpi-group-history-block__tab--active {
-    color: var(--ink-1);
-}
-
-.mpi-group-history-block__tab--active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: var(--s-3);
-    right: var(--s-3);
-    height: 2px;
-    background: var(--accent-heat);
-    border-radius: var(--r-1);
+    color: var(--accent-heat);
 }
 
 /* ── Inspector panel-h section header ───────────────────────────────────── */
@@ -107,7 +106,7 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-3);
-    background: var(--surface-2);
+    background: var(--surface-canvas);
     border-bottom: 1px solid var(--line);
 }
 
@@ -121,6 +120,7 @@
     gap: var(--s-2);
     border-bottom: 1px solid var(--line);
     overflow: hidden;
+    background: var(--surface-canvas);
 }
 
 .mpi-group-history-block--prompt-active .mpi-group-history-block__right-top {

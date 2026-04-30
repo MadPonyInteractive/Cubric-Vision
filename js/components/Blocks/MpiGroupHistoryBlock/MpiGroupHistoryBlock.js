@@ -264,10 +264,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
+        const TOOL_LABELS = {
+            prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
+            videoUpscale: 'Upscale', interpolate: 'Interpolate',
+        };
+
         historyTools.on('activate', ({ mode }) => {
             if (_currentSelectionIndices.length > 0) historyList.el.exitSelectMode();
             mountOptions(mode);
+            if (!isVideo) viewer.el.setActiveToolLabel?.(TOOL_LABELS[mode] ?? mode);
         });
+
+        // Set initial overlay label (no active tool yet)
+        if (!isVideo) viewer.el.setActiveToolLabel?.('');
 
         // ── Active-generation registry / spinner ──────────────────────────────
 
@@ -621,6 +630,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         historyList.on('selection-changed', ({ indices }) => {
             _currentSelectionIndices = indices;
+            if (!isVideo) viewer.el.setCompareEnabled?.(indices.length === 2);
             if (indices.length === 0) {
                 if (_hasPromptOps()) _pb?.el?.show();
                 return;
@@ -630,8 +640,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _pb?.el?.hide();
         });
 
+        if (!isVideo) {
+            viewer.on('compare-clicked', async () => {
+                const indices = _currentSelectionIndices;
+                if (indices.length !== 2) return;
+                const [idxA, idxB] = indices;
+                if (historyTools.el.getActiveMode?.() === 'prompt') {
+                    await viewer.el.swapToCanvas?.();
+                }
+                await viewer.el.loadCompare?.(_group.history[idxA], _group.history[idxB]);
+                viewer.el.setMaskHidden?.(false);
+            });
+        }
+
         historyList.on('selection-exited', () => {
-            if (!isVideo) viewer.el.clearCompare?.();
+            if (!isVideo) {
+                viewer.el.clearCompare?.();
+                viewer.el.setCompareEnabled?.(false);
+            }
             if (_hasPromptOps()) _pb?.el?.show();
         });
 

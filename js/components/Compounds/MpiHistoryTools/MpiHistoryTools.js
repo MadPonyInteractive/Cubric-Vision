@@ -36,18 +36,57 @@ import { MpiOptionSelector } from '../MpiOptionSelector/MpiOptionSelector.js';
 import { qs } from '../../../utils/dom.js';
 
 // ── Built-in tool lists ─────────────────────────────────────────────────────
+// Groups: each group gets a label strip + separator. Flat tools render solo.
+// group[] items are the sub-tools opened via MpiOptionSelector popup.
 
 const IMAGE_TOOLS = [
-    { mode: 'prompt', icon: 'chat', info: 'Prompt' },
-    { mode: 'crop',   icon: 'crop', info: 'Crop'   },
-    { mode: 'mask',   icon: 'mask', info: 'Mask'   },
+    {
+        mode: 'prompt',
+        label: 'Prompt',
+        group: [
+            { mode: 'prompt', icon: 'chat', info: 'Prompt' },
+        ],
+    },
+    {
+        mode: 'transform',
+        label: 'Transform',
+        group: [
+            { mode: 'crop', icon: 'crop', info: 'Crop' },
+            // resize — not yet implemented; slot reserved
+        ],
+    },
+    {
+        mode: 'mask',
+        label: 'Mask',
+        group: [
+            { mode: 'mask', icon: 'brush', info: 'Mask' },
+        ],
+    },
 ];
 
 const VIDEO_TOOLS = [
-    { mode: 'prompt',       icon: 'chat',               info: 'Prompt'      },
-    { mode: 'crop',         icon: 'crop',               info: 'Crop'        },
-    { mode: 'videoUpscale', icon: 'upscaler',           info: 'Upscale'     },
-    { mode: 'interpolate',  icon: 'interpolate_stroke', info: 'Interpolate' },
+    {
+        mode: 'prompt',
+        label: 'Prompt',
+        group: [
+            { mode: 'prompt', icon: 'chat', info: 'Prompt' },
+        ],
+    },
+    {
+        mode: 'transform',
+        label: 'Transform',
+        group: [
+            { mode: 'crop', icon: 'crop', info: 'Crop' },
+        ],
+    },
+    {
+        mode: 'enhance',
+        label: 'Enhance',
+        group: [
+            { mode: 'videoUpscale', icon: 'upscaler',           info: 'Upscale'     },
+            { mode: 'interpolate',  icon: 'interpolate_stroke', info: 'Interpolate' },
+        ],
+    },
 ];
 
 const TOOL_LISTS = { image: IMAGE_TOOLS, video: VIDEO_TOOLS };
@@ -84,7 +123,10 @@ export const MpiHistoryTools = ComponentFactory.create({
         const _defsByMode = new Map();
         toolDefs.forEach(def => {
             _defsByMode.set(def.mode, def);
-            if (def.group) def.group.forEach(sub => _defsByMode.set(sub.mode, sub));
+            if (def.group) def.group.forEach(sub => {
+                _defsByMode.set(sub.mode, sub);
+                _subToGroup.set(sub.mode, def.mode);
+            });
         });
 
         /** Cleanup registry. */
@@ -182,25 +224,45 @@ export const MpiHistoryTools = ComponentFactory.create({
             _selectors.set(def.mode, sel);
         };
 
-        /** Mount a single tool def (flat or grouped) into a fresh slot appended to el. */
-        const _mountTool = (def) => {
+        /** Mount a single tool def into a labelled group section. */
+        const _mountTool = (def, isFirst) => {
+            // Separator line between groups (not before the first)
+            if (!isFirst) {
+                const sep = document.createElement('div');
+                sep.className = 'mpi-history-tools__sep';
+                el.appendChild(sep);
+            }
+
+            // Group label strip
+            const lbl = document.createElement('span');
+            lbl.className = 'mpi-history-tools__label';
+            lbl.textContent = def.label || def.mode;
+            el.appendChild(lbl);
+
             const slot = document.createElement('div');
             slot.className = 'mpi-history-tools__slot';
             slot.dataset.mode = def.mode;
             el.appendChild(slot);
-            if (def.group) _renderGroupedTool(def, slot);
-            else _renderFlatButton(def, slot);
+
+            // Single-item group renders as flat button (no popup overhead)
+            if (def.group?.length === 1) {
+                _renderFlatButton(def.group[0], slot);
+            } else if (def.group) {
+                _renderGroupedTool(def, slot);
+            } else {
+                _renderFlatButton(def, slot);
+            }
         };
 
         /** Re-render only the tool whose disabled state changed. */
         const _remountTool = (toolMode) => {
-            // A sub-mode change requires remount of its outer group trigger.
             const outer = _subToGroup.get(toolMode) || toolMode;
             const def = _defsByMode.get(outer);
             if (!def) return;
             const slot = qs(`.mpi-history-tools__slot[data-mode="${outer}"]`, el);
             if (!slot) return;
-            if (def.group) _renderGroupedTool(def, slot);
+            if (def.group?.length === 1) _renderFlatButton(def.group[0], slot);
+            else if (def.group) _renderGroupedTool(def, slot);
             else _renderFlatButton(def, slot);
         };
 
@@ -267,7 +329,7 @@ export const MpiHistoryTools = ComponentFactory.create({
 
         // ── Initial mount ────────────────────────────────────────────────────
 
-        toolDefs.forEach(_mountTool);
+        toolDefs.forEach((def, i) => _mountTool(def, i === 0));
 
         // ── Teardown ─────────────────────────────────────────────────────────
 
