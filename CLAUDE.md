@@ -169,13 +169,13 @@ Four skills manage a human-in-the-loop execution system:
 | App versioning system | `docs/versioning.md` | No briefing section — provide context inline |
 | Project data model | `docs/project-integrity.md` | No briefing section — provide context inline |
 | Download system | `.claude/rules/downloads.md` | `## Sub-Agent Briefing` |
-| **REDESIGN — Stage UI port** | `docs/redesign/PORTING.md` (+ `PRODUCT.md`, `DESIGN.md`, `RECOLOR.md`) | Read all four end-to-end before touching any redesign code |
+| **Stage UI baseline (merged)** | `docs/redesign/PORTING.md` (+ `PRODUCT.md`, `DESIGN.md`, `RECOLOR.md`) | Read these only when touching a *new* surface or doing a follow-up phase. For routine work, the live `styles/01_base.css` and `.claude/rules/components.md` (§ "Stage design baseline") are sufficient. |
 
 ---
 
-## Active redesign — `docs/redesign/`
+## Stage UI baseline — `docs/redesign/`
 
-This worktree carries a full UI redesign ("Stage" direction). Source of truth for the redesign:
+The Stage redesign is **merged to master** (commit `e9b5eb6`, PORTING.md phases 0–10.2). Stage tokens, components, and patterns are now the live baseline; routine work follows the OKLCH tokens in `styles/01_base.css` and the rules in `.claude/rules/components.md` (§ "Stage design baseline") directly — no need to re-read the redesign docs for every change. The `docs/redesign/` folder remains the spec for any **new surface** or follow-up phase. Source of truth for the spec:
 
 | File | Purpose |
 |---|---|
@@ -202,9 +202,17 @@ This worktree carries a full UI redesign ("Stage" direction). Source of truth fo
 4. Do NOT modify any file under `docs/redesign/*.md` or `docs/redesign/c-stage/*` to "match implementation." The relationship is one-way: spec → code. If a real-app constraint forces a deviation, leave a `// REDESIGN-DEVIATION:` comment at the call site and note it in the PR description.
 5. Mascot + logo PNGs ship recolored per `RECOLOR.md` (Photoshop pass at the source). Until that pass lands, mockups use the original blue PNGs with a CSS hue-rotate filter — **do not ship the filter to the app**, recolor at the source.
 
-### First task in any redesign session
+### When to (re-)read the redesign docs
 
-Before editing any file, read in this order:
+For routine changes inside the merged Stage baseline (component tweaks, bug fixes, restyles using existing tokens), the redesign docs are NOT required reading — `.claude/rules/components.md` § "Stage design baseline", `.claude/rules/dos_and_donts.md`, and `styles/01_base.css` are the live source of truth.
+
+Re-read the redesign docs **only** when:
+
+- Building a brand-new surface that has a corresponding mockup in `docs/redesign/c-stage/`.
+- Executing a follow-up phase (anything beyond 10.2) or a deviation from the Stage spec.
+- Auditing existing UI against Stage intent.
+
+In those cases, read in this order:
 
 1. `docs/redesign/PRODUCT.md` (full)
 2. `docs/redesign/DESIGN.md` (full)
@@ -213,6 +221,6 @@ Before editing any file, read in this order:
 5. The "Critical Rules Snapshot" above
 6. Any `.claude/rules/*.md` referenced by the routing table for the area you're modifying (components, events, state, etc.)
 
-Confirm in your first message that you've read them. Then propose which PORTING.md phase to run, and wait for approval before writing code.
+Confirm in your first message that you've read them. Then propose which phase or deviation, and wait for approval before writing code.
 
 ---

@@ -9,6 +9,7 @@
 EMITS:   `toggle` `{ active: boolean }` — only in icon-button toggleable mode
          `click`  `{ originalEvent: Event, active: boolean }`
 LISTENS: (none — pure DOM events only)
+NOTE:    Stage redesign added `shape: 'sharp' | 'pill'` prop (default `'sharp'`, applies `--r-1: 0`); pass `shape: 'pill'` to opt into the legacy rounded look. Icon-button variant supports `'ghost'` (transparent, hover lifts) in addition to `secondary`/`danger`.
 
 ### MpiCanvas
 EMITS:   `modechange` `{ mode: 'none'|'mask'|'crop'|'compare' }`
@@ -133,7 +134,7 @@ LISTENS: (none)
 EMITS:   (none — calls `props.onSelect(key)` callback then self-closes)
 LISTENS: `ui:close-all-popups` — self-close
 API:     Static `MpiContextMenu.show({ x, y, items, onSelect })` — portals to body, clamps to viewport, dismisses on outside-click / Escape
-NOTE:    `items` shape: `[{ key, icon?, label, disabled?, danger? }]`
+NOTE:    `items` shape: `[{ key, icon?, label, kbd?, separator?, disabled?, danger? }]`. Stage redesign: `kbd` renders right-aligned keyboard hint (3-column grid layout); `separator: true` renders a divider line and ignores other fields.
 
 ### MpiHistoryList
 EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
@@ -165,7 +166,31 @@ EMITS:   `change` `{ value: string, def?: object }` — user picked a value (all
          `popup_toggle` `{ active: boolean }` — popup opened/closed
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `el.getValue()` · `el.setValue(v)` · `el.setTriggerIcon(icon)` · `el.setTriggerActive(bool)` · `el.setButtons(buttons)` · `el.getButtons()`
-NOTE:    Three variants — `ratio`: preset ratio picker (replaces MpiRatioSelector); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup (used by MpiHistoryTools mask group). All share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
+NOTE:    Three variants — `ratio`: preset ratio picker (renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors inside the popup, not generic MpiButton items); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup (used by MpiHistoryTools mask group). All share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
+
+### MpiSlideOver  *(Stage redesign — replaces full-page modal pattern for landing actions)*
+EMITS:   `close` `{}` — panel dismissed (close button, outside-click, or `ui:close-all-popups`)
+LISTENS: `ui:close-all-popups` — closes
+         (module-level) `slide-over:open` `{ title, component }` — mounts a fresh instance into a fresh `<div>`, calls `el.open()`, registers `close` → singleton clear. Opening a second slide-over closes the first.
+API:     `el.open()` — append to `document.body`, force reflow, set `aria-expanded="true"` (slide-in)
+         `el.close()` — set `aria-expanded="false"`, await transitionend, remove from DOM, emit `close`
+NOTE:    Owns chrome only (header with UPPERCASE title + close button, scrollable body, optional footer). Content is supplied via `props.component` — a ComponentFactory blueprint mounted into `.mpi-slide-over__body`. Calls `_contentInstance.el.onOpen?.()` after mount so content can re-init fields. Module-level `let _active = null;` enforces the singleton. Outside-click is registered on `document` with a `setTimeout(..., 0)` so the triggering click does not immediately close.
+
+### MpiSettings *(content-only — body of MpiSlideOver)*
+EMITS:   (none — chrome owned by MpiSlideOver; no `close` event from this component)
+LISTENS: (none)
+API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`. Called by `MpiSlideOver.setup()` once per open.
+NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed.
+
+### MpiHelp *(content-only — body of MpiSlideOver)*
+EMITS:   (none)
+LISTENS: (none)
+NOTE:    Static hand-authored HTML. Trigger via `Events.emit('slide-over:open', { title: 'Help', component: MpiHelp })`. Hotkey rows still hand-authored — see `docs/shell.md` and `components.md` for the registry/help-page pairing rule.
+
+### MpiAbout *(content-only — body of MpiSlideOver)*
+EMITS:   (none)
+LISTENS: (none)
+NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'About', component: MpiAbout })`.
 
 ### MpiInstalledDisplay
 EMITS:   `delete`      `{}`     — Action button clicked (Install when idle)

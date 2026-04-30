@@ -105,16 +105,17 @@ Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 ## projectUI.js (landing page — mounted once at boot)
 
 - `MpiProjectDropOverlay`   props: `{ onDrop({ folderPath, source }) }` callback   slot: `document.createElement('div')` appended to `#page-landing` — full-area OS drop target for project folders / `project.json`; shown/hidden via `#page-landing` `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); `onDrop` calls `addProjectByFolder()` then `loadProjectGrid()`. Feature-gated on `window.require` — skipped in plain-browser dev mode.
-- `MpiNewProject`, `MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiOkCancel` (delete-confirm)   slot: `document.createElement('div')` — lazy singletons shown on user action; not mounted until first trigger.
+- `MpiNewProject`, `MpiOkCancel` (delete-confirm)   slot: `document.createElement('div')` — lazy singletons shown on user action; not mounted until first trigger.
+- `MpiProjectCard` (one per project)   props: `{ title, date, media, ... }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`. Stage redesign: rendered as a row, not a card-grid item. Per-row stats (asset count + bytes-on-disk) come from `fetchStats()` in `js/services/projectStatsService.js`; in-flight fetches are aborted via the module-local `_statsBatchAC` AbortController when the grid rebuilds, so late responses don't write into rows that no longer exist.
+- **`#landingActions` slot:** plain `<a>` text links (`Settings · Help · About`) — NOT `MpiButton`s. Each click dispatches `Events.emit('slide-over:open', { title, component })` where `component` is one of `MpiSettings | MpiHelp | MpiAbout` (imported as content blueprints, not mounted directly). Hero version label `Cubric Studio · v${APP_VERSION}` mounts at `#heroVersion`.
+- **`MpiSlideOver`**   import-side-effect at module load: `import '../components/Compounds/MpiSlideOver/MpiSlideOver.js'` registers the module-level `Events.on('slide-over:open', ...)` handler. No direct mount call. The handler mounts a fresh instance per open into `document.createElement('div')`, appended to `document.body` by `el.open()`.
 
-> **MpiSettings internal mounts** (built inside `_initFields()`, called on each `el.show()`; slots cleared before remount):
+> **MpiSettings is NOT mounted directly anymore.** It is a *content component* of `MpiSlideOver` — its body element is mounted inside `.mpi-slide-over__body` via `props.component.mount(bodyEl)` from inside `MpiSlideOver.setup()`. The legacy `el.show()/el.hide()` methods are gone. Field initialisation runs via `el.onOpen()`, which `MpiSlideOver` calls once on every open. Internal mounts inside `MpiSettings._initFields()` are unchanged:
 > - `MpiCheckbox`   props: `{ checked: Storage.getAutoStartComfy(), label:'Auto-start ComfyUI on Launch' }`   slot: `#mpiSettingsAutoStartSlot`
 > - `MpiInput` (Ollama URL)   props: `{ label:'Llama API URL', placeholder:'http://localhost:8080', value }`   slot: `#mpiSettingsOllamaUrlSlot`
 > - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
 > - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
 > - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`
-> - `MpiProjectCard` (one per project)   props: `{ title, date, media }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`.
-> - `MpiButton` (landing header actions + "+ New Project")   slot: `#landingActions` / `#newProjectBtn`.
 
 ---
 

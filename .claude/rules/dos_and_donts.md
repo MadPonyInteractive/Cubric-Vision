@@ -5,7 +5,8 @@
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves DOM work, CSS, utilities, or icons.
 
-- **Never hardcode colors.** CSS variables only — from `styles/01_base.css`. No hex codes, no named colors.
+- **Never hardcode colors.** OKLCH variables only — from `styles/01_base.css`. No hex, no named colors, no `rgb()`/`hsl()` literals. Canonical token families: `--surface-{0,1,2,3,bar,canvas}`, `--ink-{1,2,3,4}`, `--line`/`--line-soft`, `--accent-{heat,frost,ok,warn}`, `--t-*` (type), `--s-*` (spacing), `--r-*` (radius), `--ease`/`--t-fast|base|slow` (motion). Legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display` are **removed** — do not reintroduce.
+- **Stage design baseline:** sharp corners default (`--r-1: 0`), no glow, no `backdrop-filter`, no glassmorphism. Pass `shape:'pill'` to opt into rounded buttons. Gradient text only on the wordmark.
 - **Never paste raw SVG.** Import from `js/utils/icons.js`. If the icon is missing, add it there first.
 - **Icon stroke is auto-detected — never pass `stroke: true` to `MpiButton`.** Name icons with `ratio_` prefix or `_stroke` suffix and `renderIcon()` handles stroke automatically.
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
@@ -48,9 +49,18 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
 ## 🎨 CSS & Styling (The Source of Truth)
 
 ### 🔴 The "No Hardcoding" Rule
-1. **NEVER hardcode colors:** Do not use raw hex codes (e.g., `#ff0000`) or standard CSS colors (e.g., `purple`) in your `.css` files. 
-2. **Use the Base Variables:** You MUST pull colors, spacing, and transition speeds from the existing CSS variables located in `styles/` (specifically `styles/01_base.css` and related architecture). 
-3. **Template UI Adherence:** If you are building UI, adhere strictly to the established design tokens. Our aesthetic relies on a unified glassmorphism / dark neon UI system. Do not deviate.
+1. **NEVER hardcode colors:** Do not use raw hex codes (e.g., `#ff0000`), standard CSS colors (e.g., `purple`), or `rgb()`/`hsl()` literals in your `.css` files. All color values MUST be OKLCH and must come from the token block in `styles/01_base.css`.
+2. **Use the Base Variables:** You MUST pull colors, spacing, radii, type sizes, and motion timings from the CSS variables in `styles/01_base.css`. Canonical token families:
+   - **Surfaces:** `--surface-0`, `--surface-1`, `--surface-2`, `--surface-3`, `--surface-bar`, `--surface-canvas`
+   - **Ink (text):** `--ink-1`, `--ink-2`, `--ink-3`, `--ink-4`
+   - **Lines:** `--line`, `--line-soft`
+   - **Accents:** `--accent-heat` (pink/magenta — primary), `--accent-frost` (cyan — focus/generative), `--accent-ok`, `--accent-warn`
+   - **Type scale:** `--t-2xs`…`--t-display`
+   - **Spacing:** `--s-1`…`--s-8`
+   - **Radius:** `--r-1` (0px, sharp default), `--r-2` (4px), `--r-3` (12px), `--r-pill` (999px)
+   - **Motion:** `--ease`, `--t-fast`, `--t-base`, `--t-slow`
+   - **Fonts:** body = `'JetBrains Mono', monospace`. `--font-wordmark` = `'VT323'` (self-hosted at `assets/fonts/VT323.woff2`) — used ONLY for the brand wordmark.
+3. **Template UI Adherence:** The active design system is **Stage** (see `docs/redesign/`). Stage = OKLCH mauve surfaces, heat/frost accents, sharp corners by default, **no neon glow, no glass blur, no `backdrop-filter`**. Legacy tokens `--bg`, `--bg-light`, `--bg-dark`, `--bg-elevated`, `--bg-recessed`, `--bg-modal`, `--surface`, `--surface-glass`, `--neon-electric`, `--neon-glow*`, `--neon-accent`, `--neon-border`, `--primary`, `--primary-dim`, `--text*`, `--border*`, `--radius*`, `--font-main`, `--font-display`, `--transition`, `--bounce` have been **removed** — do not reintroduce them. The only place `background-clip: text` (gradient text) is allowed is the wordmark.
 
 ### 🔴 Class Naming Convention
 - **BEM is Mandatory:** Since we do not use a standard bundler, you MUST use BEM (Block Element Modifier) architecture strictly in your component CSS.

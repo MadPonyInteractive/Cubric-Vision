@@ -2,6 +2,22 @@
 
 > **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in Cubric Studio.
 
+## Stage design baseline (post-redesign)
+
+The Stage redesign (PORTING.md phases 0–10.2) is **merged to master**. All components must conform:
+
+- **Tokens:** Use only the OKLCH variables in `styles/01_base.css` — `--surface-{0,1,2,3,bar,canvas}`, `--ink-{1..4}`, `--line`, `--line-soft`, `--accent-{heat,frost,ok,warn}`, `--t-*` (type), `--s-*` (spacing), `--r-*` (radius), `--ease`, `--t-fast|base|slow`. Legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display`, `--transition`/`--bounce` are **deleted** — do not reintroduce.
+- **No neon, no glass, no `backdrop-filter`.** Stage is content-forward: solid surfaces, 1px lines, sharp corners.
+- **Sharp corners by default.** `MpiButton` defaults to `shape: 'sharp'` (`--r-1: 0`). Pass `shape: 'pill'` to opt into rounded.
+- **Gradient text only on the wordmark.** No `background-clip: text` anywhere else.
+- **Wordmark font:** `--font-wordmark` = `'VT323'` (self-hosted at `assets/fonts/VT323.woff2`). Body type is `'JetBrains Mono'`.
+- **Slide-over is the canonical right-edge panel** for Settings / Help / About (replaces the legacy full-screen modal pattern). Trigger via `Events.emit('slide-over:open', { title, component })`. Do NOT mount `MpiSettings/MpiHelp/MpiAbout` directly — they are content blueprints; `MpiSlideOver` owns chrome and mounts the content into `.mpi-slide-over__body`.
+- **`MpiOptionSelector` ratio variant** renders Stage `.ratio-row` + `.ratio-pick.r-X-Y` selectors inside the popup (not generic `MpiButton` items). New `variant: 'buttons'` is a generic button-list popup.
+- **`MpiContextMenu` items** support `kbd` (right-aligned shortcut hint) and `separator: true` (divider line).
+- **Mockups are spec, not source.** Visual ground truth lives at `docs/redesign/c-stage/*.html`. New surfaces translate the mockup into Cubric's existing patterns (BEM, `ComponentFactory`, `js/utils/dom.js`, `Events`, `Hotkeys`). Never copy markup verbatim. If a real-app constraint forces a deviation from spec, leave a `// REDESIGN-DEVIATION:` comment at the call site.
+
+---
+
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves creating or modifying components.
 
