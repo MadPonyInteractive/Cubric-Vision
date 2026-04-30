@@ -328,31 +328,6 @@
     opacity: 1;
 }
 
-/* Pink dot — persistent fav indicator (top-right). Hidden when hovered so
- * the heart button takes its place. */
-.mpi-group-card__fav-dot {
-    position: absolute;
-    top: 0.7rem;
-    right: 0.8rem;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent-heat);
-    box-shadow: 0 0 6px oklch(0.72 0.20 6 / 0.6);
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    pointer-events: none;
-    z-index: 3;
-}
-
-.mpi-group-card--favourited .mpi-group-card__fav-dot {
-    opacity: 1;
-}
-
-.mpi-group-card:hover .mpi-group-card__fav-dot {
-    opacity: 0;
-}
-
 /* ── Top-left badge (model · operation / IMPORTED / VIDEO · 14.74S) ──────── */
 
 .mpi-group-card__top-badge {

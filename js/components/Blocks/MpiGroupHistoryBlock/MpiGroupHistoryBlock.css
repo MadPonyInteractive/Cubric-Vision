@@ -32,17 +32,9 @@
     overflow-x: hidden;
 }
 
-/* Tool buttons in rail — heat 2px left-bar on active, no fill, no hover bg */
-.mpi-group-history-block__left .mpi-btn--ghost:hover:not(:disabled) {
-    background: transparent;
-    color: var(--ink-1);
-}
-
-.mpi-group-history-block__left .is-active,
-.mpi-group-history-block__left [data-active="true"] {
-    color: var(--accent-heat) !important;
-    box-shadow: inset 2px 0 0 var(--accent-heat) !important;
-    background: transparent !important;
+/* Tool-rail active marker — 2px heat left-bar on the active ghost ibtn */
+.mpi-group-history-block__left .mpi-btn.mpi-ibtn.is-active {
+    box-shadow: inset 2px 0 0 var(--accent-heat);
 }
 
 /* ── Centre viewer ────────────────────────────────────────────────────────── */

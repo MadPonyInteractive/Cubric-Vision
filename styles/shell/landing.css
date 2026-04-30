@@ -140,31 +140,6 @@
   margin-top: var(--s-3);
 }
 
-/* Landing-scoped button overrides — no radius, no transform, no glow, uppercase */
-.mpi-landing .mpi-btn {
-  border-radius: 0;
-  transform: none !important;
-  box-shadow: none !important;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  padding: 1.1em 1.3em;
-}
-
-.mpi-landing .mpi-btn--primary {
-  color: var(--surface-canvas);
-  border: 1px solid transparent;
-}
-
-.mpi-landing .mpi-btn--outline {
-  border: 1px solid var(--ink-1);
-}
-
-.mpi-landing .mpi-btn--outline:hover {
-  background: var(--ink-1) !important;
-  color: var(--surface-canvas) !important;
-  border-color: var(--ink-1) !important;
-}
-
 /* Bottom stats row */
 .mpi-landing__hero-foot {
   display: flex;

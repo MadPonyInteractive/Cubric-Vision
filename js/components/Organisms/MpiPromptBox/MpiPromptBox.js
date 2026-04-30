@@ -424,7 +424,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Settings badge (trigger) ───────────────────────────────────────────
         const badgeSlot = qs('#settings-badge-slot', el);
         const badgeBtn = MpiButton.mount(badgeSlot, {
-            variant: 'ghost', size: 'sm',
+            variant: 'secondary', size: 'sm',
             toggleable: true,
             info: 'Open model & operation settings',
             extraClasses: 'mpi-prompt-box__settings-trigger',
@@ -591,7 +591,7 @@ export const MpiPromptBox = ComponentFactory.create({
             MpiButton.mount(qs('#bottom-neg-slot', el), {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
-                size: 'md', variant: 'primary', toggleable: true, active: isNegativeMode
+                size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
             }).on('click', (data) => {
                 isNegativeMode = data.active;
                 textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
@@ -608,7 +608,8 @@ export const MpiPromptBox = ComponentFactory.create({
         const runBtn = MpiButton.mount(runBtnSlot, {
             icon: 'play', iconActive: 'stop',
             info: 'Generate / Stop',
-            size: 'md', variant: 'primary',
+            size: 'sm', variant: 'primary',
+            label: 'Run',
             toggleable: true, active: isGenerating,
         });
 

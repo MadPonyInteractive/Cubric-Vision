@@ -220,7 +220,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     </div>
                 </div>
                 <div class="mpi-group-card__top-badge"></div>
-                <div class="mpi-group-card__fav-dot" aria-hidden="true"></div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
                 <div class="mpi-group-card__overlay">

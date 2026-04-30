@@ -177,20 +177,3 @@
     flex: 1;
 }
 
-.mpi-settings__browse-btn {
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-    color: var(--ink-1);
-    padding: 0.5rem 0.85rem;
-    font-size: var(--t-sm);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: border-color var(--t-base) var(--ease), color var(--t-base) var(--ease);
-}
-
-.mpi-settings__browse-btn:hover {
-    border-color: var(--accent-heat);
-    color: var(--ink-1);
-}
-

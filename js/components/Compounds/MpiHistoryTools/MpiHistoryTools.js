@@ -155,6 +155,7 @@ export const MpiHistoryTools = ComponentFactory.create({
                 toggleable: false,
                 active: _activeMode === def.mode,
                 disabled: isDisabled,
+                extraClasses: 'mpi-ibtn--rail',
             });
 
             const off = btn.on('click', () => {

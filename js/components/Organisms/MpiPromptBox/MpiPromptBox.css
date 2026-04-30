@@ -23,19 +23,6 @@
     z-index: 10;
 }
 
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn:hover,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn:focus,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn:active,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn.is-active,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn.is-active:hover,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn.is-pressed,
-.mpi-prompt-box__lock-container .mpi-btn.mpi-ibtn.is-pressed:not(:disabled) {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
 .mpi-prompt-box__lock-btn {
     transition: opacity var(--t-fast) var(--ease);
 }
@@ -133,12 +120,6 @@
 }
 
 
-
-/* Settings trigger button hosting dynamic badge */
-.mpi-prompt-box__settings-trigger.mpi-btn {
-    border: 1px solid var(--ink-2) !important;
-    cursor: pointer;
-}
 
 .mpi-prompt-box__settings-badge-host {
     display: inline-flex;
@@ -244,7 +225,10 @@
     pointer-events: auto;
     box-sizing: border-box;
     width: 100%;
-    background: transparent;
+    position: fixed;
+    bottom: 104px;
+    z-index: 10;
+    background: transparent !important;
     flex-shrink: 0;
 }
 

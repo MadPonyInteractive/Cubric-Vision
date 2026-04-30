@@ -1,0 +1,89 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-04-30T04:10:00Z",
+  "session": {
+    "name": "Gallery verify + prompt dock + statusbar",
+    "branch": "worktree/quiet-shale"
+  },
+  "goal": {
+    "original": "Resume plan to-do 11.1 (visual diff verification). Complete prompt dock restructure (E), status bar restyle (F), then editor + editor-video + popups visual diffs.",
+    "status": "in_progress",
+    "summary": "Prompt dock (E) is functionally complete: MpiPromptBox now in normal flow (not fixed), single-row grid layout (neg-toggle | textarea | settings-badge | generate), copy button removed, media strip in flow above box, badge shows model/op stacked with ×N batch count, expand btn fully transparent, body background unified to --surface-canvas. Status bar restyle (F) not yet done. Editor/editor-video/popups visual diffs not yet done."
+  },
+  "plan": {
+    "file": "docs/plans/2026-04-29-stage-redesign-port.md",
+    "completed": [
+      "0.1–0.4 (token foundation)",
+      "1.1 (mapping table)",
+      "2.1–2.6 (hardcode sweep waves)",
+      "3.1 (compat alias removal)",
+      "4.1 (popup primitives)",
+      "5.1 (landing port)",
+      "6.1 (gallery port — initial pass)",
+      "7.1 (editor port)",
+      "8.1 (titlebar/status/focus)",
+      "9.1 (slide-overs)",
+      "10.1 (renames/removals)",
+      "11.1 partial — prompt dock restructure (E) complete, gallery surface cards complete, background unified"
+    ],
+    "pending": [
+      "11.1 — (F) STATUS BAR restyle: left side '● IDLE' or '◌ UPSCALING CROP_002 · 38% · 0:42 left', right side 'VRAM ─── X/Y' 'RAM ─── X/Y' tabular-nums",
+      "11.1 — (G) Editor surface visual diff: open editor.html + Electron editor side-by-side, user reports drift, fix",
+      "11.1 — (H) Editor-video surface diff: same for editor-video.html",
+      "11.1 — (I) Popups surface diff: same for popups.html"
+    ]
+  },
+  "next_action": {
+    "description": "Read the status bar mockup section from docs/redesign/c-stage/gallery.html (the <footer class='bar'> block) and the current shell status bar implementation in styles/shell/components.css + js/shell.js. Brief the user on what needs to change, gate on approval, then implement: left slot shows job state dot + label (IDLE or active job name + % + time remaining), right slot shows VRAM and RAM gauges as 'VRAM ─── X/Y GB' 'RAM ─── X/Y GB' in tabular-nums mono. After status bar is signed off, move to editor.html visual diff.",
+    "command": "/mpi-execute-next docs/plans/2026-04-29-stage-redesign-port.md"
+  },
+  "context": {
+    "key_decisions": [
+      "MpiPromptBox moved from position:fixed floating to normal flow inside #prompt-box-mount (between tool-container and shell-info-bar). CSS is now display:grid 4-col, no fixed/transform/bottom/left.",
+      "Prompt dock layout: grid-template-columns: auto 1fr auto auto — neg-toggle | textarea col (border-bottom underline only, no MpiInput chrome) | settings badge | generate btn.",
+      "Copy button removed entirely from PromptBox JS and CSS.",
+      "Media strip also in normal flow (not fixed), transparent bg, 5rem chips, left-aligned.",
+      "Expand/lock btn: fully transparent all states (matched .mpi-btn.mpi-ibtn.is-pressed:not(:disabled) specificity to beat MpiButton.css !important).",
+      "Settings badge now shows model name (top) + operation (bottom) stacked, with ×N batch count in pink when batch > 1. Refreshes on settings:model:update event.",
+      "body::before background changed from var(--surface-0) to var(--surface-canvas) — unified dark bg across all surfaces.",
+      "Textarea locked height changed from 3.5rem to 2rem in JS updateHeight(). Col uses align-self:end so it doesn't stretch grid row.",
+      "MpiInput wrapper chrome stripped via scoped CSS overrides on .mpi-prompt-box__col--prompt — gap:0, label hidden, wrapper margin/padding/border zeroed.",
+      "REDESIGN-DEVIATION: image stack mounts above prompt box (not inline-left as in mockup) — anticipates multi-image future. Comment to be added at call site."
+    ],
+    "constraints": [
+      "Critical Rules Snapshot from CLAUDE.md always applies: BEM, ComponentFactory.create(), no hardcoded colors, no raw SVG, on/off from dom.js, Events bus, Hotkeys registry, factory locked.",
+      "Stage banned: glassmorphism (no backdrop-filter), bouncy easing, neon glow.",
+      "Test on Electron desktop only — browser broken for most features.",
+      "Mockups are SPEC not source. One-way: spec → code. Never modify docs/redesign/c-stage/*.html.",
+      "Status bar (shell-info-bar) is a shell-level component in styles/shell/components.css and wired in js/shell.js / js/shell/projectUI.js. Must check existing job-state event wiring before restyling.",
+      "Status bar mockup spec: footer .bar with left side (dot + IDLE text OR ring spinner + job name + % + time), right side (VRAM gauge + RAM gauge). Gauges use tabular-nums. The <footer class='bar'> in gallery.html is ground truth.",
+      "Do NOT update architectural rule files (.claude/rules/) without explicit user permission."
+    ],
+    "files_modified": [
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "styles/shell/workspace.css",
+      "styles/shell/base.css"
+    ],
+    "files_to_read_first": [
+      "docs/handoffs/2026-04-30-04-10-statusbar-editor-diffs.json",
+      "docs/plans/2026-04-29-stage-redesign-port.md",
+      "docs/redesign/c-stage/gallery.html",
+      "styles/shell/components.css",
+      "js/shell.js",
+      "js/shell/projectUI.js"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md (Critical Rules Snapshot)",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    "docs/redesign/PRODUCT.md",
+    "docs/redesign/DESIGN.md",
+    "docs/redesign/PORTING.md"
+  ],
+  "resume_prompt": "Read docs/handoffs/2026-04-30-04-10-statusbar-editor-diffs.json end-to-end before doing anything. We are mid-execution of plan to-do 11.1 in docs/plans/2026-04-29-stage-redesign-port.md on branch worktree/quiet-shale. Prompt dock restructure (E) is complete: MpiPromptBox is now in normal DOM flow (not fixed), single-row grid layout, copy button removed, expand btn fully transparent, badge shows stacked model/op with ×N batch count, body background unified to --surface-canvas. NEXT: implement STATUS BAR restyle (F). Read the <footer class='bar'> block in docs/redesign/c-stage/gallery.html for the spec. Read styles/shell/components.css and js/shell.js to understand current wiring. Brief the user on changes needed before writing any code (Gate 1 of /mpi-execute-next). Status bar spec: left slot = dot + 'IDLE' or spinner ring + 'UPSCALING CROP_002 · 38% · 0:42 left'; right slot = 'VRAM ─── X/Y' 'RAM ─── X/Y' tabular-nums. After status bar is signed off, move sequentially to editor.html visual diff (G), editor-video.html (H), popups.html (I). Caveman mode is active. Mockups are SPEC not source — never modify them."
+}

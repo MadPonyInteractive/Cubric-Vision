@@ -175,7 +175,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             _lineEl.setAttribute('y1', SVG_CY);
             _lineEl.setAttribute('x2', SVG_CX);
             _lineEl.setAttribute('y2', SVG_CY);
-            _lineEl.setAttribute('stroke', 'var(--text-3)');
+            _lineEl.style.stroke = 'var(--accent-heat)';
             _lineEl.setAttribute('stroke-width', '2');
             _lineEl.setAttribute('stroke-linecap', 'round');
             _lineEl.style.opacity = '0';
@@ -184,7 +184,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             _dotVirtual.setAttribute('cx', SVG_CX);
             _dotVirtual.setAttribute('cy', SVG_CY);
             _dotVirtual.setAttribute('r', '5');
-            _dotVirtual.setAttribute('fill', 'var(--text-3)');
+            _dotVirtual.style.fill = 'var(--accent-heat)';
             _dotVirtual.style.opacity = '0';
             _dotVirtual.style.transition = 'opacity 0.1s ease';
 
@@ -258,8 +258,8 @@ export const MpiRadialMenu = ComponentFactory.create({
                         class="mpi-radial__cone-svg">
                         <defs>
                             <radialGradient id="mpi-cone-grad" cx="0%" cy="50%" r="100%" fx="0%" fy="50%">
-                                <stop offset="0%"   stop-color="var(--neon-electric)" stop-opacity="0.55"/>
-                                <stop offset="100%" stop-color="var(--neon-electric)" stop-opacity="0"/>
+                                <stop offset="0%"   style="stop-color: var(--accent-heat); stop-opacity: 0.55"/>
+                                <stop offset="100%" style="stop-color: var(--accent-heat); stop-opacity: 0"/>
                             </radialGradient>
                         </defs>
                         <path d="${d}" fill="url(#mpi-cone-grad)"/>
