@@ -56,82 +56,127 @@
   transition: width var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease), box-shadow var(--t-slow) var(--ease);
 }
 
-/* Decorative left rule */
-#shell-info-bar::before {
-  content: '';
-  display: block;
-  width: 2px;
-  height: 12px;
-  background: linear-gradient(to bottom, var(--accent-heat), var(--accent-heat));
-  border-radius: 2px;
-  opacity: 0.6;
-  flex-shrink: 0;
+/* ── Job state slot (left side) ──────────────────────────────────────────────── */
+.shell-info__job {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
   position: relative;
   z-index: 1;
-}
-
-/* Left text slot */
-.shell-info__left {
   font-family: 'JetBrains Mono', monospace;
   font-size: var(--t-xs);
-  letter-spacing: 0.01em;
-  color: var(--ink-3);
-  flex: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
-  position: relative;
-  z-index: 1;
 }
 
-.shell-info__left.updating {
-  opacity: 0;
-  transform: translateY(2px);
-}
-
-/* Right process slot */
-.shell-info__right {
-  display: none;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.shell-info__right.active {
-  display: flex;
-}
-
-.shell-info__dot {
+/* Idle dot: static green */
+.shell-info__job-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-warn);
+  background: var(--accent-ok);
   flex-shrink: 0;
-  animation: sb-pulse 1.4s ease-in-out infinite;
+  transition: background var(--t-fast) var(--ease),
+              width var(--t-fast) var(--ease),
+              height var(--t-fast) var(--ease),
+              border var(--t-fast) var(--ease);
 }
 
-.shell-info__process-label {
+/* Hover (any state): dot turns frost/cyan, spinner stops */
+.shell-info__job.hovering .shell-info__job-dot {
+  background: var(--accent-frost);
+  animation: none;
+  width: 6px;
+  height: 6px;
+  border: none;
+}
+
+/* Active: dot becomes ring spinner */
+.shell-info__job--active .shell-info__job-dot {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  border: 1.5px solid var(--accent-heat);
+  border-top-color: transparent;
+  animation: sb-spin 1.2s linear infinite;
+}
+
+
+@keyframes sb-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Job label */
+.shell-info__job-label {
+  color: var(--ink-3);
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.shell-info__job--active .shell-info__job-label {
+  color: var(--ink-2);
+}
+
+/* Pct + time — only visible during active */
+.shell-info__job-pct,
+.shell-info__job-time {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.shell-info__job-pct:not(:empty)::before {
+  content: '·\00a0';
+}
+
+.shell-info__job-time:not(:empty)::before {
+  content: '·\00a0';
+}
+
+/* Hover: hide label/pct/time, show hover-text overlay */
+.shell-info__job.hovering .shell-info__job-label,
+.shell-info__job.hovering .shell-info__job-pct,
+.shell-info__job.hovering .shell-info__job-time {
+  opacity: 0;
+}
+
+/* Hover-info overlay text */
+.shell-info__hover-text {
+  position: absolute;
+  left: 1.1rem; /* align after dot space */
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
   font-family: 'JetBrains Mono', monospace;
   font-size: var(--t-xs);
   letter-spacing: 0.01em;
-  color: var(--accent-warn);
+  text-transform: none;
+  color: var(--ink-3);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease);
 }
 
-@keyframes sb-pulse {
-  0%, 100% { opacity: 1;   transform: scale(1); }
-  50%       { opacity: 0.3; transform: scale(0.75); }
+.shell-info__job.hovering .shell-info__hover-text {
+  opacity: 1;
 }
 
-.shell-info__dot--primary {
-  background: var(--accent-heat);
-}
-
-.shell-info__process-label--primary {
-  color: var(--accent-heat);
+/* Status-bar mount slot for MpiMemoryMonitor (right side of footer) */
+#shell-info-bar #memory-monitor-mount {
+  margin-left: auto;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
 }
 
 /* Status-bar mount slot for MpiMemoryMonitor (right side of footer) */

@@ -1,0 +1,84 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-04-30T08:30:00Z",
+  "session": {
+    "name": "StatusBar restyle implementation",
+    "branch": "worktree/quiet-shale"
+  },
+  "goal": {
+    "original": "Resume plan to-do 11.1 (visual diff verification). Complete status bar restyle (F), then editor + editor-video + popups visual diffs.",
+    "status": "in_progress",
+    "summary": "Status bar restyle (F) is fully complete: idle/active state machine, ring spinner, elapsed timer (starts on tool:sampling-start only), last-gen time in idle, hover-info delegation, ghost button variant added to MpiButton, separator dots in MpiMemoryMonitor, generation:timing event on Events bus, state.lastGeneration in global state. Remaining: editor (G), editor-video (H), popups (I) visual diffs."
+  },
+  "plan": {
+    "file": "docs/plans/2026-04-29-stage-redesign-port.md",
+    "completed": [
+      "0.1–0.4 (token foundation)",
+      "1.1 (mapping table)",
+      "2.1–2.6 (hardcode sweep waves)",
+      "3.1 (compat alias removal)",
+      "4.1 (popup primitives)",
+      "5.1 (landing port)",
+      "6.1 (gallery port)",
+      "7.1 (editor port)",
+      "8.1 (titlebar/status/focus)",
+      "9.1 (slide-overs)",
+      "10.1 (renames/removals)",
+      "11.1 partial — (E) prompt dock, (F) status bar restyle COMPLETE"
+    ],
+    "pending": [
+      "11.1 — (G) Editor surface visual diff: open editor.html + Electron editor side-by-side, user reports drift, fix",
+      "11.1 — (H) Editor-video surface diff: same for editor-video.html",
+      "11.1 — (I) Popups surface diff: same for popups.html"
+    ]
+  },
+  "next_action": {
+    "description": "Open docs/redesign/c-stage/editor.html in browser side-by-side with running Electron app on the editor surface. Identify visual drift vs mockup spec. Brief user on what needs fixing before touching any code. Then proceed sequentially to editor-video.html (H) and popups.html (I).",
+    "command": "/mpi-execute-next docs/plans/2026-04-29-stage-redesign-port.md"
+  },
+  "context": {
+    "key_decisions": [
+      "Status bar left slot replaced 'Ready' text with #shell-info-job slot: idle dot + label + pct/time spans. No separate 'done' state — idle IS terminal, shows last-gen elapsed time from state.lastGeneration.",
+      "Timer starts only on tool:sampling-start (KSampler firing), NOT on tool:running or tool:loading-model. tool:running → prepare('Starting') shows spinner with no timer. tool:loading-model → updateLabel only.",
+      "progress.prepare(label) added: spinner + label, no timer. progress.startTimer() added: starts elapsed only. progress.start(label) = prepare+startTimer combined (back-compat).",
+      "ghost variant added to MpiButton icon-button mode: btnVariant map now passes 'ghost' through. Press state for ghost = transparent + frost tint (no heat fill). MpiMemoryMonitor unload btn uses variant:'ghost' — no more !important overrides.",
+      "state.lastGeneration = { label, elapsed } written on complete(). Session-only, never persisted. Events.emit('generation:timing', { elapsed, label }) also fires for future meta-card consumers.",
+      "MpiMemoryMonitor: separator dots added via CSS pseudo-elements (item+item::before, actions::before) — no HTML changes. Root gap removed. min-width removed from __value.",
+      "Hover-info: uses mouseover/mouseout delegation. Dot turns --accent-frost on hover (any state). Spinner pauses visually (CSS animation:none on hovering state). Hover-text overlay absolute-positioned after dot."
+    ],
+    "constraints": [
+      "NEVER modify docs/redesign/c-stage/*.html — mockups are spec, one-way: spec → code.",
+      "User adjusted MpiMemoryMonitor styles manually — do NOT revert them.",
+      "Critical Rules Snapshot from CLAUDE.md always applies: BEM, ComponentFactory.create(), no hardcoded colors, no raw SVG, on/off from dom.js, Events bus, Hotkeys registry.",
+      "Test on Electron desktop only — browser broken for most features.",
+      "NEVER modify factory.js.",
+      "state mutations: always replace top-level key, never mutate sub-objects directly."
+    ],
+    "files_modified": [
+      "index.html",
+      "js/shell/statusBar.js",
+      "js/state.js",
+      "styles/shell/components.css",
+      "js/components/Primitives/MpiButton/MpiButton.js",
+      "js/components/Primitives/MpiButton/MpiButton.css",
+      "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js",
+      "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css"
+    ],
+    "files_to_read_first": [
+      "docs/redesign/PORTING.md",
+      "docs/redesign/DESIGN.md",
+      "docs/redesign/c-stage/editor.html",
+      "docs/redesign/c-stage/editor-video.html",
+      "docs/redesign/c-stage/popups.html",
+      ".claude/rules/components.md",
+      ".claude/rules/dos_and_donts.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md"
+  ],
+  "resume_prompt": "Read docs/handoffs/2026-04-30-08-30-statusbar-complete-editor-diffs.json and continue from where we left off. The next action is: open docs/redesign/c-stage/editor.html in a browser alongside the running Electron app on the editor surface. Identify all visual drift vs the mockup spec, brief the user on what needs fixing (do not touch code yet), then implement fixes after approval. After editor (G) is signed off, move sequentially to editor-video.html (H) and popups.html (I). This is plan to-do 11.1 in docs/plans/2026-04-29-stage-redesign-port.md. Caveman mode is active. Mockups are SPEC — never modify them."
+}

@@ -1,219 +1,291 @@
 /**
  * statusBar.js — Shell Status Bar controller.
  *
- * Manages the three-slot footer bar:
- *   Left  — hover info text (data-info delegation) + explicit StatusBar.set()
- *   Fill  — full-width progress gradient driven by StatusBar.progress
- *   Right — pulsing dot + process label during active jobs
+ * Manages the job-state slot (left) and progress fill (behind content).
  *
- * Usage (from any module):
- *   import { StatusBar } from './shell/statusBar.js';
+ * States:
+ *   idle   — green dot + "IDLE"
+ *   active — ring spinner + operation label + pct + elapsed time
+ *   done   — brief "DONE" flash, then back to idle
  *
- *   StatusBar.set('Strength: 0.72');
- *   StatusBar.progress.start('Generating image...');
- *   StatusBar.progress.update(0.65);
- *   StatusBar.progress.complete('Image ready!');  // fires toast
+ * Hover delegation: any element with [data-info] shows its value in the
+ * status bar while hovered, temporarily overlaying the job state.
+ *
+ * Elapsed timer: starts on progress.start(), ticks every second.
+ * On complete()/cancel() emits Events('generation:timing', { elapsed, label })
+ * so meta cards and future consumers can record generation time.
+ *
+ * Usage:
+ *   StatusBar.progress.start('UPSCALING CROP_002');
+ *   StatusBar.progress.update(0.38);   // 0.0–1.0
+ *   StatusBar.progress.complete('Done!');
  *   StatusBar.progress.cancel();
  */
 
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { Events } from '../events.js';
 import { gid } from '../utils/dom.js';
+import { state } from '../state.js';
 
-// ── DOM refs (populated by init) ──────────────────────────────────────────────
-let _left    = null;  // #shell-info-left
-let _fill    = null;  // .shell-info__fill
-let _right   = null;  // #shell-info-process
-let _dot     = null;  // .shell-info__dot  (created on demand)
-let _label   = null;  // .shell-info__process-label (created on demand)
+// ── DOM refs ───────────────────────────────────────────────────────────────────
+let _job       = null;  // #shell-info-job
+let _jobDot    = null;  // .shell-info__job-dot
+let _jobLabel  = null;  // #shell-info-job-label
+let _jobPct    = null;  // #shell-info-job-pct
+let _jobTime   = null;  // #shell-info-job-time
+let _hoverText = null;  // .shell-info__hover-text (injected by init)
+let _fill      = null;  // #shell-info-fill
 
 // ── Internal state ────────────────────────────────────────────────────────────
+let _state        = 'idle';   // 'idle' | 'active'
 let _hoverTarget  = null;
 let _hoverObs     = null;
-let _isProgress   = false;
+let _currentLabel = '';
+let _elapsedSec   = 0;
+let _timerInterval = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Fade-swap the left slot text. Skip animation if text is unchanged. */
-function _setText(text) {
-    if (!_left || _left.textContent === text) return;
-    _left.classList.add('updating');
-    setTimeout(() => {
-        _left.textContent = text;
-        _left.classList.remove('updating');
-    }, 80);
+function _fmtTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
 }
 
-/** Drive the CSS custom property that controls fill width (0–100). */
 function _setFill(pct) {
     if (!_fill) return;
     _fill.style.setProperty('--sb-progress', String(Math.min(100, Math.max(0, pct))));
 }
 
-/** Show/hide the right process slot. */
-function _showProcess(label) {
-    if (!_right) return;
-    if (!_dot) {
-        _dot = document.createElement('span');
-        _dot.className = 'shell-info__dot';
-        _label = document.createElement('span');
-        _label.className = 'shell-info__process-label';
-        _right.appendChild(_dot);
-        _right.appendChild(_label);
-    }
-    _label.textContent = label;
-    _right.classList.add('active');
+function _startTimer() {
+    _stopTimer();
+    _elapsedSec = 0;
+    _timerInterval = setInterval(() => {
+        _elapsedSec++;
+        if (_jobTime) _jobTime.textContent = _fmtTime(_elapsedSec);
+    }, 1000);
 }
 
-function _hideProcess() {
-    _right?.classList.remove('active');
+function _stopTimer() {
+    if (_timerInterval !== null) {
+        clearInterval(_timerInterval);
+        _timerInterval = null;
+    }
+}
+
+function _setIdle() {
+    _state = 'idle';
+    _job.className = 'shell-info__job';
+    _jobLabel.textContent = 'IDLE';
+    _currentLabel = '';
+
+    const last = state.lastGeneration;
+    _jobPct.textContent  = '';
+    _jobTime.textContent = last ? _fmtTime(last.elapsed) : '';
+}
+
+function _setActive(label) {
+    _state = 'active';
+    _job.classList.add('shell-info__job--active');
+    _currentLabel = label;
+    _jobLabel.textContent = label;
+    _jobPct.textContent   = '';
+    _jobTime.textContent  = '';  // blank until timer actually starts
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export const StatusBar = {
 
-    /**
-     * Initialise. Called once by shell.js after DOM is ready.
-     * Wires up the data-info hover delegation.
-     */
     init() {
-        _left  = gid('shell-info-text');
-        _fill  = gid('shell-info-fill');
-        _right = gid('shell-info-process');
+        _job      = gid('shell-info-job');
+        _jobLabel = gid('shell-info-job-label');
+        _jobPct   = gid('shell-info-job-pct');
+        _jobTime  = gid('shell-info-job-time');
+        _fill     = gid('shell-info-fill');
 
-        if (!_left) return;
+        if (!_job) return;
 
+        // Inject hover-text overlay span
+        _hoverText = document.createElement('span');
+        _hoverText.className = 'shell-info__hover-text';
+        _job.appendChild(_hoverText);
+
+        _jobDot = _job.querySelector('.shell-info__job-dot');
+
+        // ── Hover delegation ───────────────────────────────────────────────
+        // Uses pointermove for reliability — avoids mouseover/mouseout gaps
+        // when moving between child elements of the same [data-info] ancestor.
         _hoverObs = new MutationObserver(() => {
             if (!_hoverTarget) return;
             const info = _hoverTarget.getAttribute('data-info');
-            if (info && _left.textContent !== info) _left.textContent = info;
+            if (info) _hoverText.textContent = info;
         });
 
         document.addEventListener('mouseover', (e) => {
             const target = e.target.closest('[data-info]');
-            if (target && target !== _hoverTarget) {
-                _hoverTarget = target;
-                _hoverObs.disconnect();
-                _hoverObs.observe(target, { attributes: true, attributeFilter: ['data-info'] });
+            if (target === _hoverTarget) return; // same element, no-op
 
+            // Leaving previous target
+            if (_hoverTarget) {
+                _hoverObs.disconnect();
+            }
+
+            if (target) {
+                _hoverTarget = target;
+                _hoverObs.observe(target, { attributes: true, attributeFilter: ['data-info'] });
                 const info = target.getAttribute('data-info');
-                if (info && _left.textContent !== info) {
-                    _left.classList.add('updating');
-                    setTimeout(() => {
-                        _left.textContent = info;
-                        _left.classList.remove('updating');
-                    }, 80);
+                if (info) {
+                    _hoverText.textContent = info;
+                    _job.classList.add('hovering');
                 }
+            } else {
+                _hoverTarget = null;
+                _job.classList.remove('hovering');
             }
         });
 
         document.addEventListener('mouseout', (e) => {
-            const target = e.target.closest('[data-info]');
-            if (target && target === _hoverTarget && (!e.relatedTarget || !target.contains(e.relatedTarget))) {
+            // Only clear if leaving the document or moving to a non-[data-info] element
+            if (e.relatedTarget && e.relatedTarget.closest('[data-info]')) return;
+            const leaving = e.target.closest('[data-info]');
+            if (leaving && leaving === _hoverTarget) {
                 _hoverTarget = null;
                 _hoverObs.disconnect();
-                if (!_isProgress) _setText('Ready');
+                _job.classList.remove('hovering');
             }
         });
     },
 
     /**
-     * Write a message to the left slot explicitly.
+     * Explicitly set the job label text (used by legacy callers).
      * @param {string} text
      */
     set(text) {
-        _setText(text);
+        if (_state !== 'active') {
+            _jobLabel.textContent = text;
+        }
     },
 
     progress: {
         /**
-         * Begin a progress job. Shows the right slot and activates the fill.
-         * Only one job runs at a time — calling start() while active replaces it.
-         * @param {string} label  e.g. 'Generating image...'
+         * Enter active state with label + spinner. Does NOT start the elapsed timer.
+         * Use for pre-sampling phases (queuing, model loading) where timing is not meaningful.
+         * @param {string} label
+         */
+        prepare(label) {
+            if (_state === 'active') {
+                // Already active — just update label
+                _currentLabel = label.toUpperCase();
+                _jobLabel.textContent = _currentLabel;
+                return;
+            }
+            _setActive(label.toUpperCase());
+            _setFill(0);
+        },
+
+        /**
+         * Start the elapsed timer. Call when actual sampling begins (tool:sampling-start).
+         * Safe to call multiple times — restarts only if timer not already running.
+         */
+        startTimer() {
+            if (_state !== 'active') return;
+            if (_timerInterval !== null) return; // already running
+            _startTimer();
+        },
+
+        /**
+         * Convenience: prepare(label) + startTimer(). For callers that skip pre-phases.
+         * @param {string} label
          */
         start(label) {
-            _isProgress = true;
-            _setFill(0);
-            _showProcess(label);
+            StatusBar.progress.prepare(label);
+            StatusBar.progress.startTimer();
         },
 
         /**
-         * Set a CSS variant class on dot and label (e.g. 'primary' applies --primary--* classes).
-         * @param {string} variant  e.g. 'primary'
-         */
-        setVariant(variant) {
-            if (!_dot || !_label) return;
-            _dot.className = `shell-info__dot shell-info__dot--${variant}`;
-            _label.className = `shell-info__process-label shell-info__process-label--${variant}`;
-        },
-
-        /**
-         * Update the label text without resetting progress.
-         * @param {string} label  e.g. 'Generating...'
-         */
-        updateLabel(label) {
-            if (!_label) return;
-            _label.textContent = label;
-        },
-
-        /**
-         * Drive the progress fill.
-         * @param {number} value  0.0 – 1.0
+         * Update the fill and pct display. value is 0.0–1.0.
+         * @param {number} value
          */
         update(value) {
-            if (!_isProgress) return;
-            _setFill(value * 100);
+            if (_state !== 'active') return;
+            const pct = Math.round(value * 100);
+            _setFill(pct);
+            if (_jobPct) _jobPct.textContent = `${pct}%`;
         },
 
         /**
-         * Mark the job complete. Flashes the fill, fades it out, fires a toast.
-         * @param {string} [toastMessage]  Toast text. Defaults to 'Done'.
+         * Update job label text mid-job (e.g. phase change). Does not affect timer.
+         * @param {string} label
+         */
+        updateLabel(label) {
+            if (_state !== 'active') return;
+            _currentLabel = label.toUpperCase();
+            _jobLabel.textContent = _currentLabel;
+        },
+
+        /**
+         * Mark job complete. Flashes fill, fires toast, emits timing event, returns to idle.
+         * @param {string} [toastMessage]
+         * @param {boolean} [silent]
          */
         complete(toastMessage = 'Done', silent = false) {
-            if (!_isProgress) return;
-            _isProgress = false;
+            if (_state !== 'active') return;
 
-            // Flash
+            const elapsed = _elapsedSec;
+            const label   = _currentLabel;
+            _stopTimer();
+
+            // Persist to global state — available to meta-card consumers and status bar idle display
+            state.lastGeneration = { label, elapsed };
+            Events.emit('generation:timing', { elapsed, label });
+
+            _setFill(100);
             _fill.classList.add('shell-info__fill--flash');
 
             setTimeout(() => {
-                // Fade out
                 _fill.classList.remove('shell-info__fill--flash');
                 _fill.classList.add('shell-info__fill--fade');
 
                 setTimeout(() => {
                     _setFill(0);
                     _fill.classList.remove('shell-info__fill--fade');
-                    _hideProcess();
-                    _setText('Ready');
+                    _setIdle();
                 }, 600);
 
                 if (!silent) {
-                    // Fire toast
                     const wrapper = document.createElement('div');
                     document.body.appendChild(wrapper);
                     const t = MpiToast.mount(wrapper, {
                         message: toastMessage,
                         variant: 'success',
-                        duration: 3000
+                        duration: 3000,
                     });
                     t.on('close', () => { t.destroy(); wrapper.remove(); });
                 }
-
-            }, 200);
+            }, 400);
         },
 
         /**
-         * Cancel the active job instantly. No toast.
+         * Cancel active job instantly. No toast. Emits timing event.
          */
         cancel() {
-            if (!_isProgress) return;
-            _isProgress = false;
+            if (_state !== 'active') return;
+
+            const elapsed = _elapsedSec;
+            const label   = _currentLabel;
+            _stopTimer();
+
+            Events.emit('generation:timing', { elapsed, label, cancelled: true });
+
             _setFill(0);
-            _hideProcess();
-            _setText('Ready');
-        }
+            _setIdle();
+        },
+
+        /**
+         * Set a variant class (kept for backwards-compat, no-op now).
+         */
+        setVariant(_variant) {},
     },
 
     /**
@@ -229,21 +301,26 @@ export const StatusBar = {
     },
 
     /**
-     * Subscribe to tool lifecycle events emitted on the global event bus.
-     * Called once by shell.js after init().
+     * Subscribe to tool lifecycle events. Called once by shell.js after init().
      */
     listen() {
+        // tool:running — ComfyUI graph executing, pre-model phase. Spinner on, no timer.
         Events.on('tool:running', ({ tool }) => {
+            if (tool === 'groupHistory') StatusBar.progress.prepare('Starting');
+        });
+        // tool:loading-model — VRAM load phase. Update label only, timer still not running.
+        Events.on('tool:loading-model', ({ tool }) => {
+            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
+        });
+        // tool:sampling-start — KSampler firing. NOW start the timer + update label.
+        Events.on('tool:sampling-start', ({ tool }) => {
             if (tool === 'groupHistory') {
-                StatusBar.progress.start('Generating...');
-                StatusBar.progress.setVariant('primary');
+                StatusBar.progress.updateLabel('Generating');
+                StatusBar.progress.startTimer();
             }
         });
-        Events.on('tool:loading-model', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model...');
-        });
-        Events.on('tool:sampling-start', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Generating...');
+        Events.on('tool:progress', ({ tool, value }) => {
+            if (tool === 'groupHistory') StatusBar.progress.update(value);
         });
         Events.on('tool:cancelled', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.cancel();

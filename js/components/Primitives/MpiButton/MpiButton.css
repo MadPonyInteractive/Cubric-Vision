@@ -250,12 +250,20 @@
 
 /* ── Press / Active (compound selector — only for icon buttons) ───────────── */
 /* .mpi-btn.mpi-ibtn ensures this never bleeds onto plain MpiButton--secondary. */
-.mpi-btn.mpi-ibtn:active:not(:disabled),
-.mpi-btn.mpi-ibtn.is-pressed:not(:disabled) {
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost):active:not(:disabled),
+.mpi-btn.mpi-ibtn:not(.mpi-btn--ghost).is-pressed:not(:disabled) {
     background: var(--accent-heat) !important;
     border-color: var(--accent-heat) !important;
     color: var(--ink-1) !important;
     box-shadow: 0 0 12px oklch(0.72 0.20 6 / 0.3);
+    transform: scale(0.96);
+}
+
+/* ghost icon button — no fill on press, just scale + frost tint */
+.mpi-btn.mpi-ibtn.mpi-btn--ghost:active:not(:disabled),
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.is-pressed:not(:disabled) {
+    background: transparent;
+    color: var(--accent-frost);
     transform: scale(0.96);
 }
 

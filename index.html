@@ -143,8 +143,13 @@
       <!-- Status Info Bar — global telemetry footer (Stage spec) -->
       <footer id="shell-info-bar">
         <div class="shell-info__fill" id="shell-info-fill"></div>
-        <div class="shell-info__left" id="shell-info-text">Ready</div>
-        <div class="shell-info__right" id="shell-info-process"></div>
+        <!-- Job state slot: idle badge OR active spinner+label+pct+time -->
+        <div class="shell-info__job" id="shell-info-job">
+          <span class="shell-info__job-dot"></span>
+          <span class="shell-info__job-label" id="shell-info-job-label">IDLE</span>
+          <span class="shell-info__job-pct" id="shell-info-job-pct"></span>
+          <span class="shell-info__job-time" id="shell-info-job-time"></span>
+        </div>
         <!-- MpiMemoryMonitor mounts here (status bar right slot) -->
         <div id="memory-monitor-mount"></div>
       </footer>

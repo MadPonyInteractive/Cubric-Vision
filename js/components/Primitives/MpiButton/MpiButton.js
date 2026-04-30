@@ -65,8 +65,8 @@ export const MpiButton = ComponentFactory.create({
         const isLoading = variant === 'loading';
         const isDisabled = variant === 'disabled' || props.disabled;
 
-        // Map variant — danger stays danger, everything else → secondary (glass)
-        const btnVariant = variant === 'danger' ? 'danger' : 'secondary';
+        // Map variant — danger/ghost pass through; everything else → secondary
+        const btnVariant = (variant === 'danger' || variant === 'ghost') ? variant : 'secondary';
 
         const extraClasses = [
             'mpi-ibtn',

@@ -50,6 +50,11 @@ const _state = {
                                      // statusbar, tools/history panels) so the user can focus
                                      // on canvas / gallery / video player. Custom titlebar stays.
                                      // Auto-resets when navigating to PAGE_LANDING.
+
+    // ── Last generation (session-only, not persisted) ──────────────────────────
+    lastGeneration: null,            // { label: string, elapsed: number } — set by StatusBar on
+                                     // complete(). Read by status bar idle display and future
+                                     // meta-card consumers via 'generation:timing' event.
 };
 
 // Batching control for state mutations

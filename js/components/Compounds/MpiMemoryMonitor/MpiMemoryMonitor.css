@@ -7,7 +7,6 @@
 .mpi-mem-monitor {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
     height: auto;
 }
 
@@ -15,7 +14,6 @@
 .mpi-mem-monitor__bars {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
     flex: 1;
 }
 
@@ -31,7 +29,6 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--ink-3);
-    min-width: 2.5rem;
     user-select: none;
 }
 
@@ -62,17 +59,30 @@
 .mpi-mem-monitor__value {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-xs);
+    margin-right: 0.5rem;
     letter-spacing: 0.02em;
     color: var(--ink-3);
-    min-width: 6rem;
     user-select: none;
+}
+
+/* ── Separators — tiny dots between bars and before button ─────────────────── */
+.mpi-mem-monitor__item + .mpi-mem-monitor__item::before,
+.mpi-mem-monitor__actions::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--ink-3);
+    opacity: 0.35;
+    flex-shrink: 0;
+    margin: 0 0.35rem;
 }
 
 /* ── Actions ────────────────────────────────────────────────────────────────── */
 .mpi-mem-monitor__actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
 }
 
 .mpi-mem-monitor__btn-wrap {
@@ -81,24 +91,18 @@
     align-items: center;
 }
 
-/* Style the MpiButton as a compact workspace icon button */
+/* Compact sizing + frost hover — ghost variant handles bg/border/color base */
 .mpi-mem-monitor__btn-wrap .mpi-ibtn {
     width: 30px;
     height: 30px;
-    background: none !important;
-    border: 1px solid transparent !important;
-    color: var(--ink-3) !important;
-    border-radius: var(--r-2) !important;
-    transition: all var(--t-base) var(--ease) !important;
+    color: var(--ink-3);
 }
 
-.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover {
-    background: var(--surface-2) !important;
-    border-color: var(--line) !important;
-    color: var(--accent-frost) !important;
+.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover:not(:disabled) {
+    color: var(--accent-frost);
 }
 
-.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover .mpi-ibtn__icon {
+.mpi-mem-monitor__btn-wrap .mpi-ibtn:hover:not(:disabled) .mpi-ibtn__icon {
     filter: drop-shadow(0 0 6px oklch(0.70 0.18 250 / 0.5));
 }
 
