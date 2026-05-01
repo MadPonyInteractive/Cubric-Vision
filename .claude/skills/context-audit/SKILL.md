@@ -1,12 +1,6 @@
 ---
 name: context-audit
-description: >
-  Audit your Claude Code setup for token waste and context bloat. Use when
-  the user says "audit my context", "check my settings", "why is Claude so
-  slow", "token optimization", "context audit", or runs /context-audit.
-  Starts by running /context to see real overhead, then audits MCP servers,
-  CLAUDE.md rules, skills, settings, and file permissions. Returns a
-  health score with specific fixes.
+description: Audit your Claude Code setup for token waste and context bloat. Use when the user says "audit my context", "check my settings", "why is Claude so slow", "token optimization", "context audit", or runs /context-audit. Starts by running /context to see real overhead, then audits MCP servers, CLAUDE.md rules, skills, settings, and file permissions. Returns a health score with specific fixes.
 user-invocable: true
 ---
 
