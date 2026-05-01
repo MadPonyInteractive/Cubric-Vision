@@ -1,0 +1,24 @@
+{
+  "env": {},
+  "permissions": {
+    "allow": [],
+    "deny": []
+  },
+  "hooks": {},
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": false,
+    "superpowers@claude-plugins-official": false,
+    "claude-code-setup@claude-plugins-official": false,
+    "code-simplifier@claude-plugins-official": false,
+    "context7@claude-plugins-official": false,
+    "caveman@caveman": true,
+    "context-mode@context-mode": false,
+    "codex@openai-codex": false,
+    "taches-cc-resources@taches-cc-resources": false,
+    "skill-creator@claude-plugins-official": false
+  },
+  "extraKnownMarketplaces": {},
+  "mcpServers": {},
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": []
+}
