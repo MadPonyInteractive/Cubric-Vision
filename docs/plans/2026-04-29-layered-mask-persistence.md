@@ -54,7 +54,7 @@ display = (manualLayer ∪ ⋃ autoPickMasks[i] for i in selectedPicks) AND NOT 
 
 ## To-Dos
 
-### [ ] 1. Layered MaskManager + MpiCanvas API surface
+### [x] 1. Layered MaskManager + MpiCanvas API surface
 
 Refactor `MaskManager.js` from single `maskCanvas` to three off-screen canvases (`manualCanvas`, `subtractCanvas`, plus a derived `displayCanvas` for live overlay rendering). Composite formula: `display = (manual ∪ ⋃autoPickMasks) AND NOT subtract`. Auto-pick masks held in `Map<pickIndex, Canvas>`, set via `setAutoPickMasks(map)` / `setSelectedAutoPicks(set)`.
 

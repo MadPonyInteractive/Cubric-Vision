@@ -1,71 +1,132 @@
 /**
  * MaskManager.js
- * Manages the mask canvas and brush drawing logic.
+ * Three-layer mask model:
+ *   manualCanvas    — brush strokes (white where painted)
+ *   subtractCanvas  — eraser strokes (white where erased)
+ *   maskCanvas      — derived composite display layer = (manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract
+ *
+ * autoPickMasks is RAM-only Map<pickIndex, ImageBitmap|HTMLCanvasElement>.
+ * selectedAutoPicks is Set<number>.
+ *
+ * Brush at P → manualCanvas[P]=white, subtractCanvas[P]=black (clears erased).
+ * Eraser at P → manualCanvas[P]=black (clears painted), subtractCanvas[P]=white.
  */
 export class MaskManager {
     constructor() {
+        this.manualCanvas = document.createElement('canvas');
+        this.manualCtx = this.manualCanvas.getContext('2d', { willReadFrequently: true });
+
+        this.subtractCanvas = document.createElement('canvas');
+        this.subtractCtx = this.subtractCanvas.getContext('2d', { willReadFrequently: true });
+
         this.maskCanvas = document.createElement('canvas');
         this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
-        
+
+        this.autoPickMasks = new Map();
+        this.selectedAutoPicks = new Set();
+
         this.isMaskingMode = false;
         this.isDrawingMask = false;
         this.brushSize = 40;
-        this.brushType = 'brush'; // 'brush' or 'eraser'
+        this.brushType = 'brush';
         this.maskOpacity = 0.7;
         this.maskColor = 'rgba(255, 255, 255, 1)';
     }
 
-    /**
-     * Resizes the mask canvas to match the base image dimensions.
-     * @param {number} width 
-     * @param {number} height 
-     */
     init(width, height) {
+        this.manualCanvas.width = width;
+        this.manualCanvas.height = height;
+        this.subtractCanvas.width = width;
+        this.subtractCanvas.height = height;
         this.maskCanvas.width = width;
         this.maskCanvas.height = height;
         this.clear();
     }
 
-    /**
-     * Clears the mask buffer.
-     */
     clear() {
-        if (!this.maskCtx || !this.maskCanvas) return;
-        this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
+        if (this.manualCtx) this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
+        if (this.subtractCtx) this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
+        this.autoPickMasks.clear();
+        this.selectedAutoPicks.clear();
+        this._recomposite();
+    }
+
+    paint(imgX, imgY) {
+        const r = this.brushSize / 2;
+        if (this.brushType === 'eraser') {
+            // Manual: clear painted pixels at P
+            this.manualCtx.save();
+            this.manualCtx.globalCompositeOperation = 'destination-out';
+            this.manualCtx.beginPath();
+            this.manualCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
+            this.manualCtx.fill();
+            this.manualCtx.restore();
+
+            // Subtract: paint white at P
+            this.subtractCtx.save();
+            this.subtractCtx.globalCompositeOperation = 'source-over';
+            this.subtractCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+            this.subtractCtx.beginPath();
+            this.subtractCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
+            this.subtractCtx.fill();
+            this.subtractCtx.restore();
+        } else {
+            // Manual: paint at P
+            this.manualCtx.save();
+            this.manualCtx.globalCompositeOperation = 'source-over';
+            this.manualCtx.fillStyle = this.maskColor;
+            this.manualCtx.beginPath();
+            this.manualCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
+            this.manualCtx.fill();
+            this.manualCtx.restore();
+
+            // Subtract: clear at P (un-erase)
+            this.subtractCtx.save();
+            this.subtractCtx.globalCompositeOperation = 'destination-out';
+            this.subtractCtx.beginPath();
+            this.subtractCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
+            this.subtractCtx.fill();
+            this.subtractCtx.restore();
+        }
+        this._recomposite();
     }
 
     /**
-     * Paints on the mask using image-space coordinates.
-     * @param {number} imgX 
-     * @param {number} imgY 
+     * Rebuild display composite from layers.
+     * display = (manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract
      */
-    paint(imgX, imgY) {
+    _recomposite() {
+        if (!this.maskCtx || !this.maskCanvas) return;
+        const w = this.maskCanvas.width;
+        const h = this.maskCanvas.height;
+        if (!w || !h) return;
+
         this.maskCtx.save();
-        if (this.brushType === 'eraser') {
-            this.maskCtx.globalCompositeOperation = 'destination-out';
-        } else {
-            this.maskCtx.globalCompositeOperation = 'source-over';
-            this.maskCtx.fillStyle = this.maskColor;
+        this.maskCtx.clearRect(0, 0, w, h);
+
+        // Step 1: union manual + selected auto picks
+        this.maskCtx.globalCompositeOperation = 'source-over';
+        this.maskCtx.drawImage(this.manualCanvas, 0, 0);
+        for (const idx of this.selectedAutoPicks) {
+            const layer = this.autoPickMasks.get(idx);
+            if (layer) this.maskCtx.drawImage(layer, 0, 0, w, h);
         }
 
-        this.maskCtx.beginPath();
-        this.maskCtx.arc(imgX, imgY, this.brushSize / 2, 0, Math.PI * 2);
-        this.maskCtx.fill();
+        // Step 2: AND NOT subtract — destination-out punches subtract holes
+        this.maskCtx.globalCompositeOperation = 'destination-out';
+        this.maskCtx.drawImage(this.subtractCanvas, 0, 0);
+
         this.maskCtx.restore();
     }
 
-    /**
-     * Inverts the mask colors.
-     * @returns {string} - The new primary color name.
-     */
     flipColor() {
-        this.maskColor = this.maskColor === 'rgba(255, 255, 255, 1)' 
-            ? 'rgba(0, 0, 0, 1)' 
+        this.maskColor = this.maskColor === 'rgba(255, 255, 255, 1)'
+            ? 'rgba(0, 0, 0, 1)'
             : 'rgba(255, 255, 255, 1)';
-        
-        const imageData = this.maskCtx.getImageData(0, 0, this.maskCanvas.width, this.maskCanvas.height);
+
+        const imageData = this.manualCtx.getImageData(0, 0, this.manualCanvas.width, this.manualCanvas.height);
         const data = imageData.data;
-        
+
         for (let i = 0; i < data.length; i += 4) {
             if (data[i + 3] > 0) {
                 data[i] = 255 - data[i];
@@ -73,45 +134,120 @@ export class MaskManager {
                 data[i + 2] = 255 - data[i + 2];
             }
         }
-        
-        this.maskCtx.putImageData(imageData, 0, 0);
+
+        this.manualCtx.putImageData(imageData, 0, 0);
+        this._recomposite();
         return this.maskColor === 'rgba(255, 255, 255, 1)' ? 'white' : 'black';
     }
 
     /**
-     * Loads a mask image from a data URL.
-     * @param {string} dataUrl 
-     * @returns {Promise<void>}
+     * Loads a mask image into the manual layer (additive — replaces manual content).
      */
     async setFromURL(dataUrl) {
+        return this.setManualFromDataURL(dataUrl);
+    }
+
+    async setManualFromDataURL(dataUrl) {
         if (!dataUrl) return;
         return new Promise((resolve, reject) => {
-            const maskImg = new Image();
-            maskImg.onload = () => {
-                this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
-                this.maskCtx.drawImage(maskImg, 0, 0, this.maskCanvas.width, this.maskCanvas.height);
+            const img = new Image();
+            img.onload = () => {
+                this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
+                this.manualCtx.drawImage(img, 0, 0, this.manualCanvas.width, this.manualCanvas.height);
+                this._recomposite();
                 resolve();
             };
-            maskImg.onerror = (err) => reject(err);
-            maskImg.src = dataUrl;
+            img.onerror = (err) => reject(err);
+            img.src = dataUrl;
         });
     }
 
-    /**
-     * Exports the mask as a data URL.
-     * @param {string} bg 
-     * @param {string} fg 
-     * @returns {string}
-     */
-    destroy() {
-        if (!this.maskCanvas) return;
-        this.maskCanvas.width = 0;
-        this.maskCanvas.height = 0;
-        this.maskCanvas = null;
-        this.maskCtx = null;
+    async setSubtractFromDataURL(dataUrl) {
+        if (!dataUrl) return;
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
+                this.subtractCtx.drawImage(img, 0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
+                this._recomposite();
+                resolve();
+            };
+            img.onerror = (err) => reject(err);
+            img.src = dataUrl;
+        });
     }
 
+    setAutoPickMasks(map) {
+        this.autoPickMasks = map instanceof Map ? map : new Map();
+        this._recomposite();
+    }
+
+    setSelectedAutoPicks(set) {
+        this.selectedAutoPicks = set instanceof Set ? set : new Set();
+        this._recomposite();
+    }
+
+    clearAutoPicks() {
+        this.autoPickMasks.clear();
+        this.selectedAutoPicks.clear();
+        this._recomposite();
+    }
+
+    getManualURL() {
+        if (!this.manualCanvas) return null;
+        return this._toBlackWhiteURL(this.manualCanvas);
+    }
+
+    getSubtractURL() {
+        if (!this.subtractCanvas) return null;
+        return this._toBlackWhiteURL(this.subtractCanvas);
+    }
+
+    _toBlackWhiteURL(srcCanvas) {
+        const w = srcCanvas.width;
+        const h = srcCanvas.height;
+        if (!w || !h) return null;
+        const tmp = document.createElement('canvas');
+        tmp.width = w;
+        tmp.height = h;
+        const tctx = tmp.getContext('2d');
+        const srcCtx = srcCanvas.getContext('2d');
+        const src = srcCtx.getImageData(0, 0, w, h);
+        const out = tctx.createImageData(w, h);
+        for (let i = 0; i < src.data.length; i += 4) {
+            const a = src.data[i + 3];
+            const v = a > 0 ? 255 : 0;
+            out.data[i] = v;
+            out.data[i + 1] = v;
+            out.data[i + 2] = v;
+            out.data[i + 3] = 255;
+        }
+        tctx.putImageData(out, 0, 0);
+        return tmp.toDataURL('image/png');
+    }
+
+    destroy() {
+        for (const c of [this.manualCanvas, this.subtractCanvas, this.maskCanvas]) {
+            if (c) {
+                c.width = 0;
+                c.height = 0;
+            }
+        }
+        this.manualCanvas = null;
+        this.manualCtx = null;
+        this.subtractCanvas = null;
+        this.subtractCtx = null;
+        this.maskCanvas = null;
+        this.maskCtx = null;
+        this.autoPickMasks?.clear?.();
+        this.selectedAutoPicks?.clear?.();
+    }
+
+    /**
+     * Flatten composite display to B/W PNG.
+     */
     getURL(bg = null, fg = null) {
+        if (!this.maskCanvas) return null;
         if (!bg && !fg) {
             return this.maskCanvas.toDataURL('image/png');
         }
@@ -123,7 +259,6 @@ export class MaskManager {
         tempCanvas.height = h;
         const tempCtx = tempCanvas.getContext('2d');
 
-        // Simple black/white mapping — the only callers use 'white'/'black'
         const bgIsWhite = bg === 'white';
         const fgIsBlack = fg === 'black';
         const [bgR, bgG, bgB] = bgIsWhite ? [255, 255, 255] : [0, 0, 0];
@@ -133,15 +268,13 @@ export class MaskManager {
         const out = tempCtx.createImageData(w, h);
 
         for (let i = 0; i < src.data.length; i += 4) {
-            const a = src.data[i + 3]; // alpha of painted pixel
+            const a = src.data[i + 3];
             if (a > 0) {
-                // Painted area → fg color, fully opaque
                 out.data[i]     = fgR;
                 out.data[i + 1] = fgG;
                 out.data[i + 2] = fgB;
                 out.data[i + 3] = 255;
             } else {
-                // Unpainted area → bg color, fully opaque
                 out.data[i]     = bgR;
                 out.data[i + 1] = bgG;
                 out.data[i + 2] = bgB;

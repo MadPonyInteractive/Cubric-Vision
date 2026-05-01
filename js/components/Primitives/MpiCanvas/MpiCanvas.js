@@ -262,8 +262,10 @@ class _CanvasCore {
             i.onerror = rej;
             i.src = dataUrl;
         });
-        this.mask.maskCtx.globalCompositeOperation = 'source-over';
-        this.mask.maskCtx.drawImage(img, 0, 0);
+        // Write into manual layer; recomposite refreshes display.
+        this.mask.manualCtx.globalCompositeOperation = 'source-over';
+        this.mask.manualCtx.drawImage(img, 0, 0);
+        this.mask._recomposite();
         this.draw();
     }
 
@@ -567,6 +569,13 @@ class _CanvasCore {
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
     clearMask()             { this.mask.clear(); this.draw(); }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
+    getManualURL()          { return this.mask.getManualURL(); }
+    getSubtractURL()        { return this.mask.getSubtractURL(); }
+    async setManualFromDataURL(url)   { await this.mask.setManualFromDataURL(url); this.draw(); }
+    async setSubtractFromDataURL(url) { await this.mask.setSubtractFromDataURL(url); this.draw(); }
+    setAutoPickMasks(map)        { this.mask.setAutoPickMasks(map); this.draw(); }
+    setSelectedAutoPicks(set)    { this.mask.setSelectedAutoPicks(set); this.draw(); }
+    clearAutoPicks()             { this.mask.clearAutoPicks(); this.draw(); }
 
     // ── Crop API ──────────────────────────────────────────────────────────────
     setCropRatio(ratio) { this.crop.setRatio(ratio); this.draw(); }
@@ -602,7 +611,7 @@ export const MpiCanvas = ComponentFactory.create({
             'maskCanvas','maskCtx','brushSize','brushType',
             'maskOpacity','maskColor','maskHidden','isMaskingMode','isCroppingMode',
             'imgAfter','isComparisonMode','sliderPos',
-            'gridH','gridV','img'
+            'gridH','gridV','img','mask'
         ];
         _proxy.forEach(key => {
             Object.defineProperty(el, key, {
@@ -617,6 +626,8 @@ export const MpiCanvas = ComponentFactory.create({
             'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
             'setMaskOpacity','clearMask','getMaskDataURL',
+            'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
+            'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks',
             'setCropRatio','getCropRect',
             'setProcessedImage','clearProcessedImage'
         ];

@@ -4,7 +4,7 @@
 [][TODO] Full screen does not remove the custom top OS bar.
 
 ## PLANS
-[][TODO](docs/plans/2026-04-29-layered-mask-persistence.md)
+[][IMPLEMENTING](docs/plans/2026-04-29-layered-mask-persistence.md)
 [][TODO](docs/plans/2026-04-28-madpony-patreon-revamp.md) (User Action)
 [][TODO](docs/plans/2026-04-30-cross-platform-portable-distribution.md)
 
