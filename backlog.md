@@ -79,6 +79,7 @@
 
   - tags: [PLAN]
   - priority: low
+  - workload: Easy
   - defaultExpanded: true
     ```md
     Plan File: docs\plans\2026-04-28-madpony-patreon-revamp.md
