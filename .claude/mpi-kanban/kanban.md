@@ -92,9 +92,6 @@
   - tags: [PLAN]
   - priority: high
   - defaultExpanded: true
-  - steps:
-      - [x] example step 1
-      - [ ] example step 2
     ```md
     Plan file: docs/plans/2026-04-29-layered-mask-persistence.md
     ```
