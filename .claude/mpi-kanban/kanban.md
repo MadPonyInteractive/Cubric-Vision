@@ -64,6 +64,30 @@
     - Add trim tool + timeline thumbnails.
     ```
 
+### Port redesign to Cubric Studio website
+
+  - tags: [feature, design]
+  - priority: medium
+  - defaultExpanded: true
+    ```md
+    - Port new design from `c:\AI\Mpi\CubricStudio_Redesign\` to `c:\AI\Mpi\Cubric Studio (Website)\`.
+    - Single-page marketing site. Apply OKLCH tokens, Stage component primitives, mascot/logo recolor per RECOLOR.md.
+    - Reference spec: `docs/redesign/PRODUCT.md`, `DESIGN.md`, `c-stage/landing.html`.
+    - Separate git repo — commit independently.
+    ```
+
+### Port redesign to Cubric Studio documentation site
+
+  - tags: [feature, design]
+  - priority: medium
+  - defaultExpanded: true
+    ```md
+    - Port new design from `c:\AI\Mpi\CubricStudio_Redesign\` to `c:\AI\Mpi\Cubric Studio (Docs)\`.
+    - Documentation website. Apply OKLCH tokens, Stage component primitives, doc-appropriate type scale.
+    - Reference spec: `docs/redesign/PRODUCT.md`, `DESIGN.md`.
+    - Separate git repo — commit independently.
+    ```
+
 ## PLANNING
 
 ### Cross-platform portable distribution

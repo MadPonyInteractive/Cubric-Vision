@@ -224,3 +224,24 @@ In those cases, read in this order:
 Confirm in your first message that you've read them. Then propose which phase or deviation, and wait for approval before writing code.
 
 ---
+
+## Multi-Root Workspace
+
+VS Code workspace contains 4 root folders. CubricStudio is **master** (this folder — has `.claude/`, kanban, jsconfig, CLAUDE.md). Other 3 are siblings under `c:\AI\Mpi\`:
+
+| Folder | Purpose | Git |
+|---|---|---|
+| `c:\AI\Mpi\CubricStudio` | Main Electron app (master root) | yes |
+| `c:\AI\Mpi\CubricStudio_Redesign` | Reference-only design source for Stage redesign and future ports | no (intentional) |
+| `c:\AI\Mpi\Cubric Studio (Website)` | Public marketing website (single page) — needs new design ported | yes (separate repo) |
+| `c:\AI\Mpi\Cubric Studio (Docs)` | Documentation website — needs new design ported | yes (separate repo) |
+
+### Rules when working across roots
+
+1. **Master kanban lives here only.** All cross-folder work tracked in `.claude/mpi-kanban/kanban.md`. Entries pointing at sibling folders MUST include absolute path in body.
+2. **CLAUDE.md and `.claude/rules/` apply to CubricStudio only.** Sibling roots don't auto-load this file. When working in a sibling folder, brief sub-agents manually with relevant rules.
+3. **Use absolute paths** in tool calls (`Read`, `Glob`, `Grep`, `Edit`) when targeting sibling folders. Relative paths resolve against CubricStudio.
+4. **Sibling git repos are separate.** Never run `git` from CubricStudio against sibling paths — `cd` into the sibling first or use `-C <path>`.
+5. **Design source of truth for sibling websites:** `c:\AI\Mpi\CubricStudio_Redesign\` (no git, edit freely as design playground). Apply final design to Website/Docs repos.
+
+---
