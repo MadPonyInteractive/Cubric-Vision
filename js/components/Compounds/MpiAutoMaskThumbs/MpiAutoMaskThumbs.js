@@ -21,6 +21,7 @@
  *   clear()                  — remove all thumbnails and reset selection
  *   getPicks()               — returns current Set<number> of selected indices
  *   clearPicks()             — deselect all without removing thumbnails
+ *   setPicks(Set<number>)    — apply selection without emitting 'change'
  *
  * Emits:
  *   'change' { picks: Set<number> } — any thumbnail toggled; picks = selected indices
@@ -104,6 +105,23 @@ export const MpiAutoMaskThumbs = ComponentFactory.create({
         el.clearPicks = () => {
             _picks.clear();
             _thumbEls.forEach(item => item.classList.remove('mpi-auto-mask-thumbs__item--selected'));
+        };
+
+        /**
+         * Apply a selection set without emitting 'change'. Used to rehydrate
+         * picks after re-mount / entry switch.
+         * @param {Set<number>} picks
+         */
+        el.setPicks = (picks) => {
+            _picks.clear();
+            _thumbEls.forEach((item, idx) => {
+                if (picks?.has?.(idx)) {
+                    _picks.add(idx);
+                    item.classList.add('mpi-auto-mask-thumbs__item--selected');
+                } else {
+                    item.classList.remove('mpi-auto-mask-thumbs__item--selected');
+                }
+            });
         };
     }
 });
