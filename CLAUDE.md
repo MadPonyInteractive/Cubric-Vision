@@ -117,6 +117,13 @@ If you need to run browser automation or test web interfaces:
 **->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`) — installed globally (`npm i -g @playwright/cli`); skill at `~/.claude/skills/playwright-cli` (all projects).
 **->** **Important:** App runs on http://127.0.0.1:3000/ (browser is dev-only — some features broken in browser; Electron desktop is the ship target).
 
+### Desktop Automation (Playwright + Electron)
+If a bug may involve Electron-only behavior, desktop shell APIs, window controls, IPC, local app state, or anything that differs from browser dev mode:
+**->** **Use:** `npm run test:desktop` to launch the real Electron app through Playwright.
+**->** **Write tests in:** `tests/desktop/*.spec.js`.
+**->** **Important:** Desktop tests set `CUBRIC_E2E_USER_DATA` so they do not modify the normal Electron user data directory. Keep tests focused on launch/navigation/UI checks unless the task explicitly requires downloads, installs, file deletion, or generation.
+**->** **Port note:** the app server binds to `127.0.0.1:3000`; make sure no other Cubric Studio instance is already using that port before running desktop tests.
+
 ### Git and Commits
 NEVER commit to git unless user specifically asks for it
 ---

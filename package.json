@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
+    "test:desktop": "playwright test --config=playwright.desktop.config.js",
     "lint": "eslint js/ --max-warnings=9999",
     "lint:components": "eslint js/components/ --max-warnings=9999",
     "prepare": "husky"
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "electron": "^41.0.3",
     "eslint": "^10.2.1",
     "firacode": "^6.2.0",

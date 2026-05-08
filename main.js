@@ -1,14 +1,87 @@
 const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 const { fork } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
+
+// Mask layer TEMP store — session-scoped, cleared on quit, stale dirs pruned at boot.
+const SESSION_ID = randomUUID();
+const MASK_TEMP_ROOT = path.join(app.getPath('temp'), 'cubric-' + SESSION_ID);
+
+function pruneStaleMaskTemp() {
+  try {
+    const tmpRoot = app.getPath('temp');
+    const entries = fs.readdirSync(tmpRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (!entry.name.startsWith('cubric-')) continue;
+      if (entry.name === 'cubric-' + SESSION_ID) continue;
+      const stalePath = path.join(tmpRoot, entry.name);
+      try {
+        fs.rmSync(stalePath, { recursive: true, force: true });
+        logger.info('mask-temp', `Pruned stale session dir: ${stalePath}`);
+      } catch (err) {
+        logger.warn('mask-temp', `Failed to prune ${stalePath}: ${err.message}`);
+      }
+    }
+  } catch (err) {
+    logger.warn('mask-temp', `pruneStaleMaskTemp failed: ${err.message}`);
+  }
+}
+
+function sanitizeMaskId(id) {
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new Error('Invalid id (empty or non-string)');
+  }
+  if (id.includes('..') || id.includes('/') || id.includes('\\') || id.includes('\0')) {
+    throw new Error(`Invalid id (path traversal): ${id}`);
+  }
+  return id;
+}
+
+function resolveMaskItemDir(projectId, groupId, itemId) {
+  const p = sanitizeMaskId(projectId);
+  const g = sanitizeMaskId(groupId);
+  const i = sanitizeMaskId(itemId);
+  return path.join(MASK_TEMP_ROOT, p, g, i);
+}
+
+function dataUrlToBuffer(dataUrl) {
+  if (typeof dataUrl !== 'string') throw new Error('dataURL must be string');
+  const idx = dataUrl.indexOf('base64,');
+  if (idx === -1) throw new Error('dataURL missing base64 payload');
+  return Buffer.from(dataUrl.slice(idx + 7), 'base64');
+}
+
+function bufferToPngDataUrl(buf) {
+  return 'data:image/png;base64,' + buf.toString('base64');
+}
+
+function atomicWritePng(filePath, dataUrl) {
+  const buf = dataUrlToBuffer(dataUrl);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tmp = filePath + '.tmp';
+  fs.writeFileSync(tmp, buf);
+  fs.renameSync(tmp, filePath);
+}
 
 // Required on Windows to show the app icon (not Electron's) when launched via .bat.
 // Use exe path as model ID — recommended for unpackaged Electron apps on Windows.
 if (process.platform === 'win32') {
   app.setAppUserModelId(process.execPath);
+}
+
+if (process.env.CUBRIC_E2E) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+}
+
+if (process.env.CUBRIC_E2E_USER_DATA) {
+  fs.mkdirSync(process.env.CUBRIC_E2E_USER_DATA, { recursive: true });
+  app.setPath('userData', path.resolve(process.env.CUBRIC_E2E_USER_DATA));
 }
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
@@ -232,6 +305,9 @@ function startServer() {
 }
 
 app.on('ready', () => {
+  pruneStaleMaskTemp();
+  logger.info('mask-temp', `session=${SESSION_ID} tempDir=${MASK_TEMP_ROOT}`);
+
   startServer();
 
   let readyCalled = false;
@@ -352,6 +428,73 @@ app.on('ready', () => {
     }
   });
 
+  // Mask layer TEMP store IPC — session-scoped persistence for manual+subtract layers.
+  ipcMain.handle('mask-temp:get-session-id', async () => {
+    return { ok: true, sessionId: SESSION_ID, tempDir: MASK_TEMP_ROOT };
+  });
+
+  ipcMain.handle('mask-temp:read', async (_evt, projectId, groupId, itemId) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      const out = { manual: null, subtract: null };
+      const manualPath = path.join(dir, 'manual.png');
+      const subtractPath = path.join(dir, 'subtract.png');
+      if (fs.existsSync(manualPath)) {
+        out.manual = bufferToPngDataUrl(fs.readFileSync(manualPath));
+      }
+      if (fs.existsSync(subtractPath)) {
+        out.subtract = bufferToPngDataUrl(fs.readFileSync(subtractPath));
+      }
+      return { ok: true, ...out };
+    } catch (err) {
+      logger.error('mask-temp', 'read failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:write-manual', async (_evt, projectId, groupId, itemId, dataUrl) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      atomicWritePng(path.join(dir, 'manual.png'), dataUrl);
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'write-manual failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:write-subtract', async (_evt, projectId, groupId, itemId, dataUrl) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      atomicWritePng(path.join(dir, 'subtract.png'), dataUrl);
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'write-subtract failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:delete', async (_evt, projectId, groupId, itemId) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      fs.rmSync(dir, { recursive: true, force: true });
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'delete failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:cleanup-session', async () => {
+    try {
+      fs.rmSync(MASK_TEMP_ROOT, { recursive: true, force: true });
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'cleanup-session failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
   // Cross-platform folder picker using Electron's native dialog
   ipcMain.handle('choose-folder', async () => {
     try {
@@ -388,6 +531,15 @@ app.on('before-quit', () => {
         fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
       }
       logger.info('comfy', `Cleaned temp folder: ${dir}`);
+    }
+  }
+
+  if (fs.existsSync(MASK_TEMP_ROOT)) {
+    try {
+      fs.rmSync(MASK_TEMP_ROOT, { recursive: true, force: true });
+      logger.info('mask-temp', `Cleaned session dir: ${MASK_TEMP_ROOT}`);
+    } catch (err) {
+      logger.warn('mask-temp', `Failed to clean ${MASK_TEMP_ROOT}: ${err.message}`);
     }
   }
 });

@@ -75,7 +75,7 @@ Brush stroke handler writes to manual + clears subtract at touched pixels. Erase
 
 ---
 
-### [ ] 2. Backend IPC route + main.js session lifecycle
+### [x] 2. Backend IPC route + main.js session lifecycle
 
 Add Electron main-process session ID + TEMP folder management.
 

@@ -25,6 +25,8 @@ comfy_workflows/scripts/
 .claude/playwright-cli
 .playwright
 .playwright-cli
+playwright-report/
+test-results/
 docs/superpowers/
 .kilo
 
