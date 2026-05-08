@@ -57,7 +57,8 @@
       "mcp__nimbalyst-mcp__tracker_link_file",
       "mcp__nimbalyst-mcp__AskUserQuestion",
       "mcp__nimbalyst-session-context__update_session_board",
-      "mcp__nimbalyst-meta-agent__create_session"
+      "mcp__nimbalyst-meta-agent__create_session",
+      "Bash(npx eslint *)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

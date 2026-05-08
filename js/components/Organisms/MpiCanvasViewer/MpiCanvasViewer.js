@@ -38,6 +38,7 @@ import { state } from '../../../state.js';
 import { createImageItem } from '../../../data/projectModel.js';
 import { qs } from '../../../utils/dom.js';
 import { maskTempStore } from '../../../services/maskTempStore.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -233,6 +234,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         ];
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
+        // ComfyUI mask URLs from last detect run, ordered by sorted pick index.
+        // Used to rehydrate auto-pick bitmaps on swapToCanvas (RAM-only Canvas
+        // map is lost when MpiCanvas is destroyed for prompt-mode swap).
+        let _autoPickUrls = [];
 
         // Viewer retains ownership of the thumbs instance; MpiToolOptionsMask
         // re-parents the DOM node via getAutoMaskThumbsEl(). DO NOT destroy it
@@ -241,8 +246,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         autoMaskThumbs.on('change', ({ picks }) => {
             _autoMaskPicks = picks;
             if (picks.size === 0) {
-                canvas.clearMask();
-                _hasMask = false;
+                // Drop auto layer only — preserve manual + subtract layers.
+                canvas.clearAutoPicks();
+                canvas.setSelectedAutoPicks(new Set());
+                _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
             } else {
                 _runAutoMaskWorkflow(false);
             }
@@ -288,19 +295,46 @@ export const MpiCanvasViewer = ComponentFactory.create({
             });
 
             _autoMaskExec.onDetected = (urls) => {
+                if (!urls || urls.length === 0) {
+                    StatusBar.notify('Nothing detected', 'warning');
+                    _autoMaskExec?.cancel();
+                    _autoMaskExec = null;
+                    if (populateThumbs) autoMaskThumbs.el.setImages([]);
+                    return;
+                }
                 if (populateThumbs) {
                     autoMaskThumbs.el.setImages(urls);
                 }
             };
 
-            _autoMaskExec.onMask = async (maskUrl) => {
+            _autoMaskExec.onMasks = async (maskUrls) => {
                 if (_autoMaskPicks.size === 0) return;
+                if (maskUrls.length !== _autoMaskPicks.size) {
+                    clientLogger.warn('automask',
+                        `mask list length ${maskUrls.length} != picks ${_autoMaskPicks.size}; clearing auto picks`);
+                    canvas.clearAutoPicks();
+                    canvas.setSelectedAutoPicks(new Set());
+                    _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
+                    return;
+                }
                 try {
-                    const dataUrl = await _maskUrlToTransparentDataUrl(maskUrl);
-                    await canvas.compositeMaskDataURL(dataUrl);
+                    const bitmaps = await Promise.all(
+                        maskUrls.map(async (u) => {
+                            const dataUrl = await _maskUrlToTransparentDataUrl(u);
+                            const res = await fetch(dataUrl);
+                            const blob = await res.blob();
+                            return await createImageBitmap(blob);
+                        })
+                    );
+                    const sortedPicks = [..._autoMaskPicks].sort((a, b) => a - b);
+                    const map = new Map();
+                    sortedPicks.forEach((pickIdx, i) => map.set(pickIdx, bitmaps[i]));
+                    canvas.setAutoPickMasks(map);
+                    canvas.setSelectedAutoPicks(_autoMaskPicks);
+                    _autoPickUrls = [...maskUrls];
                     _hasMask = true;
                 } catch (err) {
-                    console.warn('[MpiCanvasViewer] Failed to apply auto-mask:', err);
+                    console.warn('[MpiCanvasViewer] Failed to apply auto-masks:', err);
                 }
             };
 
@@ -310,28 +344,68 @@ export const MpiCanvasViewer = ComponentFactory.create({
             };
         }
 
+        // Rehydrate auto-pick bitmaps from cached URLs after canvas remount
+        // (prompt → mask swap). On 404 / mismatch, clear stale state instead
+        // of leaving picks selected with no visible mask.
+        async function _restoreAutoPickMasks() {
+            // Sync viewer Set from thumbs — DOM keeps the visual selection
+            // across MpiToolOptionsMask remount; the viewer's Set is reset.
+            const thumbPicks = autoMaskThumbs.el.getPicks?.() ?? new Set();
+            if (thumbPicks.size > 0) _autoMaskPicks = thumbPicks;
+            if (_autoMaskPicks.size === 0 || _autoPickUrls.length === 0) return;
+            if (_autoPickUrls.length !== _autoMaskPicks.size) {
+                _resetAutoPickStateWithToast();
+                return;
+            }
+            try {
+                const bitmaps = await Promise.all(
+                    _autoPickUrls.map(async (u) => {
+                        const dataUrl = await _maskUrlToTransparentDataUrl(u);
+                        const res = await fetch(dataUrl);
+                        const blob = await res.blob();
+                        return await createImageBitmap(blob);
+                    })
+                );
+                const sortedPicks = [..._autoMaskPicks].sort((a, b) => a - b);
+                const map = new Map();
+                sortedPicks.forEach((idx, i) => map.set(idx, bitmaps[i]));
+                canvas.setAutoPickMasks(map);
+                canvas.setSelectedAutoPicks(_autoMaskPicks);
+                _hasMask = true;
+            } catch (err) {
+                console.warn('[MpiCanvasViewer] auto-pick restore failed:', err);
+                _resetAutoPickStateWithToast();
+            }
+        }
+
+        function _resetAutoPickStateWithToast() {
+            _autoPickUrls = [];
+            _autoMaskPicks.clear();
+            autoMaskThumbs.el.clear();
+            canvas.clearAutoPicks();
+            canvas.setSelectedAutoPicks(new Set());
+            StatusBar.notify('Auto-mask picks expired — re-run detect', 'warning');
+        }
+
         function _exitAutoMaskMode(apply) {
             _autoMaskExec?.cancel();
             _autoMaskExec = null;
 
             if (!apply) {
-                canvas.clearMask();
-                _hasMask = false;
-                emit('mask-clear', {});
-            } else {
-                // Only mark as ready if there are actual selections
-                const hasSelections = _autoMaskPicks.size > 0;
-                if (hasSelections) {
-                    _hasMask = true;
-                    emit('mask-ready', { hasMask: true });
-                } else {
-                    _hasMask = false;
-                    emit('mask-clear', {});
-                }
+                // Drop auto layer only; preserve manual + subtract.
+                canvas.clearAutoPicks();
+                canvas.setSelectedAutoPicks(new Set());
             }
+            // apply=true: keep auto picks composited.
+
+            const hasContent = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
+            _hasMask = hasContent;
+            if (hasContent) emit('mask-ready', { hasMask: true });
+            else            emit('mask-clear', {});
 
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
+            _autoPickUrls = [];
         }
 
         // ── Tool mode state machine ───────────────────────────────────────────
@@ -577,6 +651,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearMask = () => {
             canvas.clearMask();
             _hasMask = false;
+            _autoPickUrls = [];
+            const k = _maskKey(_currentItem);
+            if (k) maskTempStore.delete(k.projectId, k.groupId, k.itemId).catch(() => {});
             emit('mask-clear', {});
         };
 
@@ -617,6 +694,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             autoMaskThumbs.el.clear();
             autoMaskThumbs.el.clearPicks?.();
             _autoMaskPicks.clear();
+            _autoPickUrls = [];
         };
 
         /**
@@ -627,12 +705,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _autoMaskUseBox = !!useBox;
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
+            _autoPickUrls = [];
         };
 
         /** Kick off an auto-mask detect run and populate the thumbs strip. */
         el.runAutoMaskDetect = () => {
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
+            _autoPickUrls = [];
             _runAutoMaskWorkflow(true);
         };
 
@@ -733,6 +813,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 await _cv.el.loadImage(_resolveUrl(_currentItem.filePath));
                 await _restoreLayers(_currentItem);
             }
+
+            // Rehydrate auto-pick bitmaps from cached ComfyUI URLs.
+            await _restoreAutoPickMasks();
 
             _previewMaskCache = null;
         };

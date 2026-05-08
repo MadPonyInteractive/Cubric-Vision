@@ -51,7 +51,7 @@ import { buildWeightMap, create as createAggregator } from './progressAggregator
 /**
  * @typedef {Object} AutoMaskExecution
  * @property {function(string[]):void} onDetected - Called with thumbnail URLs from the "Detected" node
- * @property {function(string):void}   onMask     - Called with the combined mask image URL from "Output"
+ * @property {function(string[]):void} onMasks    - Called with ordered per-pick mask image URLs from "Output" (length = picks.size)
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running workflow
  */
@@ -163,10 +163,10 @@ function _buildParams(payload) {
  *
  * Two outputs are captured from a single workflow run:
  *   - "Detected" node  → thumbnail images of each detected segment
- *   - "Output" node    → combined mask image (white = selected, black = background)
+ *   - "Output" node    → ordered list of per-pick mask images (length = picks.size)
  *
- * When `picks` is empty the workflow still runs end-to-end; the "Output" will be
- * an all-black mask (no picks selected) which the caller must ignore.
+ * When `picks` is empty the caller should skip running the workflow. If invoked
+ * with empty picks the "Output" emit is suppressed.
  *
  * Returns an AutoMaskExecution handle synchronously — attach callbacks before
  * the first async tick to avoid missing early messages.
@@ -177,7 +177,7 @@ function _buildParams(payload) {
 export function runAutoMask(payload) {
     const exec = {
         onDetected: null,
-        onMask:     null,
+        onMasks:    null,
         onError:    null,
         cancel() { ComfyUIController.interrupt(); },
     };
@@ -223,6 +223,8 @@ export function runAutoMask(payload) {
             Selected_Masks_Input:  picksStr,
         };
 
+        let _detectedFired = false;
+
         const onMessage = (msg) => {
             if (msg.type !== 'executed') return;
 
@@ -233,17 +235,25 @@ export function runAutoMask(payload) {
                 const urls = nodeOutput.images.map(img =>
                     `http://${ComfyUIController.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
                 );
+                _detectedFired = true;
                 exec.onDetected?.(urls);
             }
 
             if (outputNodeIds.has(nodeId) && nodeOutput?.images) {
-                const url = `http://${ComfyUIController.serverAddress}/view?filename=${nodeOutput.images[0].filename}&type=${nodeOutput.images[0].type}&subfolder=${nodeOutput.images[0].subfolder || ''}`;
-                exec.onMask?.(url);
+                if (!payload.picks?.size) return;
+                const urls = nodeOutput.images.map(img =>
+                    `http://${ComfyUIController.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
+                );
+                exec.onMasks?.(urls);
             }
         };
 
         try {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
+            // ComfyUI skips the "Detected" preview node when SEGS is empty —
+            // no `executed` event fires. Synthesize an empty-detection signal
+            // so listeners can show "Nothing detected".
+            if (!_detectedFired) exec.onDetected?.([]);
         } catch (err) {
             clientLogger.error('comfy', `autoMask workflow failed`, err);
             Events.emit('ui:error', { title: 'Auto-mask failed', message: err.message });

@@ -88,6 +88,16 @@
     - Separate git repo — commit independently.
     ```
 
+### History page, right panel, not scrollable.
+
+  - tags: [issue, bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    I noticed that when detecting an image with a lot of faces and it displays all the faces on the right panel, I cannot see the apply button or the history below it. Nor can I scroll down to see it. The history entries are scrollable, but the conjunction of both the tools panel above and the history entries below is not scrollable. Instead of scrolling only the history entries, the user should be able to scroll both the Tools panel and the history together.
+    ```
+
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -111,11 +121,13 @@
 
 ## IMPLEMENTING
 
+## COMPLETED
+
 ### Mask persistence for layered masks
 
   - tags: [PLAN]
   - priority: high
-  - defaultExpanded: true
+  - defaultExpanded: false
     ```md
     Plan file: docs/plans/2026-04-29-layered-mask-persistence.md
 
@@ -124,10 +136,8 @@
     - [x] 2. Backend IPC route + main.js session lifecycle
     - [x] 3. Frontend maskTempStore service
     - [x] 4. Viewer wiring: swap, mode entry, getCurrentMaskDataURL, loadEntry
-    - [ ] 5. Auto-mask per-pick masks + executor protocol change
-    - [ ] 6. Empty-detection toast
-    - [ ] 7. clearMask + history-entry switch + tool teardown purge
+    - [x] 5. Auto-mask per-pick masks + executor protocol change
+    - [x] 6. Empty-detection toast
+    - [x] 7. clearMask + history-entry switch + tool teardown purge
     ```
-
-## COMPLETED
 

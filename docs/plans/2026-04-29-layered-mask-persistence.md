@@ -149,7 +149,7 @@ Rewire `MpiCanvasViewer.js` to use layered model + TEMP store. Fixes the Detail 
 
 ---
 
-### [ ] 5. Auto-mask per-pick masks + executor protocol change
+### [x] 5. Auto-mask per-pick masks + executor protocol change
 
 Update `runAutoMask` (in `js/services/commandExecutor.js` or equivalent) to call `onMasks(maskUrls[])` after server response. List length matches `picks.size`, ordered by pick index insertion.
 
@@ -180,7 +180,7 @@ ComfyUI workflow JSON edit (handled by user): ensure mask output node emits orde
 
 ---
 
-### [ ] 6. Empty-detection toast
+### [x] 6. Empty-detection toast
 
 In `_runAutoMaskWorkflow` (line 189), the `onDetected = (urls) => {...}` handler at line 199:
 - If `urls.length === 0` → emit toast "Nothing detected" via existing toast/notification infra. Do NOT proceed to mask compute.
@@ -190,7 +190,7 @@ In `_runAutoMaskWorkflow` (line 189), the `onDetected = (urls) => {...}` handler
 
 ---
 
-### [ ] 7. clearMask + history-entry switch + tool teardown purge
+### [x] 7. clearMask + history-entry switch + tool teardown purge
 
 - `clearMask` (line 462): wipe `manualLayer` + `subtractLayer` + clear auto picks. Call `maskTempStore.delete(projectId, groupId, _currentItem.id)`. Set `_hasMask = false`. Emit `mask-clear`.
 - `loadEntry` (line 347-353): persist current item's layers to TEMP if `_hasMask`. Then load new item's layers from TEMP.
