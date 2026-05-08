@@ -194,36 +194,25 @@ export class MaskManager {
     }
 
     getManualURL() {
-        if (!this.manualCanvas) return null;
-        return this._toBlackWhiteURL(this.manualCanvas);
+        return this._layerToURL(this.manualCanvas, this.manualCtx);
     }
 
     getSubtractURL() {
-        if (!this.subtractCanvas) return null;
-        return this._toBlackWhiteURL(this.subtractCanvas);
+        return this._layerToURL(this.subtractCanvas, this.subtractCtx);
     }
 
-    _toBlackWhiteURL(srcCanvas) {
-        const w = srcCanvas.width;
-        const h = srcCanvas.height;
-        if (!w || !h) return null;
-        const tmp = document.createElement('canvas');
-        tmp.width = w;
-        tmp.height = h;
-        const tctx = tmp.getContext('2d');
-        const srcCtx = srcCanvas.getContext('2d');
-        const src = srcCtx.getImageData(0, 0, w, h);
-        const out = tctx.createImageData(w, h);
-        for (let i = 0; i < src.data.length; i += 4) {
-            const a = src.data[i + 3];
-            const v = a > 0 ? 255 : 0;
-            out.data[i] = v;
-            out.data[i + 1] = v;
-            out.data[i + 2] = v;
-            out.data[i + 3] = 255;
+    /**
+     * Serialize a layer canvas as alpha PNG (preserves white-on-transparent shape so
+     * setManualFromDataURL / setSubtractFromDataURL can round-trip without flattening).
+     * Returns null when the canvas has no painted pixels.
+     */
+    _layerToURL(srcCanvas, srcCtx) {
+        if (!srcCanvas?.width || !srcCanvas?.height || !srcCtx) return null;
+        const data = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height).data;
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] > 0) return srcCanvas.toDataURL('image/png');
         }
-        tctx.putImageData(out, 0, 0);
-        return tmp.toDataURL('image/png');
+        return null;
     }
 
     destroy() {

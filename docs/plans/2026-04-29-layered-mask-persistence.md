@@ -99,7 +99,7 @@ Logging via existing `routes/logger.js`.
 
 ---
 
-### [ ] 3. Frontend maskTempStore service
+### [x] 3. Frontend maskTempStore service
 
 Create `js/services/maskTempStore.js`:
 ```
@@ -128,7 +128,7 @@ Confirm first READ returns `{ manual: 'data:image/png;...' }`, second READ retur
 
 ---
 
-### [ ] 4. Viewer wiring: swap, mode entry, getCurrentMaskDataURL, loadEntry
+### [x] 4. Viewer wiring: swap, mode entry, getCurrentMaskDataURL, loadEntry
 
 Rewire `MpiCanvasViewer.js` to use layered model + TEMP store. Fixes the Detail crash as a side effect.
 

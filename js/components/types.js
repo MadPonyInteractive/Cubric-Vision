@@ -783,6 +783,8 @@
  * @typedef {Object} MpiCanvasViewerProps (Organism — js/components/Organisms/MpiCanvasViewer)
  * @property {string} [initialImageUrl=''] - URL of the first image to load
  * @property {number} [initialIdx=0]       - History index of the initial image
+ * @property {Object} [initialItem=null]   - Full HistoryItem (provides id for TEMP mask persistence)
+ * @property {string} [groupId=null]       - Owning group's id (component of TEMP mask key path)
  *
  * Instance methods (on instance.el):
  *   loadEntry(item, idx)           — save current mask, load item's image, restore idx's mask

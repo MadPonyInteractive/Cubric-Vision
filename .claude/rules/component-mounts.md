@@ -67,7 +67,7 @@ const TOOL_OPTIONS_REGISTRY = {
 - `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero models installed
 
 **Image groups** (`_group.type !== 'video'`):
-- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars
+- `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
 - Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 

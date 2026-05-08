@@ -122,8 +122,8 @@
     Steps:
     - [x] 1. Layered MaskManager + MpiCanvas API surface
     - [x] 2. Backend IPC route + main.js session lifecycle
-    - [ ] 3. Frontend maskTempStore service
-    - [ ] 4. Viewer wiring: swap, mode entry, getCurrentMaskDataURL, loadEntry
+    - [x] 3. Frontend maskTempStore service
+    - [x] 4. Viewer wiring: swap, mode entry, getCurrentMaskDataURL, loadEntry
     - [ ] 5. Auto-mask per-pick masks + executor protocol change
     - [ ] 6. Empty-detection toast
     - [ ] 7. clearMask + history-entry switch + tool teardown purge

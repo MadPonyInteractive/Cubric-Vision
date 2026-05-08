@@ -166,6 +166,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             : MpiCanvasViewer.mount(centreSlot, {
                 initialImageUrl: resolveMediaUrl(_group.history[_currentIdx]?.filePath),
                 initialIdx:      _currentIdx,
+                initialItem:     _group.history[_currentIdx] || null,
+                groupId:         _group.id,
             });
 
         const _mascotEl = document.createElement('img');

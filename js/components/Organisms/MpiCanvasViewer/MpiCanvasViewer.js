@@ -5,6 +5,8 @@
  *
  * @param {string} [initialImageUrl=''] - URL of the first image to load
  * @param {number} [initialIdx=0]        - History index of the initial image
+ * @param {object} [initialItem=null]    - Full HistoryItem for the initial image (provides id for TEMP mask persistence)
+ * @param {string} [groupId=null]        - Owning group's id (component of TEMP mask key path)
  *
  * Instance API (on el):
  *   el.loadEntry(item, idx)            — save current mask, load item's image, restore idx's mask
@@ -35,6 +37,7 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
 import { createImageItem } from '../../../data/projectModel.js';
 import { qs } from '../../../utils/dom.js';
+import { maskTempStore } from '../../../services/maskTempStore.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -61,6 +64,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
     setup: (el, props, emit) => {
         const initialImageUrl = props.initialImageUrl || '';
         const initialIdx = props.initialIdx ?? 0;
+        const initialItem = props.initialItem || null;
+        const _groupId = props.groupId || null;
 
         // ── State ─────────────────────────────────────────────────────────────
 
@@ -68,8 +73,88 @@ export const MpiCanvasViewer = ComponentFactory.create({
         let _currentMode = 'none';
         let _activeCropRatio = SOCIAL_RATIOS[0].ratio;
         let _hasMask = false;
-        /** Saved mask data URLs keyed by history index */
-        const _maskStore = new Map();
+        /** Composite mask cache for active prompt-tool preview swap (canvas destroyed) */
+        let _previewMaskCache = null;
+
+        function _maskKey(item) {
+            const projectId = state.currentProject?.id;
+            const itemId = item?.id;
+            if (!projectId || !_groupId || !itemId) return null;
+            return { projectId, groupId: _groupId, itemId };
+        }
+
+        async function _persistLayers(item) {
+            const k = _maskKey(item);
+            if (!k) return;
+            const manualUrl = _cv.el?.getManualURL?.() || null;
+            const subtractUrl = _cv.el?.getSubtractURL?.() || null;
+            if (manualUrl) await maskTempStore.writeManual(k.projectId, k.groupId, k.itemId, manualUrl);
+            if (subtractUrl) await maskTempStore.writeSubtract(k.projectId, k.groupId, k.itemId, subtractUrl);
+            if (!manualUrl && !subtractUrl) await maskTempStore.delete(k.projectId, k.groupId, k.itemId);
+        }
+
+        async function _loadImg(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = (e) => reject(e);
+                img.src = dataUrl;
+            });
+        }
+
+        // Build composite (manual MINUS subtract) B/W PNG from TEMP layers.
+        // Returns null when no manual layer is present. Used to seed preview-mode
+        // mask after history-entry switch (canvas torn down).
+        async function _buildCompositeFromTemp(item) {
+            const k = _maskKey(item);
+            if (!k) return null;
+            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            if (!manual) return null;
+            try {
+                const manualImg = await _loadImg(manual);
+                const w = manualImg.naturalWidth;
+                const h = manualImg.naturalHeight;
+                if (!w || !h) return null;
+                const tmp = document.createElement('canvas');
+                tmp.width = w;
+                tmp.height = h;
+                const ctx = tmp.getContext('2d');
+                ctx.drawImage(manualImg, 0, 0);
+                if (subtract) {
+                    const subImg = await _loadImg(subtract);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.drawImage(subImg, 0, 0, w, h);
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+                // Flatten remaining alpha → opaque white-on-black for prompt-tool consumers
+                const src = ctx.getImageData(0, 0, w, h);
+                const out = document.createElement('canvas');
+                out.width = w; out.height = h;
+                const octx = out.getContext('2d');
+                const outData = octx.createImageData(w, h);
+                for (let i = 0; i < src.data.length; i += 4) {
+                    const v = src.data[i + 3] > 0 ? 255 : 0;
+                    outData.data[i] = v;
+                    outData.data[i + 1] = v;
+                    outData.data[i + 2] = v;
+                    outData.data[i + 3] = 255;
+                }
+                octx.putImageData(outData, 0, 0);
+                return out.toDataURL('image/png');
+            } catch (err) {
+                console.warn('[MpiCanvasViewer] composite build failed:', err);
+                return null;
+            }
+        }
+
+        async function _restoreLayers(item) {
+            const k = _maskKey(item);
+            if (!k) { _hasMask = false; return; }
+            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            if (manual)   await _cv.el.setManualFromDataURL(manual);
+            if (subtract) await _cv.el.setSubtractFromDataURL(subtract);
+            _hasMask = !!(_cv.el?.maskCanvas && hasMaskContent(_cv.el.maskCanvas));
+        }
 
         // ── Canvas + spinner ─────────────────────────────────────────────────
 
@@ -117,6 +202,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         }
 
         let _loadingComparison = false;
+        let _loadingEntry = false;
 
         async function _showCompare(itemA, itemB) {
             if (!itemA?.filePath || !itemB?.filePath) return;
@@ -347,26 +433,25 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         let _currentIdx = initialIdx;
         /** @type {import('../../../data/projectModel.js').HistoryItem|null} */
-        let _currentItem = null;
+        let _currentItem = initialItem;
 
         el.loadEntry = async (item, idx) => {
-            // Save current mask before switching away — only if canvas alive
-            if (_hasMask && !_previewInst) {
-                _maskStore.set(_currentIdx, canvas.getMaskDataURL());
-            } else if (!_previewInst) {
-                _maskStore.delete(_currentIdx);
+            // Persist current item's layers before switching — only if canvas alive
+            if (!_previewInst && _currentItem) {
+                try { await _persistLayers(_currentItem); }
+                catch (err) { console.warn('[MpiCanvasViewer] persist layers failed:', err); }
             }
 
             // Capture active tool mode so it can be restored after image swap.
-            // canvas.loadImage internally resets mode → without this, any tool
-            // (crop, mask, future) would silently disappear on entry switch.
             const _modeToRestore = _currentMode;
 
+            _loadingEntry = true;
             _currentIdx = idx;
             _currentItem = item;
             _exitMode();
 
-            // Preview mode: route through MpiMaskedImagePreview, skip canvas calls
+            // Preview mode: route through MpiMaskedImagePreview. Build composite
+            // from TEMP layers if any, else clear preview mask.
             if (_previewInst) {
                 if (item?.filePath) {
                     try {
@@ -375,32 +460,28 @@ export const MpiCanvasViewer = ComponentFactory.create({
                         console.warn('[MpiCanvasViewer] Failed to load image into preview:', err);
                     }
                 }
-                const savedPreview = _maskStore.get(idx);
-                if (savedPreview) {
-                    _previewInst.el.setMaskDataURL(savedPreview);
+                const composite = await _buildCompositeFromTemp(item);
+                if (composite) {
+                    _previewInst.el.setMaskDataURL(composite);
+                    _previewMaskCache = composite;
                     _hasMask = true;
                 } else {
                     _previewInst.el.clearMask();
+                    _previewMaskCache = null;
                     _hasMask = false;
                 }
+                _loadingEntry = false;
                 emit('entry-loaded', { idx, hasMask: _hasMask });
                 return;
             }
 
             await _showEntry(item);
-
-            const saved = _maskStore.get(idx);
-            if (saved) {
-                await canvas.setMaskDataURL(saved);
-                _hasMask = true;
-            } else {
-                canvas.clearMask();
-                _hasMask = false;
-            }
+            await _restoreLayers(item);
 
             if (_modeToRestore && _modeToRestore !== 'none') {
                 _enterMode(_modeToRestore);
             }
+            _loadingEntry = false;
 
             emit('entry-loaded', { idx, hasMask: _hasMask });
         };
@@ -423,16 +504,23 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.exitMode = () => _exitMode();
 
         el.getCurrentMaskDataURL = () => {
-            if (!_hasMask) return null;
-            return canvas.getMaskDataURL('black', 'white');
+            // Preview mode: live canvas is destroyed. Return cached composite.
+            if (_previewInst) return _previewMaskCache ?? null;
+            try {
+                if (_cv.el?.maskCanvas && hasMaskContent(_cv.el.maskCanvas)) {
+                    return _cv.el.getMaskDataURL('black', 'white');
+                }
+            } catch (_) { /* canvas torn down — fall through */ }
+            return null;
         };
 
         // Live check: paint strokes don't flip _hasMask flag (only commit/evaluate
         // does). Radial menu picks during active paint saw stale false. Compute
         // from canvas pixels when available; fall back to flag for preview mode.
         el.hasMask = () => {
+            if (_previewInst) return !!_previewMaskCache;
             try {
-                if (canvas?.maskCanvas) return hasMaskContent(canvas.maskCanvas);
+                if (_cv.el?.maskCanvas) return hasMaskContent(_cv.el.maskCanvas);
             } catch (_) { /* canvas torn down — fall back */ }
             return _hasMask;
         };
@@ -586,6 +674,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
             const imageUrl    = _currentItem ? _resolveUrl(_currentItem.filePath) : null;
 
+            // Persist manual + subtract layers to TEMP before tearing the canvas down.
+            // Required so swapToCanvas can restore exactly what the user painted.
+            if (_currentItem) {
+                try { await _persistLayers(_currentItem); }
+                catch (err) { console.warn('[MpiCanvasViewer] persist on swapToPreview failed:', err); }
+            }
+
+            _previewMaskCache = maskDataUrl;
+
             // Destroy canvas — zeros canvas dims, removes from DOM, releases GPU textures
             _cv.inst.el.destroy?.();
             const wrap = qs('#canvas-wrap', el);
@@ -631,19 +728,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 emit('mode-changed', { mode: _currentMode });
             });
 
-            // Reload image + restore mask from store
+            // Reload image + restore manual+subtract layers from TEMP
             if (_currentItem?.filePath) {
                 await _cv.el.loadImage(_resolveUrl(_currentItem.filePath));
-                const saved = _maskStore.get(_currentIdx);
-                if (saved) {
-                    await _cv.el.setMaskDataURL(saved);
-                    _hasMask = true;
-                } else {
-                    _cv.el.clearMask();
-                    _hasMask = false;
-                }
+                await _restoreLayers(_currentItem);
             }
 
+            _previewMaskCache = null;
         };
 
         // ── Lifecycle: destroy ───────────────────────────────────────────────
@@ -659,12 +750,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // ── Init: load initial image ─────────────────────────────────────────
 
-        if (initialImageUrl) {
-            _showEntry({ filePath: initialImageUrl }).then(() => {
-                const saved = _maskStore.get(initialIdx);
-                if (saved) {
-                    canvas.setMaskDataURL(saved);
-                    _hasMask = true;
+        const _initialUrl = initialItem?.filePath || initialImageUrl;
+        if (_initialUrl) {
+            _showEntry({ filePath: _initialUrl }).then(async () => {
+                if (initialItem) {
+                    try { await _restoreLayers(initialItem); }
+                    catch (err) { console.warn('[MpiCanvasViewer] initial restore failed:', err); }
                 }
                 emit('entry-loaded', { idx: initialIdx, hasMask: _hasMask });
             });
