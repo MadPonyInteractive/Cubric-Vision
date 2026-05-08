@@ -49,12 +49,12 @@
     );
 }
 
-/* ── Right panel — split into props bar (top) + history list (bottom) ──────── */
+/* ── Right panel — props bar (top) + history list (bottom) scroll as one ───── */
 .mpi-group-history-block__right {
     grid-area: right;
-    display: grid;
-    grid-template-rows: auto 1fr;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
     background: var(--surface-canvas);
     border-left: 1px solid var(--line);
 }
@@ -106,12 +106,10 @@
 .mpi-group-history-block__right-top {
     display: flex;
     flex-direction: column;
-    height: auto;
-    min-height: 0;
+    flex: 0 0 auto;
     padding: var(--s-2);
     gap: var(--s-2);
     border-bottom: 1px solid var(--line);
-    overflow: hidden;
     background: var(--surface-canvas);
 }
 
@@ -119,9 +117,9 @@
     display: none;
 }
 
-/* ── Right-bottom: history list ─────────────────────────────────────────────── */
+/* ── Right-bottom: history list — scrolls with parent column ───────────────── */
 .mpi-group-history-block__right-bottom {
-    overflow-y: auto;
+    flex: 0 0 auto;
 }
 
 /* ── Bottom: floating PromptBox — shell-managed ─────────────────────────────── */

@@ -88,16 +88,6 @@
     - Separate git repo — commit independently.
     ```
 
-### History page, right panel, not scrollable.
-
-  - tags: [issue, bug]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    I noticed that when detecting an image with a lot of faces and it displays all the faces on the right panel, I cannot see the apply button or the history below it. Nor can I scroll down to see it. The history entries are scrollable, but the conjunction of both the tools panel above and the history entries below is not scrollable. Instead of scrolling only the history entries, the user should be able to scroll both the Tools panel and the history together.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -122,6 +112,17 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### History page, right panel, not scrollable.
+
+  - tags: [issue, bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Tool panel (right-top) + history list (right-bottom) now scroll as one column.
+    Fix: MpiGroupHistoryBlock.css — right column flex+overflow-y:auto, top row flex:0 0 auto, bottom row no own scroller.
+    ```
 
 ### Mask persistence for layered masks
 
