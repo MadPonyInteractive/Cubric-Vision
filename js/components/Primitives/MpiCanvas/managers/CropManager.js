@@ -15,7 +15,12 @@
 
 import { Hotkeys } from '../../../../managers/hotkeyManager.js';
 
-const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+/* Stage canvas color constants — JS canvas draws cannot use CSS vars directly. */
+const CROP_SCRIM         = 'oklch(0.20 0.020 350 / 0.55)'; /* --surface-canvas */
+const CROP_BORDER        = 'oklch(0.95 0.005 80 / 0.85)';  /* --ink-1 */
+const CROP_THIRDS        = 'oklch(0.95 0.005 80 / 0.22)';  /* --ink-1 */
+const CROP_HANDLE_FILL   = 'oklch(0.72 0.20 6)';           /* --accent-heat */
+const CROP_HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 export class CropManager {
     constructor() {
@@ -49,8 +54,10 @@ export class CropManager {
         this._unShiftUp?.();   this._unShiftUp   = null;
     }
 
-    /** Handle size in image pixels (scaled visually by draw) */
-    static HANDLE_SIZE = 10;
+    /** Handle hit radius in image pixels (scaled by zoom for usability). */
+    static HANDLE_HIT_RADIUS = 10;
+    /** Visible handle diameter in screen pixels. */
+    static HANDLE_DIAMETER = 10;
 
     /**
      * Called when a new image is loaded.
@@ -138,7 +145,7 @@ export class CropManager {
 
         const { x, y, w, h } = this.cropRect;
         // Hit radius in image pixels — larger when zoomed out
-        const r = CropManager.HANDLE_SIZE / scale;
+        const r = CropManager.HANDLE_HIT_RADIUS / scale;
 
         const near = (ax, ay) => Math.abs(imgX - ax) <= r && Math.abs(imgY - ay) <= r;
 
@@ -344,11 +351,9 @@ export class CropManager {
     // ── Draw ──────────────────────────────────────────────────────────────────
 
     /**
-     * Draws the crop overlay.
-     * Called inside MpiCanvas draw() AFTER ctx.save/translate/scale,
-     * so all coordinates are in image-space. Scale is passed for handle sizing.
+     * Draws the crop overlay in image-space on the overlay canvas.
      *
-     * @param {CanvasRenderingContext2D} ctx - Already transformed to image-space
+     * @param {CanvasRenderingContext2D} ctx
      * @param {number} imgW
      * @param {number} imgH
      * @param {number} scale - current view scale (for fixed-size handles)
@@ -360,20 +365,20 @@ export class CropManager {
 
         // 1. Dark scrim outside crop rect (4 rects)
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-        ctx.fillRect(0,     0,     imgW, y    );          // top
-        ctx.fillRect(0,     y + h, imgW, imgH - y - h);  // bottom
-        ctx.fillRect(0,     y,     x,    h    );          // left
-        ctx.fillRect(x + w, y,     imgW - x - w, h);     // right
+        ctx.fillStyle = CROP_SCRIM;
+        ctx.fillRect(0,     0,     imgW, y    );
+        ctx.fillRect(0,     y + h, imgW, imgH - y - h);
+        ctx.fillRect(0,     y,     x,    h    );
+        ctx.fillRect(x + w, y,     imgW - x - w, h);
 
         // 2. Crop border
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.strokeStyle = CROP_BORDER;
         ctx.lineWidth   = 1.5 / scale;
         ctx.setLineDash([]);
         ctx.strokeRect(x, y, w, h);
 
         // 3. Rule-of-thirds grid (2×2 inner lines)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.strokeStyle = CROP_THIRDS;
         ctx.lineWidth   = 0.8 / scale;
         ctx.beginPath();
         // Vertical thirds
@@ -385,7 +390,7 @@ export class CropManager {
         ctx.stroke();
 
         // 4. Corner + edge handles
-        const hs = CropManager.HANDLE_SIZE / scale;  // handle half-size
+        const hr = (CropManager.HANDLE_DIAMETER / 2) / scale;
         const handles = [
             [x,       y,       'tl'], [x + w,   y,       'tr'],
             [x,       y + h,   'bl'], [x + w,   y + h,   'br'],
@@ -393,29 +398,30 @@ export class CropManager {
             [x,       y + h/2, 'l' ], [x + w,   y + h/2, 'r' ],
         ];
 
-        ctx.fillStyle   = 'rgba(255, 255, 255, 0.95)';
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.lineWidth   = 0.8 / scale;
+        ctx.fillStyle   = CROP_HANDLE_FILL;
+        ctx.strokeStyle = CROP_HANDLE_STROKE;
+        ctx.lineWidth   = 2 / scale;
 
         handles.forEach(([hx, hy]) => {
             ctx.beginPath();
-            ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
+            ctx.arc(hx, hy, hr, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
         });
 
-        // 5. Active handle highlight
+        // 5. Active handle redraw
         if (this._activeHandle) {
             const hit = handles.find(([,, k]) => k === this._activeHandle);
             if (hit) {
                 const [hx, hy] = hit;
-                ctx.fillStyle = getCSSColor('--neon-electric');
+                ctx.fillStyle = CROP_HANDLE_FILL;
+                ctx.strokeStyle = CROP_HANDLE_STROKE;
                 ctx.beginPath();
-                ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
+                ctx.arc(hx, hy, hr * 1.15, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
             }
         }
-
         ctx.restore();
     }
 

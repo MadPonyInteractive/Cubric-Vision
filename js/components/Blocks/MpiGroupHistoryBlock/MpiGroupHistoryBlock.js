@@ -600,9 +600,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     frameCount: data.item.frameCount,
                     hasAudio:   data.item.hasAudio,
                 });
-                viewer.el.exitCropMode?.();
-                // Switch back to crop options to reset config for the new source.
-                historyTools.el.setMode('crop');
                 _showToast('Cropped video saved', 'success');
             } catch (err) {
                 clientLogger.warn('MpiGroupHistoryBlock', 'video crop failed', err);

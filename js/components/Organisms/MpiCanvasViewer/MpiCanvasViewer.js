@@ -531,7 +531,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (!rect || !_currentItem?.filePath || !state.currentProject?.folderPath) return;
 
             StatusBar.progress.start('Cropping...');
-            _exitMode();
 
             const itemId = crypto.randomUUID();
 

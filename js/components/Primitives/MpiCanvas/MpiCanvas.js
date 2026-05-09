@@ -407,7 +407,7 @@ class _CanvasCore {
             ctx.globalAlpha = 1;
         }
 
-        // 3. Crop overlay (uses view.scale for handle/line normalization in to-do 7)
+        // 3. Crop overlay
         this.crop.draw(ctx, this.img.width, this.img.height, this.view.scale);
 
         // 4. Grid

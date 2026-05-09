@@ -27,11 +27,10 @@
 /* Stage canvas color constants — JS cannot use CSS vars in per-frame draws.
  * Values mirror MAPPING.md §9. Update here if tokens change in 01_base.css. */
 const SCRIM         = 'oklch(0.20 0.020 350 / 0.55)'; /* --surface-canvas 55% */
-const CROP_BORDER   = 'oklch(0.66 0.014 80 / 0.9)';   /* --ink-3 90% */
-const CROP_THIRDS   = 'oklch(0.66 0.014 80 / 0.35)';  /* --ink-3 35% */
-const HANDLE_FILL   = 'oklch(0.95 0.005 80 / 0.95)';  /* --ink-1 95% */
-const HANDLE_STROKE = 'oklch(0.20 0.020 350 / 0.6)';  /* --surface-canvas 60% */
-const CROP_STROKE   = 'oklch(0.66 0.014 80)';          /* --ink-3 (active handle) */
+const CROP_BORDER   = 'oklch(0.95 0.005 80 / 0.85)';  /* --ink-1 85% */
+const CROP_THIRDS   = 'oklch(0.95 0.005 80 / 0.22)';  /* --ink-1 22% */
+const HANDLE_FILL   = 'oklch(0.72 0.20 6)';           /* --accent-heat */
+const HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 import { Hotkeys } from '../managers/hotkeyManager.js';
 
@@ -52,8 +51,8 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
     // Event handlers (stored for cleanup)
     const _boundHandlers = {};
 
-    // Handle size in pixels (at 1:1 scale)
-    const HANDLE_SIZE = 16;
+    const HANDLE_DIAMETER = 10;
+    const HANDLE_HIT_SIZE = 16;
 
     /**
      * Get the bounding rect of the actual content (accounting for letterbox/pillarbox).
@@ -173,7 +172,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         const { x, y, w, h } = _normRect;
         // Hit radius in normalized space (fixed pixel size, scaled by content width)
         const bounds = _getContentBounds();
-        const hitRadius = HANDLE_SIZE / bounds.w;
+        const hitRadius = HANDLE_HIT_SIZE / bounds.w;
 
         const near = (ax, ay) => Math.abs(normX - ax) <= hitRadius && Math.abs(normY - ay) <= hitRadius;
 
@@ -461,7 +460,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         ctx.stroke();
 
         // 4. Draw handles (corner + edge)
-        const hs = HANDLE_SIZE / 2;
+        const hr = HANDLE_DIAMETER / 2;
         const handles = [
             [px, py, 'tl'],
             [px + pw, py, 'tr'],
@@ -479,7 +478,7 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
 
         handles.forEach(([hx, hy]) => {
             ctx.beginPath();
-            ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
+            ctx.arc(hx, hy, hr, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
         });
@@ -489,10 +488,12 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
             const hit = handles.find(([, , k]) => k === _activeHandle);
             if (hit) {
                 const [hx, hy] = hit;
-                ctx.fillStyle = CROP_STROKE;
+                ctx.fillStyle = HANDLE_FILL;
+                ctx.strokeStyle = HANDLE_STROKE;
                 ctx.beginPath();
-                ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
+                ctx.arc(hx, hy, hr * 1.15, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
             }
         }
 
