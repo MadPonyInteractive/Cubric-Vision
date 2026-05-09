@@ -58,7 +58,8 @@
       "mcp__nimbalyst-mcp__AskUserQuestion",
       "mcp__nimbalyst-session-context__update_session_board",
       "mcp__nimbalyst-meta-agent__create_session",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Read(//c/Users/Fabio/.claude/**)"
     ],
     "deny": [
       "Bash(rm -rf c:/AI/Mpi/MpiAiSuite/node_modules)",

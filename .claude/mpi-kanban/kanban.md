@@ -71,6 +71,7 @@
 
 ### Status bar not updating correctly
 
+  - tags: [issue]
   - priority: medium
   - workload: Normal
   - defaultExpanded: true
