@@ -4,7 +4,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
-import { qs, on } from '../../../utils/dom.js';
+import { qs, qsa, on } from '../../../utils/dom.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 /**
@@ -335,6 +335,15 @@ function _setupRatio(el, props, emit) {
             orientContainer.style.display = 'none';
         }
 
+        if (mode === 'quality') {
+            const speedRadio = qs('#speed-radio-slot', popupEl);
+            if (speedRadio) {
+                qsa('.mpi-radio-group__btn', speedRadio).forEach(btn => {
+                    btn.classList.toggle('is-active', btn.dataset.value === qualityTier);
+                });
+            }
+        }
+
         const currentRatio   = ratios.find(r => r.label === value) || ratios[0];
         const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
         trigger.innerHTML = MpiButton.template({
@@ -374,6 +383,16 @@ function _setupRatio(el, props, emit) {
             return;
         }
 
+        const qualityBtn = e.target.closest('#speed-radio-slot .mpi-radio-group__btn');
+        if (qualityBtn && !qualityBtn.disabled) {
+            const newTier = qualityBtn.dataset.value;
+            if (!newTier || props.qualityTier === newTier) return;
+            props.qualityTier = newTier;
+            emit('quality_change', { qualityTier: newTier });
+            updateUI();
+            return;
+        }
+
         const item = e.target.closest('.mpi-opt-sel__item[data-label]');
         if (!item) return;
         const label       = item.dataset.label;
@@ -398,18 +417,6 @@ function _setupRatio(el, props, emit) {
         });
         updateUI();
         closePopup();
-    }));
-
-    // Speed/quality tier change
-    _unsubs.push(on(popupEl, 'change', (e) => {
-        e.stopPropagation();
-        const speedRadio = e.target.closest('#speed-radio-slot');
-        if (speedRadio) {
-            const newTier     = e.target.value;
-            props.qualityTier = newTier;
-            emit('quality_change', { qualityTier: newTier });
-            updateUI();
-        }
     }));
 
     el.destroy = () => {

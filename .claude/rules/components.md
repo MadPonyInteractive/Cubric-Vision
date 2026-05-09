@@ -12,7 +12,7 @@ The Stage redesign (PORTING.md phases 0–10.2) is **merged to master**. All com
 - **Gradient text only on the wordmark.** No `background-clip: text` anywhere else.
 - **Wordmark font:** `--font-wordmark` = `'VT323'` (self-hosted at `assets/fonts/VT323.woff2`). Body type is `'JetBrains Mono'`.
 - **Slide-over is the canonical right-edge panel** for Settings / Help / About (replaces the legacy full-screen modal pattern). Trigger via `Events.emit('slide-over:open', { title, component })`. Do NOT mount `MpiSettings/MpiHelp/MpiAbout` directly — they are content blueprints; `MpiSlideOver` owns chrome and mounts the content into `.mpi-slide-over__body`.
-- **`MpiOptionSelector` ratio variant** renders Stage `.ratio-row` + `.ratio-pick.r-X-Y` selectors inside the popup (not generic `MpiButton` items). New `variant: 'buttons'` is a generic button-list popup.
+- **`MpiOptionSelector` ratio variant** renders the ratio/quality controls inside its own portaled popup. Controls inserted as raw templates there, including embedded `MpiRadioGroup.template()` quality buttons, must be handled by `MpiOptionSelector`'s delegated popup listeners because child component `setup()` does not run for raw template HTML. New `variant: 'buttons'` is a generic button-list popup.
 - **`MpiContextMenu` items** support `kbd` (right-aligned shortcut hint) and `separator: true` (divider line).
 - **Mockups are spec, not source.** Visual ground truth lives at `docs/redesign/c-stage/*.html`. New surfaces translate the mockup into Cubric's existing patterns (BEM, `ComponentFactory`, `js/utils/dom.js`, `Events`, `Hotkeys`). Never copy markup verbatim. If a real-app constraint forces a deviation from spec, leave a `// REDESIGN-DEVIATION:` comment at the call site.
 
