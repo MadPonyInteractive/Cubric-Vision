@@ -124,9 +124,11 @@ export const MpiHistoryList = ComponentFactory.create({
                     }
                     _toggleSelect(idx);
                 } else {
+                    const wasSelectMode = _selectMode;
                     _exitSelectMode();
                     _anchor = idx;
                     _selectEntry(idx);
+                    if (wasSelectMode) emit('selection-exited', {});
                 }
             });
 
