@@ -693,15 +693,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
 
             for (const idx of sorted) _group = removeHistoryEntry(_group, idx);
-            _currentIdx = _group.selectedIndex;
+            _currentIdx = _group.selectedIndex ?? 0;
             _persistGroup();
-            historyList.el.removeEntries(indices);
+            historyList.el.removeEntries(indices, _currentIdx);
+            _currentSelectionIndices = [];
 
             // Load the new current entry (if any).
             const cur = _group.history[_currentIdx];
             if (cur) {
                 if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24 });
                 else         viewer.el.loadEntry?.(cur, _currentIdx);
+            }
+
+            if (!isVideo) {
+                viewer.el.clearCompare?.();
+                viewer.el.setCompareEnabled?.(false);
+            }
+            if (historyTools.el.getActiveMode?.() === 'prompt' && _hasPromptOps()) {
+                _pb?.el?.show();
             }
 
             Events.emit('media:deleted', { count: indices.length });

@@ -95,6 +95,23 @@
 
 ## COMPLETED
 
+### History delete leaves no selected entry, prompt box missing
+
+  - tags: [bug]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Deleting history entries left no card highlighted and PromptBox hidden.
+    Root causes:
+    1. `MpiHistoryList.el.removeEntries(indices)` rebuilt cards but never reset `_selectedIdx` — `_applyCardStates` toggled active on stale (now-invalid) idx.
+    2. Block called `historyList.el.exitSelectMode()` pre-delete; instance API only cleared `_selection` Set silently — no `selection-exited` emit. Block's `selection-exited` listener (the only place that re-shows PromptBox after multi-select) never fired. PromptBox stayed hidden from the earlier `selection-changed` hide.
+    Fix:
+    - `removeEntries(indices, newSelectedIdx = 0)` clamps + sets `_selectedIdx`, anchors there, rebuilds.
+    - Block delete handler passes `_currentIdx`, resets `_currentSelectionIndices = []`, clears compare, re-shows PromptBox if active mode is prompt.
+    Files: js/components/Compounds/MpiHistoryList/MpiHistoryList.js, js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js.
+    ```
+
 ### Project cards not displaying video
 
   - tags: [Bug]

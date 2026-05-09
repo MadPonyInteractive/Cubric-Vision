@@ -262,10 +262,11 @@ export const MpiHistoryList = ComponentFactory.create({
             _applyCardStates();
         };
 
-        el.removeEntries = (indices) => {
+        el.removeEntries = (indices, newSelectedIdx = 0) => {
             const idxSet = new Set(indices);
             _history = _history.filter((_, i) => !idxSet.has(i));
-            _anchor = 0;
+            _selectedIdx = Math.max(0, Math.min(newSelectedIdx, _history.length - 1));
+            _anchor = _selectedIdx;
             _buildHistoryCards();
         };
 
