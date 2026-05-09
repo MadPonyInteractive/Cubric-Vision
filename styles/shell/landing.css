@@ -261,10 +261,12 @@
   flex-shrink: 0;
 }
 
-.mpi-landing__pl-thumb img {
+.mpi-landing__pl-thumb img,
+.mpi-landing__pl-thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .mpi-landing__pl-thumb--empty {

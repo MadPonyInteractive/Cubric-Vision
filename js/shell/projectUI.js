@@ -237,14 +237,24 @@ function _buildProjectRow(project) {
   const row = document.createElement('div');
   row.className = 'mpi-landing__pl-row';
 
-  // Thumbnail
+  // Thumbnail (image or video — first frame static, plays on row hover)
   const thumb = document.createElement('div');
   thumb.className = 'mpi-landing__pl-thumb' + (project.recentThumbnail ? '' : ' mpi-landing__pl-thumb--empty');
   if (project.recentThumbnail) {
-    const img = document.createElement('img');
-    img.src = project.recentThumbnail;
-    img.alt = project.name;
-    thumb.appendChild(img);
+    if (project.recentThumbnailType === 'video') {
+      const video = document.createElement('video');
+      video.src = project.recentThumbnail;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      thumb.appendChild(video);
+    } else {
+      const img = document.createElement('img');
+      img.src = project.recentThumbnail;
+      img.alt = project.name;
+      thumb.appendChild(img);
+    }
   }
 
   // Meta
@@ -273,6 +283,17 @@ function _buildProjectRow(project) {
   row.appendChild(thumb);
   row.appendChild(meta);
   row.appendChild(ct);
+
+  if (project.recentThumbnailType === 'video') {
+    const video = thumb.querySelector('video');
+    if (video) {
+      row.addEventListener('mouseenter', () => video.play().catch(() => {}));
+      row.addEventListener('mouseleave', () => {
+        video.pause();
+        video.currentTime = 0;
+      });
+    }
+  }
 
   // Live stats fetch — independent per row, aborted on grid rebuild.
   const signal = _statsBatchAC?.signal;

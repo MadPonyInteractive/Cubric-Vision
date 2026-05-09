@@ -134,6 +134,7 @@ router.post('/list-projects', async (req, res) => {
                         const p = await fs.readJson(jsonPath);
                         const diskFolder = path.join(root, entry).replace(/\\/g, '/');
                         let recentThumbnail = null;
+                        let recentThumbnailType = null;
                         try {
                             const mediaDir = path.join(root, entry, 'Media');
                             if (await fs.pathExists(mediaDir)) {
@@ -144,16 +145,18 @@ router.post('/list-projects', async (req, res) => {
                                     const ext = path.extname(f).toLowerCase().slice(1);
                                     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'mp4', 'webm'].includes(ext)) {
                                         const stats = await fs.stat(path.join(mediaDir, f));
-                                        candidates.push({ name: f, mtime: stats.mtime });
+                                        candidates.push({ name: f, mtime: stats.mtime, ext });
                                     }
                                 }
                                 if (candidates.length) {
                                     candidates.sort((a, b) => b.mtime - a.mtime);
-                                    recentThumbnail = `/project-file?path=${encodeURIComponent(path.join(mediaDir, candidates[0].name))}`;
+                                    const top = candidates[0];
+                                    recentThumbnail = `/project-file?path=${encodeURIComponent(path.join(mediaDir, top.name))}`;
+                                    recentThumbnailType = ['mp4', 'webm'].includes(top.ext) ? 'video' : 'image';
                                 }
                             }
                         } catch (e) { /* silent fail for media scan */ }
-                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail, isDefaultRoot: isDefault });
+                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault });
                     } catch (_) { /* skip corrupt entries */ }
                 }
             }

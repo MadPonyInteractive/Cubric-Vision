@@ -96,6 +96,20 @@
 
 ## COMPLETED
 
+### Project cards not displaying video
+
+  - tags: [Bug]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Landing rows now render `<video preload=metadata muted loop playsInline>` when the most-recent Media entry is `.mp4`/`.webm`. First frame shows static; row mouseenter plays, mouseleave pauses + rewinds. Mirrors `MpiGalleryGrid._swapThumbToVideo` pattern — no new system.
+
+    Server `/list-projects` returns sibling field `recentThumbnailType` ('image'|'video') derived from extension; existing `recentThumbnail` URL kept for back-compat.
+
+    Files: routes/projects.js, js/shell/projectUI.js, styles/shell/landing.css.
+    ```
+
 ### History entry naming + sidecar dimensions inconsistency
 
   - tags: [bug]
@@ -106,15 +120,15 @@
     Root causes:
     1. `operation` field on hydrated items contained op key ("upscale"), but fresh in-session items overwrote it with sequenced filename ("upscale_001"). Result: same item displayed differently before vs after project reload.
     2. Operations without ratio control (upscale/detail/edit/change/remove) sent no Width/Height injection params → `pixelDimensions` saved as `{0,0}` in sidecar.
-
+    
     Fix at root:
     - Sidecar gains `displayName` field (filename stem). `operation` keeps op key only. Card label uses `displayName || operation`.
     - save-generation route probes saved file via `sharp.metadata()` when client didn't supply dims, so dims always populated regardless of injection params.
     - History card now shows `WxH · Ns` (dot separator + rounded seconds) when `generationMs` present.
     - generationService, MpiCanvasViewer crop, reconciler synthetic items, projectModel defaults all updated to carry `displayName` + `generationMs`.
-
+    
     Files: routes/projects.js, js/services/generationService.js, js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js, js/components/Compounds/MpiHistoryList/MpiHistoryList.js, js/data/projectModel.js, js/managers/projectReconciler.js.
-
+    
     Pre-release: no schema migration; existing test sidecars stale, user deletes test project.
     ```
 
