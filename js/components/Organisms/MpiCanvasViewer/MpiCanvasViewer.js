@@ -554,7 +554,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 const newItem = createImageItem({
                     id: data.itemId,
                     filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
-                    operation: data.filename.replace(/\.[^.]+$/, ''),
+                    operation: 'crop',
+                    displayName: data.displayName || data.filename.replace(/\.[^.]+$/, ''),
+                    pixelDimensions: data.pixelDimensions || { w: rect.w, h: rect.h },
                 });
 
                 emit('crop-applied', { item: newItem });

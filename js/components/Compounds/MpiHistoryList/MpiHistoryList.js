@@ -77,7 +77,13 @@ export const MpiHistoryList = ComponentFactory.create({
                 });
                 _dimsLogged = true;
             }
-            return (w && w > 0) ? `${w}×${h}` : '?×?';
+            const dims = (w && w > 0) ? `${w}×${h}` : '?×?';
+            const ms = item.generationMs;
+            if (ms && ms > 0) {
+                const sec = Math.max(1, Math.round(ms / 1000));
+                return `${dims} · ${sec}s`;
+            }
+            return dims;
         }
 
         // ── Card building ─────────────────────────────────────────────────────
@@ -97,7 +103,7 @@ export const MpiHistoryList = ComponentFactory.create({
 
             const label = document.createElement('div');
             label.className = 'mpi-history-list__label';
-            label.textContent = item.operation || item.type || '';
+            label.textContent = item.displayName || item.operation || item.type || '';
 
             const dims = document.createElement('div');
             dims.className = 'mpi-history-list__dims';

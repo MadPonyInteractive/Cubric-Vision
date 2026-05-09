@@ -142,6 +142,7 @@ async function _constructSyntheticItem(id, folderPath) {
         type: hit.type,
         filePath: `/project-file?path=${encodeURIComponent(hit.path)}`,
         operation: 'imported',
+        displayName: hit.name.replace(/\.[^.]+$/, ''),
         prompt: '',
         negativePrompt: '',
         seed: -1,
@@ -152,6 +153,7 @@ async function _constructSyntheticItem(id, folderPath) {
         pixelDimensions: hit.resolution
             ? _parseResolution(hit.resolution)
             : (isVideo ? { w: 0, h: 0 } : { w: 0, h: 0 }),
+        generationMs: null,
     };
 }
 

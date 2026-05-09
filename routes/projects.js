@@ -453,6 +453,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             type:           mediaType === 'video' ? 'video' : 'image',
             filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
             operation:      req.body.operation || 'imported',
+            displayName:    finalFileName.replace(/\.[^.]+$/, ''),
             prompt:         promptContext || '',
             negativePrompt: req.body.negativePrompt || '',
             seed:           seed ?? -1,
@@ -744,12 +745,30 @@ router.post('/project/save-generation', async (req, res) => {
         // Download from ComfyUI server-side
         await streamDownload(comfyViewUrl, filePath);
 
+        // Determine pixel dimensions: prefer client-supplied (from ratio control),
+        // else probe saved file via Sharp (covers upscale/detail/edit/change/remove
+        // — operations with no ratio control → no Width/Height injection params).
+        let resolvedDims = pixelDimensions;
+        if (!resolvedDims || !resolvedDims.w || !resolvedDims.h) {
+            try {
+                const sharp = require('sharp');
+                const probed = await sharp(filePath).metadata();
+                if (probed.width && probed.height) {
+                    resolvedDims = { w: probed.width, h: probed.height };
+                }
+            } catch (probeErr) {
+                logger.warn('project', 'sharp probe failed, falling back to {0,0}', probeErr.message);
+                resolvedDims = resolvedDims ?? { w: 0, h: 0 };
+            }
+        }
+
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
             id,
             type: 'image',
             filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
             operation,
+            displayName:    filename.replace(/\.[^.]+$/, ''),
             prompt:         meta.prompt        || '',
             negativePrompt: meta.negativePrompt || '',
             seed:           meta.seed          ?? -1,
@@ -757,7 +776,7 @@ router.post('/project/save-generation', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,
-            pixelDimensions: pixelDimensions ?? { w: 0, h: 0 },
+            pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
             generationMs:   generationMs      ?? null,
         };
         const metaPath = path.join(metaDir, `${id}.json`);
@@ -806,7 +825,15 @@ router.post('/project/save-generation', async (req, res) => {
         } catch (_) { /* GC failure is non-fatal */ }
 
         const relativePath = `Media/${filename}`;
-        res.json({ success: true, itemId: id, filename, relativePath, filePath });
+        res.json({
+            success: true,
+            itemId: id,
+            filename,
+            relativePath,
+            filePath,
+            displayName: metaContent.displayName,
+            pixelDimensions: metaContent.pixelDimensions,
+        });
     } catch (err) {
         logger.error('project', 'save-generation error', err);
         res.status(500).json({ success: false, error: err.message });
@@ -895,6 +922,7 @@ router.post('/project/crop-media', async (req, res) => {
             type: 'image',
             filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
             operation: 'crop',
+            displayName: filename.replace(/\.[^.]+$/, ''),
             prompt: '',
             negativePrompt: '',
             seed: -1,
@@ -903,12 +931,20 @@ router.post('/project/crop-media', async (req, res) => {
             name: null,
             uploaded: false,
             pixelDimensions: { w: Math.round(w), h: Math.round(h) },
+            generationMs: null,
             cropRect: { x, y, w, h },
             sourceFile: inputPath,
         };
         await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
 
-        res.json({ success: true, itemId: id, filename, filePath });
+        res.json({
+            success: true,
+            itemId: id,
+            filename,
+            filePath,
+            displayName: metaContent.displayName,
+            pixelDimensions: metaContent.pixelDimensions,
+        });
     } catch (err) {
         logger.error('project', 'crop-media error', err);
         res.status(500).json({ success: false, error: err.message });

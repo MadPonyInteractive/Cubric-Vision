@@ -115,6 +115,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const thisItemId = i === 0 ? itemId : crypto.randomUUID();
             let filePath = url;
             let displayName = operation;
+            let resolvedDims = width ? { w: width, h: height } : { w: 0, h: 0 };
 
             if (state.currentProject?.folderPath) {
                 try {
@@ -125,13 +126,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         operation,
                         meta: { prompt: positive, negativePrompt: negative, modelId: model.id },
                         generationMs: elapsedMs,
-                        pixelDimensions: width
-                            ? { w: width, h: height }
-                            : { w: 0, h: 0 },
+                        pixelDimensions: resolvedDims,
                     });
                     if (data.success) {
                         filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-                        displayName = data.filename.replace(/\.[^.]+$/, '');
+                        displayName = data.displayName || data.filename.replace(/\.[^.]+$/, '');
+                        if (data.pixelDimensions) resolvedDims = data.pixelDimensions;
                     }
                 } catch (err) {
                     clientLogger.warn('generationService', 'save-generation failed, using comfy URL:', err);
@@ -141,9 +141,18 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             displayName = truncateCardName(displayName);
             if (i === 0) firstDisplayName = displayName;
 
-            const item = isVideo
-                ? createVideoItem({ id: thisItemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id })
-                : createImageItem({ id: thisItemId, filePath, operation: displayName, prompt: positive, negativePrompt: negative, modelId: model.id });
+            const baseProps = {
+                id: thisItemId,
+                filePath,
+                operation,
+                displayName,
+                prompt: positive,
+                negativePrompt: negative,
+                modelId: model.id,
+                pixelDimensions: resolvedDims,
+                generationMs: elapsedMs,
+            };
+            const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);
         }
 
@@ -168,7 +177,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // Gallery mode — one group (card) per item.
             const _galleryTempId = activeGenerations.get(_regId)?.tempId ?? null;
             const groups = builtItems.map((it) => {
-                const name = truncateCardName(it.operation || firstDisplayName);
+                const name = truncateCardName(it.displayName || it.operation || firstDisplayName);
                 const g = createItemGroup(model.mediaType, { name, width, height });
                 return appendToHistory(g, it);
             });
