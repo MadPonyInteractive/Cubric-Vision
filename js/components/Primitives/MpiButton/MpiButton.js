@@ -158,6 +158,15 @@ export const MpiButton = ComponentFactory.create({
             const target = qs('.mpi-ibtn__label, .mpi-btn__text', el);
             if (target) target.textContent = label;
         };
+
+        // Public API: sync disabled state. Required because click handler reads
+        // props.disabled — toggling the DOM attribute alone leaves props stale
+        // and clicks silently bail.
+        el.setDisabled = (disabled) => {
+            props.disabled = !!disabled;
+            if (disabled) el.setAttribute('disabled', '');
+            else el.removeAttribute('disabled');
+        };
     }
 });
 

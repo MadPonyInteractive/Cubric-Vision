@@ -60,6 +60,16 @@
     - Separate git repo — commit independently.
     ```
 
+### Move toast to the left.
+
+  - tags: [task]
+  - priority: medium
+  - workload: Easy
+  - defaultExpanded: false
+    ```md
+    After several tests, I realized that the best placement for the toast not to interfere with anything is the bottom left of the screen. Keep in mind that toast already has the correct distance from the bottom and an implementation for when the prompt box is visible.
+    ```
+
 ## PLANNING
 
 ### WAN dual-model + 12 LoRAs + LTX
@@ -111,7 +121,7 @@
       - [x] Add session generationMode
       - [x] PromptBox dual-button layout
       - [x] Queue-aware submission + cancel
-      - [ ] Run/Stop hotkey bindings
+      - [x] Run/Stop hotkey bindings
       - [ ] StatusBar queue depth indicator
       - [ ] Sync rule files + docs
     ```md

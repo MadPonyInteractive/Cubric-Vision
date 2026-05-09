@@ -12,6 +12,7 @@ import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBox
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { qs, on } from '../../../utils/dom.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -224,17 +225,13 @@ export const MpiPromptBox = ComponentFactory.create({
         el.setGenerating = (active) => {
             isGenerating = active;
             if (_runMode === 'single' || _runMode === 'autoloop') {
-                if (runBtn?.el) runBtn.el.classList.toggle('is-active', active);
+                if (runBtn?.el?.setActive) runBtn.el.setActive(active);
+                else if (runBtn?.el) runBtn.el.classList.toggle('is-active', active);
                 return;
             }
             // Queue mode: toggle Stop + Clear disabled state.
-            const setDisabled = (btn) => {
-                if (!btn?.el) return;
-                if (active) btn.el.removeAttribute('disabled');
-                else btn.el.setAttribute('disabled', '');
-            };
-            setDisabled(stopBtn);
-            setDisabled(clearBtn);
+            stopBtn?.el?.setDisabled?.(!active);
+            clearBtn?.el?.setDisabled?.(!active);
         };
 
         el.setModel = (newModel) => {
@@ -669,6 +666,14 @@ export const MpiPromptBox = ComponentFactory.create({
                 _runMode = state.generationMode || 'single';
             }
 
+            // Mode switch: reconcile isGenerating with real backend truth.
+            // Stale `isGenerating=true` from prior-mode clicks (esp. queue clicks
+            // that increment optimistically) must not paint the new button as
+            // running when no work is actually queued.
+            if ((state.generationQueueCount || 0) === 0) {
+                isGenerating = false;
+            }
+
             if (_runMode === 'single' || _runMode === 'autoloop') {
                 const slot = document.createElement('div');
                 runSlotEl.appendChild(slot);
@@ -712,8 +717,8 @@ export const MpiPromptBox = ComponentFactory.create({
             });
             runBtn.on('click', () => {
                 isGenerating = true;
-                if (stopBtn?.el) stopBtn.el.removeAttribute('disabled');
-                if (clearBtn?.el) clearBtn.el.removeAttribute('disabled');
+                stopBtn?.el?.setDisabled?.(false);
+                clearBtn?.el?.setDisabled?.(false);
                 runBtn.el.setLabel?.(_queueLabel((state.generationQueueCount || 0) + 1));
                 _emitRun();
             });
@@ -741,6 +746,35 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         _renderRunCluster();
+
+        // ── Run / Stop hotkeys (Ctrl+Enter / Ctrl+Alt+Enter) ──────────────────
+        const _triggerRun = () => {
+            if (_runMode === 'single' || _runMode === 'autoloop') {
+                if (isGenerating) return;
+                isGenerating = true;
+                runBtn?.el?.setActive?.(true);
+                _emitRun();
+                return;
+            }
+            // queue
+            isGenerating = true;
+            stopBtn?.el?.setDisabled?.(false);
+            clearBtn?.el?.setDisabled?.(false);
+            runBtn?.el?.setLabel?.(_queueLabel((state.generationQueueCount || 0) + 1));
+            _emitRun();
+        };
+
+        const _triggerStop = () => {
+            if (!isGenerating) return;
+            if (_runMode === 'single' || _runMode === 'autoloop') {
+                isGenerating = false;
+                runBtn?.el?.setActive?.(false);
+            }
+            _emitCancel();
+        };
+
+        _unsubs.push(Hotkeys.bind('generation.run',  _triggerRun));
+        _unsubs.push(Hotkeys.bind('generation.stop', _triggerStop));
 
         _unsubs.push(Events.on('state:changed', ({ key, value }) => {
             if (key === 'generationQueueCount') {

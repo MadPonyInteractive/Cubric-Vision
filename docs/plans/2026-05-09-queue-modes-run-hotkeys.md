@@ -73,7 +73,7 @@ Edit `js/services/commandExecutor.js` and `js/services/generationService.js`:
 
 **Verify:** User verified Queue mode no longer creates duplicate/ghost cards; only the in-flight placeholder is visible, saved cards persist across navigation/deletes, Single mode still works, Loop can pick up prompt/model changes, and stopping Loop re-enables the mode radio. Seed is now saved on generated items for inspection. To-do 4 was marked complete only after this verification.
 
-### 5. Hotkeys: register `generation.run` + `generation.stop` and bind in PromptBox
+### 5. Hotkeys: register `generation.run` + `generation.stop` and bind in PromptBox [x]
 
 Edit `js/managers/hotkeyRegistry.js`: add two entries
 ```js
@@ -99,6 +99,62 @@ Update only what changed:
 - `docs/PROJECT.md`: short note in the relevant subsystem section pointing to this plan.
 
 **Verify:** Look at the four edited docs — confirm each new fact is present and no unrelated content was modified.
+
+## Plan Drift (2026-05-09 session)
+
+### Architectural pivot: Cue mode now uses an in-app queue, NOT ComfyUI native queue
+
+Original plan (decision 1) said "Use ComfyUI's native queue. Capture `prompt_id` from `POST /prompt` and use `GET /queue` for depth + `POST /queue {delete:[id]}` for targeted removal."
+
+**Replaced with own-queue, single-dispatch model.** Reason: concurrent `runWorkflow` submits raced on shared static asset filenames (`mpi_input_image.png`, `mpi_input_mask.png`) and the Cue counter became unreliable when Comfy queue depth was polled vs. our optimistic increments. User also wanted full control over pending mutation (clear, future reorder).
+
+New shape:
+- `generationService._cueQueue` (in-memory array) holds pending `{ config, callbacks, opts }` entries. Only ONE prompt is ever submitted to ComfyUI at a time.
+- `enqueueGeneration(config, callbacks, opts)` — Cue-mode entry. Pushes onto queue + triggers dispatcher.
+- `_dispatchNextCue()` — pulls next when idle. Wraps `callbacks.onComplete/onError/onCancel` to flip `_cueDispatchInFlight = false` and call `_dispatchNextCue` again. Emits `promptbox:generation-end` when queue drains and nothing else is active.
+- `clearCueQueue()` / `clearPendingQueue()` — clears local pending. Comfy never has pending so no Comfy-side mutation needed.
+- `state.generationQueueCount = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0)`. Updated on push/dispatch/cancel — no polling.
+- `refreshQueueDepth()` retained as a no-op-ish hook for callers (still exported so block code paths compile).
+- `_emitPromptBoxGenerationEndIfIdle()` now also checks `_cueDispatchInFlight || _cueQueue.length`.
+
+Block-side wiring:
+- `MpiGalleryBlock.js` and `MpiGroupHistoryBlock.js` `pb.on('run')` branch on `state.generationMode === 'queue'` → `enqueueGeneration(...)`. Single + Auto-loop continue to call `startGeneration(...)` directly (autoloop still uses the existing `_activeLoops` resubmit-on-complete path).
+- `pb.on('cancel')` for queue mode now only emits `promptbox:generation-end` when `noRunning && queueIdle`. Stop on a multi-Cue run keeps Stop+Clear buttons enabled while pending remains.
+
+Removed:
+- `_scheduleQueuePoll` / `_refreshQueueDepth` Comfy `GET /queue` polling. Dead.
+- `activeGenerations.cancel` async branch that called `ComfyUIController.deleteQueueItem(promptId)` for queued (not-yet-running) prompts. With own-queue, Comfy never has pending, so cancel is back to synchronous `exec.cancel()` which calls `/interrupt` for the running job only.
+- `import { ComfyUIController } from './comfyController.js'` from generationService (no longer used here).
+
+### MpiButton: new `el.setDisabled(bool)` API
+
+`MpiButton`'s click handler reads `props.disabled`. Toggling the DOM `disabled` attribute alone (`removeAttribute('disabled')`) leaves `props.disabled` stuck at the mount-time value, so clicks silently bail. Added `el.setDisabled(disabled)` that syncs both `props.disabled` and the DOM attribute. PromptBox queue-mode Stop / Clear now use `setDisabled` instead of raw attribute toggling.
+
+This was the root cause of the user-reported "Stop button does nothing" symptom. Document in `.claude/rules/components.md` (Primitive section for MpiButton) when sync step 7 lands.
+
+### `el.setActive` adopted for run-button class sync
+
+PromptBox hotkey path was using raw `runBtn.el.classList.add/remove('is-active')` which desynced `MpiButton`'s internal `props.active` (toggle clicks afterwards saw stale state). Replaced with `runBtn.el.setActive(true/false)`. Same fix applied to `el.setGenerating` in PromptBox so the in-flight visual state survives external toggling.
+
+### Mode-switch reset of `isGenerating`
+
+`_renderRunCluster` now resets `isGenerating = false` when `state.generationQueueCount === 0` before mounting the new button cluster. Stale optimistic flags from prior-mode Cue clicks no longer paint the new Single/Loop button as active when nothing is actually running.
+
+### To-do status after this session
+
+- [x] 1. Capture prompt_id + queue helpers (kept; `prompt_id` still used for routing WS messages even though we no longer poll Comfy queue depth)
+- [x] 2. Session generationMode + PROMPT_BOX_CONTROLS
+- [x] 3. PromptBox dual-button layout
+- [x] 4. Backend queue-aware submission + cancel — **superseded mid-session**: now own-queue dispatcher; behavior verified by user
+- [x] 5. Run/Stop hotkeys — `Ctrl+Enter` / `Ctrl+Alt+Enter` registered + bound in PromptBox; help page row added
+- [ ] 6. StatusBar queue depth (untouched this session)
+- [ ] 7. Documentation + rule files sync (in progress at session end — see end-session skill)
+
+### Notes for the next agent
+
+- The original plan's references to "ComfyUI's native queue" / `getQueue` / `deleteQueueItem` for **Cue-mode behavior** are stale. ComfyUI helpers in `comfyController.js` remain (used by other code paths, keep them) but generationService no longer touches Comfy queue endpoints for depth or cancel.
+- Step 6 (StatusBar) should subscribe to `state.generationQueueCount` and read it directly — depth is now authoritative on the client side, no async fetch required.
+- Step 7 should additionally document: `MpiButton.el.setDisabled`, `el.setActive` usage from external code, and the in-app Cue queue's place in `generationService` (replaces the "ComfyUI native queue" wording in `.claude/rules/component-events.md` / `comfy_engine.md` if any references exist).
 
 ## Out of scope
 

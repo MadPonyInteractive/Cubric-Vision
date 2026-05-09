@@ -15,31 +15,82 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
-import { ComfyUIController } from './comfyController.js';
 
 // ── Auto-loop tracking ──────────────────────────────────────────────────────
 // Active loops keyed by registration id. Re-submission triggers when a loop's
 // own generation completes successfully.
 const _activeLoops = new Map(); // regId → { config, opts, callbacks }
 
-// ── Queue depth polling ─────────────────────────────────────────────────────
-let _queuePollTimer = null;
-async function _refreshQueueDepth() {
-    const q = await ComfyUIController.getQueue();
-    const depth = (q.running?.length || 0) + (q.pending?.length || 0);
+// ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
+// We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
+// time so Comfy's own queue never grows beyond 1. This avoids races on the
+// asset upload step (shared static filenames) and gives us full control over
+// pending mutation (clear, reorder).
+/** @type {Array<{ config: Object, callbacks: Object, opts: Object }>} */
+const _cueQueue = [];
+let _cueDispatchInFlight = false;
+
+function _updateQueueDepth() {
+    const depth = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0);
     if (state.generationQueueCount !== depth) {
         state.generationQueueCount = depth;
     }
-    console.log('[queue] depth', depth);
 }
-function _scheduleQueuePoll() {
-    clearTimeout(_queuePollTimer);
-    _queuePollTimer = setTimeout(_refreshQueueDepth, 200);
+
+function _dispatchNextCue() {
+    if (_cueDispatchInFlight) return;
+    const next = _cueQueue.shift();
+    if (!next) {
+        _updateQueueDepth();
+        _emitPromptBoxGenerationEndIfIdle();
+        return;
+    }
+    _cueDispatchInFlight = true;
+    _updateQueueDepth();
+
+    const wrappedCallbacks = {
+        ...next.callbacks,
+        onComplete: (data) => {
+            try { next.callbacks.onComplete?.(data); }
+            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+        },
+        onError: () => {
+            try { next.callbacks.onError?.(); }
+            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+        },
+        onCancel: () => {
+            try { next.callbacks.onCancel?.(); }
+            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+        },
+    };
+    startGeneration(next.config, wrappedCallbacks, next.opts);
+}
+
+/**
+ * Cue-mode entry point. Queues a generation and dispatches when idle.
+ * Returns nothing — callers track via `activeGenerations` events.
+ */
+export function enqueueGeneration(config, callbacks = {}, opts = {}) {
+    _cueQueue.push({ config, callbacks, opts });
+    _updateQueueDepth();
+    _dispatchNextCue();
+}
+
+/** Clears all pending Cue jobs (does not interrupt the running one). */
+export function clearCueQueue() {
+    _cueQueue.length = 0;
+    _updateQueueDepth();
+}
+
+/** Force a state.generationQueueCount refresh (no-op for own-queue model). */
+export function refreshQueueDepth() {
+    _updateQueueDepth();
 }
 
 function _emitPromptBoxGenerationEndIfIdle() {
     if (activeGenerations.list().some(entry => entry.status === 'running')) return;
     if (_activeLoops.size > 0) return;
+    if (_cueDispatchInFlight || _cueQueue.length > 0) return;
     Events.emit('promptbox:generation-end');
 }
 
@@ -107,7 +158,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
     exec.onPromptAck = (promptId) => {
         activeGenerations.setPromptId(_regId, promptId);
-        _scheduleQueuePoll();
     };
 
     if (_mode === 'autoloop') {
@@ -252,8 +302,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
         Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
 
-        _scheduleQueuePoll();
-
         // Auto-loop re-submission: if loop still active, fire again with same config.
         const loop = _activeLoops.get(_regId);
         if (loop) {
@@ -275,7 +323,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         _emitPromptBoxGenerationEndIfIdle();
         callbacks.onError?.();
         _activeLoops.delete(_regId);
-        _scheduleQueuePoll();
     };
 
     return { cancel: () => { _activeLoops.delete(_regId); exec.cancel(); } };
@@ -302,22 +349,11 @@ export function stopAllAutoLoops() {
 }
 
 /**
- * Clears all pending jobs from ComfyUI's native queue. The currently running
- * job is not interrupted. After clear, queue depth is re-polled.
+ * Clears all pending Cue jobs from the in-app queue. The currently running
+ * job (if any) is not interrupted. Comfy never holds pending jobs in the
+ * own-queue model, so no Comfy queue mutation is needed.
  */
-export async function clearPendingQueue() {
-    const q = await ComfyUIController.getQueue();
-    const pendingPromptIds = new Set((q.pending || []).map(item => (
-        Array.isArray(item) ? item[1] : (item?.prompt_id || item?.promptId)
-    )).filter(Boolean));
-    await ComfyUIController.clearQueue();
-    for (const entry of activeGenerations.list()) {
-        if (!pendingPromptIds.has(entry.promptId)) continue;
-        const tempId = entry.tempId ?? null;
-        const extraTempIds = entry.extraTempIds ?? [];
-        activeGenerations.end(entry.id, { revokePreview: true });
-        Events.emit('generation:cancelled', { id: entry.id, tempId, extraTempIds });
-    }
+export function clearPendingQueue() {
+    clearCueQueue();
     _emitPromptBoxGenerationEndIfIdle();
-    _scheduleQueuePoll();
 }

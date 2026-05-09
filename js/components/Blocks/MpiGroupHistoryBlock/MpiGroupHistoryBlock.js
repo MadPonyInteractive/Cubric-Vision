@@ -23,7 +23,7 @@ import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
-import { startGeneration, clearPendingQueue } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -482,10 +482,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (target) activeGenerations.cancel(target.id);
                 else _activeExec?.cancel();
                 if (mode !== 'queue') _activeExec = null;
-                if (!activeGenerations.list().some(e => e.status === 'running')) {
+                const noRunning = !activeGenerations.list().some(e => e.status === 'running');
+                const queueIdle = (state.generationQueueCount || 0) === 0;
+                if (noRunning && (mode !== 'queue' || queueIdle)) {
                     if (mode !== 'queue') state.generationQueueCount = 0;
                     Events.emit('promptbox:generation-end');
                 }
+                refreshQueueDepth();
                 Events.emit('tool:cancelled', { tool: 'groupHistory' });
             }));
             _unsubs.push(_pb.on('queue-clear', () => {
@@ -530,14 +533,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!next) return;
 
             _setGenerating(true);
-            _activeExec = startGeneration(
-                next.config,
-                {
-                    onCancel: () => { _activeExec = null; },
-                    getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
-                },
-                next.opts
-            );
+            const callbacks = {
+                onCancel: () => { _activeExec = null; },
+                getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
+            };
+            if (state.generationMode === 'queue') {
+                enqueueGeneration(next.config, callbacks, next.opts);
+                _activeExec = null; // Cue dispatcher manages exec lifecycle
+            } else {
+                _activeExec = startGeneration(next.config, callbacks, next.opts);
+            }
         }
 
         function _runVideoTool(operation, injectionParams = {}) {

@@ -234,6 +234,26 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: false,
     },
 
+    // ── Generation ────────────────────────────────────────────────────────────
+    {
+        id:               'generation.run',
+        key:              'control+enter',
+        type:             KEY_TYPE.DOWN,
+        category:         'generation',
+        scopeLabel:       'Generation',
+        description:      'Run / Enqueue',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'generation.stop',
+        key:              'control+alt+enter',
+        type:             KEY_TYPE.DOWN,
+        category:         'generation',
+        scopeLabel:       'Generation',
+        description:      'Stop',
+        allowWhileTyping: true,
+    },
+
     // ── System / Built-ins ────────────────────────────────────────────────────
     {
         id:               'system.fullscreen',

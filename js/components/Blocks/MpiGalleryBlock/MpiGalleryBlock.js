@@ -27,7 +27,7 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration, clearPendingQueue } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -309,20 +309,28 @@ export const MpiGalleryBlock = ComponentFactory.create({
             pb.on('run', (payload) => {
                 const next = _galleryGenerationFromPayload(payload);
                 if (!next) return;
-                startGeneration(next.config, {
+                const callbacks = {
                     onCancel: () => {},
                     getNextGeneration: () => _galleryGenerationFromPayload(_pb?.el?.getRunPayload?.() || payload),
-                }, next.opts);
+                };
+                if (state.generationMode === 'queue') {
+                    enqueueGeneration(next.config, callbacks, next.opts);
+                } else {
+                    startGeneration(next.config, callbacks, next.opts);
+                }
             });
 
             pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
                 const target = mode === 'queue' ? active[0] : active.at(-1);
                 if (target) activeGenerations.cancel(target.id);
-                if (!activeGenerations.list().some(e => e.status === 'running')) {
+                const noRunning = !activeGenerations.list().some(e => e.status === 'running');
+                const queueIdle = (state.generationQueueCount || 0) === 0;
+                if (noRunning && (mode !== 'queue' || queueIdle)) {
                     if (mode !== 'queue') state.generationQueueCount = 0;
                     Events.emit('promptbox:generation-end');
                 }
+                refreshQueueDepth();
             });
 
             pb.on('queue-clear', () => {

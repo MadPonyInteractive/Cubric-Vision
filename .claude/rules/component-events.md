@@ -9,8 +9,9 @@
 EMITS:   `toggle` `{ active: boolean }` — only in icon-button toggleable mode
          `click`  `{ originalEvent: Event, active: boolean }`
 LISTENS: (none — pure DOM events only)
-API:     `el.setActive(active)` · `el.setLabel(label)`
+API:     `el.setActive(active)` · `el.setLabel(label)` · `el.setDisabled(disabled)`
 NOTE:    Stage redesign added `shape: 'sharp' | 'pill'` prop (default `'sharp'`, applies `--r-1: 0`); pass `shape: 'pill'` to opt into the legacy rounded look. Icon-button variant supports `'ghost'` (transparent, hover lifts) in addition to `secondary`/`danger`.
+         External callers MUST use `el.setActive(bool)` / `el.setDisabled(bool)` to mutate state — the click handler reads `props.active` / `props.disabled` and toggling the DOM attributes alone leaves `props.*` stale, causing clicks to silently bail.
 
 ### MpiCanvas
 EMITS:   `modechange` `{ mode: 'none'|'mask'|'crop'|'compare' }`
@@ -365,6 +366,8 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers (not generation mode)
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
+         `state:changed` — re-renders run cluster on `generationMode` change; updates Cue label on `generationQueueCount` change (queue mode only)
+         Hotkeys `generation.run` (Ctrl+Enter) and `generation.stop` (Ctrl+Alt+Enter) — bound in setup, mode-aware (single/autoloop = toggle run; queue = enqueue / interrupt current)
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 API:     `el.getRunPayload()` returns the current live run payload. Auto-loop uses this so prompt/model/control changes apply to the next loop iteration.
 
