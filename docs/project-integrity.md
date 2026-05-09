@@ -76,6 +76,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
   "type": "image",
   "filePath": "/project-file?path=C%3A%5CUsers%5CFabio%5CDocuments%5CCubricStudio%5Cprojects%5Cmy-project%5CMedia%5Ct2i_001.png",
   "operation": "t2i",
+  "displayName": "t2i_001",
   "prompt": "a hamster in the snow",
   "negativePrompt": "",
   "seed": 42,
@@ -86,7 +87,8 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
   "pixelDimensions": {
     "w": 1024,
     "h": 1024
-  }
+  },
+  "generationMs": 15087
 }
 ```
 
@@ -94,7 +96,10 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`id`** — UUID matching the entry in `project.json` history. This is the primary key.
 - **`filePath`** — Server-relative URL to the actual image/video file. NOT a simple filename — it's a `/project-file?path=...` query string.
 - **`type`** — `'image'` or `'video'`.
-- **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`).
+- **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`). Reserved for the operation key — never overwritten with a filename or human label.
+- **`displayName`** — Human-readable label derived from the saved filename stem (e.g., `'t2i_001'`, `'upscale_002'`, `'crop_001'`). Source of truth for `MpiHistoryList` card labels and gallery group names. Distinct from `operation` so the same item displays identically before and after project reload.
+- **`pixelDimensions`** — `{w, h}` of the actual saved image. Populated either from client-supplied Width/Height injection params (ops with a ratio control) or by `sharp.metadata()` probing the saved file in `routes/projects.js` `/project/save-generation` (ops without a ratio control: upscale, detail, edit, change, remove). Crop writes the crop rect dims directly.
+- **`generationMs`** — Elapsed sampling time in milliseconds (from `tool:sampling-start` to completion). `null` for crop and uploaded items. Rendered as rounded seconds (`Ns`) on history cards.
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
 
@@ -124,6 +129,7 @@ After loading, `state.currentProject.itemGroups[n].history[m]` is a full object 
   type: 'image',
   filePath: '/project-file?path=C%3A%5CUsers%5CFabio%5C...',
   operation: 't2i',
+  displayName: 't2i_001',
   prompt: 'a hamster in the snow',
   negativePrompt: '',
   seed: 42,
@@ -131,11 +137,14 @@ After loading, `state.currentProject.itemGroups[n].history[m]` is a full object 
   createdAt: '2026-04-15T10:35:22.340Z',
   name: null,
   uploaded: false,
-  pixelDimensions: { w: 1024, h: 1024 }
+  pixelDimensions: { w: 1024, h: 1024 },
+  generationMs: 15087
 }
 ```
 
 **Components never change.** They read `.operation`, `.filePath`, `.prompt`, etc. from the history item exactly as they do today. No component knows about UUIDs or `.meta/` files.
+
+**Sidecar / in-memory parity is mandatory.** `projectReconciler.reconcileAndHydrate()` injects the sidecar JSON directly as the in-memory item. Any client-side flow that builds a fresh item (e.g. `generationService.js`, `MpiCanvasViewer` crop) must emit the same fields with the same semantics, otherwise the same item displays differently before vs after a project reload. When adding a sidecar field, update in equal measure: (a) `createImageItem`/`createVideoItem` defaults in `projectModel.js`, (b) every fresh-item construction site, (c) every server route that writes a sidecar (`save-generation`, `crop-media`, `upload`), and (d) `projectReconciler._constructSyntheticItem`.
 
 ---
 
