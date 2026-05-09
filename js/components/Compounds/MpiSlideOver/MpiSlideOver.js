@@ -105,7 +105,8 @@ export const MpiSlideOver = ComponentFactory.create({
 
 let _active = null;
 
-Events.on('slide-over:open', ({ title, component }) => {
+// Module-level singleton; lifetime = app lifetime. Unsubscribe captured but never called.
+const _slideOverOpenUnsub = Events.on('slide-over:open', ({ title, component }) => {
     if (_active) {
         _active.el.close();
         _active = null;
