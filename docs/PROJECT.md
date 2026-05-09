@@ -51,6 +51,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 6. **Output node** is the canonical result capture point.
 7. **All blocking UI uses `Overlays.request/release`** — never bypass.
 8. **All hotkeys go through `Hotkeys.bind/unbind`** — declare in `hotkeyRegistry.js`, bind by id. Never raw `window.addEventListener`.
+9. **Generation mode is session-only** — `state.generationMode` controls Single/Queue/Loop across models. Do not persist it to `project.json`.
 
 ## How to Orient in an Unfamiliar File
 

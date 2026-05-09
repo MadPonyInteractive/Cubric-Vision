@@ -339,9 +339,12 @@ const ULTIMATE_START_PROGRESS = 0.75;
 
 export function runCommand(payload) {
     const exec = {
+        promptId:        null,
+        seed:            null,
         onPreview:       null,
         onProgress:      null,
         onSamplingStart: null,
+        onPromptAck:     null,
         onComplete:      null,
         onError:         null,
         cancel() { ComfyUIController.interrupt(); },
@@ -357,6 +360,7 @@ export function runCommand(payload) {
         }
 
         const params = _buildParams(payload);
+        exec.seed = params.Seed ?? null;
 
         // Load the workflow JSON so we can identify "Output" node ids before
         // execution — needed for filtering executed messages by title.
@@ -429,6 +433,12 @@ export function runCommand(payload) {
             });
         }
         const onMessage = (msg) => {
+            if (msg.type === 'prompt_ack') {
+                exec.promptId = msg.prompt_id;
+                exec.onPromptAck?.(msg.prompt_id);
+                return;
+            }
+
             if (msg.type === 'preview') {
                 emitSamplingStart();
                 exec.onPreview?.(msg.url);

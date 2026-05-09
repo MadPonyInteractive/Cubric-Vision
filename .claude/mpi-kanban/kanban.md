@@ -80,15 +80,6 @@
     Plan file: docs/plans/2026-05-09-video-preview-gate-core.md
     ```
 
-### Queue modes + run hotkeys
-
-  - tags: [PLAN]
-  - priority: high
-  - defaultExpanded: true
-    ```md
-    Plan file: docs/plans/2026-05-09-queue-modes-run-hotkeys.md
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -109,6 +100,23 @@
     ```
 
 ## IMPLEMENTING
+
+### Queue modes + run hotkeys
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: true
+  - steps:
+      - [x] Capture prompt_id + queue helpers
+      - [x] Add session generationMode
+      - [x] PromptBox dual-button layout
+      - [x] Queue-aware submission + cancel
+      - [ ] Run/Stop hotkey bindings
+      - [ ] StatusBar queue depth indicator
+      - [ ] Sync rule files + docs
+    ```md
+    Plan file: docs/plans/2026-05-09-queue-modes-run-hotkeys.md
+    ```
 
 ### Setup video generation
 

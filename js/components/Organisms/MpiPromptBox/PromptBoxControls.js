@@ -12,6 +12,7 @@
  */
 
 import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -111,6 +112,70 @@ export const PROMPT_BOX_CONTROLS = {
      * Mounts MpiBatchSelector and injects into node titled "Batch".
      * Persists per-model under modelSettings[modelId].batch.
      */
+    /**
+     * generationMode — Run-flow selector: Single, Queue, or Auto-loop.
+     * Mounts MpiRadioGroup and stores the session-only run mode in state.generationMode.
+     * Default 'single' preserves legacy behavior. Does not inject into the workflow.
+     */
+    generationMode: {
+        nodeTitle: null,
+        defaultValue: 'single',
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            void model;
+
+            const initialValue = state.generationMode || this.defaultValue;
+            this.value = initialValue;
+
+            this._instance = MpiRadioGroup.mount(hostEl, {
+                name: 'generation-mode',
+                value: initialValue,
+                info: 'Generation mode',
+                options: [
+                    { label: 'Single', value: 'single',   icon: 'play',   info: 'Single — one job at a time' },
+                    { label: 'Queue',  value: 'queue',    icon: 'layers', info: 'Queue — enqueue back-to-back jobs' },
+                    { label: 'Loop',   value: 'autoloop', icon: 'loop',   info: 'Auto-loop — re-run after each job' },
+                ],
+            });
+
+            this._instance.on('select', ({ value }) => {
+                this.value = value;
+                state.generationMode = value;
+            });
+
+            // Disable radio while generation is busy (queue depth > 0).
+            const _setDisabled = (disabled) => {
+                const root = this._instance?.el;
+                if (!root) return;
+                root.querySelectorAll('.mpi-radio-group__btn').forEach(btn => {
+                    if (disabled) btn.setAttribute('disabled', '');
+                    else btn.removeAttribute('disabled');
+                });
+            };
+            _setDisabled((state.generationQueueCount || 0) > 0);
+
+            this._unsubBusy = Events.on('state:changed', ({ key }) => {
+                if (key !== 'generationQueueCount') return;
+                _setDisabled((state.generationQueueCount || 0) > 0);
+            });
+            this._unsubGenerationEnd = Events.on('promptbox:generation-end', () => {
+                _setDisabled(false);
+            });
+        },
+        destroy() {
+            this._unsubBusy?.();
+            this._unsubGenerationEnd?.();
+            this._unsubBusy = null;
+            this._unsubGenerationEnd = null;
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            return {};
+        },
+    },
+
     batch: {
         nodeTitle: 'Batch_Size',
         defaultValue: '1',

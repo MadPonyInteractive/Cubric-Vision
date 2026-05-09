@@ -24,7 +24,7 @@ This plan is a foundation: the next plan ("Video preview-gate core") will call i
 ## Architecture decisions
 
 1. **Use ComfyUI's native queue.** Capture `prompt_id` from `POST /prompt` response and use `GET /queue` for depth + `POST /queue {delete:[id]}` for targeted removal. Avoids duplicating queue state in Node.
-2. **Mode persistence:** per-project, per-model in `modelSettings[modelId].generationMode` (matches existing pattern). Default `'single'`.
+2. **Mode state:** session-only in `state.generationMode`, shared across models. Default `'single'`. Do not persist generation mode to `project.json`.
 3. **Stop semantics by mode:**
    - Single: Stop = interrupt active job (current behavior).
    - Queue: Stop = interrupt active job. Queued jobs continue.
@@ -34,7 +34,7 @@ This plan is a foundation: the next plan ("Video preview-gate core") will call i
 
 ## To-dos
 
-### 1. Capture `prompt_id` + add ComfyUI queue helpers in comfyController
+### 1. Capture `prompt_id` + add ComfyUI queue helpers in comfyController [x]
 
 Edit `js/services/comfyController.js`:
 - In `runWorkflow()` around `comfyController.js:365`, parse the JSON response from `POST /prompt` and return the `prompt_id`. Plumb it back to `commandExecutor.runCommand` and into `activeGenerations.register(...)` so each handle stores `promptId`.
@@ -44,13 +44,13 @@ Edit `js/services/comfyController.js`:
 
 **Verify:** Open dev tools console, trigger one Run from PromptBox, then in console run `await window.ComfyController.getQueue()`. Confirm the running job's `prompt_id` matches the one logged from `runWorkflow`. Add a temporary `console.log('[queue] prompt_id', promptId)` in `runWorkflow` for verification — remove on green.
 
-### 2. Add `generationMode` to projectModel + PROMPT_BOX_CONTROLS
+### 2. Add session `generationMode` + PROMPT_BOX_CONTROLS [x]
 
-Edit `js/data/projectModel.js`: extend `getModelSettings` defaults to include `generationMode: 'single'`. Edit `js/components/Organisms/MpiPromptBox/PromptBoxControls.js`: add a new control entry `generationMode` using `MpiOptionSelector` variant `buttons` with three options (`single`, `queue`, `autoloop`) — labels short ("Single", "Queue", "Loop"), icons from `js/utils/icons.js` (add `mode-single`, `mode-queue`, `mode-loop` if missing). On change, emit `settings:model:update { modelId, key: 'generationMode', value }` so `projectService` saves it. Register the control in the `components[]` arrays of t2i, i2i, t2v, i2v in the command registry.
+Edit `js/state.js`: add session-only `generationMode: 'single'`. Edit `js/components/Organisms/MpiPromptBox/PromptBoxControls.js`: add a new control entry `generationMode` with three options (`single`, `queue`, `autoloop`). On change, update `state.generationMode`; do not emit `settings:model:update` and do not write the mode to `project.json`. Register the control in the `components[]` arrays of t2i, i2i, t2v, i2v in the command registry.
 
-**Verify:** Open PromptBox settings popup. Confirm a three-button mode toggle is visible. Click each → reload project → reopen popup → confirm selection persisted. Look in dev tools network tab for the `/projects/save` (or equivalent) POST containing `generationMode`.
+**Verify:** Open PromptBox settings popup. Confirm a three-button mode toggle is visible. Click each and switch models → confirm the mode remains unchanged for the session. Confirm no `/update-project-settings` write contains `generationMode`.
 
-### 3. PromptBox dual-button layout for Queue/Auto-loop modes
+### 3. PromptBox dual-button layout for Queue/Auto-loop modes [x]
 
 Edit `js/components/Organisms/MpiPromptBox/MpiPromptBox.js` around lines 604-631:
 - When `generationMode === 'single'`: keep existing toggleable button (no change).
@@ -62,16 +62,16 @@ Edit `js/components/Organisms/MpiPromptBox/MpiPromptBox.js` around lines 604-631
 
 **Verify:** Toggle each mode in the popup. Single = one button toggling play↔stop. Queue + Auto-loop = two side-by-side buttons; Stop greyed when idle, enabled while a job runs. No console errors when switching modes mid-generation.
 
-### 4. Backend: queue-aware submission + cancel in commandExecutor + generationService
+### 4. Backend: queue-aware submission + cancel in commandExecutor + generationService [x]
 
 Edit `js/services/commandExecutor.js` and `js/services/generationService.js`:
-- Read `generationMode` from `getModelSettings(project, modelId).generationMode` at submission time.
+- Read `generationMode` from `state.generationMode` at submission time.
 - Single (today's behavior preserved): if any active generation exists, reject the new Run with a toast "Generation in progress". (NOTE: today there's no rejection — this tightens Single mode; confirm with user during execution.) Cancel = `interrupt()` only.
 - Queue: always accept. Submit immediately. Cancel = `interrupt()` only (kills running, queued jobs continue via ComfyUI's native queue).
 - Auto-loop: track a `_loopHandle` per workflow. On `generation:complete`, if loop still active and not stopped, re-submit with same payload. Cancel = clear `_loopHandle` (so no re-submit) but do **not** interrupt the active job. Modifier-stop hard-cancel: emit `'cancel'` with `{ mode: 'autoloop', hard: true }` → interrupt + clear loop.
 - Emit `state.generationQueueCount` updates as jobs queue/pop (poll `getQueue()` after submit + on `generation:complete` until ComfyUI reports zero pending). Add `generationQueueCount: 0` to `js/state.js`.
 
-**Verify:** Console-log queue depth on each submit + complete. Submit 3 prompts in Queue mode rapidly → look in console for `[queue] depth 3 → 2 → 1 → 0`. In Auto-loop mode: Run, wait one job, Stop → confirm console shows "[loop] stopped, no resubmit" and the active job finishes naturally (no interrupt log).
+**Verify:** User verified Queue mode no longer creates duplicate/ghost cards; only the in-flight placeholder is visible, saved cards persist across navigation/deletes, Single mode still works, Loop can pick up prompt/model changes, and stopping Loop re-enables the mode radio. Seed is now saved on generated items for inspection. To-do 4 was marked complete only after this verification.
 
 ### 5. Hotkeys: register `generation.run` + `generation.stop` and bind in PromptBox
 
@@ -94,7 +94,7 @@ Edit `js/shell/statusBar.js`: subscribe to `state.generationQueueCount` via `Eve
 
 Update only what changed:
 - `.claude/rules/component-events.md`: PromptBox now emits `'cancel'` with `{ mode, hard? }` payload (was empty `{}`). Document.
-- `.claude/rules/component-state.md`: PromptBox now reads `modelSettings[modelId].generationMode`. StatusBar now reads `state.generationQueueCount`.
+- `.claude/rules/component-state.md`: PromptBox now reads/writes session-only `state.generationMode`. StatusBar now reads `state.generationQueueCount`.
 - `.claude/rules/components.md`: under Hotkeys section (or wherever generation hotkeys are documented), add `generation.run` and `generation.stop` registry ids.
 - `docs/PROJECT.md`: short note in the relevant subsystem section pointing to this plan.
 

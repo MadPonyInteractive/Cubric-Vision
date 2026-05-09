@@ -26,11 +26,15 @@
 | `galleryShowInfo`      | `boolean`                   | MpiGalleryGrid (info button active state, card sync)                                    | MpiGalleryGrid (info button click)                                                 |
 | `gallerySizeLevel`     | `number` (1–5)              | MpiGalleryGrid (slider initial value, `_cardWidth` init)                                | MpiGalleryGrid (slider input handler)                                              |
 | `focusMode`            | `boolean`                   | (shell + components that hide on focus)                                                 | focusModeService.js (F-key toggle)                                                 |
+| `generationMode`       | `'single'\|'queue'\|'autoloop'` | MpiPromptBox, PromptBoxControls, generationService                                  | PromptBoxControls; MpiPromptBox preserves it across model changes                  |
+| `generationQueueCount` | `number`                    | MpiPromptBox, PromptBoxControls, generationService, future StatusBar                    | generationService queue polling; cancel handlers clear it for Single/Loop          |
 | `projectStats`         | `{ count, bytes }`          | landing project rows + future status-bar / project-meta consumers                       | `projectStatsService.refreshProject()` (auto-fired on `media:imported`/`media:deleted`/`generation:complete`/`project:stats-dirty`/`project:changed`) |
 | `historyStats`         | `{ groupId, count, bytes }` | `MpiGroupHistoryBlock` meta strip + future consumers                                    | `projectStatsService.refreshGroup(group)` (auto-fired on `history:stats-dirty`)    |
 | `lastGeneration`       | `{ label, elapsed } \| null`| `statusBar.js` (idle display)                                                           | `statusBar.js` (writes on generation `complete()`)                                 |
 
 > **Block-local (NOT in `state`):** `MpiGroupHistoryBlock` tracks the active tool mode in block-local variable `_options` (the currently-mounted `MpiToolOptions*` instance). This is intentionally NOT a `state` key — it is workspace-scoped and must not persist across navigation. Do NOT add an `activeTool` key to `state.js`.
+
+> **Generation mode is session-only:** `state.generationMode` is shared across models and must not be stored in `project.json` or `modelSettings`. Switching models preserves the current mode.
 
 > **MpiCanvas pan/zoom is NOT in `state`:** `scale`, `offsetX`, `offsetY` live inside `ViewManager` (instance-local). Pan/zoom is applied as a CSS `transform` on `.mpi-canvas__stack` — not via `ctx.translate/scale`. Never reach into `state` for canvas view parameters.
 

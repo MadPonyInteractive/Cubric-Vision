@@ -57,14 +57,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        components: ['ratio', 'batch', 'generationMode'],
     },
     i2i: {
         label: 'Image to Image',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        components: ['ratio', 'batch', 'generationMode'],
     },
     upscale: {
         label: 'Upscale',
@@ -112,14 +112,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio'],
+        components: ['ratio', 'generationMode'],
     },
     i2v: {
         label: 'Image to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         promptRequired: false,
-        components: ['ratio'],
+        components: ['ratio', 'generationMode'],
     },
     extend: {
         label: 'Extend',

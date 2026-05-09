@@ -75,6 +75,12 @@ export const MpiPromptBox = ComponentFactory.create({
         /** @type {Map<string, Object>} */
         const _activeControls = new Map();
 
+        let runSlotEl = null;
+        let runBtn = null;
+        let stopBtn = null;
+        let clearBtn = null;
+        let _runMode = 'single';
+
         let model = props.model || null;
         let modelList = props.modelList || [];
         let _modelDropdown = null;
@@ -217,10 +223,22 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.setGenerating = (active) => {
             isGenerating = active;
-            runBtn.el.classList.toggle('is-active', active);
+            if (_runMode === 'single' || _runMode === 'autoloop') {
+                if (runBtn?.el) runBtn.el.classList.toggle('is-active', active);
+                return;
+            }
+            // Queue mode: toggle Stop + Clear disabled state.
+            const setDisabled = (btn) => {
+                if (!btn?.el) return;
+                if (active) btn.el.removeAttribute('disabled');
+                else btn.el.setAttribute('disabled', '');
+            };
+            setDisabled(stopBtn);
+            setDisabled(clearBtn);
         };
 
         el.setModel = (newModel) => {
+            const modeToKeep = _runMode || 'single';
             model = newModel;
             _currentModelType = newModel?.mediaType ?? _currentModelType;
             if (_modelDropdown) {
@@ -229,9 +247,11 @@ export const MpiPromptBox = ComponentFactory.create({
                     newModel.id
                 );
             }
+            if (state.generationMode !== modeToKeep) state.generationMode = modeToKeep;
             _refreshOpDropdown();
             _refreshOpSlot();
             _renderBadge();
+            if (typeof _renderRunCluster === 'function') _renderRunCluster(modeToKeep);
         };
 
         el.setModelList = (newModelList) => {
@@ -380,6 +400,7 @@ export const MpiPromptBox = ComponentFactory.create({
                     <div class="mpi-prompt-box__settings-row" id="settings-model-slot"></div>
                     <div class="mpi-prompt-box__settings-row" id="settings-op-dropdown-slot"></div>
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
+                    <div class="mpi-prompt-box__settings-row" id="settings-flow-slot"></div>
                 </div>
             </div>
         `).trim();
@@ -566,9 +587,16 @@ export const MpiPromptBox = ComponentFactory.create({
             opDropdownSlot.appendChild(_opDropdown.el);
         }
 
+        const FLOW_CONTROL_IDS = new Set(['generationMode']);
+        const flowSlot = qs('#settings-flow-slot', popupNode);
+
         function _refreshOpSlot() {
             if (!opSlot) return;
+            for (const ctrl of _activeControls.values()) {
+                try { ctrl.destroy?.(); } catch {}
+            }
             opSlot.innerHTML = '';
+            if (flowSlot) flowSlot.innerHTML = '';
             _activeControls.clear();
 
             const componentIds = getCommandComponents(activeOperation);
@@ -577,11 +605,14 @@ export const MpiPromptBox = ComponentFactory.create({
                 const ctrl = PROMPT_BOX_CONTROLS[componentId];
                 if (!ctrl) continue;
 
+                const targetSlot = FLOW_CONTROL_IDS.has(componentId) ? flowSlot : opSlot;
+                if (!targetSlot) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
-                opSlot.appendChild(ctrlEl);
+                targetSlot.appendChild(ctrlEl);
 
-                ctrl.mount(ctrlEl, { model });
+                ctrl.mount(ctrlEl, { model, generationMode: _runMode });
                 _activeControls.set(componentId, ctrl);
             }
         }
@@ -602,33 +633,125 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
-        const runBtnSlot = document.createElement('div');
-        qs('#bottom-right-slot', el).appendChild(runBtnSlot);
+        runSlotEl = qs('#bottom-right-slot', el);
 
-        const runBtn = MpiButton.mount(runBtnSlot, {
-            icon: 'play', iconActive: 'stop',
-            info: 'Generate / Stop',
-            size: 'sm', variant: 'primary',
-            label: 'Run',
-            toggleable: true, active: isGenerating,
-        });
+        const _queueLabel = (count = state.generationQueueCount || 0) => `Cue x${Math.max(0, Number(count) || 0)}`;
 
-        runBtn.on('toggle', (data) => {
-            if (data.active) {
-                isGenerating = true;
-                const injectionParams = getInjectionParamsFromControls(_activeControls);
-                emit('run', {
-                    operation:  activeOperation,
-                    positive:   positiveValue,
-                    negative:   negativeValue,
-                    mediaItems: el.getMediaItems(),
-                    injectionParams,
-                });
-            } else if (isGenerating) {
-                isGenerating = false;
-                emit('cancel', {});
+        el.getRunPayload = () => {
+            const injectionParams = getInjectionParamsFromControls(_activeControls);
+            return {
+                operation:  activeOperation,
+                positive:   positiveValue,
+                negative:   negativeValue,
+                mediaItems: el.getMediaItems(),
+                injectionParams,
+            };
+        };
+
+        const _emitRun = () => {
+            emit('run', el.getRunPayload());
+        };
+
+        const _emitCancel = () => {
+            emit('cancel', { mode: _runMode });
+        };
+
+        function _renderRunCluster(modeOverride) {
+            if (!runSlotEl) return;
+            runSlotEl.innerHTML = '';
+            runBtn = null;
+            stopBtn = null;
+            clearBtn = null;
+
+            if (modeOverride) {
+                _runMode = modeOverride;
+            } else {
+                _runMode = state.generationMode || 'single';
             }
-        });
+
+            if (_runMode === 'single' || _runMode === 'autoloop') {
+                const slot = document.createElement('div');
+                runSlotEl.appendChild(slot);
+
+                const label = _runMode === 'autoloop' ? 'Loop' : 'Run';
+                const info  = _runMode === 'autoloop' ? 'Start auto-loop / Stop' : 'Generate / Stop';
+
+                runBtn = MpiButton.mount(slot, {
+                    icon: 'play', iconActive: 'stop',
+                    info,
+                    size: 'sm', variant: 'primary',
+                    label,
+                    toggleable: true, active: isGenerating,
+                });
+
+                runBtn.on('toggle', (data) => {
+                    if (data.active) {
+                        isGenerating = true;
+                        _emitRun();
+                    } else if (isGenerating) {
+                        isGenerating = false;
+                        _emitCancel();
+                    }
+                });
+                return;
+            }
+
+            // Queue — Cue (always-on) + Stop (interrupt current) + Clear (wipe pending)
+            const runHost = document.createElement('div');
+            const stopHost = document.createElement('div');
+            const clearHost = document.createElement('div');
+            runSlotEl.appendChild(runHost);
+            runSlotEl.appendChild(stopHost);
+            runSlotEl.appendChild(clearHost);
+
+            runBtn = MpiButton.mount(runHost, {
+                icon: 'play',
+                info: 'Cue generation',
+                size: 'sm', variant: 'primary',
+                label: _queueLabel(),
+            });
+            runBtn.on('click', () => {
+                isGenerating = true;
+                if (stopBtn?.el) stopBtn.el.removeAttribute('disabled');
+                if (clearBtn?.el) clearBtn.el.removeAttribute('disabled');
+                runBtn.el.setLabel?.(_queueLabel((state.generationQueueCount || 0) + 1));
+                _emitRun();
+            });
+
+            stopBtn = MpiButton.mount(stopHost, {
+                icon: 'stop',
+                info: 'Stop current job (queue continues)',
+                size: 'sm', variant: 'secondary',
+                disabled: !isGenerating,
+            });
+            stopBtn.on('click', () => {
+                if (!isGenerating) return;
+                _emitCancel();
+            });
+
+            clearBtn = MpiButton.mount(clearHost, {
+                icon: 'trash',
+                info: 'Clear pending queue',
+                size: 'sm', variant: 'secondary',
+                disabled: !isGenerating,
+            });
+            clearBtn.on('click', () => {
+                emit('queue-clear', {});
+            });
+        }
+
+        _renderRunCluster();
+
+        _unsubs.push(Events.on('state:changed', ({ key, value }) => {
+            if (key === 'generationQueueCount') {
+                if (_runMode !== 'queue') return;
+                runBtn?.el?.setLabel?.(_queueLabel(value));
+                return;
+            }
+            if (key === 'generationMode') {
+                _renderRunCluster(value);
+            }
+        }));
 
         // ── Initialise ─────────────────────────────────────────────────────────
         _refreshOpDropdown();

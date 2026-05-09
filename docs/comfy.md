@@ -7,8 +7,10 @@ ComfyUI is the generation engine. Communication is via REST + WebSocket.
 Singleton that manages the ComfyUI server lifecycle and workflow execution.
 
 - `ensureServerRunning()`: Starts ComfyUI if not running (calls `POST /comfy/start`).
-- `queuePrompt(workflow, prompt)`: Enqueues a workflow via REST.
-- `runWorkflow(workflowFile, params, onProgress?)`: Loads workflow JSON, uploads input assets, injects params by node `_meta.title`, captures `Output` node results via WebSocket.
+- `runWorkflow(workflowFile, params, onProgress?)`: Loads workflow JSON, uploads input assets, injects params by node `_meta.title`, captures `Output` node results via WebSocket, and routes messages by ComfyUI `prompt_id` so queued jobs complete into the correct active-generation entry.
+- `getQueue()`: Reads ComfyUI's native queue and returns `{ running, pending }`.
+- `clearQueue()`: Clears pending ComfyUI jobs without interrupting the current job.
+- `deleteQueueItem(promptId)`: Removes one pending ComfyUI queue item.
 - `interrupt()`: Aborts running generation.
 - `generateRandomSeed()`: Returns a random seed for the Seed node.
 
@@ -21,6 +23,15 @@ Orchestrates a full generation request.
 - `_depFilename(depId)`: Maps dep ID to filename.
 - `_resolveWorkflowFile(operation, modelId)`: Returns workflow JSON path.
 - `_buildParams(payload)`: Builds the title→value map for injection. Merges `payload.injectionParams` (from PromptBox controls) into the params object alongside standard fields (Positive, Negative, Seed, media slots).
+- Execution handles expose `promptId`, `seed`, and `onPromptAck`. `generationService` stores `promptId` in `activeGenerations` and saves the resolved seed on generated items.
+
+## Generation Modes
+
+PromptBox generation mode is session-only (`state.generationMode`) and shared across models. It must not be persisted to `project.json`.
+
+- `single`: one toggle button; Stop interrupts the active job.
+- `queue`: Cue submits immediately into ComfyUI's native FIFO queue; only the first running placeholder is visible in Gallery. Stop interrupts the current job and pending jobs continue. Clear removes pending jobs.
+- `autoloop`: Loop resubmits after natural completion while active. The next iteration reads the live PromptBox payload, so prompt/model/control changes made while a job runs apply to the next loop.
 
 ## Workflow Injection Pattern
 

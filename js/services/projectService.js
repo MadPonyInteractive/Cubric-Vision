@@ -283,15 +283,28 @@ export async function deleteProject(project, { deleteFiles = true } = {}) {
 
 // ── Group mutations (NEW) ────────────────────────────────────────────────────
 
+// Serialize all project mutations through a single in-flight chain. Without
+// this, concurrent addGroup/removeGroup/updateGroup calls (e.g. Queue mode
+// firing parallel completions) read stale state.currentProject snapshots and
+// the last-write-wins behavior loses or resurrects groups.
+let _mutationChain = Promise.resolve();
+function _enqueueMutation(fn) {
+    const next = _mutationChain.then(fn, fn);
+    _mutationChain = next.catch(() => {}); // chain must not break on error
+    return next;
+}
+
 /**
  * Add a new group to the current project, persist, and emit.
  * @param {Object} group — Full ItemGroup with hydrated history items
  */
 export async function addGroup(group) {
-    if (!state.currentProject) return;
-    state.currentProject = addGroupToProject(state.currentProject, group);
-    await persistGroups();
-    Events.emit('project:group-added', { group });
+    return _enqueueMutation(async () => {
+        if (!state.currentProject) return;
+        state.currentProject = addGroupToProject(state.currentProject, group);
+        await persistGroups();
+        Events.emit('project:group-added', { group });
+    });
 }
 
 /**
@@ -299,10 +312,12 @@ export async function addGroup(group) {
  * @param {Object} group — Full ItemGroup with hydrated history items
  */
 export async function updateGroup(group) {
-    if (!state.currentProject) return;
-    state.currentProject = updateGroupInProject(state.currentProject, group);
-    await persistGroups();
-    Events.emit('project:group-updated', { group });
+    return _enqueueMutation(async () => {
+        if (!state.currentProject) return;
+        state.currentProject = updateGroupInProject(state.currentProject, group);
+        await persistGroups();
+        Events.emit('project:group-updated', { group });
+    });
 }
 
 /**
@@ -310,10 +325,12 @@ export async function updateGroup(group) {
  * @param {string} groupId
  */
 export async function removeGroup(groupId) {
-    if (!state.currentProject) return;
-    state.currentProject = removeGroupFromProject(state.currentProject, groupId);
-    await persistGroups();
-    Events.emit('project:group-removed', { groupId });
+    return _enqueueMutation(async () => {
+        if (!state.currentProject) return;
+        state.currentProject = removeGroupFromProject(state.currentProject, groupId);
+        await persistGroups();
+        Events.emit('project:group-removed', { groupId });
+    });
 }
 
 /**

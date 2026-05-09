@@ -23,7 +23,7 @@ import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
-import { startGeneration } from '../../../services/generationService.js';
+import { startGeneration, clearPendingQueue } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -476,10 +476,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     : null;
                 _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams });
             }));
-            _unsubs.push(_pb.on('cancel', () => {
-                _activeExec?.cancel();
-                _activeExec = null;
+            _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
+                const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
+                const target = mode === 'queue' ? active[0] : active.at(-1);
+                if (target) activeGenerations.cancel(target.id);
+                else _activeExec?.cancel();
+                if (mode !== 'queue') _activeExec = null;
+                if (!activeGenerations.list().some(e => e.status === 'running')) {
+                    if (mode !== 'queue') state.generationQueueCount = 0;
+                    Events.emit('promptbox:generation-end');
+                }
                 Events.emit('tool:cancelled', { tool: 'groupHistory' });
+            }));
+            _unsubs.push(_pb.on('queue-clear', () => {
+                clearPendingQueue();
             }));
             return true;
         }
@@ -497,21 +507,36 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         let _activeExec = null;
 
-        function _runGenerate({ operation, positive, negative, mediaItems = [], maskDataUrl = null, injectionParams = {} }) {
+        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} }) {
             if (!activeModel) return;
-
-            _setGenerating(true);
 
             const currentItem = _group.history[_currentIdx];
             const hasDroppedImage = mediaItems.some(m => m.mediaType === 'image');
             const resolvedMedia = (!hasDroppedImage && currentItem?.filePath)
                 ? [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }, ...mediaItems]
                 : mediaItems;
+            const resolvedMask = maskDataUrl !== undefined
+                ? maskDataUrl
+                : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);
 
+            return {
+                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams },
+                opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id },
+            };
+        }
+
+        function _runGenerate(payload) {
+            const next = _generationFromPromptPayload(payload);
+            if (!next) return;
+
+            _setGenerating(true);
             _activeExec = startGeneration(
-                { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl, injectionParams },
-                { onCancel: () => { _activeExec = null; } },
-                { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
+                next.config,
+                {
+                    onCancel: () => { _activeExec = null; },
+                    getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
+                },
+                next.opts
             );
         }
 

@@ -15,6 +15,33 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
+import { ComfyUIController } from './comfyController.js';
+
+// ── Auto-loop tracking ──────────────────────────────────────────────────────
+// Active loops keyed by registration id. Re-submission triggers when a loop's
+// own generation completes successfully.
+const _activeLoops = new Map(); // regId → { config, opts, callbacks }
+
+// ── Queue depth polling ─────────────────────────────────────────────────────
+let _queuePollTimer = null;
+async function _refreshQueueDepth() {
+    const q = await ComfyUIController.getQueue();
+    const depth = (q.running?.length || 0) + (q.pending?.length || 0);
+    if (state.generationQueueCount !== depth) {
+        state.generationQueueCount = depth;
+    }
+    console.log('[queue] depth', depth);
+}
+function _scheduleQueuePoll() {
+    clearTimeout(_queuePollTimer);
+    _queuePollTimer = setTimeout(_refreshQueueDepth, 200);
+}
+
+function _emitPromptBoxGenerationEndIfIdle() {
+    if (activeGenerations.list().some(entry => entry.status === 'running')) return;
+    if (_activeLoops.size > 0) return;
+    Events.emit('promptbox:generation-end');
+}
 
 /**
  * @typedef {Object} GenerationConfig
@@ -52,6 +79,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
 
+    const _mode = state.generationMode || 'single';
+
     Events.emit('tool:running', { tool: 'groupHistory', type: operation });
 
     const exec = runCommand({
@@ -76,6 +105,19 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         exec,
     });
 
+    exec.onPromptAck = (promptId) => {
+        activeGenerations.setPromptId(_regId, promptId);
+        _scheduleQueuePoll();
+    };
+
+    if (_mode === 'autoloop') {
+        _activeLoops.set(_regId, {
+            config: { ...config, mediaItems: [...mediaItems], injectionParams: { ...injectionParams } },
+            opts: { ...opts },
+            callbacks,
+        });
+    }
+
     exec.onPreview = (url) => {
         activeGenerations.setPreview(_regId, url);
         callbacks.onPreview?.(url);
@@ -87,8 +129,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     };
 
     exec.onComplete = async (urls) => {
-        Events.emit('promptbox:generation-end');
-
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
@@ -97,6 +137,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const _cancelExtraTempIds = _cancelEntry?.extraTempIds ?? [];
             activeGenerations.end(_regId, { revokePreview: true });
             Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId, extraTempIds: _cancelExtraTempIds });
+            _emitPromptBoxGenerationEndIfIdle();
             callbacks.onCancel?.();
             return;
         }
@@ -125,7 +166,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         comfyViewUrl: url,
                         itemId: thisItemId,
                         operation,
-                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id },
+                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1 },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -152,6 +193,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 prompt: positive,
                 negativePrompt: negative,
                 modelId: model.id,
+                seed: exec.seed ?? -1,
                 pixelDimensions: resolvedDims,
                 generationMs: elapsedMs,
             };
@@ -169,7 +211,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             builtItems.push(item);
         }
 
-        // Project mutation.
+        // Project mutation. MUST await — addGroup/updateGroup are serialized
+        // through the mutation chain in projectService; emitting before they
+        // resolve makes listeners see stale state.currentProject.
         if (opts.existingGroup) {
             // GroupHistory mode — append all items to existing group (history view).
             let working = opts.existingGroup;
@@ -181,43 +225,99 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 width:  opts.existingGroup.width  || width,
                 height: opts.existingGroup.height || height,
             };
-            updateGroup(updatedGroup);
+            await updateGroup(updatedGroup);
             activeGenerations.end(_regId, { revokePreview: false });
             const lastItem = builtItems[builtItems.length - 1];
             Events.emit('generation:complete', { id: _regId, item: lastItem, group: updatedGroup });
             callbacks.onComplete?.({ item: lastItem, group: updatedGroup });
         } else {
             // Gallery mode — one group (card) per item.
-            const _galleryTempId = activeGenerations.get(_regId)?.tempId ?? null;
+            const _galleryEntry = activeGenerations.get(_regId);
+            const _galleryTempId = _galleryEntry?.tempId ?? null;
+            const _galleryExtraTempIds = _galleryEntry?.extraTempIds ?? [];
             const groups = builtItems.map((it) => {
                 const name = truncateCardName(it.displayName || it.operation || firstDisplayName);
                 const g = createItemGroup(model.mediaType, { name, width, height });
                 return appendToHistory(g, it);
             });
-            for (const g of groups) addGroup(g);
+            for (const g of groups) await addGroup(g);
             activeGenerations.end(_regId, { revokePreview: false });
             const firstItem = builtItems[0];
             const firstGroup = groups[0];
             // Single emit — handler reads state.currentProject.itemGroups (already
             // contains all N groups via addGroup) and rebuilds grid with them.
-            const _galleryExtraTempIds = activeGenerations.get(_regId)?.extraTempIds ?? [];
             Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds });
             callbacks.onComplete?.({ item: firstItem, group: firstGroup });
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
+
+        _scheduleQueuePoll();
+
+        // Auto-loop re-submission: if loop still active, fire again with same config.
+        const loop = _activeLoops.get(_regId);
+        if (loop) {
+            _activeLoops.delete(_regId);
+            const next = loop.callbacks.getNextGeneration?.() || {};
+            startGeneration(next.config || loop.config, loop.callbacks, next.opts || loop.opts);
+        } else {
+            _emitPromptBoxGenerationEndIfIdle();
+        }
     };
 
     exec.onError = (err) => {
-        Events.emit('promptbox:generation-end');
         Events.emit('tool:cancelled', { tool: 'groupHistory' });
         const _errEntry = activeGenerations.get(_regId);
         const _errTempId = _errEntry?.tempId ?? null;
         const _errExtraTempIds = _errEntry?.extraTempIds ?? [];
         activeGenerations.end(_regId, { revokePreview: true });
         Events.emit('generation:error', { id: _regId, tempId: _errTempId, extraTempIds: _errExtraTempIds });
+        _emitPromptBoxGenerationEndIfIdle();
         callbacks.onError?.();
+        _activeLoops.delete(_regId);
+        _scheduleQueuePoll();
     };
 
-    return { cancel: () => exec.cancel() };
+    return { cancel: () => { _activeLoops.delete(_regId); exec.cancel(); } };
+}
+
+/**
+ * Stops the auto-loop for a given registration id without interrupting the
+ * currently in-flight job. The active job will complete naturally; no
+ * re-submission will occur.
+ */
+export function stopAutoLoop(regId) {
+    const had = _activeLoops.delete(regId);
+    if (had) console.log('[loop] stopped, no resubmit', regId);
+    return had;
+}
+
+/**
+ * Stops all auto-loops in flight (used when bulk-cancelling).
+ */
+export function stopAllAutoLoops() {
+    if (_activeLoops.size === 0) return;
+    console.log('[loop] stopped all', _activeLoops.size);
+    _activeLoops.clear();
+}
+
+/**
+ * Clears all pending jobs from ComfyUI's native queue. The currently running
+ * job is not interrupted. After clear, queue depth is re-polled.
+ */
+export async function clearPendingQueue() {
+    const q = await ComfyUIController.getQueue();
+    const pendingPromptIds = new Set((q.pending || []).map(item => (
+        Array.isArray(item) ? item[1] : (item?.prompt_id || item?.promptId)
+    )).filter(Boolean));
+    await ComfyUIController.clearQueue();
+    for (const entry of activeGenerations.list()) {
+        if (!pendingPromptIds.has(entry.promptId)) continue;
+        const tempId = entry.tempId ?? null;
+        const extraTempIds = entry.extraTempIds ?? [];
+        activeGenerations.end(entry.id, { revokePreview: true });
+        Events.emit('generation:cancelled', { id: entry.id, tempId, extraTempIds });
+    }
+    _emitPromptBoxGenerationEndIfIdle();
+    _scheduleQueuePoll();
 }

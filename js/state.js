@@ -51,6 +51,12 @@ const _state = {
                                      // on canvas / gallery / video player. Custom titlebar stays.
                                      // Auto-resets when navigating to PAGE_LANDING.
 
+    // ── Generation queue (session-only) ────────────────────────────────────────
+    generationMode: 'single',        // 'single' | 'queue' | 'autoloop'. Session-only run mode
+                                    // shared across models; never persisted to project.json.
+    generationQueueCount: 0,         // ComfyUI's native queue depth (running + pending). Polled
+                                     // by generationService after submit + on generation:complete.
+
     // ── Last generation (session-only, not persisted) ──────────────────────────
     lastGeneration: null,            // { label: string, elapsed: number } — set by StatusBar on
                                      // complete(). Read by status bar idle display and future

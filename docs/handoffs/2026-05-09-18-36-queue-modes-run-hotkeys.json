@@ -1,0 +1,87 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-05-09T18:36:40Z",
+  "session": {
+    "name": "Queue modes + run hotkeys — to-do 4 (queue-aware submission) mid-flight",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Add three execution modes to PromptBox generation — Single (current), Queue, Auto-loop — with a separate Stop button surface for the new modes and Ctrl+Enter / Ctrl+Alt+Enter hotkeys matching ComfyUI convention.",
+    "status": "in_progress",
+    "summary": "To-dos 1-3 are verified and complete. To-do 4 (queue-aware submission + cancel) is partially implemented but NOT verified. User reports inconsistencies: duplicate cards in Queue mode, plus a fix attempt for 'card disappears after generation completes' may still be racey. User explicitly requested NOT to mark to-do 4 as done. To-dos 5-7 not started."
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-09-queue-modes-run-hotkeys.md",
+    "completed": [
+      "1. Capture prompt_id + add ComfyUI queue helpers in comfyController",
+      "2. Add generationMode to projectModel + PROMPT_BOX_CONTROLS",
+      "3. PromptBox dual-button layout for Queue/Auto-loop modes"
+    ],
+    "pending": [
+      "4. Backend: queue-aware submission + cancel in commandExecutor + generationService (PARTIALLY IMPLEMENTED — DO NOT mark as done; needs further debugging on duplicate cards in queue mode)",
+      "5. Hotkeys: register generation.run + generation.stop and bind in PromptBox",
+      "6. StatusBar queue depth indicator",
+      "7. Documentation + rule files sync"
+    ]
+  },
+  "kanban_entry": "Queue modes + run hotkeys",
+  "next_action": {
+    "description": "Resume debugging to-do 4 (queue-aware submission + cancel). Specifically investigate duplicate cards reported in Queue mode after recent fixes. Test thoroughly: submit multiple Cue clicks in Queue mode, verify only one placeholder card appears at any time (the in-flight one), verify saved cards appear correctly when each generation completes, verify no ghost/duplicate cards. Verify card persistence across project navigation and after deletes. Single mode also needs re-verification — the addGroup/updateGroup await change may have side effects elsewhere. Once stable, also re-test that the seed actually randomizes between successive Cue clicks in Queue mode (user reported first queued result identical to a prior single-mode result — root cause not confirmed; may have been ComfyUI cache or perception). Do NOT mark to-do 4 [x] in the plan or flip the kanban step until user explicitly verifies.",
+    "command": "/mpi-kanban:mpi-execute-next docs/plans/2026-05-09-queue-modes-run-hotkeys.md"
+  },
+  "context": {
+    "key_decisions": [
+      "Single mode rejection (plan to-do 4 open question #1) — DROPPED. The Run button is hidden while running, so concurrent submission via UI is impossible. No need for a 'Generation in progress' toast.",
+      "Auto-loop hard-stop modifier (plan to-do 4 open question #2) — NOT NEEDED. Loop mode uses single toggleable button (Loop ↔ Stop). Stop = end loop AND interrupt current job.",
+      "Queue mode UI = 3 buttons (Cue + Stop + Clear). Cue = enqueue. Stop = interrupt current (Comfy queue continues with next pending). Clear = wipe pending via ComfyUIController.clearQueue() (current keeps running). Mirrors ComfyUI native UX.",
+      "Mode change while busy — DISABLED. Radio buttons disabled when state.generationQueueCount > 0. Prevents user confusion when leaving queue mode mid-flight.",
+      "Loop mode = single toggleable button (same UX as Single mode visually).",
+      "Only ONE placeholder card visible at a time in Queue mode (the in-flight 'first running' entry). Subsequent queued jobs are tracked in activeGenerations but rendered invisible until they bubble to first.",
+      "addGroup/updateGroup/removeGroup in projectService.js are now serialized through a module-scoped _mutationChain promise to prevent stale-snapshot races when multiple completions land in parallel.",
+      "generationService.startGeneration now AWAITS addGroup/updateGroup before emitting generation:complete — listeners must see updated state.currentProject when they fire setGroups()."
+    ],
+    "constraints": [
+      "User explicitly said: 'do not check the queue aware submission box on the kanban' — to-do 4 stays [ ] until user verifies cleanly.",
+      "User flagged: 'this is a sensitive implementation' — placeholder/preview/save card flow is the result of multi-hour earlier work (commits d0a8712 + 83fecef). Be VERY careful editing MpiGalleryBlock event handlers and generationService completion path.",
+      "ComfyUI's native queue is FIFO. We capture prompt_id from POST /prompt response. getQueue/clearQueue/deleteQueueItem helpers exist on ComfyUIController.",
+      "state.generationQueueCount is polled via _scheduleQueuePoll() in generationService — fires console.log('[queue] depth', n) as verification log (still in code).",
+      "_activeLoops Map in generationService tracks autoloop reg ids; cleared on cancel; re-submits on natural completion via startGeneration recursion.",
+      "Caveman mode (full) is active in this session — user prefers terse responses.",
+      "Plan file uses '### N. Title [x]' marker convention for done to-dos (no '- [ ]' bullet checkboxes at the H3 level)."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js",
+      "js/services/commandExecutor.js",
+      "js/services/activeGenerations.js",
+      "js/services/generationService.js",
+      "js/services/projectService.js",
+      "js/state.js",
+      "js/data/projectModel.js",
+      "js/data/commandRegistry.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "docs/plans/2026-05-09-queue-modes-run-hotkeys.md",
+      ".claude/mpi-kanban/kanban.md"
+    ],
+    "files_to_read_first": [
+      "docs/plans/2026-05-09-queue-modes-run-hotkeys.md",
+      "docs/handoffs/2026-05-09-18-36-queue-modes-run-hotkeys.json",
+      "js/services/generationService.js",
+      "js/services/projectService.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-state.md"
+  ],
+  "resume_prompt": "You are resuming work on the 'Queue modes + run hotkeys' plan (kanban entry: 'Queue modes + run hotkeys', currently in IMPLEMENTING). Read docs/handoffs/2026-05-09-18-36-queue-modes-run-hotkeys.json first, then docs/plans/2026-05-09-queue-modes-run-hotkeys.md. To-dos 1-3 are verified and marked [x]. To-do 4 (queue-aware submission + cancel) is partially implemented but NOT verified — duplicate-cards inconsistencies in Queue mode were reported by the user. Do NOT mark to-do 4 [x] in the plan or flip its kanban step until the user explicitly verifies. The relevant changes live in js/services/generationService.js (mode-aware submission, _activeLoops, _scheduleQueuePoll, awaited addGroup/updateGroup), js/services/projectService.js (mutation chain serialization), and js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (first-running-only placeholder rule). Plan deviations from the original spec: Single-mode rejection dropped (Run button is hidden while running so it's not needed); Auto-loop hard-stop modifier dropped (Loop is a single toggleable button so Stop = end-loop + interrupt); Queue mode now uses 3 buttons (Cue + Stop + Clear); mode-change radio is disabled while busy. Run /mpi-kanban:mpi-execute-next docs/plans/2026-05-09-queue-modes-run-hotkeys.md to continue, but expect the next brief to be a debugging continuation of to-do 4 rather than a fresh implementation."
+}

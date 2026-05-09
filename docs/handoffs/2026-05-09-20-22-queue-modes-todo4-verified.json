@@ -1,0 +1,100 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-05-09T20:22:27.5332763+01:00",
+  "project": "CubricStudio",
+  "session": {
+    "summary": "Queue-mode to-do 4 was implemented, re-tested by the user, and marked verified. The kanban step is checked, but the broader Queue modes + run hotkeys entry remains in IMPLEMENTING because hotkeys, StatusBar queue depth, and final documentation/rule sync steps are still open.",
+    "user_verified": [
+      "Queue mode no longer creates duplicate or ghost cards.",
+      "Only the current in-flight queue placeholder is shown.",
+      "Saved cards appear as each generation completes.",
+      "Cards persist correctly across project navigation and deletes.",
+      "Single mode still behaves after awaiting addGroup/updateGroup mutations.",
+      "Loop picks up prompt/model/control changes on the next iteration.",
+      "Generation mode survives model changes as a session value.",
+      "Stopping Loop re-enables the radio mode selector.",
+      "Queue button displays Cue xN according to queued/running work."
+    ]
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-09-queue-modes-run-hotkeys.md",
+    "current_status": "Step 4 checked after explicit user verification.",
+    "completed_steps": [
+      "1. Add generation mode UI state and controls [x]",
+      "2. Refactor Comfy execution handles for queue tracking [x]",
+      "3. Frontend: Gallery/PromptBox mode-aware rendering [x]",
+      "4. Backend: queue-aware submission + cancel in commandExecutor + generationService [x]"
+    ],
+    "remaining_steps": [
+      "5. Run/Stop hotkeys [ ]",
+      "6. StatusBar queue depth [ ]",
+      "7. Documentation + rule sync [ ]"
+    ],
+    "do_not_do": [
+      "Do not mark steps 5, 6, or 7 complete until implemented and verified.",
+      "Do not move the kanban entry to COMPLETED while those steps remain open.",
+      "Do not persist generationMode into project.json, project model settings, or modelSettings."
+    ]
+  },
+  "kanban": {
+    "file": ".claude/mpi-kanban/kanban.md",
+    "entry": "Queue modes + run hotkeys",
+    "lane": "IMPLEMENTING",
+    "checked_step": "Queue-aware submission + cancel",
+    "remaining_steps": [
+      "Run/Stop hotkeys",
+      "StatusBar queue depth",
+      "Final docs/rules sync"
+    ]
+  },
+  "implementation_notes": [
+    "Generation mode is session-only via state.generationMode and is not saved into project.json.",
+    "PromptBox exposes getRunPayload() so Auto-loop reads the current prompt/model/control values before each next run.",
+    "Queue mode button label now renders Cue xN using state.generationQueueCount, including optimistic increments on click.",
+    "ComfyUIController routes websocket messages by prompt_id to prevent cross-run completion/progress leaks.",
+    "Execution handles expose promptId, seed, and onPromptAck; saved generated items include the seed.",
+    "Queue rendering shows only the first running placeholder in Gallery/History to avoid duplicate placeholder cards.",
+    "Queue cancel targets the first running queue item; Single and Loop cancel the last active generation.",
+    "Loop stop clears queue count when no active generation remains and PromptBoxControls unlocks on promptbox:generation-end."
+  ],
+  "files_changed": [
+    ".claude/mpi-kanban/kanban.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-state.md",
+    "docs/PROJECT.md",
+    "docs/comfy.md",
+    "docs/plans/2026-05-09-queue-modes-run-hotkeys.md",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+    "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+    "js/components/Primitives/MpiButton/MpiButton.js",
+    "js/data/commandRegistry.js",
+    "js/data/projectModel.js",
+    "js/services/activeGenerations.js",
+    "js/services/comfyController.js",
+    "js/services/commandExecutor.js",
+    "js/services/generationService.js",
+    "js/services/projectService.js",
+    "js/state.js"
+  ],
+  "verification": {
+    "agent_checks": [
+      "npm run lint -- --quiet",
+      "git -c core.safecrlf=false diff --check",
+      "rg -n \"settings:model:update.*generationMode|modelSettings.*generationMode|getModelSettings.*generationMode|projectModel.*generationMode\" js docs .claude -S"
+    ],
+    "agent_check_results": [
+      "lint passed",
+      "diff whitespace check passed",
+      "generationMode persistence grep returned no matches"
+    ],
+    "manual_user_result": "User reported: OK, cool, everything is working now."
+  },
+  "next_actions": [
+    "Implement plan step 5: Run/Stop hotkeys.",
+    "Implement plan step 6: StatusBar queue depth.",
+    "Complete step 7 after the remaining implementation is done, verifying docs/rules match final behavior.",
+    "Keep to-do 4 closed unless a new regression is reported."
+  ]
+}

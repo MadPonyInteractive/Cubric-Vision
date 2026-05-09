@@ -37,10 +37,16 @@ const _registry = new Map();
  */
 function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec }) {
     const id = crypto.randomUUID();
-    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec };
+    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null };
     _registry.set(id, entry);
     Events.emit('generation:started', { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders });
     return { id };
+}
+
+/** Attach the ComfyUI prompt_id once the /prompt POST ack arrives. */
+function setPromptId(id, promptId) {
+    const entry = _registry.get(id);
+    if (entry) entry.promptId = promptId;
 }
 
 /** @returns {GenerationEntry|null} */
@@ -99,10 +105,11 @@ function cancel(id) {
     const entry = _registry.get(id);
     if (!entry) return;
     const tempId = entry.tempId ?? null;
+    const extraTempIds = entry.extraTempIds ?? [];
     entry.exec?.cancel?.();
     entry.status = 'cancelled';
     end(id, { revokePreview: true });
-    Events.emit('generation:cancelled', { id, tempId });
+    Events.emit('generation:cancelled', { id, tempId, extraTempIds });
 }
 
 /** Cancel all active entries. */
@@ -110,4 +117,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, setPreview, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, setPreview, setPromptId, setStatus, end, cancel, cancelAll };

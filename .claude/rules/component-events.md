@@ -9,6 +9,7 @@
 EMITS:   `toggle` `{ active: boolean }` — only in icon-button toggleable mode
          `click`  `{ originalEvent: Event, active: boolean }`
 LISTENS: (none — pure DOM events only)
+API:     `el.setActive(active)` · `el.setLabel(label)`
 NOTE:    Stage redesign added `shape: 'sharp' | 'pill'` prop (default `'sharp'`, applies `--r-1: 0`); pass `shape: 'pill'` to opt into the legacy rounded look. Icon-button variant supports `'ghost'` (transparent, hover lifts) in addition to `secondary`/`danger`.
 
 ### MpiCanvas
@@ -354,16 +355,18 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `media-change`     `{ imageCount: number, videoCount: number, items: MediaItem[] }`
          `media-imported`   `{ url: string, filename: string, mediaType: string, source: 'file' }` — also emitted on EventBus as `media:imported`
          `run`              `{ operation: string, positive: string, negative: string, mediaItems: MediaItem[], injectionParams: Object }`
-         `cancel`           `{}`
+         `cancel`           `{ mode: 'single'|'queue'|'autoloop' }`
+         `queue-clear`      `{}`
          `model-change`     `{ model: ModelDef }`
          `operation-change` `{ operation: string }`
          `settings`         `{ model: ModelDef }`
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
-         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers
+         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers (not generation mode)
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
+API:     `el.getRunPayload()` returns the current live run payload. Auto-loop uses this so prompt/model/control changes apply to the next loop iteration.
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
@@ -371,8 +374,8 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
-         `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` — adds N placeholder cards (1 + extras); seeds `_myGenIds`
-         `generation:preview` `{ id, url }` — broadcasts preview to all N placeholder tempIds (main + extras)
+         `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` — seeds `_myGenIds`; in Queue mode only the first running generation's placeholders are visible
+         `generation:preview` `{ id, url }` — updates preview only for the first running visible placeholder set
          `generation:complete` `{ id, item, group, tempId, extraTempIds }` — removes all N placeholders, `setGroups` from state
          `generation:error` `{ id, tempId, extraTempIds }` — removes all N placeholders, restores group list
          `generation:cancelled` `{ id, tempId, extraTempIds }` — removes all N placeholders, restores group list
@@ -382,7 +385,7 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `models:open` — when zero image models installed
 NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
-         Cancel via `pb.on('cancel')` delegates to `activeGenerations.cancel(last.id)` — does NOT call `exec.cancel()` directly
+         Queue cancel targets the first running gallery entry; Single/Loop cancel targets the last active entry. Clear calls `clearPendingQueue()`.
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
 
@@ -399,11 +402,11 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 |---|---|---|
 | `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` | `activeGenerations.start()` called |
 | `generation:preview` | `{ id, url }` | `activeGenerations.setPreview()` — preview broadcast to all N placeholders (same latent, ComfyUI emits one) |
-| `generation:complete` | `{ id, item, group, tempId?, extraTempIds? }` | `generationService` emits after `end()` |
+| `generation:complete` | `{ id, item, group, tempId?, extraTempIds? }` | `generationService` emits after project mutation + `end()` |
 | `generation:error` | `{ id, tempId?, extraTempIds? }` | `generationService` emits after `end()` |
 | `generation:cancelled` | `{ id, tempId?, extraTempIds? }` | `generationService` or `activeGenerations.cancel()` emits after `end()` |
 
-**API:** `start({ scope, groupId, tempId, operation, modelId, placeholderGroup, extraTempIds, extraPlaceholders, exec })` → `{ id }` · `get(id)` · `list()` · `listFor(scope, groupId|null)` · `setPreview(id, url)` · `end(id, { revokePreview })` · `cancel(id)` · `cancelAll()`
+**API:** `start({ scope, groupId, tempId, operation, modelId, placeholderGroup, extraTempIds, extraPlaceholders, exec })` → `{ id }` · `get(id)` · `list()` · `listFor(scope, groupId|null)` · `setPreview(id, url)` · `setPromptId(id, promptId)` · `end(id, { revokePreview })` · `cancel(id)` · `cancelAll()`
 
 **Batch semantics:** `extraTempIds` + `extraPlaceholders` describe N-1 sibling placeholder cards for a batch > 1. Gallery renders all N up front, broadcasts preview to all, removes all on complete/error/cancelled, then `setGroups()` with the N real groups already in `state.currentProject.itemGroups` (generationService calls `addGroup` N times before emit).
 

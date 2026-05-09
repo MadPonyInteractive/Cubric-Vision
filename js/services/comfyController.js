@@ -42,8 +42,14 @@ export const ComfyUIController = {
     /** @type {boolean} True while a workflow is actively executing. */
     _isRunning: false,
 
-    /** @type {((msg: object) => void)|null} Current WebSocket message listener. */
-    _activeListener: null,
+    /** @type {Map<string, (msg: object) => void>} Active WS listeners keyed by ComfyUI prompt_id. */
+    _promptListeners: new Map(),
+
+    /** @type {Map<string, object[]>} Prompt-scoped messages that arrived before POST ack handling finished. */
+    _pendingPromptMessages: new Map(),
+
+    /** @type {string|null} Last prompt_id reported as actively executing. Used for binary previews. */
+    _activePromptId: null,
 
     /**
      * Ensures the ComfyUI Python process is running and ready.
@@ -150,6 +156,66 @@ export const ComfyUIController = {
     },
 
     /**
+     * Returns ComfyUI's native queue snapshot.
+     * Shape: `{ queue_running: [...], queue_pending: [...] }` (raw Comfy response,
+     * normalized to `{ running, pending }` for caller convenience).
+     * @returns {Promise<{ running: any[], pending: any[] }>}
+     */
+    async getQueue() {
+        try {
+            const res = await fetch(`http://${this.serverAddress}/queue`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return {
+                running: data.queue_running || [],
+                pending: data.queue_pending || [],
+            };
+        } catch (e) {
+            clientLogger.error('comfy', 'getQueue failed', e);
+            return { running: [], pending: [] };
+        }
+    },
+
+    /**
+     * Clears all pending jobs from ComfyUI's native queue. Does not interrupt
+     * the currently running job.
+     * @returns {Promise<boolean>}
+     */
+    async clearQueue() {
+        try {
+            const res = await fetch(`http://${this.serverAddress}/queue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clear: true }),
+            });
+            return res.ok;
+        } catch (e) {
+            clientLogger.error('comfy', 'clearQueue failed', e);
+            return false;
+        }
+    },
+
+    /**
+     * Removes a specific queued (pending) job from ComfyUI's native queue.
+     * Does not affect the currently running job — use `interrupt()` for that.
+     * @param {string} promptId
+     * @returns {Promise<boolean>}
+     */
+    async deleteQueueItem(promptId) {
+        try {
+            const res = await fetch(`http://${this.serverAddress}/queue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delete: [promptId] }),
+            });
+            return res.ok;
+        } catch (e) {
+            clientLogger.error('comfy', 'deleteQueueItem failed', e);
+            return false;
+        }
+    },
+
+    /**
      * Opens (or reuses) a WebSocket connection to the ComfyUI WS server.
      *
      * - Binary ArrayBuffer messages are decoded as JPEG preview blobs and
@@ -160,24 +226,53 @@ export const ComfyUIController = {
      *
      * @param {(msg: object) => void} [onMessage]  Message handler to register as the active listener.
      */
-    connect(onMessage) {
+    _routeMessage(msg) {
+        if (msg instanceof ArrayBuffer || (msg && msg.type === 'preview')) {
+            const listener = this._activePromptId ? this._promptListeners.get(this._activePromptId) : null;
+            listener?.(msg);
+            return;
+        }
+
+        const promptId = msg?.data?.prompt_id || msg?.prompt_id || null;
+        if (promptId) {
+            if (msg.type === 'executing' && msg.data?.node !== null) {
+                this._activePromptId = promptId;
+            }
+            const listener = this._promptListeners.get(promptId);
+            if (listener) {
+                listener(msg);
+            } else {
+                const pending = this._pendingPromptMessages.get(promptId) || [];
+                pending.push(msg);
+                this._pendingPromptMessages.set(promptId, pending);
+            }
+            return;
+        }
+
+        if (msg?.type === 'status') return;
+
+        // Some ComfyUI events omit prompt_id but are only meaningful for the
+        // currently executing prompt. Route them narrowly instead of broadcasting
+        // completions/progress across queued jobs.
+        const activeListener = this._activePromptId ? this._promptListeners.get(this._activePromptId) : null;
+        activeListener?.(msg);
+    },
+
+    connect() {
         if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
-            if (onMessage) this._activeListener = onMessage;
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
                     const url = URL.createObjectURL(blob);
-                    this._activeListener({ type: 'preview', url });
+                    this._routeMessage({ type: 'preview', url });
                 } else {
                     const msg = JSON.parse(event.data);
-                    if (this._activeListener) this._activeListener(msg);
+                    this._routeMessage(msg);
                 }
             };
             this._ws.binaryType = 'arraybuffer';
             return;
         }
-
-        if (onMessage) this._activeListener = onMessage;
 
         if (this._ws) {
             this._ws.onopen = null;
@@ -193,21 +288,20 @@ export const ComfyUIController = {
             if (event.data instanceof ArrayBuffer) {
                 const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
                 const url = URL.createObjectURL(blob);
-                this._activeListener({ type: 'preview', url });
+                this._routeMessage({ type: 'preview', url });
             } else {
                 const msg = JSON.parse(event.data);
-                if (this._activeListener) this._activeListener(msg);
+                this._routeMessage(msg);
             }
         };
 
         this._ws.onerror = (e) => {
             clientLogger.warn('comfy', 'WebSocket error (may be transient)');
-            if (onMessage) onMessage({ type: 'error', error: e });
         };
 
         this._ws.onclose = () => {
-            if (this._activeListener && this._isRunning) {
-                setTimeout(() => this.connect(this._activeListener), 1000);
+            if (this._promptListeners.size && this._isRunning) {
+                setTimeout(() => this.connect(), 1000);
             }
         };
     },
@@ -339,6 +433,7 @@ export const ComfyUIController = {
         // 4. Execution
         return new Promise(async (resolve, reject) => {
             const outputs = [];
+            let promptId = null;
             const internalListener = (msg) => {
                 if (msg instanceof ArrayBuffer || (msg && msg.type === 'preview')) {
                     if (onMessage) onMessage(msg);
@@ -353,12 +448,14 @@ export const ComfyUIController = {
                 }
 
                 if (msg.type === 'executing' && msg.data.node === null) {
-                    this._isRunning = false;
+                    if (promptId) this._promptListeners.delete(promptId);
+                    if (this._activePromptId === promptId) this._activePromptId = null;
+                    this._isRunning = this._promptListeners.size > 0;
                     resolve({ success: true, images: outputs });
                 }
             };
 
-            this.connect(internalListener);
+            this.connect();
             this._isRunning = true;
 
             try {
@@ -372,8 +469,20 @@ export const ComfyUIController = {
                     const errData = await req.json();
                     throw new Error(errData.error?.message || "ComfyUI Error");
                 }
+
+                const ack = await req.json();
+                promptId = ack?.prompt_id || null;
+                if (!promptId) throw new Error('ComfyUI did not return a prompt_id');
+                if (promptId) {
+                    this._promptListeners.set(promptId, internalListener);
+                    if (onMessage) onMessage({ type: 'prompt_ack', prompt_id: promptId });
+                    const pending = this._pendingPromptMessages.get(promptId) || [];
+                    this._pendingPromptMessages.delete(promptId);
+                    for (const msg of pending) internalListener(msg);
+                }
             } catch (err) {
-                this._isRunning = false;
+                if (promptId) this._promptListeners.delete(promptId);
+                this._isRunning = this._promptListeners.size > 0;
                 reject(err);
             }
         });

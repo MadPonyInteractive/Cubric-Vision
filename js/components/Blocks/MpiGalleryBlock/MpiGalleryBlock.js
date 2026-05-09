@@ -27,7 +27,7 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration } from '../../../services/generationService.js';
+import { startGeneration, clearPendingQueue } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -68,7 +68,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Rehydrate any in-flight gallery generations ───────────────────────
         const _myGenIds = new Set();
         const _runningGallery = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
-        const _placeholderGroups = _runningGallery.map(e => e.placeholderGroup).filter(Boolean);
+        // Only the first-running entry gets a visible placeholder. Queued
+        // siblings are tracked in activeGenerations but stay invisible until
+        // their turn comes up.
+        const _placeholderGroups = _runningGallery.length
+            ? [
+                _runningGallery[0].placeholderGroup,
+                ...(_runningGallery[0].extraPlaceholders || []),
+              ].filter(Boolean)
+            : [];
 
         const grid   = MpiGalleryGrid.mount(el, { groups: [..._placeholderGroups, ...groups] });
 
@@ -264,14 +272,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 refreshRadial({ imageCount, videoCount });
             });
 
-            pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
-                if (!activeModel) return;
-
+            const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image') => {
                 const batchCount = Math.max(1, Number(injectionParams.Batch_Size) || 1);
-                const cardType   = activeModel.mediaType;
-
                 const tempIds = Array.from({ length: batchCount }, () => crypto.randomUUID());
-                const tempId  = tempIds[0];
+                const tempId = tempIds[0];
 
                 const mkPlaceholder = (id) => ({
                     id,
@@ -284,19 +288,45 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     isGenerating: true,
                 });
 
-                const placeholderGroup  = mkPlaceholder(tempId);
-                const extraPlaceholders = tempIds.slice(1).map(mkPlaceholder);
+                return {
+                    scope: 'gallery',
+                    tempId,
+                    placeholderGroup: mkPlaceholder(tempId),
+                    extraTempIds: tempIds.slice(1),
+                    extraPlaceholders: tempIds.slice(1).map(mkPlaceholder),
+                };
+            };
 
-                startGeneration(
-                    { operation, model: activeModel, positive, negative, mediaItems, injectionParams },
-                    { onCancel: () => {} },
-                    { scope: 'gallery', tempId, placeholderGroup, extraTempIds: tempIds.slice(1), extraPlaceholders }
-                );
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
+                if (!activeModel) return;
+                const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams };
+                return {
+                    config,
+                    opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType),
+                };
+            };
+
+            pb.on('run', (payload) => {
+                const next = _galleryGenerationFromPayload(payload);
+                if (!next) return;
+                startGeneration(next.config, {
+                    onCancel: () => {},
+                    getNextGeneration: () => _galleryGenerationFromPayload(_pb?.el?.getRunPayload?.() || payload),
+                }, next.opts);
             });
 
-            pb.on('cancel', () => {
-                const last = activeGenerations.listFor('gallery', null).at(-1);
-                if (last) activeGenerations.cancel(last.id);
+            pb.on('cancel', ({ mode } = {}) => {
+                const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
+                const target = mode === 'queue' ? active[0] : active.at(-1);
+                if (target) activeGenerations.cancel(target.id);
+                if (!activeGenerations.list().some(e => e.status === 'running')) {
+                    if (mode !== 'queue') state.generationQueueCount = 0;
+                    Events.emit('promptbox:generation-end');
+                }
+            });
+
+            pb.on('queue-clear', () => {
+                clearPendingQueue();
             });
         }
 
@@ -307,49 +337,61 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }
 
         // ── Registry event subscriptions (gallery-scoped) ─────────────────────
-        _unsubs.push(Events.on('generation:started', ({ id, scope, tempId: tid, placeholderGroup: pg, extraPlaceholders = [] }) => {
+
+        // In Queue mode, multiple generations can be in flight via ComfyUI's
+        // native FIFO. We only render placeholders for the FIRST running entry
+        // (the one ComfyUI is actively processing); later ones stay invisible
+        // until they bubble up to "first" position.
+        const _firstRunningEntry = () => {
+            return activeGenerations.listFor('gallery', null).find(e => e.status === 'running') || null;
+        };
+        const _placeholdersForFirst = () => {
+            const first = _firstRunningEntry();
+            if (!first) return [];
+            return [first.placeholderGroup, ...(first.extraPlaceholders || [])].filter(Boolean);
+        };
+
+        _unsubs.push(Events.on('generation:started', ({ id, scope }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
             const currentGroups = state.currentProject?.itemGroups || [];
-            const runningPlaceholders = activeGenerations.listFor('gallery', null)
-                .filter(e => e.status === 'running' && e.id !== id)
-                .flatMap(e => [e.placeholderGroup, ...(e.extraPlaceholders || [])])
-                .filter(Boolean);
-            const myPlaceholders = [pg, ...extraPlaceholders].filter(Boolean);
-            if (myPlaceholders.length) grid.el.setGroups([...myPlaceholders, ...runningPlaceholders, ...currentGroups]);
+            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
-            const entry = activeGenerations.get(id);
-            if (!entry) return;
-            const allTempIds = [entry.tempId, ...(entry.extraTempIds || [])].filter(Boolean);
+            // Only paint preview for the first-running entry (the one whose
+            // placeholder is actually mounted).
+            const first = _firstRunningEntry();
+            if (!first || first.id !== id) return;
+            const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
             for (const t of allTempIds) grid.el.updatePreview(t, url);
         }));
 
-        _unsubs.push(Events.on('generation:complete', ({ id, item, group, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+        // After a job ends, rebuild the grid: remove its placeholders if they
+        // were mounted (only the first-running's are), and re-mount the new
+        // first-running's placeholders if any remain in the queue.
+        const _rebuildAfterEnd = (id, tid, extraTempIds = []) => {
             _myGenIds.delete(id);
-            const currentGroups = state.currentProject?.itemGroups || [];
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
-            grid.el.setGroups(currentGroups);
+            const currentGroups = state.currentProject?.itemGroups || [];
+            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+        };
+
+        _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
+            if (!_myGenIds.has(id)) return;
+            _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
             if (!_myGenIds.has(id)) return;
-            _myGenIds.delete(id);
-            const allTempIds = [tid, ...extraTempIds].filter(Boolean);
-            for (const t of allTempIds) grid.el.removeCard(t);
-            grid.el.setGroups(state.currentProject?.itemGroups || []);
+            _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
             if (!_myGenIds.has(id)) return;
-            _myGenIds.delete(id);
-            const allTempIds = [tid, ...extraTempIds].filter(Boolean);
-            for (const t of allTempIds) grid.el.removeCard(t);
-            grid.el.setGroups(state.currentProject?.itemGroups || []);
+            _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         // Model settings overlay

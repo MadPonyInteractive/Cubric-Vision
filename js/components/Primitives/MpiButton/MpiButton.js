@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { qs } from '../../../utils/dom.js';
 
 /**
  * MpiButton — Atomic Button Primitive
@@ -149,6 +150,13 @@ export const MpiButton = ComponentFactory.create({
         el.setActive = (active) => {
             props.active = active;
             el.classList.toggle('is-active', active);
+        };
+
+        el.setLabel = (label) => {
+            props.label = label;
+            props.text = label;
+            const target = qs('.mpi-ibtn__label, .mpi-btn__text', el);
+            if (target) target.textContent = label;
         };
     }
 });
