@@ -420,6 +420,7 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         ctx.clearRect(0, 0, this.screenUICanvas.width, this.screenUICanvas.height);
         if (this.comparison.isComparisonMode) this._drawSliderUI();
+        this.crop.drawScreenHandles(ctx, this.view);
         this._drawBrushIndicator();
     }
 

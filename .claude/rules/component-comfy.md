@@ -34,6 +34,8 @@ MpiPromptBox 'run' event
       → "Detected" node (auto-mask only) captures segmentation preview URLs
 ```
 
+**Group History selected-entry invariant:** `MpiGroupHistoryBlock` owns `_currentIdx` and promotes the clicked history item via `entry-selected`. Prompt-driven operations must inject `_group.history[_currentIdx]` when the user has not supplied a dropped image. Auto-mask detection is owned by `MpiCanvasViewer`; because the viewer survives history switches, it must resolve `_currentItem.filePath` at detect time rather than reusing `initialImageUrl`.
+
 ---
 
 ## PromptBoxControls Registry — static, do not regenerate

@@ -389,18 +389,39 @@ export class CropManager {
         ctx.moveTo(x, y + h * 2/3);   ctx.lineTo(x + w, y + h * 2/3);
         ctx.stroke();
 
-        // 4. Corner + edge handles
-        const hr = (CropManager.HANDLE_DIAMETER / 2) / scale;
+        ctx.restore();
+    }
+
+    /**
+     * Draw fixed-size crop handles in screen/container space.
+     * The image-space crop geometry stays on overlayCanvas; handles are drawn on
+     * screenUICanvas so the circular controls are anti-aliased and not affected
+     * by the image stack's `image-rendering: pixelated`.
+     *
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {{ offsetX: number, offsetY: number, scale: number }} view
+     */
+    drawScreenHandles(ctx, view) {
+        if (!this.isCroppingMode) return;
+
+        const { x, y, w, h } = this.cropRect;
+        const scale = view.scale || 1;
+        const toScreen = (imgX, imgY) => [
+            view.offsetX + imgX * scale,
+            view.offsetY + imgY * scale,
+        ];
+        const hr = CropManager.HANDLE_DIAMETER / 2;
         const handles = [
-            [x,       y,       'tl'], [x + w,   y,       'tr'],
-            [x,       y + h,   'bl'], [x + w,   y + h,   'br'],
-            [x + w/2, y,       't' ], [x + w/2, y + h,   'b' ],
-            [x,       y + h/2, 'l' ], [x + w,   y + h/2, 'r' ],
+            [...toScreen(x,       y      ), 'tl'], [...toScreen(x + w,   y      ), 'tr'],
+            [...toScreen(x,       y + h  ), 'bl'], [...toScreen(x + w,   y + h  ), 'br'],
+            [...toScreen(x + w/2, y      ), 't' ], [...toScreen(x + w/2, y + h  ), 'b' ],
+            [...toScreen(x,       y + h/2), 'l' ], [...toScreen(x + w,   y + h/2), 'r' ],
         ];
 
+        ctx.save();
         ctx.fillStyle   = CROP_HANDLE_FILL;
         ctx.strokeStyle = CROP_HANDLE_STROKE;
-        ctx.lineWidth   = 2 / scale;
+        ctx.lineWidth   = 2;
 
         handles.forEach(([hx, hy]) => {
             ctx.beginPath();

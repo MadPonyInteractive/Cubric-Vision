@@ -291,17 +291,34 @@ export const MpiCanvasViewer = ComponentFactory.create({
         function _runAutoMaskWorkflow(populateThumbs = false) {
             _autoMaskExec?.cancel();
 
-            _autoMaskExec = runAutoMask({
-                imageUrl:      initialImageUrl,
+            const imageUrl = _currentItem?.filePath
+                ? _resolveUrl(_currentItem.filePath)
+                : initialImageUrl;
+            if (!imageUrl) {
+                StatusBar.notify('No image selected', 'warning');
+                return;
+            }
+
+            const sourceItem = _currentItem;
+            const sourceKey = _autoPickKey(sourceItem);
+            const runPicks = new Set(_autoMaskPicks);
+            const exec = runAutoMask({
+                imageUrl,
                 detectorModel: _autoMaskModel,
                 useBox:        _autoMaskUseBox,
-                picks:         _autoMaskPicks,
+                picks:         runPicks,
             });
+            _autoMaskExec = exec;
 
-            _autoMaskExec.onDetected = (urls) => {
+            const isCurrentRun = () =>
+                _autoMaskExec === exec
+                && (!sourceKey || _autoPickKey(_currentItem) === sourceKey);
+
+            exec.onDetected = (urls) => {
+                if (!isCurrentRun()) return;
                 if (!urls || urls.length === 0) {
                     StatusBar.notify('Nothing detected', 'warning');
-                    _autoMaskExec?.cancel();
+                    exec.cancel();
                     _autoMaskExec = null;
                     if (populateThumbs) autoMaskThumbs.el.setImages([]);
                     return;
@@ -312,11 +329,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 }
             };
 
-            _autoMaskExec.onMasks = async (maskUrls) => {
-                if (_autoMaskPicks.size === 0) return;
-                if (maskUrls.length !== _autoMaskPicks.size) {
+            exec.onMasks = async (maskUrls) => {
+                if (!isCurrentRun()) return;
+                if (runPicks.size === 0) return;
+                if (maskUrls.length !== runPicks.size) {
                     clientLogger.warn('automask',
-                        `mask list length ${maskUrls.length} != picks ${_autoMaskPicks.size}; clearing auto picks`);
+                        `mask list length ${maskUrls.length} != picks ${runPicks.size}; clearing auto picks`);
                     canvas.clearAutoPicks();
                     canvas.setSelectedAutoPicks(new Set());
                     _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
@@ -331,19 +349,20 @@ export const MpiCanvasViewer = ComponentFactory.create({
                             return await createImageBitmap(blob);
                         })
                     );
-                    const sortedPicks = [..._autoMaskPicks].sort((a, b) => a - b);
+                    const sortedPicks = [...runPicks].sort((a, b) => a - b);
                     const map = new Map();
                     sortedPicks.forEach((pickIdx, i) => map.set(pickIdx, bitmaps[i]));
                     canvas.setAutoPickMasks(map);
-                    canvas.setSelectedAutoPicks(_autoMaskPicks);
-                    _saveAutoPickEntry(_currentItem, [...maskUrls], _autoMaskPicks, _lastDetectThumbUrls);
+                    canvas.setSelectedAutoPicks(runPicks);
+                    _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
                     _hasMask = true;
                 } catch (err) {
                     console.warn('[MpiCanvasViewer] Failed to apply auto-masks:', err);
                 }
             };
 
-            _autoMaskExec.onError = (err) => {
+            exec.onError = (err) => {
+                if (_autoMaskExec !== exec) return;
                 _autoMaskExec = null;
                 console.error('[MpiCanvasViewer] Auto-mask error:', err);
             };
