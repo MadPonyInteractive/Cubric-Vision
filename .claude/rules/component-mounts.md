@@ -203,10 +203,9 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ## MpiHistoryTools.js (internal mounts)
 
-Builds its own tool list from `mode: 'image'|'video'` prop. Flat tools render `MpiButton`; grouped tools (e.g. `mask`) render `MpiOptionSelector` (buttons variant) as the trigger.
+Builds its own tool list from `mode: 'image'|'video'` prop. All tools — flat or grouped — render as `MpiButton`. Multi-item groups stack their sub-tools as flat buttons directly under the group label (no popup, no portal). New tools added to a group auto-stack.
 
-- `MpiButton` (flat tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled }`   slot: fresh div appended to root — `toggleable:false` enforces radio behaviour (re-click = no-op)
-- `MpiOptionSelector` (grouped tool)   props: `{ variant:'buttons', buttons:[{icon,label,value,info}], triggerIcon, triggerActive, popupTitle }`   slot: fresh div appended to root — sub-tool click activates sub-mode + updates trigger icon
+- `MpiButton` (every tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled, extraClasses:'mpi-ibtn--rail' }`   slot: per-button wrapper div appended to the group's `__slot` — wrapper required because `ComponentFactory.mount` writes `container.innerHTML` and would clobber siblings otherwise. `toggleable:false` enforces radio behaviour (re-click = no-op)
 
 **Image mode tools:** `prompt`, `crop`, `mask`
 **Video mode tools:** `prompt`, `crop`, `videoUpscale`, `interpolate`

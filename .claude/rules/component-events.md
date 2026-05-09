@@ -166,7 +166,7 @@ EMITS:   `change` `{ value: string, def?: object }` — user picked a value (all
          `popup_toggle` `{ active: boolean }` — popup opened/closed
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `el.getValue()` · `el.setValue(v)` · `el.setTriggerIcon(icon)` · `el.setTriggerActive(bool)` · `el.setButtons(buttons)` · `el.getButtons()`
-NOTE:    Three variants — `ratio`: preset ratio picker (renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors inside the popup, not generic MpiButton items); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup (used by MpiHistoryTools mask group). All share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
+NOTE:    Three variants — `ratio`: preset ratio picker (renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors inside the popup, not generic MpiButton items); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup. All share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
          Delegated `popupEl` click/change handlers call `e.stopPropagation()` first — sub-popup interactions never bubble to document-level listeners. Required because handlers rewrite `grid.innerHTML` / `trigger.innerHTML` synchronously; without it, `e.target` detaches mid-bubble and breaks parent popup `closest('.mpi-popup')` exclusion → parent closes incorrectly.
 
 ### MpiSlideOver  *(Stage redesign — replaces full-page modal pattern for landing actions)*
