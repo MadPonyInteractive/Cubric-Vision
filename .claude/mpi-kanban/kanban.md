@@ -70,17 +70,6 @@
     Status bar displays generating before the actual generation process starts while the model is still loading.
     ```
 
-### Pop-up menu in the prompt box
-
-  - tags: [issue]
-  - priority: high
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    The prompt box has an issue right now. When we open up the pop-up menu to change models and ratio, for example, and other tools opening the sub-pop-up menus in it and making a selection closes all the pop-up menus, the user might have not finished with the sub-pop-up menu, and it becomes frustrating.
-    For example, opening the pop-up menu and then opening the ratio menu and selecting from portrait to landscape closes all menus. It shouldn't.
-    ```
-
 ### Toast too low.
 
   - tags: [issue]
@@ -115,6 +104,19 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Pop-up menu in the prompt box
+
+  - tags: [issue]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Settings popup closed when sub-popup (ratio orient toggle, ratio item, batch number) clicked.
+    Cause: sub-popup click handlers in MpiOptionSelector rewrote `grid.innerHTML` / `trigger.innerHTML` synchronously, detaching `e.target` before parent (PromptBox settings) document-level outside-click listener ran on bubble. Parent's `e.target.closest('.mpi-popup')` exclusion walked detached node → null → parent treated as outside-click → closed.
+    Fix at root: `e.stopPropagation()` at the top of every click/change handler on `popupEl` in MpiOptionSelector (ratio, number, buttons variants + speed radio). Sub-popup interactions never reach document-level listeners; mutation is irrelevant to parent.
+    File: js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js.
+    ```
 
 ### Full screen OS bar not hidden
 

@@ -206,6 +206,7 @@ function _setupButtons(el, props, emit) {
     }));
 
     _unsubs.push(on(popupEl, 'click', (e) => {
+        e.stopPropagation();
         const item = e.target.closest('.mpi-opt-sel__item[data-value]');
         if (!item) return;
         const value = item.dataset.value;
@@ -343,6 +344,12 @@ function _setupRatio(el, props, emit) {
 
     // Orientation toggle + ratio selection (single delegated click handler)
     _unsubs.push(on(popupEl, 'click', (e) => {
+        // Stop bubble BEFORE any DOM mutation. Parent popups (e.g. PromptBox
+        // settings) attach document-level outside-click listeners; if we mutate
+        // (rewrite grid/trigger innerHTML) before the event reaches them, the
+        // detached e.target makes their `.closest('.mpi-popup')` exclusion
+        // walk return null and they close incorrectly.
+        e.stopPropagation();
         const orientBtn = e.target.closest('.mpi-opt-sel__orient-btn');
         if (orientBtn) {
             const currentOrient = props.orientation || props.initialOrientation || 'portrait';
@@ -395,6 +402,7 @@ function _setupRatio(el, props, emit) {
 
     // Speed/quality tier change
     _unsubs.push(on(popupEl, 'change', (e) => {
+        e.stopPropagation();
         const speedRadio = e.target.closest('#speed-radio-slot');
         if (speedRadio) {
             const newTier     = e.target.value;
@@ -464,6 +472,7 @@ function _setupNumber(el, props, emit) {
     };
 
     _unsubs.push(on(popupEl, 'click', (e) => {
+        e.stopPropagation();
         const item = e.target.closest('.mpi-opt-sel__item[data-value]');
         if (!item) return;
         const v = item.dataset.value;
