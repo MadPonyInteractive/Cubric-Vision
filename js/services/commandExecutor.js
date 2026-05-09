@@ -29,6 +29,24 @@ import { getModelSettings, getToolSettings } from '../data/projectModel.js';
 import { DEPS } from '../data/modelConstants/dependencies.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
 
+function _buildComfyViewUrl(fileInfo) {
+    const params = new URLSearchParams();
+    for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
+        const value = fileInfo?.[key];
+        if (value !== undefined && value !== null) params.set(key, value);
+    }
+    return `http://${ComfyUIController.serverAddress}/view?${params.toString()}`;
+}
+
+function _collectComfyOutputUrls(nodeOutput, target) {
+    if (nodeOutput?.images) {
+        nodeOutput.images.forEach(img => target.push(_buildComfyViewUrl(img)));
+    }
+    if (nodeOutput?.gifs) {
+        nodeOutput.gifs.forEach(gif => target.push(_buildComfyViewUrl(gif)));
+    }
+}
+
 /**
  * @typedef {Object} RunPayload
  * @property {string}   operation    - Command key (e.g. 't2i', 'upscale')
@@ -232,18 +250,14 @@ export function runAutoMask(payload) {
             const nodeOutput = msg.data?.output;
 
             if (detectedNodeIds.has(nodeId) && nodeOutput?.images) {
-                const urls = nodeOutput.images.map(img =>
-                    `http://${ComfyUIController.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
-                );
+                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img));
                 _detectedFired = true;
                 exec.onDetected?.(urls);
             }
 
             if (outputNodeIds.has(nodeId) && nodeOutput?.images) {
                 if (!payload.picks?.size) return;
-                const urls = nodeOutput.images.map(img =>
-                    `http://${ComfyUIController.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
-                );
+                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img));
                 exec.onMasks?.(urls);
             }
         };
@@ -481,13 +495,7 @@ export function runCommand(payload) {
                 if (!outputNodeIds.has(nodeId)) return; // ignore non-Output nodes
 
                 const nodeOutput = msg.data?.output;
-                if (nodeOutput?.images) {
-                    nodeOutput.images.forEach(img => {
-                        outputUrls.push(
-                            `http://${ComfyUIController.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
-                        );
-                    });
-                }
+                _collectComfyOutputUrls(nodeOutput, outputUrls);
             }
         };
 

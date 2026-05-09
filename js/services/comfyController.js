@@ -10,6 +10,24 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
 
+function _buildComfyViewUrl(serverAddress, fileInfo) {
+    const params = new URLSearchParams();
+    for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
+        const value = fileInfo?.[key];
+        if (value !== undefined && value !== null) params.set(key, value);
+    }
+    return `http://${serverAddress}/view?${params.toString()}`;
+}
+
+function _collectComfyOutputUrls(serverAddress, nodeOutput, target) {
+    if (nodeOutput?.images) {
+        for (const img of nodeOutput.images) target.push(_buildComfyViewUrl(serverAddress, img));
+    }
+    if (nodeOutput?.gifs) {
+        for (const gif of nodeOutput.gifs) target.push(_buildComfyViewUrl(serverAddress, gif));
+    }
+}
+
 export const ComfyUIController = {
 
     /** @type {string} Target ComfyUI WS/HTTP server address. */
@@ -331,13 +349,7 @@ export const ComfyUIController = {
 
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
-                    if (nodeOutput?.images) {
-                        for (const img of nodeOutput.images) {
-                            outputs.push(
-                                `http://${this.serverAddress}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder || ''}`
-                            );
-                        }
-                    }
+                    _collectComfyOutputUrls(this.serverAddress, nodeOutput, outputs);
                 }
 
                 if (msg.type === 'executing' && msg.data.node === null) {

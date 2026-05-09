@@ -9,7 +9,7 @@
 
 **Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
 
-**Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node.
+**Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node. Video Helper Suite nodes may emit final videos under `output.gifs`; inspect the filename/format because that payload can still be an MP4.
 
 **Upload images/masks:** Pass Data URIs, blob URLs, http URLs, or local paths to `Input_Image` / `Input_Mask` — the controller uploads automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
 
@@ -44,7 +44,7 @@ See `docs/comfy.md` for the full injection pattern and example.
 | `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |
 | `"Box"` | `inputs.boolean` | Box (true) vs segment (false) |
 | `"Selected_Masks_Input"` | `inputs.text` / `picks` | Comma-separated mask indices |
-| `"Output"` | read-only | **Required** — final output node for result capture. Nodes without this title are ignored. |
+| `"Output"` | read-only | **Required** — final output node for result capture. Nodes without this title are ignored; capture `images` and VHS `gifs` payloads. |
 | `"Detected"` | read-only | **Required** — auto-masking preview output node |
 
 > When adding new params: use a capitalized title (e.g. `"Input_Video"`) and add it here.

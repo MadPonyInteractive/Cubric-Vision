@@ -705,9 +705,10 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions } = req.body;
+        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
+        const isVideo = mediaType === 'video';
 
         // Normalize path to use backslashes on Windows
         const normalizedFolderPath = path.normalize(folderPath);
@@ -752,7 +753,18 @@ router.post('/project/save-generation', async (req, res) => {
         // else probe saved file via Sharp (covers upscale/detail/edit/change/remove
         // — operations with no ratio control → no Width/Height injection params).
         let resolvedDims = pixelDimensions;
-        if (!resolvedDims || !resolvedDims.w || !resolvedDims.h) {
+        let videoInfo = null;
+        if (isVideo) {
+            videoInfo = await probeVideo(filePath);
+            if (videoInfo) {
+                resolvedDims = {
+                    w: videoInfo.width  || resolvedDims?.w || 0,
+                    h: videoInfo.height || resolvedDims?.h || 0,
+                };
+            } else {
+                resolvedDims = resolvedDims ?? { w: 0, h: 0 };
+            }
+        } else if (!resolvedDims || !resolvedDims.w || !resolvedDims.h) {
             try {
                 const sharp = require('sharp');
                 const probed = await sharp(filePath).metadata();
@@ -768,7 +780,7 @@ router.post('/project/save-generation', async (req, res) => {
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
             id,
-            type: 'image',
+            type: isVideo ? 'video' : 'image',
             filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
             operation,
             displayName:    filename.replace(/\.[^.]+$/, ''),
@@ -782,6 +794,25 @@ router.post('/project/save-generation', async (req, res) => {
             pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
             generationMs:   generationMs      ?? null,
         };
+        if (isVideo) {
+            if (videoInfo) {
+                metaContent.fps        = videoInfo.fps;
+                metaContent.duration   = videoInfo.duration;
+                metaContent.frameCount = videoInfo.frameCount;
+                metaContent.hasAudio   = videoInfo.hasAudio;
+                metaContent.videoMeta  = {
+                    fps: videoInfo.fps,
+                    duration: videoInfo.duration,
+                    frameCount: videoInfo.frameCount,
+                    hasAudio: videoInfo.hasAudio,
+                };
+            }
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractVideoThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+            }
+        }
         const metaPath = path.join(metaDir, `${id}.json`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
 
@@ -836,6 +867,12 @@ router.post('/project/save-generation', async (req, res) => {
             filePath,
             displayName: metaContent.displayName,
             pixelDimensions: metaContent.pixelDimensions,
+            thumbPath: metaContent.thumbPath || null,
+            fps: metaContent.fps || 0,
+            duration: metaContent.duration || 0,
+            frameCount: metaContent.frameCount || 0,
+            hasAudio: metaContent.hasAudio || false,
+            videoMeta: metaContent.videoMeta || null,
         });
     } catch (err) {
         logger.error('project', 'save-generation error', err);

@@ -116,6 +116,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             let filePath = url;
             let displayName = operation;
             let resolvedDims = width ? { w: width, h: height } : { w: 0, h: 0 };
+            let savedData = null;
 
             if (state.currentProject?.folderPath) {
                 try {
@@ -127,8 +128,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         meta: { prompt: positive, negativePrompt: negative, modelId: model.id },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
+                        mediaType: model.mediaType,
                     });
                     if (data.success) {
+                        savedData = data;
                         filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
                         displayName = data.displayName || data.filename.replace(/\.[^.]+$/, '');
                         if (data.pixelDimensions) resolvedDims = data.pixelDimensions;
@@ -152,6 +155,16 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 pixelDimensions: resolvedDims,
                 generationMs: elapsedMs,
             };
+            if (isVideo) {
+                Object.assign(baseProps, {
+                    thumbPath:   savedData?.thumbPath ?? null,
+                    fps:         savedData?.fps ?? 0,
+                    duration:    savedData?.duration ?? 0,
+                    frameCount:  savedData?.frameCount ?? 0,
+                    hasAudio:    savedData?.hasAudio ?? false,
+                    videoMeta:   savedData?.videoMeta ?? null,
+                });
+            }
             const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);
         }

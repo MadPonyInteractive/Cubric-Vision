@@ -98,22 +98,22 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`type`** — `'image'` or `'video'`.
 - **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`). Reserved for the operation key — never overwritten with a filename or human label.
 - **`displayName`** — Human-readable label derived from the saved filename stem (e.g., `'t2i_001'`, `'upscale_002'`, `'crop_001'`). Source of truth for `MpiHistoryList` card labels and gallery group names. Distinct from `operation` so the same item displays identically before and after project reload.
-- **`pixelDimensions`** — `{w, h}` of the actual saved image. Populated either from client-supplied Width/Height injection params (ops with a ratio control) or by `sharp.metadata()` probing the saved file in `routes/projects.js` `/project/save-generation` (ops without a ratio control: upscale, detail, edit, change, remove). Crop writes the crop rect dims directly.
+- **`pixelDimensions`** — `{w, h}` of the actual saved media. Images use client-supplied Width/Height when present, else `sharp.metadata()` in `/project/save-generation`; generated videos use `ffprobe` in `/project/save-generation`. Crop writes the crop rect dims directly.
 - **`generationMs`** — Elapsed sampling time in milliseconds (from `tool:sampling-start` to completion). `null` for crop and uploaded items. Rendered as rounded seconds (`Ns`) on history cards.
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
 
 **Video-specific sidecar fields** (present when `type === 'video'`):
-- **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` at upload/crop time. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
-- **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` on upload.
-- **`duration`** — Duration in seconds (number). Written by `services/ffprobeVideo.js` on upload.
-- **`frameCount`** — Total frame count (number). Written by `services/ffprobeVideo.js` on upload.
-- **`hasAudio`** — Whether the video has an audio stream (boolean). Written by `services/ffprobeVideo.js` on upload.
+- **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` for upload/crop/generated video saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
+- **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
+- **`duration`** — Duration in seconds (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
+- **`frameCount`** — Total frame count (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
+- **`hasAudio`** — Whether the video has an audio stream (boolean). Written by `services/ffprobeVideo.js` for upload/generated video saves.
 - **`sourceItemId`** — UUID of the source item, present on crop/upscale/interpolate outputs. Traces lineage back to original.
 - **`sourceGroupId`** — Group ID of the source item, present on crop outputs.
 - **`videoMeta`** — Object containing raw ffprobe output fields (optional; used for future enrichment).
 
-> **Note:** `fps`, `duration`, `frameCount`, `hasAudio` are probed once at import/upload time and written into the sidecar. They are available in memory as `item.fps`, `item.duration`, etc. after hydration.
+> **Note:** `fps`, `duration`, `frameCount`, `hasAudio` are probed once at import/upload/generated-save time and written into the sidecar. They are available in memory as `item.fps`, `item.duration`, etc. after hydration.
 
 **Source of truth:** This file is THE source of truth for everything about the item. Nothing in `project.json` duplicates this data.
 
