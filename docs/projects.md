@@ -95,6 +95,8 @@ Projects are self-contained folders. The `folderPath` field points to the projec
 - `updateGroup(group)`: Centralized way to update paths/favourite status and write to disk.
 - Other methods: see `docs/project-integrity.md` for full API.
 
+Project JSON writes are serialized server-side by `routes/projects.js` through a per-file queue and atomic temp-file replace. New routes that modify `project.json` must use that helper instead of writing the file directly.
+
 ---
 
 **See:** `docs/project-integrity.md` for the complete project data model, reconciliation rules, and migration system.

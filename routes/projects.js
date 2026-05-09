@@ -29,6 +29,41 @@ const { DEFAULT_PROJECTS_ROOT, COMFYUI_PORT, streamDownload } = require('./share
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 
+const projectJsonQueues = new Map();
+
+async function writeJsonAtomic(filePath, data) {
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    try {
+        await fs.writeFile(tmpPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+        await fs.rename(tmpPath, filePath);
+    } catch (err) {
+        await fs.remove(tmpPath).catch(() => {});
+        throw err;
+    }
+}
+
+function updateProjectJson(jsonPath, updater) {
+    const key = path.resolve(jsonPath).toLowerCase();
+    const previous = projectJsonQueues.get(key) || Promise.resolve();
+
+    const next = previous
+        .catch(() => {})
+        .then(async () => {
+            const project = await fs.readJson(jsonPath);
+            const updated = await updater(project);
+            await writeJsonAtomic(jsonPath, updated);
+            return updated;
+        })
+        .finally(() => {
+            if (projectJsonQueues.get(key) === next) {
+                projectJsonQueues.delete(key);
+            }
+        });
+
+    projectJsonQueues.set(key, next);
+    return next;
+}
+
 // ── Project CRUD ──────────────────────────────────────────────────────────────
 
 router.post('/create-project', async (req, res) => {
@@ -150,9 +185,11 @@ router.post('/update-project', async (req, res) => {
     try {
         const { folderPath, updates } = req.body;
         const jsonPath = path.join(folderPath, 'project.json');
-        const project = await fs.readJson(jsonPath);
-        const updated = { ...project, ...updates, updatedAt: new Date().toISOString() };
-        await fs.writeJson(jsonPath, updated, { spaces: 2 });
+        const updated = await updateProjectJson(jsonPath, project => ({
+            ...project,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+        }));
         res.json({ success: true, project: updated });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -183,9 +220,11 @@ router.post('/update-project-settings', async (req, res) => {
     try {
         const { folderPath, updates } = req.body;
         const jsonPath = path.join(folderPath, 'project.json');
-        const project = await fs.readJson(jsonPath);
-        const updated = { ...project, ...updates, updatedAt: new Date().toISOString() };
-        await fs.writeJson(jsonPath, updated, { spaces: 2 });
+        await updateProjectJson(jsonPath, project => ({
+            ...project,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+        }));
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -939,13 +978,11 @@ router.post('/migrate-project', async (req, res) => {
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
 
         const jsonPath = path.join(folderPath, 'project.json');
-        const project = await fs.readJson(jsonPath);
-
-        // Import migration runner lazily to avoid circular deps
-        const { migrateProject } = require('../js/migrations/projectMigrations.js');
-        const migrated = await migrateProject(project, folderPath);
-
-        await fs.writeJson(jsonPath, migrated, { spaces: 2 });
+        const migrated = await updateProjectJson(jsonPath, project => {
+            // Import migration runner lazily to avoid circular deps
+            const { migrateProject } = require('../js/migrations/projectMigrations.js');
+            return migrateProject(project, folderPath);
+        });
         res.json({ success: true, project: migrated });
     } catch (err) {
         logger.error('project', 'migrate-project error', err);
@@ -1006,10 +1043,13 @@ router.post('/project-templates/:id', async (req, res) => {
         const folderPath = await findProjectFolder(req.params.id);
         if (!folderPath) return res.status(404).json({ error: 'Project not found' });
         const projectPath = path.join(folderPath, 'project.json');
-        const project = await fs.readJson(projectPath);
-        if (!project.templates) project.templates = {};
-        project.templates[name] = { created: new Date().toISOString(), toolStates };
-        await fs.writeJson(projectPath, project, { spaces: 2 });
+        await updateProjectJson(projectPath, project => ({
+            ...project,
+            templates: {
+                ...(project.templates || {}),
+                [name]: { created: new Date().toISOString(), toolStates },
+            },
+        }));
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1025,9 +1065,11 @@ router.delete('/project-templates/:id/:name', async (req, res) => {
         const folderPath = await findProjectFolder(req.params.id);
         if (!folderPath) return res.status(404).json({ error: 'Project not found' });
         const projectPath = path.join(folderPath, 'project.json');
-        const project = await fs.readJson(projectPath);
-        if (project.templates) delete project.templates[req.params.name];
-        await fs.writeJson(projectPath, project, { spaces: 2 });
+        await updateProjectJson(projectPath, project => {
+            const templates = { ...(project.templates || {}) };
+            delete templates[req.params.name];
+            return { ...project, templates };
+        });
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });

@@ -60,6 +60,8 @@ setup: (el, props, emit) => {
 
 ## Settings Persistence Rule
 
+Server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js`. It serializes writes per project file and writes atomically via temp-file replace. Do not add direct `fs.writeJson(project.json, ...)` routes for project metadata/settings; concurrent `/update-project` and `/update-project-settings` calls can otherwise corrupt the file.
+
 `projectService` is the **sole writer** to `modelSettings` and `toolSettings` in `project.json`. Components must **not** directly call `setModelSettings`, `setToolSettings`, or `saveProjectSettings` for these fields.
 
 **Instead, emit:**

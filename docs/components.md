@@ -50,6 +50,7 @@ export const MyComponent = ComponentFactory.create({
 - `Hotkeys.bind(id, fn)` to bind — `id` is a stable registry id from `hotkeyRegistry.js`.
 - Store the returned unbind fn in `_unsubs`; called in `el.destroy()`.
 - Never use raw `window.addEventListener('keydown')`.
+- Hotkey typing suppression only applies to text-entry controls. Sliders and other non-text controls may retain focus; do not blur them solely to preserve global shortcuts.
 
 ## Events
 

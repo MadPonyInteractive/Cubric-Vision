@@ -226,6 +226,12 @@ When the app saves the project, `persistGroups()` in `projectService.js` seriali
 
 This is the only place where full objects are converted to UUIDs. No other code path touches this.
 
+### Server Write Safety
+
+All full-file `project.json` updates on the server must go through `updateProjectJson()` in `routes/projects.js`. That helper serializes writes per resolved `project.json` path and writes via a temporary file followed by `rename()`.
+
+This applies to `/update-project`, `/update-project-settings`, `/migrate-project`, and project template routes. Do not add another `readJson -> merge -> writeJson` route for `project.json`; concurrent settings saves and group persistence can otherwise interleave and leave concatenated or truncated JSON on disk.
+
 ---
 
 ## Path Normalization

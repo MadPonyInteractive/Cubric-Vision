@@ -12,6 +12,32 @@ try {
     }
 } catch (e) { /* Silent fail — expected in Browser Mode */ }
 
+const TEXT_INPUT_TYPES = new Set([
+    '',
+    'text',
+    'search',
+    'url',
+    'tel',
+    'email',
+    'password',
+    'number',
+    'date',
+    'datetime-local',
+    'month',
+    'time',
+    'week',
+]);
+
+function isTextEntryElement(el) {
+    if (!el) return false;
+    if (el instanceof HTMLTextAreaElement) return true;
+    if (el.isContentEditable) return true;
+    if (!(el instanceof HTMLInputElement)) return false;
+
+    const type = (el.getAttribute('type') || 'text').toLowerCase();
+    return TEXT_INPUT_TYPES.has(type);
+}
+
 class HotkeyManager {
     constructor() {
         /** @type {Map<string, Set<Function>>} key = `${type}:${normalizedKey}` */
@@ -104,12 +130,7 @@ class HotkeyManager {
         if (entries.length === 0) return;
 
         const activeEl = document.activeElement;
-        const isTyping = !!(
-            activeEl &&
-            (activeEl.tagName === 'INPUT' ||
-             activeEl.tagName === 'TEXTAREA' ||
-             activeEl.isContentEditable)
-        );
+        const isTyping = isTextEntryElement(activeEl);
 
         const isSingleLetter = e.key.length === 1 && !e.ctrlKey && !e.metaKey;
         const isBareModifier = ['Shift', 'Alt', 'Control', 'Meta'].includes(e.key);

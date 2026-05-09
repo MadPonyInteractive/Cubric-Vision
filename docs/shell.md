@@ -38,6 +38,7 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 - `Hotkeys.unbind(id, fn)`: Remove a specific handler.
 - `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array (used by MpiHelp).
 - F11 toggles fullscreen. Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
+- Focus gating treats only text-entry controls as typing (`TEXTAREA`, contenteditable, and text-like `INPUT` types such as `text`, `number`, `search`, `email`, `password`, date/time types). Non-text controls such as `input[type="range"]`, checkboxes, radios, and buttons may keep focus without blocking global hotkeys.
 
 ### Adding a hotkey
 
@@ -63,9 +64,11 @@ The Help overlay (`MpiHelp`) is **not** generated from `hotkeyRegistry.js`. Its 
 
 ### Gating model
 
+`isTyping` means a real text-entry context: `TEXTAREA`, `[contenteditable]`, or text-like `INPUT` types. Non-text controls such as `input[type="range"]`, checkboxes, radios, and buttons are not typing contexts, so global hotkeys continue to work after those controls receive focus.
+
 Keydown fires handlers only if all guards pass (in order):
 1. Entry found in registry for normalized key + type.
-2. `isTyping` check — single-letter and bare-modifier keys blocked while `INPUT`/`TEXTAREA`/`[contenteditable]` focused, unless `allowWhileTyping: true`. F-keys and `Ctrl+`-chords always pass.
+2. `isTyping` check — single-letter and bare-modifier keys blocked while a text-entry control is focused, unless `allowWhileTyping: true`. F-keys and `Ctrl+`-chords always pass.
 3. `when(ctx)` optional gate — receives `{ state, event, activeElement, isTyping }`.
 4. `preventDefault`/`stopPropagation` called only after all guards pass.
 
@@ -121,6 +124,8 @@ Centralized persistence layer for project mutations. Replaces the old `projectMa
 **Queue behavior:** Each `modelId` (and `toolKey`) has its own queue. Multiple models write in parallel. `ratioSelector` sub-keys are deep-merged so rapid partial updates (`orientation`, `qualityTier`, `selectedRatio`) don't drop each other. `loras` and `upscaleModel` are full replacements.
 
 **Key creation:** Keys are created on first `select` event using defaults from `getModelSettings` / `getToolSettings`. Components never need to check key existence.
+
+**Disk write safety:** Server-side `project.json` writes in `routes/projects.js` go through a per-file queue and atomic temp-file replace. This serializes concurrent writes from `/update-project`, `/update-project-settings`, `/migrate-project`, and project template routes so group persistence and debounced settings saves cannot interleave and corrupt the JSON file.
 
 **Events consumed:**
 - `settings:model:select` — create `modelSettings[modelId]` key with defaults if missing

@@ -28,6 +28,7 @@
 - **Navigation MUST call \****`instance.destroy()`**\*\* before clearing mounted Block.** See `.claude/rules/components.md` section "Observer Lifecycle & Teardown Contract". Never use `innerHTML = ''` alone.
 - **If \****`setup`***\* calls \****`Events.on(...)`***\*, \****`window.addEventListener(...)`***\*, or creates any Observer — MUST define \****`el.destroy()`**\*\* that cleans them up.** Collect unsubscribes in `const _unsubs = []`.
 - **Never mutate \****`state`**\*\* sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
+- **Project JSON writes:** server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js` for per-file queued atomic writes. Do not add direct `fs.writeJson(project.json, ...)` routes.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
 
 ---
