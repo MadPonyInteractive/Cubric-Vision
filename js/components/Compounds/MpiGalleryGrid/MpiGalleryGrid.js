@@ -362,9 +362,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const dims = selected?.pixelDimensions;
                 const dimStr = (dims?.w && dims?.h) ? `${dims.w} × ${dims.h}` : '';
                 let timeStr = '';
-                if (selected?.createdAt) {
-                    const d = new Date(selected.createdAt);
-                    if (!isNaN(d)) timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const ms = selected?.generationMs;
+                if (ms && ms > 0) {
+                    const totalSec = Math.max(1, Math.round(ms / 1000));
+                    if (totalSec >= 60) {
+                        const m = Math.floor(totalSec / 60);
+                        const s = totalSec % 60;
+                        timeStr = s ? `${m}m ${s}s` : `${m}m`;
+                    } else {
+                        timeStr = `${totalSec}s`;
+                    }
                 }
                 let snippet = '';
                 if (selected?.prompt) {

@@ -1,15 +1,5 @@
 ## BACKLOG
 
-### Setup video generation
-
-  - tags: [Implementation completion]
-  - priority: high
-  - workload: Hard
-  - defaultExpanded: false
-    ```md
-    Video generation hasn't been tested. The outputs from Coffee Y are different from the image outputs. It needs to be tested. Some workflows output several stages that need to be handled. This should be a cooperative session with the dev.
-    ```
-
 ### Patreon landing page images
 
   - tags: [Idea]
@@ -92,6 +82,16 @@
     ```
 
 ## IMPLEMENTING
+
+### Setup video generation
+
+  - tags: [Implementation completion]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+    ```md
+    Video generation hasn't been tested. The outputs from Coffee Y are different from the image outputs. It needs to be tested. Some workflows output several stages that need to be handled. This should be a cooperative session with the dev.
+    ```
 
 ## COMPLETED
 
