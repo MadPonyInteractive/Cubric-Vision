@@ -77,9 +77,9 @@ Keydown fires handlers only if all guards pass (in order):
 
 Bottom status bar. Shows ComfyUI engine status, active model, generation progress.
 - Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:cancelled`, `tool:idle`.
-- On `tool:running`: starts progress bar with "Generating..." label (blue variant)
+- On `tool:running`: prepares the progress bar without starting elapsed timing
 - On `tool:loading-model`: updates label to "Loading model..." (model VRAM load phase)
-- On `tool:sampling-start`: updates label back to "Generating..." (KSampler steps begin)
+- On `tool:sampling-start`: updates label back to "Generating..." and starts elapsed timing
 - On `tool:cancelled`: cancels progress bar instantly
 - On `tool:idle`: completes progress bar, fires success toast with "Generation finished"
 - On `ui:success` / `ui:warning` / `ui:info`: fires a standalone toast via `StatusBar.notify(message, variant)` — **this is the correct way to show toasts from anywhere in the app**

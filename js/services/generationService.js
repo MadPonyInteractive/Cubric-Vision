@@ -48,7 +48,7 @@ import { activeGenerations } from './activeGenerations.js';
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
     const { operation, model, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
-    const generationStartTime = Date.now();
+    let samplingStartTime = null;
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
 
@@ -82,6 +82,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     };
 
     exec.onProgress = (value) => StatusBar.progress.update(value);
+    exec.onSamplingStart = () => {
+        samplingStartTime ??= Date.now();
+    };
 
     exec.onComplete = async (urls) => {
         Events.emit('promptbox:generation-end');
@@ -100,7 +103,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
         const width  = injectionParams.Width  || 0;
         const height = injectionParams.Height || 0;
-        const elapsedMs = Date.now() - generationStartTime;
+        const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
 
         // Build one item per output URL. Each item gets its own uuid (first reuses
         // the pre-allocated itemId so existing telemetry stays consistent).

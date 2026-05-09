@@ -67,6 +67,7 @@ export function buildWeightMap(workflow) {
         } else if (
             classType === 'KSampler' ||
             classType === 'KSamplerAdvanced' ||
+            classType === 'SamplerCustom' ||
             classType === 'ClownsharKSampler' ||
             SAMPLER_REGEX.test(classType)
         ) {

@@ -67,6 +67,7 @@ When adding a new model to the application, it requires a dependency array. Chec
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.
 - Any new routes that communicate with ComfyUI's internal API (`/manager/unload_models`, etc.) must account for deep vs. shallow memory cleaning.
+- ComfyUI stdout/stderr phase lines may drive renderer lifecycle via `/comfy/events/stream`. Preserve `Model Initializing ...` and `Model Initialization complete!` parsing in `routes/comfy.js`; StatusBar timing depends on those events for model-initialization-sensitive sampler/upscale nodes.
 
 ### 3. Engine Installation Flow (Fresh Install)
 

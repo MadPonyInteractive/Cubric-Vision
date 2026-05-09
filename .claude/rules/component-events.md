@@ -421,21 +421,22 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 **commandExecutor.js**
 - Analyzes workflow JSON to detect loader nodes (CheckpointLoaderSimple, UNETLoader, LoraLoaderModelOnly, etc. by class_type)
 - Emits `tool:loading-model` when a loader node starts executing (VRAM load phase)
-- Emits `tool:sampling-start` on first KSampler progress callback (sampling phase begins)
+- Emits `tool:sampling-start` only when sampling/generation actually begins. Do not treat node execution alone as sampling; some sampler/upscale nodes report a model-initialization phase first.
+- For ComfyUI terminal phases, `/comfy/events/stream` bridges `Model Initializing ...` to `tool:loading-model` and `Model Initialization complete!` to `tool:sampling-start`.
 - Both events carry `{ tool: 'groupHistory' }` payload
 
 **StatusBar (js/shell/statusBar.js)**
-- Listens to `tool:running` → calls `start('Generating...')` + `setVariant('primary')` (blue badge)
+- Listens to `tool:running` → prepares active state without starting elapsed timer
 - Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
-- Listens to `tool:sampling-start` → calls `updateLabel('Generating...')`
+- Listens to `tool:sampling-start` → calls `updateLabel('Generating...')` and starts elapsed timer
 - Listens to `tool:cancelled` → calls `cancel()`
 - Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast)
 
 **Pattern notes:**
 - Blocks emit `tool:running` at generation start (in promptBox 'run' handler)
-- commandExecutor emits `tool:loading-model` / `tool:sampling-start` based on WS message types
+- commandExecutor emits `tool:loading-model` / `tool:sampling-start` based on WS messages plus backend ComfyUI phase output for model-initialization-sensitive nodes
 - StatusBar owns all progress UI logic; blocks don't call StatusBar methods directly (except `progress.update()` for KSampler progress)
-- Generation timing saved to item sidecar: backend receives `generationMs` field in save-generation POST body
+- Generation timing saved to item sidecar starts at `tool:sampling-start`; backend receives `generationMs` field in save-generation POST body
 
 ---
 

@@ -60,16 +60,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Status bar not updating correctly
-
-  - tags: [issue]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: true
-    ```md
-    Status bar displays generating before the actual generation process starts while the model is still loading.
-    ```
-
 ### Toast too low.
 
   - tags: [issue]
@@ -78,6 +68,17 @@
   - defaultExpanded: false
     ```md
     The Toast currently appears at the bottom right of the screen, but when the prompt box is present, the Toast appears on top of the buttons of the prompt box. It would be nice for the Toast to appear above him, so we need to move it up a little bit.
+    ```
+
+### When applying a crop, the crop box goes away.
+
+  - tags: [Bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    - Let's make sure that the crop box stays until another tool is selected or a selection is made. 
+    - Let's use this kanban entry also to update the looks of the crop box, as the handles still do not match the mock-up design. You may ask the user for a visual of how it should look.
     ```
 
 ## PLANNING
@@ -104,6 +105,19 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Status bar not updating correctly
+
+  - tags: [issue]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: true
+    ```md
+    Fixed status bar timing so model initialization does not start elapsed generation time.
+    Backend bridges ComfyUI terminal phase lines (`Model Initializing ...`, `Model Initialization complete!`) over `/comfy/events/stream`.
+    commandExecutor starts `tool:sampling-start` on model-init-complete, preview, or real sampler progress; UltimateSDUpscale remains heuristic because it reports useful latent/progress late.
+    Files: routes/comfy.js, js/services/commandExecutor.js, js/services/progressAggregator.js, js/services/generationService.js, docs/shell.md, .claude/rules/component-events.md, .claude/rules/comfy_engine.md.
+    ```
 
 ### Pop-up menu in the prompt box
 

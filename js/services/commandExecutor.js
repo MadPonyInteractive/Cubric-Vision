@@ -311,16 +311,25 @@ const LOADER_CLASS_TYPES = new Set([
     'DiffusionModelLoader',
     'CLIPLoader', 'DualCLIPLoader',
     'VAELoader',
+    'SAMLoader',
+    'UpscaleModelLoader',
     'LoraLoader', 'LoraLoaderModelOnly',
-    'MpiLoraModelClip',
+    'MpiLoraModel', 'MpiLoraModelClip',
+    'MpiFromCheckpoint',
 ]);
+
+const IMMEDIATE_WORK_KINDS = new Set(['sampler', 'imageUpscale', 'vhs']);
+const DELAYED_WORK_KINDS = new Set(['ultimateSDUpscale']);
+const TERMINAL_PHASE_WORK_KINDS = new Set(['sampler']);
+const ULTIMATE_START_PROGRESS = 0.75;
 
 export function runCommand(payload) {
     const exec = {
-        onPreview:  null,
-        onProgress: null,
-        onComplete: null,
-        onError:    null,
+        onPreview:       null,
+        onProgress:      null,
+        onSamplingStart: null,
+        onComplete:      null,
+        onError:         null,
         cancel() { ComfyUIController.interrupt(); },
     };
 
@@ -364,12 +373,50 @@ export function runCommand(payload) {
         // Build weight map and create aggregator for this execution
         const weightMap  = buildWeightMap(workflow);
         const aggregator = createAggregator(weightMap);
+        const hasTerminalPhaseSampler = Object.values(weightMap.nodes).some(node =>
+            TERMINAL_PHASE_WORK_KINDS.has(node.kind)
+        );
+        let comfyEventSource = null;
 
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
         let _samplingStartFired = false;
+        const emitSamplingStart = () => {
+            if (_samplingStartFired) return;
+            _samplingStartFired = true;
+            Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+            exec.onSamplingStart?.();
+        };
+        const isImmediateWorkNode = (nodeId) => IMMEDIATE_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
+        const isDelayedWorkNode = (nodeId) => DELAYED_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
+        const isTerminalPhaseWorkNode = (nodeId) => TERMINAL_PHASE_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
+        const progressFraction = (info) => {
+            const value = Number(info?.value);
+            const max   = Number(info?.max);
+            if (!Number.isFinite(value) || !Number.isFinite(max) || max <= 0) return 0;
+            return value / max;
+        };
+        const closeComfyEventSource = () => {
+            if (!comfyEventSource) return;
+            comfyEventSource.close();
+            comfyEventSource = null;
+        };
+        exec.cancel = () => {
+            closeComfyEventSource();
+            ComfyUIController.interrupt();
+        };
+        if (hasTerminalPhaseSampler && typeof EventSource !== 'undefined') {
+            comfyEventSource = new EventSource('/comfy/events/stream');
+            comfyEventSource.addEventListener('comfy:model-initializing', () => {
+                if (!_samplingStartFired) Events.emit('tool:loading-model', { tool: 'groupHistory' });
+            });
+            comfyEventSource.addEventListener('comfy:model-init-complete', () => {
+                emitSamplingStart();
+            });
+        }
         const onMessage = (msg) => {
             if (msg.type === 'preview') {
+                emitSamplingStart();
                 exec.onPreview?.(msg.url);
                 return;
             }
@@ -381,13 +428,12 @@ export function runCommand(payload) {
                     const nodeData = msg.data?.nodes || {};
                     const workRunning = Object.entries(nodeData).some(([id, info]) => {
                         if (info.state !== 'running') return false;
-                        const k = weightMap.nodes[id]?.kind;
-                        return k === 'sampler' || k === 'ultimateSDUpscale' || k === 'imageUpscale' || k === 'vhs';
+                        if (isTerminalPhaseWorkNode(id)) return progressFraction(info) > 0;
+                        if (isImmediateWorkNode(id)) return true;
+                        if (isDelayedWorkNode(id)) return progressFraction(info) >= ULTIMATE_START_PROGRESS;
+                        return false;
                     });
-                    if (workRunning) {
-                        _samplingStartFired = true;
-                        Events.emit('tool:sampling-start', { tool: 'groupHistory' });
-                    }
+                    if (workRunning) emitSamplingStart();
                 }
                 exec.onProgress?.(aggregator.percent());
                 return;
@@ -396,8 +442,14 @@ export function runCommand(payload) {
             if (msg.type === 'progress') {
                 aggregator.onProgress(msg);
                 if (!_samplingStartFired) {
-                    _samplingStartFired = true;
-                    Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                    const nodeId = msg.data?.node;
+                    if (isTerminalPhaseWorkNode(nodeId) && progressFraction(msg.data) > 0) {
+                        emitSamplingStart();
+                    } else if (!isTerminalPhaseWorkNode(nodeId) && isImmediateWorkNode(nodeId)) {
+                        emitSamplingStart();
+                    } else if (isDelayedWorkNode(nodeId) && progressFraction(msg.data) >= ULTIMATE_START_PROGRESS) {
+                        emitSamplingStart();
+                    }
                 }
                 exec.onProgress?.(aggregator.percent());
                 return;
@@ -410,9 +462,8 @@ export function runCommand(payload) {
                     const nodeKind = weightMap.nodes[nodeId]?.kind;
                     if (!_samplingStartFired && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
                         Events.emit('tool:loading-model', { tool: 'groupHistory' });
-                    } else if (!_samplingStartFired && (nodeKind === 'sampler' || nodeKind === 'ultimateSDUpscale' || nodeKind === 'imageUpscale' || nodeKind === 'vhs')) {
-                        _samplingStartFired = true;
-                        Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                    } else if (!_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
+                        emitSamplingStart();
                     }
                     aggregator.onExecuting(msg);
                     return;
@@ -420,6 +471,7 @@ export function runCommand(payload) {
 
                 // node === null: execution complete signal
                 aggregator.onExecutionSuccess();
+                closeComfyEventSource();
                 exec.onComplete?.(outputUrls);
                 return;
             }
@@ -442,6 +494,7 @@ export function runCommand(payload) {
         try {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
         } catch (err) {
+            closeComfyEventSource();
             clientLogger.error('comfy', `Workflow failed: ${payload.operation} / ${payload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, payload.modelId);
             Events.emit('ui:error', { title, message });

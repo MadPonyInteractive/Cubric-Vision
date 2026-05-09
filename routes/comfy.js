@@ -32,6 +32,27 @@ const { getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine'
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 const ENGINE_ROOT = getEngineRoot();
+const _comfyEventClients = new Set();
+
+function _broadcastComfyEvent(event, data) {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    for (const client of _comfyEventClients) {
+        try { client.write(payload); } catch (_) { /* client closed */ }
+    }
+}
+
+function _handleComfyOutput(level, chunk) {
+    const text = chunk.toString().trim();
+    if (!text) return;
+
+    logger[level]('comfy', text);
+
+    if (/Model Initialization complete!/i.test(text)) {
+        _broadcastComfyEvent('comfy:model-init-complete', { message: text });
+    } else if (/Model Initializing/i.test(text)) {
+        _broadcastComfyEvent('comfy:model-initializing', { message: text });
+    }
+}
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -69,6 +90,20 @@ router.get('/comfy/status', async (req, res) => {
     }
 });
 
+router.get('/comfy/events/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (res.flushHeaders) res.flushHeaders();
+
+    _comfyEventClients.add(res);
+    res.write(`event: connected\ndata: {}\n\n`);
+
+    req.on('close', () => {
+        _comfyEventClients.delete(res);
+    });
+});
+
 /**
  * POST /comfy/start
  * Launches ComfyUI in the background. Idempotent — returns success if already running.
@@ -97,8 +132,8 @@ router.post('/comfy/start', async (req, res) => {
         }
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath) });
-        processState.activeComfyProcess.stdout.on('data', (d) => logger.info('comfy', d.toString().trim()));
-        processState.activeComfyProcess.stderr.on('data', (d) => logger.warn('comfy', d.toString().trim()));
+        processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));
+        processState.activeComfyProcess.stderr.on('data', (d) => _handleComfyOutput('warn', d));
         processState.activeComfyProcess.on('exit', () => {
             logger.info('comfy', 'ComfyUI process exited');
             processState.activeComfyProcess = null;
