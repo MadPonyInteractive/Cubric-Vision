@@ -79,60 +79,6 @@
       "title": "Mpi To ChekPoint"
     }
   },
-  "535": {
-    "inputs": {
-      "sage_attention": "auto",
-      "allow_compile": false,
-      "model": [
-        "96",
-        0
-      ]
-    },
-    "class_type": "PathchSageAttentionKJ",
-    "_meta": {
-      "title": "Patch Sage Attention KJ"
-    }
-  },
-  "536": {
-    "inputs": {
-      "sage_attention": "auto",
-      "allow_compile": false,
-      "model": [
-        "95",
-        0
-      ]
-    },
-    "class_type": "PathchSageAttentionKJ",
-    "_meta": {
-      "title": "Patch Sage Attention KJ"
-    }
-  },
-  "538": {
-    "inputs": {
-      "enable_fp16_accumulation": true,
-      "model": [
-        "535",
-        0
-      ]
-    },
-    "class_type": "ModelPatchTorchSettings",
-    "_meta": {
-      "title": "Model Patch Torch Settings"
-    }
-  },
-  "539": {
-    "inputs": {
-      "enable_fp16_accumulation": true,
-      "model": [
-        "536",
-        0
-      ]
-    },
-    "class_type": "ModelPatchTorchSettings",
-    "_meta": {
-      "title": "Model Patch Torch Settings"
-    }
-  },
   "635": {
     "inputs": {
       "seconds": [
@@ -283,15 +229,6 @@
     "class_type": "VAEDecodeTiled",
     "_meta": {
       "title": "VAE Decode 2 (Tiled)"
-    }
-  },
-  "729": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
     }
   },
   "730": {
@@ -651,7 +588,7 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "539",
+        "95",
         0
       ]
     },
@@ -735,7 +672,7 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "538",
+        "96",
         0
       ]
     },
@@ -876,7 +813,7 @@
   },
   "838": {
     "inputs": {
-      "int": 2
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {

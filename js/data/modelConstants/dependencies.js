@@ -103,7 +103,7 @@ export const DEPS = {
     'umt5_xxl_fp8_e4m3fn_scaled': {
         id: 'umt5_xxl_fp8_e4m3fn_scaled',
         name: 'umt5_xxl_fp8_e4m3fn_scaled',
-        filename: 'vae/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
+        filename: 'text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         url: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         size: '6.27GB',
         sha256: 'c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68'

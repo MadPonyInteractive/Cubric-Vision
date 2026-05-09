@@ -49,7 +49,7 @@ function buildExtraModelPathsYaml(basePath) {
         'loras', 'unet', 'diffusers', 'vae_approx', 'gligen',
         'hypernetworks', 'photomaker', 'classifiers', 'style_models',
         'face_models', 'ipadapter', 'model_patches', 'audio_encoders',
-        'latent_upscale_models',
+        'latent_upscale_models', 'text_encoders',
     ];
     for (const key of coreExtras) folderKeys.add(key);
 
