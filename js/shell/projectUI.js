@@ -16,6 +16,7 @@ import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjec
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
+import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
@@ -78,8 +79,8 @@ export function initProjectUI() {
   const _openFolder = async () => {
     try {
       const { ipcRenderer } = window.require('electron');
-      const result = await ipcRenderer.invoke('dialog:openFolder');
-      if (result?.folderPath) await handleProjectDrop(result.folderPath);
+      const result = await ipcRenderer.invoke('choose-folder');
+      if (!result?.cancelled && result?.path) await handleProjectDrop(result.path);
     } catch (err) {
       clientLogger.error('projectUI', 'openFolder failed', err);
     }
@@ -250,21 +251,13 @@ function _buildProjectRow(project) {
   const meta = document.createElement('div');
   meta.className = 'mpi-landing__pl-meta';
 
-  // Title row: h3 + inline delete
-  const titleRow = document.createElement('div');
-  titleRow.className = 'mpi-landing__pl-title-row';
   const h3 = document.createElement('h3');
   h3.textContent = project.name;
-  const deleteSlot = document.createElement('div');
-  deleteSlot.className = 'mpi-landing__pl-delete';
-  const deleteBtn = MpiButton.mount(deleteSlot, { icon: 'trash', variant: 'ghost', size: 'sm' });
-  titleRow.appendChild(h3);
-  titleRow.appendChild(deleteSlot);
+  meta.appendChild(h3);
 
   const sub = document.createElement('span');
   sub.className = 'mpi-landing__pl-sub';
   sub.textContent = dateStr;
-  meta.appendChild(titleRow);
   meta.appendChild(sub);
 
   // Count — placeholder until /project-stats resolves
@@ -293,20 +286,30 @@ function _buildProjectRow(project) {
       if (err?.name !== 'AbortError') clientLogger.warn('projectUI', 'fetchStats failed', err);
     });
 
-  row.addEventListener('click', async (e) => {
-    if (deleteSlot.contains(e.target)) return;
+  row.addEventListener('click', async () => {
     await openProject(project);
     navigate(PAGE_GALLERY);
   });
 
-  deleteBtn.on('click', () => {
-    _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
-      try {
-        await deleteProject(project, { deleteFiles });
-        loadProjectGrid();
-      } catch (err) {
-        window.MpiAlert('Could not delete project: ' + err.message);
-      }
+  row.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    MpiContextMenu.show({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { key: 'delete', icon: 'trash', label: 'Delete project', danger: true },
+      ],
+      onSelect: (key) => {
+        if (key !== 'delete') return;
+        _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
+          try {
+            await deleteProject(project, { deleteFiles });
+            loadProjectGrid();
+          } catch (err) {
+            window.MpiAlert('Could not delete project: ' + err.message);
+          }
+        });
+      },
     });
   });
 

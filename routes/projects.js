@@ -25,7 +25,7 @@ const fs     = require('fs-extra');
 const path   = require('path');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
-const { DEFAULT_PROJECTS_ROOT, COMFYUI_PORT, streamDownload } = require('./shared');
+const { getProjectsRoot, COMFYUI_PORT, streamDownload } = require('./shared');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 
@@ -81,7 +81,9 @@ router.post('/create-project', async (req, res) => {
                 projectRoot = path.join(folderPath, sanitizedName);
             }
         } else {
-            projectRoot = path.join(DEFAULT_PROJECTS_ROOT, sanitizedName);
+            const root = getProjectsRoot();
+            await fs.ensureDir(root);
+            projectRoot = path.join(root, sanitizedName);
         }
 
         if (await fs.pathExists(projectRoot)) {
@@ -117,12 +119,14 @@ router.post('/create-project', async (req, res) => {
 router.post('/list-projects', async (req, res) => {
     try {
         const { extraPaths = [] } = req.body;
-        const roots = [DEFAULT_PROJECTS_ROOT, ...extraPaths];
+        const defaultRoot = getProjectsRoot();
+        const roots = [defaultRoot, ...extraPaths];
         const projects = [];
 
         for (const root of roots) {
             if (!(await fs.pathExists(root))) continue;
             const entries = await fs.readdir(root);
+            const isDefault = root === defaultRoot;
             for (const entry of entries) {
                 const jsonPath = path.join(root, entry, 'project.json');
                 if (await fs.pathExists(jsonPath)) {
@@ -149,7 +153,7 @@ router.post('/list-projects', async (req, res) => {
                                 }
                             }
                         } catch (e) { /* silent fail for media scan */ }
-                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail });
+                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail, isDefaultRoot: isDefault });
                     } catch (_) { /* skip corrupt entries */ }
                 }
             }
@@ -997,7 +1001,7 @@ router.post('/migrate-project', async (req, res) => {
  */
 async function findProjectFolder(id) {
     if (!id) return null;
-    const roots = [DEFAULT_PROJECTS_ROOT];
+    const roots = [getProjectsRoot()];
     for (const root of roots) {
         if (!(await fs.pathExists(root))) continue;
         const entries = await fs.readdir(root);

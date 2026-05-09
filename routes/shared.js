@@ -24,7 +24,33 @@ const _require = createRequire(__filename);
 
 const ENGINE_ROOT = getEngineRoot();
 
-const DEFAULT_PROJECTS_ROOT = path.join(__dirname, '..', 'projects');
+/**
+ * Resolve the default projects root.
+ * Priority:
+ *   1. .engine-config.json `projectsPath` (worktree share — opt-in)
+ *   2. APP_DOCUMENTS env (set by main.js → app.getPath('documents'))
+ *      → <Documents>/Cubric Studio/Projects
+ *   3. Dev fallback: <repo>/projects
+ *
+ * Cross-platform: app.getPath('documents') resolves the OS-native Documents
+ * folder on Win / macOS / Linux. path.join handles spaces.
+ */
+function getProjectsRoot() {
+    try {
+        const configPath = path.join(__dirname, '..', '.engine-config.json');
+        if (fs.existsSync(configPath)) {
+            const cfg = _require(configPath);
+            if (cfg && cfg.projectsPath && fs.existsSync(cfg.projectsPath)) {
+                return cfg.projectsPath;
+            }
+        }
+    } catch (_) { /* fall through */ }
+
+    if (process.env.APP_DOCUMENTS) {
+        return path.join(process.env.APP_DOCUMENTS, 'Cubric Studio', 'Projects');
+    }
+    return path.join(__dirname, '..', 'projects');
+}
 const MODELS_ROOT = getLlamaModelsRoot();
 const LLM_CONFIG_PATH = path.join(__dirname, '..', 'dev_configs', 'llm_models.json');
 const LLAMA_ENGINE_ROOT = getLlamaEngineRoot();
@@ -389,7 +415,7 @@ async function cleanComfyUITempFiles() {
 }
 
 module.exports = {
-    DEFAULT_PROJECTS_ROOT,
+    getProjectsRoot,
     MODELS_ROOT,
     LLM_CONFIG_PATH,
     LLAMA_ENGINE_ROOT,

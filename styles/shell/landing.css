@@ -275,14 +275,7 @@
 }
 
 /* Meta */
-.mpi-landing__pl-title-row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-1);
-  min-width: 0;
-}
-
-.mpi-landing__pl-title-row h3 {
+.mpi-landing__pl-meta h3 {
   font-family: var(--font-main);
   font-size: var(--t-xl);
   font-weight: 600;
@@ -292,7 +285,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  flex: 1;
 }
 
 .mpi-landing__pl-meta .mpi-landing__pl-sub {
@@ -322,28 +314,6 @@
   text-transform: none;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-/* Delete btn — inline next to title on hover */
-.mpi-landing__pl-delete {
-  position: static;
-  display: inline-flex;
-  vertical-align: middle;
-  margin-left: var(--s-2);
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
-}
-
-.mpi-landing__pl-row:hover .mpi-landing__pl-delete {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Wrap h3 + delete inline */
-.mpi-landing__pl-title-row {
-  display: flex;
-  align-items: center;
 }
 
 /* ── Loading / empty states ────────────────────────────────────────────────── */

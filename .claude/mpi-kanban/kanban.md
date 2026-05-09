@@ -78,23 +78,25 @@
     Status bar displays generating before the actual generation process starts while the model is still loading.
     ```
 
-### Project page issues
+### Pop-up menu in the prompt box
 
-  - tags: [Bug, Feature]
+  - tags: [issue]
   - priority: high
   - workload: Normal
-  - defaultExpanded: true
+  - defaultExpanded: false
     ```md
-    - Change Project Page Projects Delete Behavior
-    To delete a project currently in the project page, there is a trash icon that appears when moving the project. We would like to change this to be able to delete the project on a right click instead. This should use our current context custom menu. 
-    -  The open folder buttons do not seem to be wired and are throwing an error on the projects page. 
-    
-    Error occurred in handler for 'dialog:openFolder': Error: No handler registered for 'dialog:openFolder'
-        at Session.<anonymous> (node:electron/js2c/browser_init:2:116575)
-        at Session.emit (node:events:508:28)
-    [2026-05-09T03:22:05.806Z] [ERROR] [projectUI] openFolder failed ÔÇö Error: Error invoking remote method 'dialog:openFolder': Error: No handler registered for 'dialog:openFolder'
-        at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9840)
-        at async _openFolder (http://127.0.0.1:3000/js/shell/projectUI.js:81:22)
+    The prompt box has an issue right now. When we open up the pop-up menu to change models and ratio, for example, and other tools opening the sub-pop-up menus in it and making a selection closes all the pop-up menus, the user might have not finished with the sub-pop-up menu, and it becomes frustrating.
+    For example, opening the pop-up menu and then opening the ratio menu and selecting from portrait to landscape closes all menus. It shouldn't.
+    ```
+
+### Toast too low.
+
+  - tags: [issue]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    The Toast currently appears at the bottom right of the screen, but when the prompt box is present, the Toast appears on top of the buttons of the prompt box. It would be nice for the Toast to appear above him, so we need to move it up a little bit.
     ```
 
 ## PLANNING
@@ -121,6 +123,19 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Project page issues
+
+  - tags: [Bug, Feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Fix 1 (delete UX): row trash button removed; right-click on a project row opens MpiContextMenu with "Delete project" → MpiOkCancel confirm flow.
+    Fix 2 (open folder IPC): `_openFolder` was invoking missing `dialog:openFolder`; switched to existing `choose-folder` handler in main.js.
+    Fix 3 (default root location): projects no longer created inside app install dir. New default root = `<Documents>/Cubric Studio/Projects` via `app.getPath('documents')` (cross-platform Win/Mac/Linux). Implemented as `getProjectsRoot()` getter in routes/shared.js; main.js passes `APP_DOCUMENTS` env to server. Default-root projects skip the "Also delete files" checkbox in confirm dialog (always purge, since the folder is app-managed). `isDefaultRoot` flag added to /list-projects response. .gitignore `projects/` removed.
+    Files: main.js, routes/shared.js, routes/projects.js, js/shell/projectUI.js, js/services/projectService.js, styles/shell/landing.css, .gitignore, docs/PROJECT.md.
+    ```
 
 ### History workspace multi-select prompt box bug
 

@@ -155,8 +155,11 @@ const _settingsUnsubs = [
 // ── CRUD (same signatures as projectManager.js) ────────────────────────────────
 
 export async function chooseFolder() {
-    const result = await post('/choose-folder', {});
-    return result.cancelled ? null : result.path;
+    // Browser dev mode has no native dialog — return null silently.
+    if (typeof window.require !== 'function') return null;
+    const { ipcRenderer } = window.require('electron');
+    const result = await ipcRenderer.invoke('choose-folder');
+    return result?.cancelled ? null : (result?.path ?? null);
 }
 
 export async function createProject(name, folderPath = null) {
@@ -266,8 +269,8 @@ export async function deleteProject(project, { deleteFiles = true } = {}) {
     }
 
     // Always remove parent dir from extras registry when present.
-    // Works for imported projects; created projects live under DEFAULT_PROJECTS_ROOT
-    // which is not stored in extras, so filtering is a safe no-op for them.
+    // Works for imported projects; default-root projects (Documents/Cubric Studio/Projects)
+    // are not stored in extras, so filtering is a safe no-op for them.
     const parentDir = folderPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/');
     const extras = Storage.getExtraProjectPaths().filter(p => p !== parentDir);
     Storage.setExtraProjectPaths(extras);

@@ -12,7 +12,6 @@ llama_models/
 .engine-config.json
 
 # User data
-projects/
 resources/
 comfy_workflows/scripts/
 

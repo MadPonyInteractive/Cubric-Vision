@@ -286,11 +286,14 @@ function createWindow() {
 // Start the Express server
 function startServer() {
   const userDataPath = app.getPath('userData');
+  const documentsPath = app.getPath('documents');
   console.log('[main] APP_USER_DATA set to:', userDataPath);
+  console.log('[main] APP_DOCUMENTS set to:', documentsPath);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
     env: {
       ...process.env,
       APP_USER_DATA: userDataPath,
+      APP_DOCUMENTS: documentsPath,
       MPI_RESOURCES_PATH: app.isPackaged ? process.resourcesPath : '',
     }
   });
