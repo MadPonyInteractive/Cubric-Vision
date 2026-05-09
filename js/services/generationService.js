@@ -48,19 +48,25 @@ function _dispatchNextCue() {
     _cueDispatchInFlight = true;
     _updateQueueDepth();
 
+    const finishCueDispatch = () => {
+        _cueDispatchInFlight = false;
+        _updateQueueDepth();
+        setTimeout(() => _dispatchNextCue(), 0);
+    };
+
     const wrappedCallbacks = {
         ...next.callbacks,
         onComplete: (data) => {
             try { next.callbacks.onComplete?.(data); }
-            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+            finally { finishCueDispatch(); }
         },
         onError: () => {
             try { next.callbacks.onError?.(); }
-            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+            finally { finishCueDispatch(); }
         },
         onCancel: () => {
             try { next.callbacks.onCancel?.(); }
-            finally { _cueDispatchInFlight = false; _dispatchNextCue(); }
+            finally { finishCueDispatch(); }
         },
     };
     startGeneration(next.config, wrappedCallbacks, next.opts);

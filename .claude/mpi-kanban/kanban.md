@@ -111,23 +111,6 @@
 
 ## IMPLEMENTING
 
-### Queue modes + run hotkeys
-
-  - tags: [PLAN]
-  - priority: high
-  - defaultExpanded: true
-  - steps:
-      - [x] Capture prompt_id + queue helpers
-      - [x] Add session generationMode
-      - [x] PromptBox dual-button layout
-      - [x] Queue-aware submission + cancel
-      - [x] Run/Stop hotkey bindings
-      - [ ] StatusBar queue depth indicator
-      - [ ] Sync rule files + docs
-    ```md
-    Plan file: docs/plans/2026-05-09-queue-modes-run-hotkeys.md
-    ```
-
 ### Setup video generation
 
   - tags: [Implementation completion]
@@ -139,6 +122,23 @@
     ```
 
 ## COMPLETED
+
+### Queue modes + run hotkeys
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: true
+  - steps:
+      - [x] Capture prompt_id + queue helpers
+      - [x] Add session generationMode
+      - [x] PromptBox dual-button layout
+      - [x] Queue-aware submission + cancel
+      - [x] Run/Stop hotkey bindings
+      - [x] StatusBar queue depth indicator
+      - [x] Sync rule files + docs
+    ```md
+    Plan file: docs/plans/2026-05-09-queue-modes-run-hotkeys.md
+    ```
 
 ### History delete leaves no selected entry, prompt box missing
 

@@ -76,14 +76,16 @@ Keydown fires handlers only if all guards pass (in order):
 ## statusBar.js (`js/shell/statusBar.js`)
 
 Bottom status bar. Shows ComfyUI engine status, active model, generation progress.
-- Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:cancelled`, `tool:idle`.
+- Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:cancelled`, `tool:idle`, and `state.generationQueueCount`.
 - On `tool:running`: prepares the progress bar without starting elapsed timing
 - On `tool:loading-model`: updates label to "Loading model..." (model VRAM load phase)
 - On `tool:sampling-start`: updates label back to "Generating..." and starts elapsed timing
 - On `tool:cancelled`: cancels progress bar instantly
 - On `tool:idle`: completes progress bar, fires success toast with "Generation finished"
+- On `state.generationQueueCount`: appends pending Cue depth to the active label, e.g. `GENERATING (2 queued)`. The progress bar remains per active job; it does not aggregate across the full queue.
 - On `ui:success` / `ui:warning` / `ui:info`: fires a standalone toast via `StatusBar.notify(message, variant)` — **this is the correct way to show toasts from anywhere in the app**
 - `progress.update(value)`: driven by KSampler step progress (called directly from blocks, not via events)
+- New active runs invalidate pending completion animation from the previous run, so a queued item cannot have its progress bar cleared by the prior item's delayed `complete()` timers.
 
 **Showing a toast (non-progress):**
 ```js
@@ -141,6 +143,9 @@ Centralized generation lifecycle manager. Wraps `runCommand()` with project pers
 **API:**
 - `startGeneration(config, callbacks, opts)` — Run a generation with automatic save, group creation/update, and progress tracking. Returns `{ cancel }`.
 
+- `enqueueGeneration(config, callbacks, opts)` - Cue-mode entry point. Adds to the in-app queue and dispatches one generation at a time.
+- `clearPendingQueue()` - Clears pending Cue jobs without interrupting the running job.
+
 **Callbacks:** `onPreview`, `onComplete`, `onCancel`, `onError`
 
-**Key pattern:** Blocks call `startGeneration()` and handle their own UI lifecycle (placeholders, spinner) via callbacks. The service handles the backend lifecycle (command execution, file save, project mutation).
+**Key pattern:** Blocks call `startGeneration()` directly for Single/Auto-loop and `enqueueGeneration()` for Cue mode. The service handles backend lifecycle, file save, project mutation, and Cue dispatch sequencing.

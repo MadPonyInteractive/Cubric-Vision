@@ -438,9 +438,11 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Listens to `tool:sampling-start` → calls `updateLabel('Generating...')` and starts elapsed timer
 - Listens to `tool:cancelled` → calls `cancel()`
 - Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast)
+- Listens to `state.generationQueueCount` → appends pending Cue depth to the active label only, e.g. `GENERATING (2 queued)`
 
 **Pattern notes:**
 - Blocks emit `tool:running` at generation start (in promptBox 'run' handler)
+- Cue mode progress is per active generation, not aggregate across the whole queue. `generationService` defers the next Cue dispatch until the current lifecycle has emitted `tool:idle`; StatusBar ignores stale completion timers if a new active run starts.
 - commandExecutor emits `tool:loading-model` / `tool:sampling-start` based on WS messages plus backend ComfyUI phase output for model-initialization-sensitive nodes
 - StatusBar owns all progress UI logic; blocks don't call StatusBar methods directly (except `progress.update()` for KSampler progress)
 - Generation timing saved to item sidecar starts at `tool:sampling-start`; backend receives `generationMs` field in save-generation POST body

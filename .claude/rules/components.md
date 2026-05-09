@@ -14,6 +14,7 @@ The Stage redesign (PORTING.md phases 0–10.2) is **merged to master**. All com
 - **Slide-over is the canonical right-edge panel** for Settings / Help / About (replaces the legacy full-screen modal pattern). Trigger via `Events.emit('slide-over:open', { title, component })`. Do NOT mount `MpiSettings/MpiHelp/MpiAbout` directly — they are content blueprints; `MpiSlideOver` owns chrome and mounts the content into `.mpi-slide-over__body`.
 - **`MpiOptionSelector` ratio variant** renders the ratio/quality controls inside its own portaled popup. Controls inserted as raw templates there, including embedded `MpiRadioGroup.template()` quality buttons, must be handled by `MpiOptionSelector`'s delegated popup listeners because child component `setup()` does not run for raw template HTML. New `variant: 'buttons'` is a generic button-list popup.
 - **`MpiContextMenu` items** support `kbd` (right-aligned shortcut hint) and `separator: true` (divider line).
+- **`MpiButton` imperative sync:** external callers must use `el.setActive(bool)` / `el.setDisabled(bool)` instead of raw class or attribute toggles. The click handler reads `props.active` / `props.disabled`, so DOM-only mutation leaves stale internal props.
 - **Mockups are spec, not source.** Visual ground truth lives at `docs/redesign/c-stage/*.html`. New surfaces translate the mockup into Cubric's existing patterns (BEM, `ComponentFactory`, `js/utils/dom.js`, `Events`, `Hotkeys`). Never copy markup verbatim. If a real-app constraint forces a deviation from spec, leave a `// REDESIGN-DEVIATION:` comment at the call site.
 
 ---
@@ -164,6 +165,7 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 * MUST use `Hotkeys.bind(id, fn)` — `id` is a stable string from `hotkeyRegistry.js`. Never use raw `window.addEventListener('keydown')`.
 * Store the returned unbind fn in `_unsubs`. Call `_unsubs.forEach(fn => fn())` in `el.destroy()`.
 * Hotkey typing suppression applies only to text-entry controls. Do not blur sliders or buttons just to keep shortcuts alive; `input[type="range"]` and other non-text controls are not treated as typing contexts by `hotkeyManager`.
+* Generation hotkeys are `generation.run` (`Ctrl+Enter`) and `generation.stop` (`Ctrl+Alt+Enter`). `MpiPromptBox` owns the bindings and keeps them mode-aware.
 * **The Help overlay (`MpiHelp.js`) is hand-authored static HTML, NOT generated from the registry.** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row inside `MpiHelp.js`'s `template`. Treat the two files as paired — a registry change without a help-page edit is incomplete work. Row format and grouping conventions: see `docs/shell.md` § "Help page — hand-authored HTML".
 
 ---

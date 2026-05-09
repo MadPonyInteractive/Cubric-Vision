@@ -54,8 +54,8 @@ const _state = {
     // ── Generation queue (session-only) ────────────────────────────────────────
     generationMode: 'single',        // 'single' | 'queue' | 'autoloop'. Session-only run mode
                                     // shared across models; never persisted to project.json.
-    generationQueueCount: 0,         // ComfyUI's native queue depth (running + pending). Polled
-                                     // by generationService after submit + on generation:complete.
+    generationQueueCount: 0,         // Local Cue queue depth (active dispatch + pending jobs).
+                                     // Maintained synchronously by generationService.
 
     // ── Last generation (session-only, not persisted) ──────────────────────────
     lastGeneration: null,            // { label: string, elapsed: number } — set by StatusBar on

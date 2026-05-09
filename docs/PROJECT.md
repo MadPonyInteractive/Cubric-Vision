@@ -53,6 +53,8 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 8. **All hotkeys go through `Hotkeys.bind/unbind`** — declare in `hotkeyRegistry.js`, bind by id. Never raw `window.addEventListener`.
 9. **Generation mode is session-only** — `state.generationMode` controls Single/Queue/Loop across models. Do not persist it to `project.json`.
 
+10. **Queue mode is in-app Cue dispatch** - `generationService` owns `_cueQueue` and submits one ComfyUI prompt at a time. Do not use ComfyUI native queue polling for Cue depth.
+
 ## How to Orient in an Unfamiliar File
 
 1. Read the relevant subsystem doc above.

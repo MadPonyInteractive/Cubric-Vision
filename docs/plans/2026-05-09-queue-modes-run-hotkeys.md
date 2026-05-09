@@ -5,6 +5,8 @@
 **Tag:** [PLAN]
 **Priority:** high
 
+> Current source of truth: see "Plan Drift (2026-05-09 session)" below. Early references to ComfyUI native queue behavior are historical context only; Cue mode now uses the in-app `_cueQueue`.
+
 ## Goal
 
 Add three execution modes to PromptBox generation — **Single** (current), **Queue**, **Auto-loop** — with a separate Stop button surface for the new modes and `Ctrl+Enter` / `Ctrl+Alt+Enter` hotkeys matching ComfyUI convention.
@@ -147,8 +149,8 @@ PromptBox hotkey path was using raw `runBtn.el.classList.add/remove('is-active')
 - [x] 3. PromptBox dual-button layout
 - [x] 4. Backend queue-aware submission + cancel — **superseded mid-session**: now own-queue dispatcher; behavior verified by user
 - [x] 5. Run/Stop hotkeys — `Ctrl+Enter` / `Ctrl+Alt+Enter` registered + bound in PromptBox; help page row added
-- [ ] 6. StatusBar queue depth (untouched this session)
-- [ ] 7. Documentation + rule files sync (in progress at session end — see end-session skill)
+- [x] 6. StatusBar queue depth — label now renders local Cue pending depth from `state.generationQueueCount`
+- [x] 7. Documentation + rule files sync — component rules, shell/comfy docs, project index, and project memory updated
 
 ### Notes for the next agent
 

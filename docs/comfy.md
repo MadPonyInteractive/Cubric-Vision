@@ -33,6 +33,8 @@ PromptBox generation mode is session-only (`state.generationMode`) and shared ac
 - `queue`: Cue enqueues into the in-app `_cueQueue` in `generationService.js`. Only ONE prompt is ever submitted to ComfyUI at a time (single-dispatch); Comfy never holds pending jobs. `state.generationQueueCount = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0)` updated synchronously on enqueue/dispatch — no Comfy polling. Only the first running placeholder is visible in Gallery. Stop interrupts the current job and the dispatcher pulls the next pending item. Clear empties `_cueQueue` (current job continues). API: `enqueueGeneration(config, callbacks, opts)` for Cue mode; `startGeneration` direct for Single + Auto-loop.
 - `autoloop`: Loop resubmits after natural completion while active. The next iteration reads the live PromptBox payload, so prompt/model/control changes made while a job runs apply to the next loop.
 
+Cue StatusBar progress is per active generation, not aggregate across the full queue. The dispatcher waits for the current lifecycle to unwind before starting the next queued item.
+
 ## Workflow Injection Pattern
 
 Nodes are matched by `_meta.title` (case-insensitive). Example:

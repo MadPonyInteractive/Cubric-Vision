@@ -24,7 +24,7 @@
 
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { Events } from '../events.js';
-import { gid } from '../utils/dom.js';
+import { gid, qs } from '../utils/dom.js';
 import { state } from '../state.js';
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
@@ -41,8 +41,11 @@ let _state        = 'idle';   // 'idle' | 'active'
 let _hoverTarget  = null;
 let _hoverObs     = null;
 let _currentLabel = '';
+let _queueDepth = 0;
 let _elapsedSec   = 0;
 let _timerInterval = null;
+let _completionToken = 0;
+const _listenUnsubs = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -55,6 +58,22 @@ function _fmtTime(sec) {
 function _setFill(pct) {
     if (!_fill) return;
     _fill.style.setProperty('--sb-progress', String(Math.min(100, Math.max(0, pct))));
+}
+
+function _getDisplayLabel(label = _currentLabel) {
+    const pending = Math.max(0, _queueDepth - 1);
+    if (_state !== 'active' || pending === 0) return label;
+    return `${label} (${pending} queued)`;
+}
+
+function _renderJobLabel() {
+    if (!_jobLabel || _state !== 'active') return;
+    _jobLabel.textContent = _getDisplayLabel();
+}
+
+function _beginActiveCycle() {
+    _completionToken++;
+    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade');
 }
 
 function _startTimer() {
@@ -79,16 +98,15 @@ function _setIdle() {
     _jobLabel.textContent = 'IDLE';
     _currentLabel = '';
 
-    const last = state.lastGeneration;
     _jobPct.textContent  = '';
-    _jobTime.textContent = last ? _fmtTime(last.elapsed) : '';
+    _jobTime.textContent = '';
 }
 
 function _setActive(label) {
     _state = 'active';
     _job.classList.add('shell-info__job--active');
     _currentLabel = label;
-    _jobLabel.textContent = label;
+    _renderJobLabel();
     _jobPct.textContent   = '';
     _jobTime.textContent  = '';  // blank until timer actually starts
 }
@@ -111,7 +129,7 @@ export const StatusBar = {
         _hoverText.className = 'shell-info__hover-text';
         _job.appendChild(_hoverText);
 
-        _jobDot = _job.querySelector('.shell-info__job-dot');
+        _jobDot = qs('.shell-info__job-dot', _job);
 
         // ── Hover delegation ───────────────────────────────────────────────
         // Uses pointermove for reliability — avoids mouseover/mouseout gaps
@@ -174,10 +192,11 @@ export const StatusBar = {
          * @param {string} label
          */
         prepare(label) {
+            _beginActiveCycle();
             if (_state === 'active') {
                 // Already active — just update label
                 _currentLabel = label.toUpperCase();
-                _jobLabel.textContent = _currentLabel;
+                _renderJobLabel();
                 return;
             }
             _setActive(label.toUpperCase());
@@ -221,7 +240,7 @@ export const StatusBar = {
         updateLabel(label) {
             if (_state !== 'active') return;
             _currentLabel = label.toUpperCase();
-            _jobLabel.textContent = _currentLabel;
+            _renderJobLabel();
         },
 
         /**
@@ -234,9 +253,10 @@ export const StatusBar = {
 
             const elapsed = _elapsedSec;
             const label   = _currentLabel;
+            const token   = _completionToken;
             _stopTimer();
 
-            // Persist to global state — available to meta-card consumers and status bar idle display
+            // Persist to global state for meta-card consumers and timing listeners.
             state.lastGeneration = { label, elapsed };
             Events.emit('generation:timing', { elapsed, label });
 
@@ -244,10 +264,12 @@ export const StatusBar = {
             _fill.classList.add('shell-info__fill--flash');
 
             setTimeout(() => {
+                if (token !== _completionToken) return;
                 _fill.classList.remove('shell-info__fill--flash');
                 _fill.classList.add('shell-info__fill--fade');
 
                 setTimeout(() => {
+                    if (token !== _completionToken) return;
                     _setFill(0);
                     _fill.classList.remove('shell-info__fill--fade');
                     _setIdle();
@@ -304,32 +326,37 @@ export const StatusBar = {
      * Subscribe to tool lifecycle events. Called once by shell.js after init().
      */
     listen() {
+        if (_listenUnsubs.length > 0) return;
         // tool:running — ComfyUI graph executing, pre-model phase. Spinner on, no timer.
-        Events.on('tool:running', ({ tool }) => {
+        _listenUnsubs.push(Events.on('tool:running', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.prepare('Starting');
-        });
+        }));
         // tool:loading-model — VRAM load phase. Update label only, timer still not running.
-        Events.on('tool:loading-model', ({ tool }) => {
+        _listenUnsubs.push(Events.on('tool:loading-model', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
-        });
+        }));
         // tool:sampling-start — KSampler firing. NOW start the timer + update label.
-        Events.on('tool:sampling-start', ({ tool }) => {
+        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool }) => {
             if (tool === 'groupHistory') {
                 StatusBar.progress.updateLabel('Generating');
                 StatusBar.progress.startTimer();
             }
-        });
-        Events.on('tool:progress', ({ tool, value }) => {
+        }));
+        _listenUnsubs.push(Events.on('tool:progress', ({ tool, value }) => {
             if (tool === 'groupHistory') StatusBar.progress.update(value);
-        });
-        Events.on('tool:cancelled', ({ tool }) => {
+        }));
+        _listenUnsubs.push(Events.on('tool:cancelled', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.cancel();
-        });
-        Events.on('tool:idle', ({ tool }) => {
+        }));
+        _listenUnsubs.push(Events.on('tool:idle', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished', false);
-        });
-        Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success'));
-        Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning'));
-        Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info'));
+        }));
+        _listenUnsubs.push(Events.onState('generationQueueCount', (count) => {
+            _queueDepth = Math.max(0, Number(count) || 0);
+            _renderJobLabel();
+        }));
+        _listenUnsubs.push(Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success')));
+        _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
+        _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
     },
 };
