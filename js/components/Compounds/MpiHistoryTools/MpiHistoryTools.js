@@ -5,9 +5,9 @@
  * Builds its own tool list from a `mode: 'image' | 'video'` prop and renders a
  * vertical radio strip of icon buttons. Exactly one mode may be active at a time.
  *
- * Grouped tool defs render an `MpiOptionSelector` (buttons variant) as the trigger;
- * picking a sub-option activates that sub-mode and persists the last-picked icon
- * onto the trigger for the session.
+ * Grouped tool defs render their sub-tools as a vertical stack of flat buttons
+ * directly under the group label — no popup, no portal. New tools added to a
+ * group automatically stack inline; the layout scales without changes here.
  *
  * Usage:
  *   const tools = MpiHistoryTools.mount(leftSlot, { mode: 'image' });
@@ -32,12 +32,11 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiOptionSelector } from '../MpiOptionSelector/MpiOptionSelector.js';
 import { qs } from '../../../utils/dom.js';
 
 // ── Built-in tool lists ─────────────────────────────────────────────────────
-// Groups: each group gets a label strip + separator. Flat tools render solo.
-// group[] items are the sub-tools opened via MpiOptionSelector popup.
+// Groups: each group gets a label strip + separator. group[] items render as
+// stacked flat buttons under the label; multi-item groups stack vertically.
 
 const IMAGE_TOOLS = [
     {
@@ -107,17 +106,11 @@ export const MpiHistoryTools = ComponentFactory.create({
         /** Flat button instances keyed by tool mode ({mode -> MpiButton instance}). */
         const _buttons = new Map();
 
-        /** Option-selector instances keyed by OUTER group mode (e.g. 'mask' -> MpiOptionSelector). */
-        const _selectors = new Map();
-
         /** Reverse lookup: subMode -> outer group mode (for grouped tool defs). */
         const _subToGroup = new Map();
 
         /** Per-def disabled state. Shape: { mode: { disabled: bool, reason?: string } } */
         const _disabledState = new Map();
-
-        /** Last-picked sub-tool per group trigger (persists icon across popup opens). */
-        const _lastSubIcon = new Map();
 
         /** Current tool defs indexed by mode for cheap lookup on remount. */
         const _defsByMode = new Map();
@@ -135,10 +128,10 @@ export const MpiHistoryTools = ComponentFactory.create({
         // ── Rendering helpers ────────────────────────────────────────────────
 
         /**
-         * Render a flat (non-grouped) tool button into its slot. Re-mounts to apply
-         * disabled-state + active-state changes (MpiButton has no setDisabled).
+         * Append a flat tool button into a slot. Each button gets its own wrapper
+         * container so MpiButton.mount's innerHTML overwrite doesn't clobber siblings.
          */
-        const _renderFlatButton = (def, slot) => {
+        const _appendFlatButton = (def, slot) => {
             const prev = _buttons.get(def.mode);
             if (prev) prev.destroy?.();
 
@@ -146,8 +139,11 @@ export const MpiHistoryTools = ComponentFactory.create({
             const isDisabled = !!dstate?.disabled;
             const tooltip = isDisabled && dstate?.reason ? dstate.reason : (def.info || def.mode);
 
-            slot.innerHTML = '';
-            const btn = MpiButton.mount(slot, {
+            const wrap = document.createElement('div');
+            wrap.className = 'mpi-history-tools__btn';
+            slot.appendChild(wrap);
+
+            const btn = MpiButton.mount(wrap, {
                 icon: def.icon,
                 size: 'sm',
                 variant: 'ghost',
@@ -167,62 +163,11 @@ export const MpiHistoryTools = ComponentFactory.create({
             _buttons.set(def.mode, btn);
         };
 
-        /**
-         * Render a grouped tool as an MpiOptionSelector (buttons variant). Sub-tool
-         * click activates that sub-mode and persists the sub-tool's icon on the trigger.
-         */
-        const _renderGroupedTool = (def, slot) => {
-            const prev = _selectors.get(def.mode);
-            if (prev) prev.destroy?.();
-
-            // Build button list from group def; carry disabled flags through.
-            const buttons = def.group.map(sub => {
-                const dstate = _disabledState.get(sub.mode);
-                return {
-                    icon: sub.icon,
-                    label: sub.label ?? sub.info ?? sub.mode,
-                    value: sub.mode,
-                    info: dstate?.disabled && dstate?.reason
-                        ? dstate.reason
-                        : (sub.info ?? sub.label ?? sub.mode),
-                };
-            });
-
-            // Trigger icon defaults to first sub-tool's icon (Photoshop-style —
-            // the trigger reflects which sub-tool will fire on repeat-click).
-            // Persist last-picked across re-renders via _lastSubIcon.
-            if (!_lastSubIcon.has(def.mode)) {
-                _lastSubIcon.set(def.mode, def.group[0]?.icon || def.icon);
-            }
-            const triggerIcon = _lastSubIcon.get(def.mode);
-            // Trigger is "active" when any sub-mode is currently selected.
-            const triggerActive = def.group.some(sub => sub.mode === _activeMode);
-
-            // Record sub -> outer mapping (idempotent).
-            def.group.forEach(sub => _subToGroup.set(sub.mode, def.mode));
-
+        /** Render every sub-tool of a group as a stacked flat button into one slot. */
+        const _renderGroupSlot = (def, slot) => {
             slot.innerHTML = '';
-            const sel = MpiOptionSelector.mount(slot, {
-                variant: 'buttons',
-                buttons,
-                triggerIcon,
-                triggerActive,
-                triggerSize: 'sm',
-                triggerVariant: 'ghost',
-                popupTitle: def.info || def.mode,
-                info: def.info || def.mode,
-            });
-
-            const off = sel.on('change', ({ value, def: subDef }) => {
-                // Check disabled state on the sub-mode before activating.
-                const dstate = _disabledState.get(value);
-                if (dstate?.disabled) return;
-                if (subDef?.icon) _lastSubIcon.set(def.mode, subDef.icon);
-                _activate(value);
-            });
-            _unsubs.push(off);
-
-            _selectors.set(def.mode, sel);
+            const subs = def.group || [def];
+            subs.forEach(sub => _appendFlatButton(sub, slot));
         };
 
         /** Mount a single tool def into a labelled group section. */
@@ -245,26 +190,17 @@ export const MpiHistoryTools = ComponentFactory.create({
             slot.dataset.mode = def.mode;
             el.appendChild(slot);
 
-            // Single-item group renders as flat button (no popup overhead)
-            if (def.group?.length === 1) {
-                _renderFlatButton(def.group[0], slot);
-            } else if (def.group) {
-                _renderGroupedTool(def, slot);
-            } else {
-                _renderFlatButton(def, slot);
-            }
+            _renderGroupSlot(def, slot);
         };
 
-        /** Re-render only the tool whose disabled state changed. */
+        /** Re-render only the group containing the tool whose disabled state changed. */
         const _remountTool = (toolMode) => {
             const outer = _subToGroup.get(toolMode) || toolMode;
             const def = _defsByMode.get(outer);
             if (!def) return;
             const slot = qs(`.mpi-history-tools__slot[data-mode="${outer}"]`, el);
             if (!slot) return;
-            if (def.group?.length === 1) _renderFlatButton(def.group[0], slot);
-            else if (def.group) _renderGroupedTool(def, slot);
-            else _renderFlatButton(def, slot);
+            _renderGroupSlot(def, slot);
         };
 
         // ── Activation ───────────────────────────────────────────────────────
@@ -278,26 +214,11 @@ export const MpiHistoryTools = ComponentFactory.create({
             const prev = _activeMode;
             _activeMode = newMode;
 
-            // Clear previous flat-button active visual.
             if (prev && _buttons.has(prev)) {
                 _buttons.get(prev)?.el.setActive?.(false);
             }
-            // Clear previous grouped-trigger active visual.
-            const prevOuter = prev ? _subToGroup.get(prev) : null;
-            if (prevOuter && _selectors.has(prevOuter)) {
-                _selectors.get(prevOuter)?.el.setTriggerActive?.(false);
-            }
-
-            // Set new active visual.
             if (_buttons.has(newMode)) {
                 _buttons.get(newMode)?.el.setActive?.(true);
-            }
-            const newOuter = _subToGroup.get(newMode);
-            if (newOuter && _selectors.has(newOuter)) {
-                const sel = _selectors.get(newOuter);
-                sel?.el.setTriggerActive?.(true);
-                const subDef = _defsByMode.get(newMode);
-                if (subDef?.icon) sel?.el.setTriggerIcon?.(subDef.icon);
             }
 
             emit('activate', { mode: newMode });
@@ -337,12 +258,9 @@ export const MpiHistoryTools = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
             _buttons.forEach(btn => btn?.destroy?.());
-            _selectors.forEach(sel => sel?.destroy?.());
             _buttons.clear();
-            _selectors.clear();
             _subToGroup.clear();
             _disabledState.clear();
-            _lastSubIcon.clear();
         };
     },
 });

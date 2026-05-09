@@ -20,6 +20,14 @@
     width: 100%;
 }
 
+.mpi-history-tools__slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+}
+
 .mpi-history-tools__sep {
     height: 1px;
     background: var(--line);

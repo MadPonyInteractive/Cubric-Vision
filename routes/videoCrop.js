@@ -122,6 +122,7 @@ router.post('/api/video/crop', async (req, res) => {
             type:       'video',
             filePath:   filePathUrl,
             operation:  'crop',
+            displayName: finalName.replace(/\.[^.]+$/, ''),
             prompt:     '',
             negativePrompt: '',
             seed:       -1,
