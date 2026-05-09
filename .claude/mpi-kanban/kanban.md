@@ -1,5 +1,15 @@
 ## BACKLOG
 
+### Setup video generation
+
+  - tags: [Implementation completion]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+    ```md
+    Video generation hasn't been tested. The outputs from Coffee Y are different from the image outputs. It needs to be tested. Some workflows output several stages that need to be handled. This should be a cooperative session with the dev.
+    ```
+
 ### Patreon landing page images
 
   - tags: [Idea]
@@ -60,17 +70,6 @@
     - Separate git repo — commit independently.
     ```
 
-### When applying a crop, the crop box goes away.
-
-  - tags: [Bug]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    - Let's make sure that the crop box stays until another tool is selected or a selection is made. 
-    - Let's use this kanban entry also to update the looks of the crop box, as the handles still do not match the mock-up design. You may ask the user for a visual of how it should look.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -104,9 +103,9 @@
   - defaultExpanded: false
     ```md
     Landing rows now render `<video preload=metadata muted loop playsInline>` when the most-recent Media entry is `.mp4`/`.webm`. First frame shows static; row mouseenter plays, mouseleave pauses + rewinds. Mirrors `MpiGalleryGrid._swapThumbToVideo` pattern — no new system.
-
+    
     Server `/list-projects` returns sibling field `recentThumbnailType` ('image'|'video') derived from extension; existing `recentThumbnail` URL kept for back-compat.
-
+    
     Files: routes/projects.js, js/shell/projectUI.js, styles/shell/landing.css.
     ```
 
@@ -141,6 +140,17 @@
     ```md
     Toast base positioning now uses CSS variables and raises the stack only when a visible PromptBox is mounted, keeping normal toast placement unchanged elsewhere.
     File: js/components/Primitives/MpiToast/MpiToast.css.
+    ```
+
+### When applying a crop, the crop box goes away.
+
+  - tags: [Bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    - Let's make sure that the crop box stays until another tool is selected or a selection is made. 
+    - Let's use this kanban entry also to update the looks of the crop box, as the handles still do not match the mock-up design. You may ask the user for a visual of how it should look.
     ```
 
 ### Status bar not updating correctly
