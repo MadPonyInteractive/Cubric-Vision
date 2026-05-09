@@ -1,14 +1,5 @@
 ## BACKLOG
 
-### Full screen OS bar not hidden
-
-  - tags: [bug]
-  - priority: medium
-  - defaultExpanded: true
-    ```md
-    - Full screen does not remove the custom top OS bar.
-    ```
-
 ### Patreon landing page images
 
   - tags: [Idea]
@@ -124,6 +115,16 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Full screen OS bar not hidden
+
+  - tags: [bug]
+  - priority: medium
+  - defaultExpanded: true
+    ```md
+    F11/native fullscreen now hides the custom titlebar and collapses the shell's titlebar offset via `body.window-fullscreen`.
+    Files: main.js, js/shell/windowControls.js, styles/shell/titlebar.css, tests/desktop/fullscreen-titlebar.spec.js.
+    ```
 
 ### Project page issues
 

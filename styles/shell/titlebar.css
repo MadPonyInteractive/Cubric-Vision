@@ -15,6 +15,14 @@
   box-shadow: 0 1px 0 var(--line-soft);
 }
 
+body.window-fullscreen {
+  --titlebar-h: 0px;
+}
+
+body.window-fullscreen .titlebar {
+  display: none;
+}
+
 .titlebar-drag-region {
   flex: 1;
   height: 100%;

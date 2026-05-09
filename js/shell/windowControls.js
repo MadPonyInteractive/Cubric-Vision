@@ -3,7 +3,7 @@
  * Fail-safe for browser testing.
  */
 
-import { gid } from '../utils/dom.js';
+import { gid, on } from '../utils/dom.js';
 
 let ipcRenderer = null;
 
@@ -30,38 +30,51 @@ export function bindWindowControls() {
   const fsEnterIcon  = gid('fullscreen-enter-icon');
   const fsExitIcon   = gid('fullscreen-exit-icon');
 
-  const isBrowser = !ipcRenderer;
+  const setFullscreenState = (isFullScreen) => {
+    document.body.classList.toggle('window-fullscreen', Boolean(isFullScreen));
 
-  if (btnMin) btnMin.addEventListener('click', () => {
+    if (fsEnterIcon && fsExitIcon && btnFS) {
+      fsEnterIcon.classList.toggle('hide', isFullScreen);
+      fsExitIcon.classList.toggle('hide', !isFullScreen);
+      btnFS.title = isFullScreen ? 'Exit Full Screen' : 'Full Screen';
+    }
+  };
+
+  if (btnMin) on(btnMin, 'click', () => {
     if (ipcRenderer) ipcRenderer.send('window-minimize');
   });
 
-  if (btnFS) btnFS.addEventListener('click', () => {
+  if (btnFS) on(btnFS, 'click', () => {
     if (ipcRenderer) ipcRenderer.send('window-fullscreen');
   });
 
-  if (btnMax) btnMax.addEventListener('click', () => {
+  if (btnMax) on(btnMax, 'click', () => {
     if (ipcRenderer) ipcRenderer.send('window-maximize');
   });
 
-  if (btnClose) btnClose.addEventListener('click', () => {
+  if (btnClose) on(btnClose, 'click', () => {
     if (ipcRenderer) ipcRenderer.send('window-close');
   });
 
   // Listen for Electron State changes
   if (ipcRenderer) {
     ipcRenderer.on('window-fullscreen-change', (event, isFullScreen) => {
-      if (fsEnterIcon && fsExitIcon && btnFS) {
-        fsEnterIcon.classList.toggle('hide', isFullScreen);
-        fsExitIcon.classList.toggle('hide', !isFullScreen);
-        btnFS.title = isFullScreen ? 'Exit Full Screen' : 'Full Screen';
-      }
+      setFullscreenState(isFullScreen);
     });
 
     ipcRenderer.on('window-maximize-change', (event, isMaximized) => {
       if (maxIcon && restoreIcon) {
         maxIcon.classList.toggle('hide', isMaximized);
         restoreIcon.classList.toggle('hide', !isMaximized);
+      }
+    });
+
+    ipcRenderer.invoke('window-state').then((state) => {
+      setFullscreenState(state?.isFullScreen);
+
+      if (maxIcon && restoreIcon) {
+        maxIcon.classList.toggle('hide', state?.isMaximized);
+        restoreIcon.classList.toggle('hide', !state?.isMaximized);
       }
     });
   }

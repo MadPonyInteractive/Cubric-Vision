@@ -37,7 +37,8 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 - `Hotkeys.bind(id, fn) → unbindFn`: Bind a handler to a registry entry by stable id (e.g. `'mask.brush.toolbar'`). Returns an unbind function — store and call in `destroy()`.
 - `Hotkeys.unbind(id, fn)`: Remove a specific handler.
 - `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array (used by MpiHelp).
-- F11 toggles fullscreen. Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
+- F11 toggles native Electron fullscreen. On `enter-full-screen` / `leave-full-screen`, `windowControls.js` syncs `body.window-fullscreen`; CSS hides the custom titlebar and collapses `--titlebar-h` so the app fills the viewport.
+- Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
 - Focus gating treats only text-entry controls as typing (`TEXTAREA`, contenteditable, and text-like `INPUT` types such as `text`, `number`, `search`, `email`, `password`, date/time types). Non-text controls such as `input[type="range"]`, checkboxes, radios, and buttons may keep focus without blocking global hotkeys.
 
 ### Adding a hotkey
@@ -94,7 +95,7 @@ Never call `MpiToast.mount()` directly from components — emit the event instea
 
 ## windowControls.js (`js/shell/windowControls.js`)
 
-Electron window controls — minimize, maximize, close. Uses Electron `remote` API.
+Electron window controls — minimize, maximize, close, fullscreen. Fullscreen can be triggered by the custom titlebar button or by F11 through `Hotkeys`; both route to the `window-fullscreen` IPC channel. The renderer listens for `window-fullscreen-change` and asks `window-state` on startup so restored fullscreen windows also hide the custom titlebar immediately.
 
 ## projectUI.js (`js/shell/projectUI.js`)
 

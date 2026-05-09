@@ -376,6 +376,11 @@ app.on('ready', () => {
     }
   });
 
+  ipcMain.handle('window-state', () => ({
+    isFullScreen: Boolean(mainWindow?.isFullScreen()),
+    isMaximized: Boolean(mainWindow?.isMaximized())
+  }));
+
   // System notification — fires only when window is minimized.
   // Renderer sends unconditionally; main gates on isMinimized().
   ipcMain.on('notify-generation-complete', (event, payload = {}) => {
