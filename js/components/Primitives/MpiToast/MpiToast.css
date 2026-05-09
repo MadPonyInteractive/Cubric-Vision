@@ -4,10 +4,11 @@
 
 .mpi-toast {
     position: fixed;
+    --toast-bottom: var(--s-4);
     --toast-stack-offset: 70px;
     --toast-stack-index: 0;
-    bottom: calc(20px + var(--toast-stack-index) * var(--toast-stack-offset));
-    right: 20px;
+    bottom: calc(var(--toast-bottom) + var(--toast-stack-index) * var(--toast-stack-offset));
+    right: var(--s-4);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -28,6 +29,10 @@
     opacity: 0;
     transform: translateY(20px) scale(0.9);
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease), bottom var(--t-base) var(--ease);
+}
+
+body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi-toast {
+    --toast-bottom: calc(var(--s-8) + var(--s-2));
 }
 
 .mpi-toast--open {

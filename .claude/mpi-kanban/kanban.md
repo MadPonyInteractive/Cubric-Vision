@@ -60,16 +60,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Toast too low.
-
-  - tags: [issue]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    The Toast currently appears at the bottom right of the screen, but when the prompt box is present, the Toast appears on top of the buttons of the prompt box. It would be nice for the Toast to appear above him, so we need to move it up a little bit.
-    ```
-
 ### When applying a crop, the crop box goes away.
 
   - tags: [Bug]
@@ -105,6 +95,17 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Toast too low.
+
+  - tags: [issue]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: true
+    ```md
+    Toast base positioning now uses CSS variables and raises the stack only when a visible PromptBox is mounted, keeping normal toast placement unchanged elsewhere.
+    File: js/components/Primitives/MpiToast/MpiToast.css.
+    ```
 
 ### Status bar not updating correctly
 
