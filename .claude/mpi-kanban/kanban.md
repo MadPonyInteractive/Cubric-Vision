@@ -108,6 +108,17 @@
 
 ## COMPLETED
 
+### Queue Continue jobs on multi-stage previews
+
+  - tags: [feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Multi-stage video ops (`t2v_ms`, `i2v_ms`) now expose `generationMode` so previews can be Cued. Continue button on a preview enqueues the final-pass job into the in-app Cue queue (no more "wait" toast). Card shows "Queued…" badge with a Cancel button while waiting; flips to "Generating final…" on its turn. Cue label `x{n}` reflects all queued jobs (regular cue + queued Continues). Cue Clear reverts every queued Continue card via fired `onCancel`. Continue auto-syncs PB to the preview's model + op when mismatched and forces `state.generationMode='queue'`. Improved toasts when source model is unknown/uninstalled.
+    Files: js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js, js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.{js,css}, js/data/commandRegistry.js, js/services/{activeGenerations.js,generationService.js}, .claude/rules/{component-state.md,component-events.md}.
+    ```
+
 ### Move toast to the left.
 
   - tags: [task]
