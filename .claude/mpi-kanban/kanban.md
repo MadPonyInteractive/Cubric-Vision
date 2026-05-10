@@ -73,16 +73,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Move toast to the left.
-
-  - tags: [task]
-  - priority: medium
-  - workload: Easy
-  - defaultExpanded: false
-    ```md
-    After several tests, I realized that the best placement for the toast not to interfere with anything is the bottom left of the screen. Keep in mind that toast already has the correct distance from the bottom and an implementation for when the prompt box is visible.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -117,6 +107,17 @@
     ```
 
 ## COMPLETED
+
+### Move toast to the left.
+
+  - tags: [task]
+  - priority: medium
+  - workload: Easy
+  - defaultExpanded: false
+    ```md
+    Toast anchored bottom-left. CSS swap `right: var(--s-4)` → `left: var(--s-4)` in MpiToast.css. Progress bar border-radius flipped to left-rounded so the visible anchor edge stays rounded as the bar shrinks. PromptBox-visible raise + stack offset variables untouched.
+    File: js/components/Primitives/MpiToast/MpiToast.css.
+    ```
 
 ### WAN dual-model + 12 LoRAs
 

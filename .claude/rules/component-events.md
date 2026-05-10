@@ -395,6 +395,7 @@ NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          Queue cancel targets the first running gallery entry; Single/Loop cancel targets the last active entry. Clear calls `clearPendingQueue()`.
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
+         Continue (`preview:continue`) drives PromptBox via `_pb.el.setGenerating(true)` so Run becomes Stop; existing `pb.on('cancel')` handler cancels the live `activeGenerations` entry (covers Continue runs without a separate cancel path). Cleared via `setGenerating(false)` on `gallery:item-updated`, `onError`, or `onCancel`.
 
 ---
 

@@ -82,6 +82,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const _stabilizedIds = new Set();
 
+        // Group ids whose preview card is mid-Continue. Survives setGroups
+        // rebuilds — re-applied to fresh cards inside _rerenderJustified so
+        // the spinner doesn't flash off when the grid is rebuilt.
+        const _continuingIds = new Set();
+
         const grid = qs('.mpi-gallery-grid__grid', el);
         const sliderWrap = qs('.mpi-gallery-grid__slider-wrap', el);
 
@@ -225,6 +230,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
                 <div class="mpi-group-card__preview-badge">PREVIEW</div>
+                <div class="mpi-group-card__continue-spinner"></div>
                 <div class="mpi-group-card__preview-actions">
                     <div class="mpi-group-card__continue-wrap"></div>
                     <div class="mpi-group-card__discard-wrap"></div>
@@ -625,6 +631,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 });
 
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
+                _continuingIds.forEach(id => _cardMap.get(id)?.card?.el?.setContinuing?.(true));
             }, 16);
         }
 
@@ -719,6 +726,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.getCardByGroupId = (groupId) => {
             const entry = _cardMap.get(groupId);
             return entry?.card?.el || null;
+        };
+
+        el.markContinuing = (groupId, val) => {
+            if (val) _continuingIds.add(groupId);
+            else     _continuingIds.delete(groupId);
+            _cardMap.get(groupId)?.card?.el?.setContinuing?.(!!val);
         };
 
         el.refreshGroup = (newGroup) => {

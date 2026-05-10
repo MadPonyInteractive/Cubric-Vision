@@ -8,7 +8,7 @@
     --toast-stack-offset: 70px;
     --toast-stack-index: 0;
     bottom: calc(var(--toast-bottom) + var(--toast-stack-index) * var(--toast-stack-offset));
-    right: var(--s-4);
+    left: var(--s-4);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -87,7 +87,7 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
     height: 3px;
     width: 100%;
     background: var(--accent-heat);
-    border-radius: 0 var(--r-pill) var(--r-pill) 0;
+    border-radius: var(--r-pill) 0 0 var(--r-pill);
 }
 
 .mpi-toast--info .mpi-toast__progress {

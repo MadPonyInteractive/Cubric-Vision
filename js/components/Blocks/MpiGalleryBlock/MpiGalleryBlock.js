@@ -202,14 +202,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _previewDiscardDialog.el.show();
         });
 
-        // Track which groups have a Continue run in flight. Used to re-apply
-        // the continuing state after grid rebuilds (setGroups recreates cards).
+        // Track which groups have a Continue run in flight. The grid now owns
+        // the per-card continuing class — setGroups rebuilds re-apply it via
+        // grid.el.markContinuing's internal Set, so we only mirror it here for
+        // the cancel/error/complete callbacks.
         const _continuingGroupIds = new Set();
-        const _reapplyContinuing = () => {
-            _continuingGroupIds.forEach(id => {
-                grid.el.getCardByGroupId(id)?.setContinuing?.(true);
-            });
-        };
 
         grid.on('preview:continue', ({ group: g, item }) => {
             if (!item?.frozenParams) {
@@ -251,11 +248,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
             };
 
             _continuingGroupIds.add(g.id);
-            grid.el.getCardByGroupId(g.id)?.setContinuing?.(true);
+            grid.el.markContinuing(g.id, true);
+            // Drive PromptBox into "generating" so its Run becomes Stop and the
+            // user can cancel the Continue run. Cancel routing falls through
+            // the existing pb.on('cancel') handler which cancels the latest
+            // gallery-scope active generation.
+            _pb?.el?.setGenerating?.(true);
 
             const _clearContinuing = () => {
                 _continuingGroupIds.delete(g.id);
-                grid.el.getCardByGroupId(g.id)?.setContinuing?.(false);
+                grid.el.markContinuing(g.id, false);
+                _pb?.el?.setGenerating?.(false);
             };
 
             const callbacks = {
@@ -264,16 +267,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 onComplete: () => { /* cleared when gallery:item-updated fires */ },
             };
             startGeneration(config, callbacks, { scope: 'gallery' });
-            // setGroups in the 'generation:started' handler rebuilds cards;
-            // re-apply continuing state right after.
-            _reapplyContinuing();
         });
 
         _unsubs.push(Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
             if (!updatedGroup) return;
             grid.el.refreshGroup(updatedGroup);
-            _continuingGroupIds.delete(groupId);
-            grid.el.getCardByGroupId(groupId)?.setContinuing?.(false);
+            if (_continuingGroupIds.has(groupId)) {
+                _continuingGroupIds.delete(groupId);
+                grid.el.markContinuing(groupId, false);
+                _pb?.el?.setGenerating?.(false);
+            }
         }));
 
         // ── Media missing (garbage collection) ───────────────────────────────────
@@ -477,7 +480,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.add(id);
             const currentGroups = state.currentProject?.itemGroups || [];
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
-            _reapplyContinuing();
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
@@ -499,7 +501,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const t of allTempIds) grid.el.removeCard(t);
             const currentGroups = state.currentProject?.itemGroups || [];
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
-            _reapplyContinuing();
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {

@@ -531,8 +531,39 @@
     outline-offset: -2px;
 }
 
-/* Continuing state: hide action buttons, show progress strip. */
+/* Continuing state: hide action buttons, show spinner + progress strip. */
 .mpi-group-card--continuing .mpi-group-card__preview-actions {
+    display: none;
+}
+
+.mpi-group-card__continue-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 3px solid color-mix(in oklch, var(--ink-1) 15%, transparent);
+    border-top-color: var(--accent-heat);
+    border-radius: 50%;
+    animation: mpi-card-spin 0.75s linear infinite;
+    display: none;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.mpi-group-card--continuing .mpi-group-card__continue-spinner {
+    display: block;
+}
+
+.mpi-group-card--continuing .mpi-group-card__media::before {
+    inset: 0;
+    height: auto;
+    background: oklch(0 0 0 / 0.45);
+    opacity: 1;
+}
+
+.mpi-group-card--continuing .mpi-group-card__media::after {
     display: none;
 }
 
