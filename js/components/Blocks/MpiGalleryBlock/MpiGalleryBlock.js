@@ -28,6 +28,7 @@ import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
+import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -162,6 +163,118 @@ export const MpiGalleryBlock = ComponentFactory.create({
         grid.on('reuse', ({ positive, negative }) => {
             Events.emit('workspace:inject-prompts', { positive, negative });
         });
+
+        // ── Preview-stage Continue / Discard ────────────────────────────────────
+        const _previewDiscardDialog = MpiOkCancel.mount(document.createElement('div'), {
+            title:       'Discard preview',
+            text:        'Discard this preview? The preview clip and its sidecar will be permanently deleted.',
+            okLabel:     'Discard',
+            cancelLabel: 'Cancel',
+        });
+        let _pendingDiscard = null;
+
+        _previewDiscardDialog.on('ok', async () => {
+            const project = state.currentProject;
+            const target = _pendingDiscard;
+            _pendingDiscard = null;
+            if (!project || !target) return;
+
+            const { group: g, item } = target;
+            const fp = item?.filePath;
+            if (fp) {
+                const filename = extractFilenameFromPath(fp);
+                if (filename) {
+                    fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`, {
+                        method: 'DELETE',
+                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'preview discard: delete file failed:', err));
+                    fetch(`/project-media/${project.id}/${encodeURIComponent(`${item.id}.json`)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
+                        method: 'DELETE',
+                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'preview discard: delete sidecar failed:', err));
+                }
+            }
+            removeGroup(g.id);
+            grid.el.removeCard(g.id);
+            Events.emit('gallery:item-removed', { groupId: g.id, itemId: item?.id });
+        });
+
+        grid.on('preview:discard', ({ group: g, item }) => {
+            _pendingDiscard = { group: g, item };
+            _previewDiscardDialog.el.show();
+        });
+
+        // Track which groups have a Continue run in flight. Used to re-apply
+        // the continuing state after grid rebuilds (setGroups recreates cards).
+        const _continuingGroupIds = new Set();
+        const _reapplyContinuing = () => {
+            _continuingGroupIds.forEach(id => {
+                grid.el.getCardByGroupId(id)?.setContinuing?.(true);
+            });
+        };
+
+        grid.on('preview:continue', ({ group: g, item }) => {
+            if (!item?.frozenParams) {
+                clientLogger.warn('MpiGalleryBlock', 'preview:continue without frozenParams', item);
+                return;
+            }
+            const model = MODELS.find(m => m.id === item.modelId);
+            if (!model || model.installed === false) {
+                StatusBar.notify('Model for this preview is no longer installed.', 'warning');
+                return;
+            }
+
+            // Multi-stage ops do not expose generationMode — Continue always
+            // runs as a single-shot job. If anything is currently generating,
+            // reject with a warning.
+            const anyRunning = activeGenerations.list().some(e => e.status === 'running');
+            if (anyRunning) {
+                StatusBar.notify('Generation in progress — stop or wait before continuing the preview.', 'warning');
+                return;
+            }
+
+            const frozen = item.frozenParams || {};
+            const dims = frozen.dims || {};
+            const injectionParams = {};
+            if (dims.w) injectionParams.Width  = dims.w;
+            if (dims.h) injectionParams.Height = dims.h;
+            if (frozen.frames != null) injectionParams.Frames = frozen.frames;
+            if (frozen.seed != null) injectionParams.Seed = frozen.seed;
+
+            const config = {
+                operation:     item.operation,
+                model,
+                positive:      frozen.prompt   || '',
+                negative:      frozen.negative || '',
+                mediaItems:    [],
+                injectionParams,
+                previewOnly:   false,
+                replaceItemId: item.id,
+            };
+
+            _continuingGroupIds.add(g.id);
+            grid.el.getCardByGroupId(g.id)?.setContinuing?.(true);
+
+            const _clearContinuing = () => {
+                _continuingGroupIds.delete(g.id);
+                grid.el.getCardByGroupId(g.id)?.setContinuing?.(false);
+            };
+
+            const callbacks = {
+                onCancel: _clearContinuing,
+                onError:  _clearContinuing,
+                onComplete: () => { /* cleared when gallery:item-updated fires */ },
+            };
+            startGeneration(config, callbacks, { scope: 'gallery' });
+            // setGroups in the 'generation:started' handler rebuilds cards;
+            // re-apply continuing state right after.
+            _reapplyContinuing();
+        });
+
+        _unsubs.push(Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
+            if (!updatedGroup) return;
+            grid.el.refreshGroup(updatedGroup);
+            _continuingGroupIds.delete(groupId);
+            grid.el.getCardByGroupId(groupId)?.setContinuing?.(false);
+        }));
 
         // ── Media missing (garbage collection) ───────────────────────────────────
         grid.on('media-missing', ({ group: g, itemId }) => {
@@ -364,6 +477,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.add(id);
             const currentGroups = state.currentProject?.itemGroups || [];
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            _reapplyContinuing();
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
@@ -385,6 +499,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const t of allTempIds) grid.el.removeCard(t);
             const currentGroups = state.currentProject?.itemGroups || [];
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            _reapplyContinuing();
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {

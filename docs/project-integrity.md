@@ -103,6 +103,11 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
 
+**Multi-stage video preview-gate fields** (present only when `type === 'video'` AND the item was produced by a multi-stage op like `t2v_ms` / `i2v_ms`):
+- **`stage`** — `'preview'` | `'final'` | absent. Items saved by a `previewOnly: true` run are tagged `'preview'`; the resulting gallery card renders the `--preview` variant (badge + Continue/Discard, click-gated so it cannot navigate to history). Continue re-runs the workflow with `replaceItemId` set, which overwrites the same sidecar with `stage: 'final'`, drops `frozenParams` / `loraSnapshot`, and replaces the media file on disk. Legacy and non-multi-stage items intentionally have NO `stage` key (in-memory MediaItem mirrors this — see `feedback_sidecar_inmemory_parity.md`).
+- **`frozenParams`** — `{ seed, prompt, negative, dims: { w, h }, frames | null }`. Snapshot of the determinism-critical inputs taken at preview time. Continue replays these into the final run so the final video matches the preview's intent. Removed when stage transitions to `'final'`.
+- **`loraSnapshot`** — `[{ name, strengthModel, strengthClip }, ...]` from `modelSettings[modelId].loras` at preview time. Informational only (NOT used by Continue — Continue uses the user's current LoRA selection). Removed alongside `frozenParams` on finalize.
+
 **Video-specific sidecar fields** (present when `type === 'video'`):
 - **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` for upload/crop/generated video saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
 - **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
@@ -202,6 +207,10 @@ All removals are **silent** — no error shown to the user. The project is simpl
   - Returns success
 4. Client removes the UUID from the history array in state.
 5. Next save writes the updated history to `project.json`.
+
+### In-place replacement (multi-stage preview → final)
+
+Multi-stage video ops Continue path POSTs `/project/save-generation` with `replaceItemId: <uuid>`. The route forces the new sidecar id to that uuid (overwriting `<uuid>.json`), stamps `stage: 'final'`, drops `frozenParams` / `loraSnapshot`, then deletes the previous media file (and `<uuid>.thumb.jpg` if any) once the new file is committed. The history slot in `project.json` is unchanged because the uuid is reused. Listeners refresh via the `gallery:item-updated` event emitted by `generationService`.
 
 ### Orphaned sidecars (garbage collection)
 

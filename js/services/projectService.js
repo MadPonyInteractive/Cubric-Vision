@@ -362,11 +362,11 @@ export async function persistGroups() {
  * Save a generation result to the project folder.
  * @returns {{ success: boolean, filePath?: string, filename?: string }}
  */
-export async function saveGeneration({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot }) {
+export async function saveGeneration({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId }) {
     const res = await fetch('/project/save-generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot }),
+        body: JSON.stringify({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId }),
     });
     if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
     return res.json();

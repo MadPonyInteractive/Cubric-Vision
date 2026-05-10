@@ -175,6 +175,23 @@ export function promoteHistoryEntry(group, index) {
 }
 
 /**
+ * Replaces a history entry matched by item id. Returns a new group with the
+ * matching slot swapped for `nextItem`. selectedIndex is preserved. If no
+ * entry matches the id, the group is returned unchanged.
+ * @param {ItemGroup} group
+ * @param {MediaItem} nextItem
+ * @returns {ItemGroup}
+ */
+export function replaceHistoryItemById(group, nextItem) {
+    if (!group?.history?.length || !nextItem?.id) return group;
+    const idx = group.history.findIndex(h => h.id === nextItem.id);
+    if (idx === -1) return group;
+    const history = group.history.slice();
+    history[idx] = nextItem;
+    return { ...group, history };
+}
+
+/**
  * Removes a history entry by index.
  * Adjusts selectedIndex if needed.
  * Returns a new group object — does not mutate the original.

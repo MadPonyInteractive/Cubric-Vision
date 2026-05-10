@@ -16,6 +16,7 @@ The Stage redesign (PORTING.md phases 0–10.2) is **merged to master**. All com
 - **`MpiContextMenu` items** support `kbd` (right-aligned shortcut hint) and `separator: true` (divider line).
 - **`MpiButton` imperative sync:** external callers must use `el.setActive(bool)` / `el.setDisabled(bool)` instead of raw class or attribute toggles. The click handler reads `props.active` / `props.disabled`, so DOM-only mutation leaves stale internal props.
 - **Mockups are spec, not source.** Visual ground truth lives at `docs/redesign/c-stage/*.html`. New surfaces translate the mockup into Cubric's existing patterns (BEM, `ComponentFactory`, `js/utils/dom.js`, `Events`, `Hotkeys`). Never copy markup verbatim. If a real-app constraint forces a deviation from spec, leave a `// REDESIGN-DEVIATION:` comment at the call site.
+- **Gallery card preview-stage variant:** `MpiGalleryGrid` cards opt into `.mpi-group-card--preview` when `selected.stage === 'preview'`. Preview cards expose a corner `PREVIEW` badge (top-right, `--accent-heat`) plus a Continue / Discard action row at the bottom; the Click handler is gated so card-body clicks never emit `open-group` while in preview state. While a Continue run is in flight, the card adds `--continuing`, hides the action row, and overlays a "Generating final…" strip via the card's `::after`. External code drives this via `cardEl.setContinuing(bool)` / `el.refreshGroup(group)` / `el.getCardByGroupId(id)` on the grid instance.
 
 ---
 

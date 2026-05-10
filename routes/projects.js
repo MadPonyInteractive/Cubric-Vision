@@ -705,7 +705,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot } = req.body;
+        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -713,11 +713,37 @@ router.post('/project/save-generation', async (req, res) => {
         // Normalize path to use backslashes on Windows
         const normalizedFolderPath = path.normalize(folderPath);
 
-        const id = itemId || uuidv4();
+        // When `replaceItemId` is supplied (preview → final replacement), force
+        // the resulting sidecar id to match so the existing in-memory item slot
+        // is reused. The old media file + thumb are deleted after the new file
+        // lands successfully.
+        const id = replaceItemId || itemId || uuidv4();
 
         const mediaDir = path.join(normalizedFolderPath, 'Media');
         const metaDir  = path.join(mediaDir, '.meta');
         await fs.ensureDir(metaDir);
+
+        // Replacement path: capture the existing media + thumb paths so we can
+        // delete them once the new file is safely written. We resolve them
+        // BEFORE overwriting the sidecar to avoid losing the references.
+        let _replacePrevMediaPath = null;
+        let _replacePrevThumbPath = null;
+        if (replaceItemId) {
+            try {
+                const prevMetaPath = path.join(metaDir, `${replaceItemId}.json`);
+                if (await fs.pathExists(prevMetaPath)) {
+                    const prev = await fs.readJson(prevMetaPath);
+                    if (prev?.filePath) {
+                        const m = prev.filePath.match(/path=(.+)$/);
+                        if (m) _replacePrevMediaPath = decodeURIComponent(m[1]);
+                    }
+                    if (prev?.thumbPath) {
+                        const m = prev.thumbPath.match(/path=(.+)$/);
+                        if (m) _replacePrevThumbPath = decodeURIComponent(m[1]);
+                    }
+                }
+            } catch (_) { /* non-fatal */ }
+        }
 
         // Derive extension from the comfy URL filename param
         let ext = 'png';
@@ -813,11 +839,34 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
         }
-        if (stage)         metaContent.stage         = stage;
-        if (frozenParams)  metaContent.frozenParams  = frozenParams;
-        if (loraSnapshot)  metaContent.loraSnapshot  = loraSnapshot;
+        if (replaceItemId) {
+            // Final pass: stamp stage='final', drop preview-only metadata.
+            metaContent.stage = 'final';
+            // frozenParams + loraSnapshot intentionally omitted.
+        } else {
+            if (stage)         metaContent.stage         = stage;
+            if (frozenParams)  metaContent.frozenParams  = frozenParams;
+            if (loraSnapshot)  metaContent.loraSnapshot  = loraSnapshot;
+        }
         const metaPath = path.join(metaDir, `${id}.json`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
+
+        // Replacement path: delete the previous media file + thumb now that
+        // the new sidecar is committed at the same id.
+        if (replaceItemId) {
+            const newAbs = filePath; // absolute path to the new media file
+            if (_replacePrevMediaPath && path.normalize(_replacePrevMediaPath) !== path.normalize(newAbs)) {
+                try { await fs.remove(_replacePrevMediaPath); }
+                catch (e) { logger.warn('project', 'replace: old media remove failed', e.message); }
+            }
+            if (_replacePrevThumbPath) {
+                const newThumbAbs = isVideo ? path.join(metaDir, `${id}.thumb.jpg`) : null;
+                if (!newThumbAbs || path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
+                    try { await fs.remove(_replacePrevThumbPath); }
+                    catch (e) { logger.warn('project', 'replace: old thumb remove failed', e.message); }
+                }
+            }
+        }
 
         // Garbage-collect orphaned sidecars (skip the one we just wrote)
         try {

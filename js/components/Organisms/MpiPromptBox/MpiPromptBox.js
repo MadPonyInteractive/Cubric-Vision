@@ -11,6 +11,7 @@ import { commands, getAvailableCommands, getCommandComponents } from '../../../d
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { clearPendingQueue } from '../../../services/generationService.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
@@ -597,6 +598,15 @@ export const MpiPromptBox = ComponentFactory.create({
             _activeControls.clear();
 
             const componentIds = getCommandComponents(activeOperation);
+
+            // Mode failsafe: ops without a `generationMode` control (e.g. multi-
+            // stage video t2v_ms / i2v_ms) cannot expose Queue/Auto-loop. Force
+            // mode → 'single' and drain any pending Cue jobs left from the
+            // previous op so the run cluster + queue UI stay coherent.
+            if (!componentIds.includes('generationMode')) {
+                if (state.generationMode !== 'single') state.generationMode = 'single';
+                if ((state.generationQueueCount || 0) > 0) clearPendingQueue();
+            }
 
             for (const componentId of componentIds) {
                 const ctrl = PROMPT_BOX_CONTROLS[componentId];

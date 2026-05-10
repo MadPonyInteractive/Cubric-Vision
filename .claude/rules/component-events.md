@@ -346,6 +346,8 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
+         `preview:continue` `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card; Block re-runs the workflow with `previewOnly: false` + `replaceItemId: item.id`
+         `preview:discard`  `{ group: ItemGroup, item: MediaItem }` — Discard button on preview-stage card; Block confirms then deletes media + sidecar and removes the group
 LISTENS: (none — internal MpiButton tab events handled internally)
 NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection: ctrl/cmd-click toggles, shift-click range-selects, right-click opens `MpiContextMenu`. No `MpiSelectionBar` or `MpiCheckbox`.
 
@@ -386,6 +388,8 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
          `models:open` — when zero image models installed
+         `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
+         `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
 NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
          Queue cancel targets the first running gallery entry; Single/Loop cancel targets the last active entry. Clear calls `clearPendingQueue()`.

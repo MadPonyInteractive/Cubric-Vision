@@ -43,6 +43,8 @@ import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
  *   'gc-remove'   { groupId }            — all history entries missing; remove from grid
  *   'selection-start' {}                 — selection mode activated (hide PromptBox)
  *   'selection-end'   {}                 — selection mode exited (show PromptBox)
+ *   'preview:continue' { group, item }   — preview-stage card Continue clicked
+ *   'preview:discard'  { group, item }   — preview-stage card Discard clicked
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -222,6 +224,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 <div class="mpi-group-card__top-badge"></div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
+                <div class="mpi-group-card__preview-badge">PREVIEW</div>
+                <div class="mpi-group-card__preview-actions">
+                    <div class="mpi-group-card__continue-wrap"></div>
+                    <div class="mpi-group-card__discard-wrap"></div>
+                </div>
                 <div class="mpi-group-card__overlay">
                     <span class="mpi-group-card__name"></span>
                     <span class="mpi-group-card__sub"></span>
@@ -236,9 +243,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const previewImg = qs('.mpi-group-card__preview-img', cardEl);
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
-            const topBadgeEl = qs('.mpi-group-card__top-badge', cardEl);
-            const favWrap    = qs('.mpi-group-card__fav-wrap', cardEl);
-            const reuseWrap  = qs('.mpi-group-card__reuse-wrap', cardEl);
+            const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
+            const favWrap      = qs('.mpi-group-card__fav-wrap', cardEl);
+            const reuseWrap    = qs('.mpi-group-card__reuse-wrap', cardEl);
+            const continueWrap = qs('.mpi-group-card__continue-wrap', cardEl);
+            const discardWrap  = qs('.mpi-group-card__discard-wrap', cardEl);
 
             let _generating = false;
             let _showInfo   = false;
@@ -268,6 +277,32 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const selected = group?.history?.[group.selectedIndex];
                 if (!selected) return;
                 emit('reuse', { positive: selected.prompt || '', negative: selected.negativePrompt || '' });
+            });
+
+            const _continueBtn = MpiButton.mount(continueWrap, {
+                icon: 'frameForward', size: 'sm', variant: 'primary',
+                info: 'Continue: finalize this preview',
+                label: 'Continue',
+            });
+
+            _continueBtn.on('click', (e) => {
+                e.originalEvent?.stopPropagation();
+                const selected = group?.history?.[group.selectedIndex];
+                if (!selected) return;
+                emit('preview:continue', { group, item: selected });
+            });
+
+            const _discardBtn = MpiButton.mount(discardWrap, {
+                icon: 'trash', size: 'sm', variant: 'ghost',
+                info: 'Discard preview',
+                label: 'Discard',
+            });
+
+            _discardBtn.on('click', (e) => {
+                e.originalEvent?.stopPropagation();
+                const selected = group?.history?.[group.selectedIndex];
+                if (!selected) return;
+                emit('preview:discard', { group, item: selected });
             });
 
             let _videoThumb = null;
@@ -392,6 +427,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _favourite = group?.favourite || false;
                 _favBtn.el.setActive(_favourite);
                 cardEl.classList.toggle('mpi-group-card--favourited', _favourite);
+
+                const _isPreview = selected?.stage === 'preview';
+                cardEl.classList.toggle('mpi-group-card--preview', _isPreview);
             }
 
             // ── Selection state ──────────────────────────────────────────────
@@ -404,6 +442,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (_generating) return;
                 if (favWrap.contains(e.target)) return;
                 if (reuseWrap.contains(e.target)) return;
+                if (continueWrap.contains(e.target)) return;
+                if (discardWrap.contains(e.target)) return;
+
+                // Preview-stage cards are not history-clickable.
+                const _selectedNow = group?.history?.[group.selectedIndex];
+                if (_selectedNow?.stage === 'preview') return;
 
                 if (e.shiftKey) {
                     e.preventDefault();
@@ -475,6 +519,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
             cardEl.setShowInfo = (val) => {
                 _showInfo = val;
                 cardEl.classList.toggle('mpi-group-card--show-info', val);
+            };
+
+            cardEl.setContinuing = (val) => {
+                cardEl.classList.toggle('mpi-group-card--continuing', !!val);
+            };
+
+            cardEl.refreshGroup = (newGroup) => {
+                if (newGroup) group = newGroup;
+                _render();
             };
 
             _render();
@@ -661,6 +714,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
             entry.el.remove();
             _cardMap.delete(groupId);
             _groups = _groups.filter(g => g.id !== groupId);
+        };
+
+        el.getCardByGroupId = (groupId) => {
+            const entry = _cardMap.get(groupId);
+            return entry?.card?.el || null;
+        };
+
+        el.refreshGroup = (newGroup) => {
+            if (!newGroup?.id) return;
+            const idx = _groups.findIndex(g => g.id === newGroup.id);
+            if (idx !== -1) _groups[idx] = newGroup;
+            const entry = _cardMap.get(newGroup.id);
+            entry?.card?.el?.refreshGroup?.(newGroup);
         };
 
         el.setSelectionMode = (val) => {

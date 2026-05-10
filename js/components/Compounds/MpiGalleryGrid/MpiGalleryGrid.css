@@ -471,3 +471,85 @@
 .mpi-group-card--selected .mpi-group-card__top-badge {
     color: var(--accent-heat);
 }
+
+/* ── Preview-stage card (PREVIEW badge + Continue/Discard actions) ───────── */
+
+.mpi-group-card__preview-badge {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.7rem;
+    display: none;
+    padding: 0.2rem 0.45rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+    background: var(--accent-heat);
+    border-radius: var(--r-1);
+    pointer-events: none;
+    z-index: 5;
+    line-height: 1;
+}
+
+.mpi-group-card--preview .mpi-group-card__preview-badge {
+    display: inline-block;
+}
+
+/* Hide the standard fav/reuse hover icons on preview cards so the badge owns
+ * the top-right and the action row owns the bottom. */
+.mpi-group-card--preview .mpi-group-card__fav-wrap,
+.mpi-group-card--preview .mpi-group-card__reuse-wrap {
+    display: none;
+}
+
+.mpi-group-card__preview-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    z-index: 4;
+}
+
+.mpi-group-card--preview .mpi-group-card__preview-actions {
+    display: flex;
+}
+
+.mpi-group-card--preview .mpi-group-card__overlay {
+    /* Make room for the action row when preview state is active. */
+    bottom: 2.6rem;
+}
+
+.mpi-group-card--preview {
+    cursor: default;
+    outline: 1px dashed color-mix(in oklch, var(--accent-heat) 70%, transparent);
+    outline-offset: -2px;
+}
+
+/* Continuing state: hide action buttons, show progress strip. */
+.mpi-group-card--continuing .mpi-group-card__preview-actions {
+    display: none;
+}
+
+.mpi-group-card--preview.mpi-group-card--continuing::after {
+    content: 'Generating final…';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.45rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+    background: color-mix(in oklch, var(--accent-heat) 65%, transparent);
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
+}

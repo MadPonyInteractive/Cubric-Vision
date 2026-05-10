@@ -12,10 +12,10 @@
 - [x] To-do 2 — Preview_Only injection + new ms ops registered
 - [x] To-do 3 — PromptBox toggle "Preview initial stage"
 - [x] To-do 4 — save preview output as `stage: 'preview'` + frozenParams (verified: preview MP4 saved, sidecar correct)
-- [ ] To-do 5 — gallery PREVIEW badge + Continue / Discard buttons + click gate
-- [ ] To-do 6 — Continue handler: re-submit with frozen params, replace card on finalize
-- [ ] To-do 7 — Continue-while-busy behavior per generation mode
-- [ ] To-do 8 — documentation + rule files sync
+- [x] To-do 5 — gallery PREVIEW badge + Continue / Discard buttons + click gate
+- [x] To-do 6 — Continue handler: re-submit with frozen params, replace card on finalize
+- [x] To-do 7 — Continue-while-busy behavior per generation mode
+- [x] To-do 8 — documentation + rule files sync
 
 ## Deviations from original plan (read before continuing)
 

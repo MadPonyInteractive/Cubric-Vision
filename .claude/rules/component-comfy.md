@@ -5,10 +5,11 @@
 
 ## Injection Points
 
-| Control ID | Component        | nodeTitle(s)                     | Params injected                  | Operations (from commandRegistry)          |
-|------------|------------------|----------------------------------|----------------------------------|--------------------------------------------|
-| `ratio`    | `MpiOptionSelector` (variant: ratio) | `"Width"`, `"Height"` (separate nodes) | `{ Width: number, Height: number }` | `t2i`, `i2i`, `t2v`, `i2v`             |
-| `batch`    | `MpiBatchSelector` | `"Batch_Size"` (MpiInt.inputs.int) | `{ Batch_Size: 1\|2\|3\|4 }`     | `t2i`, `i2i`                               |
+| Control ID | Component        | nodeTitle(s)                     | Params injected                  | Operations (from commandRegistry)                          |
+|------------|------------------|----------------------------------|----------------------------------|------------------------------------------------------------|
+| `ratio`    | `MpiOptionSelector` (variant: ratio) | `"Width"`, `"Height"` (separate nodes) | `{ Width: number, Height: number }` | `t2i`, `i2i`, `t2v`, `i2v`, `t2v_ms`, `i2v_ms`     |
+| `batch`    | `MpiBatchSelector` | `"Batch_Size"` (MpiInt.inputs.int) | `{ Batch_Size: 1\|2\|3\|4 }`     | `t2i`, `i2i`                                               |
+| `previewStage` | `MpiButton` (size: sm, toggleable, icon: frameForward) | `"Preview_Only"` (`MpiBoolean.inputs.boolean`) | only when `true` → run payload `previewOnly: true`; `commandExecutor._buildParams` injects `Preview_Only: true` | `t2v_ms`, `i2v_ms` |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -44,10 +45,11 @@ MpiPromptBox 'run' event
 
 **Current controls:**
 
-| ID      | Component         | nodeTitle | defaultValue | `getInjectionParams()` return |
-|---------|-------------------|-----------|--------------|-------------------------------|
-| `ratio` | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
-| `batch` | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }` |
+| ID             | Component         | nodeTitle      | defaultValue | `getInjectionParams()` return |
+|----------------|-------------------|----------------|--------------|-------------------------------|
+| `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
+| `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }` |
+| `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: true` only when `previewOnly === true`. Persisted per-model under `modelSettings[modelId].previewStage`. |
 
 > **Adding a new control:** (1) create component, (2) add entry to `PROMPT_BOX_CONTROLS` with `nodeTitle` + `getInjectionParams()`, (3) add control ID to operation's `components[]` in `commandRegistry.js`
 
@@ -64,8 +66,10 @@ MpiPromptBox 'run' event
 | `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `remove`          | Remove             | image     | 1              | —             | true         | yes            | (none)              | active      |
-| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         | active      |
-| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         | active      |
+| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio','generationMode']`         | active      |
+| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio','generationMode']`         | active      |
+| `t2v_ms`          | Text to Video (multi-stage) | video | 0           | —             | —            | yes            | `['ratio','previewStage']`           | active      |
+| `i2v_ms`          | Image to Video (multi-stage) | video | 1          | —             | —            | no             | `['ratio','previewStage']`           | active      |
 | `extend`          | Extend             | video     | 0              | 1             | —            | no             | (none)              | active      |
 | `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | (none)              | universal   |
 | `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | (none)              | universal   |

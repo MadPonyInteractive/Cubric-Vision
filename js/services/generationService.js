@@ -8,7 +8,7 @@
 
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
-import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings } from '../data/projectModel.js';
+import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, replaceHistoryItemById } from '../data/projectModel.js';
 import { StatusBar } from '../shell/statusBar.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
@@ -238,9 +238,16 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         const builtItems = [];
         let firstDisplayName = operation;
 
+        // Replacement runs (preview → final) target a specific existing item
+        // and emit a single output URL. Force the first (and only) item id
+        // to the replaceItemId so save-generation overwrites the same sidecar.
+        const _replaceItemId = config.replaceItemId || null;
+
         for (let i = 0; i < urls.length; i++) {
             const url = urls[i];
-            const thisItemId = i === 0 ? itemId : crypto.randomUUID();
+            const thisItemId = _replaceItemId && i === 0
+                ? _replaceItemId
+                : (i === 0 ? itemId : crypto.randomUUID());
             let filePath = url;
             let displayName = operation;
             let resolvedDims = width ? { w: width, h: height } : { w: 0, h: 0 };
@@ -260,6 +267,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         stage:        _previewStage,
                         frozenParams: _previewFrozen,
                         loraSnapshot: _previewLoraSnapshot,
+                        replaceItemId: (_replaceItemId && i === 0) ? _replaceItemId : undefined,
                     });
                     if (data.success) {
                         savedData = data;
@@ -307,7 +315,26 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // Project mutation. MUST await — addGroup/updateGroup are serialized
         // through the mutation chain in projectService; emitting before they
         // resolve makes listeners see stale state.currentProject.
-        if (opts.existingGroup) {
+        if (_replaceItemId) {
+            // Replacement run (preview → final): swap the matching history slot
+            // in the owning group; do NOT add a new group.
+            const targetGroup = (state.currentProject?.itemGroups || [])
+                .find(g => g.history?.some(h => h.id === _replaceItemId));
+            const newItem = builtItems[0];
+            if (targetGroup && newItem) {
+                const updatedGroup = replaceHistoryItemById(targetGroup, newItem);
+                await updateGroup(updatedGroup);
+                activeGenerations.end(_regId, { revokePreview: false });
+                Events.emit('gallery:item-updated', { groupId: updatedGroup.id, item: newItem, group: updatedGroup });
+                Events.emit('generation:complete', { id: _regId, item: newItem, group: updatedGroup });
+                callbacks.onComplete?.({ item: newItem, group: updatedGroup });
+            } else {
+                clientLogger.warn('generationService', 'replaceItemId set but no matching group/item found', { _replaceItemId });
+                activeGenerations.end(_regId, { revokePreview: false });
+                Events.emit('generation:complete', { id: _regId, item: newItem, group: null });
+                callbacks.onComplete?.({ item: newItem, group: null });
+            }
+        } else if (opts.existingGroup) {
             // GroupHistory mode — append all items to existing group (history view).
             let working = opts.existingGroup;
             for (const it of builtItems) {
