@@ -11,7 +11,6 @@ import { commands, getAvailableCommands, getCommandComponents, getCommandMediaIn
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { clearPendingQueue } from '../../../services/generationService.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
@@ -81,7 +80,13 @@ export const MpiPromptBox = ComponentFactory.create({
         let runBtn = null;
         let stopBtn = null;
         let clearBtn = null;
-        let _runMode = 'single';
+
+        // ── Hold-to-loop state ────────────────────────────────────────────────
+        const HOLD_THRESHOLD_MS = 700;
+        let _holdTimer = null;
+        let _holdStartTs = 0;
+        let _holdDidArm = false;       // True if current pointerdown reached threshold (suppresses click).
+        let _holdSuppressClick = false; // Carry-over flag set when threshold reached, reset on next click handler.
 
         let model = props.model || null;
         let modelList = props.modelList || [];
@@ -285,18 +290,12 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.setGenerating = (active) => {
             isGenerating = active;
-            if (_runMode === 'single' || _runMode === 'autoloop') {
-                if (runBtn?.el?.setActive) runBtn.el.setActive(active);
-                else if (runBtn?.el) runBtn.el.classList.toggle('is-active', active);
-                return;
-            }
-            // Queue mode: toggle Stop + Clear disabled state.
+            // Cue cluster only — Stop + Clear disabled-state mirror activity.
             stopBtn?.el?.setDisabled?.(!active);
             clearBtn?.el?.setDisabled?.(!active);
         };
 
         el.setModel = (newModel) => {
-            const modeToKeep = _runMode || 'single';
             model = newModel;
             _currentModelType = newModel?.mediaType ?? _currentModelType;
             if (_modelDropdown) {
@@ -305,11 +304,10 @@ export const MpiPromptBox = ComponentFactory.create({
                     newModel.id
                 );
             }
-            if (state.generationMode !== modeToKeep) state.generationMode = modeToKeep;
             _refreshOpDropdown();
             _refreshOpSlot();
             _renderBadge();
-            if (typeof _renderRunCluster === 'function') _renderRunCluster(modeToKeep);
+            if (typeof _refreshRunLabel === 'function') _refreshRunLabel();
         };
 
         el.setModelList = (newModelList) => {
@@ -463,7 +461,6 @@ export const MpiPromptBox = ComponentFactory.create({
                     <div class="mpi-prompt-box__settings-row" id="settings-model-slot"></div>
                     <div class="mpi-prompt-box__settings-row" id="settings-op-dropdown-slot"></div>
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
-                    <div class="mpi-prompt-box__settings-row" id="settings-flow-slot"></div>
                 </div>
             </div>
         `).trim();
@@ -650,41 +647,25 @@ export const MpiPromptBox = ComponentFactory.create({
             opDropdownSlot.appendChild(_opDropdown.el);
         }
 
-        const FLOW_CONTROL_IDS = new Set(['generationMode']);
-        const flowSlot = qs('#settings-flow-slot', popupNode);
-
         function _refreshOpSlot() {
             if (!opSlot) return;
             for (const ctrl of _activeControls.values()) {
                 try { ctrl.destroy?.(); } catch {}
             }
             opSlot.innerHTML = '';
-            if (flowSlot) flowSlot.innerHTML = '';
             _activeControls.clear();
 
             const componentIds = getCommandComponents(activeOperation);
-
-            // Mode failsafe: ops without a `generationMode` control (e.g. multi-
-            // stage video t2v_ms / i2v_ms) cannot expose Queue/Auto-loop. Force
-            // mode → 'single' and drain any pending Cue jobs left from the
-            // previous op so the run cluster + queue UI stay coherent.
-            if (!componentIds.includes('generationMode')) {
-                if (state.generationMode !== 'single') state.generationMode = 'single';
-                if ((state.generationQueueCount || 0) > 0) clearPendingQueue();
-            }
 
             for (const componentId of componentIds) {
                 const ctrl = PROMPT_BOX_CONTROLS[componentId];
                 if (!ctrl) continue;
 
-                const targetSlot = FLOW_CONTROL_IDS.has(componentId) ? flowSlot : opSlot;
-                if (!targetSlot) continue;
-
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
-                targetSlot.appendChild(ctrlEl);
+                opSlot.appendChild(ctrlEl);
 
-                ctrl.mount(ctrlEl, { model, generationMode: _runMode });
+                ctrl.mount(ctrlEl, { model });
                 _activeControls.set(componentId, ctrl);
             }
         }
@@ -707,7 +688,17 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Run / Stop ─────────────────────────────────────────────────────────
         runSlotEl = qs('#bottom-right-slot', el);
 
-        const _queueLabel = (count = state.generationQueueCount || 0) => `Cue x${Math.max(0, Number(count) || 0)}`;
+        // Label rules:
+        //   loopArmed=false, depth=0  → 'Cue'
+        //   loopArmed=false, depth>0  → 'Cue xN'
+        //   loopArmed=true,  depth<=1 → 'Loop'        (steady-state loop = 1 active dispatch, no real backlog)
+        //   loopArmed=true,  depth>=2 → 'Loop xN'     (backlog draining before loop reaches steady-state)
+        const _runLabel = (count = state.generationQueueCount || 0) => {
+            const armed = !!state.loopArmed;
+            const n = Math.max(0, Number(count) || 0);
+            if (armed) return n >= 2 ? `Loop x${n}` : 'Loop';
+            return n > 0 ? `Cue x${n}` : 'Cue';
+        };
 
         el.getRunPayload = () => {
             const injectionParams = getInjectionParamsFromControls(_activeControls);
@@ -723,65 +714,37 @@ export const MpiPromptBox = ComponentFactory.create({
             };
         };
 
-        const _emitRun = () => {
-            emit('run', el.getRunPayload());
+        const _emitRun    = () => emit('run', el.getRunPayload());
+        const _emitCancel = () => emit('cancel', {});
+
+        // Seed: if loop just armed but nothing is running/pending, kick off
+        // one job so the dispatcher has something to re-fire from.
+        const _seedLoopIfIdle = () => {
+            if (!state.loopArmed) return;
+            if ((state.generationQueueCount || 0) > 0) return;
+            isGenerating = true;
+            stopBtn?.el?.setDisabled?.(false);
+            clearBtn?.el?.setDisabled?.(false);
+            _emitRun();
         };
 
-        const _emitCancel = () => {
-            emit('cancel', { mode: _runMode });
-        };
+        function _refreshRunLabel() {
+            runBtn?.el?.setLabel?.(_runLabel());
+            runBtn?.el?.classList.toggle('mpi-prompt-box__cue-btn--armed', !!state.loopArmed);
+        }
 
-        function _renderRunCluster(modeOverride) {
+        function _renderRunCluster() {
             if (!runSlotEl) return;
             runSlotEl.innerHTML = '';
             runBtn = null;
             stopBtn = null;
             clearBtn = null;
 
-            if (modeOverride) {
-                _runMode = modeOverride;
-            } else {
-                _runMode = state.generationMode || 'single';
-            }
+            // Idle reconcile — fresh mount must not show stale active flag.
+            if ((state.generationQueueCount || 0) === 0) isGenerating = false;
 
-            // Mode switch: reconcile isGenerating with real backend truth.
-            // Stale `isGenerating=true` from prior-mode clicks (esp. queue clicks
-            // that increment optimistically) must not paint the new button as
-            // running when no work is actually queued.
-            if ((state.generationQueueCount || 0) === 0) {
-                isGenerating = false;
-            }
-
-            if (_runMode === 'single' || _runMode === 'autoloop') {
-                const slot = document.createElement('div');
-                runSlotEl.appendChild(slot);
-
-                const label = _runMode === 'autoloop' ? 'Loop' : 'Run';
-                const info  = _runMode === 'autoloop' ? 'Start auto-loop / Stop' : 'Generate / Stop';
-
-                runBtn = MpiButton.mount(slot, {
-                    icon: 'play', iconActive: 'stop',
-                    info,
-                    size: 'sm', variant: 'primary',
-                    label,
-                    toggleable: true, active: isGenerating,
-                });
-
-                runBtn.on('toggle', (data) => {
-                    if (data.active) {
-                        isGenerating = true;
-                        _emitRun();
-                    } else if (isGenerating) {
-                        isGenerating = false;
-                        _emitCancel();
-                    }
-                });
-                return;
-            }
-
-            // Queue — Cue (always-on) + Stop (interrupt current) + Clear (wipe pending)
-            const runHost = document.createElement('div');
-            const stopHost = document.createElement('div');
+            const runHost   = document.createElement('div');
+            const stopHost  = document.createElement('div');
             const clearHost = document.createElement('div');
             runSlotEl.appendChild(runHost);
             runSlotEl.appendChild(stopHost);
@@ -789,21 +752,68 @@ export const MpiPromptBox = ComponentFactory.create({
 
             runBtn = MpiButton.mount(runHost, {
                 icon: 'play',
-                info: 'Cue generation',
+                info: 'Tap to cue. Hold to toggle loop.',
                 size: 'sm', variant: 'primary',
-                label: _queueLabel(),
+                label: _runLabel(),
+                extraClasses: 'mpi-prompt-box__cue-btn',
             });
+            // Charge-fill sweep element (CSS scaleX 0→1 over HOLD_THRESHOLD_MS).
+            const fillEl = document.createElement('span');
+            fillEl.className = 'mpi-prompt-box__cue-fill';
+            runBtn.el.appendChild(fillEl);
+
+            // Tap = enqueue. Hold ≥700ms = toggle loopArmed (suppresses click).
+            const _resetFill = () => {
+                fillEl.style.transition = 'none';
+                fillEl.style.transform = 'scaleX(0)';
+                // Force reflow so next transition takes effect.
+                void fillEl.offsetWidth;
+            };
+            const _cancelHold = () => {
+                if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; }
+                _holdDidArm = false;
+                _resetFill();
+            };
+            on(runBtn.el, 'pointerdown', (e) => {
+                if (e.button !== 0 && e.pointerType === 'mouse') return;
+                if (runBtn.el.hasAttribute('disabled')) return;
+                // Loop already armed: ignore hold gesture (no charge anim, no toggle).
+                if (state.loopArmed) return;
+                _holdStartTs = Date.now();
+                _holdDidArm = false;
+                _resetFill();
+                fillEl.style.transition = `transform ${HOLD_THRESHOLD_MS}ms linear`;
+                fillEl.style.transform = 'scaleX(1)';
+                _holdTimer = setTimeout(() => {
+                    _holdDidArm = true;
+                    _holdSuppressClick = true;
+                    state.loopArmed = true;
+                    _holdTimer = null;
+                    _seedLoopIfIdle();
+                }, HOLD_THRESHOLD_MS);
+            });
+            on(runBtn.el, 'pointerup',     _cancelHold);
+            on(runBtn.el, 'pointerleave',  _cancelHold);
+            on(runBtn.el, 'pointercancel', _cancelHold);
+
             runBtn.on('click', () => {
+                // Suppress click that came from a hold-to-arm gesture.
+                if (_holdSuppressClick) { _holdSuppressClick = false; return; }
+                // Tap while loopArmed = disarm loop. Current job + pending continue.
+                if (state.loopArmed) {
+                    state.loopArmed = false;
+                    return;
+                }
                 isGenerating = true;
                 stopBtn?.el?.setDisabled?.(false);
                 clearBtn?.el?.setDisabled?.(false);
-                runBtn.el.setLabel?.(_queueLabel((state.generationQueueCount || 0) + 1));
+                runBtn.el.setLabel?.(_runLabel((state.generationQueueCount || 0) + 1));
                 _emitRun();
             });
 
             stopBtn = MpiButton.mount(stopHost, {
                 icon: 'stop',
-                info: 'Stop current job (queue continues)',
+                info: 'Stop current job',
                 size: 'sm', variant: 'secondary',
                 disabled: !isGenerating,
             });
@@ -821,47 +831,47 @@ export const MpiPromptBox = ComponentFactory.create({
             clearBtn.on('click', () => {
                 emit('queue-clear', {});
             });
+
+            // Sync armed class on initial mount.
+            runBtn.el.classList.toggle('mpi-prompt-box__cue-btn--armed', !!state.loopArmed);
         }
 
         _renderRunCluster();
 
-        // ── Run / Stop hotkeys (Ctrl+Enter / Ctrl+Alt+Enter) ──────────────────
+        // ── Run / Stop / Loop hotkeys ──────────────────────────────────────────
         const _triggerRun = () => {
-            if (_runMode === 'single' || _runMode === 'autoloop') {
-                if (isGenerating) return;
-                isGenerating = true;
-                runBtn?.el?.setActive?.(true);
-                _emitRun();
+            if (state.loopArmed) {
+                state.loopArmed = false;
                 return;
             }
-            // queue
             isGenerating = true;
             stopBtn?.el?.setDisabled?.(false);
             clearBtn?.el?.setDisabled?.(false);
-            runBtn?.el?.setLabel?.(_queueLabel((state.generationQueueCount || 0) + 1));
+            runBtn?.el?.setLabel?.(_runLabel((state.generationQueueCount || 0) + 1));
             _emitRun();
         };
 
         const _triggerStop = () => {
             if (!isGenerating) return;
-            if (_runMode === 'single' || _runMode === 'autoloop') {
-                isGenerating = false;
-                runBtn?.el?.setActive?.(false);
-            }
             _emitCancel();
+        };
+
+        const _triggerLoop = () => {
+            state.loopArmed = !state.loopArmed;
+            if (state.loopArmed) _seedLoopIfIdle();
         };
 
         _unsubs.push(Hotkeys.bind('generation.run',  _triggerRun));
         _unsubs.push(Hotkeys.bind('generation.stop', _triggerStop));
+        _unsubs.push(Hotkeys.bind('generation.loop', _triggerLoop));
 
         _unsubs.push(Events.on('state:changed', ({ key, value }) => {
             if (key === 'generationQueueCount') {
-                if (_runMode !== 'queue') return;
-                runBtn?.el?.setLabel?.(_queueLabel(value));
+                runBtn?.el?.setLabel?.(_runLabel(value));
                 return;
             }
-            if (key === 'generationMode') {
-                _renderRunCluster(value);
+            if (key === 'loopArmed') {
+                _refreshRunLabel();
             }
         }));
 

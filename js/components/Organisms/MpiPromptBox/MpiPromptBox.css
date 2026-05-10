@@ -313,3 +313,36 @@
     background: var(--accent-heat);
     border-color: var(--accent-heat);
 }
+
+/* ── Cue button — hold-to-loop charge fill + armed state ───────────────── */
+.mpi-prompt-box__cue-btn {
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+}
+
+.mpi-prompt-box__cue-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--accent-frost);
+    opacity: 0.85;
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mpi-prompt-box__cue-btn > :not(.mpi-prompt-box__cue-fill) {
+    position: relative;
+    z-index: 1;
+}
+
+.mpi-prompt-box__cue-btn--armed {
+    background: var(--accent-frost) !important;
+    border-color: var(--accent-frost) !important;
+    color: var(--surface-0) !important;
+}
+
+.mpi-prompt-box__cue-btn--armed .mpi-prompt-box__cue-fill {
+    display: none;
+}

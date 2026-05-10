@@ -241,7 +241,7 @@ export const HOTKEY_REGISTRY = [
         type:             KEY_TYPE.DOWN,
         category:         'generation',
         scopeLabel:       'Generation',
-        description:      'Run / Enqueue',
+        description:      'Cue generation',
         allowWhileTyping: true,
     },
     {
@@ -250,7 +250,16 @@ export const HOTKEY_REGISTRY = [
         type:             KEY_TYPE.DOWN,
         category:         'generation',
         scopeLabel:       'Generation',
-        description:      'Stop',
+        description:      'Stop current job',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'generation.loop',
+        key:              'control+l',
+        type:             KEY_TYPE.DOWN,
+        category:         'generation',
+        scopeLabel:       'Generation',
+        description:      'Toggle loop mode',
         allowWhileTyping: true,
     },
 

@@ -63,7 +63,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'batch', 'generationMode'],
+        components: ['ratio', 'batch'],
     },
     i2i: {
         label: 'Image to Image',
@@ -73,7 +73,7 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        components: ['ratio', 'batch', 'generationMode'],
+        components: ['ratio', 'batch'],
     },
     upscale: {
         label: 'Upscale',
@@ -136,7 +136,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'generationMode'],
+        components: ['ratio'],
     },
     i2v: {
         label: 'Image to Video',
@@ -147,14 +147,14 @@ export const commands = {
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
         ],
         promptRequired: false,
-        components: ['ratio', 'generationMode'],
+        components: ['ratio'],
     },
     t2v_ms: {
         label: 'Text to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'previewStage', 'generationMode'],
+        components: ['ratio', 'previewStage'],
     },
     i2v_ms: {
         label: 'Image to Video',
@@ -165,7 +165,7 @@ export const commands = {
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
         ],
         promptRequired: false,
-        components: ['ratio', 'previewStage', 'generationMode'],
+        components: ['ratio', 'previewStage'],
     },
     extend: {
         label: 'Extend',

@@ -52,8 +52,9 @@ const _state = {
                                      // Auto-resets when navigating to PAGE_LANDING.
 
     // ── Generation queue (session-only) ────────────────────────────────────────
-    generationMode: 'single',        // 'single' | 'queue' | 'autoloop'. Session-only run mode
-                                    // shared across models; never persisted to project.json.
+    loopArmed: false,                // Hold-to-arm loop flag. Cue button hold ≥700ms toggles on.
+                                     // While armed + queue drains to 0, generationService re-fires
+                                     // last payload via getNextGeneration callback. Session-only.
     generationQueueCount: 0,         // Local Cue queue depth (active dispatch + pending jobs).
                                      // Maintained synchronously by generationService.
 

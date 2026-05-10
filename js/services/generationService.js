@@ -16,19 +16,22 @@ import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 
-// ── Auto-loop tracking ──────────────────────────────────────────────────────
-// Active loops keyed by registration id. Re-submission triggers when a loop's
-// own generation completes successfully.
-const _activeLoops = new Map(); // regId → { config, opts, callbacks }
-
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
 // time so Comfy's own queue never grows beyond 1. This avoids races on the
 // asset upload step (shared static filenames) and gives us full control over
 // pending mutation (clear, reorder).
+//
+// Loop mode: when state.loopArmed is true and the dispatcher drains to empty,
+// we ask the last-dispatched job's `getNextGeneration` callback for a fresh
+// payload (live PromptBox state — model/op/prompt/media at re-fire time) and
+// enqueue it. Re-fire triggers on complete, cancel, AND error. Only flipping
+// state.loopArmed = false halts re-fire.
 /** @type {Array<{ config: Object, callbacks: Object, opts: Object }>} */
 const _cueQueue = [];
 let _cueDispatchInFlight = false;
+/** Most-recent dispatched job — used by loop re-fire to fetch fresh payloads. */
+let _lastJobForLoop = null;
 
 function _updateQueueDepth() {
     const depth = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0);
@@ -42,10 +45,21 @@ function _dispatchNextCue() {
     const next = _cueQueue.shift();
     if (!next) {
         _updateQueueDepth();
+        // Loop re-fire: when armed and queue just drained, ask the last job
+        // for a fresh payload (live PromptBox state) and re-enqueue. Halts
+        // when state.loopArmed flips false or callback returns nothing.
+        if (state.loopArmed && _lastJobForLoop) {
+            const fresh = _lastJobForLoop.callbacks?.getNextGeneration?.();
+            if (fresh && fresh.config) {
+                enqueueGeneration(fresh.config, _lastJobForLoop.callbacks, fresh.opts || _lastJobForLoop.opts);
+                return;
+            }
+        }
         _emitPromptBoxGenerationEndIfIdle();
         return;
     }
     _cueDispatchInFlight = true;
+    _lastJobForLoop = next;
     _updateQueueDepth();
 
     const finishCueDispatch = () => {
@@ -121,8 +135,8 @@ export function refreshQueueDepth() {
 
 function _emitPromptBoxGenerationEndIfIdle() {
     if (activeGenerations.list().some(entry => entry.status === 'running')) return;
-    if (_activeLoops.size > 0) return;
     if (_cueDispatchInFlight || _cueQueue.length > 0) return;
+    if (state.loopArmed) return;
     Events.emit('promptbox:generation-end');
 }
 
@@ -163,8 +177,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
 
-    const _mode = state.generationMode || 'single';
-
     Events.emit('tool:running', { tool: 'groupHistory', type: operation });
 
     const exec = runCommand({
@@ -194,14 +206,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     exec.onPromptAck = (promptId) => {
         activeGenerations.setPromptId(_regId, promptId);
     };
-
-    if (_mode === 'autoloop') {
-        _activeLoops.set(_regId, {
-            config: { ...config, mediaItems: [...mediaItems], injectionParams: { ...injectionParams } },
-            opts: { ...opts },
-            callbacks,
-        });
-    }
 
     exec.onPreview = (url) => {
         activeGenerations.setPreview(_regId, url);
@@ -413,16 +417,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
-
-        // Auto-loop re-submission: if loop still active, fire again with same config.
-        const loop = _activeLoops.get(_regId);
-        if (loop) {
-            _activeLoops.delete(_regId);
-            const next = loop.callbacks.getNextGeneration?.() || {};
-            startGeneration(next.config || loop.config, loop.callbacks, next.opts || loop.opts);
-        } else {
-            _emitPromptBoxGenerationEndIfIdle();
-        }
+        _emitPromptBoxGenerationEndIfIdle();
     };
 
     exec.onError = (err) => {
@@ -434,30 +429,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         Events.emit('generation:error', { id: _regId, tempId: _errTempId, extraTempIds: _errExtraTempIds });
         _emitPromptBoxGenerationEndIfIdle();
         callbacks.onError?.();
-        _activeLoops.delete(_regId);
     };
 
-    return { cancel: () => { _activeLoops.delete(_regId); exec.cancel(); } };
-}
-
-/**
- * Stops the auto-loop for a given registration id without interrupting the
- * currently in-flight job. The active job will complete naturally; no
- * re-submission will occur.
- */
-export function stopAutoLoop(regId) {
-    const had = _activeLoops.delete(regId);
-    if (had) console.log('[loop] stopped, no resubmit', regId);
-    return had;
-}
-
-/**
- * Stops all auto-loops in flight (used when bulk-cancelling).
- */
-export function stopAllAutoLoops() {
-    if (_activeLoops.size === 0) return;
-    console.log('[loop] stopped all', _activeLoops.size);
-    _activeLoops.clear();
+    return { cancel: () => { exec.cancel(); } };
 }
 
 /**

@@ -554,12 +554,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 onCancel: () => { _activeExec = null; },
                 getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
             };
-            if (state.generationMode === 'queue') {
-                enqueueGeneration(next.config, callbacks, next.opts);
-                _activeExec = null; // Cue dispatcher manages exec lifecycle
-            } else {
-                _activeExec = startGeneration(next.config, callbacks, next.opts);
-            }
+            enqueueGeneration(next.config, callbacks, next.opts);
+            _activeExec = null; // Cue dispatcher manages exec lifecycle
         }
 
         function _runVideoTool(operation, injectionParams = {}) {

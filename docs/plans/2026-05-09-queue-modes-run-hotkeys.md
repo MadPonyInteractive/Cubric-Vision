@@ -4,6 +4,7 @@
 **Kanban entry:** `Queue modes + run hotkeys`
 **Tag:** [PLAN]
 **Priority:** high
+**Status:** SUPERSEDED 2026-05-10 — Single/Queue/Auto-loop tri-mode replaced by Cue-only + `state.loopArmed` boolean (hold-to-arm Cue button, Ctrl+L toggle). See feedback_loop_armed_hold_gesture.md memory + components.md / component-state.md rules for current spec.
 
 > Current source of truth: see "Plan Drift (2026-05-09 session)" below. Early references to ComfyUI native queue behavior are historical context only; Cue mode now uses the in-app `_cueQueue`.
 

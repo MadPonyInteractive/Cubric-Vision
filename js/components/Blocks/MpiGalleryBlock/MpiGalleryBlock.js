@@ -253,9 +253,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const name = model.label || model.name || model.id;
                 StatusBar.notify(`Switched to "${name}" — continuing preview.`, 'info');
             }
-            // Force Queue mode so the user sees the Cue x{n} cluster while
-            // multiple Continues stack up.
-            if (state.generationMode !== 'queue') state.generationMode = 'queue';
 
             const frozen = item.frozenParams || {};
             const dims = frozen.dims || {};
@@ -504,27 +501,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     onCancel: () => {},
                     getNextGeneration: () => _galleryGenerationFromPayload(_pb?.el?.getRunPayload?.() || payload),
                 };
-                if (state.generationMode === 'queue') {
-                    enqueueGeneration(next.config, callbacks, next.opts);
-                } else {
-                    startGeneration(next.config, callbacks, next.opts);
-                }
+                enqueueGeneration(next.config, callbacks, next.opts);
             });
 
-            pb.on('cancel', ({ mode } = {}) => {
+            pb.on('cancel', () => {
                 const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
-                const target = mode === 'queue' ? active[0] : active.at(-1);
+                const target = active[0];
                 if (target) activeGenerations.cancel(target.id);
                 const currentGroups = state.currentProject?.itemGroups || [];
                 grid.el.setGroups(currentGroups);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
-                // Continue jobs ride the Cue queue regardless of PB mode. If
-                // any are queued/running we must NOT flip PB to idle, even
-                // when current mode !== 'queue'.
                 const continueBusy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
-                if (noRunning && (mode !== 'queue' || queueIdle) && !continueBusy) {
-                    if (mode !== 'queue') state.generationQueueCount = 0;
+                if (noRunning && queueIdle && !continueBusy && !state.loopArmed) {
                     Events.emit('promptbox:generation-end');
                 }
                 refreshQueueDepth();

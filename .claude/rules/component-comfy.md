@@ -73,8 +73,8 @@ MpiPromptBox 'run' event
 | `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `remove`          | Remove             | image     | 1              | —             | true         | yes            | (none)              | active      |
-| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio','generationMode']`         | active      |
-| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio','generationMode']`         | active      |
+| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         | active      |
+| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         | active      |
 | `t2v_ms`          | Text to Video (multi-stage) | video | 0           | —             | —            | yes            | `['ratio','previewStage']`           | active      |
 | `i2v_ms`          | Image to Video (multi-stage) | video | 1          | —             | —            | no             | `['ratio','previewStage']`           | active      |
 | `extend`          | Extend             | video     | 0              | 1             | —            | no             | (none)              | active      |

@@ -83,6 +83,16 @@
     This could be broader than just images added to the prompt box. I noticed that, for example, having an image model loaded and adding an image to the prompt box filters out the operations that can take in an image, but when changing to a different model text or video doesn't matter. It defaults to text-to-image or text-to-video the operation does. So changing to a different model should be aware if there is media in the prompt box and filter out operations that take or do not take media.
     ```
 
+### Dragging an image from and to the gallery grid sometimes adds a duplicate.
+
+  - tags: [Bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    I noticed that when dragging an existing card into the prompt box and then back into the gallery grid, it sometimes adds a duplicate card with the same image. The same might be true for video cards.
+    ```
+
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -117,6 +127,20 @@
     ```
 
 ## COMPLETED
+
+### Cue + Loop refactor — drop Single/Queue/Auto-loop tri-mode
+
+  - tags: [feature, refactor]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Replaced three-mode generation flow with always-Cue + `state.loopArmed` boolean. There is no Single mode; queue is the only execution path. Loop is a flag layered on top — toggled by holding the Cue button ≥700ms (cyan color sweep over pink) or `Ctrl+L`. Tap-while-armed disarms. Hold-while-armed is a no-op. Loop re-fire integrated into `generationService._dispatchNextCue` empty-queue branch via `_lastJobForLoop.callbacks.getNextGeneration()`; re-fires on complete, cancel, AND error. Stop interrupts current job; loop continues. New hotkey `generation.loop` (Ctrl+L). Help overlay row added.
+    Removed: `state.generationMode`, `_activeLoops` Map, `stopAutoLoop`/`stopAllAutoLoops` exports, `generationMode` PromptBoxControls entry, `'generationMode'` from 6 ops in commandRegistry, `FLOW_CONTROL_IDS`/`flowSlot`/`#settings-flow-slot` in PromptBox, mode-switch failsafe block in `_refreshOpSlot`, force-`'queue'` writes in GalleryBlock + GroupHistoryBlock.
+    Label rules: `Cue` / `Cue xN` (N>0) / `Loop` (armed, depth<=1) / `Loop xN` (armed, depth>=2). Visual: pink Cue idle → cyan sweep L→R during 700ms hold → cyan armed steady.
+    Files: js/state.js, js/services/generationService.js, js/managers/hotkeyRegistry.js, js/data/commandRegistry.js, js/components/Organisms/MpiPromptBox/{MpiPromptBox.js,MpiPromptBox.css,PromptBoxControls.js}, js/components/Blocks/{MpiGalleryBlock,MpiGroupHistoryBlock}, js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js, .claude/rules/{components,component-events,component-state,component-comfy}.md, docs/{PROJECT.md,comfy.md,plans/2026-05-09-queue-modes-run-hotkeys.md (superseded)}.
+    Memory: feedback_loop_armed_hold_gesture.md (new); feedback_generationmode_failsafe.md (deleted).
+    ```
 
 ### Queue Continue jobs on multi-stage previews
 

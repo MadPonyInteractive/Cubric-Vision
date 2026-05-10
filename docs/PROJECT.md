@@ -51,7 +51,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 6. **Output node** is the canonical result capture point.
 7. **All blocking UI uses `Overlays.request/release`** — never bypass.
 8. **All hotkeys go through `Hotkeys.bind/unbind`** — declare in `hotkeyRegistry.js`, bind by id. Never raw `window.addEventListener`.
-9. **Generation mode is session-only** — `state.generationMode` controls Single/Queue/Loop across models. Do not persist it to `project.json`.
+9. **Loop armed flag is session-only** — `state.loopArmed` (boolean) toggles Cue dispatcher re-fire on queue drain. Do not persist it to `project.json`. There is no Single mode — Cue is the only execution path; Loop is a flag layered on top.
 
 10. **Queue mode is in-app Cue dispatch** - `generationService` owns `_cueQueue` and submits one ComfyUI prompt at a time. Do not use ComfyUI native queue polling for Cue depth.
 11. **LoRA settings can be flat or staged** - most models use six flat LoRA slots. WAN declares `model.loraStages` and stores LoRAs as `{ high: [...], low: [...] }`, injecting `Lora_High_*` and `Lora_Low_*` by workflow node title.

@@ -166,7 +166,7 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 * MUST use `Hotkeys.bind(id, fn)` — `id` is a stable string from `hotkeyRegistry.js`. Never use raw `window.addEventListener('keydown')`.
 * Store the returned unbind fn in `_unsubs`. Call `_unsubs.forEach(fn => fn())` in `el.destroy()`.
 * Hotkey typing suppression applies only to text-entry controls. Do not blur sliders or buttons just to keep shortcuts alive; `input[type="range"]` and other non-text controls are not treated as typing contexts by `hotkeyManager`.
-* Generation hotkeys are `generation.run` (`Ctrl+Enter`) and `generation.stop` (`Ctrl+Alt+Enter`). `MpiPromptBox` owns the bindings and keeps them mode-aware.
+* Generation hotkeys: `generation.run` (`Ctrl+Enter`) cues a generation, `generation.stop` (`Ctrl+Alt+Enter`) interrupts current job, `generation.loop` (`Ctrl+L`) toggles `state.loopArmed`. `MpiPromptBox` owns all three bindings. There is no Single mode — Cue is the only execution path; Loop is a flag layered on top that re-fires on queue drain.
 * **The Help overlay (`MpiHelp.js`) is hand-authored static HTML, NOT generated from the registry.** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row inside `MpiHelp.js`'s `template`. Treat the two files as paired — a registry change without a help-page edit is incomplete work. Row format and grouping conventions: see `docs/shell.md` § "Help page — hand-authored HTML".
 
 ---

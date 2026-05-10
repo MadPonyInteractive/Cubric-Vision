@@ -119,8 +119,9 @@ export const MpiHelp = ComponentFactory.create({
                         <div class="mpi-help__shortcut-group">
                             <h4>Generation</h4>
                             <ul>
-                                <li><span>CTRL+ENTER</span><span>Run / Enqueue</span></li>
-                                <li><span>CTRL+ALT+ENTER</span><span>Stop</span></li>
+                                <li><span>CTRL+ENTER</span><span>Cue generation</span></li>
+                                <li><span>CTRL+ALT+ENTER</span><span>Stop current job</span></li>
+                                <li><span>CTRL+L</span><span>Toggle loop mode</span></li>
                             </ul>
                         </div>
 

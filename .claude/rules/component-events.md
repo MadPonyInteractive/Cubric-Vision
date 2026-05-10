@@ -359,7 +359,7 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `media-change`     `{ imageCount: number, videoCount: number, items: MediaItem[] }`
          `media-imported`   `{ url: string, filename: string, mediaType: string, source: 'file' }` — also emitted on EventBus as `media:imported`
          `run`              `{ operation: string, positive: string, negative: string, mediaItems: MediaItem[], injectionParams: Object }`
-         `cancel`           `{ mode: 'single'|'queue'|'autoloop' }`
+         `cancel`           `{}`
          `queue-clear`      `{}`
          `model-change`     `{ model: ModelDef }`
          `operation-change` `{ operation: string }`
@@ -369,10 +369,11 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers (not generation mode)
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
-         `state:changed` — re-renders run cluster on `generationMode` change; updates Cue label on `generationQueueCount` change (queue mode only)
-         Hotkeys `generation.run` (Ctrl+Enter) and `generation.stop` (Ctrl+Alt+Enter) — bound in setup, mode-aware (single/autoloop = toggle run; queue = enqueue / interrupt current)
+         `state:changed` — updates Cue button label on `generationQueueCount` change; re-renders Cue/Loop label on `loopArmed` change
+         Hotkeys `generation.run` (Ctrl+Enter) cue, `generation.stop` (Ctrl+Alt+Enter) stop, `generation.loop` (Ctrl+L) toggle `state.loopArmed` — all bound in setup
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
-API:     `el.getRunPayload()` returns the current live run payload. Auto-loop uses this so prompt/model/control changes apply to the next loop iteration.
+API:     `el.getRunPayload()` returns the current live run payload. Loop re-fire reads it via `getNextGeneration` callback so prompt/model/control changes apply to the next iteration.
+GESTURE: Cue button — tap = enqueue 1 job. Hold ≥700ms = arm loop (color sweep fills button left→right; suppresses trailing click). Tap while armed = disarm. Hold while armed = no-op.
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
@@ -393,10 +394,10 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
 NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
-         Queue cancel targets the first running gallery entry; Single/Loop cancel targets the last active entry. Clear calls `clearPendingQueue()`.
+         Cancel targets the first running gallery entry. Clear calls `clearPendingQueue()`.
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
-         Continue (`preview:continue`) enqueues a final-pass job via `enqueueGeneration` (rides the in-app Cue queue, single-dispatch). Block tracks `_queuedContinueGroupIds` (Map: groupId→itemId, "Queued…" badge) and `_continuingGroupIds` (Set, "Generating final…" badge); flips queued→continuing on `generation:started` by matching `replaceItemId`. PromptBox shows generating while either set is non-empty. On Continue, Block also auto-syncs PB model + op to the preview's (`item.modelId` / `item.operation`) when mismatched and forces `state.generationMode = 'queue'` so the Cue cluster is visible. `preview:pop-continue` calls `removeCueJob(job => job.config.replaceItemId === item.id)`; the cleared job's `onCancel` reverts the card. Cue Clear and per-job cancellation both fire `onCancel` chains, so card markers stay coherent.
+         Continue (`preview:continue`) enqueues a final-pass job via `enqueueGeneration` (rides the in-app Cue queue, single-dispatch). Block tracks `_queuedContinueGroupIds` (Map: groupId→itemId, "Queued…" badge) and `_continuingGroupIds` (Set, "Generating final…" badge); flips queued→continuing on `generation:started` by matching `replaceItemId`. PromptBox shows generating while either set is non-empty. On Continue, Block also auto-syncs PB model + op to the preview's (`item.modelId` / `item.operation`) when mismatched. `preview:pop-continue` calls `removeCueJob(job => job.config.replaceItemId === item.id)`; the cleared job's `onCancel` reverts the card. Cue Clear and per-job cancellation both fire `onCancel` chains, so card markers stay coherent.
 
 ---
 

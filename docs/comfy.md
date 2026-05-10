@@ -25,13 +25,12 @@ Orchestrates a full generation request.
 - `_buildParams(payload)`: Builds the title→value map for injection. Merges `payload.injectionParams` (from PromptBox controls) into the params object alongside standard fields (Positive, Negative, Seed, media slots).
 - Execution handles expose `promptId`, `seed`, and `onPromptAck`. `generationService` stores `promptId` in `activeGenerations` and saves the resolved seed on generated items.
 
-## Generation Modes
+## Generation Flow — Cue + Loop
 
-PromptBox generation mode is session-only (`state.generationMode`) and shared across models. It must not be persisted to `project.json`.
+There is one execution path: the in-app Cue queue in `generationService.js`. Loop is a session-only boolean (`state.loopArmed`) layered on top — never persisted to `project.json`. There is no Single mode.
 
-- `single`: one toggle button; Stop interrupts the active job.
-- `queue`: Cue enqueues into the in-app `_cueQueue` in `generationService.js`. Only ONE prompt is ever submitted to ComfyUI at a time (single-dispatch); Comfy never holds pending jobs. `state.generationQueueCount = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0)` updated synchronously on enqueue/dispatch — no Comfy polling. Only the first running placeholder is visible in Gallery. Stop interrupts the current job and the dispatcher pulls the next pending item. Clear empties `_cueQueue` (current job continues). API: `enqueueGeneration(config, callbacks, opts)` for Cue mode; `startGeneration` direct for Single + Auto-loop.
-- `autoloop`: Loop resubmits after natural completion while active. The next iteration reads the live PromptBox payload, so prompt/model/control changes made while a job runs apply to the next loop.
+- **Cue (default)**: tap Cue button or `Ctrl+Enter` enqueues one job into `_cueQueue`. Only ONE prompt is ever submitted to ComfyUI at a time (single-dispatch); Comfy never holds pending. `state.generationQueueCount = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0)` updated synchronously on enqueue/dispatch — no Comfy polling. Stop interrupts the current job; the dispatcher pulls the next pending item. Clear empties `_cueQueue` (current job continues). API: `enqueueGeneration(config, callbacks, opts)`.
+- **Loop**: `state.loopArmed = true` — set by holding the Cue button ≥700ms or `Ctrl+L`. When the dispatcher drains to empty AND `loopArmed`, it re-fires using the last job's `getNextGeneration` callback (live PromptBox payload — model/op/prompt/media at re-fire time). Re-fire triggers on complete, cancel, AND error. Only flipping `loopArmed = false` (tap Cue while armed, or Ctrl+L) halts re-fire.
 
 Cue StatusBar progress is per active generation, not aggregate across the full queue. The dispatcher waits for the current lifecycle to unwind before starting the next queued item.
 
