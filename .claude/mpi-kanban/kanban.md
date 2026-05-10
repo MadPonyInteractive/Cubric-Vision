@@ -38,6 +38,7 @@
   - defaultExpanded: true
     ```md
     - Add resize tool.
+    This should auto resize the image based on certain parameters and should also work as a transform with handles. Either that or separating into two different tools, a resize tool and a transform tool. This is for the image workspace specifically. 
     ```
 
 ### Trim tool
@@ -46,7 +47,8 @@
   - priority: medium
   - defaultExpanded: true
     ```md
-    - Add trim tool + timeline thumbnails.
+    - Add trim tool to video workspace.
+    Use redesign mock-up as a guide for a visual identity. 
     ```
 
 ### Port redesign to Cubric Studio website

@@ -18,6 +18,10 @@ export const STORAGE_KEYS = {
   EXTRA_PROJECT_PATHS: 'mpi_extra_project_paths',
   LAST_PROJECT:       'mpi_last_project',
 
+  // Model selection (per-mediaType, persisted across sessions)
+  SELECTED_MODELS:        'mpi_selected_models_by_type',
+  LAST_SELECTED_MEDIATYPE:'mpi_last_selected_mediatype',
+
   // Dev tools
   COMP_DEBUG:          'mpi_comp_debug',
 };

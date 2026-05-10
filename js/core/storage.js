@@ -45,6 +45,12 @@ export const Storage = {
 
   getCompDebug:        () => get(STORAGE_KEYS.COMP_DEBUG, false),
   setCompDebug:        (v) => set(STORAGE_KEYS.COMP_DEBUG, v),
+
+  getSelectedModels:   () => get(STORAGE_KEYS.SELECTED_MODELS, { image: null, video: null }),
+  setSelectedModels:   (v) => set(STORAGE_KEYS.SELECTED_MODELS, v),
+
+  getLastSelectedMediaType: () => get(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, 'image'),
+  setLastSelectedMediaType: (v) => set(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, v),
 };
 
 export const Session = {

@@ -1,4 +1,5 @@
 import { Events } from './events.js';
+import { Storage } from './core/storage.js';
 
 // Global runtime state. Per-project persistent settings live on state.currentProject
 // (modelSettings, toolSettings) — not here.
@@ -18,10 +19,21 @@ const _state = {
     upscaleModels: [],          // Available upscale model filenames from ComfyUI backend
     availableLoras: [],         // Available LoRA filenames from ComfyUI backend
 
-    // ── Canonical selected model ───────────────────────────────────────────────
-    s_selectedModelId: null,    // Canonical selected model ID — written by any workspace
-                               // that hosts a model selector. Read by other workspaces to
-                               // sync the dropdown when switching pages.
+    // ── Canonical selected model (per-mediaType, persisted via localStorage) ──
+    s_selectedModelIdByType: Storage.getSelectedModels(),
+                               // { image: modelId|null, video: modelId|null }.
+                               // Read by workspaces via resolveActiveModel(mediaType).
+                               // Written via setSelectedModelId(mediaType, id) in
+                               // js/utils/modelHelpers.js — top-level replace pattern
+                               // (Proxy is shallow). Mirrored to localStorage on every
+                               // change by the subscriber below.
+
+    s_lastSelectedMediaType: Storage.getLastSelectedMediaType(),
+                               // 'image' | 'video' — which slot was most recently
+                               // written. Gallery is mediaType-agnostic: on mount it
+                               // resolves from this so the user's last pick (image or
+                               // video) is restored. Updated by setSelectedModelId.
+                               // Mirrored to localStorage by subscriber below.
 
     // ── Installed model list (populated after syncModelInstalled) ──────────────
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
@@ -102,3 +114,11 @@ export function batchState(fn) {
         _batchQueue.clear();
     }
 }
+
+// Persist selected-model map to localStorage on every change. Source of truth
+// is state.s_selectedModelIdByType; localStorage is a mirror for cold-start
+// hydration only.
+Events.on('state:changed', ({ key, value }) => {
+    if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
+    else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
+});

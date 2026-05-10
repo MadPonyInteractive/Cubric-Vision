@@ -394,7 +394,7 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `models:open` — when zero image models installed
          `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
-NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
+NOTE:    Reads `state.s_selectedModelIdByType` (via `resolveActiveModel('image')`), `state.currentProject`; writes selected model via `setSelectedModelId(model.mediaType, id)` (in `js/utils/modelHelpers.js`), `state.currentProject`. NEVER writes at mount time.
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
          Cancel targets the first running gallery entry. Clear calls `clearPendingQueue()`.
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
@@ -481,5 +481,5 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
          **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
-         **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelId`, `s_installedModelIds`, `project:changed`.
+         **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelIdByType` (filtered by `modeKind`), `s_installedModelIds`, `project:changed`.
          **PromptBox model list:** `s_installedModelIds` listener also calls `_pb?.el?.setModelList?(getModelsByType(modeKind).filter(m => m.installed !== false))` — live dropdown refresh on install/uninstall.

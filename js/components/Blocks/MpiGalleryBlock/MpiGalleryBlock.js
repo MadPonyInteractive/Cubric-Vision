@@ -22,7 +22,7 @@ import { Events } from '../../../events.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
-import { resolveActiveModel } from '../../../utils/modelHelpers.js';
+import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
@@ -264,8 +264,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (modelMismatch) {
                     activeModel   = model;
                     activeModelId = model.id;
-                    state.s_selectedModelId = model.id;
+                    setSelectedModelId(model.mediaType, model.id);
                     _pb?.el?.setModel?.(model);
+                    refreshRadial({ imageCount, videoCount, modelId: model.id });
                 }
                 if (item.operation) {
                     activeOperation = item.operation;
@@ -429,17 +430,30 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // ── PromptBox setup ─────────────────────────────────────────────────────
         // Gallery is a mediaType-agnostic entry point — show ALL installed models
-        // in the dropdown (image + video). Initial active model still prefers
-        // image so default operation `t2i` is valid; user can switch via dropdown.
-        const { model: activeModelInit, modelId: activeModelIdInit } = resolveActiveModel('image');
+        // in the dropdown (image + video). Initial active model follows the user's
+        // last-touched mediaType so a video pick survives navigation/restart.
+        const _lastType = state.s_lastSelectedMediaType === 'video' ? 'video' : 'image';
+        const { model: activeModelInit, modelId: activeModelIdInit } = resolveActiveModel(_lastType);
         let installedAllModels = MODELS.filter(m => m.installed !== false);
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
-        if (activeModelId) state.s_selectedModelId = activeModelId;
+        // No mount-time write-back: resolver already returned a valid id for
+        // 'image'. Persisting it would clobber a sibling-type selection
+        // (e.g. video model picked earlier) on every Gallery mount.
 
-        let activeOperation = 't2i';
+        // Default op tracks active model's mediaType. t2i for image, t2v for video.
+        // PromptBox will re-pick a valid op for context on its own; this just
+        // keeps Block-side bookkeeping consistent with the initial model.
+        let activeOperation = activeModel?.mediaType === 'video' ? 't2v' : 't2i';
+        if (activeModel && !activeModel.supportedOps?.includes(activeOperation)) {
+            activeOperation = activeModel.supportedOps?.[0] ?? activeOperation;
+        }
         let imageCount      = 0;
         let videoCount      = 0;
+
+        // Seed radial with current model so its items render correctly before
+        // any PromptBox media-/model-change events fire.
+        refreshRadial({ imageCount, videoCount, modelId: activeModelId });
 
         let _pb = null;
 
@@ -447,7 +461,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!pb) return;
 
             pb.on('model-change', ({ model }) => {
-                state.s_selectedModelId = model.id;
+                setSelectedModelId(model.mediaType, model.id);
                 activeModelId   = model.id;
                 activeModel     = model;
                 // PromptBox.setModel already picked the right op for current
@@ -457,6 +471,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     activeOperation = model.supportedOps?.[0] ?? activeOperation;
                     _pb?.el?.setOperation(activeOperation);
                 }
+                refreshRadial({ imageCount, videoCount, modelId: model.id });
             });
 
             pb.on('operation-change', ({ operation }) => {
@@ -471,7 +486,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 imageCount = ic;
                 videoCount = vc;
                 _pb?.el?.updateContext({ imageCount, videoCount, hasMask: false });
-                refreshRadial({ imageCount, videoCount });
+                refreshRadial({ imageCount, videoCount, modelId: activeModelId });
             });
 
             const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image', mediaItems = []) => {
@@ -683,10 +698,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const currentModels = MODELS.filter(m => m.installed !== false);
             installedAllModels = currentModels;
             if (!_pb?.el && currentModels.length > 0) {
-                const newModel = currentModels.find(m => m.id === state.s_selectedModelId) || currentModels[0];
+                // Prefer last-touched mediaType's selection, then the other type,
+                // then first available. Mirrors mount-time logic above.
+                const lastType = state.s_lastSelectedMediaType === 'video' ? 'video' : 'image';
+                const otherType = lastType === 'video' ? 'image' : 'video';
+                const persistedPrimary   = getSelectedModelId(lastType);
+                const persistedSecondary = getSelectedModelId(otherType);
+                const newModel =
+                    currentModels.find(m => m.id === persistedPrimary)
+                    || currentModels.find(m => m.id === persistedSecondary)
+                    || currentModels[0];
                 activeModel = newModel;
                 activeModelId = newModel.id;
-                state.s_selectedModelId = newModel.id;
+                setSelectedModelId(newModel.mediaType, newModel.id);
                 activeOperation = newModel.supportedOps?.[0] ?? activeOperation;
                 _pb = _mountPb({
                     model: newModel,
@@ -696,6 +720,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 _wirePromptBox(_pb);
                 _pb?.el?.show();
+                refreshRadial({ imageCount, videoCount, modelId: newModel.id });
             } else if (_pb?.el) {
                 _pb.el.setModelList?.(currentModels);
             }

@@ -29,7 +29,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl } from '../../../utils/mediaActions.js';
-import { resolveActiveModel } from '../../../utils/modelHelpers.js';
+import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup } from '../../../services/projectService.js';
 import {
     promoteHistoryEntry,
@@ -98,7 +98,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             resolveActiveModel(isVideo ? 'video' : 'image');
         let activeModelId = activeModelIdInit;
         let activeModel   = activeModelInit;
-        if (activeModelId) state.s_selectedModelId = activeModelId;
+        // No mount-time write-back: resolver returns a valid id for the
+        // group's mediaType. Persisting here would clobber the sibling-type
+        // slot (e.g. entering image history would wipe a video selection).
 
         const _baseCtx = isVideo
             ? { imageCount: 0, videoCount: 1 }
@@ -464,7 +466,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _unsubs.push(_pb.on('settings', () => _settingsOverlay.el.open({ modelId: activeModel.id })));
             _unsubs.push(_pb.on('model-change', ({ model }) => {
-                state.s_selectedModelId = model.id;
+                // markAsLast: false — History is a typed workspace (image or video
+                // group). Its selection is bound to the group's mediaType, not a
+                // user choice of "default mode," so it must not influence the
+                // marker Gallery uses to restore the active slot.
+                setSelectedModelId(model.mediaType, model.id, { markAsLast: false });
                 activeModelId = model.id;
                 activeModel = model;
                 // PromptBox.setModel already updated internal state + picked op
@@ -821,11 +827,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── State model change + installed-models reactivity ─────────────────
 
-        _unsubs.push(Events.onState('s_selectedModelId', (value) => {
-            if (!value || value === activeModelId) return;
-            const newModel = installedModels.find(m => m.id === value);
+        _unsubs.push(Events.onState('s_selectedModelIdByType', (value) => {
+            // Only react when the slot for THIS workspace's mediaType changes.
+            // Foreign-type writes (e.g. video selection while viewing an image
+            // group) must not coerce the active model here.
+            const next = value?.[modeKind];
+            if (!next || next === activeModelId) return;
+            const newModel = installedModels.find(m => m.id === next);
             if (newModel && newModel !== activeModel) {
-                activeModelId = value;
+                activeModelId = next;
                 activeModel = newModel;
                 _pb?.el?.setModel(newModel);
                 _refreshOpOptions();

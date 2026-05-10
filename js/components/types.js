@@ -756,7 +756,7 @@
  * — No props. Reads state.currentProject directly.
  *
  * Emits: (none — uses Events bus)
- * Uses: state.currentProject, state.s_selectedModelId
+ * Uses: state.currentProject, state.s_selectedModelIdByType
  */
 
 /**
@@ -808,7 +808,7 @@
  * @property {string} groupId - ID of the ItemGroup to display (from router params)
  *
  * Emits: (none — uses Events bus)
- * Uses: state.currentProject, state.s_selectedModelId
+ * Uses: state.currentProject, state.s_selectedModelIdByType
  */
 
 /**

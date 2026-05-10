@@ -6,7 +6,7 @@ Read the primary `.js` entry file for each component folder under `js/components
 - **Props:** from `template(props)` param destructuring or `js/components/types.js` JSDoc
 - **Emits:** every `emit(` call — capture event name and payload shape
 - **Listens:** every `Events.on(` call — capture event name
-- **State reads:** every `state.` read (e.g. `state.currentProject`, `state.s_selectedModelId`)
+- **State reads:** every `state.` read (e.g. `state.currentProject`, `state.s_selectedModelIdByType`)
 - **State writes:** every `state.x =` assignment
 
 ## Step 2 — Explore workspaces

@@ -33,6 +33,8 @@ let _currentPage      = null;
 let _currentGroupId   = null;
 let _pageLanding      = null;
 let _currentBlock     = null;   // track mounted view Block for teardown
+let _radialModelId    = null;   // active model id for radial item generation;
+                                // pushed by Blocks via refreshRadial({ modelId })
 
 // ── Radial context definitions ─────────────────────────────────────────────
 
@@ -60,7 +62,7 @@ const OP_ICONS = {
  * @returns {Array<{action:string, label:string, icon:string}>}
  */
 function _buildGalleryItems(ctx = {}) {
-    const model = getModelById(state.s_selectedModelId);
+    const model = _radialModelId ? getModelById(_radialModelId) : null;
     if (!model) return [];
     const hasMedia = (ctx.imageCount ?? 0) > 0 || (ctx.videoCount ?? 0) > 0;
     return getAvailableCommands(model.mediaType, model, ctx)
@@ -271,10 +273,13 @@ function _syncRadial(page) {
 
 /**
  * Rebuilds the gallery radial items using the current media context.
- * Called by gallery.js when the PromptBox media-change fires.
- * @param {{ imageCount?: number, videoCount?: number }} [ctx]
+ * Called by gallery.js when the PromptBox media-change or model-change fires.
+ * @param {{ imageCount?: number, videoCount?: number, modelId?: string|null }} [ctx]
  */
 export function refreshRadial(ctx = {}) {
+    if (Object.prototype.hasOwnProperty.call(ctx, 'modelId')) {
+        _radialModelId = ctx.modelId ?? null;
+    }
     if (!_radialInstance) return;
     _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems(ctx));
 }
