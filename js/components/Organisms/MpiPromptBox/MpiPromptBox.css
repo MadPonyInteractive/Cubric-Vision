@@ -131,14 +131,15 @@
     display: inline-flex;
     align-items: center;
     gap: var(--s-2);
-    line-height: 1;
+    min-height: 16px;
+    line-height: 16px;
     white-space: nowrap;
 }
 
 .mpi-prompt-box__badge-model {
     font-size: var(--t-xs);
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-1);
 }
@@ -154,6 +155,7 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-3);
+    font-weight: 500;
 }
 
 .mpi-prompt-box__badge-batch {
