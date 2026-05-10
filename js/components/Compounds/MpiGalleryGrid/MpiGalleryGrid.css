@@ -584,3 +584,51 @@
     z-index: 5;
     pointer-events: none;
 }
+
+/* Queued-continue state: hide Continue/Discard, show Cancel in the same
+ * bottom-right action row, and a "Queued…" band centered over the card. */
+.mpi-group-card__queued-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    z-index: 6;
+}
+
+.mpi-group-card--queued-continue .mpi-group-card__preview-actions {
+    display: none;
+}
+
+.mpi-group-card--queued-continue .mpi-group-card__queued-actions {
+    display: flex;
+}
+
+.mpi-group-card--queued-continue .mpi-group-card__media::before {
+    inset: 0;
+    height: auto;
+    background: oklch(0 0 0 / 0.35);
+    opacity: 1;
+}
+
+.mpi-group-card--preview.mpi-group-card--queued-continue::after {
+    content: 'Queued…';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.35rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+    background: color-mix(in oklch, var(--accent-heat) 50%, transparent);
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
+}

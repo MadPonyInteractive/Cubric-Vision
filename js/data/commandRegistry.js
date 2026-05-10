@@ -126,14 +126,14 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'previewStage'],
+        components: ['ratio', 'previewStage', 'generationMode'],
     },
     i2v_ms: {
         label: 'Image to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         promptRequired: false,
-        components: ['ratio', 'previewStage'],
+        components: ['ratio', 'previewStage', 'generationMode'],
     },
     extend: {
         label: 'Extend',

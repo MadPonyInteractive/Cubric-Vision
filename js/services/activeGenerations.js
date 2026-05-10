@@ -35,11 +35,11 @@ const _registry = new Map();
  * @param {{ scope, groupId, tempId, operation, modelId, placeholderGroup, exec }} opts
  * @returns {{ id: string }}
  */
-function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec }) {
+function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null }) {
     const id = crypto.randomUUID();
-    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null };
+    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId };
     _registry.set(id, entry);
-    Events.emit('generation:started', { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders });
+    Events.emit('generation:started', { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId });
     return { id };
 }
 

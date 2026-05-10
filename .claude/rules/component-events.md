@@ -346,8 +346,9 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
-         `preview:continue` `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card; Block re-runs the workflow with `previewOnly: false` + `replaceItemId: item.id`
-         `preview:discard`  `{ group: ItemGroup, item: MediaItem }` — Discard button on preview-stage card; Block confirms then deletes media + sidecar and removes the group
+         `preview:continue`     `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card; Block enqueues a final-pass run via `enqueueGeneration` with `previewOnly: false` + `replaceItemId: item.id`
+         `preview:discard`      `{ group: ItemGroup, item: MediaItem }` — Discard button on preview-stage card; Block confirms then deletes media + sidecar and removes the group
+         `preview:pop-continue` `{ group: ItemGroup, item: MediaItem }` — Cancel button on a queued-Continue card; Block calls `removeCueJob` to drop the matching pending job and revert the card to preview state
 LISTENS: (none — internal MpiButton tab events handled internally)
 NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection: ctrl/cmd-click toggles, shift-click range-selects, right-click opens `MpiContextMenu`. No `MpiSelectionBar` or `MpiCheckbox`.
 
@@ -379,7 +380,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `models:closed` — remounts PromptBox if needed
          `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
-         `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` — seeds `_myGenIds`; in Queue mode only the first running generation's placeholders are visible
+         `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId }` — seeds `_myGenIds`; in Queue mode only the first running generation's placeholders are visible. Block uses `replaceItemId` to flip queued-Continue cards from "Queued…" → "Generating final…"
          `generation:preview` `{ id, url }` — updates preview only for the first running visible placeholder set
          `generation:complete` `{ id, item, group, tempId, extraTempIds }` — removes all N placeholders, `setGroups` from state
          `generation:error` `{ id, tempId, extraTempIds }` — removes all N placeholders, restores group list
@@ -395,7 +396,7 @@ NOTE:    Reads `state.s_selectedModelId`, `state.currentProject`; writes same
          Queue cancel targets the first running gallery entry; Single/Loop cancel targets the last active entry. Clear calls `clearPendingQueue()`.
          commandExecutor emits tool:loading-model and tool:sampling-start during generation (see below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
-         Continue (`preview:continue`) drives PromptBox via `_pb.el.setGenerating(true)` so Run becomes Stop; existing `pb.on('cancel')` handler cancels the live `activeGenerations` entry (covers Continue runs without a separate cancel path). Cleared via `setGenerating(false)` on `gallery:item-updated`, `onError`, or `onCancel`.
+         Continue (`preview:continue`) enqueues a final-pass job via `enqueueGeneration` (rides the in-app Cue queue, single-dispatch). Block tracks `_queuedContinueGroupIds` (Map: groupId→itemId, "Queued…" badge) and `_continuingGroupIds` (Set, "Generating final…" badge); flips queued→continuing on `generation:started` by matching `replaceItemId`. PromptBox shows generating while either set is non-empty. On Continue, Block also auto-syncs PB model + op to the preview's (`item.modelId` / `item.operation`) when mismatched and forces `state.generationMode = 'queue'` so the Cue cluster is visible. `preview:pop-continue` calls `removeCueJob(job => job.config.replaceItemId === item.id)`; the cleared job's `onCancel` reverts the card. Cue Clear and per-job cancellation both fire `onCancel` chains, so card markers stay coherent.
 
 ---
 
@@ -408,7 +409,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 **Events emitted (via Events bus):**
 | Event | Payload | When |
 |---|---|---|
-| `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }` | `activeGenerations.start()` called |
+| `generation:started` | `{ id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId }` | `activeGenerations.start()` called |
 | `generation:preview` | `{ id, url }` | `activeGenerations.setPreview()` — preview broadcast to all N placeholders (same latent, ComfyUI emits one) |
 | `generation:complete` | `{ id, item, group, tempId?, extraTempIds? }` | `generationService` emits after project mutation + `end()` |
 | `generation:error` | `{ id, tempId?, extraTempIds? }` | `generationService` emits after `end()` |

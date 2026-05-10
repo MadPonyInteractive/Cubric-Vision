@@ -84,8 +84,34 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
 
 /** Clears all pending Cue jobs (does not interrupt the running one). */
 export function clearCueQueue() {
-    _cueQueue.length = 0;
+    const removed = _cueQueue.splice(0, _cueQueue.length);
     _updateQueueDepth();
+    for (const job of removed) {
+        try { job.callbacks?.onCancel?.(); } catch {}
+    }
+}
+
+/**
+ * Removes pending Cue jobs matching `predicate(job)`. Returns removed jobs.
+ * Each removed job has its `onCancel` callback fired so callers can roll back
+ * UI state (e.g., flip "Queued..." card back to preview state).
+ * Does NOT interrupt the running job.
+ */
+export function removeCueJob(predicate) {
+    if (typeof predicate !== 'function') return [];
+    const removed = [];
+    for (let i = _cueQueue.length - 1; i >= 0; i--) {
+        if (predicate(_cueQueue[i])) {
+            removed.push(..._cueQueue.splice(i, 1));
+        }
+    }
+    if (removed.length) {
+        _updateQueueDepth();
+        for (const job of removed) {
+            try { job.callbacks?.onCancel?.(); } catch {}
+        }
+    }
+    return removed;
 }
 
 /** Force a state.generationQueueCount refresh (no-op for own-queue model). */
@@ -162,6 +188,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         extraTempIds:      opts.extraTempIds ?? [],
         extraPlaceholders: opts.extraPlaceholders ?? [],
         exec,
+        replaceItemId:     config.replaceItemId ?? null,
     });
 
     exec.onPromptAck = (promptId) => {

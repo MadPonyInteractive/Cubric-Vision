@@ -36,7 +36,7 @@
 
 > **Generation mode is session-only:** `state.generationMode` is shared across models and must not be stored in `project.json` or `modelSettings`. Switching models preserves the current mode.
 >
-> **Generation-mode failsafe:** when `_refreshOpSlot()` in `MpiPromptBox` mounts an op whose `commandRegistry.components[]` does NOT include `'generationMode'` (e.g. `t2v_ms` / `i2v_ms`), it forces `state.generationMode = 'single'` and calls `clearPendingQueue()` so the run cluster + Cue UI stay coherent. Ops that opt-out of mode controls cannot be executed under Queue / Auto-loop.
+> **Generation-mode failsafe:** when `_refreshOpSlot()` in `MpiPromptBox` mounts an op whose `commandRegistry.components[]` does NOT include `'generationMode'`, it forces `state.generationMode = 'single'` and calls `clearPendingQueue()` so the run cluster + Cue UI stay coherent. Ops that opt-out of mode controls cannot be executed under Queue / Auto-loop. (No live ops opt out today — `t2v_ms` / `i2v_ms` include `generationMode` so `previewStage` previews can be Cued; the Continue path then enqueues final-pass jobs via the same Cue queue.)
 
 > **PromptBox reads `modelSettings[modelId].previewStage`** — boolean, persisted per-model via `settings:model:update`. Drives the "Preview initial stage" toggle (control id `previewStage`) and the `previewOnly` field on the run payload. Only present in operations whose `components[]` includes `'previewStage'` (today: `t2v_ms`, `i2v_ms`).
 

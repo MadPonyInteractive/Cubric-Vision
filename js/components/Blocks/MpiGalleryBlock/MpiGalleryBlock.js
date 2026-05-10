@@ -27,7 +27,7 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -202,11 +202,18 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _previewDiscardDialog.el.show();
         });
 
-        // Track which groups have a Continue run in flight. The grid now owns
-        // the per-card continuing class — setGroups rebuilds re-apply it via
-        // grid.el.markContinuing's internal Set, so we only mirror it here for
-        // the cancel/error/complete callbacks.
+        // Track Continue runs. `_queuedContinueGroupIds` = waiting in Cue queue;
+        // `_continuingGroupIds` = currently running. Both maps `groupId → itemId`
+        // so cue-queue removal can target the exact replaceItemId job.
+        // Grid mirrors via markContinuing / markQueuedContinue (debounced render
+        // re-applies state from internal Sets).
         const _continuingGroupIds = new Set();
+        const _queuedContinueGroupIds = new Map(); // groupId → itemId
+
+        const _refreshPbGenerating = () => {
+            const busy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
+            _pb?.el?.setGenerating?.(busy);
+        };
 
         grid.on('preview:continue', ({ group: g, item }) => {
             if (!item?.frozenParams) {
@@ -214,19 +221,41 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 return;
             }
             const model = MODELS.find(m => m.id === item.modelId);
-            if (!model || model.installed === false) {
-                StatusBar.notify('Model for this preview is no longer installed.', 'warning');
+            if (!model) {
+                StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot continue.`, 'warning');
+                return;
+            }
+            if (model.installed === false) {
+                const name = model.label || model.name || model.id;
+                StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to continue.`, 'warning');
                 return;
             }
 
-            // Multi-stage ops do not expose generationMode — Continue always
-            // runs as a single-shot job. If anything is currently generating,
-            // reject with a warning.
-            const anyRunning = activeGenerations.list().some(e => e.status === 'running');
-            if (anyRunning) {
-                StatusBar.notify('Generation in progress — stop or wait before continuing the preview.', 'warning');
-                return;
+            // Already queued or running for this group — ignore re-clicks.
+            if (_continuingGroupIds.has(g.id) || _queuedContinueGroupIds.has(g.id)) return;
+
+            // Sync PB to the preview's model + op so the user sees Cue progress
+            // for the multi-stage workflow that originally produced the preview.
+            // Skip the switch when already aligned to avoid clobbering state.
+            const modelMismatch = activeModelId !== model.id;
+            const opMismatch    = activeOperation !== item.operation;
+            if (modelMismatch || opMismatch) {
+                if (modelMismatch) {
+                    activeModel   = model;
+                    activeModelId = model.id;
+                    state.s_selectedModelId = model.id;
+                    _pb?.el?.setModel?.(model);
+                }
+                if (item.operation) {
+                    activeOperation = item.operation;
+                    _pb?.el?.setOperation?.(item.operation);
+                }
+                const name = model.label || model.name || model.id;
+                StatusBar.notify(`Switched to "${name}" — continuing preview.`, 'info');
             }
+            // Force Queue mode so the user sees the Cue x{n} cluster while
+            // multiple Continues stack up.
+            if (state.generationMode !== 'queue') state.generationMode = 'queue';
 
             const frozen = item.frozenParams || {};
             const dims = frozen.dims || {};
@@ -247,26 +276,60 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 replaceItemId: item.id,
             };
 
-            _continuingGroupIds.add(g.id);
-            grid.el.markContinuing(g.id, true);
-            // Drive PromptBox into "generating" so its Run becomes Stop and the
-            // user can cancel the Continue run. Cancel routing falls through
-            // the existing pb.on('cancel') handler which cancels the latest
-            // gallery-scope active generation.
-            _pb?.el?.setGenerating?.(true);
+            // Mark queued. If nothing is currently running, enqueueGeneration
+            // will dispatch immediately and `generation:started` flips us to
+            // continuing. Otherwise the card stays in "Queued..." state.
+            _queuedContinueGroupIds.set(g.id, item.id);
+            grid.el.markQueuedContinue(g.id, true);
+            _refreshPbGenerating();
 
             const _clearContinuing = () => {
                 _continuingGroupIds.delete(g.id);
                 grid.el.markContinuing(g.id, false);
-                _pb?.el?.setGenerating?.(false);
+                _refreshPbGenerating();
+            };
+
+            const _clearQueued = () => {
+                if (_queuedContinueGroupIds.has(g.id)) {
+                    _queuedContinueGroupIds.delete(g.id);
+                    grid.el.markQueuedContinue(g.id, false);
+                }
+                _refreshPbGenerating();
             };
 
             const callbacks = {
-                onCancel: _clearContinuing,
-                onError:  _clearContinuing,
+                // onCancel fires for both: cleared-while-pending (clearCueQueue/
+                // removeCueJob) AND user-cancelled-mid-run. In the queued case
+                // _continuingGroupIds is empty, so _clearContinuing is a no-op
+                // and _clearQueued does the work.
+                onCancel: () => { _clearQueued(); _clearContinuing(); },
+                onError:  () => { _clearQueued(); _clearContinuing(); },
                 onComplete: () => { /* cleared when gallery:item-updated fires */ },
             };
-            startGeneration(config, callbacks, { scope: 'gallery' });
+            enqueueGeneration(config, callbacks, { scope: 'gallery', _continueGroupId: g.id });
+        });
+
+        // When a Continue job actually starts dispatching, flip its card from
+        // "Queued..." → "Generating final...".
+        _unsubs.push(Events.on('generation:started', ({ scope, replaceItemId }) => {
+            if (scope !== 'gallery' || !replaceItemId) return;
+            for (const [groupId, itemId] of _queuedContinueGroupIds) {
+                if (itemId === replaceItemId) {
+                    _queuedContinueGroupIds.delete(groupId);
+                    grid.el.markQueuedContinue(groupId, false);
+                    _continuingGroupIds.add(groupId);
+                    grid.el.markContinuing(groupId, true);
+                    _refreshPbGenerating();
+                    break;
+                }
+            }
+        }));
+
+        // Pop button on a queued card → remove its job from the cue queue.
+        // removeCueJob fires the job's onCancel which clears the marker.
+        grid.on('preview:pop-continue', ({ group: g, item }) => {
+            if (!_queuedContinueGroupIds.has(g.id)) return;
+            removeCueJob(job => job.config?.replaceItemId === item.id);
         });
 
         _unsubs.push(Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
@@ -275,7 +338,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (_continuingGroupIds.has(groupId)) {
                 _continuingGroupIds.delete(groupId);
                 grid.el.markContinuing(groupId, false);
-                _pb?.el?.setGenerating?.(false);
+                _refreshPbGenerating();
             }
         }));
 
@@ -442,7 +505,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (target) activeGenerations.cancel(target.id);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
-                if (noRunning && (mode !== 'queue' || queueIdle)) {
+                // Continue jobs ride the Cue queue regardless of PB mode. If
+                // any are queued/running we must NOT flip PB to idle, even
+                // when current mode !== 'queue'.
+                const continueBusy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
+                if (noRunning && (mode !== 'queue' || queueIdle) && !continueBusy) {
                     if (mode !== 'queue') state.generationQueueCount = 0;
                     Events.emit('promptbox:generation-end');
                 }

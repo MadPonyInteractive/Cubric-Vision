@@ -43,8 +43,9 @@ import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
  *   'gc-remove'   { groupId }            — all history entries missing; remove from grid
  *   'selection-start' {}                 — selection mode activated (hide PromptBox)
  *   'selection-end'   {}                 — selection mode exited (show PromptBox)
- *   'preview:continue' { group, item }   — preview-stage card Continue clicked
- *   'preview:discard'  { group, item }   — preview-stage card Discard clicked
+ *   'preview:continue'    { group, item } — preview-stage card Continue clicked
+ *   'preview:discard'     { group, item } — preview-stage card Discard clicked
+ *   'preview:pop-continue'{ group, item } — Pop clicked while card is queued for Continue
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -86,6 +87,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // rebuilds — re-applied to fresh cards inside _rerenderJustified so
         // the spinner doesn't flash off when the grid is rebuilt.
         const _continuingIds = new Set();
+        const _queuedContinueIds = new Set();
 
         const grid = qs('.mpi-gallery-grid__grid', el);
         const sliderWrap = qs('.mpi-gallery-grid__slider-wrap', el);
@@ -235,6 +237,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-group-card__continue-wrap"></div>
                     <div class="mpi-group-card__discard-wrap"></div>
                 </div>
+                <div class="mpi-group-card__queued-actions">
+                    <div class="mpi-group-card__pop-wrap"></div>
+                </div>
                 <div class="mpi-group-card__overlay">
                     <span class="mpi-group-card__name"></span>
                     <span class="mpi-group-card__sub"></span>
@@ -254,6 +259,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const reuseWrap    = qs('.mpi-group-card__reuse-wrap', cardEl);
             const continueWrap = qs('.mpi-group-card__continue-wrap', cardEl);
             const discardWrap  = qs('.mpi-group-card__discard-wrap', cardEl);
+            const popWrap      = qs('.mpi-group-card__pop-wrap', cardEl);
 
             let _generating = false;
             let _showInfo   = false;
@@ -309,6 +315,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const selected = group?.history?.[group.selectedIndex];
                 if (!selected) return;
                 emit('preview:discard', { group, item: selected });
+            });
+
+            const _popBtn = MpiButton.mount(popWrap, {
+                icon: 'close', size: 'sm', variant: 'primary',
+                info: 'Cancel queued continue (returns to Continue / Discard)',
+                label: 'Cancel',
+            });
+
+            _popBtn.on('click', (e) => {
+                e.originalEvent?.stopPropagation();
+                const selected = group?.history?.[group.selectedIndex];
+                if (!selected) return;
+                emit('preview:pop-continue', { group, item: selected });
             });
 
             let _videoThumb = null;
@@ -531,6 +550,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.toggle('mpi-group-card--continuing', !!val);
             };
 
+            cardEl.setQueuedContinue = (val) => {
+                cardEl.classList.toggle('mpi-group-card--queued-continue', !!val);
+            };
+
             cardEl.refreshGroup = (newGroup) => {
                 if (newGroup) group = newGroup;
                 _render();
@@ -632,6 +655,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
                 _continuingIds.forEach(id => _cardMap.get(id)?.card?.el?.setContinuing?.(true));
+                _queuedContinueIds.forEach(id => _cardMap.get(id)?.card?.el?.setQueuedContinue?.(true));
             }, 16);
         }
 
@@ -732,6 +756,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (val) _continuingIds.add(groupId);
             else     _continuingIds.delete(groupId);
             _cardMap.get(groupId)?.card?.el?.setContinuing?.(!!val);
+        };
+
+        el.markQueuedContinue = (groupId, val) => {
+            if (val) _queuedContinueIds.add(groupId);
+            else     _queuedContinueIds.delete(groupId);
+            _cardMap.get(groupId)?.card?.el?.setQueuedContinue?.(!!val);
+        };
+
+        el.clearAllQueuedContinue = () => {
+            const ids = [..._queuedContinueIds];
+            _queuedContinueIds.clear();
+            for (const id of ids) {
+                _cardMap.get(id)?.card?.el?.setQueuedContinue?.(false);
+            }
+            return ids;
         };
 
         el.refreshGroup = (newGroup) => {
