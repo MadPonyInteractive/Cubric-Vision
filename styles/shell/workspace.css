@@ -30,6 +30,12 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  /* Establish stacking context so the absolutely-positioned media strip
+   * (rendered above the bar, bottom: 100%) paints over gallery cards
+   * — including the sticky "Generating…" slot (z-index 10) — while
+   * staying below drop overlays (z-index 50+) and modals/toasts. */
+  position: relative;
+  z-index: 40;
 }
 
 /* ── Tool Container ─────────────────────────────────────────────────────────── */

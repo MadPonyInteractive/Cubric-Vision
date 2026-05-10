@@ -275,6 +275,10 @@
     box-sizing: border-box;
     background: transparent;
     flex-shrink: 0;
+    /* Sits above siblings within #prompt-box-mount stacking context.
+     * Mount-level z-index (workspace.css) keeps it above gallery cards
+     * while staying beneath drop overlays / modals / toasts. */
+    z-index: 1;
 }
 
 .mpi-prompt-box-media-strip:empty {
@@ -287,7 +291,7 @@
     height: 5rem;
     border-radius: 0;
     overflow: visible;
-    border: 1px solid var(--line-soft);
+    border: 3px solid var(--accent-heat);
     flex-shrink: 0;
     background: var(--surface-2);
 }
