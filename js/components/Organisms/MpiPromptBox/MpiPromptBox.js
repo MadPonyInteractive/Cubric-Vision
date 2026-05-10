@@ -7,7 +7,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -88,19 +88,71 @@ export const MpiPromptBox = ComponentFactory.create({
         let _modelDropdown = null;
         let _opDropdown = null;
 
-        const acceptsImage = model
-            ? model.supportedOps.some(op => (commands[op]?.requiresImages ?? 0) >= 1)
-            : false;
-        const acceptsVideo = model
-            ? model.supportedOps.some(op => (commands[op]?.requiresVideo  ?? 0) >= 1)
-            : false;
-
         /** @type {Array<Function>} Cleanup functions, all run in destroy. */
         const _unsubs = [];
 
         // ── Media state ────────────────────────────────────────────────────────
-        /** @type {Array<{id:string, url:string, file:File|null, mediaType:'image'|'video', source:'file'|'app'}>} */
+        /** @type {Array<{id:string, url:string, file:File|null, mediaType:'image'|'video'|'audio', source:'file'|'app', role?:string}>} */
         const _mediaItems = [];
+
+        function _mediaSlotsForOperation(operation = activeOperation) {
+            return getCommandMediaInputs(operation);
+        }
+
+        function _maxMediaForOperation(operation, mediaType) {
+            const slots = _mediaSlotsForOperation(operation).filter(slot => slot.mediaType === mediaType);
+            if (slots.length) return slots.length;
+            const cmd = commands[operation];
+            if (!cmd) return 0;
+            if (mediaType === 'image') return Math.max(0, Number(cmd.requiresImages) || 0);
+            if (mediaType === 'video') return Math.max(0, Number(cmd.requiresVideo) || 0);
+            return 0;
+        }
+
+        function _maxMediaForCurrentOperation(mediaType) {
+            const activeMax = _maxMediaForOperation(activeOperation, mediaType);
+            if (activeMax > 0) return activeMax;
+            if (!model?.supportedOps?.length) return 0;
+            return model.supportedOps.reduce((max, op) => Math.max(max, _maxMediaForOperation(op, mediaType)), 0);
+        }
+
+        function _acceptsMediaType(mediaType) {
+            return _maxMediaForCurrentOperation(mediaType) > 0;
+        }
+
+        function _withAssignedRoles(items = _mediaItems, operation = activeOperation) {
+            const slots = _mediaSlotsForOperation(operation);
+            if (!slots.length) return items.map(item => ({ ...item }));
+
+            const usedIds = new Set();
+            const assigned = new Map();
+            const nextItems = items.map(item => ({ ...item, role: item.role || undefined }));
+
+            for (const slot of slots) {
+                const explicit = nextItems.find(item =>
+                    item.role === slot.key &&
+                    item.mediaType === slot.mediaType &&
+                    !usedIds.has(item.id)
+                );
+                if (!explicit) continue;
+                usedIds.add(explicit.id);
+                assigned.set(slot.key, explicit);
+            }
+
+            for (const slot of slots) {
+                if (assigned.has(slot.key)) continue;
+                const item = nextItems.find(candidate =>
+                    candidate.mediaType === slot.mediaType &&
+                    !usedIds.has(candidate.id)
+                );
+                if (!item) continue;
+                item.role = slot.key;
+                usedIds.add(item.id);
+                assigned.set(slot.key, item);
+            }
+
+            return nextItems;
+        }
 
         function _removeItem(id) {
             const idx = _mediaItems.findIndex(m => m.id === id);
@@ -113,7 +165,8 @@ export const MpiPromptBox = ComponentFactory.create({
         function _emitMediaChange() {
             el.imageCount = _mediaItems.filter(m => m.mediaType === 'image').length;
             el.videoCount = _mediaItems.filter(m => m.mediaType === 'video').length;
-            _context = { ..._context, imageCount: el.imageCount, videoCount: el.videoCount };
+            el.audioCount = _mediaItems.filter(m => m.mediaType === 'audio').length;
+            _context = { ..._context, imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount };
 
             const hasMedia = el.imageCount > 0 || el.videoCount > 0;
             const curCmd = commands[activeOperation];
@@ -137,13 +190,21 @@ export const MpiPromptBox = ComponentFactory.create({
                 _refreshOpDropdown();
             }
 
-            _renderStrip([..._mediaItems]);
-            emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, items: [..._mediaItems] });
+            const renderedItems = _withAssignedRoles();
+            _renderStrip(renderedItems);
+            emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
         function _tryAddMedia({ url, file, mediaType, source }) {
-            const existing = _mediaItems.find(m => m.mediaType === mediaType);
-            if (existing) _removeItem(existing.id);
+            const maxCount = _maxMediaForCurrentOperation(mediaType);
+            if (maxCount <= 0) { _showIncompatibleToast(); return; }
+
+            const sameType = _mediaItems.filter(m => m.mediaType === mediaType);
+            if (maxCount === 1) {
+                sameType.forEach(item => _removeItem(item.id));
+            } else if (sameType.length >= maxCount) {
+                _removeItem(sameType[0].id);
+            }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
             _mediaItems.push(item);
@@ -170,8 +231,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (appData) {
                     try {
                         const { filePath, type } = JSON.parse(appData);
-                        if (type === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
-                        if (type === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
+                        if (!_acceptsMediaType(type)) { _showIncompatibleToast(); return; }
                         _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
                     } catch { /* malformed */ }
                     return;
@@ -181,10 +241,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (!file) return;
                 const mediaType = file.type.startsWith('image/') ? 'image'
                                 : file.type.startsWith('video/') ? 'video'
+                                : file.type.startsWith('audio/') ? 'audio'
                                 : null;
                 if (!mediaType) return;
-                if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return; }
-                if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return; }
+                if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return; }
 
                 const project = state.currentProject;
                 const uploaded = project
@@ -206,7 +266,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Public API ─────────────────────────────────────────────────────────
         el.imageCount    = 0;
         el.videoCount    = 0;
-        el.getMediaItems = () => [..._mediaItems];
+        el.getMediaItems = () => _withAssignedRoles();
         el.clearMedia    = () => [..._mediaItems].forEach(m => _removeItem(m.id));
         el.removeMedia   = (id) => _removeItem(id);
 
@@ -298,13 +358,19 @@ export const MpiPromptBox = ComponentFactory.create({
             _stripEl.innerHTML = '';
             items.forEach(item => {
                 const chip = document.createElement('div');
-                chip.className = 'mpi-prompt-box-media-strip__chip';
+                chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
-                chip.innerHTML = item.mediaType === 'image'
-                    ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="">
-                       <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`
-                    : `<div class="mpi-prompt-box-media-strip__video-thumb">${renderIcon('video', 'sm')}</div>
-                       <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>`;
+                const mediaHtml = item.mediaType === 'image'
+                    ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="">`
+                    : item.mediaType === 'video'
+                        ? `<video src="${item.url}" class="mpi-prompt-box-media-strip__thumb" muted playsinline preload="metadata"></video>
+                           <span class="mpi-prompt-box-media-strip__type">${renderIcon('video', 'xs')}</span>`
+                        : `<div class="mpi-prompt-box-media-strip__audio-thumb">${renderIcon('audio', 'sm')}</div>
+                           <span class="mpi-prompt-box-media-strip__type">${renderIcon('audio', 'xs')}</span>`;
+                chip.innerHTML = `
+                    ${mediaHtml}
+                    <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
+                `;
                 on(qs('.mpi-prompt-box-media-strip__remove', chip), 'click', (e) => {
                     e.stopPropagation();
                     el.removeMedia?.(item.id);
@@ -327,8 +393,7 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         el.injectMedia = ({ url, mediaType }) => {
-            if (mediaType === 'image' && !acceptsImage) { _showIncompatibleToast(); return false; }
-            if (mediaType === 'video' && !acceptsVideo) { _showIncompatibleToast(); return false; }
+            if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
             _tryAddMedia({ url, file: null, mediaType, source: 'app' });
             return true;
         };

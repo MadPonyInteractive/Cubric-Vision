@@ -73,6 +73,16 @@
     - Separate git repo — commit independently.
     ```
 
+### Workflow operations not updating when image is present.
+
+  - tags: [Bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    This could be broader than just images added to the prompt box. I noticed that, for example, having an image model loaded and adding an image to the prompt box filters out the operations that can take in an image, but when changing to a different model text or video doesn't matter. It defaults to text-to-image or text-to-video the operation does. So changing to a different model should be aware if there is media in the prompt box and filter out operations that take or do not take media.
+    ```
+
 ## PLANNING
 
 ### Cross-platform portable distribution

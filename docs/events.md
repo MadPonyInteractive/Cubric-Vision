@@ -47,7 +47,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `workspace:set-operation` | Radial menu operation change `{ operation }` |
 | `workspace:inject-prompts` | Reuse button injects prompt into PromptBox `{ positive, negative }` |
 | `generation:started` | Generation registered in activeGenerations `{ id, scope, groupId, tempId, placeholderGroup }` |
-| `generation:preview` | New latent preview blob URL available `{ id, url }` |
+| `generation:preview` | New latent preview blob URL available `{ id, url }`; gallery cards keep the generating spinner visible until the preview image has loaded |
 | `generation:complete` | Generation finished, item persisted `{ id, item, group, tempId? }` |
 | `generation:error` | Generation failed `{ id, tempId? }` |
 | `generation:cancelled` | Generation cancelled or produced no output `{ id, tempId? }` |

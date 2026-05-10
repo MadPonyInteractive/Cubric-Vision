@@ -236,8 +236,30 @@
     transition: opacity 0.2s ease;
 }
 
+.mpi-group-card img.mpi-group-card__thumb:not(.mpi-group-card__thumb--loaded),
+.mpi-group-card img.mpi-group-card__preview-img:not(.mpi-group-card__preview-img--loaded) {
+    opacity: 0;
+}
+
+.mpi-group-card__thumb:not([src]),
+.mpi-group-card__thumb[src=""],
+.mpi-group-card__preview-img[src=""],
+.mpi-group-card__preview-img:not([src]) {
+    visibility: hidden;
+}
+
 .mpi-group-card__thumb--video {
     object-fit: cover;
+}
+
+.mpi-group-card__thumb--empty {
+    background: transparent;
+}
+
+.mpi-group-card__thumb--bg {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 /* ── Generating state ────────────────────────────────────────────────────── */
@@ -282,10 +304,6 @@
     to {
         transform: translate(-50%, -50%) rotate(360deg);
     }
-}
-
-.mpi-group-card--generating .mpi-group-card__thumb {
-    visibility: hidden;
 }
 
 /* ── Select checkbox ─────────────────────────────────────────────────────── */

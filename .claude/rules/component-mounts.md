@@ -214,3 +214,6 @@ Builds its own tool list from `mode: 'image'|'video'` prop. All tools — flat o
 - `setMode(mode)` — activate programmatically; emits `activate { mode }`; re-activating current = no-op
 - `setDisabled(map)` — bulk update `{ [toolMode]: { disabled, reason? } }`; accepts top-level and sub-modes
 - `getActiveMode()` — read current mode
+## Gallery Preview Lifecycle
+
+`MpiGalleryGrid.updatePreview(tempId, url)` must keep the generating spinner visible until the preview image's own `load` event fires. Do not hide the spinner immediately after assigning `img.src`; WAN/video workflows can emit early preview URLs while models are still loading.

@@ -30,6 +30,12 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {boolean}         [promptRequired] - Whether a text prompt is mandatory
  * @property {boolean}         [universal]    - Not model-tied; uses universalWorkflows in modelRegistry
  * @property {boolean}         [stub]         - Not yet implemented; registered but disabled in UI
+ * @property {Array<{
+ *   key:string,
+ *   mediaType:'image'|'video'|'audio',
+ *   title:string,
+ *   required?:boolean
+ * }>}                         [mediaInputs] - Named media slots injected by Comfy node title.
  * @property {string[]}        [components]   - IDs of operation-specific sub-controls injected
  *                                              into MpiPromptBox's operation slot.
  *                                              Each ID maps to a component in js/components/.
@@ -63,6 +69,9 @@ export const commands = {
         label: 'Image to Image',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         promptRequired: true,
         components: ['ratio', 'batch', 'generationMode'],
     },
@@ -70,6 +79,9 @@ export const commands = {
         label: 'Upscale',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         promptRequired: false,
         components: [],
     },
@@ -77,6 +89,9 @@ export const commands = {
         label: 'Edit',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         promptRequired: true,
         components: [],
     },
@@ -84,6 +99,9 @@ export const commands = {
         label: 'Detail',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         requiresMask: true,
         promptRequired: true,
         components: [],
@@ -92,6 +110,9 @@ export const commands = {
         label: 'Change',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         requiresMask: true,
         promptRequired: true,
         components: [],
@@ -100,6 +121,9 @@ export const commands = {
         label: 'Remove',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         requiresMask: true,
         promptRequired: true,
         components: [],
@@ -118,6 +142,10 @@ export const commands = {
         label: 'Image to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+        ],
         promptRequired: false,
         components: ['ratio', 'generationMode'],
     },
@@ -132,6 +160,10 @@ export const commands = {
         label: 'Image to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+        ],
         promptRequired: false,
         components: ['ratio', 'previewStage', 'generationMode'],
     },
@@ -140,6 +172,9 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         requiresVideo: 1,
+        mediaInputs: [
+            { key: 'inputVideo', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
+        ],
         promptRequired: false,
         components: [],
     },
@@ -151,6 +186,10 @@ export const commands = {
         label: 'Interpolate',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
+        requiresVideo: 1,
+        mediaInputs: [
+            { key: 'inputVideo', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
+        ],
         promptRequired: false,
         universal: true,     // not model-tied; uses universalWorkflows in modelRegistry
     },
@@ -158,6 +197,10 @@ export const commands = {
         label: 'Video Upscale',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
+        requiresVideo: 1,
+        mediaInputs: [
+            { key: 'inputVideo', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
+        ],
         promptRequired: false,
         universal: true,
     },
@@ -165,6 +208,9 @@ export const commands = {
         label: 'Auto Masking',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
         promptRequired: false,
         universal: true,
     },
@@ -241,6 +287,41 @@ export function getToolCommands(mediaType) {
  */
 export function getCommand(key) {
     return commands[key] ?? null;
+}
+
+/**
+ * Returns a command's declared media input slots, falling back to the legacy
+ * requiresImages/requiresVideo counters for operations not yet migrated.
+ * @param {string} key
+ * @returns {Array<{key:string, mediaType:'image'|'video'|'audio', title:string, required:boolean}>}
+ */
+export function getCommandMediaInputs(key) {
+    const cmd = commands[key];
+    if (!cmd) return [];
+    if (Array.isArray(cmd.mediaInputs)) {
+        return cmd.mediaInputs.map(slot => ({ required: true, ...slot }));
+    }
+
+    const slots = [];
+    const imageCount = Math.max(0, Number(cmd.requiresImages) || 0);
+    const videoCount = Math.max(0, Number(cmd.requiresVideo) || 0);
+    for (let i = 0; i < imageCount; i++) {
+        slots.push({
+            key: i === 0 ? 'inputImage' : `inputImage${i + 1}`,
+            mediaType: MEDIA_TYPE.IMAGE,
+            title: i === 0 ? 'Input_Image' : `Input_Image_${i + 1}`,
+            required: true,
+        });
+    }
+    for (let i = 0; i < videoCount; i++) {
+        slots.push({
+            key: i === 0 ? 'inputVideo' : `inputVideo${i + 1}`,
+            mediaType: MEDIA_TYPE.VIDEO,
+            title: i === 0 ? 'Input_Video' : `Input_Video_${i + 1}`,
+            required: true,
+        });
+    }
+    return slots;
 }
 
 /**

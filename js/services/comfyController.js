@@ -312,10 +312,10 @@ export const ComfyUIController = {
      * Handles:
      * 1. **Loading** — resolves a workflow ID string from `state.allComfyWorkflows`
      *    or treats it as a `.json` filename and fetches it from `/comfy_workflows/`.
-     * 2. **Asset uploads** — `Input_Image`, `Input_Mask`, `Image`, `Mask` params
-     *    (data URIs, blob URLs, http URLs, or `/project-file` paths) are uploaded
-     *    to ComfyUI using **static filenames** (`mpi_input_image.png`,
-     *    `mpi_input_mask.png`) to enable execution caching.
+     * 2. **Asset handling** — image/mask params are uploaded to ComfyUI using
+     *    **static filenames** (`mpi_input_image.png`, `mpi_input_mask.png`) to
+     *    enable execution caching. Video/audio params resolve to local paths for
+     *    path-based loader nodes.
      * 3. **Parameter injection** — params are matched to nodes by `_meta.title`
      *    (case-insensitive) and written to the first matching input field
      *    (`value`, `text`, `int`, `float`, `boolean`, `string`, `ckpt_name`,
@@ -350,17 +350,34 @@ export const ComfyUIController = {
             workflow = await res.json();
         }
 
-        // 2. Handle Asset Uploads (Images/Masks) — static filenames for ComfyUI caching
-        const assetMap = {
-            "Image":       "mpi_input_image.png",
-            "Input_Image": "mpi_input_image.png",
-            "Mask":        "mpi_input_mask.png",
-            "Input_Mask":  "mpi_input_mask.png"
-        };
+        // 2. Handle media inputs by inspecting the matching workflow node input.
+        // This keeps future named slots (Input_Image_2, Reference_Video_3, etc.)
+        // from needing another hardcoded map in the controller.
+        const mediaParamKinds = {};
+        for (const key of Object.keys(params)) {
+            const nodes = Object.values(workflow).filter(node =>
+                (node?._meta?.title || '').toLowerCase() === key.toLowerCase()
+            );
+            if (nodes.some(node => node?.inputs && 'video' in node.inputs)) mediaParamKinds[key] = 'video';
+            else if (nodes.some(node => node?.inputs && 'audio' in node.inputs)) mediaParamKinds[key] = 'audio';
+            else if (nodes.some(node => node?.inputs && 'mask' in node.inputs)) mediaParamKinds[key] = 'mask';
+            else if (nodes.some(node => node?.inputs && 'image' in node.inputs)) mediaParamKinds[key] = 'image';
+        }
+        if (params.Image && !mediaParamKinds.Image) mediaParamKinds.Image = 'image';
+        if (params.Input_Image && !mediaParamKinds.Input_Image) mediaParamKinds.Input_Image = 'image';
+        if (params.Mask && !mediaParamKinds.Mask) mediaParamKinds.Mask = 'mask';
+        if (params.Input_Mask && !mediaParamKinds.Input_Mask) mediaParamKinds.Input_Mask = 'mask';
 
-        for (const [paramKey, staticName] of Object.entries(assetMap)) {
+        for (const [paramKey, mediaKind] of Object.entries(mediaParamKinds)) {
             let val = params[paramKey];
             if (!val) continue;
+
+            if (mediaKind === 'video' || mediaKind === 'audio') {
+                if (typeof val === 'string') params[paramKey] = this._resolveMediaPath(val);
+                continue;
+            }
+
+            const staticName = `mpi_${paramKey.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`;
 
             // Normalize local project paths to /project-file URLs
             if (
@@ -412,7 +429,7 @@ export const ComfyUIController = {
                 'value', 'text', 'int', 'float', 'boolean', 'string',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
-                'denoise', 'seed', 'noise_seed'
+                'denoise', 'seed', 'noise_seed', 'video', 'audio'
             ];
             for (const t of targets) {
                 if (t in node.inputs) {
@@ -530,5 +547,35 @@ export const ComfyUIController = {
             body: formData
         });
         return await uploadRes.json();
+    },
+
+    /**
+     * Resolves app media URLs into local paths for ComfyUI path-loader nodes.
+     * @param {string} mediaPathOrUrl
+     * @returns {string}
+     * @private
+     */
+    _resolveMediaPath(mediaPathOrUrl) {
+        if (!mediaPathOrUrl) return mediaPathOrUrl;
+
+        if (mediaPathOrUrl.includes('project-file?path=')) {
+            try {
+                const url = new URL(mediaPathOrUrl, window.location.origin);
+                return decodeURIComponent(url.searchParams.get('path') || mediaPathOrUrl);
+            } catch (_) {
+                const match = mediaPathOrUrl.match(/[?&]path=([^&]+)/);
+                return match ? decodeURIComponent(match[1]) : mediaPathOrUrl;
+            }
+        }
+
+        if (
+            !mediaPathOrUrl.startsWith('data:') &&
+            !mediaPathOrUrl.startsWith('blob:') &&
+            !mediaPathOrUrl.startsWith('http')
+        ) {
+            return mediaPathOrUrl.replace(/\//g, '\\');
+        }
+
+        return mediaPathOrUrl;
     }
 };

@@ -193,6 +193,11 @@ export const StatusBar = {
          */
         prepare(label) {
             _beginActiveCycle();
+            _stopTimer();
+            _elapsedSec = 0;
+            _setFill(0);
+            if (_jobPct) _jobPct.textContent = '';
+            if (_jobTime) _jobTime.textContent = '';
             if (_state === 'active') {
                 // Already active — just update label
                 _currentLabel = label.toUpperCase();
@@ -200,7 +205,6 @@ export const StatusBar = {
                 return;
             }
             _setActive(label.toUpperCase());
-            _setFill(0);
         },
 
         /**

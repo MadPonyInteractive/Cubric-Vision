@@ -208,7 +208,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         callbacks.onPreview?.(url);
     };
 
-    exec.onProgress = (value) => StatusBar.progress.update(value);
+    exec.onProgress = (value) => {
+        if (samplingStartTime) StatusBar.progress.update(value);
+    };
     exec.onSamplingStart = () => {
         samplingStartTime ??= Date.now();
     };
@@ -238,6 +240,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         let _previewStage = opts.stage;
         let _previewFrozen = opts.frozenParams;
         let _previewLoraSnapshot = opts.loraSnapshot;
+        const _frozenMediaItems = mediaItems
+            .filter(item => item?.url && item?.mediaType)
+            .map((item, index) => ({
+                id:        item.id ?? `frozen-media-${index}`,
+                url:       item.url,
+                mediaType: item.mediaType,
+                source:    item.source ?? null,
+                role:      item.role ?? null,
+            }));
         if (isVideo && config.previewOnly === true && _previewStage === undefined) {
             _previewStage = 'preview';
             _previewFrozen = {
@@ -246,6 +257,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 negative: negative,
                 dims:     { w: width, h: height },
                 frames:   injectionParams.Frames ?? injectionParams.Frame_Count ?? null,
+                mediaItems: _frozenMediaItems,
             };
             const _proj = state.currentProject;
             if (_proj && model.id) {

@@ -91,6 +91,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const grid = qs('.mpi-gallery-grid__grid', el);
         const sliderWrap = qs('.mpi-gallery-grid__slider-wrap', el);
+        const EMPTY_IMAGE_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
         /** @type {Array<Function>} */
         const _unsubs = [];
@@ -222,10 +223,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.innerHTML = `
                 <div class="mpi-group-card__media">
-                    <img class="mpi-group-card__thumb" alt="" draggable="true">
+                    <div class="mpi-group-card__thumb mpi-group-card__thumb--empty"></div>
                     <div class="mpi-group-card__preview">
                         <div class="mpi-group-card__spinner"></div>
-                        <img class="mpi-group-card__preview-img" alt="">
                     </div>
                 </div>
                 <div class="mpi-group-card__top-badge"></div>
@@ -248,10 +248,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             wrapper.appendChild(cardEl);
 
-            const thumb      = qs('.mpi-group-card__thumb', cardEl);
+            let thumb        = qs('.mpi-group-card__thumb', cardEl);
             const preview    = qs('.mpi-group-card__preview', cardEl);
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
-            const previewImg = qs('.mpi-group-card__preview-img', cardEl);
+            let previewImg   = null;
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
             const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
@@ -331,6 +331,85 @@ export const MpiGalleryGrid = ComponentFactory.create({
             });
 
             let _videoThumb = null;
+            function _ensurePreviewImage() {
+                if (previewImg) return previewImg;
+                previewImg = document.createElement('img');
+                previewImg.className = 'mpi-group-card__preview-img';
+                previewImg.alt = '';
+                previewImg.onload = () => {
+                    previewImg?.classList.add('mpi-group-card__preview-img--loaded');
+                    spinner.style.display = 'none';
+                };
+                preview.appendChild(previewImg);
+                return previewImg;
+            }
+
+            function _setPreviewImageSrc(img, url) {
+                img.classList.remove('mpi-group-card__preview-img--loaded');
+                spinner.style.display = '';
+                img.src = url;
+                if (img.complete && img.naturalWidth > 0) {
+                    img.classList.add('mpi-group-card__preview-img--loaded');
+                    spinner.style.display = 'none';
+                }
+            }
+
+            function _clearPreviewImage() {
+                previewImg?.remove();
+                previewImg = null;
+            }
+
+            function _replaceThumb(nextThumb) {
+                if (thumb === nextThumb) return;
+                thumb.replaceWith(nextThumb);
+                thumb = nextThumb;
+            }
+
+            function _swapThumbToImage(src, selected) {
+                let imageThumb = thumb instanceof HTMLImageElement ? thumb : null;
+                if (!imageThumb || imageThumb.classList.contains('mpi-group-card__thumb--video')) {
+                    imageThumb = document.createElement('img');
+                    imageThumb.className = 'mpi-group-card__thumb';
+                    imageThumb.alt = '';
+                    imageThumb.draggable = true;
+                    _replaceThumb(imageThumb);
+                    _videoThumb = null;
+                }
+                imageThumb.style.visibility = '';
+                imageThumb.classList.remove('mpi-group-card__thumb--loaded');
+                imageThumb.onload = () => {
+                    imageThumb.classList.add('mpi-group-card__thumb--loaded');
+                    cardEl.classList.remove('mpi-group-card--missing');
+                    if (group?.id && !_stabilizedIds.has(group.id)) {
+                        _stabilizedIds.add(group.id);
+                        _rerenderJustified();
+                    }
+                };
+                imageThumb.onerror = () => {
+                    cardEl.classList.add('mpi-group-card--missing');
+                    _swapThumbToEmpty();
+                    emit('media-missing', { group, itemId: selected?.id });
+                };
+                imageThumb.src = src;
+            }
+
+            function _swapThumbToEmpty() {
+                const emptyThumb = document.createElement('div');
+                emptyThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--empty';
+                _replaceThumb(emptyThumb);
+                _videoThumb = null;
+                cardEl.classList.remove('mpi-group-card--missing');
+            }
+
+            function _swapThumbToBackgroundImage(src) {
+                const bgThumb = document.createElement('div');
+                bgThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--bg';
+                bgThumb.style.backgroundImage = `url("${String(src).replaceAll('"', '\\"')}")`;
+                _replaceThumb(bgThumb);
+                _videoThumb = null;
+                cardEl.classList.remove('mpi-group-card--missing');
+            }
+
             function _swapThumbToVideo(src) {
                 if (_videoThumb && _videoThumb.src.endsWith(src)) return;
                 if (!_videoThumb) {
@@ -365,7 +444,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                             filePath: sel?.filePath, type: group.type,
                         }));
                     });
-                    thumb.replaceWith(_videoThumb);
+                    _replaceThumb(_videoThumb);
                 }
                 _videoThumb.src = src;
             }
@@ -376,27 +455,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const src = selected?.filePath || '';
 
                 if (src) {
-                    const isVideo = group.type === 'video' || selected?.type === 'video';
-                    if (isVideo) {
+                    const isVideo = selected?.type === 'video' || (group.type === 'video' && selected?.type !== 'image');
+                    if (selected?.inputPreview) {
+                        _swapThumbToBackgroundImage(src);
+                    } else if (isVideo) {
                         _swapThumbToVideo(src);
                     } else {
-                        thumb.onload = () => {
-                            cardEl.classList.remove('mpi-group-card--missing');
-                            if (group?.id && !_stabilizedIds.has(group.id)) {
-                                _stabilizedIds.add(group.id);
-                                _rerenderJustified();
-                            }
-                        };
-                        thumb.onerror = () => {
-                            cardEl.classList.add('mpi-group-card--missing');
-                            emit('media-missing', { group, itemId: selected?.id });
-                        };
-                        thumb.src = src;
+                        _swapThumbToImage(src, selected);
                     }
                 } else {
-                    thumb.onload = null;
-                    thumb.onerror = null;
-                    thumb.removeAttribute('src');
+                    _swapThumbToEmpty();
                 }
 
                 nameEl.textContent = selected?.name || group.name || '';
@@ -524,13 +592,23 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.add('mpi-group-card--generating');
                 preview.classList.add('mpi-group-card__preview--visible');
                 spinner.style.display = '';
-                if (previewUrl) previewImg.src = previewUrl;
+                if (thumb.getAttribute('src') !== EMPTY_IMAGE_SRC) {
+                    thumb.style.visibility = '';
+                } else {
+                    thumb.style.visibility = 'hidden';
+                }
+                if (previewUrl) {
+                    const img = _ensurePreviewImage();
+                    _setPreviewImageSrc(img, previewUrl);
+                } else {
+                    _clearPreviewImage();
+                }
             };
 
             cardEl.updatePreview = (previewUrl) => {
                 if (!_generating) return;
-                previewImg.src = previewUrl;
-                spinner.style.display = 'none';
+                const img = _ensurePreviewImage();
+                _setPreviewImageSrc(img, previewUrl);
             };
 
             cardEl.setDone = (newGroup) => {
@@ -538,6 +616,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _generating = false;
                 cardEl.classList.remove('mpi-group-card--generating');
                 preview.classList.remove('mpi-group-card__preview--visible');
+                _clearPreviewImage();
                 _render();
             };
 

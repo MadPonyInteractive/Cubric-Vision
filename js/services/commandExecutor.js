@@ -21,7 +21,7 @@
 
 import { ComfyUIController } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
-import { getCommand } from '../data/commandRegistry.js';
+import { getCommandMediaInputs } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
@@ -55,7 +55,7 @@ function _collectComfyOutputUrls(nodeOutput, target) {
  * @property {string}   [negative]   - Negative prompt text
  * @property {number}   [seed]       - Explicit seed; randomised if omitted
  * @property {Object}   [injectionParams] - Additional params from PromptBox controls (e.g. Width, Height, Steps, Denoise)
- * @property {Array<{url:string, mediaType:'image'|'video', source:string}>} [mediaItems]
+ * @property {Array<{url:string, mediaType:'image'|'video'|'audio', source:string, role?:string}>} [mediaItems]
  */
 
 /**
@@ -137,12 +137,68 @@ function _buildParams(payload) {
 
     if (payload.previewOnly === true) params['Preview_Only'] = true;
 
-    // Map dropped media to standard injection titles
-    const imageItem = mediaItems.find(m => m.mediaType === 'image');
-    const videoItem = mediaItems.find(m => m.mediaType === 'video');
+    // Map media to operation-declared Comfy input slots. Slots are role-first:
+    // explicit item.role wins, then remaining media fills matching mediaType in
+    // declared order. This supports future multi-image/video/audio workflows.
+    const mediaSlots = getCommandMediaInputs(payload.operation);
+    if (mediaSlots.length) {
+        const usedIds = new Set();
+        const assigned = new Map();
+        const fallbackAssigned = new Set();
 
-    if (imageItem) params['Input_Image'] = imageItem.url;
-    if (videoItem) params['Input_Image'] = videoItem.url; // video ops use same slot
+        for (const slot of mediaSlots) {
+            const explicit = mediaItems.find(item =>
+                item.role === slot.key &&
+                item.mediaType === slot.mediaType &&
+                item.url &&
+                !usedIds.has(item.id || item.url)
+            );
+            if (!explicit) continue;
+            usedIds.add(explicit.id || explicit.url);
+            assigned.set(slot.key, explicit);
+            params[slot.title] = explicit.url;
+        }
+
+        for (const slot of mediaSlots) {
+            if (assigned.has(slot.key)) continue;
+            const item = mediaItems.find(candidate =>
+                candidate.mediaType === slot.mediaType &&
+                candidate.url &&
+                !usedIds.has(candidate.id || candidate.url)
+            );
+            if (!item) continue;
+            usedIds.add(item.id || item.url);
+            assigned.set(slot.key, item);
+            params[slot.title] = item.url;
+        }
+
+        // Future-proof fallback: every declared media slot should receive a
+        // valid asset when any matching media exists. This prevents Comfy from
+        // using stale filenames embedded in the workflow JSON for optional or
+        // newly-added input nodes.
+        for (const slot of mediaSlots) {
+            if (assigned.has(slot.key)) continue;
+            const fallback = mediaItems.find(candidate =>
+                candidate.mediaType === slot.mediaType &&
+                candidate.url
+            );
+            if (!fallback) continue;
+            assigned.set(slot.key, fallback);
+            fallbackAssigned.add(slot.key);
+            params[slot.title] = fallback.url;
+        }
+
+        const endFrameSlot = mediaSlots.find(slot => slot.key === 'endFrame');
+        if (endFrameSlot) {
+            params['Use_End_Image'] = assigned.has(endFrameSlot.key) && !fallbackAssigned.has(endFrameSlot.key);
+        }
+    } else {
+        // Backward compatibility for any command not yet migrated.
+        const imageItem = mediaItems.find(m => m.mediaType === 'image');
+        const videoItem = mediaItems.find(m => m.mediaType === 'video');
+        if (imageItem) params['Input_Image'] = imageItem.url;
+        if (videoItem) params['Input_Video'] = videoItem.url;
+    }
 
     if (payload.maskDataUrl) params['Input_Mask'] = payload.maskDataUrl;
 
@@ -418,8 +474,11 @@ export function runCommand(payload) {
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
         let _samplingStartFired = false;
+        let _modelInitializing = hasTerminalPhaseSampler;
         const emitSamplingStart = () => {
             if (_samplingStartFired) return;
+            if (_modelInitializing) return;
+            _modelInitializing = false;
             _samplingStartFired = true;
             Events.emit('tool:sampling-start', { tool: 'groupHistory' });
             exec.onSamplingStart?.();
@@ -445,10 +504,12 @@ export function runCommand(payload) {
         if (hasTerminalPhaseSampler && typeof EventSource !== 'undefined') {
             comfyEventSource = new EventSource('/comfy/events/stream');
             comfyEventSource.addEventListener('comfy:model-initializing', () => {
+                _modelInitializing = true;
                 if (!_samplingStartFired) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
             comfyEventSource.addEventListener('comfy:model-init-complete', () => {
-                emitSamplingStart();
+                _modelInitializing = false;
+                if (!_samplingStartFired) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
         }
         const onMessage = (msg) => {
@@ -466,6 +527,7 @@ export function runCommand(payload) {
 
             if (msg.type === 'progress_state') {
                 aggregator.onProgressState(msg);
+                if (_modelInitializing) return;
                 if (!_samplingStartFired) {
                     // Only flip badge when a work node is actually running
                     const nodeData = msg.data?.nodes || {};
@@ -484,6 +546,7 @@ export function runCommand(payload) {
 
             if (msg.type === 'progress') {
                 aggregator.onProgress(msg);
+                if (_modelInitializing) return;
                 if (!_samplingStartFired) {
                     const nodeId = msg.data?.node;
                     if (isTerminalPhaseWorkNode(nodeId) && progressFraction(msg.data) > 0) {
@@ -505,7 +568,7 @@ export function runCommand(payload) {
                     const nodeKind = weightMap.nodes[nodeId]?.kind;
                     if (!_samplingStartFired && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
                         Events.emit('tool:loading-model', { tool: 'groupHistory' });
-                    } else if (!_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
+                    } else if (!_modelInitializing && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
                         emitSamplingStart();
                     }
                     aggregator.onExecuting(msg);

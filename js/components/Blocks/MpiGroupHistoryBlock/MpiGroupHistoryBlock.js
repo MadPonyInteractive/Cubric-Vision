@@ -22,7 +22,7 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
-import { getAvailableCommands } from '../../../data/commandRegistry.js';
+import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -470,11 +470,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _syncPromptToolDisabled();
             }));
             _unsubs.push(_pb.on('operation-change', ({ operation }) => { activeOperation = operation; }));
-            _unsubs.push(_pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams }) => {
+            _unsubs.push(_pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams, previewOnly }) => {
                 const maskDataUrl = viewer.el.hasMask?.()
                     ? viewer.el.getCurrentMaskDataURL?.()
                     : null;
-                _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams });
+                _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams, previewOnly });
             }));
             _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
@@ -514,10 +514,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
-            const hasDroppedImage = mediaItems.some(m => m.mediaType === 'image');
-            const resolvedMedia = (!hasDroppedImage && currentItem?.filePath)
-                ? [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }, ...mediaItems]
-                : mediaItems;
+            const currentMediaType = isVideo ? 'video' : 'image';
+            const mediaSlots = getCommandMediaInputs(operation);
+            const wantsStartFrame = mediaSlots.some(slot => slot.key === 'startFrame');
+            const wantsCurrentType = mediaSlots.some(slot => slot.mediaType === currentMediaType && slot.required !== false);
+            const hasCurrentTypeMedia = mediaItems.some(m => m.mediaType === currentMediaType);
+            let resolvedMedia = mediaItems;
+
+            if (currentItem?.filePath) {
+                const currentMedia = {
+                    url: resolveMediaUrl(currentItem.filePath),
+                    mediaType: currentMediaType,
+                    source: 'history',
+                };
+                if (!isVideo && wantsStartFrame) {
+                    resolvedMedia = [{ ...currentMedia, role: 'startFrame' }, ...mediaItems];
+                } else if (wantsCurrentType && !hasCurrentTypeMedia) {
+                    resolvedMedia = [currentMedia, ...mediaItems];
+                } else if (!mediaSlots.length && !hasCurrentTypeMedia) {
+                    resolvedMedia = [currentMedia, ...mediaItems];
+                }
+            }
             const resolvedMask = maskDataUrl !== undefined
                 ? maskDataUrl
                 : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);

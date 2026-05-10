@@ -270,7 +270,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 model,
                 positive:      frozen.prompt   || '',
                 negative:      frozen.negative || '',
-                mediaItems:    [],
+                mediaItems:    Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
                 injectionParams,
                 previewOnly:   false,
                 replaceItemId: item.id,
@@ -451,16 +451,28 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 refreshRadial({ imageCount, videoCount });
             });
 
-            const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image') => {
+            const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image', mediaItems = []) => {
                 const batchCount = Math.max(1, Number(injectionParams.Batch_Size) || 1);
                 const tempIds = Array.from({ length: batchCount }, () => crypto.randomUUID());
                 const tempId = tempIds[0];
+                const startFrame = (mediaItems || []).find(item => item?.mediaType === 'image' && item?.role === 'startFrame')
+                    || (mediaItems || []).find(item => item?.mediaType === 'image');
+                const startFrameUrl = startFrame?.url ? resolveMediaUrl(startFrame.url) : '';
 
                 const mkPlaceholder = (id) => ({
                     id,
                     type: cardType,
                     name: 'Generating...',
-                    history: [],
+                    history: startFrameUrl ? [{
+                        id: `${id}-input-preview`,
+                        type: 'image',
+                        filePath: startFrameUrl,
+                        name: 'Generating...',
+                        displayName: 'Generating...',
+                        operation: activeOperation,
+                        inputPreview: true,
+                        pixelDimensions: { w: 0, h: 0 },
+                    }] : [],
                     selectedIndex: 0,
                     width: injectionParams.Width || 1024,
                     height: injectionParams.Height || 1024,
@@ -481,7 +493,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
-                    opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType),
+                    opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType, mediaItems),
                 };
             };
 
@@ -503,6 +515,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
                 const target = mode === 'queue' ? active[0] : active.at(-1);
                 if (target) activeGenerations.cancel(target.id);
+                const currentGroups = state.currentProject?.itemGroups || [];
+                grid.el.setGroups(currentGroups);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 // Continue jobs ride the Cue queue regardless of PB mode. If
