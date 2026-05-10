@@ -2,8 +2,8 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { formatTime } from '../../../utils/string.js';
-import { renderIcon } from '../../../utils/icons.js';
 import { qs } from '../../../utils/dom.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
 /**
  * MpiVideoPlayer — Organism: Video + Custom Controls Overlay.
@@ -37,7 +37,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
         const src = props.src || '';
         const poster = props.poster || '';
         const autoplay = props.autoplay ? 'autoplay' : '';
-        const loop = props.loop ? 'loop' : '';
+        const loop = props.loop !== false ? 'loop' : '';
         const muted = props.muted ? 'muted' : '';
         const hasControls = props.controls !== false;
 
@@ -80,12 +80,6 @@ export const MpiVideoPlayer = ComponentFactory.create({
                     </div>
                 </div>
                 ` : ''}
-                
-                <div class="mpi-video-player__overlay">
-                    <div class="mpi-video-player__big-play">
-                        ${renderIcon('play', 'lg')}
-                    </div>
-                </div>
             </div>
         `;
     },
@@ -168,8 +162,9 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 icon: 'loop',
                 active: video.loop,
                 size: 'sm',
-                info: 'Loop'
+                info: 'Loop (L)'
             });
+            if (video.loop) loopBtn.el.classList.add('is-active');
 
             // 7. Fullscreen Button
             fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
@@ -293,6 +288,22 @@ export const MpiVideoPlayer = ComponentFactory.create({
                     console.error('Fullscreen request failed:', err);
                 }
             });
+
+            // ── Hotkeys (video workspace scope) ──
+            const adjustVolume = (delta) => {
+                const next = Math.max(0, Math.min(100, Math.round(video.volume * 100) + delta));
+                video.volume = next / 100;
+                if (video.muted && next > 0) video.muted = false;
+                volumeSlider.el.setValueQuiet(next);
+                emit('change', { volume: video.volume, muted: video.muted });
+            };
+
+            _unsubs.push(Hotkeys.bind('video.playPause',     () => { video.paused ? video.play() : video.pause(); }));
+            _unsubs.push(Hotkeys.bind('video.frame.back',    () => frameBackBtn.el.click()));
+            _unsubs.push(Hotkeys.bind('video.frame.forward', () => frameForwardBtn.el.click()));
+            _unsubs.push(Hotkeys.bind('video.volume.up',     () => adjustVolume(+10)));
+            _unsubs.push(Hotkeys.bind('video.volume.down',   () => adjustVolume(-10)));
+            _unsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));
 
             // Video events for UI sync
             const handleVolumeChange = () => {

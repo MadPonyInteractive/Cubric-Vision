@@ -125,6 +125,19 @@ export const MpiHelp = ComponentFactory.create({
                             </ul>
                         </div>
 
+                        <!-- Video Player -->
+                        <div class="mpi-help__shortcut-group">
+                            <h4>Video Player</h4>
+                            <ul>
+                                <li><span>SPACE</span><span>Play / pause</span></li>
+                                <li><span>&larr;</span><span>Previous frame</span></li>
+                                <li><span>&rarr;</span><span>Next frame</span></li>
+                                <li><span>&uarr;</span><span>Volume +10%</span></li>
+                                <li><span>&darr;</span><span>Volume -10%</span></li>
+                                <li><span>L</span><span>Toggle loop</span></li>
+                            </ul>
+                        </div>
+
                         <!-- System -->
                         <div class="mpi-help__shortcut-group">
                             <h4>System</h4>

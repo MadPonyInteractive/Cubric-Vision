@@ -263,6 +263,62 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: true,
     },
 
+    // ── Video Player ──────────────────────────────────────────────────────────
+    {
+        id:               'video.playPause',
+        key:              'space',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Play / pause',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.frame.back',
+        key:              'arrowleft',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Previous frame',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.frame.forward',
+        key:              'arrowright',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Next frame',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.volume.up',
+        key:              'arrowup',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Volume +10%',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.volume.down',
+        key:              'arrowdown',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Volume -10%',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.loop',
+        key:              'l',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Toggle loop',
+        allowWhileTyping: false,
+    },
+
     // ── System / Built-ins ────────────────────────────────────────────────────
     {
         id:               'system.fullscreen',

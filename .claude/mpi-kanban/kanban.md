@@ -118,6 +118,24 @@
 
 ## COMPLETED
 
+### Video player polish + workspace hotkeys
+
+  - tags: [task, video, hotkeys]
+  - priority: medium
+  - workload: Easy
+  - defaultExpanded: false
+    ```md
+    Cleaned MpiVideoPlayer chrome and added a video-workspace-only hotkey set.
+    - Removed the centered "big play" overlay (template + CSS) and dropped the unused renderIcon import.
+    - Sharp corners: `border-radius: var(--r-3)` → `0` on `.mpi-video-player`; ornamental `box-shadow` removed (Stage baseline = solid surfaces, sharp corners).
+    - Loop default ON: template default `loop !== false`; loop button forced active class on mount.
+    - Six new entries in `js/managers/hotkeyRegistry.js` under category `video` (all `allowWhileTyping: false`):
+      `video.playPause` (space), `video.frame.back/forward` (arrowleft/right), `video.volume.up/down` (arrowup/down, ±10%), `video.loop` (l).
+    - Bound inside `MpiVideoPlayer.setup` so they auto-clean via `_unsubs` on destroy — no leak into image workspace. `space` does not collide because `canvas.pan.*` only binds inside MpiCanvas.
+    - Help slide-over: new "Video Player" group added in `MpiHelp.js` before the System block.
+    Files: js/components/Compounds/MpiVideoPlayer/{MpiVideoPlayer.js,MpiVideoPlayer.css}, js/managers/hotkeyRegistry.js, js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js.
+    ```
+
 ### Workflow operations not updating when image is present.
 
   - tags: [Bug]
