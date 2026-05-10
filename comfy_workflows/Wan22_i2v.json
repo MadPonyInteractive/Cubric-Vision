@@ -157,12 +157,15 @@
   },
   "635": {
     "inputs": {
-      "seconds": 2,
+      "seconds": [
+        "842",
+        0
+      ],
       "fps": 16
     },
     "class_type": "MpiWanSeconds",
     "_meta": {
-      "title": "Mpi Wan Seconds"
+      "title": "Duration"
     }
   },
   "637": {
@@ -1116,6 +1119,15 @@
     "class_type": "LoadImage",
     "_meta": {
       "title": "Start_Frame"
+    }
+  },
+  "842": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Duration"
     }
   }
 }

@@ -483,7 +483,7 @@
   },
   "752": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiBoolean",
     "_meta": {
@@ -817,7 +817,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seconds"
+      "title": "Duration"
     }
   }
 }
