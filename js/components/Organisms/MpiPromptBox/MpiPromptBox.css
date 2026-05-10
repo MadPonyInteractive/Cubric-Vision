@@ -223,6 +223,42 @@
     flex-wrap: wrap;
 }
 
+/* ── Slider controls inside settings popup (Duration, Motion_Intensity) ─── */
+
+.mpi-prompt-box__slider-control {
+    flex: 1 1 100%;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    padding: 4px 2px 2px;
+}
+
+.mpi-prompt-box__slider-lbl {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--t-2xs, 0.6875rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.mpi-prompt-box__slider-val {
+    color: var(--ink-1);
+    text-transform: none;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.mpi-prompt-box__slider-track {
+    width: 100%;
+    min-width: 0;
+}
+
+.mpi-prompt-box__slider-track .mpi-progress {
+    min-width: 0;
+}
+
 /* ── Media strip (sibling element rendered by organism) ──────────────────── */
 
 .mpi-prompt-box-media-strip {

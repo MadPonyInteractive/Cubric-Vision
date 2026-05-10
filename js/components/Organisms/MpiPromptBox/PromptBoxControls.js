@@ -13,6 +13,7 @@
 
 import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -200,6 +201,160 @@ export const PROMPT_BOX_CONTROLS = {
             const v = parseInt(live ?? this.value ?? this.defaultValue, 10) || 1;
             // Workflow node titled "Batch_Size" (MpiInt, inputs.int).
             return { Batch_Size: v };
+        },
+    },
+
+    /**
+     * duration — Video length (int, 1..30, step 1).
+     * Mounts MpiProgressBar slider and injects into node titled "Duration"
+     * (MpiInt, inputs.value / inputs.int). Persists per-model under
+     * modelSettings[modelId].duration.
+     */
+    duration: {
+        nodeTitle: 'Duration',
+        defaultValue: 5,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const savedNum = Number(saved.duration ?? this.defaultValue);
+            const initial = Number.isFinite(savedNum) ? Math.min(30, Math.max(1, Math.round(savedNum))) : this.defaultValue;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Duration';
+            const valEl = document.createElement('span');
+            valEl.className = 'mpi-prompt-box__slider-val';
+            valEl.textContent = `${initial} s`;
+            lblRow.appendChild(nameEl);
+            lblRow.appendChild(valEl);
+            hostEl.appendChild(lblRow);
+
+            const barHost = document.createElement('div');
+            barHost.className = 'mpi-prompt-box__slider-track';
+            hostEl.appendChild(barHost);
+
+            this._instance = MpiProgressBar.mount(barHost, {
+                min: 1,
+                max: 30,
+                step: 1,
+                value: initial,
+                interactive: true,
+                wheel: true,
+                handle: true,
+                variant: 'primary',
+            });
+
+            const _renderLabel = (v) => { valEl.textContent = `${v} s`; };
+
+            this._instance.on('input', ({ value }) => {
+                _renderLabel(Math.min(30, Math.max(1, Math.round(value))));
+            });
+
+            this._instance.on('change', ({ value }) => {
+                const v = Math.min(30, Math.max(1, Math.round(value)));
+                this.value = v;
+                _renderLabel(v);
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'duration',
+                        value: v,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Math.min(30, Math.max(1, Math.round(Number(this.value ?? this.defaultValue) || this.defaultValue)));
+            return { Duration: v };
+        },
+    },
+
+    /**
+     * motionIntensity — Motion strength (float, 0..1, step 0.01).
+     * Mounts MpiProgressBar slider and injects into node titled
+     * "Motion_Intensity" (MpiFloat, inputs.float). Persists per-model under
+     * modelSettings[modelId].motionIntensity.
+     */
+    motionIntensity: {
+        nodeTitle: 'Motion_Intensity',
+        defaultValue: 0,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const savedNum = Number(saved.motionIntensity ?? this.defaultValue);
+            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const _fmt = (v) => Number(v).toFixed(2);
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Motion';
+            const valEl = document.createElement('span');
+            valEl.className = 'mpi-prompt-box__slider-val';
+            valEl.textContent = _fmt(initial);
+            lblRow.appendChild(nameEl);
+            lblRow.appendChild(valEl);
+            hostEl.appendChild(lblRow);
+
+            const barHost = document.createElement('div');
+            barHost.className = 'mpi-prompt-box__slider-track';
+            hostEl.appendChild(barHost);
+
+            this._instance = MpiProgressBar.mount(barHost, {
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: initial,
+                interactive: true,
+                wheel: true,
+                handle: true,
+                variant: 'primary',
+            });
+
+            const _renderLabel = (v) => { valEl.textContent = _fmt(v); };
+
+            this._instance.on('input', ({ value }) => {
+                _renderLabel(Math.min(1, Math.max(0, Number(value) || 0)));
+            });
+
+            this._instance.on('change', ({ value }) => {
+                const v = Math.min(1, Math.max(0, Number(value) || 0));
+                this.value = v;
+                _renderLabel(v);
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'motionIntensity',
+                        value: v,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
+            return { Motion_Intensity: v };
         },
     },
 

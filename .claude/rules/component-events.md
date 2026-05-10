@@ -367,7 +367,7 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `settings`         `{ model: ModelDef }`
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
-         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls ratio/orientation/quality handlers (not generation mode)
+         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls: ratio/orientation/quality, batch, previewStage, duration, motionIntensity (not generation mode)
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
          `state:changed` — updates Cue button label on `generationQueueCount` change; re-renders Cue/Loop label on `loopArmed` change

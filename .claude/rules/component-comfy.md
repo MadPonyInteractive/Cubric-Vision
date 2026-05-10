@@ -10,6 +10,8 @@
 | `ratio`    | `MpiOptionSelector` (variant: ratio) | `"Width"`, `"Height"` (separate nodes) | `{ Width: number, Height: number }` | `t2i`, `i2i`, `t2v`, `i2v`, `t2v_ms`, `i2v_ms`     |
 | `batch`    | `MpiBatchSelector` | `"Batch_Size"` (MpiInt.inputs.int) | `{ Batch_Size: 1\|2\|3\|4 }`     | `t2i`, `i2i`                                               |
 | `previewStage` | `MpiButton` (size: sm, toggleable, icon: frameForward) | `"Preview_Only"` (`MpiBoolean.inputs.boolean`) | only when `true` → run payload `previewOnly: true`; `commandExecutor._buildParams` injects `Preview_Only: true` | `t2v_ms`, `i2v_ms` |
+| `duration` | `MpiProgressBar` (interactive, wheel, handle, suffix `s`) | `"Duration"` (`MpiInt.inputs.int`) | `{ Duration: 1..30 }` (int, step 1) | `t2v`, `i2v`, `t2v_ms`, `i2v_ms` |
+| `motionIntensity` | `MpiProgressBar` (interactive, wheel, handle) | `"Motion_Intensity"` (`MpiFloat.inputs.float`) | `{ Motion_Intensity: 0..1 }` (float, step 0.01) | `i2v`, `i2v_ms` |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -57,8 +59,70 @@ MpiPromptBox 'run' event
 | `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
 | `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }` |
 | `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: true` only when `previewOnly === true`. Persisted per-model under `modelSettings[modelId].previewStage`. |
+| `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). Persisted per-model under `modelSettings[modelId].duration`. |
+| `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). Persisted per-model under `modelSettings[modelId].motionIntensity`. |
 
-> **Adding a new control:** (1) create component, (2) add entry to `PROMPT_BOX_CONTROLS` with `nodeTitle` + `getInjectionParams()`, (3) add control ID to operation's `components[]` in `commandRegistry.js`
+---
+
+## PromptBoxControl Protocol — adding a new control
+
+Every new PromptBoxControl MUST follow this checklist. Skipping any step breaks recall, persistence, or injection.
+
+**1. Pick or build the UI component.** Reuse existing primitives/compounds (`MpiOptionSelector`, `MpiButton`, `MpiProgressBar`, `MpiDropdown`). Build a new component only if none fits.
+
+**2. Add entry to `PROMPT_BOX_CONTROLS`** in `js/components/Organisms/MpiPromptBox/PromptBoxControls.js` with this shape:
+
+```javascript
+controlId: {
+    nodeTitle: 'Workflow_Node_Title',   // or null if no single node (e.g. ratio)
+    defaultValue: <primitive>,
+    mount(hostEl, opts = {}) {
+        const model = opts.model || {};
+        const modelId = model.id;
+        // Recall: read persisted value from project
+        const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+        const initial = /* clamp + coerce saved.<controlId> */;
+        this.value = initial;
+        // Mount UI primitive bound to initial
+        this._instance = SomePrimitive.mount(hostEl, { value: initial, ... });
+        // Persist: emit settings:model:update on user change
+        this._instance.on('change', ({ value }) => {
+            const v = /* clamp + coerce */;
+            this.value = v;
+            if (modelId) {
+                Events.emit('settings:model:update', {
+                    modelId,
+                    key: '<controlId>',
+                    value: v,
+                });
+            }
+        });
+    },
+    getValue() { return this.value ?? this.defaultValue; },
+    getInjectionParams() {
+        return { Workflow_Node_Title: this.value ?? this.defaultValue };
+    },
+},
+```
+
+**3. Register on operations.** Add `controlId` to `commandRegistry.js` `components[]` array for every operation that should expose it.
+
+**4. Workflow contract.** Ensure each registered operation's workflow JSON contains an `MpiInt` / `MpiFloat` / `MpiBoolean` / etc. node with `_meta.title === 'Workflow_Node_Title'`. Inject loop hits `inputs.int`, `inputs.float`, `inputs.boolean`, `inputs.value`, etc. — match field type to node class. **Agents must NOT edit workflow JSON** — document the contract here and ask the user.
+
+**5. Update title map.** Add a row in `.claude/rules/comfy_injection.md` "Standard Node Title Map" with the new title + which `inputs.*` field it writes.
+
+**6. Update injection table.** Add a row to the table above (control ID, component, nodeTitle, defaultValue, getInjectionParams).
+
+**7. Update operations table** below if new control changes any operation's `components[]`.
+
+**Persistence invariants:**
+- Storage path: `project.modelSettings[modelId][controlId]` — flat per-model key.
+- Recall: `getModelSettings(state.currentProject, modelId)` on every `mount()`. Never cache across mounts.
+- Save: emit `Events.emit('settings:model:update', { modelId, key, value })` — `projectService` debounces + atomically writes `project.json` via `updateProjectJson()`.
+- Never call `setModelSettings()` directly from a control; never write `project.json` directly.
+- Clamp + coerce both on save (in `change` handler) AND on recall (in `mount`), since persisted values may be from older builds with different ranges.
+
+**Operation-level vs payload-level signals:** most controls flow through `getInjectionParams()` → merged into `injectionParams` → `commandExecutor._buildParams()` → ComfyUI. Exception: `previewStage` exposes itself through `el.getRunPayload().previewOnly` because the executor needs the flag *before* params merge (to select capture-title filter). Default to the standard `getInjectionParams()` path unless executor needs out-of-band knowledge.
 
 ---
 
@@ -73,10 +137,10 @@ MpiPromptBox 'run' event
 | `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `remove`          | Remove             | image     | 1              | —             | true         | yes            | (none)              | active      |
-| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio']`         | active      |
-| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio']`         | active      |
-| `t2v_ms`          | Text to Video (multi-stage) | video | 0           | —             | —            | yes            | `['ratio','previewStage']`           | active      |
-| `i2v_ms`          | Image to Video (multi-stage) | video | 1          | —             | —            | no             | `['ratio','previewStage']`           | active      |
+| `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio','duration']`                                       | active      |
+| `i2v`             | Image to Video     | video     | 1              | —             | —            | no             | `['ratio','duration','motionIntensity']`                     | active      |
+| `t2v_ms`          | Text to Video (multi-stage) | video | 0           | —             | —            | yes            | `['ratio','previewStage','duration']`                        | active      |
+| `i2v_ms`          | Image to Video (multi-stage) | video | 1          | —             | —            | no             | `['ratio','previewStage','duration','motionIntensity']`      | active      |
 | `extend`          | Extend             | video     | 0              | 1             | —            | no             | (none)              | active      |
 | `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | (none)              | universal   |
 | `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | (none)              | universal   |

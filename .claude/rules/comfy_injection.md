@@ -7,6 +7,8 @@
 
 **Title-based injection:** Target nodes exclusively by `_meta.title` (case-insensitive). Never hardcode node IDs. Use `filter` not `find` when locating nodes — multiple nodes can share a title.
 
+**Never edit workflow JSON.** Files under `comfy_workflows/` are owned by the user — read-only for agents. Do not add, rename, or rewire nodes there. If a new injection target is required, document the contract (title + expected `inputs.*` field) in this file and in `.claude/rules/component-comfy.md`, then ask the user to add the node. Agents only write injection params on the frontend side.
+
 **Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
 
 **Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node. Video Helper Suite nodes may emit final videos under `output.gifs`; inspect the filename/format because that payload can still be an MP4.
@@ -41,6 +43,8 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"Lora_Low_1"` ... `"Lora_Low_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN low-noise LoRA slots. Workflow node titles must be unique (`Lora_Low_1` ... `Lora_Low_6`) |
 | `"Use_Refiner"` | `inputs.boolean` / `inputs.value` | MpiBoolean uses `inputs.boolean` |
 | `"Batch_Size"` | `inputs.int` | `MpiInt` node driving Empty Latent via link. Value from `MpiBatchSelector` (1–4). Workflow returns N images → N gallery cards (one per URL). |
+| `"Duration"` | `inputs.int` | `MpiInt` node — video length in seconds (1–30, step 1). Injected by PromptBox `duration` control on `t2v`, `i2v`, `t2v_ms`, `i2v_ms`. |
+| `"Motion_Intensity"` | `inputs.float` | `MpiFloat` node — motion strength (0.0–1.0, step 0.01). Injected by PromptBox `motionIntensity` control on `i2v`, `i2v_ms`. |
 | `"Input_Image"` | `inputs.image` | Auto-uploaded by controller |
 | `"Input_Mask"` | `inputs.mask` | Auto-uploaded by controller |
 | `"Denoise"` | `inputs.denoise` / `inputs.value` | Denoising strength |
