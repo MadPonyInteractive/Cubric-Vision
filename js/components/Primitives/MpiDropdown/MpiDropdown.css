@@ -78,7 +78,7 @@
 
 .mpi-dropdown__list {
     position: fixed;
-    z-index: 10001;
+    z-index: 11000;
     background: oklch(0.30 0.022 350);
     border: 1px solid var(--ink-3);
     border-radius: var(--r-1);

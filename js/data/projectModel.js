@@ -18,6 +18,8 @@
 
 'use strict';
 
+import { MODELS } from './modelConstants/models.js';
+
 const generateId = () => crypto.randomUUID();
 
 // ── MediaItem ─────────────────────────────────────────────────────────────────
@@ -299,16 +301,32 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
     strengthClip: 1.0,
 }));
 
+const _getModelDef = (modelId) => MODELS.find(m => m.id === modelId) ?? null;
+
+export function getLoraStages(modelId) {
+    const stages = _getModelDef(modelId)?.loraStages;
+    return Array.isArray(stages) && stages.length > 0 ? stages : null;
+}
+
+export function createDefaultLoras(modelId) {
+    const stages = getLoraStages(modelId);
+    if (!stages) return _defaultLoraSlots();
+
+    return Object.fromEntries(
+        stages.map(stage => [stage.key, _defaultLoraSlots()])
+    );
+}
+
 /**
  * Returns the model settings for a given modelId on the project.
  * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} modelId
- * @returns {{ loras: Array, upscaleModel: string|null, ratioSelector: { selectedRatio?: string, orientation?: string, qualityTier?: string } }}
+ * @returns {{ loras: Array|Object, upscaleModel: string|null, ratioSelector: { selectedRatio?: string, orientation?: string, qualityTier?: string } }}
  */
 export function getModelSettings(project, modelId) {
     return (project.modelSettings ?? {})[modelId] ?? {
-        loras: _defaultLoraSlots(),
+        loras: createDefaultLoras(modelId),
         upscaleModel: null,
         ratioSelector: {},
     };
@@ -319,7 +337,7 @@ export function getModelSettings(project, modelId) {
  * Does not mutate the original. Properly deep-merges nested objects like ratioSelector.
  * @param {Project} project
  * @param {string} modelId
- * @param {{ loras?: Array, upscaleModel?: string|null, ratioSelector?: Object }} updates
+ * @param {{ loras?: Array|Object, upscaleModel?: string|null, ratioSelector?: Object }} updates
  * @returns {Project}
  */
 export function setModelSettings(project, modelId, updates) {

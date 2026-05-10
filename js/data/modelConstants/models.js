@@ -107,6 +107,10 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         mediaType: 'video',
         type: 'wan',
+        loraStages: [
+            { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
+            { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
+        ],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
         description: 'Wan 2.2 workflows for both anime and realism using the SmoothMix models.',

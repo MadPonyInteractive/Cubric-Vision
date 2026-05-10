@@ -84,15 +84,34 @@
     gap: 8px;
 }
 
+.mpi-model-settings__lora-stage-header {
+    padding: var(--s-2) var(--s-3);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.mpi-model-settings__lora-stage-header:not(:first-child) {
+    margin-top: var(--s-2);
+}
+
 .mpi-model-settings__lora-slot {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
     background: var(--surface-bar);
     border: 1px solid var(--line);
     border-radius: var(--r-2);
+}
+
+.mpi-model-settings__lora-dropdown {
+    min-width: 0;
 }
 
 .mpi-model-settings__lora-slot--empty .mpi-model-settings__lora-strengths {

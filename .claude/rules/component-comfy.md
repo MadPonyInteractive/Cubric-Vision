@@ -37,6 +37,13 @@ MpiPromptBox 'run' event
 
 **Group History selected-entry invariant:** `MpiGroupHistoryBlock` owns `_currentIdx` and promotes the clicked history item via `entry-selected`. Prompt-driven operations must inject `_group.history[_currentIdx]` when the user has not supplied a dropped image. Auto-mask detection is owned by `MpiCanvasViewer`; because the viewer survives history switches, it must resolve `_currentItem.filePath` at detect time rather than reusing `initialImageUrl`.
 
+## Model Settings Injection
+
+- `_buildParams()` merges model settings for LoRAs and upscale models. Checkpoints are app/workflow-owned and are not user-selectable in Model Settings.
+- Flat-LoRA models inject `Lora_1` ... `Lora_6` from `modelSettings[modelId].loras`.
+- Models with `model.loraStages` inject staged keys from `stage.injectionPrefix`, e.g. WAN emits `Lora_High_1` ... `Lora_High_6` and `Lora_Low_1` ... `Lora_Low_6`.
+- LoRA dropdowns show every file returned by the active models root `loras/` folder. They are not filtered by `model.type`; users own their LoRA folder naming.
+
 ---
 
 ## PromptBoxControls Registry — static, do not regenerate

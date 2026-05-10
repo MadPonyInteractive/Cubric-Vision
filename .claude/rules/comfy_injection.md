@@ -19,6 +19,11 @@
 
 See `docs/comfy.md` for the full injection pattern and example.
 
+Staged LoRA models may also inject keys such as `"Lora_High_1"` and `"Lora_Low_1"`.
+These use the same LoRA object shape as flat slots, and the controller writes
+`lora_name` plus whichever strength input the workflow node exposes
+(`strength`, `strength_model`, and/or `strength_clip`).
+
 ## Standard Node Title Map
 
 | Title | Input field | Notes |
@@ -30,6 +35,8 @@ See `docs/comfy.md` for the full injection pattern and example.
 | `"Checkpoint"` / `"Model"` | `inputs.ckpt_name` / `unet_name` / `model_name` | Primary checkpoint |
 | `"Checkpoint_Refiner"` | `inputs.ckpt_name` | Refiner checkpoint |
 | `"Lora_1"` … `"Lora_6"` | `inputs.lora_name`, `strength_model`, `strength_clip` | User LoRA slots — system LoRAs are baked in, not injected |
+| `"Lora_High_1"` ... `"Lora_High_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN high-noise LoRA slots. Generated from `model.loraStages[].injectionPrefix` |
+| `"Lora_Low_1"` ... `"Lora_Low_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN low-noise LoRA slots. Workflow node titles must be unique (`Lora_Low_1` ... `Lora_Low_6`) |
 | `"Use_Refiner"` | `inputs.boolean` / `inputs.value` | MpiBoolean uses `inputs.boolean` |
 | `"Batch_Size"` | `inputs.int` | `MpiInt` node driving Empty Latent via link. Value from `MpiBatchSelector` (1–4). Workflow returns N images → N gallery cards (one per URL). |
 | `"Input_Image"` | `inputs.image` | Auto-uploaded by controller |
@@ -78,6 +85,7 @@ const params = {
     "Seed": 45678,
     "Upscale_Model": "4x_NMKD-Siax_200k.pth",
     "Lora_1": { lora_name: "my_lora.safetensors", strength_model: 0.8, strength_clip: 0.8 },
+    "Lora_High_1": { lora_name: "wan 2.2\\foo_HIGH.safetensors", strength_model: 0.8, strength_clip: 1.0 },
     "Input_Image": "data:image/png;base64,..."
 };
 const result = await ComfyUIController.runWorkflow('sdxl_t2i', params, onProgress);

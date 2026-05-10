@@ -121,7 +121,7 @@ export const MpiModelSettings = ComponentFactory.create({
         /** @type {{ modelId?: string, toolKey?: string } | null} */
         let _context = null;
 
-        /** Per-slot LoRA tracking (mutated by input events) */
+        /** Per-slot LoRA tracking (mutated by input events); array or staged object */
         let _loraSlots = [];
 
         /** Currently selected upscale value (tracked from change event) */
@@ -188,7 +188,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 };
             });
 
-            const loraOpts = _loraOptions(_filterByType(state.availableLoras, modelType));
+            const loraOpts = _loraOptions(state.availableLoras);
 
             _loraSlots.forEach((slot, i) => {
                 const slotEl = document.createElement('div');
@@ -266,6 +266,108 @@ export const MpiModelSettings = ComponentFactory.create({
 
         // ── Public open() method ──────────────────────────────────────────────
 
+        function _normaliseLoraSlots(slots) {
+            return Array.from({ length: LORA_COUNT }, (_, i) => {
+                const s = slots?.[i] ?? {};
+                return {
+                    name: s.name || null,
+                    strengthModel: s.strengthModel ?? 1.0,
+                    strengthClip: s.strengthClip ?? 1.0,
+                };
+            });
+        }
+
+        function _mountStagedLoraSlots(slots, modelType, loraStages) {
+            const list = qs('.mpi-model-settings__lora-list', el);
+            list.innerHTML = '';
+
+            _loraSlots = Object.fromEntries(
+                loraStages.map(stage => [stage.key, _normaliseLoraSlots(slots?.[stage.key])])
+            );
+
+            const loraOpts = _loraOptions(state.availableLoras);
+
+            loraStages.forEach(stage => {
+                const header = document.createElement('div');
+                header.className = 'mpi-model-settings__lora-stage-header';
+                header.textContent = stage.label;
+                list.appendChild(header);
+
+                _loraSlots[stage.key].forEach((slot, i) => {
+                    const slotEl = document.createElement('div');
+                    slotEl.className = [
+                        'mpi-model-settings__lora-slot',
+                        !slot.name ? 'mpi-model-settings__lora-slot--empty' : '',
+                    ].filter(Boolean).join(' ');
+
+                    const dropHost = document.createElement('div');
+                    dropHost.className = 'mpi-model-settings__lora-dropdown';
+
+                    const strengthsEl = document.createElement('div');
+                    strengthsEl.className = 'mpi-model-settings__lora-strengths';
+
+                    const modelLabel = document.createElement('label');
+                    modelLabel.className = 'mpi-model-settings__strength-label';
+                    modelLabel.textContent = 'Model';
+
+                    const modelInput = MpiInput.mount(document.createElement('div'), {
+                        type: 'number',
+                        size: 'sm',
+                        value: slot.strengthModel,
+                        min: -2,
+                        max: 2,
+                        step: 0.05,
+                        decimals: 2,
+                    });
+
+                    const clipLabel = document.createElement('label');
+                    clipLabel.className = 'mpi-model-settings__strength-label';
+                    clipLabel.textContent = 'Clip';
+
+                    const clipInput = MpiInput.mount(document.createElement('div'), {
+                        type: 'number',
+                        size: 'sm',
+                        value: slot.strengthClip,
+                        min: -2,
+                        max: 2,
+                        step: 0.05,
+                        decimals: 2,
+                    });
+
+                    modelInput.on('change', ({ value }) => {
+                        _loraSlots[stage.key][i].strengthModel = value;
+                        _autoSave();
+                    });
+
+                    clipInput.on('change', ({ value }) => {
+                        _loraSlots[stage.key][i].strengthClip = value;
+                        _autoSave();
+                    });
+
+                    strengthsEl.appendChild(modelLabel);
+                    strengthsEl.appendChild(modelInput.el);
+                    strengthsEl.appendChild(clipLabel);
+                    strengthsEl.appendChild(clipInput.el);
+
+                    slotEl.appendChild(dropHost);
+                    slotEl.appendChild(strengthsEl);
+                    list.appendChild(slotEl);
+
+                    const dd = MpiDropdown.mount(dropHost, {
+                        options: loraOpts,
+                        value: slot.name || '',
+                        placeholder: `${stage.label} ${i + 1} - None`,
+                    });
+
+                    dd.on('change', ({ value }) => {
+                        _loraSlots[stage.key][i].name = value || null;
+                        slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
+                        _autoSave();
+                    });
+                });
+            });
+        }
+
         el.open = async (ctx = {}) => {
             if (!state.currentProject) {
                 clientLogger.error('model-settings', 'MpiModelSettings.open() called with no active project');
@@ -295,18 +397,25 @@ export const MpiModelSettings = ComponentFactory.create({
                 const settings = getModelSettings(state.currentProject, ctx.modelId);
                 const model = getModelById(ctx.modelId);
                 const modelType = model?.type ?? null;
+                const loraStages = model?.loraStages ?? null;
                 // Resolve saved dep ID → filename; fallback to model default → filename → SIAX
                 const savedFile = _depToFilename(settings.upscaleModel);
                 const modelDefaultFile = _depToFilename(model?.defaultUpscale);
                 const siaxFile = _depToFilename('4x-NMKD-Siax');
                 const defaultUpscale = savedFile || modelDefaultFile || siaxFile;
                 _mountUpscaleDropdown(defaultUpscale, modelType);
-                _mountLoraSlots(settings.loras, modelType);
+                el.classList.toggle('mpi-model-settings--staged-lora', Boolean(loraStages?.length));
+                if (loraStages?.length) {
+                    _mountStagedLoraSlots(settings.loras, modelType, loraStages);
+                } else {
+                    _mountLoraSlots(settings.loras, modelType);
+                }
                 lorasSection.style.display = '';
             } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
                 // Tool context has no model type → no filter, show all upscalers.
                 _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || _depToFilename('4x-NMKD-Siax'), null);
+                el.classList.remove('mpi-model-settings--staged-lora');
                 lorasSection.style.display = 'none';
             }
 

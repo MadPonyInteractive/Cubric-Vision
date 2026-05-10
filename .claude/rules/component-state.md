@@ -40,6 +40,8 @@
 
 > **PromptBox reads `modelSettings[modelId].previewStage`** — boolean, persisted per-model via `settings:model:update`. Drives the "Preview initial stage" toggle (control id `previewStage`) and the `previewOnly` field on the run payload. Only present in operations whose `components[]` includes `'previewStage'` (today: `t2v_ms`, `i2v_ms`).
 
+> **Model LoRA settings shape:** most models, including LTX, use the flat shape `modelSettings[modelId].loras: Array<6>`. Models that declare `model.loraStages` (WAN) use a staged object, e.g. `loras: { high: Array<6>, low: Array<6> }`. `MpiModelSettings`, `commandExecutor`, and preview `loraSnapshot` handling must support both shapes.
+
 > **Cue queue depth is local:** `state.generationQueueCount` includes the active Cue dispatch plus pending jobs. StatusBar subtracts the active dispatch and only displays pending depth, e.g. `GENERATING (2 queued)`. Do not poll ComfyUI queue depth for Cue mode.
 
 > **MpiCanvas pan/zoom is NOT in `state`:** `scale`, `offsetX`, `offsetY` live inside `ViewManager` (instance-local). Pan/zoom is applied as a CSS `transform` on `.mpi-canvas__stack` — not via `ctx.translate/scale`. Never reach into `state` for canvas view parameters.

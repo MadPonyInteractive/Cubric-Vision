@@ -39,3 +39,6 @@ Project JSON: `{ id, name, folderPath, createdAt, updatedAt, thumbnail, itemGrou
 - `getToolSettings(project, toolKey) / setToolSettings(project, toolKey, settings)`: Tool-specific settings.
 
 Model settings are persisted to the project JSON. LoRA picks and upscale model selections live here.
+Most models use a flat six-slot `loras` array. Models that declare `model.loraStages`
+use a staged object instead; WAN stores `{ high: [...], low: [...] }`. LTX uses the
+standard flat LoRA shape.

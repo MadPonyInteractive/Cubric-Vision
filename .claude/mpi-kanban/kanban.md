@@ -1,5 +1,18 @@
 ## BACKLOG
 
+### LTX 2.3 video model integration
+
+  - tags: [PLAN, video]
+  - priority: medium
+  - defaultExpanded: true
+    ```md
+    Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
+    Scope:
+    - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` and `LTX23_i2v.json` exist.
+    - Verify LTX uses the existing preview-gate flow: Preview_Only, Preview output, Output final, Continue, Discard.
+    - LTX uses the standard flat LoRA shape, not staged WAN-style LoRAs.
+    ```
+
 ### Patreon landing page images
 
   - tags: [Idea]
@@ -72,15 +85,6 @@
 
 ## PLANNING
 
-### WAN dual-model + 12 LoRAs + LTX
-
-  - tags: [PLAN]
-  - priority: high
-  - defaultExpanded: true
-    ```md
-    Plan file: docs/plans/2026-05-09-wan-dual-model-12-loras-ltx.md
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -113,6 +117,20 @@
     ```
 
 ## COMPLETED
+
+### WAN dual-model + 12 LoRAs
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: true
+  - steps:
+      - [x] Per-stage LoRA settings upgrade
+      - [x] Settings overlay 12 LoRAs
+      - [x] Per-stage LoRA injection
+      - [x] Docs and rules sync
+    ```md
+    Plan file: docs/plans/2026-05-09-wan-dual-model-12-loras-ltx.md
+    ```
 
 ### Video preview-gate core
 

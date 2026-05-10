@@ -51,6 +51,10 @@ const params = {
 
 Known titles: "Positive", "Negative", "Seed", "Checkpoint", "Lora_1"…"Lora_6", "Input_Image", "Input_Mask", "Output", "Detected", "Upscale_Model", etc. See `.claude/rules/comfy_injection.md` for the full table.
 
+Models with staged LoRAs, such as WAN, inject title keys from `model.loraStages`.
+WAN uses `Lora_High_1` ... `Lora_High_6` and `Lora_Low_1` ... `Lora_Low_6`.
+ComfyUI nodes may expose either `strength` or `strength_model`; the injector supports both.
+
 **Static filenames for uploads** (e.g. `mpi_detailer_input.png`) enable ComfyUI execution caching.
 
 ## assetService (`js/services/assetService.js`)
@@ -61,15 +65,14 @@ Loads available LoRA and upscale model filenames from `GET /comfy/list-files` in
 
 Recursively walks the requested `subDir` under the resolved models root (custom root from `extra_model_paths.yaml` when set, else engine default). Returns relative paths from `subDir` for files with extensions `.safetensors | .ckpt | .pt | .bin | .pth`. Only scans the requested bucket — does NOT return siblings from other top-level folders (checkpoints, sams, ultralytics, etc).
 
-### Model-type subfolder convention
+### LoRA and upscaler visibility
 
-Files placed directly in `loras/` or `upscale_models/` are **universal** (e.g. `4x_NMKD-Siax_200k.pth`, installed with the engine via `installOnEngine: true`). Files placed under a `<type>/` subfolder (e.g. `loras/sdxl/foo.safetensors`) are **scoped to that model.type**. `MpiModelSettings._filterByType()` reads the flat list and shows:
+LoRA dropdowns show every file returned from the active models root `loras/`
+folder. The app does not filter LoRAs by `model.type` because users control their
+own LoRA folder names and conventions.
 
-- Root-level files (no `/` in path) — always included (universal)
-- `<modelType>/*` files — included when opened for a model of matching `type`
-- Other-type subfolder files — excluded
-
-`modelType` comes from `model.type` in `js/data/modelConstants/models.js` (values: `sdxl`, `flux`, `wan`, ...). Tool-context (no `modelId`) passes `null` — no filter, all files shown.
+Upscale model dropdowns still use model-type filtering where appropriate, with
+root-level files treated as universal.
 
 ## Download Manager
 

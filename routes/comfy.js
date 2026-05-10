@@ -311,10 +311,7 @@ router.get('/comfy/list-files', async (req, res) => {
 
     try {
         const customRoot = await getCustomRoot();
-        // Get the models root (custom or engine) by calling resolveComfyPath
-        // with an empty filename, then scope to the requested subDir.
-        const { localPath: modelsRoot } = await resolveComfyPath({ type: 'checkpoint', filename: '' }, customRoot, {});
-        if (!modelsRoot) return res.json({ success: true, files: [] });
+        const modelsRoot = customRoot || getComfyPath(ENGINE_ROOT, 'models');
 
         const targetPath = path.join(modelsRoot, subDir);
 

@@ -54,6 +54,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 9. **Generation mode is session-only** — `state.generationMode` controls Single/Queue/Loop across models. Do not persist it to `project.json`.
 
 10. **Queue mode is in-app Cue dispatch** - `generationService` owns `_cueQueue` and submits one ComfyUI prompt at a time. Do not use ComfyUI native queue polling for Cue depth.
+11. **LoRA settings can be flat or staged** - most models use six flat LoRA slots. WAN declares `model.loraStages` and stores LoRAs as `{ high: [...], low: [...] }`, injecting `Lora_High_*` and `Lora_Low_*` by workflow node title.
 
 ## How to Orient in an Unfamiliar File
 

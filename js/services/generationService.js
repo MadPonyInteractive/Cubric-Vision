@@ -223,7 +223,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const _proj = state.currentProject;
             if (_proj && model.id) {
                 const _settings = getModelSettings(_proj, model.id);
-                _previewLoraSnapshot = (_settings.loras || [])
+                const _loraSlots = Array.isArray(_settings.loras)
+                    ? _settings.loras
+                    : Object.values(_settings.loras || {}).flat();
+                _previewLoraSnapshot = _loraSlots
                     .filter(slot => slot && slot.name)
                     .map(slot => ({
                         name:          slot.name,

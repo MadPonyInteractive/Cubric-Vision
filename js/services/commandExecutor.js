@@ -152,20 +152,35 @@ function _buildParams(payload) {
         if (payload.modelId) {
             // Model context: inject LoRA slots + upscale model
             const settings = getModelSettings(project, payload.modelId);
+            const modelDef = getModelById(payload.modelId);
 
             // LoRA slots — only inject non-null entries
-            settings.loras.forEach((slot, i) => {
-                if (!slot.name) return;
-                params[`Lora_${i + 1}`] = {
-                    lora_name:      slot.name,
-                    strength_model: slot.strengthModel ?? 1.0,
-                    strength_clip:  slot.strengthClip  ?? 1.0,
-                };
-            });
+            if (modelDef?.loraStages?.length) {
+                modelDef.loraStages.forEach(stage => {
+                    const stageSlots = settings.loras?.[stage.key] || [];
+                    stageSlots.forEach((slot, i) => {
+                        if (!slot.name) return;
+                        params[`${stage.injectionPrefix}_${i + 1}`] = {
+                            lora_name:      slot.name,
+                            strength_model: slot.strengthModel ?? 1.0,
+                            strength_clip:  slot.strengthClip  ?? 1.0,
+                        };
+                    });
+                });
+            } else {
+                (settings.loras || []).forEach((slot, i) => {
+                    if (!slot.name) return;
+                    params[`Lora_${i + 1}`] = {
+                        lora_name:      slot.name,
+                        strength_model: slot.strengthModel ?? 1.0,
+                        strength_clip:  slot.strengthClip  ?? 1.0,
+                    };
+                });
+            }
 
             // Upscale model — user selection takes priority, else model default
             const upscaleFilename = settings.upscaleModel
-                || _depFilename(getModelById(payload.modelId)?.defaultUpscale);
+                || _depFilename(modelDef?.defaultUpscale);
             if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
 
         } else if (payload.operation) {

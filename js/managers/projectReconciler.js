@@ -17,7 +17,7 @@
  * was removed (so the disk state stays clean).
  */
 
-import { state } from '../state.js';
+import { createDefaultLoras, getLoraStages } from '../data/projectModel.js';
 
 /**
  * Reconcile a migrated project: load .meta/ files, drop broken entries,
@@ -30,14 +30,15 @@ import { state } from '../state.js';
  */
 export async function reconcileAndHydrate(project) {
     let wasModified = false;
+    const projectWithSettings = _upgradeStagedLoraSettings(project);
     const hydratedGroups = [];
 
-    for (const group of (project.itemGroups ?? [])) {
+    for (const group of (projectWithSettings.itemGroups ?? [])) {
         const hydratedHistory = [];
 
         for (const id of (group.history ?? [])) {
             // Load .meta/<uuid>.json from server
-            const meta = await _fetchMeta(id, project.folderPath);
+            const meta = await _fetchMeta(id, projectWithSettings.folderPath);
 
             if (!meta) {
                 // No .meta/ file found. This can happen for:
@@ -46,7 +47,7 @@ export async function reconcileAndHydrate(project) {
                 // In both cases, try to construct a minimal synthetic item from
                 // the media file itself so the entry isn't silently lost.
                 wasModified = true;
-                const synthetic = await _constructSyntheticItem(id, project.folderPath);
+                const synthetic = await _constructSyntheticItem(id, projectWithSettings.folderPath);
                 if (synthetic) {
                     hydratedHistory.push(synthetic);
                 }
@@ -57,7 +58,7 @@ export async function reconcileAndHydrate(project) {
             const mediaExists = await _checkFileExists(meta.filePath);
             if (!mediaExists) {
                 // Orphaned meta — clean it up
-                await _deleteMeta(id, project.folderPath);
+                await _deleteMeta(id, projectWithSettings.folderPath);
                 wasModified = true;
                 continue;
             }
@@ -78,12 +79,37 @@ export async function reconcileAndHydrate(project) {
     }
 
     return {
-        project: { ...project, itemGroups: hydratedGroups },
+        project: { ...projectWithSettings, itemGroups: hydratedGroups },
         wasModified,
     };
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
+
+function _upgradeStagedLoraSettings(project) {
+    const settings = project.modelSettings ?? {};
+    let nextSettings = settings;
+
+    for (const [modelId, modelSettings] of Object.entries(settings)) {
+        const stages = getLoraStages(modelId);
+        if (!stages || !Array.isArray(modelSettings?.loras)) continue;
+
+        const stagedLoras = createDefaultLoras(modelId);
+        const firstStage = stages[0]?.key;
+        if (firstStage) stagedLoras[firstStage] = modelSettings.loras;
+
+        if (nextSettings === settings) nextSettings = { ...settings };
+        nextSettings[modelId] = {
+            ...modelSettings,
+            loras: stagedLoras,
+        };
+
+    }
+
+    return nextSettings === settings
+        ? project
+        : { ...project, modelSettings: nextSettings };
+}
 
 /**
  * Fetch a .meta/<uuid>.json file from the server.
