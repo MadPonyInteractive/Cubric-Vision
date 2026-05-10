@@ -3,7 +3,7 @@
     display: grid;
     grid-template-columns: auto 1fr auto auto;
     align-items: end;
-    gap: var(--s-4);
+    gap: var(--s-2);
     background: var(--surface-bar);
     border: none;
     border-top: 1px solid var(--line-soft);
@@ -127,11 +127,12 @@
     gap: var(--s-3);
 }
 
-.mpi-prompt-box__badge-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    line-height: 1.2;
+.mpi-prompt-box__badge-line {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .mpi-prompt-box__badge-model {
@@ -142,8 +143,14 @@
     color: var(--ink-1);
 }
 
+.mpi-prompt-box__badge-sep {
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1;
+}
+
 .mpi-prompt-box__badge-op {
-    font-size: var(--t-2xs);
+    font-size: var(--t-xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -225,9 +232,6 @@
     pointer-events: auto;
     box-sizing: border-box;
     width: 100%;
-    position: fixed;
-    bottom: 104px;
-    z-index: 10;
     background: transparent !important;
     flex-shrink: 0;
 }

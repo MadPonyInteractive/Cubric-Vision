@@ -524,8 +524,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 ? `<span class="mpi-prompt-box__badge-batch">×${batchCount}</span>`
                 : '';
             badgeHost.innerHTML = `
-                <span class="mpi-prompt-box__badge-stack">
+                <span class="mpi-prompt-box__badge-line">
                     <span class="mpi-prompt-box__badge-model">${modelName}</span>
+                    <span class="mpi-prompt-box__badge-sep">·</span>
                     <span class="mpi-prompt-box__badge-op">${opLabel}</span>
                 </span>
                 ${batchTag}
