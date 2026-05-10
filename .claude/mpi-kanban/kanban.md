@@ -38,7 +38,7 @@
   - defaultExpanded: true
     ```md
     - Add resize tool.
-    This should auto resize the image based on certain parameters and should also work as a transform with handles. Either that or separating into two different tools, a resize tool and a transform tool. This is for the image workspace specifically. 
+    This should auto resize the image based on certain parameters and should also work as a transform with handles. Either that or separating into two different tools, a resize tool and a transform tool. This is for the image workspace specifically.
     ```
 
 ### Trim tool
@@ -48,7 +48,7 @@
   - defaultExpanded: true
     ```md
     - Add trim tool to video workspace.
-    Use redesign mock-up as a guide for a visual identity. 
+    Use redesign mock-up as a guide for a visual identity.
     ```
 
 ### Port redesign to Cubric Studio website
@@ -73,6 +73,16 @@
     - Documentation website. Apply OKLCH tokens, Stage component primitives, doc-appropriate type scale.
     - Reference spec: `docs/redesign/PRODUCT.md`, `DESIGN.md`.
     - Separate git repo — commit independently.
+    ```
+
+### Continue from last frame.
+
+  - tags: [Feature]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+    ```md
+    In the video history workspace, we are going to implement a feature so that the user can continue from the last frame and that creates a new video with the previous video + the generated video after. The last frame can be extracted from the last frame of the current video and injected in an image-to-video workflow displaying the prompt box. Please let the user know about the implementation briefing and concerns, and how this is supposed to happen. If it's a new PromptBoxControls.js, if it's a new tool, brainstorm with the user use cases of how to implement this.
     ```
 
 ## PLANNING
@@ -119,19 +129,19 @@
     ```md
     Two fixes shipped together:
     - Duplicate card on drag round-trip — root cause: PromptBox media chips were
-      using default browser draggable (img element). Dragging a chip onto the
-      gallery grid triggered the OS-file drop overlay (browser synthesizes a
-      Files entry from the dragged image), which re-uploaded the same file as
-      a new sidecar. Fixed by `draggable=false` on chip img/video + chip-level
-      dragstart preventDefault belt+suspenders.
+    using default browser draggable (img element). Dragging a chip onto the
+    gallery grid triggered the OS-file drop overlay (browser synthesizes a
+    Files entry from the dragged image), which re-uploaded the same file as
+    a new sidecar. Fixed by `draggable=false` on chip img/video + chip-level
+    dragstart preventDefault belt+suspenders.
     - Multi-file drop on the gallery — MpiMediaDropOverlay only handled
-      `files[0]`. Now passes the full file list to onDrop. Gallery uses
-      `_pb.el.remainingCapacity(mediaType)` to inject the first N files
-      (where N = free PromptBox slots for that op) into the PromptBox media
-      strip; overflow files still create gallery cards but are not pushed
-      into the slots. MpiGroupHistoryBlock updated to the new payload too.
+    `files[0]`. Now passes the full file list to onDrop. Gallery uses
+    `_pb.el.remainingCapacity(mediaType)` to inject the first N files
+    (where N = free PromptBox slots for that op) into the PromptBox media
+    strip; overflow files still create gallery cards but are not pushed
+    into the slots. MpiGroupHistoryBlock updated to the new payload too.
     Files: MpiPromptBox.js, MpiMediaDropOverlay.js, MpiGalleryBlock.js,
-           MpiGroupHistoryBlock.js
+    MpiGroupHistoryBlock.js
     ```
 
 ### Video player polish + workspace hotkeys
@@ -146,7 +156,7 @@
     - Sharp corners: `border-radius: var(--r-3)` → `0` on `.mpi-video-player`; ornamental `box-shadow` removed (Stage baseline = solid surfaces, sharp corners).
     - Loop default ON: template default `loop !== false`; loop button forced active class on mount.
     - Six new entries in `js/managers/hotkeyRegistry.js` under category `video` (all `allowWhileTyping: false`):
-      `video.playPause` (space), `video.frame.back/forward` (arrowleft/right), `video.volume.up/down` (arrowup/down, ±10%), `video.loop` (l).
+    `video.playPause` (space), `video.frame.back/forward` (arrowleft/right), `video.volume.up/down` (arrowup/down, ±10%), `video.loop` (l).
     - Bound inside `MpiVideoPlayer.setup` so they auto-clean via `_unsubs` on destroy — no leak into image workspace. `space` does not collide because `canvas.pan.*` only binds inside MpiCanvas.
     - Help slide-over: new "Video Player" group added in `MpiHelp.js` before the System block.
     Files: js/components/Compounds/MpiVideoPlayer/{MpiVideoPlayer.js,MpiVideoPlayer.css}, js/managers/hotkeyRegistry.js, js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js.
@@ -160,7 +170,7 @@
   - defaultExpanded: false
     ```md
     Switching models with media in the PromptBox now respects the media context. Root cause: `MpiPromptBox.setModel`/`setModelList` never reconciled `activeOperation` against current media, and both Block-side `model-change` listeners force-reset op to `model.supportedOps[0]`.
-
+    
     Fix:
     - Added `_pickOpForModel(candidate)` in `MpiPromptBox.js` that uses `el.imageCount`/`videoCount` + `_context` to keep the current op when it still fits, otherwise picks first media-compatible supported op (preferring `available`), falling back to text-only when no media is present.
     - `setModel` and `setModelList` now route through `setOperation(picked)` so `operation-change` is emitted (avoids stranded listeners per `feedback_instance_api_silent_emit`).

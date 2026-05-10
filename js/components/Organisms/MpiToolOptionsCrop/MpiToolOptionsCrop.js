@@ -87,7 +87,7 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         const isVideo = kind === 'video';
 
         // Local state
-        let _family      = 'social';
+        let _family      = 'free';
         let _orientation = 'portrait';
         let _label       = SOCIAL_RATIOS[0].label;
 
