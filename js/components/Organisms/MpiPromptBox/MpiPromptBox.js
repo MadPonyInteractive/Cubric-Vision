@@ -295,18 +295,51 @@ export const MpiPromptBox = ComponentFactory.create({
             clearBtn?.el?.setDisabled?.(!active);
         };
 
+        function _pickOpForModel(candidate) {
+            if (!candidate?.supportedOps?.length) return activeOperation;
+            const supported = candidate.supportedOps;
+            const cmds = getAvailableCommands(candidate.mediaType, candidate, _context);
+            const byKey = new Map(cmds.map(c => [c.key, c]));
+            const hasImages = (el.imageCount ?? 0) > 0;
+            const hasVideo  = (el.videoCount  ?? 0) > 0;
+            const hasMedia  = hasImages || hasVideo;
+
+            const matches = (cmd) => {
+                if (!cmd) return false;
+                if (hasImages && (cmd.requiresImages ?? 0) === 0) return false;
+                if (hasVideo  && (cmd.requiresVideo  ?? 0) === 0) return false;
+                if (!hasMedia && ((cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)) return false;
+                return true;
+            };
+
+            const currentCmd = byKey.get(activeOperation);
+            if (supported.includes(activeOperation) && matches(currentCmd)) return activeOperation;
+
+            const ranked = supported.map(k => byKey.get(k)).filter(Boolean);
+            const ready = ranked.find(c => matches(c) && c.available);
+            if (ready) return ready.key;
+            const fit = ranked.find(c => matches(c));
+            if (fit) return fit.key;
+            return supported[0];
+        }
+
         el.setModel = (newModel) => {
             model = newModel;
             _currentModelType = newModel?.mediaType ?? _currentModelType;
+            const picked = _pickOpForModel(newModel);
             if (_modelDropdown) {
                 _modelDropdown.el.setOptions(
                     modelList.map(m => ({ value: m.id, label: m.name })),
                     newModel.id
                 );
             }
-            _refreshOpDropdown();
-            _refreshOpSlot();
-            _renderBadge();
+            if (picked && picked !== activeOperation) {
+                el.setOperation(picked);
+            } else {
+                _refreshOpDropdown();
+                _refreshOpSlot();
+                _renderBadge();
+            }
             if (typeof _refreshRunLabel === 'function') _refreshRunLabel();
         };
 
@@ -316,19 +349,22 @@ export const MpiPromptBox = ComponentFactory.create({
             // If current model no longer in list (e.g. uninstalled), pick first available
             // and propagate change so badge, op dropdown, and consumers stay in sync.
             const stillPresent = model && modelList.some(m => m.id === model.id);
+            let nextOp = activeOperation;
             if (!stillPresent) {
                 const next = modelList[0] ?? null;
                 model = next;
                 _currentModelType = next?.mediaType ?? _currentModelType;
                 if (next) {
-                    activeOperation = next.supportedOps?.[0] ?? activeOperation;
+                    nextOp = _pickOpForModel(next) ?? next.supportedOps?.[0] ?? activeOperation;
                     emit('model-change', { model: next });
                 }
+            } else if (model) {
+                nextOp = _pickOpForModel(model) ?? activeOperation;
             }
 
             // Guard: activeOperation may be invalid for current model (e.g. mixed image/video lists)
-            if (model && !model.supportedOps?.includes(activeOperation)) {
-                activeOperation = model.supportedOps?.[0] ?? activeOperation;
+            if (model && !model.supportedOps?.includes(nextOp)) {
+                nextOp = model.supportedOps?.[0] ?? nextOp;
             }
 
             if (_modelDropdown) {
@@ -337,9 +373,13 @@ export const MpiPromptBox = ComponentFactory.create({
                     model?.id ?? null
                 );
             }
-            _refreshOpDropdown();
-            _refreshOpSlot();
-            _renderBadge();
+            if (nextOp !== activeOperation) {
+                el.setOperation(nextOp);
+            } else {
+                _refreshOpDropdown();
+                _refreshOpSlot();
+                _renderBadge();
+            }
         };
 
         // ── Show / hide ────────────────────────────────────────────────────────

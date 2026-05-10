@@ -373,6 +373,7 @@ LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea v
          Hotkeys `generation.run` (Ctrl+Enter) cue, `generation.stop` (Ctrl+Alt+Enter) stop, `generation.loop` (Ctrl+L) toggle `state.loopArmed` — all bound in setup
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 API:     `el.getRunPayload()` returns the current live run payload. Loop re-fire reads it via `getNextGeneration` callback so prompt/model/control changes apply to the next iteration.
+         `el.setModel(model)` / `el.setModelList(list)` auto-pick `activeOperation` for current media context (image/video counts) and emit `operation-change` when the picked op differs. Block-side `model-change` listeners must NOT force-reset op to `model.supportedOps[0]` — only override when current op is unsupported by the new model.
 GESTURE: Cue button — tap = enqueue 1 job. Hold ≥700ms = arm loop (color sweep fills button left→right; suppresses trailing click). Tap while armed = disarm. Hold while armed = no-op.
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)

@@ -73,16 +73,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Workflow operations not updating when image is present.
-
-  - tags: [Bug]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    This could be broader than just images added to the prompt box. I noticed that, for example, having an image model loaded and adding an image to the prompt box filters out the operations that can take in an image, but when changing to a different model text or video doesn't matter. It defaults to text-to-image or text-to-video the operation does. So changing to a different model should be aware if there is media in the prompt box and filter out operations that take or do not take media.
-    ```
-
 ### Dragging an image from and to the gallery grid sometimes adds a duplicate.
 
   - tags: [Bug]
@@ -127,6 +117,21 @@
     ```
 
 ## COMPLETED
+
+### Workflow operations not updating when image is present.
+
+  - tags: [Bug]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Switching models with media in the PromptBox now respects the media context. Root cause: `MpiPromptBox.setModel`/`setModelList` never reconciled `activeOperation` against current media, and both Block-side `model-change` listeners force-reset op to `model.supportedOps[0]`.
+
+    Fix:
+    - Added `_pickOpForModel(candidate)` in `MpiPromptBox.js` that uses `el.imageCount`/`videoCount` + `_context` to keep the current op when it still fits, otherwise picks first media-compatible supported op (preferring `available`), falling back to text-only when no media is present.
+    - `setModel` and `setModelList` now route through `setOperation(picked)` so `operation-change` is emitted (avoids stranded listeners per `feedback_instance_api_silent_emit`).
+    - `MpiGalleryBlock` + `MpiGroupHistoryBlock` `model-change` listeners no longer overwrite the picked op — they only force-reset if the current op is genuinely unsupported by the new model.
+    ```
 
 ### Cue + Loop refactor — drop Single/Queue/Auto-loop tri-mode
 

@@ -51,6 +51,8 @@ You MUST follow Atomic Design principles. **NEVER "import up".**
 * **Tier 4 (Blocks):** Sidebars, grids, workspace coordinators. (Can import Primitives, Compounds, and Organisms).
 
 > **Note on complexity:** Organisms like `MpiPromptBox` and Blocks can be substantially more complex than Primitives and most Compounds. They own multiple mount points, conditional sub-component rendering, and dynamic operation switching. Approach debugging and modifications carefully — trace all mount targets before making changes.
+>
+> **MpiPromptBox operation auto-pick:** `setModel` / `setModelList` reconcile `activeOperation` against current media (`imageCount` / `videoCount` from `_context`) — keep current op when still compatible, else first media-fitting `supportedOp`, else text-only when no media. Picked op flows through `setOperation` so `operation-change` fires. Block-side `model-change` listeners must rely on this and only force-reset when the current op is genuinely outside `model.supportedOps` — never default to `supportedOps[0]` unconditionally.
 
 ---
 

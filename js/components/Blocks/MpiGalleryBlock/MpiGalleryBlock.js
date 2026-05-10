@@ -429,8 +429,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 state.s_selectedModelId = model.id;
                 activeModelId   = model.id;
                 activeModel     = model;
-                activeOperation = model.supportedOps[0];
-                _pb?.el?.setOperation(activeOperation);
+                // PromptBox.setModel already picked the right op for current
+                // media context and emitted operation-change. The operation-change
+                // listener below syncs activeOperation — no force-reset here.
+                if (!model.supportedOps?.includes(activeOperation)) {
+                    activeOperation = model.supportedOps?.[0] ?? activeOperation;
+                    _pb?.el?.setOperation(activeOperation);
+                }
             });
 
             pb.on('operation-change', ({ operation }) => {

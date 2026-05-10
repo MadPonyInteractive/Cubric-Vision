@@ -465,7 +465,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 state.s_selectedModelId = model.id;
                 activeModelId = model.id;
                 activeModel = model;
-                _pb?.el?.setModel(model);
+                // PromptBox.setModel already updated internal state + picked op
+                // for current media context. Just refresh Block-side UI.
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
