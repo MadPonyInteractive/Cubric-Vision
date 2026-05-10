@@ -81,15 +81,6 @@
     Plan file: docs/plans/2026-05-09-wan-dual-model-12-loras-ltx.md
     ```
 
-### Video preview-gate core
-
-  - tags: [PLAN]
-  - priority: high
-  - defaultExpanded: true
-    ```md
-    Plan file: docs/plans/2026-05-09-video-preview-gate-core.md
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -110,6 +101,24 @@
     ```
 
 ## IMPLEMENTING
+
+### Video preview-gate core
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: true
+  - steps:
+      - [x] Sidecar schema + in-memory parity for `stage` + `frozenParams`
+      - [x] Inject `Preview_Only` boolean + new `t2v_ms`/`i2v_ms` ops
+      - [x] PromptBox toggle: "Preview initial stage"
+      - [x] Save preview output as `stage: 'preview'` + frozenParams
+      - [ ] Gallery card: PREVIEW badge + Continue / Discard buttons + click gate
+      - [ ] Continue handler: re-submit with frozen params, replace card on finalize
+      - [ ] Continue-while-busy behavior per generation mode
+      - [ ] Documentation + rule files sync
+    ```md
+    Plan file: docs/plans/2026-05-09-video-preview-gate-core.md
+    ```
 
 ### Setup video generation
 

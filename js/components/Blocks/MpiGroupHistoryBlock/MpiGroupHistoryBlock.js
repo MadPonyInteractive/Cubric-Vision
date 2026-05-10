@@ -510,7 +510,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         let _activeExec = null;
 
-        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} }) {
+        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -523,7 +523,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);
 
             return {
-                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams },
+                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly },
                 opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id },
             };
         }

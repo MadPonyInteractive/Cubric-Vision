@@ -121,6 +121,20 @@ export const commands = {
         promptRequired: false,
         components: ['ratio', 'generationMode'],
     },
+    t2v_ms: {
+        label: 'Text to Video',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresImages: 0,
+        promptRequired: true,
+        components: ['ratio', 'previewStage'],
+    },
+    i2v_ms: {
+        label: 'Image to Video',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresImages: 1,
+        promptRequired: false,
+        components: ['ratio', 'previewStage'],
+    },
     extend: {
         label: 'Extend',
         mediaType: MEDIA_TYPE.VIDEO,

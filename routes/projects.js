@@ -705,7 +705,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType } = req.body;
+        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -813,6 +813,9 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
         }
+        if (stage)         metaContent.stage         = stage;
+        if (frozenParams)  metaContent.frozenParams  = frozenParams;
+        if (loraSnapshot)  metaContent.loraSnapshot  = loraSnapshot;
         const metaPath = path.join(metaDir, `${id}.json`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
 
@@ -873,6 +876,9 @@ router.post('/project/save-generation', async (req, res) => {
             frameCount: metaContent.frameCount || 0,
             hasAudio: metaContent.hasAudio || false,
             videoMeta: metaContent.videoMeta || null,
+            stage:         metaContent.stage         ?? null,
+            frozenParams:  metaContent.frozenParams  ?? null,
+            loraSnapshot:  metaContent.loraSnapshot  ?? null,
         });
     } catch (err) {
         logger.error('project', 'save-generation error', err);

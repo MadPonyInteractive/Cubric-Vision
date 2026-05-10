@@ -390,6 +390,20 @@ export const ComfyUIController = {
             }
         }
 
+        // Defensive: Preview_Only param requested but workflow lacks the boolean
+        // node. Op contract guarantees presence on multi-stage workflows; this
+        // catches malformed/desynced workflow files. Strip param so injection
+        // does not no-op silently and the run proceeds as full generation.
+        if (params.Preview_Only !== undefined) {
+            const hasNode = Object.values(workflow).some(
+                n => (n?._meta?.title || '').toLowerCase() === 'preview_only'
+            );
+            if (!hasNode) {
+                clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation');
+                delete params.Preview_Only;
+            }
+        }
+
         // 3. Inject Parameters (Title-Based)
         const _inject = (nodeId, val) => {
             const node = workflow[nodeId];

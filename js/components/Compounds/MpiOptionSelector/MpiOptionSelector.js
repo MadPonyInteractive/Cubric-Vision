@@ -43,6 +43,7 @@ function _templateRatio(props) {
     const isActive    = props.showPopup || false;
     const mode        = RATIO_MODES[modelType] ?? 'orientation';
     const ratios      = getModelRatios(modelType, mode === 'orientation' ? orientation : undefined, qualityTier);
+    const triggerSize = props.size || 'md';
 
     const currentRatio = ratios.find(r => r.label === value) || ratios[0];
     const triggerIcon  = currentRatio.icon.replace('rect_', 'ratio_');
@@ -81,7 +82,7 @@ function _templateRatio(props) {
     const popupInnerHtml = `${headerHtml}<div class="mpi-opt-sel__grid">${ratioBtnsHtml}</div>`;
 
     const triggerBtnHtml = MpiButton.template({
-        icon: triggerIcon, label: value, size: 'md', active: isActive, toggleable: true, stroke: true, info: 'Select aspect ratio'
+        icon: triggerIcon, label: value, size: triggerSize, active: isActive, toggleable: true, stroke: true, info: 'Select aspect ratio'
     });
 
     return `<div class="mpi-opt-sel mpi-opt-sel--ratio">
@@ -91,10 +92,11 @@ function _templateRatio(props) {
 }
 
 function _templateNumber(props) {
-    const values   = props.values || [];
-    const current  = props.value ?? values[0] ?? '';
-    const icon     = props.icon ?? null;
-    const isActive = props.showPopup || false;
+    const values      = props.values || [];
+    const current     = props.value ?? values[0] ?? '';
+    const icon        = props.icon ?? null;
+    const isActive    = props.showPopup || false;
+    const triggerSize = props.size || 'md';
 
     const itemsHtml = values.map(v => `
         <div class="mpi-opt-sel__item" data-value="${v}">
@@ -109,7 +111,7 @@ function _templateNumber(props) {
 
     const triggerHtml = MpiButton.template({
         ...(icon ? { icon, label: String(current) } : { text: String(current), variant: 'secondary' }),
-        size: 'md', active: isActive, toggleable: true, info: props.info || '',
+        size: triggerSize, active: isActive, toggleable: true, info: props.info || '',
     });
 
     return `<div class="mpi-opt-sel mpi-opt-sel--number">
@@ -311,6 +313,7 @@ function _setupRatio(el, props, emit) {
         const modelType   = props.modelType || 'flux';
         const value       = props.value || '1:1';
         const qualityTier = props.qualityTier || 'medium';
+        const triggerSize = props.size || 'md';
         const mode        = RATIO_MODES[modelType] ?? 'orientation';
         const ratios      = getModelRatios(
             modelType,
@@ -347,7 +350,7 @@ function _setupRatio(el, props, emit) {
         const currentRatio   = ratios.find(r => r.label === value) || ratios[0];
         const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
         trigger.innerHTML = MpiButton.template({
-            icon: triggerIconName, label: value, active: props.showPopup, toggleable: true
+            icon: triggerIconName, label: value, size: triggerSize, active: props.showPopup, toggleable: true
         });
     };
 
@@ -466,6 +469,7 @@ function _setupNumber(el, props, emit) {
 
     const _updateUI = () => {
         const current = props.value;
+        const triggerSize = props.size || 'md';
         grid.innerHTML = values.map(v => `
             <div class="mpi-opt-sel__item" data-value="${v}">
                 ${MpiButton.template({ text: String(v), size: 'md', variant: v === current ? 'primary' : 'ghost', extraClasses: v === current ? 'is-active' : '' })}
@@ -474,7 +478,7 @@ function _setupNumber(el, props, emit) {
 
         trigger.innerHTML = MpiButton.template({
             ...(icon ? { icon, label: String(current) } : { text: String(current), variant: 'secondary' }),
-            size: 'md', active: props.showPopup, toggleable: true, info: props.info || '',
+            size: triggerSize, active: props.showPopup, toggleable: true, info: props.info || '',
         });
     };
 

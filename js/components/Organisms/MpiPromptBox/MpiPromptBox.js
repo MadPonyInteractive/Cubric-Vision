@@ -636,12 +636,15 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.getRunPayload = () => {
             const injectionParams = getInjectionParamsFromControls(_activeControls);
+            const previewCtrl = _activeControls.get('previewStage');
+            const previewOnly = previewCtrl?.getValue?.() === true;
             return {
                 operation:  activeOperation,
                 positive:   positiveValue,
                 negative:   negativeValue,
                 mediaItems: el.getMediaItems(),
                 injectionParams,
+                previewOnly,
             };
         };
 

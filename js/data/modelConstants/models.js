@@ -107,12 +107,12 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         mediaType: 'video',
         type: 'wan',
-        supportedOps: ['t2v', 'i2v'],
+        supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
         description: 'Wan 2.2 workflows for both anime and realism using the SmoothMix models.',
         workflows: {
-            t2v: 'Wan22_t2v.json',
-            i2v: 'Wan22_i2v.json',
+            t2v_ms: 'Wan22_t2v.json',
+            i2v_ms: 'Wan22_i2v.json',
         },
         dependencies: [
             'wan-22-t2v-high',

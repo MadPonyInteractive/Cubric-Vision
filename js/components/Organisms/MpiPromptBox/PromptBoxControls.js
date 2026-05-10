@@ -13,6 +13,7 @@
 
 import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -49,6 +50,7 @@ export const PROMPT_BOX_CONTROLS = {
                 initialOrientation,
                 value: initialValue,
                 qualityTier: initialQualityTier,
+                size: 'sm',
             });
 
             // Ratio selection: update displayed size + queue save via projectService
@@ -176,6 +178,51 @@ export const PROMPT_BOX_CONTROLS = {
         },
     },
 
+    /**
+     * previewStage — Multi-stage video toggle.
+     * When active, the workflow's `Preview_Only` boolean node is set to true,
+     * producing a low-res preview MP4 instead of the final video. Registered
+     * only on `_ms` ops (e.g. t2v_ms, i2v_ms). Persists per-model.
+     */
+    previewStage: {
+        nodeTitle: null,
+        defaultValue: false,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const initialActive = saved.previewStage === true;
+            this.value = initialActive;
+
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'frameForward',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initialActive,
+                info: 'Preview initial stage — low-res preview pass before full render',
+            });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'previewStage',
+                        value: !!active,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value === true;
+        },
+        getInjectionParams() {
+            return {};
+        },
+    },
+
     batch: {
         nodeTitle: 'Batch_Size',
         defaultValue: '1',
@@ -194,6 +241,7 @@ export const PROMPT_BOX_CONTROLS = {
                 icon: 'layers',
                 popupTitle: 'BATCH',
                 info: 'Batch size (images per run)',
+                size: 'sm',
             });
             this.value = initialValue;
 

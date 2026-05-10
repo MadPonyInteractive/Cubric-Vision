@@ -8,7 +8,7 @@
 
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
-import { createImageItem, createVideoItem, createItemGroup, appendToHistory } from '../data/projectModel.js';
+import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings } from '../data/projectModel.js';
 import { StatusBar } from '../shell/statusBar.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
@@ -109,6 +109,7 @@ function _emitPromptBoxGenerationEndIfIdle() {
  * @property {Array}    mediaItems
  * @property {string}   [maskDataUrl]
  * @property {Object}   [injectionParams]
+ * @property {boolean}  [previewOnly]   — multi-stage ops only; injects Preview_Only=true
  */
 
 /**
@@ -148,6 +149,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         mediaItems,
         maskDataUrl,
         injectionParams,
+        previewOnly: config.previewOnly === true,
     });
 
     const { id: _regId } = activeGenerations.start({
@@ -202,6 +204,35 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         const height = injectionParams.Height || 0;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
 
+        // Multi-stage video preview tagging: when this run was a Preview-only pass,
+        // tag the saved sidecar with stage='preview' + frozenParams (so a later
+        // Continue can re-run with identical seed/prompt/dims) + loraSnapshot
+        // (informational record of the LoRAs used at preview time).
+        let _previewStage = opts.stage;
+        let _previewFrozen = opts.frozenParams;
+        let _previewLoraSnapshot = opts.loraSnapshot;
+        if (isVideo && config.previewOnly === true && _previewStage === undefined) {
+            _previewStage = 'preview';
+            _previewFrozen = {
+                seed:     exec.seed ?? -1,
+                prompt:   positive,
+                negative: negative,
+                dims:     { w: width, h: height },
+                frames:   injectionParams.Frames ?? injectionParams.Frame_Count ?? null,
+            };
+            const _proj = state.currentProject;
+            if (_proj && model.id) {
+                const _settings = getModelSettings(_proj, model.id);
+                _previewLoraSnapshot = (_settings.loras || [])
+                    .filter(slot => slot && slot.name)
+                    .map(slot => ({
+                        name:          slot.name,
+                        strengthModel: slot.strengthModel ?? 1.0,
+                        strengthClip:  slot.strengthClip  ?? 1.0,
+                    }));
+            }
+        }
+
         // Build one item per output URL. Each item gets its own uuid (first reuses
         // the pre-allocated itemId so existing telemetry stays consistent).
         const builtItems = [];
@@ -226,6 +257,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
+                        stage:        _previewStage,
+                        frozenParams: _previewFrozen,
+                        loraSnapshot: _previewLoraSnapshot,
                     });
                     if (data.success) {
                         savedData = data;
@@ -262,6 +296,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                     hasAudio:    savedData?.hasAudio ?? false,
                     videoMeta:   savedData?.videoMeta ?? null,
                 });
+                if (savedData?.stage)        baseProps.stage        = savedData.stage;
+                if (savedData?.frozenParams) baseProps.frozenParams = savedData.frozenParams;
+                if (savedData?.loraSnapshot) baseProps.loraSnapshot = savedData.loraSnapshot;
             }
             const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);

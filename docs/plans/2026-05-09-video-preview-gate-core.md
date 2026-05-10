@@ -6,6 +6,55 @@
 **Priority:** high
 **Depends on:** `Queue modes + run hotkeys` (this plan calls into the queue API + uses the new mode toggle).
 
+## Status (as of 2026-05-10)
+
+- [x] To-do 1 — sidecar schema + in-memory parity (verified with normal video gen)
+- [x] To-do 2 — Preview_Only injection + new ms ops registered
+- [x] To-do 3 — PromptBox toggle "Preview initial stage"
+- [x] To-do 4 — save preview output as `stage: 'preview'` + frozenParams (verified: preview MP4 saved, sidecar correct)
+- [ ] To-do 5 — gallery PREVIEW badge + Continue / Discard buttons + click gate
+- [ ] To-do 6 — Continue handler: re-submit with frozen params, replace card on finalize
+- [ ] To-do 7 — Continue-while-busy behavior per generation mode
+- [ ] To-do 8 — documentation + rule files sync
+
+## Deviations from original plan (read before continuing)
+
+These changes were made during execution and should be honored by the next session.
+
+1. **New ops `t2v_ms` / `i2v_ms` instead of repurposing `t2v` / `i2v`.**
+   The plan originally added a `previewInitialStage` toggle to `t2v` and `i2v`. We instead created **multi-stage operations** as first-class entries in `commandRegistry.js` and changed WAN's `workflows`/`supportedOps` in `js/data/modelConstants/models.js` to use `t2v_ms` and `i2v_ms`. Single-stage `t2v` / `i2v` remain in the registry for future single-stage models. Future video models opt into multi-stage by listing `*_ms` ops in `supportedOps` + providing matching workflow files.
+
+2. **No PromptBox-level capability scan.** The plan considered fetching workflow JSON to detect `Preview_Only` node presence. Rejected — the op key (`_ms` suffix) is the contract. Workflow authoring guarantees node presence. Defensive scan stays in `comfyController.runWorkflow` as a `clientLogger.warn` only (dev signal, no user-facing toast).
+
+3. **No `toast:warn` event bus.** No such event exists in the app. The defensive warning when a workflow is missing `Preview_Only` is `clientLogger.warn` only — UI never sees it because the op contract should prevent the case.
+
+4. **`previewStage` control name (not `previewInitialStage`).** Registered in `PROMPT_BOX_CONTROLS` as `previewStage`. Component is an `MpiButton` with `toggleable: true`, `size: 'sm'`, icon `frameForward` (double-play). Persists per-model under `modelSettings[modelId].previewStage`. Run payload field is `previewOnly: boolean`.
+
+5. **`MpiOptionSelector` got a `size` prop.** To match the new small Preview toggle visually, `size: 'sm'` was added to MpiOptionSelector and passed from `PromptBoxControls.js` for the `ratio` and `batch` controls. Default remains `md` for non-PromptBox callers (MpiToolOptionsUpscale, MpiToolOptionsInterpolate). Documented in `js/components/types.js`.
+
+6. **Capture-title filter switch in `commandExecutor.js`.** Critical bug discovered + fixed: the executed-message filter was hardcoded to `_meta.title === 'output'`, silently dropping the Preview node's `gifs[]` payload during preview-only runs. Filter now switches to `'preview'` when `payload.previewOnly === true`. Workflow authors of `_ms` workflows MUST title their two `VHS_VideoCombine` capture nodes exactly `"Preview"` and `"Output"`. Documented in `.claude/rules/comfy_injection.md`.
+
+7. **`projectModel.js` factory defaults NOT updated.** Plan suggested adding `stage`/`frozenParams`/`loraSnapshot` defaults. We deliberately omitted — sidecars and in-memory MediaItems intentionally don't carry these keys when absent. Reconciler hydrates verbatim. This preserves shape parity (`feedback_sidecar_inmemory_parity.md` memory) — legacy sidecars stay clean.
+
+8. **Frames frozen-param is `null` for v1.** WAN workflows don't expose a frame-count injection node today. `frozenParams.frames` stores `null` until a workflow adds a `Frames` / `Frame_Count` node — `generationService` already reads from `injectionParams.Frames` or `injectionParams.Frame_Count` if either appears.
+
+## Files touched in this session (for next-session orientation)
+
+- `routes/projects.js` (save-generation: stage / frozenParams / loraSnapshot accept + persist + echo)
+- `js/services/projectService.js` (saveGeneration wrapper forwards new fields)
+- `js/services/generationService.js` (preview-mode metadata builder pre-loop; passes `previewOnly` into `runCommand`)
+- `js/services/commandExecutor.js` (inject `Preview_Only` boolean; capture-title filter switches `output` ↔ `preview`)
+- `js/services/comfyController.js` (defensive scan: warn + strip `Preview_Only` if node missing)
+- `js/data/modelConstants/models.js` (WAN `supportedOps` + `workflows` → `t2v_ms` / `i2v_ms`)
+- `js/data/commandRegistry.js` (new `t2v_ms` / `i2v_ms` entries with `components: ['ratio','previewStage']`)
+- `js/components/Organisms/MpiPromptBox/PromptBoxControls.js` (new `previewStage` control; `size: 'sm'` on ratio/batch)
+- `js/components/Organisms/MpiPromptBox/MpiPromptBox.js` (`getRunPayload` includes `previewOnly`)
+- `js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js` + `.css` (size prop)
+- `js/components/types.js` (size prop docs)
+- `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` (forward `previewOnly`)
+- `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` (forward `previewOnly`)
+- `.claude/rules/comfy_injection.md` (Preview_Only / Preview / Output node contract)
+
 ## Goal
 
 Let users run multi-stage video workflows (WAN today, LTX later) with `Preview_Only=true` to get a low-res motion preview MP4. The preview lands as a gallery card with a **PREVIEW** badge plus **Continue** and **Discard** buttons. Continue re-runs the workflow with `Preview_Only=false` reusing the frozen seed + prompt from the sidecar (LoRAs use current PromptBox state). The final card replaces the preview card in the gallery on completion. Preview cards are not clickable into history.
@@ -100,7 +149,7 @@ While Continue is in flight for a card, hide its Continue + Discard buttons and 
 
 Tie into plan #1 generation mode. In the Continue handler:
 - Single + idle: submit immediately.
-- Single + busy: emit `'toast:warn'` "Generation in progress — stop or wait". Do not submit.
+- Single + busy: mount an inline `MpiToast` (variant `warning`) "Generation in progress — stop or wait" using the existing pattern in `js/services/downloadService.js` (no `toast:warn` event bus exists). Do not submit.
 - Queue: submit (will land in ComfyUI native queue). Continue button shows "Queued" state until it becomes the active job.
 - Auto-loop + idle (loop not running): submit as one-off (does not start the loop).
 - Auto-loop + active: enqueue after current job completes; loop resumes after Continue lands. Verify with user during execution if a different preference comes up.
@@ -110,11 +159,12 @@ Tie into plan #1 generation mode. In the Continue handler:
 ### 8. Documentation + rule files sync
 
 Update only what changed:
-- `.claude/rules/comfy_injection.md`: document the `Preview_Only` boolean injection + the workflow-detection warning path.
+- `.claude/rules/comfy_injection.md`: ALREADY UPDATED in this session (Preview_Only boolean injection + Preview/Output capture node contract + multi-stage workflow authoring contract). Re-verify still accurate after to-dos 5-7.
 - `.claude/rules/component-events.md`: add `'preview:continue'`, `'preview:discard'`, `'gallery:item-updated'`, `'gallery:item-removed'` (whichever are new).
-- `.claude/rules/component-state.md`: PromptBox now reads `modelSettings[modelId].previewInitialStage`.
+- `.claude/rules/component-state.md`: PromptBox now reads `modelSettings[modelId].previewStage` (NOT `previewInitialStage` — actual key in code is `previewStage`).
 - `docs/project-integrity.md`: extend the sidecar schema section with `stage`, `frozenParams`, `loraSnapshot`.
 - `.claude/rules/components.md`: gallery card now has preview-stage variant.
+- `.claude/rules/component-comfy.md`: document new `t2v_ms` / `i2v_ms` ops + that `Preview_Only` is injected only when `previewOnly === true`.
 
 **Verify:** Look at the five edited docs — confirm each new fact is present, no unrelated content modified.
 
@@ -127,6 +177,6 @@ Update only what changed:
 
 ## Open questions to confirm during execution
 
-1. **Output node disambiguation:** if the WAN workflow has both `Preview` (preview node) and `SaveVideo` (final node) wired, when `Preview_Only=true` the final node is starved. But ComfyUI may still emit empty payloads for it. Confirm `_collectComfyOutputUrls` picks the right MP4 — may need filter by node id/title.
+1. **Output node disambiguation: RESOLVED.** When `previewOnly === true`, `commandExecutor.js` switches its capture-title filter to `'preview'` (instead of `'output'`). Workflow MUST have a `VHS_VideoCombine` node titled exactly `"Preview"` for the preview clip and one titled exactly `"Output"` for the final clip. Verified working with `Wan22_t2v.json`.
 2. **Replacement vs new entry on Continue:** the user spec says "replace the preview card". Confirm this means the same gallery position + same item id. If the grid re-sorts on update, the visual replacement may shift; might need to anchor by id.
 3. **Auto-loop interaction with Continue:** spec'd as "queue after current loop iteration, loop resumes". Confirm during to-do 7.

@@ -297,9 +297,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 };
             };
 
-            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {} }) => {
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false }) => {
                 if (!activeModel) return;
-                const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams };
+                const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
                     opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType),

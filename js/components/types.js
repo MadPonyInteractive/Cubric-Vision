@@ -180,6 +180,7 @@
 /**
  * @typedef {Object} MpiOptionSelectorProps (Compound — js/components/Compounds/MpiOptionSelector)
  * @property {'ratio'|'number'|'buttons'} variant  - Selector variant (required)
+ * @property {'sm'|'md'|'lg'} [size='md'] - Trigger button size (applies to ratio/number/buttons variants)
  *
  * The ratio popup panel renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors
  * (defined in MpiOptionSelector.css) instead of generic MpiButton items.

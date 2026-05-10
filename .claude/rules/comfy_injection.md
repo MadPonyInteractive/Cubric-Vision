@@ -44,10 +44,27 @@ See `docs/comfy.md` for the full injection pattern and example.
 | `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |
 | `"Box"` | `inputs.boolean` | Box (true) vs segment (false) |
 | `"Selected_Masks_Input"` | `inputs.text` / `picks` | Comma-separated mask indices |
+| `"Preview_Only"` | `inputs.boolean` | **Required on multi-stage video workflows** (ops with `_ms` suffix). Boolean toggle: `true` halts the workflow at the preview stage; `false`/absent runs full final stage. See "Multi-stage video workflows" below. |
 | `"Output"` | read-only | **Required** — final output node for result capture. Nodes without this title are ignored; capture `images` and VHS `gifs` payloads. |
+| `"Preview"` | read-only | **Required on multi-stage video workflows** — the node whose `gifs[]` payload carries the preview clip when `Preview_Only=true`. `commandExecutor.js` switches its capture-title filter from `"output"` → `"preview"` for preview-only runs; without the exact title, the executed message is silently dropped and the run reports "no output returned". |
 | `"Detected"` | read-only | **Required** — auto-masking preview output node |
 
 > When adding new params: use a capitalized title (e.g. `"Input_Video"`) and add it here.
+
+## Multi-stage video workflows
+
+Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass, gated by a `Preview_Only` boolean node inside the workflow JSON.
+
+**Authoring contract:** every `_ms` workflow file MUST contain:
+- A `MpiBoolean` node titled `"Preview_Only"` whose `inputs.boolean` gates the preview/final branch.
+- A capture node titled exactly `"Preview"` (typically `VHS_VideoCombine` saving to `temp/`) whose `gifs[]` payload is the preview clip.
+- A capture node titled exactly `"Output"` (typically `VHS_VideoCombine` saving to `output/`) whose `gifs[]` payload is the final clip.
+
+Single-stage workflows (no `_ms`) MUST NOT have the `Preview_Only` node and need only the `Output` capture node.
+
+**Symptom of missing node:** when the user toggles "Preview initial stage" in PromptBox and runs, the gen completes a full final video instead of stopping at preview. `comfyController.runWorkflow` defensively scans for the node when `Preview_Only` is present in params; if missing, it strips the param and emits a `clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation')`. Check the dev console / `logs/app.log` first when preview mode silently produces a full video.
+
+**Fix:** add a `Preview_Only` boolean node to the workflow JSON, wire it into the stage-branching logic (typically a Switch node before the final SaveVideo). Keep the title spelled exactly `Preview_Only` — case-insensitive match but spacing/underscores must be exact.
 
 ## Image & Mask Uploads
 Pass `Input_Image` / `Input_Mask` as Data URIs, blob URLs, http URLs, or local project paths — controller uploads them automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching; overwrite the file when content changes.

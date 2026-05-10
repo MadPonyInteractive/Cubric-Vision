@@ -135,6 +135,8 @@ function _buildParams(payload) {
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);
 
+    if (payload.previewOnly === true) params['Preview_Only'] = true;
+
     // Map dropped media to standard injection titles
     const imageItem = mediaItems.find(m => m.mediaType === 'image');
     const videoItem = mediaItems.find(m => m.mediaType === 'video');
@@ -375,10 +377,12 @@ export function runCommand(payload) {
         }
 
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
-        // Only images from these nodes are treated as final results.
+        // — or "preview" when this is a preview-only run on a multi-stage workflow.
+        // Only images/gifs from these nodes are treated as final results.
+        const _captureTitle = payload.previewOnly === true ? 'preview' : 'output';
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === 'output'
+                workflow[id]._meta?.title?.toLowerCase() === _captureTitle
             )
         );
 
