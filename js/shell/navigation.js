@@ -74,11 +74,21 @@ function _buildGalleryItems(ctx = {}) {
         .map(cmd => ({ action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate' }));
 }
 
-// group-history items are still static (no dynamic input context yet — that's item 6)
-const GROUP_HISTORY_ITEMS = [
-    { action: 'upscale', label: 'Upscale', icon: 'upscaler' },
-    { action: 'detail',  label: 'Detail',  icon: 'detailer' },
-];
+// Last items pushed by MpiGroupHistoryBlock — single source of truth, derived
+// from the Block's own _opOptions() (same data the PromptBox dropdown uses).
+let _groupHistoryItems = [];
+
+/**
+ * Maps a PromptBox-shaped op option ({ value, label, disabled }) to a radial
+ * item. Keeps only enabled options.
+ * @param {Array<{value:string,label:string,disabled?:boolean}>} opts
+ * @returns {Array<{action:string,label:string,icon:string}>}
+ */
+function _mapOpsToRadialItems(opts) {
+    return (opts || [])
+        .filter(o => !o.disabled)
+        .map(o => ({ action: o.value, label: o.label, icon: OP_ICONS[o.value] || 'generate' }));
+}
 
 // ── Public init ─────────────────────────────────────────────────────────────
 
@@ -118,8 +128,7 @@ export function handleNavigation(page, params = {}) {
     if (page === PAGE_LANDING) {
         clearHistory();
         Overlays.reset();
-        // Tear down radial so the next project entry re-mounts fresh,
-        // correctly re-evaluating tutorialSeen for the new project.
+        // Tear down radial so the next project entry re-mounts fresh.
         if (_radialInstance) {
             _radialInstance.destroy?.();
             _radialMount.innerHTML = '';
@@ -254,7 +263,7 @@ function _syncRadial(page) {
         });
 
         _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
-        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, GROUP_HISTORY_ITEMS);
+        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {
@@ -263,9 +272,16 @@ function _syncRadial(page) {
             }
             Events.emit('workspace:set-operation', { operation: action });
         });
+
+        // Bridge: radial pre-render hook → workspace event. Active workspace
+        // Block can refresh radial items synchronously (e.g. re-evaluate live
+        // mask state) so the upcoming render reflects current capabilities.
+        _radialInstance.on('will-open', () => {
+            Events.emit('radial:will-open', { page: _currentPage });
+        });
     } else {
         _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
-        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, GROUP_HISTORY_ITEMS);
+        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
         _radialInstance.el.setContext(page);
         _radialInstance.el.setExtraItems(extraItems);
     }
@@ -282,6 +298,25 @@ export function refreshRadial(ctx = {}) {
     }
     if (!_radialInstance) return;
     _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems(ctx));
+}
+
+/**
+ * Replaces the group-history radial items. Called by MpiGroupHistoryBlock with
+ * the SAME op options it feeds to MpiPromptBox — single source of truth so the
+ * radial and PromptBox dropdown can never disagree.
+ * @param {Array<{value:string,label:string,disabled?:boolean}>} opOptions
+ */
+export function refreshGroupHistoryRadial(opOptions) {
+    _groupHistoryItems = _mapOpsToRadialItems(opOptions);
+    if (!_radialInstance) return;
+    _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
+}
+
+/** Clears group-history radial items (called by Block on teardown). */
+export function clearGroupHistoryRadial() {
+    _groupHistoryItems = [];
+    if (!_radialInstance) return;
+    _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, []);
 }
 
 // ── Lazy view imports ───────────────────────────────────────────────────────

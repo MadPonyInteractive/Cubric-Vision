@@ -2,8 +2,6 @@ import { ComponentFactory } from '../../factory.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { on, qs, qsa } from '../../../utils/dom.js';
 import { ICONS } from '../../../utils/icons.js';
-import { updateProject } from '../../../services/projectService.js';
-import { state } from '../../../state.js';
 
 /**
  * MpiRadialMenu — Radial navigation primitive.
@@ -15,17 +13,19 @@ import { state } from '../../../state.js';
  * Release Tab while outside centre → selects highlighted item.
  * Release Tab while inside centre → no selection, menu closes.
  *
- * First open shows a tutorial hint until user completes one Tab-hold cycle;
- * then project.tutorialSeen is set to true.
+ * Single-item context: dead-zone bypassed — cone + selection active immediately.
  *
  * @param {string} [context='root'] - Active context key.
  * @param {boolean} [open=false]    - Force-open state (first-run).
  * @param {Array<{action:string, label:string, icon:string}>} [extraItems=[]]
  *
  * Emits:
- * 'select' { action: string }
- * 'open'   {}
- * 'close'  {}
+ * 'select'    { action: string }
+ * 'will-open' {}                  — fires BEFORE items render; listeners can
+ *                                  push fresh items via setContextItems and
+ *                                  they will appear in the upcoming render.
+ * 'open'      {}
+ * 'close'     {}
  */
 export const MpiRadialMenu = ComponentFactory.create({
     name: 'MpiRadialMenu',
@@ -75,16 +75,6 @@ export const MpiRadialMenu = ComponentFactory.create({
                 return `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">${paths}</svg>`;
             }
             return `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4"/></svg>`;
-        }
-
-        // ── Tutorial state ──────────────────────────────────────────────────────
-        function _tutorialSeen() {
-            return !!(state.currentProject?.tutorialSeen);
-        }
-
-        function _markTutorialSeen() {
-            if (_tutorialSeen()) return;
-            updateProject({ tutorialSeen: true });
         }
 
         // ── Pointer lock ────────────────────────────────────────────────────────
@@ -142,20 +132,6 @@ export const MpiRadialMenu = ComponentFactory.create({
             const dot = document.createElement('div');
             dot.className = 'mpi-radial__dot';
             el.appendChild(dot);
-
-            // Tutorial hints
-            const hintTop = document.createElement('div');
-            hintTop.className = 'mpi-radial__hint mpi-radial__hint--top';
-            hintTop.textContent = 'Hold Tab...';
-            const hintBottom = document.createElement('div');
-            hintBottom.className = 'mpi-radial__hint mpi-radial__hint--bottom';
-            hintBottom.textContent = 'when you need me.';
-            if (_tutorialSeen()) {
-                hintTop.classList.add('mpi-radial__hint--hidden');
-                hintBottom.classList.add('mpi-radial__hint--hidden');
-            }
-            el.appendChild(hintTop);
-            el.appendChild(hintBottom);
 
             // Cone SVG
             const cone = document.createElement('div');
@@ -236,41 +212,58 @@ export const MpiRadialMenu = ComponentFactory.create({
             const cx = size / 2;
             const cy = size / 2;
             const outerR = size / 2;
-            const halfAngle = (360 / Math.max(count, 1) / 2) * (Math.PI / 180);
 
-            const x1 = cx + outerR * Math.cos(-halfAngle);
-            const y1 = cy + outerR * Math.sin(-halfAngle);
-            const x2 = cx + outerR * Math.cos(halfAngle);
-            const y2 = cy + outerR * Math.sin(halfAngle);
+            let pathD;
+            let gradAttrs;
 
-            const largeArc = halfAngle * 2 > Math.PI ? 1 : 0;
-
-            const d = [
-                `M ${cx} ${cy}`,
-                `L ${x1.toFixed(2)} ${y1.toFixed(2)}`,
-                `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
-                'Z'
-            ].join(' ');
+            if (count <= 1) {
+                // Single item — full circle ring with centre-radial gradient so user
+                // sees immediately there's exactly one option.
+                pathD = [
+                    `M ${cx - outerR} ${cy}`,
+                    `A ${outerR} ${outerR} 0 1 0 ${cx + outerR} ${cy}`,
+                    `A ${outerR} ${outerR} 0 1 0 ${cx - outerR} ${cy}`,
+                    'Z'
+                ].join(' ');
+                gradAttrs = 'cx="50%" cy="50%" r="50%" fx="50%" fy="50%"';
+            } else {
+                const halfAngle = (360 / count / 2) * (Math.PI / 180);
+                const x1 = cx + outerR * Math.cos(-halfAngle);
+                const y1 = cy + outerR * Math.sin(-halfAngle);
+                const x2 = cx + outerR * Math.cos(halfAngle);
+                const y2 = cy + outerR * Math.sin(halfAngle);
+                const largeArc = halfAngle * 2 > Math.PI ? 1 : 0;
+                pathD = [
+                    `M ${cx} ${cy}`,
+                    `L ${x1.toFixed(2)} ${y1.toFixed(2)}`,
+                    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
+                    'Z'
+                ].join(' ');
+                gradAttrs = 'cx="0%" cy="50%" r="100%" fx="0%" fy="50%"';
+            }
 
             return `<svg xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 ${size} ${size}"
                         width="${size}" height="${size}"
                         class="mpi-radial__cone-svg">
                         <defs>
-                            <radialGradient id="mpi-cone-grad" cx="0%" cy="50%" r="100%" fx="0%" fy="50%">
+                            <radialGradient id="mpi-cone-grad" ${gradAttrs}>
                                 <stop offset="0%"   style="stop-color: var(--accent-heat); stop-opacity: 0.55"/>
                                 <stop offset="100%" style="stop-color: var(--accent-heat); stop-opacity: 0"/>
                             </radialGradient>
                         </defs>
-                        <path d="${d}" fill="url(#mpi-cone-grad)"/>
+                        <path d="${pathD}" fill="url(#mpi-cone-grad)"/>
                     </svg>`;
         }
 
         // ── Active item tracking ────────────────────────────────────────────────
         function _resolveActiveIndex(dx, dy) {
+            if (_itemCount === 0) return -1;
+            // Single item — always active. Cone fills as full ring; no direction
+            // needed. Tab-release immediately selects the only option.
+            if (_itemCount === 1) return 0;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < moveDist) return -1;
-            if (_itemCount === 0) return -1;
 
             const mouseAngle = Math.atan2(dy, dx);
             let best = -1;
@@ -320,10 +313,17 @@ export const MpiRadialMenu = ComponentFactory.create({
         function _show() {
             if (_visible) return;
             _visible = true;
+            // Pre-render hook: listeners can call setContextItems synchronously
+            // here to refresh availability based on live workspace state (e.g.
+            // mask presence) without waiting for tool-mode exit events.
+            emit('will-open', {});
             _render();
             el.classList.remove('mpi-radial--hidden');
             el.classList.add('mpi-radial--visible');
             _requestLock();
+            // Single-item contexts auto-activate — cone visible from open with
+            // no mouse motion required.
+            _applyActive(_resolveActiveIndex(_vx, _vy));
             emit('open', {});
         }
 
@@ -370,7 +370,6 @@ export const MpiRadialMenu = ComponentFactory.create({
                 } else {
                     _hide();
                 }
-                _markTutorialSeen();
             }
         };
 

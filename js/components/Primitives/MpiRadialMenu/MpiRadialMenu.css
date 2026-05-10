@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    MpiRadialMenu — Radial navigation primitive
-   BEM: .mpi-radial / .mpi-radial__item / .mpi-radial__hint
+   BEM: .mpi-radial / .mpi-radial__item
         .mpi-radial__dot / .mpi-radial__cone
 ═══════════════════════════════════════════════════════════════ */
 
@@ -40,8 +40,6 @@
 /* ── Hidden / Visible states ───────────────────────────── */
 
 .mpi-radial--hidden .mpi-radial__item,
-.mpi-radial--hidden .mpi-radial__hint--top,
-.mpi-radial--hidden .mpi-radial__hint--bottom,
 .mpi-radial--hidden .mpi-radial__dot {
     opacity: 0;
     pointer-events: none;
@@ -190,51 +188,10 @@
     white-space: nowrap;
 }
 
-/* ── Centre hint ────────────────────────────────────────── */
-
-.mpi-radial__hint {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%) scale(0.85);
-    z-index: 4;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: var(--t-xs);
-    color: var(--ink-3);
-    letter-spacing: 0.04em;
-    pointer-events: none;
-    text-align: center;
-    white-space: nowrap;
-
-    opacity: 0;
-    transition:
-        opacity var(--t-base) var(--ease) 0.15s,
-        transform var(--t-base) var(--ease) 0.15s;
-}
-
-.mpi-radial__hint--top {
-    bottom: calc(50% + 10px);
-}
-
-.mpi-radial__hint--bottom {
-    top: calc(50% + 10px);
-}
-
-.mpi-radial--visible .mpi-radial__hint {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-}
-
-/* Hidden once tutorial is seen — stays invisible even when menu is open */
-.mpi-radial__hint--hidden {
-    display: none;
-}
-
 /* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
     .mpi-radial__item,
-    .mpi-radial__hint--top,
-    .mpi-radial__hint--bottom,
     .mpi-radial__dot,
     .mpi-radial__cone-svg {
         transition: opacity var(--t-fast) var(--ease);

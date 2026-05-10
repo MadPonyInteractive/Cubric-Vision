@@ -74,11 +74,12 @@ EMITS:   `input`  `{ value: number }`
 LISTENS: (none)
 
 ### MpiRadialMenu
-EMITS:   `select` `{ action: string }`
-         `open`   `{}`
-         `close`  `{}`
+EMITS:   `select`    `{ action: string }`
+         `will-open` `{}` (fires BEFORE items render; listeners can call `setContextItems()` synchronously to refresh availability)
+         `open`      `{}`
+         `close`     `{}`
 LISTENS: Hotkeys 'tab' (open/close toggle), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
-NOTE:    Reads `state.currentProject?.tutorialSeen` and calls `updateProject()` to mark tutorial seen.
+NOTE:    Single-item context auto-activates (full-circle cone, no movement needed).
 
 ### MpiRadioGroup
 EMITS:   `select` `{ value: string, option: object|string }`
@@ -463,6 +464,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 ### MpiGroupHistoryBlock (Block — js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js)
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer (image) or MpiVideoViewer (video), MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
+         `radial:will-open` — pre-render hook; calls `refreshGroupHistoryRadial(_opOptions())` so radial mirrors PromptBox availability (live mask check via `viewer.el.hasMask()`)
          `generation:started` `{ id, scope, groupId }` — seeds `_myGenIds` if scope+groupId match; shows generating state on canvas
          `generation:preview` `{ id, url }` — loads preview into canvasViewer if id in `_myGenIds`
          `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state

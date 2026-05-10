@@ -21,6 +21,7 @@ import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
+import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
@@ -432,6 +433,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     _pb?.el?.setOperation(activeOperation);
                 }
             }
+            // Single source of truth: ship the same op list to the radial that
+            // PromptBox uses. _opOptions() pixel-scans the live mask via
+            // viewer.el.hasMask() (preview-mode aware), so radial reflects
+            // current capability instantly — no per-stroke event needed.
+            refreshGroupHistoryRadial(opts);
         }
 
         /** Gate prompt tool button disabled state based on _hasPromptOps(). */
@@ -866,6 +872,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.onState('s_installedModelIds', _onZeroInstalled));
 
         if (!_hasInstalledImageModels()) Events.emit('models:open', { auto: true });
+
+        // Seed radial with current op set on mount.
+        refreshGroupHistoryRadial(_opOptions());
+
+        // Pre-render hook from radial: refresh op list synchronously before
+        // items render. _opOptions() pixel-scans the live mask (preview-mode
+        // aware) so paint strokes made while still in mask mode — no mode-exit
+        // event yet — are reflected immediately.
+        _unsubs.push(Events.on('radial:will-open', () => {
+            refreshGroupHistoryRadial(_opOptions());
+        }));
+
+        // Clear on teardown so a stale set doesn't flash if Tab is held during
+        // navigation back to gallery.
+        _unsubs.push(() => clearGroupHistoryRadial());
 
         // ── Cleanup ───────────────────────────────────────────────────────────
 
