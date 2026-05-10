@@ -87,22 +87,43 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
         const dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
-            onDrop: async ({ file, mediaType }) => {
+            onDrop: async ({ files }) => {
                 const project = state.currentProject;
                 if (!project?.folderPath || !project?.id) {
                     clientLogger.warn('MpiGalleryBlock', 'No current project on drop');
                     return;
                 }
-                const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
-                if (!uploaded) return;
-                Events.emit('media:imported', {
-                    url: uploaded.filePath,
-                    filename: uploaded.filename,
-                    itemId: uploaded.itemId,
-                    thumbPath: uploaded.thumbPath,
-                    mediaType,
+                // Tag each file with whether it should also be injected into the
+                // PromptBox, based on remaining slots for its mediaType under
+                // the current operation. Files beyond capacity still get
+                // imported as gallery cards but are not pushed into the slots.
+                const remaining = {
+                    image: _pb?.el?.remainingCapacity?.('image') ?? 0,
+                    video: _pb?.el?.remainingCapacity?.('video') ?? 0,
+                    audio: _pb?.el?.remainingCapacity?.('audio') ?? 0,
+                };
+                const plan = files.map(({ file, mediaType }) => {
+                    const inject = remaining[mediaType] > 0;
+                    if (inject) remaining[mediaType]--;
+                    return { file, mediaType, inject };
                 });
-                _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
+
+                // Sequential — server queues per-project.json writes; parallel
+                // would still serialise but order would be non-deterministic.
+                for (const { file, mediaType, inject } of plan) {
+                    const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
+                    if (!uploaded) continue;
+                    Events.emit('media:imported', {
+                        url: uploaded.filePath,
+                        filename: uploaded.filename,
+                        itemId: uploaded.itemId,
+                        thumbPath: uploaded.thumbPath,
+                        mediaType,
+                    });
+                    if (inject) {
+                        _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
+                    }
+                }
             },
         });
         el.appendChild(dropOverlay.el);

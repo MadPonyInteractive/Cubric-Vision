@@ -59,9 +59,9 @@ EMITS:   `close`      `{}`
 LISTENS: `ui:close-all-popups` — removes `is-active`, emits `close`
 
 ### MpiMediaDropOverlay
-EMITS:   (none — dumb primitive; calls `props.onDrop({ file, mediaType })` on valid drop; all side effects in caller)
+EMITS:   (none — dumb primitive; calls `props.onDrop({ files: [{ file, mediaType }, ...] })` once per drop with all valid image/video files; all side effects in caller)
 LISTENS: `ui:close-all-popups` — hides overlay (Escape during drag)
-NOTE:    Accepts any image/video OS file drag. Ignores internal `application/mpi-media` drags. Replaced `MpiGalleryDropOverlay`.
+NOTE:    Accepts any image/video OS file drag (multi-file supported). Ignores internal `application/mpi-media` drags. Replaced `MpiGalleryDropOverlay`.
 
 ### MpiProjectDropOverlay
 EMITS:   (none — dumb primitive; calls `props.onDrop({ folderPath, source })` on valid drop; all side effects in caller)
@@ -374,6 +374,7 @@ LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea v
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 API:     `el.getRunPayload()` returns the current live run payload. Loop re-fire reads it via `getNextGeneration` callback so prompt/model/control changes apply to the next iteration.
          `el.setModel(model)` / `el.setModelList(list)` auto-pick `activeOperation` for current media context (image/video counts) and emit `operation-change` when the picked op differs. Block-side `model-change` listeners must NOT force-reset op to `model.supportedOps[0]` — only override when current op is unsupported by the new model.
+         `el.injectMedia({ url, mediaType })` adds one item to the strip (overflow evicts oldest of same type). Bulk callers should query `el.remainingCapacity(mediaType)` first and inject only that many — exceeding capacity silently evicts earlier items, which is rarely what bulk drops want.
 GESTURE: Cue button — tap = enqueue 1 job. Hold ≥700ms = arm loop (color sweep fills button left→right; suppresses trailing click). Tap while armed = disarm. Hold while armed = no-op.
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
@@ -476,7 +477,7 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          StatusBar listens to tool:running, tool:loading-model, tool:sampling-start, tool:idle, tool:cancelled and updates progress label/variant
          commandExecutor emits tool:loading-model and tool:sampling-start (see commandExecutor note below)
          Window-level drag listeners (`dragenter`/`dragleave`/`dragover`/`drop`) managed here; removed in `destroy()`
-         MpiMediaDropOverlay onDrop: uploads file + calls _pb.el.injectMedia() (organism handle on Block) only (no history card created)
+         MpiMediaDropOverlay onDrop: loops dropped files, uploads each + calls _pb.el.injectMedia() per file (organism handle on Block) (no history card created)
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
          **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.

@@ -31,6 +31,8 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
  *   el.clearMedia()
  *   el.removeMedia(id)
  *   el.injectMedia({ url, mediaType })
+ *   el.remainingCapacity(mediaType) → number of free media slots for type
+ *                                     under the current operation
  *   el.injectPrompts({ positive, negative })
  *   el.setOperation(key)
  *   el.setGenerating(bool)
@@ -398,10 +400,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
+                chip.draggable = false;
                 const mediaHtml = item.mediaType === 'image'
-                    ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="">`
+                    ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="" draggable="false">`
                     : item.mediaType === 'video'
-                        ? `<video src="${item.url}" class="mpi-prompt-box-media-strip__thumb" muted playsinline preload="metadata"></video>
+                        ? `<video src="${item.url}" class="mpi-prompt-box-media-strip__thumb" muted playsinline preload="metadata" draggable="false"></video>
                            <span class="mpi-prompt-box-media-strip__type">${renderIcon('video', 'xs')}</span>`
                         : `<div class="mpi-prompt-box-media-strip__audio-thumb">${renderIcon('audio', 'sm')}</div>
                            <span class="mpi-prompt-box-media-strip__type">${renderIcon('audio', 'xs')}</span>`;
@@ -409,6 +412,11 @@ export const MpiPromptBox = ComponentFactory.create({
                     ${mediaHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
                 `;
+                // Belt + suspenders: kill any drag that escapes draggable=false
+                // (browsers ignore the attr on some media elements during specific
+                // gesture sequences). Prevents the strip from acting as a source
+                // for OS-style file drags that would re-import on the gallery.
+                chip.addEventListener('dragstart', (e) => e.preventDefault());
                 on(qs('.mpi-prompt-box-media-strip__remove', chip), 'click', (e) => {
                     e.stopPropagation();
                     el.removeMedia?.(item.id);
@@ -434,6 +442,16 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
             _tryAddMedia({ url, file: null, mediaType, source: 'app' });
             return true;
+        };
+
+        // Remaining slots for `mediaType` under the current operation. Used by
+        // callers performing bulk imports to know how many they can inject
+        // before overflow eviction kicks in.
+        el.remainingCapacity = (mediaType) => {
+            const max = _maxMediaForCurrentOperation(mediaType);
+            if (max <= 0) return 0;
+            const used = _mediaItems.filter(m => m.mediaType === mediaType).length;
+            return Math.max(0, max - used);
         };
 
         el.injectPrompts = ({ positive, negative }) => {

@@ -2,11 +2,12 @@
  * MpiMediaDropOverlay — Primitive: full-area OS-file drop target.
  *
  * Dumb primitive. Handles show/hide, dragover preventDefault, and calls
- * props.onDrop({ file, mediaType }) when a valid OS file is dropped.
- * No upload, no Events.emit — all side effects live in the caller.
+ * props.onDrop({ files }) once per drop event with all valid image/video
+ * files. No upload, no Events.emit — all side effects live in the caller.
  *
  * Props:
- *   onDrop({ file: File, mediaType: 'image'|'video' }) — called on valid drop
+ *   onDrop({ files: Array<{ file: File, mediaType: 'image'|'video' }> })
+ *     — called on valid drop (callback receives all files in one call)
  *
  * Instance methods (on instance.el):
  *   show() — make overlay visible (adds visible modifier)
@@ -46,15 +47,20 @@ export const MpiMediaDropOverlay = ComponentFactory.create({
             e.stopPropagation();
             el.hide();
 
-            const file = e.dataTransfer?.files?.[0];
-            if (!file) return;
+            const fileList = e.dataTransfer?.files;
+            if (!fileList || !fileList.length) return;
 
-            const mediaType = file.type.startsWith('image/') ? 'image'
-                            : file.type.startsWith('video/') ? 'video'
-                            : null;
-            if (!mediaType) return;
+            const files = [];
+            for (const file of fileList) {
+                const mediaType = file.type.startsWith('image/') ? 'image'
+                                : file.type.startsWith('video/') ? 'video'
+                                : null;
+                if (!mediaType) continue;
+                files.push({ file, mediaType });
+            }
+            if (!files.length) return;
 
-            props.onDrop?.({ file, mediaType });
+            props.onDrop?.({ files });
         });
 
         _unsubs.push(Events.on('ui:close-all-popups', () => el.hide()));

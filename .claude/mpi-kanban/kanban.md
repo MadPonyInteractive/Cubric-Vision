@@ -73,16 +73,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Dragging an image from and to the gallery grid sometimes adds a duplicate.
-
-  - tags: [Bug]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    I noticed that when dragging an existing card into the prompt box and then back into the gallery grid, it sometimes adds a duplicate card with the same image. The same might be true for video cards.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -117,6 +107,30 @@
     ```
 
 ## COMPLETED
+
+### Gallery drag duplicate + multi-file drop fill PromptBox slots
+
+  - tags: [Bug, gallery]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Two fixes shipped together:
+    - Duplicate card on drag round-trip — root cause: PromptBox media chips were
+      using default browser draggable (img element). Dragging a chip onto the
+      gallery grid triggered the OS-file drop overlay (browser synthesizes a
+      Files entry from the dragged image), which re-uploaded the same file as
+      a new sidecar. Fixed by `draggable=false` on chip img/video + chip-level
+      dragstart preventDefault belt+suspenders.
+    - Multi-file drop on the gallery — MpiMediaDropOverlay only handled
+      `files[0]`. Now passes the full file list to onDrop. Gallery uses
+      `_pb.el.remainingCapacity(mediaType)` to inject the first N files
+      (where N = free PromptBox slots for that op) into the PromptBox media
+      strip; overflow files still create gallery cards but are not pushed
+      into the slots. MpiGroupHistoryBlock updated to the new payload too.
+    Files: MpiPromptBox.js, MpiMediaDropOverlay.js, MpiGalleryBlock.js,
+           MpiGroupHistoryBlock.js
+    ```
 
 ### Video player polish + workspace hotkeys
 

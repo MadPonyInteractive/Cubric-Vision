@@ -373,14 +373,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── OS-file drop overlay ───────────────────────────────────────────────
 
         const _dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
-            onDrop: async ({ file, mediaType }) => {
+            onDrop: async ({ files }) => {
                 const project = state.currentProject;
                 if (!project?.folderPath || !project?.id) {
                     clientLogger.warn('MpiGroupHistoryBlock', 'No current project on drop');
                     return;
                 }
-                const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
-                if (uploaded) _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
+                for (const { file, mediaType } of files) {
+                    const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id);
+                    if (uploaded) _pb?.el?.injectMedia?.({ url: uploaded.filePath, mediaType });
+                }
             },
         });
         el.appendChild(_dropOverlay.el);
