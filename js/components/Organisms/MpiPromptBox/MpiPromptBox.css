@@ -226,15 +226,18 @@
 /* ── Media strip (sibling element rendered by organism) ──────────────────── */
 
 .mpi-prompt-box-media-strip {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.5rem var(--s-6) 0;
+    padding: 0.5rem var(--s-6);
     justify-content: flex-start;
     pointer-events: auto;
     box-sizing: border-box;
-    width: 100%;
-    background: transparent !important;
+    background: transparent;
     flex-shrink: 0;
 }
 

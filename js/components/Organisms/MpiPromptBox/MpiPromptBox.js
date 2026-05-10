@@ -349,7 +349,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Media strip rendering ──────────────────────────────────────────────
         const _stripEl = document.createElement('div');
         _stripEl.className = 'mpi-prompt-box-media-strip';
-        el.parentElement?.insertBefore(_stripEl, el);
+        el.prepend(_stripEl);
 
         function _renderStrip(items) {
             if (!_stripEl) return;
