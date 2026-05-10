@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
-import { ce, qs, qsa } from '/js/utils/dom.js';
+import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { state } from '../../../state.js';
@@ -743,6 +743,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
         const resizeObserver = new ResizeObserver(() => { _rerenderJustified(); });
         resizeObserver.observe(grid);
         _unsubs.push(() => resizeObserver.disconnect());
+
+        // Forward wheel events from empty grid space to scroll the grid.
+        // Native scroll already covers cards; this catches gaps/below-last-row
+        // areas where Electron sometimes drops wheel-to-scroll on flex parents.
+        _unsubs.push(on(grid, 'wheel', (e) => {
+            if (e.ctrlKey) return;
+            grid.scrollTop += e.deltaY;
+        }, { passive: true }));
 
         // ── Info toggle button ───────────────────────────────────────────────
 

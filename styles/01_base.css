@@ -157,22 +157,28 @@ button:focus-visible {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface-0);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border: 2px solid var(--surface-0);
+  background: color-mix(in oklch, var(--ink-1) 10%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-heat);
+  background: color-mix(in oklch, var(--accent-heat) 70%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--surface-3) var(--surface-0);
+  scrollbar-color: color-mix(in oklch, var(--ink-1) 10%, transparent) transparent;
 }
 
 h1,
