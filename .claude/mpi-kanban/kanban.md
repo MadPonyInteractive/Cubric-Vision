@@ -102,6 +102,18 @@
 
 ## IMPLEMENTING
 
+### Setup video generation
+
+  - tags: [Implementation completion]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+    ```md
+    Video generation hasn't been tested. The outputs from Coffee Y are different from the image outputs. It needs to be tested. Some workflows output several stages that need to be handled. This should be a cooperative session with the dev.
+    ```
+
+## COMPLETED
+
 ### Video preview-gate core
 
   - tags: [PLAN]
@@ -119,18 +131,6 @@
     ```md
     Plan file: docs/plans/2026-05-09-video-preview-gate-core.md
     ```
-
-### Setup video generation
-
-  - tags: [Implementation completion]
-  - priority: high
-  - workload: Hard
-  - defaultExpanded: false
-    ```md
-    Video generation hasn't been tested. The outputs from Coffee Y are different from the image outputs. It needs to be tested. Some workflows output several stages that need to be handled. This should be a cooperative session with the dev.
-    ```
-
-## COMPLETED
 
 ### Queue modes + run hotkeys
 
