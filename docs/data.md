@@ -6,7 +6,8 @@ Three core data files. All are plain JS objects — no ORM, no database.
 
 **Single source of truth for all generative models.**
 
-- `MODELS`: Array of `ModelDef` objects `{ id, name, mediaType, supportedOps, workflows, dependencies }`.
+- `MODELS`: Array of `ModelDef` objects `{ id, name, mediaType, supportedOps, workflows, dependencies, dropdownMeta? }`.
+  - `dropdownMeta`: Optional short category text shown in compact model selectors (for example `PHOTO`, `ANIME`, `VIDEO`). Keep this as model data rather than deriving it from names in UI code.
 - `getModelsByType(mediaType, opts?)`: Returns models filtered by media type. Accepts `{ installed: true|false }` to filter by install state.
 - `getModelById(id)`: Lookup by ID.
 - `getWorkflowFile(modelId, op)`: Returns the workflow JSON filename for a model+op combination.

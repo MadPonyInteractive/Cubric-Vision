@@ -1,5 +1,37 @@
 import { ComponentFactory } from '../../factory.js';
 import { qs, qsa, on } from '../../../utils/dom.js';
+import { Events } from '../../../events.js';
+
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const optionValue = (opt) => typeof opt === 'string' ? opt : opt.value;
+const optionLabel = (opt) => typeof opt === 'string' ? opt : opt.label;
+const optionMeta = (opt) => typeof opt === 'string' ? '' : (opt.meta ?? opt.description ?? opt.detail ?? '');
+
+const renderOption = (opt, value) => {
+    const label    = optionLabel(opt);
+    const val      = optionValue(opt);
+    const meta     = optionMeta(opt);
+    const active   = val === value ? 'is-active' : '';
+    const disabled = opt.disabled ? 'is-disabled' : '';
+    const metaHtml = meta
+        ? `<span class="mpi-dropdown__option-meta">${escapeHtml(meta)}</span>`
+        : '';
+
+    return `
+        <div class="mpi-dropdown__option ${active} ${disabled}"
+             data-value="${escapeHtml(val)}"
+             data-label="${escapeHtml(label)}">
+            <span class="mpi-dropdown__option-label">${escapeHtml(label)}</span>
+            ${metaHtml}
+        </div>
+    `;
+};
 
 /**
  * MpiDropdown — Select / Dropdown Primitive
@@ -9,12 +41,14 @@ import { qs, qsa, on } from '../../../utils/dom.js';
  * ancestor overflow:hidden and CSS transform stacking-context issues.
  *
  * Props:
- * @param {Array<string|{label:string,value:string}>} [options=[]] - Option list
+ * @param {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string}>} [options=[]] - Option list
  * @param {string} [value=''] - Currently selected value
  * @param {string} [placeholder='Select...'] - Placeholder shown when nothing is selected
  * @param {boolean} [disabled=false] - Disabled state
  * @param {'up'|'down'} [direction='down'] - Whether the list opens above or below the trigger
  * @param {string} [info] - Info Bar description
+ * @param {string} [extraClasses=''] - Additional BEM modifier/helper classes on the root
+ * @param {boolean} [wrapLabels=false] - Allow option labels to wrap to multiple lines
  *
  * Emits:
  * 'change' { value: string, label: string }
@@ -30,30 +64,26 @@ export const MpiDropdown = ComponentFactory.create({
         const disabled    = props.disabled  || false;
         const direction   = props.direction || 'down';
         const info        = props.info ? `data-info="${props.info}"` : '';
+        const extraClasses = props.extraClasses || '';
+        const listClasses = props.wrapLabels ? 'mpi-dropdown__list--wrap' : '';
 
-        const selected = options.find(o => (typeof o === 'string' ? o : o.value) === value);
+        const selected = options.find(o => optionValue(o) === value);
         const triggerLabel = selected
-            ? (typeof selected === 'string' ? selected : selected.label)
+            ? optionLabel(selected)
             : placeholder;
 
-        const optionsHtml = options.map(opt => {
-            const label    = typeof opt === 'string' ? opt : opt.label;
-            const val      = typeof opt === 'string' ? opt : opt.value;
-            const active   = val === value ? 'is-active' : '';
-            const disabled = opt.disabled ? 'is-disabled' : '';
-            return `<div class="mpi-dropdown__option ${active} ${disabled}" data-value="${val}">${label}</div>`;
-        }).join('');
+        const optionsHtml = options.map(opt => renderOption(opt, value)).join('');
 
         return `
-            <div class="mpi-dropdown mpi-dropdown--${direction} ${disabled ? 'mpi-dropdown--disabled' : ''}"
+            <div class="mpi-dropdown mpi-dropdown--${direction} ${extraClasses} ${disabled ? 'mpi-dropdown--disabled' : ''}"
                  ${info}>
                 <button type="button"
                         class="mpi-dropdown__trigger"
                         ${disabled ? 'disabled' : ''}>
-                    <span class="mpi-dropdown__label">${triggerLabel}</span>
+                    <span class="mpi-dropdown__label">${escapeHtml(triggerLabel)}</span>
                     <span class="mpi-dropdown__chevron" aria-hidden="true"></span>
                 </button>
-                <div class="mpi-dropdown__list" role="listbox">
+                <div class="mpi-dropdown__list ${listClasses}" role="listbox">
                     ${optionsHtml}
                 </div>
             </div>
@@ -65,6 +95,9 @@ export const MpiDropdown = ComponentFactory.create({
         const trigger = qs('.mpi-dropdown__trigger', el);
         const list    = qs('.mpi-dropdown__list', el);
         const labelEl = qs('.mpi-dropdown__label', el);
+        const _unsubs = [];
+        let observer = null;
+        let destroyed = false;
 
         if (props.disabled) return;
 
@@ -102,14 +135,17 @@ export const MpiDropdown = ComponentFactory.create({
 
         /** Full teardown: close list, remove portal node, detach all listeners. */
         const destroy = () => {
+            if (destroyed) return;
+            destroyed = true;
             closeList();
             if (list.parentNode) list.parentNode.removeChild(list);
-            document.removeEventListener('click', onOutside);
-            observer.disconnect();
+            _unsubs.forEach(fn => fn?.());
+            observer?.disconnect();
         };
+        el.destroy = destroy;
 
         // Toggle list
-        trigger.addEventListener('click', (e) => {
+        _unsubs.push(on(trigger, 'click', (e) => {
             e.stopPropagation();
             const opening = !list.classList.contains('is-open');
 
@@ -127,15 +163,16 @@ export const MpiDropdown = ComponentFactory.create({
             }
 
             list.setAttribute('aria-expanded', opening);
-        });
+        }));
 
         // Select option
-        list.addEventListener('click', (e) => {
+        _unsubs.push(on(list, 'click', (e) => {
+            e.stopPropagation();
             const option = e.target.closest('.mpi-dropdown__option');
             if (!option || option.classList.contains('is-disabled')) return;
 
             const value = option.dataset.value;
-            const label = option.textContent.trim();
+            const label = option.dataset.label || qs('.mpi-dropdown__option-label', option)?.textContent?.trim() || option.textContent.trim();
 
             qsa('.mpi-dropdown__option', list).forEach(o =>
                 o.classList.toggle('is-active', o === option)
@@ -146,38 +183,34 @@ export const MpiDropdown = ComponentFactory.create({
 
             closeList();
             emit('change', { value, label });
-        });
+        }));
 
         /**
          * Rebuild the option list and update the trigger label.
-         * @param {Array<string|{label:string, value:string, disabled?:boolean}>} newOptions
+         * @param {Array<string|{label:string, value:string, disabled?:boolean, meta?:string, description?:string, detail?:string}>} newOptions
          * @param {string} selectedValue
          */
         el.setOptions = (newOptions, selectedValue) => {
-            const selected = newOptions.find(o => (typeof o === 'string' ? o : o.value) === selectedValue);
+            const selected = newOptions.find(o => optionValue(o) === selectedValue);
             labelEl.textContent = selected
-                ? (typeof selected === 'string' ? selected : selected.label)
+                ? optionLabel(selected)
                 : (props.placeholder ?? 'Select...');
             props.value = selectedValue;
+            props.options = newOptions;
 
-            list.innerHTML = newOptions.map(opt => {
-                const label    = typeof opt === 'string' ? opt : opt.label;
-                const val      = typeof opt === 'string' ? opt : opt.value;
-                const active   = val === selectedValue ? 'is-active' : '';
-                const disabled = opt.disabled ? 'is-disabled' : '';
-                return `<div class="mpi-dropdown__option ${active} ${disabled}" data-value="${val}">${label}</div>`;
-            }).join('');
+            list.innerHTML = newOptions.map(opt => renderOption(opt, selectedValue)).join('');
         };
 
         // Close on outside click; also handles el removal (no-click path covered by observer)
         const onOutside = (e) => {
             if (!el.contains(e.target) && !list.contains(e.target)) closeList();
         };
-        document.addEventListener('click', onOutside);
+        _unsubs.push(on(document, 'click', onOutside));
+        _unsubs.push(Events.on('ui:close-all-popups', closeList));
 
         // Watch for el being removed from the DOM and clean up the portal node.
         // Observes document.body so it catches removal at any ancestor level.
-        const observer = new MutationObserver(() => {
+        observer = new MutationObserver(() => {
             if (!document.contains(el)) destroy();
         });
         observer.observe(document.body, { childList: true, subtree: true });

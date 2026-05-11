@@ -146,15 +146,17 @@
 
 /**
  * @typedef {Object} MpiDropdownProps (Primitive — js/components/Primitives/MpiDropdown)
- * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
+ * @property {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,disabled?:boolean}>} [options=[]] - Option list
  * @property {string} [value=''] - Currently selected value
  * @property {string} [placeholder='Select...'] - Placeholder text (empty/unselected label)
  * @property {boolean} [disabled=false] - Disabled state
  * @property {'up'|'down'} [direction='down'] - Preferred open direction
  * @property {string} [info] - Info Bar description
+ * @property {string} [extraClasses=''] - Additional BEM modifier/helper classes on the root
+ * @property {boolean} [wrapLabels=false] - Allow option labels to wrap in the list
  *
  * Emits:
- * 'change' { value: string }
+ * 'change' { value: string, label: string }
  */
 
 /**

@@ -3,6 +3,7 @@
  * @typedef {Object} ModelDef
  * @property {string}   id           - Unique identifier
  * @property {string}   name         - Display name
+ * @property {string}   [dropdownMeta] - Short UI category shown in compact model selectors
  * @property {'image'|'video'} mediaType
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
  * @property {string[]} supportedOps - Operation keys from commandRegistry.js
@@ -16,6 +17,7 @@ export const MODELS = [
     {
         id: 'sdxl-realistic',
         name: 'SDXL Realistic',
+        dropdownMeta: 'PHOTO',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
         image: 'Lustify7.png',
@@ -38,6 +40,7 @@ export const MODELS = [
     {
         id: 'ill-anime-beauty',
         name: 'ILL Anime Beauty',
+        dropdownMeta: 'ANIME',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
         image: 'AlchemyMix176.png',
@@ -60,6 +63,7 @@ export const MODELS = [
     {
         id: 'ill-anime',
         name: 'ILL Anime',
+        dropdownMeta: 'ANIME',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
         image: 'AnimeMixV80.png',
@@ -82,6 +86,7 @@ export const MODELS = [
     {
         id: 'pony-mix',
         name: 'PONY Mix',
+        dropdownMeta: 'STYLIZED',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
         image: 'AnimerJeiV30.png',
@@ -105,6 +110,7 @@ export const MODELS = [
     {
         id: 'wan-22',
         name: 'Wan 2.2 Smooth',
+        dropdownMeta: 'VIDEO',
         mediaType: 'video',
         type: 'wan',
         loraStages: [

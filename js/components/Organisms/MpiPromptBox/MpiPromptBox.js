@@ -326,13 +326,21 @@ export const MpiPromptBox = ComponentFactory.create({
             return supported[0];
         }
 
+        function _modelDropdownOptions() {
+            return modelList.map(m => ({
+                value: m.id,
+                label: m.name,
+                meta: m.dropdownMeta || '',
+            }));
+        }
+
         el.setModel = (newModel) => {
             model = newModel;
             _currentModelType = newModel?.mediaType ?? _currentModelType;
             const picked = _pickOpForModel(newModel);
             if (_modelDropdown) {
                 _modelDropdown.el.setOptions(
-                    modelList.map(m => ({ value: m.id, label: m.name })),
+                    _modelDropdownOptions(),
                     newModel.id
                 );
             }
@@ -372,7 +380,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             if (_modelDropdown) {
                 _modelDropdown.el.setOptions(
-                    modelList.map(m => ({ value: m.id, label: m.name })),
+                    _modelDropdownOptions(),
                     model?.id ?? null
                 );
             }
@@ -625,10 +633,12 @@ export const MpiPromptBox = ComponentFactory.create({
         if (model) {
             if (modelList.length >= 1) {
                 _modelDropdown = MpiDropdown.mount(document.createElement('div'), {
-                    options:   modelList.map(m => ({ value: m.id, label: m.name })),
+                    options:   _modelDropdownOptions(),
                     value:     model.id,
                     info:      'Active model',
                     direction: 'up',
+                    extraClasses: 'mpi-dropdown--model-select',
+                    wrapLabels: true,
                 });
                 _modelDropdown.on('change', ({ value }) => {
                     const selected = modelList.find(m => m.id === value);
@@ -636,6 +646,9 @@ export const MpiPromptBox = ComponentFactory.create({
                         el.setModel(selected);
                         Events.emit('settings:model:select', { modelId: selected.id });
                         emit('model-change', { model: selected });
+                        requestAnimationFrame(() => {
+                            if (document.contains(el)) openPopup();
+                        });
                     }
                 });
                 modelSlot.appendChild(_modelDropdown.el);

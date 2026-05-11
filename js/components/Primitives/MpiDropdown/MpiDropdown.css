@@ -79,11 +79,11 @@
 .mpi-dropdown__list {
     position: fixed;
     z-index: 11000;
-    background: oklch(0.30 0.022 350);
+    background: var(--surface-1);
     border: 1px solid var(--ink-3);
     border-radius: var(--r-1);
     padding: 4px 0;
-    box-shadow: 0 24px 48px -16px oklch(0.16 0.02 350 / 0.6);
+    box-shadow: none;
     overflow-y: auto;
     max-height: 220px;
     transform-origin: top center;
@@ -110,7 +110,8 @@
 /* ── Option items ──────────────────────────────────────────────────────────── */
 
 .mpi-dropdown__option {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
@@ -119,9 +120,37 @@
     cursor: pointer;
     border-left: 2px solid transparent;
     transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
-    white-space: nowrap;
+}
+
+.mpi-dropdown__option-label {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-dropdown__list--wrap .mpi-dropdown__option {
+    align-items: start;
+}
+
+.mpi-dropdown__list--wrap .mpi-dropdown__option-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.35;
+}
+
+.mpi-dropdown__option-meta {
+    max-width: 11ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    justify-self: end;
+    transition: color var(--t-base) var(--ease);
 }
 
 .mpi-dropdown__option:hover {
@@ -129,10 +158,18 @@
     color: var(--ink-1);
 }
 
+.mpi-dropdown__option:hover .mpi-dropdown__option-meta {
+    color: var(--ink-2);
+}
+
 .mpi-dropdown__option.is-active {
     color: var(--accent-heat);
     border-left-color: var(--accent-heat);
-    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
+    background: color-mix(in oklch, var(--accent-heat) 18%, var(--surface-2));
+}
+
+.mpi-dropdown__option.is-active .mpi-dropdown__option-meta {
+    color: var(--ink-2);
 }
 
 .mpi-dropdown__option.is-disabled {
@@ -158,6 +195,11 @@
     border-radius: 999px;
     background: var(--accent-heat);
     flex-shrink: 0;
+}
+
+.mpi-dropdown--model-select {
+    flex: 1 1 220px;
+    min-width: 0;
 }
 
 /* ── Disabled state ────────────────────────────────────────────────────────── */
