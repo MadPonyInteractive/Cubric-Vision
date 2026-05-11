@@ -136,7 +136,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'duration'],
+        components: ['qualityTier', 'duration', 'ratio'],
     },
     i2v: {
         label: 'Image to Video',
@@ -147,14 +147,14 @@ export const commands = {
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
         ],
         promptRequired: false,
-        components: ['ratio', 'duration', 'motionIntensity'],
+        components: ['qualityTier', 'duration', 'motionIntensity', 'ratio'],
     },
     t2v_ms: {
         label: 'Text to Video',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'previewStage', 'duration'],
+        components: ['qualityTier', 'duration', 'ratio', 'previewStage'],
     },
     i2v_ms: {
         label: 'Image to Video',
@@ -165,7 +165,7 @@ export const commands = {
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
         ],
         promptRequired: false,
-        components: ['ratio', 'previewStage', 'duration', 'motionIntensity'],
+        components: ['qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
     },
     extend: {
         label: 'Extend',

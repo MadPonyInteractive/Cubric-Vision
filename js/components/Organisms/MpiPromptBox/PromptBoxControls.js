@@ -23,6 +23,58 @@ import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 export const PROMPT_BOX_CONTROLS = {
 
     /**
+     * qualityTier — Standalone quality picker for models whose ratio set is
+     * partitioned by quality (RATIO_MODES[modelType] === 'quality', e.g. wan, ltx).
+     * Renders as an inline radio row. Persists qualityTier under ratioSelector
+     * (same key as `ratio` control) so they share a single source of truth.
+     * Emits `ratio:quality-change` so the sibling ratio control can re-render
+     * its ratio set without going through the popup.
+     *
+     * Renders nothing when the model uses orientation-mode ratios.
+     */
+    qualityTier: {
+        nodeTitle: null,
+        defaultValue: 'medium',
+        mount(el, opts = {}) {
+            const model = opts.model || {};
+            const modelType = model.type ?? 'flux';
+            const modelId = model.id;
+            const mode = RATIO_MODES[modelType] ?? 'orientation';
+
+            // Only render for quality-mode models. Leave host empty for others.
+            if (mode !== 'quality') {
+                this._instance = null;
+                this.value = null;
+                return;
+            }
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const initialTier = saved.ratioSelector?.qualityTier || this.defaultValue;
+            this.value = initialTier;
+
+            this._instance = MpiOptionSelector.mount(el, {
+                variant: 'quality',
+                qualityTier: initialTier,
+            });
+
+            this._instance.on('change', ({ qualityTier }) => {
+                this.value = qualityTier;
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'ratioSelector',
+                        value: { qualityTier },
+                    });
+                }
+                // Notify sibling ratio control to re-render its ratio set.
+                Events.emit('ratio:quality-change', { modelId, qualityTier });
+            });
+        },
+        getValue() { return this.value; },
+        getInjectionParams() { return {}; },
+    },
+
+    /**
      * ratio — Aspect ratio picker for image generation (t2i, i2i, upscale, video, etc.).
      * Mounts MpiRatioSelector and injects Width/Height into the workflow.
      * modelType sourced from model.type → determines ratio set and UI mode from ratios.js.
@@ -75,14 +127,14 @@ export const PROMPT_BOX_CONTROLS = {
                 });
             });
 
-            // Quality tier change: queue save via projectService
-            this._instance.on('quality_change', ({ qualityTier }) => {
-                if (!modelId) return;
-                Events.emit('settings:model:update', {
-                    modelId,
-                    key: 'ratioSelector',
-                    value: { qualityTier },
-                });
+            // External quality control (qualityTier entry) drives this ratio
+            // control's ratio set via `ratio:quality-change`. Filter by modelId
+            // so unrelated PromptBox instances don't react.
+            this._qualityUnsub = Events.on('ratio:quality-change', ({ modelId: mid, qualityTier }) => {
+                if (mid !== modelId) return;
+                if (this._instance?.el?.setQualityTier) {
+                    this._instance.el.setQualityTier(qualityTier);
+                }
             });
 
             // Initialize cache with resolved dimensions (not hardcoded 1024×1024)
@@ -106,6 +158,12 @@ export const PROMPT_BOX_CONTROLS = {
             }
             const v = this.value ?? { w: 1024, h: 1024 };
             return { Width: v.w, Height: v.h };
+        },
+        destroy() {
+            this._qualityUnsub?.();
+            this._qualityUnsub = null;
+            this._instance?.destroy?.();
+            this._instance = null;
         },
     },
 
@@ -250,6 +308,7 @@ export const PROMPT_BOX_CONTROLS = {
                 wheel: true,
                 handle: true,
                 variant: 'primary',
+                info: 'Video length in seconds',
             });
 
             const _renderLabel = (v) => { valEl.textContent = `${v} s`; };
@@ -328,6 +387,7 @@ export const PROMPT_BOX_CONTROLS = {
                 wheel: true,
                 handle: true,
                 variant: 'primary',
+                info: 'Motion strength (0 = default, 1 = extra motion)',
             });
 
             const _renderLabel = (v) => { valEl.textContent = _fmt(v); };

@@ -85,6 +85,16 @@
     In the video history workspace, we are going to implement a feature so that the user can continue from the last frame and that creates a new video with the previous video + the generated video after. The last frame can be extracted from the last frame of the current video and injected in an image-to-video workflow displaying the prompt box. Please let the user know about the implementation briefing and concerns, and how this is supposed to happen. If it's a new PromptBoxControls.js, if it's a new tool, brainstorm with the user use cases of how to implement this.
     ```
 
+### Introduce video compared tool
+
+  - tags: [Feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    The video compare is already accessible through the same custom context menu. It just needs to be wired when a video is selected instead of an image. It already works for image.
+    ```
+
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -119,6 +129,42 @@
     ```
 
 ## COMPLETED
+
+### Standalone quality control + popup width cap + Preview_Only op gate
+
+  - tags: [feature, bug, ux]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Three related changes to the PromptBox settings popup and the video generation path.
+
+    1. Quality picker split out of the ratio popup.
+       - New `quality` variant in `MpiOptionSelector` — standalone inline radio row, no trigger button, no popup. Renders "Quality" label above `Very Low … Very High` radio.
+       - New `qualityTier` entry in `PromptBoxControls`. Renders only when `RATIO_MODES[modelType] === 'quality'` (today `wan`; `ltx` future). Persists to `modelSettings[modelId].ratioSelector.qualityTier` (shared key with the `ratio` control).
+       - Cross-control sync via `Events.emit('ratio:quality-change', { modelId, qualityTier })`. The `ratio` control filters by modelId then calls its new `el.setQualityTier(tier)` API to re-render its ratio set in place.
+       - Ratio popup loses its embedded `QUALITY` header + speed radio. `quality_change` event removed.
+       - Video op `components[]` reordered: `qualityTier` → `duration` → `motionIntensity` → `ratio` → `previewStage`. Image ops unchanged.
+       - PromptBoxControls `ratio` entry now has a `destroy()` that drops its `ratio:quality-change` subscription.
+
+    2. Settings popup width cap.
+       - `.mpi-prompt-box__settings { width: 355px; max-width: 90vw; }`. Breaks the circular sizing between `MpiPopup` (`width: max-content`) and inner primitives (`.mpi-dropdown`, `.mpi-progress`) that default to `width: 100%`. Primitives untouched — they still stretch correctly inside the cap.
+
+    3. `Preview_Only` injection op-gated.
+       - `commandExecutor._buildParams` now injects `Preview_Only` ONLY when `payload.operation.endsWith('_ms')`. Previously a stale `previewStage` toggle from a prior `_ms` op leaked into single-stage workflows (text-to-image silently broke). Per-model persistence is preserved.
+
+    Side fixes shipped in same session:
+    - PromptBox `#prompt-box-mount` gets `position: relative; z-index: 40` + `.mpi-prompt-box-media-strip { z-index: 1 }`. Media strip now paints above the gallery sticky "Generating…" card (z-10) and below drop overlays (z-50), modals (z-10009), toasts (z-20000). Chips also got a 3px `--accent-heat` border so they don't blend into gallery thumbs.
+    - Ratio popup grid right-aligns its picks (`mpi-opt-sel__grid--ratio` modifier — `.mpi-opt-sel--ratio` ancestor rule didn't match post-portal).
+    - `_refreshOpSlot` mount loop wrapped in try/catch with `clientLogger.error` — a single failing control no longer blocks subsequent ones.
+    - Op-dropdown info copy updated to "Current model operation - Also accessible by holding Tab".
+
+    Files: js/components/Compounds/MpiOptionSelector/{MpiOptionSelector.js,MpiOptionSelector.css}, js/components/Organisms/MpiPromptBox/{MpiPromptBox.js,MpiPromptBox.css,PromptBoxControls.js}, js/data/commandRegistry.js, js/services/commandExecutor.js.
+
+    Rule files: .claude/rules/component-comfy.md, .claude/rules/component-events.md, .claude/rules/component-mounts.md, .claude/rules/component-state.md.
+
+    Memory: feedback_mpipopup_max_content_loop.md, feedback_preview_only_op_gated.md, feedback_promptbox_mount_stacking.md (new).
+    ```
 
 ### Gallery drag duplicate + multi-file drop fill PromptBox slots
 

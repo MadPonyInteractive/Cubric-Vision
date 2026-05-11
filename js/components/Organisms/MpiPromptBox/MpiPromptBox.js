@@ -11,6 +11,7 @@ import { commands, getAvailableCommands, getCommandComponents, getCommandMediaIn
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
@@ -697,7 +698,7 @@ export const MpiPromptBox = ComponentFactory.create({
             _opDropdown = MpiDropdown.mount(document.createElement('div'), {
                 options: availableOps,
                 value: activeOperation,
-                info: 'Operation',
+                info: 'Current model operation - Also accessible by holding Tab',
                 direction: 'up',
             });
             _opDropdown.on('change', ({ value }) => el.setOperation(value));
@@ -724,8 +725,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
 
-                ctrl.mount(ctrlEl, { model });
-                _activeControls.set(componentId, ctrl);
+                try {
+                    ctrl.mount(ctrlEl, { model });
+                    _activeControls.set(componentId, ctrl);
+                } catch (err) {
+                    clientLogger.error('PromptBox', `Control "${componentId}" mount failed`, err);
+                }
             }
         }
 

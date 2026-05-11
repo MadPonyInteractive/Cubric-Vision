@@ -135,7 +135,9 @@ function _buildParams(payload) {
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);
 
-    if (payload.previewOnly === true) params['Preview_Only'] = true;
+    if (String(payload.operation || '').endsWith('_ms')) {
+        params['Preview_Only'] = payload.previewOnly === true;
+    }
 
     // Map media to operation-declared Comfy input slots. Slots are role-first:
     // explicit item.role wins, then remaining media fills matching mediaType in

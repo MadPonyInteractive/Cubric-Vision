@@ -4,6 +4,26 @@
     display: inline-block;
 }
 
+/* ── Quality variant — stacked label + radio, natural width ──────────────── */
+.mpi-opt-sel--quality {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-1);
+}
+
+.mpi-opt-sel__quality-label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+.mpi-opt-sel__quality-radio {
+    display: inline-flex;
+}
+
 .mpi-opt-sel__header {
     display: flex;
     justify-content: space-between;
@@ -48,8 +68,10 @@
    Used inside the ratio variant popup to replace MpiButton-based ratio items.
    Applied when the popup panel has the .mpi-opt-sel--ratio-stage modifier.   */
 
-.mpi-opt-sel--ratio .mpi-opt-sel__grid {
+.mpi-opt-sel--ratio .mpi-opt-sel__grid,
+.mpi-opt-sel__grid--ratio {
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .ratio-row {

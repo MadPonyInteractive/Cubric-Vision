@@ -57,6 +57,8 @@ function _templateRatio(props) {
         </div>`;
     }).join('');
 
+    // Quality picker is now a sibling control (variant: 'quality'); only
+    // orientation models render a header here.
     const isFlat = mode === 'quality' || modelType === 'social';
     let headerHtml = '';
     if (mode === 'orientation') {
@@ -68,18 +70,9 @@ function _templateRatio(props) {
                 ${MpiButton.template({ icon: orientIcon, size: 'sm', info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation` })}
             </div>
         </div>`;
-    } else if (mode === 'quality') {
-        const speedOptions = ['very_low', 'low', 'medium', 'high', 'very_high'];
-        headerHtml = `
-        <div class="mpi-opt-sel__header">
-            ${MpiBadge.template({ label: 'QUALITY', variant: 'secondary' })}
-            <div class="mpi-opt-sel__speed-radio" id="speed-radio-slot">
-                ${MpiRadioGroup.template({ options: speedOptions, value: qualityTier, name: 'quality_tier' })}
-            </div>
-        </div>`;
     }
 
-    const popupInnerHtml = `${headerHtml}<div class="mpi-opt-sel__grid">${ratioBtnsHtml}</div>`;
+    const popupInnerHtml = `${headerHtml}<div class="mpi-opt-sel__grid mpi-opt-sel__grid--ratio">${ratioBtnsHtml}</div>`;
 
     const triggerBtnHtml = MpiButton.template({
         icon: triggerIcon, label: value, size: triggerSize, active: isActive, toggleable: true, stroke: true, info: 'Select aspect ratio'
@@ -118,6 +111,68 @@ function _templateNumber(props) {
         <div class="mpi-opt-sel__trigger">${triggerHtml}</div>
         ${MpiPopup.template({ active: isActive, position: 'top' }, popupInnerHtml)}
     </div>`;
+}
+
+// ── Quality variant ──────────────────────────────────────────────────────────
+//
+// Standalone quality-tier picker. Shares qualityTier state with the ratio
+// control via Events ('settings:model:update' key: 'ratioSelector'). The
+// ratio control listens for `ratio:quality-change` to re-render its set.
+//
+// Used for models with RATIO_MODES[modelType] === 'quality' (e.g. wan, ltx).
+
+const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
+const QUALITY_LABELS = {
+    very_low:  'Very Low',
+    low:       'Low',
+    medium:    'Medium',
+    high:      'High',
+    very_high: 'Very High',
+};
+
+function _templateQuality(props) {
+    const qualityTier = props.qualityTier || 'medium';
+    const radioOptions = QUALITY_TIERS.map(t => ({ label: QUALITY_LABELS[t], value: t }));
+
+    return `<div class="mpi-opt-sel mpi-opt-sel--quality">
+        <span class="mpi-opt-sel__quality-label">Quality</span>
+        <div class="mpi-opt-sel__quality-radio" id="quality-radio-slot">
+            ${MpiRadioGroup.template({ options: radioOptions, value: qualityTier, name: 'quality_tier' })}
+        </div>
+    </div>`;
+}
+
+function _setupQuality(el, props, emit) {
+    if (!props.qualityTier) props.qualityTier = 'medium';
+
+    const radioSlot = qs('#quality-radio-slot', el);
+
+    el.getValue = () => props.qualityTier;
+    el.setValue = (v) => {
+        if (!QUALITY_TIERS.includes(v) || props.qualityTier === v) return;
+        props.qualityTier = v;
+        _syncRadio();
+    };
+
+    const _syncRadio = () => {
+        if (!radioSlot) return;
+        qsa('.mpi-radio-group__btn', radioSlot).forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.value === props.qualityTier);
+        });
+    };
+
+    const _unsubs = [];
+    _unsubs.push(on(el, 'click', (e) => {
+        const qualityBtn = e.target.closest('.mpi-radio-group__btn');
+        if (!qualityBtn || qualityBtn.disabled) return;
+        const newTier = qualityBtn.dataset.value;
+        if (!newTier || !QUALITY_TIERS.includes(newTier) || props.qualityTier === newTier) return;
+        props.qualityTier = newTier;
+        _syncRadio();
+        emit('change', { qualityTier: newTier });
+    }));
+
+    el.destroy = () => { _unsubs.forEach(fn => fn?.()); };
 }
 
 // ── Buttons variant ──────────────────────────────────────────────────────────
@@ -281,6 +336,35 @@ function _setupRatio(el, props, emit) {
     if (!props.orientation) props.orientation = props.initialOrientation || 'portrait';
 
     el.getValue = () => resolveCurrentDimensions(props);
+    // External quality control updates ratio set without going through popup.
+    el.setQualityTier = (tier) => {
+        if (!tier || props.qualityTier === tier) return;
+        props.qualityTier = tier;
+        // Reset to first ratio of new quality set if current label invalid.
+        const modelType = props.modelType || 'flux';
+        const mode      = RATIO_MODES[modelType] ?? 'orientation';
+        const ratios    = getModelRatios(
+            modelType,
+            mode === 'orientation' ? (props.orientation || 'portrait') : undefined,
+            mode === 'quality' ? tier : undefined
+        );
+        if (!ratios.find(r => r.label === props.value)) {
+            const next = ratios[0];
+            props.value = next?.label || props.value;
+        }
+        updateUI();
+        // Emit change so consumers cache new dims for the resolved label.
+        const current = ratios.find(r => r.label === props.value) || ratios[0];
+        if (current) {
+            emit('change', {
+                value:       current.label,
+                ratio:       current.ratio ?? (current.w && current.h ? current.w / current.h : null),
+                w:           current.w ?? null,
+                h:           current.h ?? null,
+                orientation: mode === 'orientation' ? props.orientation : null,
+            });
+        }
+    };
 
     const trigger        = qs('.mpi-opt-sel__trigger', el);
     const popupEl        = qs('.mpi-popup', el);
@@ -338,15 +422,6 @@ function _setupRatio(el, props, emit) {
             orientContainer.style.display = 'none';
         }
 
-        if (mode === 'quality') {
-            const speedRadio = qs('#speed-radio-slot', popupEl);
-            if (speedRadio) {
-                qsa('.mpi-radio-group__btn', speedRadio).forEach(btn => {
-                    btn.classList.toggle('is-active', btn.dataset.value === qualityTier);
-                });
-            }
-        }
-
         const currentRatio   = ratios.find(r => r.label === value) || ratios[0];
         const triggerIconName = currentRatio.icon.replace('rect_', 'ratio_');
         trigger.innerHTML = MpiButton.template({
@@ -382,16 +457,6 @@ function _setupRatio(el, props, emit) {
                 h:           newRatio.h ?? null,
                 orientation: props.orientation,
             });
-            updateUI();
-            return;
-        }
-
-        const qualityBtn = e.target.closest('#speed-radio-slot .mpi-radio-group__btn');
-        if (qualityBtn && !qualityBtn.disabled) {
-            const newTier = qualityBtn.dataset.value;
-            if (!newTier || props.qualityTier === newTier) return;
-            props.qualityTier = newTier;
-            emit('quality_change', { qualityTier: newTier });
             updateUI();
             return;
         }
@@ -507,15 +572,17 @@ export const MpiOptionSelector = ComponentFactory.create({
     css: ['js/components/Compounds/MpiOptionSelector/MpiOptionSelector.css'],
 
     template: (props) => {
-        if (props.variant === 'ratio')  return _templateRatio(props);
-        if (props.variant === 'number') return _templateNumber(props);
+        if (props.variant === 'ratio')   return _templateRatio(props);
+        if (props.variant === 'number')  return _templateNumber(props);
         if (props.variant === 'buttons') return _templateButtons(props);
+        if (props.variant === 'quality') return _templateQuality(props);
         return `<div class="mpi-opt-sel"></div>`;
     },
 
     setup: (el, props, emit) => {
-        if (props.variant === 'ratio')  return _setupRatio(el, props, emit);
-        if (props.variant === 'number') return _setupNumber(el, props, emit);
+        if (props.variant === 'ratio')   return _setupRatio(el, props, emit);
+        if (props.variant === 'number')  return _setupNumber(el, props, emit);
         if (props.variant === 'buttons') return _setupButtons(el, props, emit);
+        if (props.variant === 'quality') return _setupQuality(el, props, emit);
     },
 });
