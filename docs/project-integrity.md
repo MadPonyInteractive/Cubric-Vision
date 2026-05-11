@@ -130,7 +130,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`). Reserved for the operation key — never overwritten with a filename or human label.
 - **`displayName`** — Human-readable label derived from the saved filename stem (e.g., `'t2i_001'`, `'upscale_002'`, `'crop_001'`). Source of truth for `MpiHistoryList` card labels and gallery group names. Distinct from `operation` so the same item displays identically before and after project reload.
 - **`pixelDimensions`** — `{w, h}` of the actual saved media. Images use client-supplied Width/Height when present, else `sharp.metadata()` in `/project/save-generation`; generated videos use `ffprobe` in `/project/save-generation`. Crop writes the crop rect dims directly.
-- **`generationMs`** — Elapsed sampling time in milliseconds (from `tool:sampling-start` to completion). `null` for crop and uploaded items. Rendered as rounded seconds (`Ns`) on history cards.
+- **`generationMs`** — Elapsed sampling time in milliseconds (from `tool:sampling-start` to completion). `null` for crop and uploaded items. Rendered as rounded seconds (`Ns`) on history cards. **Multi-stage replace (preview → final):** the route `/project/save-generation` sums the previous sidecar's `generationMs` with the incoming final-stage elapsed time and writes the aggregate, so finalized items show total generation time across stages.
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
 

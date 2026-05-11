@@ -344,7 +344,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 modelId: model.id,
                 seed: exec.seed ?? -1,
                 pixelDimensions: resolvedDims,
-                generationMs: elapsedMs,
+                // Server returns aggregated generationMs on preview→final replace
+                // (prev stage + this stage). Prefer it over the local timer.
+                generationMs: savedData?.generationMs ?? elapsedMs,
             };
             if (isVideo) {
                 Object.assign(baseProps, {

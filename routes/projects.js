@@ -751,6 +751,7 @@ router.post('/project/save-generation', async (req, res) => {
         // BEFORE overwriting the sidecar to avoid losing the references.
         let _replacePrevMediaPath = null;
         let _replacePrevThumbPath = null;
+        let _replacePrevGenerationMs = null;
         if (replaceItemId) {
             try {
                 const prevMetaPath = path.join(metaDir, `${replaceItemId}.json`);
@@ -763,6 +764,9 @@ router.post('/project/save-generation', async (req, res) => {
                     if (prev?.thumbPath) {
                         const m = prev.thumbPath.match(/path=(.+)$/);
                         if (m) _replacePrevThumbPath = decodeURIComponent(m[1]);
+                    }
+                    if (Number.isFinite(prev?.generationMs)) {
+                        _replacePrevGenerationMs = prev.generationMs;
                     }
                 }
             } catch (_) { /* non-fatal */ }
@@ -841,7 +845,11 @@ router.post('/project/save-generation', async (req, res) => {
             name:           null,
             uploaded:       false,
             pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
-            generationMs:   generationMs      ?? null,
+            // Preview→final replace sums the previous stage's elapsed time into
+            // the final sidecar so history shows aggregate generation time.
+            generationMs:   (replaceItemId && _replacePrevGenerationMs != null && Number.isFinite(generationMs))
+                ? _replacePrevGenerationMs + generationMs
+                : (generationMs ?? null),
         };
         if (isVideo) {
             if (videoInfo) {
@@ -973,6 +981,7 @@ router.post('/project/save-generation', async (req, res) => {
             stage:         metaContent.stage         ?? null,
             frozenParams:  metaContent.frozenParams  ?? null,
             loraSnapshot:  metaContent.loraSnapshot  ?? null,
+            generationMs:  metaContent.generationMs  ?? null,
         });
     } catch (err) {
         logger.error('project', 'save-generation error', err);
