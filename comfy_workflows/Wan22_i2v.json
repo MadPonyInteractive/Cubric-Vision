@@ -708,7 +708,7 @@
         0
       ],
       "input": [
-        "740",
+        "846",
         0
       ]
     },
@@ -1105,7 +1105,7 @@
   },
   "839": {
     "inputs": {
-      "image": "example.png"
+      "image": "Girl_with_cat_202603182027.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1114,7 +1114,7 @@
   },
   "841": {
     "inputs": {
-      "image": "example.png"
+      "image": "Detailed_00005_small.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1128,6 +1128,90 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Duration"
+    }
+  },
+  "843": {
+    "inputs": {
+      "filename_prefix": "wan22",
+      "samples": [
+        "848",
+        1
+      ]
+    },
+    "class_type": "SaveLatent",
+    "_meta": {
+      "title": "SaveLatent"
+    }
+  },
+  "844": {
+    "inputs": {
+      "latent": "wan22_i2v_00001_.latent"
+    },
+    "class_type": "LoadLatent",
+    "_meta": {
+      "title": "LoadLatent"
+    }
+  },
+  "845": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiBoolean",
+    "_meta": {
+      "title": "Is_Continue"
+    }
+  },
+  "846": {
+    "inputs": {
+      "boolean": [
+        "845",
+        0
+      ],
+      "true": [
+        "844",
+        0
+      ],
+      "false": [
+        "740",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "848": {
+    "inputs": {
+      "boolean": [
+        "849",
+        0
+      ],
+      "input": [
+        "770",
+        1
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "849": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "752",
+        0
+      ],
+      "b": [
+        "845",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
     }
   }
 }

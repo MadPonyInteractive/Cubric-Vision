@@ -483,7 +483,7 @@
   },
   "752": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiBoolean",
     "_meta": {
@@ -499,22 +499,6 @@
       "input": [
         "740",
         1
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "770": {
-    "inputs": {
-      "boolean": [
-        "752",
-        0
-      ],
-      "input": [
-        "740",
-        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -562,7 +546,7 @@
   "775": {
     "inputs": {
       "passthrough": [
-        "770",
+        "883",
         0
       ]
     },
@@ -818,6 +802,103 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Duration"
+    }
+  },
+  "883": {
+    "inputs": {
+      "boolean": true,
+      "input": [
+        "888",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "884": {
+    "inputs": {
+      "boolean": [
+        "886",
+        0
+      ],
+      "input": [
+        "883",
+        1
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "885": {
+    "inputs": {
+      "filename_prefix": "wan22",
+      "samples": [
+        "884",
+        1
+      ]
+    },
+    "class_type": "SaveLatent",
+    "_meta": {
+      "title": "SaveLatent"
+    }
+  },
+  "886": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "752",
+        0
+      ],
+      "b": [
+        "887",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "887": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiBoolean",
+    "_meta": {
+      "title": "Is_Continue"
+    }
+  },
+  "888": {
+    "inputs": {
+      "boolean": [
+        "887",
+        0
+      ],
+      "true": [
+        "889",
+        0
+      ],
+      "false": [
+        "740",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "889": {
+    "inputs": {
+      "latent": "wan22_i2v_00001_.latent"
+    },
+    "class_type": "LoadLatent",
+    "_meta": {
+      "title": "LoadLatent"
     }
   }
 }
