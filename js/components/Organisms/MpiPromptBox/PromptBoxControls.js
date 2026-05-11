@@ -50,11 +50,14 @@ export const PROMPT_BOX_CONTROLS = {
 
             const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
             const initialTier = saved.ratioSelector?.qualityTier || this.defaultValue;
+            const initialRatio = saved.ratioSelector?.selectedRatio || '1:1';
             this.value = initialTier;
 
             this._instance = MpiOptionSelector.mount(el, {
                 variant: 'quality',
                 qualityTier: initialTier,
+                modelType,
+                selectedRatio: initialRatio,
             });
 
             this._instance.on('change', ({ qualityTier }) => {
@@ -69,9 +72,22 @@ export const PROMPT_BOX_CONTROLS = {
                 // Notify sibling ratio control to re-render its ratio set.
                 Events.emit('ratio:quality-change', { modelId, qualityTier });
             });
+
+            // Refresh per-tier resolution info when sibling ratio control
+            // changes the active ratio label.
+            this._ratioUnsub = Events.on('ratio:selection-change', ({ modelId: mid, selectedRatio }) => {
+                if (mid !== modelId) return;
+                this._instance?.el?.setSelectedRatio?.(selectedRatio);
+            });
         },
         getValue() { return this.value; },
         getInjectionParams() { return {}; },
+        destroy() {
+            this._ratioUnsub?.();
+            this._ratioUnsub = null;
+            this._instance?.destroy?.();
+            this._instance = null;
+        },
     },
 
     /**
@@ -115,6 +131,9 @@ export const PROMPT_BOX_CONTROLS = {
                         value: { selectedRatio: value, orientation },
                     });
                 }
+                // Notify sibling quality control so its per-tier resolution
+                // info reflects the newly selected ratio label.
+                Events.emit('ratio:selection-change', { modelId, selectedRatio: value });
             });
 
             // Orientation change: queue save via projectService

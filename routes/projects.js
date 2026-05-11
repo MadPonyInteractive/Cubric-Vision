@@ -350,10 +350,33 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
         const mediaDir = path.join(folderPath, 'Media');
         const filePath = path.join(mediaDir, filename);
 
-        // Delete the UUID-based .meta/<uuid>.json if itemId is provided
+        // Delete the UUID-based .meta/<uuid>.json if itemId is provided.
+        // Also remove any companion video first-frame thumb referenced by the
+        // sidecar (thumbPath) before unlinking the sidecar itself. Fallback to
+        // the conventional `<itemId>.thumb.jpg` path when sidecar is missing
+        // or lacks thumbPath (covers older sidecars + crash-recovery cases).
         if (itemId) {
-            const uuidMetaPath = path.join(mediaDir, '.meta', `${itemId}.json`);
-            if (await fs.pathExists(uuidMetaPath)) await fs.remove(uuidMetaPath);
+            const metaDir = path.join(mediaDir, '.meta');
+            const uuidMetaPath = path.join(metaDir, `${itemId}.json`);
+            let thumbAbsPath = null;
+            if (await fs.pathExists(uuidMetaPath)) {
+                try {
+                    const sidecar = await fs.readJson(uuidMetaPath);
+                    if (sidecar?.thumbPath) {
+                        const m = sidecar.thumbPath.match(/path=(.+)$/);
+                        if (m) thumbAbsPath = decodeURIComponent(m[1]);
+                    }
+                } catch (_) { /* non-fatal */ }
+                await fs.remove(uuidMetaPath);
+            }
+            if (!thumbAbsPath) {
+                const fallback = path.join(metaDir, `${itemId}.thumb.jpg`);
+                if (await fs.pathExists(fallback)) thumbAbsPath = fallback;
+            }
+            if (thumbAbsPath && await fs.pathExists(thumbAbsPath)) {
+                try { await fs.remove(thumbAbsPath); }
+                catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
+            }
         }
 
         // Delete the legacy filename-based .meta/ sidecar
@@ -868,31 +891,39 @@ router.post('/project/save-generation', async (req, res) => {
             }
         }
 
-        // Garbage-collect orphaned sidecars (skip the one we just wrote)
+        // Garbage-collect orphaned sidecars + companion thumbs.
+        // Pass 1: drop sidecars whose media file is gone (also drop their
+        // companion `<id>.thumb.jpg`). Pass 2: drop any leftover thumb files
+        // whose sidecar no longer exists (covers thumbs leaked by older
+        // delete paths before the cleanup fix).
         try {
-            const sidecars = await fs.readdir(metaDir);
-            for (const sc of sidecars) {
+            const entries = await fs.readdir(metaDir);
+            const survivingIds = new Set();
+
+            for (const sc of entries) {
                 if (!sc.endsWith('.json')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
 
                 // Skip the meta file we just created
                 if (baseName === id) {
+                    survivingIds.add(baseName);
                     continue;
                 }
 
                 const metaFilePath = path.join(metaDir, sc);
                 let mediaPath = null;
+                let thumbPath = null;
 
                 // Try to read the meta file to get the actual media file path
                 try {
                     const metaContent = await fs.readJson(metaFilePath);
                     if (metaContent.filePath) {
-                        // filePath is like `/project-file?path=${encodeURIComponent(filePath)}`
-                        // Extract the actual file path
                         const match = metaContent.filePath.match(/path=(.+)$/);
-                        if (match) {
-                            mediaPath = decodeURIComponent(match[1]);
-                        }
+                        if (match) mediaPath = decodeURIComponent(match[1]);
+                    }
+                    if (metaContent.thumbPath) {
+                        const m = metaContent.thumbPath.match(/path=(.+)$/);
+                        if (m) thumbPath = decodeURIComponent(m[1]);
                     }
                 } catch (_) {
                     // If we can't read the meta file, treat it as orphaned
@@ -906,7 +937,21 @@ router.post('/project/save-generation', async (req, res) => {
                 // Only delete if the referenced media file doesn't exist
                 if (!(await fs.pathExists(mediaPath))) {
                     await fs.remove(metaFilePath);
+                    if (!thumbPath) thumbPath = path.join(metaDir, `${baseName}.thumb.jpg`);
+                    if (await fs.pathExists(thumbPath)) {
+                        try { await fs.remove(thumbPath); } catch (_) {}
+                    }
+                } else {
+                    survivingIds.add(baseName);
                 }
+            }
+
+            // Pass 2: orphan thumbs with no surviving sidecar
+            for (const f of entries) {
+                if (!f.endsWith('.thumb.jpg')) continue;
+                const baseName = f.slice(0, -'.thumb.jpg'.length);
+                if (survivingIds.has(baseName)) continue;
+                try { await fs.remove(path.join(metaDir, f)); } catch (_) {}
             }
         } catch (_) { /* GC failure is non-fatal */ }
 
@@ -1094,9 +1139,30 @@ router.delete('/delete-meta', (req, res) => {
     const { id, folderPath } = req.query;
     if (!id || !folderPath) return res.status(400).json({ error: 'Missing params' });
 
-    const metaPath = path.join(folderPath, 'Media', '.meta', `${id}.json`);
+    const metaDir  = path.join(folderPath, 'Media', '.meta');
+    const metaPath = path.join(metaDir, `${id}.json`);
+
+    // Remove companion video first-frame thumb referenced by the sidecar
+    // (thumbPath) before unlinking the sidecar. Fallback to the conventional
+    // `<id>.thumb.jpg` path for older sidecars / missing thumbPath.
+    let thumbAbsPath = null;
     if (fs.existsSync(metaPath)) {
+        try {
+            const sidecar = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+            if (sidecar?.thumbPath) {
+                const m = sidecar.thumbPath.match(/path=(.+)$/);
+                if (m) thumbAbsPath = decodeURIComponent(m[1]);
+            }
+        } catch (_) { /* non-fatal */ }
         fs.removeSync(metaPath);
+    }
+    if (!thumbAbsPath) {
+        const fallback = path.join(metaDir, `${id}.thumb.jpg`);
+        if (fs.existsSync(fallback)) thumbAbsPath = fallback;
+    }
+    if (thumbAbsPath && fs.existsSync(thumbAbsPath)) {
+        try { fs.removeSync(thumbAbsPath); }
+        catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
     }
     res.json({ success: true });
 });

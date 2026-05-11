@@ -52,8 +52,9 @@ function _templateRatio(props) {
     const ratioBtnsHtml = ratios.map(r => {
         const isSelected = r.label === value;
         const iconName   = r.icon.replace('rect_', 'ratio_');
+        const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
         return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `Switch to ${r.label} ratio` })}
+            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
         </div>`;
     }).join('');
 
@@ -130,9 +131,28 @@ const QUALITY_LABELS = {
     very_high: 'Very High',
 };
 
+/**
+ * Build per-tier info strings for quality radio buttons.
+ * Resolution = tier's ratio set, matched by the currently selected ratio label
+ * (falls back to first ratio in the tier).
+ */
+function _buildQualityOptions(modelType, selectedRatio) {
+    return QUALITY_TIERS.map(t => {
+        let info = QUALITY_LABELS[t];
+        if (modelType) {
+            const ratios = getModelRatios(modelType, undefined, t);
+            const match = ratios.find(r => r.label === selectedRatio) || ratios[0];
+            if (match?.w && match?.h) {
+                info = `${QUALITY_LABELS[t]} — ${match.w}×${match.h}`;
+            }
+        }
+        return { label: QUALITY_LABELS[t], value: t, info };
+    });
+}
+
 function _templateQuality(props) {
     const qualityTier = props.qualityTier || 'medium';
-    const radioOptions = QUALITY_TIERS.map(t => ({ label: QUALITY_LABELS[t], value: t }));
+    const radioOptions = _buildQualityOptions(props.modelType, props.selectedRatio);
 
     return `<div class="mpi-opt-sel mpi-opt-sel--quality">
         <span class="mpi-opt-sel__quality-label">Quality</span>
@@ -159,6 +179,21 @@ function _setupQuality(el, props, emit) {
         qsa('.mpi-radio-group__btn', radioSlot).forEach(btn => {
             btn.classList.toggle('is-active', btn.dataset.value === props.qualityTier);
         });
+    };
+
+    const _syncInfo = () => {
+        if (!radioSlot) return;
+        const opts = _buildQualityOptions(props.modelType, props.selectedRatio);
+        qsa('.mpi-radio-group__btn', radioSlot).forEach(btn => {
+            const def = opts.find(o => o.value === btn.dataset.value);
+            if (def?.info) btn.setAttribute('data-info', def.info);
+        });
+    };
+
+    el.setSelectedRatio = (label) => {
+        if (!label || props.selectedRatio === label) return;
+        props.selectedRatio = label;
+        _syncInfo();
     };
 
     const _unsubs = [];
@@ -408,8 +443,9 @@ function _setupRatio(el, props, emit) {
         grid.innerHTML = ratios.map(r => {
             const isSelected = r.label === value;
             const iconName   = r.icon.replace('rect_', 'ratio_');
+            const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
             return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true })}
+                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
             </div>`;
         }).join('');
 
