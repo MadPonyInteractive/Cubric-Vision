@@ -121,6 +121,11 @@ controlId: {
 
 **7. Update operations table** below if new control changes any operation's `components[]`.
 
+**8. Snapshot/replay surfaces (preview-gate, history-recall, any future params-locked run).** Generation-state surfaces that snapshot user inputs and replay them later MUST carry your control's value. Today this means: `generationService.js` snapshots the entire `injectionParams` map into `frozenParams.injectionParams` on `previewOnly` runs, and `MpiGalleryBlock` "preview:continue" spreads that whole map back before overlaying `Width`/`Height`/`Seed`. Rules for ANY new control:
+- If the control flows through the standard `getInjectionParams()` path → automatic, no code change needed.
+- If the control flows through an out-of-band path (like `previewStage` → `el.getRunPayload().previewOnly`) → you MUST extend `frozenParams` in `js/services/generationService.js` and the replay in `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` ("preview:continue" handler) to carry the signal. Same rule applies to any future snapshot/replay surface (recall-from-history, retry-with-same-params, etc.) — audit those sites when adding any out-of-band control.
+- NEVER re-read live PromptBox state inside a replay handler. Snapshots are the source of truth.
+
 **Persistence invariants:**
 - Storage path: `project.modelSettings[modelId][controlId]` — flat per-model key.
 - Recall: `getModelSettings(state.currentProject, modelId)` on every `mount()`. Never cache across mounts.

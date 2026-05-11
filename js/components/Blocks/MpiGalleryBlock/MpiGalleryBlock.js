@@ -278,10 +278,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             const frozen = item.frozenParams || {};
             const dims = frozen.dims || {};
-            const injectionParams = {};
+            // Full frozen injection map (every PromptBox control snapshotted at
+            // preview time). W/H/Seed overlaid explicitly since they live on
+            // frozenParams top-level, not inside the injection map.
+            const injectionParams = { ...(frozen.injectionParams || {}) };
             if (dims.w) injectionParams.Width  = dims.w;
             if (dims.h) injectionParams.Height = dims.h;
-            if (frozen.frames != null) injectionParams.Frames = frozen.frames;
             if (frozen.seed != null) injectionParams.Seed = frozen.seed;
 
             const config = {

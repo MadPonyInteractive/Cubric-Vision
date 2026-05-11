@@ -255,12 +255,17 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             }));
         if (isVideo && config.previewOnly === true && _previewStage === undefined) {
             _previewStage = 'preview';
+            // Snapshot the full injectionParams map (minus Preview_Only, which is
+            // a stage marker, not a user-controlled param). Continue replays this
+            // wholesale so any PromptBox control (Duration, Motion_Intensity, and
+            // any future control) is locked to the preview-time value.
+            const { Preview_Only: _skip, ...frozenInjection } = injectionParams;
             _previewFrozen = {
                 seed:     exec.seed ?? -1,
                 prompt:   positive,
                 negative: negative,
                 dims:     { w: width, h: height },
-                frames:   injectionParams.Frames ?? injectionParams.Frame_Count ?? null,
+                injectionParams: frozenInjection,
                 mediaItems: _frozenMediaItems,
             };
             const _proj = state.currentProject;
