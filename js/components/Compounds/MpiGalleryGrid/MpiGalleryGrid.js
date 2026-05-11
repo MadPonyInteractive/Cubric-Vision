@@ -5,6 +5,7 @@ import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
+import { getCommand } from '../../../data/commandRegistry.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -469,8 +470,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 nameEl.textContent = selected?.name || group.name || '';
 
-                // Top-left badge: SDXL · UPSCALE / IMPORTED / WAN 2.2 SMOOTH · 5S / FLUX · MASK
+                // Top-left badge: SDXL · UPSCALE / IMPORTED / WAN 2.2 SMOOTH · 5S / INTERPOLATE · 12S
                 const model = getModelById(selected?.modelId);
+                const command = getCommand(selected?.operation);
                 let badgeText = '';
                 if (selected?.uploaded) {
                     badgeText = 'IMPORTED';
@@ -479,7 +481,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     const dur = Number.isFinite(duration) && duration > 0
                         ? `${Math.max(1, Math.round(duration))}S`
                         : '';
-                    badgeText = [model?.name || selected?.modelId, dur]
+                    const sourceLabel = command?.universal
+                        ? command.label
+                        : (model?.name || selected?.modelId || command?.label || selected?.operation);
+                    badgeText = [sourceLabel, dur]
                         .filter(Boolean)
                         .map(s => String(s).toUpperCase())
                         .join(' · ');
