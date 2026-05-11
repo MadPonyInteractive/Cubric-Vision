@@ -85,16 +85,6 @@
     In the video history workspace, we are going to implement a feature so that the user can continue from the last frame and that creates a new video with the previous video + the generated video after. The last frame can be extracted from the last frame of the current video and injected in an image-to-video workflow displaying the prompt box. Please let the user know about the implementation briefing and concerns, and how this is supposed to happen. If it's a new PromptBoxControls.js, if it's a new tool, brainstorm with the user use cases of how to implement this.
     ```
 
-### Introduce video compared tool
-
-  - tags: [Feature]
-  - priority: high
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    The video compare is already accessible through the same custom context menu. It just needs to be wired when a video is selected instead of an image. It already works for image.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -129,6 +119,59 @@
     ```
 
 ## COMPLETED
+
+### Introduce video compared tool
+
+  - tags: [Feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Compare overlay now supports image+image (existing), image+video, video+image,
+    and video+video pairs. Pair playback driven by hotkeys only (no on-screen
+    transport): space play/pause both, ←/→ frame step (clamps at ends, no wrap),
+    L toggle loop (default on). Both sides start t=0; on either reaching the
+    shorter duration both pause+seek 0 and replay if loop on. Frame step uses
+    per-side fps from sidecar `videoMeta.fps` (mixed fps handled). Pan/zoom/
+    letterbox/slider inherited from existing image-compare canvas pipeline.
+
+    MpiCanvas API additions: loadVideo, loadComparisonVideo, playCompare,
+    pauseCompare, togglePlayCompare, frameStepCompare, setCompareLoop,
+    getCompareLoop, isCompareVideoPair. ComparisonManager extended for
+    type-agnostic after-media with afterWidth/afterHeight accessors.
+
+    MpiGroupHistoryBlock lazy-mounts MpiCompareOverlay when a video group's
+    2-item selection compare is requested (parallel to MpiGalleryBlock); drops
+    the `|| isVideo` gate on compare-requested. Gallery path needed no change —
+    it already routes through MpiCompareOverlay.open which now branches by
+    mediaType internally.
+
+    Hotkey registry: new `compare.*` category (space/←/→/L). MpiHelp gets a
+    new "Compare" group.
+
+    Edge cases handled (memory entries written):
+    - HTMLVideoElement has no .width property — paint gates now use
+      ComparisonManager.afterWidth accessor.
+    - drawImage(video) is transparent until loadeddata + currentTime=0 nudge.
+    - Chromium coalesces rapid currentTime= writes — `_pendingSeekTime` per
+      video keeps frame-step presses additive.
+    - Auto-loop replay gated on user-play intent flag, not `isPlaying()` at
+      moment of `ended` (browser pauses before `ended` fires).
+    - MpiCanvas `this.img` must remain HTMLImageElement — loadImage resets to
+      fresh Image() if a prior loadVideo replaced it; `_renderBase` hardened
+      with an `_isDrawable(src)` typeguard.
+
+    Files: js/components/Primitives/MpiCanvas/MpiCanvas.js,
+    js/components/Primitives/MpiCanvas/managers/ComparisonManager.js,
+    js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js,
+    js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js,
+    js/managers/hotkeyRegistry.js,
+    js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js.
+
+    Memory: feedback_video_element_no_width, feedback_video_first_frame_paint,
+    feedback_chromium_seek_coalescing, feedback_compare_loop_user_intent,
+    feedback_mpicanvas_img_must_stay_image (new).
+    ```
 
 ### Standalone quality control + popup width cap + Preview_Only op gate
 
