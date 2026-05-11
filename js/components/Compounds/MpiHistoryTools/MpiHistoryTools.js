@@ -51,7 +51,7 @@ const IMAGE_TOOLS = [
         label: 'Transform',
         group: [
             { mode: 'crop', icon: 'crop', info: 'Crop' },
-            { mode: 'resize', icon: 'resize', info: 'Resize' },
+            { mode: 'resize', icon: 'resize_stroke', info: 'Resize' },
         ],
     },
     {

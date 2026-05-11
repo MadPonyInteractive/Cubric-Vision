@@ -352,8 +352,12 @@ export const StatusBar = {
         _listenUnsubs.push(Events.on('tool:cancelled', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.cancel();
         }));
-        _listenUnsubs.push(Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished', false);
+        _listenUnsubs.push(Events.on('tool:idle', ({ tool, type }) => {
+            if (tool !== 'groupHistory') return;
+            // Tool-only transforms (resize) get their own bespoke toast from the
+            // owning block; silent here so users see exactly one toast.
+            const _silent = type === 'resize' || type === 'resizeVideo';
+            StatusBar.progress.complete('Generation finished', _silent);
         }));
         _listenUnsubs.push(Events.onState('generationQueueCount', (count) => {
             _queueDepth = Math.max(0, Number(count) || 0);

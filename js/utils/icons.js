@@ -80,6 +80,7 @@ export const ICONS = {
     'interpolate_stroke': '<rect x="2" y="5" width="5" height="5" rx="1"/><rect x="17" y="5" width="5" height="5" rx="1"/><path d="M9 7.5L12 7.5M15 7.5L18 7.5"/><circle cx="10.5" cy="7.5" r="0.8"/><circle cx="13.5" cy="7.5" r="0.8"/><rect x="2" y="14" width="5" height="5" rx="1"/><rect x="17" y="14" width="5" height="5" rx="1"/><path d="M9 16.5L12 16.5M15 16.5L18 16.5"/><circle cx="10.5" cy="16.5" r="0.8"/><circle cx="13.5" cy="16.5" r="0.8"/>',
     'flipX_stroke': '<path d="M12 3v18"/><path d="M8 7H3v10h5"/><path d="M16 7h5v10h-5"/><path d="M8 12H3"/><path d="M16 12h5"/>',
     'flipY_stroke': '<path d="M3 12h18"/><path d="M7 8V3h10v5"/><path d="M7 16v5h10v-5"/><path d="M12 8V3"/><path d="M12 16v5"/>',
+    'resize_stroke': '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 9l6 6"/><path d="M9 9h4"/><path d="M9 9v4"/><path d="M15 15h-4"/><path d="M15 15v-4"/>',
 
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:

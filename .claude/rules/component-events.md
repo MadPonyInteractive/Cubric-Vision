@@ -343,11 +343,13 @@ LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
 
 ### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
-EMITS:   `apply` `{ width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }`
+EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }, previewUrl: string|null }` — `previewUrl` is the last successful preview's comfy view URL when the cached params match the current params; null otherwise. Block fast-path uses `previewUrl` directly via `saveGeneration` (no Comfy re-run); falls back to `startGeneration` when null.
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:tool:update` `{ toolKey: 'resize', key, value }` — debounced per-control persistence to `project.toolSettings.resize`
 LISTENS: `resize-source-ready` from MpiCanvasViewer when image resize mode enters
-NOTE:    Image mode enters `viewer.el.enterResizeMode()`, runs debounced Comfy previews through `runCommand` without saving history, paints them via `viewer.el.setResizePreview(blobUrl)`, and clears preview on destroy. Apply emits the payload; `MpiGroupHistoryBlock` appends the resized result as a new history entry. The panel uses `MpiColorPicker` for `pad_color`.
+API:     `el.setCurrentItem(item)` — re-target active history item without remount; invalidates preview cache, cancels in-flight preview, clears canvas preview, schedules a fresh preview. Block calls this from `historyList.on('entry-selected')` AND from inside `_handleResizeApply` after `loadEntry` so the new entry previews.
+         `el.getParams()` — read current params.
+NOTE:    Image mode enters `viewer.el.enterResizeMode()`, runs debounced Comfy previews through `runCommand` without saving history, paints them via `viewer.el.setResizePreview(blobUrl)`, and clears preview on destroy. Setup fires an initial `schedulePreview()` so the user sees the tool's effect without touching a control. Apply caches the comfy view URL keyed by `JSON.stringify(params)`; any control change clears the cache. Block treats resize as a tool-only transform — uses `_setBusy` (no mascot) instead of `_setGenerating`, and the Apply success toast (`'Resize applied'`) comes from the block (StatusBar `tool:idle` for `type === 'resize'` is silent). After Apply the block re-enters resize mode and re-targets `_options.el.setCurrentItem(newItem)`. The panel uses `MpiColorPicker` for `pad_color`.
 
 ---
 
@@ -466,7 +468,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
 - Listens to `tool:sampling-start` → calls `updateLabel('Generating...')` and starts elapsed timer
 - Listens to `tool:cancelled` → calls `cancel()`
-- Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast)
+- Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast). Reads `type` from the payload; for tool-only transforms (`resize`, `resizeVideo`) passes `silent: true` so the owning block can fire its own bespoke toast (e.g. `'Resize applied'`) without doubling up.
 - Listens to `state.generationQueueCount` → appends pending Cue depth to the active label only, e.g. `GENERATING (2 queued)`
 
 **Pattern notes:**
@@ -486,7 +488,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `radial:will-open` — pre-render hook; calls `refreshGroupHistoryRadial(_opOptions())` so radial mirrors PromptBox availability (live mask check via `viewer.el.hasMask()`)
          `generation:started` `{ id, scope, groupId }` — seeds `_myGenIds` if scope+groupId match; shows generating state on canvas
          `generation:preview` `{ id, url }` — loads preview into canvasViewer if id in `_myGenIds`
-         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state
+         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state. **Snapshot `_wasReplace = _group.history?.some(entry => entry.id === item.id)` BEFORE reassigning `_group = group`** — `group` is the post-append snapshot so `.some(...)` would always be true and route every completion to `replaceEntry` (which silently bails for new ids not yet in the list). Mascot animation is gated on `item.operation` — `resize`/`resizeVideo` (tool transforms) skip the mascot. Resize fast-path Apply also needs `await viewer.el.enterResizeMode()` + `_options?.el?.setCurrentItem?.(item)` after `loadEntry` because `exitMode` resets `_currentMode = 'none'` and `loadEntry`'s `_modeToRestore` capture never re-enters resize.
          `generation:error` `{ id }` — clears generating state
          `generation:cancelled` `{ id }` — clears generating state
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start

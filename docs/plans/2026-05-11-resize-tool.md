@@ -285,6 +285,89 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Open an image group with at least one item. Open the Resize tool, set Width=512, Height=512, keep_proportion=`crop`. Click Apply. Within a few seconds, a success toast appears and the history list has one additional entry named `resize_###`; the original source item remains available. The new entry sidecar has `pixelDimensions.w: 512, pixelDimensions.h: 512` and no `frozenParams` field.
 
+### Phase 3 — Deviations applied during follow-up session (2026-05-11)
+
+Phase 3 shipped as written but the follow-up session found several gaps that
+needed fixing before the tool felt right. Phase 4 implementers should know
+about these so they replicate the same patterns for video:
+
+1. **Apply reuses the cached preview output — does NOT re-run Comfy.** Plan
+   3.3 had `startGeneration` re-running the workflow on Apply. Wasteful and
+   slow. The shipped flow caches the last successful preview's comfy view URL
+   plus a `JSON.stringify(params)` key in `MpiToolOptionsResize`; on any
+   control change the cache is invalidated. Apply emits
+   `{ params, previewUrl }` — block fast-path calls `saveGeneration` directly
+   with the cached URL when `previewUrl` matches current params. Fallback to
+   `startGeneration` only when no cached preview exists (e.g. user clicked
+   Apply before any preview ran). Mirror this for `resizeVideo` — same shape,
+   video-typed save.
+
+2. **Apply emit payload shape changed** to `{ params, previewUrl }`. Block
+   `_handleResizeApply` destructures
+   `const { params: resizeParams = payload, previewUrl = null } = payload;`
+   for back-compat with older callers. Keep this shape for `resizeVideo` so
+   one mediator branch handles both.
+
+3. **`el.setCurrentItem(item)` is required.** The compound needs a public
+   setter so the block can re-target the active history item without
+   re-mounting the panel. Without it, selecting a different entry while the
+   tool is mounted leaves `currentItem` stale and previews keep running on
+   the previous item. Block calls it from `historyList.on('entry-selected')`
+   and from inside `_handleResizeApply`'s post-Apply branch.
+
+4. **Re-enter resize mode after Apply.** Both fast-path Apply and the
+   fallback `generation:complete` listener call `viewer.el.exitMode()` to
+   reset state, then `loadEntry()`. `loadEntry` captures `_modeToRestore`
+   from `_currentMode`, which is `'none'` after `exitMode`. Mode never
+   re-enters resize → `MpiCanvas.setPreviewImage` early-returns
+   (`activeMode !== 'resize'`) → subsequent control changes paint nothing.
+   Fix: after `loadEntry`, call `await viewer.el.enterResizeMode()` and then
+   `_options?.el?.setCurrentItem?.(item)` so the preview cache invalidates
+   and a fresh preview kicks off. Apply this same pattern to the video
+   resize completion path.
+
+5. **`generation:complete` listener had a latent append-vs-replace bug.**
+   The check `_group.history.some(entry => entry.id === item.id)` ran AFTER
+   `_group = group` was reassigned to the new (already-appended) group, so
+   `.some` always returned true → routed every completion to
+   `replaceEntry`, which silently bailed for new items not yet in the list.
+   Fix: snapshot the lookup BEFORE the reassign
+   (`const _wasReplace = _group.history?.some(...)`). This also affected
+   interpolate/videoUpscale append flows — fixed implicitly.
+
+6. **Mascot and `'Generation finished'` toast are model-op-only.** Tool
+   transforms (`resize`, `resizeVideo`) must NOT trigger the mascot
+   animation or the StatusBar's generic "Generation finished" toast. The
+   block now has two helpers: `_setGenerating` (with mascot, for PromptBox
+   driven model ops) and `_setBusy` (no mascot, for tool transforms). The
+   `generation:complete` listener skips the mascot when
+   `item.operation === 'resize' || 'resizeVideo'`. StatusBar's `tool:idle`
+   listener reads the `type` field and passes `silent: true` to
+   `progress.complete()` for those ops; the owning block emits its own
+   bespoke `'Resize applied'` toast instead. Reuse this contract for video:
+   add `'resizeVideo'` everywhere `'resize'` is gated.
+
+7. **Initial preview fires on mount.** When the resize tool is selected, the
+   compound calls `schedulePreview()` at the end of `setup` so the user
+   sees the tool's effect on the active entry without touching a control.
+   Do the same in the video path so the video resize panel previews
+   immediately.
+
+8. **Left-rail icon is `resize_stroke`.** The plan registered a single fill
+   `resize` glyph; the stroke version reads better in the toolbar's stroke
+   icon language. `MpiHistoryTools` references `resize_stroke` for the
+   Transform group. The fill `resize` glyph is retained for other consumers.
+
+9. **Flip icon-to-label mapping was inverted** in the shipped Phase 2 UI;
+   icons swapped at the `MpiToolOptionsResize` call site (not at glyph
+   definitions) so other consumers of `flipX_stroke` / `flipY_stroke` are
+   unaffected.
+
+10. **MpiColorPicker shipped with a different visual treatment** than the
+    plan described — functional contract (HSV/RGB/hex sync, `'change'`
+    emit, `getRGB`/`setRGB`/`setHex` methods) is intact. No follow-up
+    needed unless the video phase wants the redesign baseline applied.
+
 ---
 
 ## Phase 4 — Video workspace support

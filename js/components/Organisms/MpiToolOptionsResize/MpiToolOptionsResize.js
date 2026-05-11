@@ -98,7 +98,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        const { viewer, kind = 'image', currentItem = null } = props;
+        const { viewer, kind = 'image' } = props;
+        let currentItem = props.currentItem ?? null;
         const defaults = defaultsForItem(currentItem);
         const hasPersistedResize = !!state.currentProject?.toolSettings?.resize;
         let settings = coerceSettings(
@@ -113,6 +114,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         let _previewAbort = null;
         let _previewSerial = 0;
         let _destroyed = false;
+        let _lastPreviewUrl = null;
+        let _lastPreviewParamsKey = null;
         let widthInput = null;
         let heightInput = null;
 
@@ -141,6 +144,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
 
         const setValue = (key, value) => {
             settings = { ...settings, [key]: value };
+            _lastPreviewUrl = null;
+            _lastPreviewParamsKey = null;
             persist(key, value);
             syncConditionalRows();
             schedulePreview();
@@ -150,6 +155,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             ...settings,
             pad_color: { ...settings.pad_color },
         });
+
+        const _paramsKey = (p) => JSON.stringify(p);
 
         const mount = (slotId, Component, componentProps) => {
             const host = qs(slotId, el);
@@ -230,8 +237,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             iconOnly: true,
             options: [
                 { label: 'None', value: 'none', icon: 'close', info: 'No flip' },
-                { label: 'Vertical', value: 'x', icon: 'flipX_stroke', info: 'Flip vertically' },
-                { label: 'Horizontal', value: 'y', icon: 'flipY_stroke', info: 'Flip horizontally' },
+                { label: 'Vertical', value: 'x', icon: 'flipY_stroke', info: 'Flip vertically' },
+                { label: 'Horizontal', value: 'y', icon: 'flipX_stroke', info: 'Flip horizontally' },
             ],
         });
         _unsubs.push(flipRadio.on('select', ({ value }) => setValue('flip', value)));
@@ -256,8 +263,10 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             info: 'Apply resize settings',
         });
         _unsubs.push(applyBtn.on('click', () => {
+            const current = params();
+            const previewUrl = _lastPreviewParamsKey === _paramsKey(current) ? _lastPreviewUrl : null;
             cancelPreview();
-            emit('apply', params());
+            emit('apply', { params: current, previewUrl });
         }));
 
         function syncConditionalRows() {
@@ -299,13 +308,16 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             _previewAbort = abort;
             setPreviewing(true);
 
+            const previewParams = params();
+            const previewKey = _paramsKey(previewParams);
+
             const exec = runCommand({
                 operation: 'resize',
                 modelId: null,
                 positive: '',
                 negative: '',
                 mediaItems: [{ id: currentItem.id, url: sourceUrl, mediaType: 'image', source: 'history' }],
-                injectionParams: params(),
+                injectionParams: previewParams,
                 previewOnly: true,
             });
             _previewExec = exec;
@@ -322,6 +334,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
                         URL.revokeObjectURL(blobUrl);
                         return;
                     }
+                    _lastPreviewUrl = first;
+                    _lastPreviewParamsKey = previewKey;
                     await viewer.el.setResizePreview?.(blobUrl);
                 } catch (err) {
                     if (!abort.signal.aborted) {
@@ -349,11 +363,24 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         }
 
         el.getParams = params;
+        el.setCurrentItem = (item) => {
+            if (!item || item.id === currentItem?.id) return;
+            currentItem = item;
+            _lastPreviewUrl = null;
+            _lastPreviewParamsKey = null;
+            cancelPreview();
+            viewer.el.clearResizePreview?.();
+            schedulePreview();
+        };
 
         syncConditionalRows();
 
         if (kind === 'video') viewer.el.enterResizeMode?.();
         else viewer.el.enterResizeMode?.();
+
+        // Kick off an initial preview so the user sees the tool's effect on the
+        // active entry without touching any control first.
+        if (kind === 'image' && currentItem?.filePath) schedulePreview();
 
         el.destroy = () => {
             _destroyed = true;
