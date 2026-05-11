@@ -1,38 +1,79 @@
 /**
  * ComparisonManager.js
- * Manages image comparison state and split-slider logic.
+ * Manages comparison state and split-slider logic for image+video pairs.
  */
 export class ComparisonManager {
     constructor() {
         this.imgAfter = new Image();
         this.imgAfter.crossOrigin = "anonymous";
+        this.afterKind = 'image';
+        this.afterFps  = 24;
         this.isComparisonMode = false;
-        this.sliderPos = 0.5; // 0 to 1
+        this.sliderPos = 0.5;
         this.isDraggingSlider = false;
     }
 
-    /**
-     * Loads a second image for comparison.
-     * @param {string} url 
-     * @returns {Promise<void>}
-     */
+    /** Native pixel width of the "after" media (image or video). */
+    get afterWidth() {
+        const m = this.imgAfter;
+        if (!m) return 0;
+        return m.videoWidth || m.naturalWidth || m.width || 0;
+    }
+
+    /** Native pixel height of the "after" media (image or video). */
+    get afterHeight() {
+        const m = this.imgAfter;
+        if (!m) return 0;
+        return m.videoHeight || m.naturalHeight || m.height || 0;
+    }
+
+    /** Load an image as the "after" media. */
     async load(url) {
-        return new Promise((resolve, reject) => {
-            this.imgAfter.onload = () => {
-                this.isComparisonMode = true;
-                resolve();
-            };
-            this.imgAfter.onerror = (err) => reject(err);
-            this.imgAfter.src = url;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = (err) => reject(err);
+            img.src = url;
         });
+        this.imgAfter = img;
+        this.afterKind = 'image';
+        this.afterFps  = 24;
+        this.isComparisonMode = true;
+    }
+
+    /** Load a video as the "after" media. fps from sidecar videoMeta.fps. */
+    async loadVideo(url, fps = 24) {
+        const v = document.createElement('video');
+        v.crossOrigin = 'anonymous';
+        v.muted = true;
+        v.loop = false; // loop handled by ComparisonPlayback (pair-synced)
+        v.playsInline = true;
+        v.preload = 'auto';
+        v.src = url;
+        // Wait for first frame decoded — drawImage(video) is transparent until loadeddata.
+        await new Promise((resolve, reject) => {
+            const onData = () => { cleanup(); resolve(); };
+            const onErr  = () => { cleanup(); reject(new Error(`Video failed to load: ${url}`)); };
+            const cleanup = () => {
+                v.removeEventListener('loadeddata', onData);
+                v.removeEventListener('error', onErr);
+            };
+            v.addEventListener('loadeddata', onData);
+            v.addEventListener('error', onErr);
+        });
+        // Nudge to t=0 so first frame is committed for paint (Chromium sometimes
+        // needs an explicit seek before drawImage reads a non-blank frame).
+        try { v.currentTime = 0; } catch (_) {}
+        this.imgAfter = v;
+        this.afterKind = 'video';
+        this.afterFps  = fps > 0 ? fps : 24;
+        this.isComparisonMode = true;
     }
 
     /**
-     * Checks if a horizontal position (image-px) is over the slider handle.
      * @param {number} imgX - Horizontal position in image-native px.
      * @param {number} imgW - Image width in native px.
-     * @param {number} screenThreshold - Hit threshold in screen px, divided by scale before passing.
-     * @returns {boolean}
      */
     isOverSlider(imgX, imgW) {
         if (!this.isComparisonMode) return false;
@@ -40,11 +81,6 @@ export class ComparisonManager {
         return Math.abs(imgX - barImgX) < 20;
     }
 
-    /**
-     * Updates the slider position based on image-px mouse position.
-     * @param {number} imgX - Horizontal position in image-native px.
-     * @param {number} imgW - Image width in native px.
-     */
     updateSlider(imgX, imgW) {
         if (this.isDraggingSlider) {
             this.sliderPos = Math.max(0, Math.min(1, imgX / imgW));
@@ -55,6 +91,11 @@ export class ComparisonManager {
 
     destroy() {
         if (!this.imgAfter) return;
+        if (this.afterKind === 'video' && this.imgAfter.pause) {
+            try { this.imgAfter.pause(); } catch (_) {}
+            this.imgAfter.removeAttribute('src');
+            try { this.imgAfter.load(); } catch (_) {}
+        }
         if (this.imgAfter instanceof ImageBitmap) this.imgAfter.close();
         this.imgAfter = null;
     }

@@ -138,6 +138,17 @@ export const MpiHelp = ComponentFactory.create({
                             </ul>
                         </div>
 
+                        <!-- Compare Overlay -->
+                        <div class="mpi-help__shortcut-group">
+                            <h4>Compare</h4>
+                            <ul>
+                                <li><span>SPACE</span><span>Play / pause both videos</span></li>
+                                <li><span>&larr;</span><span>Previous frame (no loop)</span></li>
+                                <li><span>&rarr;</span><span>Next frame (no loop)</span></li>
+                                <li><span>L</span><span>Toggle loop</span></li>
+                            </ul>
+                        </div>
+
                         <!-- System -->
                         <div class="mpi-help__shortcut-group">
                             <h4>System</h4>

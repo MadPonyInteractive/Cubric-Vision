@@ -69,6 +69,16 @@ import { InputController }   from './managers/InputController.js';
 
 const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 
+/** True if value is a valid first arg for CanvasRenderingContext2D.drawImage(). */
+function _isDrawable(src) {
+    if (!src) return false;
+    return (src instanceof HTMLImageElement)
+        || (src instanceof HTMLVideoElement)
+        || (src instanceof HTMLCanvasElement)
+        || (typeof ImageBitmap !== 'undefined' && src instanceof ImageBitmap)
+        || (typeof OffscreenCanvas !== 'undefined' && src instanceof OffscreenCanvas);
+}
+
 // GPU MAX_TEXTURE_SIZE probe — done once at module load. Fallback 4096.
 const MAX_TEXTURE_SIZE = (() => {
     try {
@@ -132,6 +142,14 @@ class _CanvasCore {
         // Processed bitmap (forward-compat hook for raw tool re-add).
         this._processedBitmap = null;
 
+        // Comparison playback state — populated when before/after is a video.
+        this._videoBefore = null;     // HTMLVideoElement | null
+        this._beforeKind  = 'image';  // 'image' | 'video'
+        this._beforeFps   = 24;
+        this._compareLoop = true;     // loop on by default
+        this._compareUserPlaying = false; // true while user-initiated play is active
+        this._compareRafId = null;
+        this._compareVideoHandlers = []; // [{ video, name, fn }] for teardown
 
         // State Managers
         this.view       = new ViewManager();
@@ -223,6 +241,8 @@ class _CanvasCore {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
+        this._stopComparePlayback();
+        this._teardownBeforeVideo();
         this.input?.destroy?.();
         this.crop?.destroy?.();
         this.mask?.destroy?.();
@@ -270,6 +290,8 @@ class _CanvasCore {
     }
 
     clearImage() {
+        this._stopComparePlayback();
+        this._teardownBeforeVideo();
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
         this._activeMode = 'none';
@@ -282,7 +304,15 @@ class _CanvasCore {
 
     async loadImage(url) {
         try {
-            if (!this.img) throw new Error(`loadImage called on destroyed canvas (url=${url})`);
+            if (!this.baseCanvas) throw new Error(`loadImage called on destroyed canvas (url=${url})`);
+            // Drop any prior video-before state + ensure this.img is a real Image
+            // (loadVideo replaces it with a duck-typed {width,height} stub).
+            this._stopComparePlayback();
+            this._teardownBeforeVideo();
+            if (!(this.img instanceof HTMLImageElement)) {
+                this.img = new Image();
+                this.img.crossOrigin = 'anonymous';
+            }
             await new Promise((resolve, reject) => {
                 this.img.onload = resolve;
                 this.img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
@@ -329,6 +359,8 @@ class _CanvasCore {
     }
 
     async loadComparisonImage(url) {
+        this._stopComparePlayback();
+        this._teardownAfterVideo();
         await this.comparison.load(url);
         // ComparisonManager.load() sets comparison.isComparisonMode = true internally;
         // sync _activeMode so getter stays consistent, then fire modechange.
@@ -336,8 +368,298 @@ class _CanvasCore {
         this.canvas.dataset.comparisonUrl = url;
         this.input.updateCursor();
         this.draw();
+        this._wireComparePlayback();
         if (this._onModeChange) this._onModeChange('compare');
     }
+
+    /**
+     * Load a video as the primary "before" media. Sizes canvases to video native px.
+     * @param {string} url
+     * @param {{ fps?: number }} [opts]
+     */
+    async loadVideo(url, opts = {}) {
+        try {
+            if (!this.baseCanvas) throw new Error(`loadVideo called on destroyed canvas (url=${url})`);
+
+            this._teardownBeforeVideo();
+
+            const v = document.createElement('video');
+            v.crossOrigin = 'anonymous';
+            v.muted = true;
+            v.loop = false; // loop handled by ComparisonPlayback
+            v.playsInline = true;
+            v.preload = 'auto';
+            v.src = url;
+
+            await new Promise((resolve, reject) => {
+                const onData = () => { cleanup(); resolve(); };
+                const onErr  = () => { cleanup(); reject(new Error(`Video failed to load: ${url}`)); };
+                const cleanup = () => {
+                    v.removeEventListener('loadeddata', onData);
+                    v.removeEventListener('error', onErr);
+                };
+                v.addEventListener('loadeddata', onData);
+                v.addEventListener('error', onErr);
+            });
+            try { v.currentTime = 0; } catch (_) {}
+
+            if (!this.baseCanvas) return; // teardown raced
+            this._videoBefore = v;
+            this._beforeKind  = 'video';
+            this._beforeFps   = opts.fps > 0 ? opts.fps : 24;
+
+            // Mirror loadImage atomic mode reset
+            this._activeMode = 'none';
+            this.mask.isMaskingMode          = false;
+            this.crop.isCroppingMode         = false;
+            this.comparison.isComparisonMode = false;
+            this.canvas.dataset.mediaUrl = url;
+            delete this.canvas.dataset.comparisonUrl;
+            this.canvas.dataset.sliderPos = '0.5';
+            if (this._onModeChange) this._onModeChange('none');
+
+            // Drive ViewManager.reset (relies on this.img.width/.height). Use a stub Image-like
+            // object exposing width/height for ViewManager + a real Image kept on this.img so
+            // existing img.width consumers don't crash.
+            const w = v.videoWidth;
+            const h = v.videoHeight;
+            this.img = { width: w, height: h }; // duck-typed for ViewManager.reset
+
+            const ratio = Math.min(1, MAX_TEXTURE_SIZE / Math.max(w, h));
+            const clampedW = Math.round(w * ratio);
+            const clampedH = Math.round(h * ratio);
+            this.baseCanvas.width  = clampedW;
+            this.baseCanvas.height = clampedH;
+            this.baseCanvas.style.width  = clampedW + 'px';
+            this.baseCanvas.style.height = clampedH + 'px';
+            this.overlayCanvas.width  = clampedW;
+            this.overlayCanvas.height = clampedH;
+            this.overlayCanvas.style.width  = clampedW + 'px';
+            this.overlayCanvas.style.height = clampedH + 'px';
+            this.stackEl.style.width  = clampedW + 'px';
+            this.stackEl.style.height = clampedH + 'px';
+
+            await this.resetView();
+        } catch (err) {
+            clientLogger.error('canvas', 'Failed to load video', err);
+            throw err;
+        }
+    }
+
+    /**
+     * Load a video as the "after" comparison media.
+     * @param {string} url
+     * @param {{ fps?: number }} [opts]
+     */
+    async loadComparisonVideo(url, opts = {}) {
+        this._stopComparePlayback();
+        this._teardownAfterVideo();
+        await this.comparison.loadVideo(url, opts.fps || 24);
+        this._activeMode = 'compare';
+        this.canvas.dataset.comparisonUrl = url;
+        this.input.updateCursor();
+        this.draw();
+        this._wireComparePlayback();
+        if (this._onModeChange) this._onModeChange('compare');
+    }
+
+    // ── Compare playback (image+video / video+video pairs) ────────────────────
+
+    _hasAnyCompareVideo() {
+        return this._beforeKind === 'video' || this.comparison.afterKind === 'video';
+    }
+
+    _wireComparePlayback() {
+        this._teardownCompareVideoHandlers();
+        const handlers = [];
+        const attach = (video, name) => {
+            if (!video || video.tagName !== 'VIDEO') return;
+            const onTimeUpdate = () => this._onCompareTick(name);
+            const onPlay   = () => this._kickCompareRaf();
+            const onPause  = () => { /* rAF self-stops when both paused */ };
+            const onEnded  = () => this._onCompareEnded();
+            const onSeeked = () => this.draw();
+            video.addEventListener('timeupdate', onTimeUpdate);
+            video.addEventListener('play',   onPlay);
+            video.addEventListener('pause',  onPause);
+            video.addEventListener('ended',  onEnded);
+            video.addEventListener('seeked', onSeeked);
+            handlers.push({ video, name: 'timeupdate', fn: onTimeUpdate });
+            handlers.push({ video, name: 'play',   fn: onPlay });
+            handlers.push({ video, name: 'pause',  fn: onPause });
+            handlers.push({ video, name: 'ended',  fn: onEnded });
+            handlers.push({ video, name: 'seeked', fn: onSeeked });
+            try { video.currentTime = 0; } catch (_) {}
+        };
+        attach(this._videoBefore, 'before');
+        if (this.comparison.afterKind === 'video') attach(this.comparison.imgAfter, 'after');
+        this._compareVideoHandlers = handlers;
+    }
+
+    _teardownCompareVideoHandlers() {
+        for (const { video, name, fn } of this._compareVideoHandlers) {
+            try { video.removeEventListener(name, fn); } catch (_) {}
+        }
+        this._compareVideoHandlers = [];
+    }
+
+    _shorterDuration() {
+        const a = this._beforeKind === 'video' ? (this._videoBefore?.duration || 0) : Infinity;
+        const b = this.comparison.afterKind === 'video' ? (this.comparison.imgAfter?.duration || 0) : Infinity;
+        const d = Math.min(a, b);
+        return Number.isFinite(d) ? d : 0;
+    }
+
+    _onCompareTick(_name) {
+        const dur = this._shorterDuration();
+        if (dur > 0) {
+            const tBefore = this._beforeKind === 'video' ? (this._videoBefore?.currentTime || 0) : 0;
+            const tAfter  = this.comparison.afterKind === 'video' ? (this.comparison.imgAfter?.currentTime || 0) : 0;
+            const t = Math.max(tBefore, tAfter);
+            if (t >= dur - 0.001) {
+                this._onCompareEnded();
+                return;
+            }
+        }
+    }
+
+    _onCompareEnded() {
+        const shouldLoop = this._compareLoop && this._compareUserPlaying;
+        this._pauseBoth();
+        this._seekBoth(0);
+        if (shouldLoop) {
+            // resume in next tick so video.currentTime=0 settles
+            requestAnimationFrame(() => this._playBoth());
+        } else {
+            this._compareUserPlaying = false;
+        }
+        this.draw();
+    }
+
+    _isAnyComparePlaying() {
+        if (this._videoBefore && !this._videoBefore.paused) return true;
+        if (this.comparison.afterKind === 'video' && this.comparison.imgAfter && !this.comparison.imgAfter.paused) return true;
+        return false;
+    }
+
+    _playBoth() {
+        this._compareUserPlaying = true;
+        const dur = this._shorterDuration();
+        if (this._videoBefore) {
+            if (dur > 0 && this._videoBefore.currentTime >= dur - 0.001) try { this._videoBefore.currentTime = 0; } catch (_) {}
+            this._videoBefore.play().catch(() => {});
+        }
+        if (this.comparison.afterKind === 'video' && this.comparison.imgAfter) {
+            if (dur > 0 && this.comparison.imgAfter.currentTime >= dur - 0.001) try { this.comparison.imgAfter.currentTime = 0; } catch (_) {}
+            this.comparison.imgAfter.play().catch(() => {});
+        }
+        this._kickCompareRaf();
+    }
+
+    _pauseBoth() {
+        try { this._videoBefore?.pause(); } catch (_) {}
+        if (this.comparison.afterKind === 'video') {
+            try { this.comparison.imgAfter?.pause(); } catch (_) {}
+        }
+    }
+
+    _seekBoth(t) {
+        try { if (this._videoBefore) this._videoBefore.currentTime = t; } catch (_) {}
+        if (this.comparison.afterKind === 'video') {
+            try { this.comparison.imgAfter.currentTime = t; } catch (_) {}
+        }
+        this.draw();
+    }
+
+    _kickCompareRaf() {
+        if (this._compareRafId != null) return;
+        const tick = () => {
+            this._compareRafId = null;
+            if (!this.baseCanvas) return;
+            this.draw();
+            if (this._isAnyComparePlaying()) {
+                this._compareRafId = requestAnimationFrame(tick);
+            }
+        };
+        this._compareRafId = requestAnimationFrame(tick);
+    }
+
+    _stopComparePlayback() {
+        if (this._compareRafId != null) {
+            cancelAnimationFrame(this._compareRafId);
+            this._compareRafId = null;
+        }
+        this._compareUserPlaying = false;
+        this._pauseBoth();
+        this._teardownCompareVideoHandlers();
+    }
+
+    _teardownBeforeVideo() {
+        if (this._videoBefore) {
+            try { this._videoBefore.pause(); } catch (_) {}
+            try { this._videoBefore.removeAttribute('src'); this._videoBefore.load(); } catch (_) {}
+            this._videoBefore = null;
+        }
+        this._beforeKind = 'image';
+        this._beforeFps  = 24;
+    }
+
+    _teardownAfterVideo() {
+        // ComparisonManager.destroy zeroes imgAfter; here we only clear video handlers
+        // when re-loading a new comparison media. Pause + detach old video element.
+        if (this.comparison.afterKind === 'video' && this.comparison.imgAfter) {
+            try { this.comparison.imgAfter.pause(); } catch (_) {}
+            try { this.comparison.imgAfter.removeAttribute('src'); this.comparison.imgAfter.load(); } catch (_) {}
+        }
+    }
+
+    // Public compare playback API
+    playCompare()  { if (this._hasAnyCompareVideo()) this._playBoth(); }
+    pauseCompare() {
+        this._compareUserPlaying = false;
+        this._pauseBoth();
+        this.draw();
+    }
+    togglePlayCompare() {
+        if (!this._hasAnyCompareVideo()) return;
+        if (this._isAnyComparePlaying()) {
+            this._compareUserPlaying = false;
+            this._pauseBoth();
+        } else {
+            this._playBoth();
+        }
+        this.draw();
+    }
+    /** Step frames on both video sides. dir = +1 or -1. Clamps at ends, no wrap.
+     *  Tracks pending seek time so rapid presses accumulate even when Chromium
+     *  coalesces in-flight seeks. */
+    frameStepCompare(dir = 1) {
+        if (!this._hasAnyCompareVideo()) return;
+        this._compareUserPlaying = false;
+        this._pauseBoth();
+        const stepVideo = (v, fps) => {
+            if (!v) return;
+            const step = 1 / Math.max(1, fps);
+            const dur = v.duration || 0;
+            const base = (v._pendingSeekTime != null) ? v._pendingSeekTime : v.currentTime;
+            let next = base + dir * step;
+            next = Math.max(0, Math.min(Math.max(0, dur - 0.0001), next));
+            v._pendingSeekTime = next;
+            try { v.currentTime = next; } catch (_) {}
+            // Clear pending once browser commits seek.
+            const onSeeked = () => {
+                if (Math.abs(v.currentTime - next) < step / 2) v._pendingSeekTime = null;
+                v.removeEventListener('seeked', onSeeked);
+            };
+            v.addEventListener('seeked', onSeeked);
+        };
+        if (this._videoBefore) stepVideo(this._videoBefore, this._beforeFps);
+        if (this.comparison.afterKind === 'video') stepVideo(this.comparison.imgAfter, this.comparison.afterFps);
+        // Don't draw here — seeked handler (in _wireComparePlayback) calls draw() when frame arrives.
+    }
+    setCompareLoop(on) { this._compareLoop = !!on; }
+    getCompareLoop()   { return this._compareLoop; }
+    isCompareVideoPair() { return this._hasAnyCompareVideo(); }
 
     async resetView() {
         await this.view.reset(this.container, this.img);
@@ -385,7 +707,10 @@ class _CanvasCore {
     _renderBase() {
         const ctx = this.baseCtx;
         ctx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
-        const src = this._processedBitmap || this.img;
+        const src = (this._beforeKind === 'video' && this._videoBefore)
+            ? this._videoBefore
+            : (this._processedBitmap || this.img);
+        if (!_isDrawable(src)) return;
         ctx.drawImage(src, 0, 0, this.baseCanvas.width, this.baseCanvas.height);
     }
 
@@ -396,7 +721,7 @@ class _CanvasCore {
         ctx.clearRect(0, 0, W, H);
 
         // 1. Comparison clip layer (image-px math; overlay ctx un-transformed)
-        if (this.comparison.isComparisonMode && this.comparison.imgAfter.width) {
+        if (this.comparison.isComparisonMode && this.comparison.afterWidth) {
             this._drawComparisonLayer();
         }
 
@@ -426,19 +751,27 @@ class _CanvasCore {
 
     _drawComparisonLayer() {
         const ctx = this.overlayCtx;
-        ctx.save();
         const imgAfter = this.comparison.imgAfter;
-        const relScale = Math.max(this.img.width / imgAfter.width, this.img.height / imgAfter.height);
+        if (!imgAfter) return;
 
-        const compW = imgAfter.width  * relScale;
-        const compH = imgAfter.height * relScale;
-        const compX = (this.img.width  - compW) / 2;
-        const compY = (this.img.height - compH) / 2;
+        const afterW = this.comparison.afterWidth;
+        const afterH = this.comparison.afterHeight;
+        if (!afterW || !afterH) return;
 
-        const clipX = this.comparison.sliderPos * this.img.width;
+        const baseW = this.baseCanvas.width;
+        const baseH = this.baseCanvas.height;
+
+        ctx.save();
+        const relScale = Math.max(baseW / afterW, baseH / afterH);
+        const compW = afterW * relScale;
+        const compH = afterH * relScale;
+        const compX = (baseW - compW) / 2;
+        const compY = (baseH - compH) / 2;
+
+        const clipX = this.comparison.sliderPos * baseW;
 
         ctx.beginPath();
-        ctx.rect(clipX, 0, this.img.width - clipX, this.img.height);
+        ctx.rect(clipX, 0, baseW - clipX, baseH);
         ctx.clip();
         ctx.drawImage(imgAfter, compX, compY, compW, compH);
         ctx.restore();
@@ -624,6 +957,9 @@ export const MpiCanvas = ComponentFactory.create({
 
         const _methods = [
             'destroy','setMaskDataURL','compositeMaskDataURL','clearImage','loadImage','loadComparisonImage',
+            'loadVideo','loadComparisonVideo',
+            'playCompare','pauseCompare','togglePlayCompare','frameStepCompare',
+            'setCompareLoop','getCompareLoop','isCompareVideoPair',
             'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
             'setMaskOpacity','clearMask','getMaskDataURL',

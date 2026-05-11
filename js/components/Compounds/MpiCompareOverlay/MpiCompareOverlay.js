@@ -1,21 +1,25 @@
 /**
- * MpiCompareOverlay — Side-by-side image comparison overlay (Compound)
+ * MpiCompareOverlay — Side-by-side comparison overlay (Compound)
  *
- * Full #tool-container takeover that renders two images on an MpiCanvas
- * in comparison mode. The vertical slider reveals the second image (imgAfter).
+ * Full #tool-container takeover that renders two media items on an MpiCanvas
+ * in comparison mode. The vertical slider reveals the second media (imgAfter).
+ *
+ * Supports image+image, image+video, video+image, and video+video pairs.
+ * Video playback driven by hotkeys only (no on-screen transport):
+ *   space            → play/pause both
+ *   arrowleft/right  → frame step (no wrap, clamps at ends)
+ *   l                → toggle loop (default ON)
  *
  * Uses MpiOverlay as its base — inherits the Stash Pattern, OverlayManager
  * registration, and Escape-to-close behaviour automatically.
  *
  * Usage:
  *   const compare = MpiCompareOverlay.mount(document.createElement('div'));
- *   compare.el.open(selectedItemA, selectedItemB);  // resolves URLs, shows overlay
+ *   compare.el.open(selectedItemA, selectedItemB);
  *   compare.on('close', () => {});
  *
- * Props: none required at mount time.
- *
  * Instance methods (on instance.el):
- *   open(itemA, itemB) — load two MediaItems and show the overlay
+ *   open(itemA, itemB) — load two MediaItems / HistoryItems and show the overlay
  *
  * Emits:
  *   'close' {} — overlay closed (forwarded from MpiOverlay)
@@ -25,8 +29,8 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay }       from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiCanvas }        from '../../Primitives/MpiCanvas/MpiCanvas.js';
 import { qs }               from '../../../utils/dom.js';
+import { Hotkeys }          from '../../../managers/hotkeyManager.js';
 
-/** Max chars shown in a label before truncation */
 const LABEL_MAX = 28;
 
 function _truncate(str) {
@@ -34,14 +38,25 @@ function _truncate(str) {
     return str.length > LABEL_MAX ? str.slice(0, LABEL_MAX - 1) + '…' : str;
 }
 
-/** Resolve a MediaItem's filePath to a fetchable URL */
 function _resolveUrl(item) {
     if (!item?.filePath) return '';
     const p = item.filePath;
-    // Already a full URL or already a project-file API path
     if (p.startsWith('http') || p.startsWith('blob:') || p.startsWith('data:') || p.includes('project-file')) return p;
-    // Absolute disk path — wrap in project-file API
     return `/project-file?path=${encodeURIComponent(p.replace(/\\/g, '/'))}`;
+}
+
+const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|$)/i;
+
+function _isVideoItem(item) {
+    if (!item) return false;
+    if (item.type === 'video') return true;
+    if (item.mediaType === 'video') return true;
+    if (VIDEO_EXT_RE.test(item.filePath || '')) return true;
+    return false;
+}
+
+function _fpsOf(item, fallback = 24) {
+    return item?.videoMeta?.fps || item?.fps || fallback;
 }
 
 export const MpiCompareOverlay = ComponentFactory.create({
@@ -59,17 +74,19 @@ export const MpiCompareOverlay = ComponentFactory.create({
     `,
 
     setup: (el, _props, emit) => {
-        // ── MpiOverlay base — owns #tool-container stash + OverlayManager ──────
         const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
         overlay.el.appendToContainer(el);
 
-        overlay.on('close', () => emit('close', {}));
+        overlay.on('close', () => {
+            _unbindHotkeys();
+            emit('close', {});
+        });
 
         el.show = () => overlay.el.show();
         el.hide = () => overlay.el.hide();
 
-        // ── Canvas instance (lazy — created on first open) ────────────────────
         let _canvas = null;
+        const _hotkeyUnsubs = [];
 
         const canvasWrap  = qs('#canvas-wrap',   el);
         const labelBefore = qs('#label-before',  el);
@@ -80,40 +97,73 @@ export const MpiCompareOverlay = ComponentFactory.create({
             _canvas = MpiCanvas.mount(canvasWrap);
         }
 
+        function _bindHotkeys() {
+            _unbindHotkeys();
+            _hotkeyUnsubs.push(Hotkeys.bind('compare.playPause', () => {
+                _canvas?.el?.togglePlayCompare?.();
+            }));
+            _hotkeyUnsubs.push(Hotkeys.bind('compare.frame.back', () => {
+                _canvas?.el?.frameStepCompare?.(-1);
+            }));
+            _hotkeyUnsubs.push(Hotkeys.bind('compare.frame.forward', () => {
+                _canvas?.el?.frameStepCompare?.(+1);
+            }));
+            _hotkeyUnsubs.push(Hotkeys.bind('compare.loop', () => {
+                if (!_canvas?.el) return;
+                _canvas.el.setCompareLoop(!_canvas.el.getCompareLoop());
+            }));
+        }
+
+        function _unbindHotkeys() {
+            while (_hotkeyUnsubs.length) {
+                const fn = _hotkeyUnsubs.pop();
+                try { fn(); } catch (_) {}
+            }
+        }
+
         /**
-         * Load two MediaItems and show the overlay.
-         * itemA is displayed on the left (before), itemB on the right (after).
-         * @param {import('../../../data/projectModel.js').MediaItem} itemA
-         * @param {import('../../../data/projectModel.js').MediaItem} itemB
+         * @param {object} itemA — left (before)
+         * @param {object} itemB — right (after, revealed by slider)
          */
         el.open = async (itemA, itemB) => {
             _ensureCanvas();
 
             const urlA = _resolveUrl(itemA);
             const urlB = _resolveUrl(itemB);
+            const isVideoA = _isVideoItem(itemA);
+            const isVideoB = _isVideoItem(itemB);
 
-            // Label from filename (no extension) or truncated name
-            const nameA = _truncate(itemA?.name || _basenameNoExt(itemA?.filePath) || 'Before');
-            const nameB = _truncate(itemB?.name || _basenameNoExt(itemB?.filePath) || 'After');
+            const nameA = _truncate(itemA?.name || itemA?.displayName || _basenameNoExt(itemA?.filePath) || 'Before');
+            const nameB = _truncate(itemB?.name || itemB?.displayName || _basenameNoExt(itemB?.filePath) || 'After');
             labelBefore.textContent = nameA;
             labelAfter.textContent  = nameB;
 
-            // Show first so the canvas has dimensions before loading
             overlay.el.show();
 
             try {
-                await _canvas.el.loadImage(urlA);
-                await _canvas.el.loadComparisonImage(urlB);
+                if (isVideoA) {
+                    await _canvas.el.loadVideo(urlA, { fps: _fpsOf(itemA) });
+                } else {
+                    await _canvas.el.loadImage(urlA);
+                }
+                if (isVideoB) {
+                    await _canvas.el.loadComparisonVideo(urlB, { fps: _fpsOf(itemB) });
+                } else {
+                    await _canvas.el.loadComparisonImage(urlB);
+                }
+
+                if (isVideoA || isVideoB) {
+                    _canvas.el.setCompareLoop(true);
+                    _bindHotkeys();
+                }
             } catch (err) {
-                console.error('[MpiCompareOverlay] Failed to load images:', err);
+                console.error('[MpiCompareOverlay] Failed to load media:', err);
             }
         };
 
-        // ── Cleanup canvas on hide ────────────────────────────────────────────
-        // MpiOverlay removes el from the DOM on hide — destroy canvas to avoid
-        // ghost event listeners (InputController has window-level listeners).
         const _origHide = el.hide;
         el.hide = () => {
+            _unbindHotkeys();
             if (_canvas) {
                 _canvas.el.destroy();
                 _canvas = null;
@@ -121,9 +171,9 @@ export const MpiCompareOverlay = ComponentFactory.create({
             _origHide();
         };
 
-        // Safety: MutationObserver in case overlay is removed externally
         const _obs = new MutationObserver(() => {
             if (!document.contains(el) && _canvas) {
+                _unbindHotkeys();
                 _canvas.el.destroy();
                 _canvas = null;
                 _obs.disconnect();
@@ -133,16 +183,13 @@ export const MpiCompareOverlay = ComponentFactory.create({
     }
 });
 
-// ── Private helpers ───────────────────────────────────────────────────────────
-
 function _basenameNoExt(filePath) {
     if (!filePath) return '';
-    // If it's a project-file API URL, decode the path param to get the real filename
     if (filePath.includes('project-file')) {
         try {
             const match = filePath.match(/[?&]path=([^&]+)/);
             if (match) filePath = decodeURIComponent(match[1]);
-        } catch (_) { /* use filePath as-is */ }
+        } catch (_) {}
     }
     const base = filePath.replace(/\\/g, '/').split('/').pop() || '';
     const dot = base.lastIndexOf('.');

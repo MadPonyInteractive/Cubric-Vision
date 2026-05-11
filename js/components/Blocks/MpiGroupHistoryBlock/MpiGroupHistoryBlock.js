@@ -44,6 +44,7 @@ import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSetti
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
+import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
@@ -142,6 +143,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             : (isVideo ? 't2v' : 'generate');
         let _currentIdx = _group.selectedIndex ?? 0;
         let _currentSelectionIndices = [];
+        let _compareOverlay = null;
 
         // ── Persist / toast helpers ──────────────────────────────────────────
 
@@ -719,8 +721,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         });
 
         historyList.on('compare-requested', async ({ indices }) => {
-            if (indices.length !== 2 || isVideo) return;
+            if (indices.length !== 2) return;
             const [idxA, idxB] = indices;
+            if (isVideo) {
+                // Video viewer has no inline compare surface — use full-screen overlay
+                // (parallel to MpiGalleryBlock). Lazy-mount on first use.
+                if (!_compareOverlay) {
+                    _compareOverlay = MpiCompareOverlay.mount(document.createElement('div'));
+                }
+                _compareOverlay.el.open(_group.history[idxA], _group.history[idxB]);
+                return;
+            }
             // Compare needs MpiCanvas alive. If in prompt mode (preview swapped),
             // remount canvas first so loadCompare doesn't hit a destroyed canvas.
             if (historyTools.el.getActiveMode?.() === 'prompt') {
@@ -908,6 +919,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _settingsOverlay.destroy?.();
             _pb?.el?.destroy?.();
             _pb = null;
+            if (_compareOverlay) {
+                try { _compareOverlay.el.hide?.(); } catch (_) {}
+                _compareOverlay.el.destroy?.();
+                _compareOverlay = null;
+            }
         };
     },
 });

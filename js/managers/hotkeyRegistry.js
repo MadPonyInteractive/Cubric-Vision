@@ -319,6 +319,44 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: false,
     },
 
+    // ── Compare Overlay ───────────────────────────────────────────────────────
+    {
+        id:               'compare.playPause',
+        key:              'space',
+        type:             KEY_TYPE.DOWN,
+        category:         'compare',
+        scopeLabel:       'Compare',
+        description:      'Play / pause both videos',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'compare.frame.back',
+        key:              'arrowleft',
+        type:             KEY_TYPE.DOWN,
+        category:         'compare',
+        scopeLabel:       'Compare',
+        description:      'Previous frame (no loop)',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'compare.frame.forward',
+        key:              'arrowright',
+        type:             KEY_TYPE.DOWN,
+        category:         'compare',
+        scopeLabel:       'Compare',
+        description:      'Next frame (no loop)',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'compare.loop',
+        key:              'l',
+        type:             KEY_TYPE.DOWN,
+        category:         'compare',
+        scopeLabel:       'Compare',
+        description:      'Toggle loop',
+        allowWhileTyping: false,
+    },
+
     // ── System / Built-ins ────────────────────────────────────────────────────
     {
         id:               'system.fullscreen',
