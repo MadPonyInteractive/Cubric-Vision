@@ -128,6 +128,8 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         el.loadVideo = (url, meta = {}) => {
             if (!url || !_playerInstance?.el) return;
+            if (meta.fps && _playerInstance.el._setFps) _playerInstance.el._setFps(meta.fps);
+            if (meta.frameCount && _playerInstance.el._setFrameCount) _playerInstance.el._setFrameCount(meta.frameCount);
             if (_playerInstance.el._setSrc) _playerInstance.el._setSrc(url);
         };
 

@@ -77,6 +77,7 @@ export const ICONS = {
     'fullscreen': '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>',
     'frameBack': '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
     'frameForward': '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
+    'frames': '<path d="M4 4h16v16H4V4zm2 2v3h3V6H6zm5 0v3h2V6h-2zm4 0v3h3V6h-3zM6 11v2h3v-2H6zm5 0v2h2v-2h-2zm4 0v2h3v-2h-3zM6 15v3h3v-3H6zm5 0v3h2v-3h-2zm4 0v3h3v-3h-3z"/>',
     'interpolate_stroke': '<rect x="2" y="5" width="5" height="5" rx="1"/><rect x="17" y="5" width="5" height="5" rx="1"/><path d="M9 7.5L12 7.5M15 7.5L18 7.5"/><circle cx="10.5" cy="7.5" r="0.8"/><circle cx="13.5" cy="7.5" r="0.8"/><rect x="2" y="14" width="5" height="5" rx="1"/><rect x="17" y="14" width="5" height="5" rx="1"/><path d="M9 16.5L12 16.5M15 16.5L18 16.5"/><circle cx="10.5" cy="16.5" r="0.8"/><circle cx="13.5" cy="16.5" r="0.8"/>',
     'flipX_stroke': '<path d="M12 3v18"/><path d="M8 7H3v10h5"/><path d="M16 7h5v10h-5"/><path d="M8 12H3"/><path d="M16 12h5"/>',
     'flipY_stroke': '<path d="M3 12h18"/><path d="M7 8V3h10v5"/><path d="M7 16v5h10v-5"/><path d="M12 8V3"/><path d="M12 16v5"/>',

@@ -70,6 +70,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                         </div>
 
                         <div class="mpi-video-player__right">
+                            <div class="mpi-video-player__frames-toggle-wrapper"></div>
                             <div class="mpi-video-player__loop-wrapper"></div>
                             <div class="mpi-video-player__volume">
                                 <div class="mpi-video-player__volume-mute"></div>
@@ -93,7 +94,11 @@ export const MpiVideoPlayer = ComponentFactory.create({
 
         // ── Hoist button declarations out of if-block for destroy() scope ──
         let playBtn, progressSlider, muteBtn, volumeSlider;
-        let frameBackBtn, frameForwardBtn, loopBtn, fullscreenBtn;
+        let frameBackBtn, frameForwardBtn, loopBtn, fullscreenBtn, framesToggleBtn;
+
+        let _showFrames = true;
+        let _fps = props.fps || 24;
+        let _frameCount = null;
 
         // --- Sub-components (only if controls are enabled) ---
         if (hasControls) {
@@ -103,12 +108,13 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const volumeSliderWrapper = qs('.mpi-video-player__volume-slider', el);
             const frameBackWrapper = qs('.mpi-video-player__frame-back-wrapper', el);
             const frameForwardWrapper = qs('.mpi-video-player__frame-forward-wrapper', el);
+            const framesToggleWrapper = qs('.mpi-video-player__frames-toggle-wrapper', el);
             const loopWrapper = qs('.mpi-video-player__loop-wrapper', el);
             const fullscreenWrapper = qs('.mpi-video-player__fullscreen-wrapper', el);
             const currentTimeEl = qs('.mpi-video-player__current', el);
             const durationEl = qs('.mpi-video-player__duration', el);
 
-            const fps = props.fps || 24;
+            // _fps mutable via el._setFps(); frame-step + display read from it
 
             // 1. Play/Pause Button
             playBtn = MpiButton.mount(playPauseWrapper, {
@@ -166,6 +172,15 @@ export const MpiVideoPlayer = ComponentFactory.create({
             });
             if (video.loop) loopBtn.el.classList.add('is-active');
 
+            // 6b. Frames/Seconds Toggle (frames on by default)
+            framesToggleBtn = MpiButton.mount(framesToggleWrapper, {
+                icon: 'frames',
+                active: _showFrames,
+                size: 'sm',
+                info: 'Show frames / seconds'
+            });
+            if (_showFrames) framesToggleBtn.el.classList.add('is-active');
+
             // 7. Fullscreen Button
             fullscreenBtn = MpiButton.mount(fullscreenWrapper, {
                 icon: 'fullscreen',
@@ -193,14 +208,26 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 playBtn.el.classList.toggle('is-active', isPlaying);
             };
 
+            const formatFrame = (s, isDuration = false) => {
+                if (isDuration && Number.isFinite(_frameCount) && _frameCount > 0) {
+                    return String(_frameCount).padStart(4, '0');
+                }
+                return String(Math.max(0, Math.round(s * _fps))).padStart(4, '0');
+            };
+
             const updateTime = () => {
                 if (isSeeking) return;
 
                 const cur = video.currentTime || 0;
                 const dur = video.duration || 0;
 
-                currentTimeEl.textContent = formatTime(cur);
-                durationEl.textContent = formatTime(dur);
+                if (_showFrames) {
+                    currentTimeEl.textContent = formatFrame(cur, false);
+                    durationEl.textContent = formatFrame(dur, true);
+                } else {
+                    currentTimeEl.textContent = formatTime(cur);
+                    durationEl.textContent = formatTime(dur);
+                }
 
                 if (dur > 0) {
                     const pct = (cur / dur) * 1000;
@@ -255,17 +282,17 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 emit('change', { volume: video.volume, muted: video.muted });
             });
 
-            // Frame-back button: seek backward by 1/fps
+            // Frame-back button: seek backward by 1/_fps
             frameBackBtn.on('click', () => {
                 video.pause();
-                const frameStep = 1 / fps;
+                const frameStep = 1 / _fps;
                 video.currentTime = Math.max(0, video.currentTime - frameStep);
             });
 
-            // Frame-forward button: seek forward by 1/fps
+            // Frame-forward button: seek forward by 1/_fps
             frameForwardBtn.on('click', () => {
                 video.pause();
-                const frameStep = 1 / fps;
+                const frameStep = 1 / _fps;
                 video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
             });
 
@@ -274,6 +301,13 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 video.loop = !video.loop;
                 loopBtn.el.classList.toggle('is-active', video.loop);
                 emit('loop-change', { loop: video.loop });
+            });
+
+            // Frames/Seconds display toggle
+            framesToggleBtn.on('click', () => {
+                _showFrames = !_showFrames;
+                framesToggleBtn.el.classList.toggle('is-active', _showFrames);
+                updateTime();
             });
 
             // Fullscreen button
@@ -361,6 +395,16 @@ export const MpiVideoPlayer = ComponentFactory.create({
             video.load();
         };
 
+        el._setFps = (fps) => {
+            const n = Number(fps);
+            if (Number.isFinite(n) && n > 0) _fps = n;
+        };
+
+        el._setFrameCount = (count) => {
+            const n = Number(count);
+            _frameCount = Number.isFinite(n) && n > 0 ? n : null;
+        };
+
         el._play = () => video.play();
         el._pause = () => video.pause();
 
@@ -387,6 +431,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 if (frameBackBtn && frameBackBtn.destroy) frameBackBtn.destroy();
                 if (frameForwardBtn && frameForwardBtn.destroy) frameForwardBtn.destroy();
                 if (loopBtn && loopBtn.destroy) loopBtn.destroy();
+                if (framesToggleBtn && framesToggleBtn.destroy) framesToggleBtn.destroy();
                 if (fullscreenBtn && fullscreenBtn.destroy) fullscreenBtn.destroy();
             }
             _unsubs.forEach(fn => fn());
