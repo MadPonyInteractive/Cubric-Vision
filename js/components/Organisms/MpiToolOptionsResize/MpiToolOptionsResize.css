@@ -26,6 +26,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--s-2);
+    align-items: end;
 }
 
 .mpi-tool-options-resize__row {
@@ -38,8 +39,18 @@
 
 .mpi-tool-options-resize__row .mpi-dropdown,
 .mpi-tool-options-resize__row .mpi-input,
-.mpi-tool-options-resize__pair .mpi-input {
+.mpi-tool-options-resize__pair .mpi-input,
+.mpi-tool-options-resize__pair .mpi-dropdown,
+.mpi-tool-options-resize__pair .mpi-color-picker {
     width: 100%;
+}
+
+.mpi-tool-options-resize__pair > div[hidden] {
+    display: none;
+}
+
+.mpi-tool-options-resize__pair:has(> div[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .mpi-tool-options-resize__row .mpi-radio-group {

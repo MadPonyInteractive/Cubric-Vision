@@ -106,11 +106,15 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             </div>
             <div class="mpi-tool-options-resize__section">
                 <div class="mpi-tool-options-resize__section-label">Method</div>
-                <div class="mpi-tool-options-resize__row" id="resize-method-slot"></div>
-                <div class="mpi-tool-options-resize__row" id="resize-proportion-slot"></div>
+                <div class="mpi-tool-options-resize__pair">
+                    <div id="resize-method-slot"></div>
+                    <div id="resize-proportion-slot"></div>
+                </div>
                 <div class="mpi-tool-options-resize__row" id="resize-crop-slot"></div>
-                <div class="mpi-tool-options-resize__row" id="resize-color-slot"></div>
-                <div class="mpi-tool-options-resize__row" id="resize-divisible-slot"></div>
+                <div class="mpi-tool-options-resize__pair" id="resize-color-divisible-pair">
+                    <div id="resize-color-slot"></div>
+                    <div id="resize-divisible-slot"></div>
+                </div>
             </div>
             <div class="mpi-tool-options-resize__section">
                 <div class="mpi-tool-options-resize__section-label">Transform</div>
