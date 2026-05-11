@@ -469,14 +469,20 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 nameEl.textContent = selected?.name || group.name || '';
 
-                // Top-left badge: SDXL · UPSCALE / IMPORTED / VIDEO · 14.74S / FLUX · MASK
+                // Top-left badge: SDXL · UPSCALE / IMPORTED / WAN 2.2 SMOOTH · 5S / FLUX · MASK
                 const model = getModelById(selected?.modelId);
                 let badgeText = '';
                 if (selected?.uploaded) {
                     badgeText = 'IMPORTED';
                 } else if (group.type === 'video') {
-                    const dur = selected?.duration ? `${selected.duration.toFixed(2)}S` : '';
-                    badgeText = ['VIDEO', dur].filter(Boolean).join(' · ');
+                    const duration = Number(selected?.duration);
+                    const dur = Number.isFinite(duration) && duration > 0
+                        ? `${Math.max(1, Math.round(duration))}S`
+                        : '';
+                    badgeText = [model?.name || selected?.modelId, dur]
+                        .filter(Boolean)
+                        .map(s => String(s).toUpperCase())
+                        .join(' · ');
                 } else {
                     badgeText = [model?.name, selected?.operation]
                         .filter(Boolean)
