@@ -1,0 +1,134 @@
+{
+  "1": {
+    "inputs": {
+      "width": 512,
+      "height": 768,
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad",
+      "pad_color": "255, 105, 180",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "3": {
+    "inputs": {
+      "flip_method": "x-axis: vertically",
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ImageFlip",
+    "_meta": {
+      "title": "ImageFlip"
+    }
+  },
+  "4": {
+    "inputs": {
+      "rotation": "none",
+      "image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "ImageRotate",
+    "_meta": {
+      "title": "Image Rotate"
+    }
+  },
+  "5": {
+    "inputs": {
+      "boolean": [
+        "6",
+        0
+      ],
+      "true": [
+        "3",
+        0
+      ],
+      "false": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "6": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Flip"
+    }
+  },
+  "9": {
+    "inputs": {
+      "video": "D:\\WORK\\Images\\Outputs\\t2v_480.mp4",
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Input_Video"
+    }
+  },
+  "10": {
+    "inputs": {
+      "frame_rate": [
+        "11",
+        0
+      ],
+      "loop_count": 0,
+      "filename_prefix": "FinalGen",
+      "format": "video/nvenc_h264-mp4",
+      "pix_fmt": "yuv420p",
+      "bitrate": 10,
+      "megabit": true,
+      "save_metadata": false,
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "4",
+        0
+      ],
+      "audio": [
+        "9",
+        2
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "11": {
+    "inputs": {
+      "video_info": [
+        "9",
+        3
+      ]
+    },
+    "class_type": "VHS_VideoInfoSource",
+    "_meta": {
+      "title": "Video Info (Source) 🎥🅥🅗🅢"
+    }
+  }
+}

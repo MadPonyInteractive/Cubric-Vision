@@ -1,0 +1,98 @@
+{
+  "1": {
+    "inputs": {
+      "width": 512,
+      "height": 768,
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad",
+      "pad_color": "255, 105, 180",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "2": {
+    "inputs": {
+      "image": "205c4fec-a39b-4569-8e79-14a4c8dc9e92.thumb.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "3": {
+    "inputs": {
+      "flip_method": "x-axis: vertically",
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ImageFlip",
+    "_meta": {
+      "title": "ImageFlip"
+    }
+  },
+  "4": {
+    "inputs": {
+      "rotation": "none",
+      "image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "ImageRotate",
+    "_meta": {
+      "title": "Image Rotate"
+    }
+  },
+  "5": {
+    "inputs": {
+      "boolean": [
+        "6",
+        0
+      ],
+      "true": [
+        "3",
+        0
+      ],
+      "false": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "6": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Flip"
+    }
+  },
+  "7": {
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  }
+}

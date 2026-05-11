@@ -31,16 +31,6 @@
     - Explore adding to settings additive folders for models.
     ```
 
-### Resize tool
-
-  - tags: [feature]
-  - priority: medium
-  - defaultExpanded: true
-    ```md
-    - Add resize tool.
-    This should auto resize the image based on certain parameters and should also work as a transform with handles. Either that or separating into two different tools, a resize tool and a transform tool. This is for the image workspace specifically.
-    ```
-
 ### Trim tool
 
   - tags: [feature]
@@ -86,6 +76,16 @@
     ```
 
 ## PLANNING
+
+### Resize tool
+
+  - tags: [PLAN]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: true
+    ```md
+    Plan file: docs/plans/2026-05-11-resize-tool.md
+    ```
 
 ### Cross-platform portable distribution
 
