@@ -630,32 +630,39 @@ class _CanvasCore {
         }
         this.draw();
     }
-    /** Step frames on both video sides. dir = +1 or -1. Clamps at ends, no wrap.
-     *  Tracks pending seek time so rapid presses accumulate even when Chromium
-     *  coalesces in-flight seeks. */
+    /** Step frames on both video sides by the SAME delta-time so paired videos stay
+     *  in sync regardless of fps mismatch. Delta = 1/maxFps across all video sides
+     *  (highest temporal resolution wins). Clamps at ends, no wrap.
+     *  Tracks pending seek time per video so rapid presses accumulate even when
+     *  Chromium coalesces in-flight seeks. */
     frameStepCompare(dir = 1) {
         if (!this._hasAnyCompareVideo()) return;
         this._compareUserPlaying = false;
         this._pauseBoth();
-        const stepVideo = (v, fps) => {
+
+        // Highest fps among active video sides — drives the shared step size.
+        let maxFps = 1;
+        if (this._beforeKind === 'video')         maxFps = Math.max(maxFps, this._beforeFps);
+        if (this.comparison.afterKind === 'video') maxFps = Math.max(maxFps, this.comparison.afterFps);
+        const step = 1 / Math.max(1, maxFps);
+
+        const stepVideo = (v) => {
             if (!v) return;
-            const step = 1 / Math.max(1, fps);
             const dur = v.duration || 0;
             const base = (v._pendingSeekTime != null) ? v._pendingSeekTime : v.currentTime;
             let next = base + dir * step;
             next = Math.max(0, Math.min(Math.max(0, dur - 0.0001), next));
             v._pendingSeekTime = next;
             try { v.currentTime = next; } catch (_) {}
-            // Clear pending once browser commits seek.
             const onSeeked = () => {
                 if (Math.abs(v.currentTime - next) < step / 2) v._pendingSeekTime = null;
                 v.removeEventListener('seeked', onSeeked);
             };
             v.addEventListener('seeked', onSeeked);
         };
-        if (this._videoBefore) stepVideo(this._videoBefore, this._beforeFps);
-        if (this.comparison.afterKind === 'video') stepVideo(this.comparison.imgAfter, this.comparison.afterFps);
-        // Don't draw here — seeked handler (in _wireComparePlayback) calls draw() when frame arrives.
+        if (this._videoBefore) stepVideo(this._videoBefore);
+        if (this.comparison.afterKind === 'video') stepVideo(this.comparison.imgAfter);
+        // seeked handler (in _wireComparePlayback) calls draw() when frame arrives.
     }
     setCompareLoop(on) { this._compareLoop = !!on; }
     getCompareLoop()   { return this._compareLoop; }
