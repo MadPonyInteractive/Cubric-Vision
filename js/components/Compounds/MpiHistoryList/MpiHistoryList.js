@@ -274,6 +274,17 @@ export const MpiHistoryList = ComponentFactory.create({
             _applyCardStates();
         };
 
+        el.replaceEntry = (item) => {
+            if (!item?.id) return;
+            const idx = _history.findIndex(entry => entry.id === item.id);
+            if (idx === -1) return;
+            _history = _history.slice();
+            _history[idx] = item;
+            _selectedIdx = idx;
+            _anchor = idx;
+            _buildHistoryCards();
+        };
+
         el.removeEntries = (indices, newSelectedIdx = 0) => {
             const idxSet = new Set(indices);
             _history = _history.filter((_, i) => !idxSet.has(i));

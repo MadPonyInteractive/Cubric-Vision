@@ -22,4 +22,10 @@ export const UNIVERSAL_WORKFLOWS = {
     autoMaskImg: {
         workflow: 'img_auto_mask.json',
     },
+    resize: {
+        workflow: 'resize.json',
+    },
+    resizeVideo: {
+        workflow: 'resize_video.json',
+    },
 };

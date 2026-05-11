@@ -64,6 +64,24 @@ These use the same LoRA object shape as flat slots, and the controller writes
 
 > When adding new params: use a capitalized title (e.g. `"Input_Video"`) and add it here.
 
+## Standalone Workflow Injectors
+
+Most params are injected by `comfyController.runWorkflow()` from the title-keyed
+params map produced by `commandExecutor._buildParams()`. Tool-panel utility
+workflows may also use a standalone injector when the params do not fit the
+standard title map.
+
+- Operation declares `injector: '<name>'` in `js/data/commandRegistry.js`.
+- `commandExecutor.runCommand()` loads the workflow JSON, then applies
+  `INJECTORS[name](workflow, payload.injectionParams || {})` before submit.
+- Injector code lives in `js/services/workflowInjectors/` and must target nodes
+  by `_meta.title` using case-insensitive filtering. Never hardcode numeric IDs.
+- Current injector: `resize` (`resize` and `resizeVideo` ops). It writes:
+  `"Resize Image v2"` inputs `width`, `height`, `upscale_method`,
+  `keep_proportion`, `pad_color`, `crop_position`, `divisible_by`, `device`;
+  `"ImageFlip"` input `flip_method`; `"Image Rotate"` input `rotation`; and
+  `"Flip"` input `boolean`.
+
 ## Multi-stage video workflows
 
 Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass, gated by a `Preview_Only` boolean node inside the workflow JSON.

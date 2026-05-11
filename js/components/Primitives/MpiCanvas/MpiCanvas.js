@@ -48,11 +48,13 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
  *   setMaskOpacity(opacity)
  *   clearMask()
  *   getMaskDataURL(bg, fg)
+ *   setPreviewImage(blobUrl)  — resize-mode-only temporary preview image
+ *   clearPreviewImage()       — clears resize preview and restores original image
  *   setCropRatio(ratio)
  *   getCropRect()
  *   destroy()
  *
- * Active modes: 'none' | 'mask' | 'crop' | 'compare'
+ * Active modes: 'none' | 'mask' | 'crop' | 'compare' | 'resize'
  * Setting activeMode to any value automatically exits all other modes.
  *
  * Emits:
@@ -141,6 +143,8 @@ class _CanvasCore {
 
         // Processed bitmap (forward-compat hook for raw tool re-add).
         this._processedBitmap = null;
+        this._previewImg = null;
+        this._previewBlobUrl = null;
 
         // Comparison playback state — populated when before/after is a video.
         this._videoBefore = null;     // HTMLVideoElement | null
@@ -190,7 +194,7 @@ class _CanvasCore {
     }
 
     // ── Active Mode (mutual exclusion) ────────────────────────────────────────
-    // Valid values: 'none' | 'mask' | 'crop' | 'compare'
+    // Valid values: 'none' | 'mask' | 'crop' | 'compare' | 'resize'
     get activeMode() { return this._activeMode; }
     set activeMode(v) {
         if (this._activeMode === v) return;
@@ -257,6 +261,7 @@ class _CanvasCore {
         }
         // Close ImageBitmap if held — GPU memory not released until .close()
         if (this._processedBitmap instanceof ImageBitmap) this._processedBitmap.close();
+        this._revokePreviewBlob();
         this.baseCanvas = null;
         this.overlayCanvas = null;
         this.screenUICanvas = null;
@@ -268,6 +273,7 @@ class _CanvasCore {
         this.ctx = null;
         this.img = null;
         this._processedBitmap = null;
+        this._previewImg = null;
     }
 
     async setMaskDataURL(dataUrl) {
@@ -292,6 +298,8 @@ class _CanvasCore {
     clearImage() {
         this._stopComparePlayback();
         this._teardownBeforeVideo();
+        this._revokePreviewBlob();
+        this._previewImg = null;
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
         this._activeMode = 'none';
@@ -313,6 +321,8 @@ class _CanvasCore {
                 this.img = new Image();
                 this.img.crossOrigin = 'anonymous';
             }
+            this._revokePreviewBlob();
+            this._previewImg = null;
             await new Promise((resolve, reject) => {
                 this.img.onload = resolve;
                 this.img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
@@ -337,17 +347,7 @@ class _CanvasCore {
             const clampedW = Math.round(imgW * ratio);
             const clampedH = Math.round(imgH * ratio);
 
-            // Size base + overlay backing buffers + CSS to image-native (clamped) px.
-            this.baseCanvas.width  = clampedW;
-            this.baseCanvas.height = clampedH;
-            this.baseCanvas.style.width  = clampedW + 'px';
-            this.baseCanvas.style.height = clampedH + 'px';
-            this.overlayCanvas.width  = clampedW;
-            this.overlayCanvas.height = clampedH;
-            this.overlayCanvas.style.width  = clampedW + 'px';
-            this.overlayCanvas.style.height = clampedH + 'px';
-            this.stackEl.style.width  = clampedW + 'px';
-            this.stackEl.style.height = clampedH + 'px';
+            this._sizeImageCanvases(clampedW, clampedH);
 
             this.mask.init(this.img.width, this.img.height);
             this.crop.init(this.img.width, this.img.height);
@@ -668,8 +668,60 @@ class _CanvasCore {
     getCompareLoop()   { return this._compareLoop; }
     isCompareVideoPair() { return this._hasAnyCompareVideo(); }
 
+    _displayImage() {
+        return this._previewImg || this.img;
+    }
+
+    _revokePreviewBlob() {
+        if (!this._previewBlobUrl) return;
+        try { URL.revokeObjectURL(this._previewBlobUrl); } catch (_) {}
+        this._previewBlobUrl = null;
+    }
+
+    _sizeImageCanvases(width, height) {
+        this.baseCanvas.width  = width;
+        this.baseCanvas.height = height;
+        this.baseCanvas.style.width  = width + 'px';
+        this.baseCanvas.style.height = height + 'px';
+        this.overlayCanvas.width  = width;
+        this.overlayCanvas.height = height;
+        this.overlayCanvas.style.width  = width + 'px';
+        this.overlayCanvas.style.height = height + 'px';
+        this.stackEl.style.width  = width + 'px';
+        this.stackEl.style.height = height + 'px';
+    }
+
+    async setPreviewImage(blobUrl) {
+        if (this.activeMode !== 'resize' || !blobUrl) return;
+        const preview = new Image();
+        preview.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+            preview.onload = resolve;
+            preview.onerror = () => reject(new Error(`Preview image failed to load: ${blobUrl}`));
+            preview.src = blobUrl;
+        });
+        if (this.activeMode !== 'resize' || !this.baseCanvas) return;
+        this._revokePreviewBlob();
+        this._previewBlobUrl = blobUrl.startsWith('blob:') ? blobUrl : null;
+        this._previewImg = preview;
+
+        const ratio = Math.min(1, MAX_TEXTURE_SIZE / Math.max(preview.width, preview.height));
+        this._sizeImageCanvases(Math.round(preview.width * ratio), Math.round(preview.height * ratio));
+        await this.resetView();
+    }
+
+    async clearPreviewImage() {
+        if (!this._previewImg) return;
+        this._revokePreviewBlob();
+        this._previewImg = null;
+        if (!this.img?.width || !this.baseCanvas) return;
+        const ratio = Math.min(1, MAX_TEXTURE_SIZE / Math.max(this.img.width, this.img.height));
+        this._sizeImageCanvases(Math.round(this.img.width * ratio), Math.round(this.img.height * ratio));
+        await this.resetView();
+    }
+
     async resetView() {
-        await this.view.reset(this.container, this.img);
+        await this.view.reset(this.container, this._displayImage());
         this.resize();
         this._applyTransform();
         this.draw();
@@ -694,8 +746,9 @@ class _CanvasCore {
         this.screenUICanvas.height = rect.height;
         this.screenUICanvas.style.width  = rect.width  + 'px';
         this.screenUICanvas.style.height = rect.height + 'px';
-        if (this.view.isManagedView && this.img && this.img.width) {
-            this.view.refit(rect.width, rect.height, this.img.width, this.img.height);
+        const display = this._displayImage();
+        if (this.view.isManagedView && display && display.width) {
+            this.view.refit(rect.width, rect.height, display.width, display.height);
         } else {
             this.view.handleResize(oldW, oldH, rect.width, rect.height);
         }
@@ -704,7 +757,8 @@ class _CanvasCore {
     }
 
     draw() {
-        if (!this.img || !this.img.width) return;
+        const display = this._displayImage();
+        if (!display || !display.width) return;
         if (this.baseCanvas.width === 0 || this.baseCanvas.height === 0) return;
         this._renderBase();
         this._renderOverlay();
@@ -716,7 +770,7 @@ class _CanvasCore {
         ctx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
         const src = (this._beforeKind === 'video' && this._videoBefore)
             ? this._videoBefore
-            : (this._processedBitmap || this.img);
+            : (this._previewImg || this._processedBitmap || this.img);
         if (!_isDrawable(src)) return;
         ctx.drawImage(src, 0, 0, this.baseCanvas.width, this.baseCanvas.height);
     }
@@ -740,7 +794,8 @@ class _CanvasCore {
         }
 
         // 3. Crop overlay
-        this.crop.draw(ctx, this.img.width, this.img.height, this.view.scale);
+        const display = this._displayImage();
+        this.crop.draw(ctx, display.width, display.height, this.view.scale);
 
         // 4. Grid
         if (this.gridH > 1 || this.gridV > 1) {
@@ -787,6 +842,7 @@ class _CanvasCore {
     _drawGridOverlay() {
         const ctx = this.overlayCtx;
         const scale = this.view.scale || 1;
+        const display = this._displayImage();
         ctx.save();
         ctx.strokeStyle = GRID_LINE;
         ctx.lineWidth = 2 / scale;
@@ -794,14 +850,14 @@ class _CanvasCore {
         ctx.beginPath();
 
         for (let i = 1; i < this.gridH; i++) {
-            const y = (this.img.height / this.gridH) * i;
+            const y = (display.height / this.gridH) * i;
             ctx.moveTo(0, y);
-            ctx.lineTo(this.img.width, y);
+            ctx.lineTo(display.width, y);
         }
         for (let i = 1; i < this.gridV; i++) {
-            const x = (this.img.width / this.gridV) * i;
+            const x = (display.width / this.gridV) * i;
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, this.img.height);
+            ctx.lineTo(x, display.height);
         }
         ctx.stroke();
 
@@ -815,7 +871,8 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         const W = this.screenUICanvas.width;
         const H = this.screenUICanvas.height;
-        const barX = this.view.offsetX + this.comparison.sliderPos * this.img.width * this.view.scale;
+        const display = this._displayImage();
+        const barX = this.view.offsetX + this.comparison.sliderPos * display.width * this.view.scale;
         ctx.save();
         ctx.strokeStyle = BRUSH_CURSOR;
         ctx.lineWidth = 2;
@@ -973,7 +1030,8 @@ export const MpiCanvas = ComponentFactory.create({
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks',
             'setCropRatio','getCropRect',
-            'setProcessedImage','clearProcessedImage'
+            'setProcessedImage','clearProcessedImage',
+            'setPreviewImage','clearPreviewImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });
     }

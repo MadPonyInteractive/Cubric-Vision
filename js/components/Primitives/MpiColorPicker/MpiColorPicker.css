@@ -1,0 +1,176 @@
+.mpi-color-picker {
+    width: 100%;
+}
+
+.mpi-color-picker__trigger {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--s-2);
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background: var(--surface-2);
+    color: var(--ink-1);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    letter-spacing: 0;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.mpi-color-picker__trigger:hover {
+    border-color: var(--ink-3);
+    background: var(--surface-3);
+}
+
+.mpi-color-picker__swatch,
+.mpi-color-picker__preview {
+    border: 1px solid var(--line);
+    background:
+        linear-gradient(45deg, var(--surface-1) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--surface-1) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--surface-1) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--surface-1) 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+}
+
+.mpi-color-picker__swatch {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+.mpi-color-picker__hex {
+    color: var(--ink-2);
+}
+
+.mpi-color-picker__popup {
+    position: fixed;
+    z-index: 9999;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background: var(--surface-2);
+    color: var(--ink-1);
+}
+
+.mpi-color-picker__preview {
+    height: 32px;
+}
+
+.mpi-color-picker__saturation {
+    position: relative;
+    height: 156px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background-color: hsl(0 100% 50%);
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.mpi-color-picker__saturation:focus,
+.mpi-color-picker__hue:focus {
+    outline: 1px solid var(--accent-frost);
+    outline-offset: 2px;
+}
+
+.mpi-color-picker__saturation-shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mpi-color-picker__saturation-shade--white {
+    background: linear-gradient(90deg, white, transparent);
+}
+
+.mpi-color-picker__saturation-shade--black {
+    background: linear-gradient(0deg, black, transparent);
+}
+
+.mpi-color-picker__saturation-handle,
+.mpi-color-picker__hue-handle {
+    position: absolute;
+    z-index: 1;
+    transform: translate(-50%, -50%);
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 70%), 0 1px 4px rgb(0 0 0 / 45%);
+    pointer-events: none;
+}
+
+.mpi-color-picker__saturation-handle {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+}
+
+.mpi-color-picker__hue {
+    position: relative;
+    height: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background: linear-gradient(
+        90deg,
+        hsl(0 100% 50%),
+        hsl(60 100% 50%),
+        hsl(120 100% 50%),
+        hsl(180 100% 50%),
+        hsl(240 100% 50%),
+        hsl(300 100% 50%),
+        hsl(360 100% 50%)
+    );
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.mpi-color-picker__hue-handle {
+    top: 50%;
+    width: 8px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+}
+
+.mpi-color-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-1);
+}
+
+.mpi-color-picker__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.mpi-color-picker__field input {
+    min-width: 0;
+    width: 100%;
+    padding: 6px 7px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    background: var(--surface-1);
+    color: var(--ink-1);
+    font: inherit;
+}
+
+.mpi-color-picker__field input:focus {
+    outline: 1px solid var(--accent-frost);
+    outline-offset: 0;
+}
+
+.mpi-color-picker__field--hex {
+    width: 100%;
+}

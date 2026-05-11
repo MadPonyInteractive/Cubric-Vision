@@ -174,6 +174,7 @@ export const DEPS = {
         filename: 'comfyui-kjnodes',
         url: 'https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.zip',
         installRequirements: true,
+        installOnEngine: true,
         size: '28MB',
     },
     'ComfyUI-UltimateSDUpscale': {

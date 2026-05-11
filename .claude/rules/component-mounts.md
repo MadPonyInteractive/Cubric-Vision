@@ -56,6 +56,8 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
+    resize:       MpiToolOptionsResize,
+    resizeVideo:  MpiToolOptionsResize,
 };
 ```
 
@@ -68,7 +70,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsResize`
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 
 **Video groups** (`_group.type === 'video'`):
@@ -80,12 +82,13 @@ const TOOL_OPTIONS_REGISTRY = {
 
 ## MpiToolOptions* (Organisms — js/components/Organisms/MpiToolOptions<Name>/)
 
-Four self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
+Five self-contained tool-options compounds. Each mounts into `#right-top-slot` via the Block mediator. No bars inside viewers.
 
 **Pattern:** `setup` enters viewer mode → owns controls → `destroy` evaluates mask + exits viewer mode. No apply buttons on mask panel (PromptBox drives ops). No cancel buttons.
 
 - `MpiToolOptionsCrop`   props: `{ viewer, kind: 'image'|'video' }`   — family `MpiDropdown` (SDXL/FLUX/SOCIAL/FREE) + orientation `MpiRadioGroup` (icon-only, sdxl/flux only) + ratio `MpiRadioGroup` (icon-only, hidden for FREE) + apply (image) / snapshot+save (video) buttons. Pushes ratio to `viewer.el.setCropRatio(ratio|null)` — `null` = FREE (no aspect lock). Emits `apply { kind: 'image'|'video-save'|'video-snapshot' }`. Crop drag honors Shift modifier (scales from rect center) via `Hotkeys.register('shift', …)` inside `CropManager`/`cropTool`.
 - `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
+- `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, Apply `MpiButton`. Image mode debounces live Comfy previews into `viewer.el.setResizePreview(blobUrl)` without saving history; Apply appends a new history entry and preserves the source item. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
 
@@ -207,7 +210,7 @@ Builds its own tool list from `mode: 'image'|'video'` prop. All tools — flat o
 
 - `MpiButton` (every tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled, extraClasses:'mpi-ibtn--rail' }`   slot: per-button wrapper div appended to the group's `__slot` — wrapper required because `ComponentFactory.mount` writes `container.innerHTML` and would clobber siblings otherwise. `toggleable:false` enforces radio behaviour (re-click = no-op)
 
-**Image mode tools:** `prompt`, `crop`, `mask`
+**Image mode tools:** `prompt`, `crop`, `resize`, `mask`
 **Video mode tools:** `prompt`, `crop`, `videoUpscale`, `interpolate`
 
 **Instance API (on `el`):**

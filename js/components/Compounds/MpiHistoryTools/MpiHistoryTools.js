@@ -51,7 +51,7 @@ const IMAGE_TOOLS = [
         label: 'Transform',
         group: [
             { mode: 'crop', icon: 'crop', info: 'Crop' },
-            // resize — not yet implemented; slot reserved
+            { mode: 'resize', icon: 'resize', info: 'Resize' },
         ],
     },
     {

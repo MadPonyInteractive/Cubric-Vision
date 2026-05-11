@@ -55,6 +55,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 
 10. **Queue mode is in-app Cue dispatch** - `generationService` owns `_cueQueue` and submits one ComfyUI prompt at a time. Do not use ComfyUI native queue polling for Cue depth.
 11. **LoRA settings can be flat or staged** - most models use six flat LoRA slots. WAN declares `model.loraStages` and stores LoRAs as `{ high: [...], low: [...] }`, injecting `Lora_High_*` and `Lora_Low_*` by workflow node title.
+12. **Standalone workflow injectors are allowed for tool-panel utility workflows** - operations declare `injector` in `commandRegistry.js`; `commandExecutor` applies the matching `js/services/workflowInjectors/*Injector.js` after workflow JSON load and before submit. Injectors still target nodes by `_meta.title`, never numeric IDs.
 
 ## How to Orient in an Unfamiliar File
 

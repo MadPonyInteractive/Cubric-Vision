@@ -21,13 +21,14 @@
 
 import { ComfyUIController } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
-import { getCommandMediaInputs } from '../data/commandRegistry.js';
+import { COMMANDS, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
 import { getModelSettings, getToolSettings } from '../data/projectModel.js';
 import { DEPS } from '../data/modelConstants/dependencies.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
+import { INJECTORS } from './workflowInjectors/index.js';
 
 function _buildComfyViewUrl(fileInfo) {
     const params = new URLSearchParams();
@@ -449,10 +450,34 @@ export function runCommand(payload) {
             return;
         }
 
+        const opDef = COMMANDS[payload.operation];
+        if (opDef?.injector) {
+            const injector = INJECTORS[opDef.injector];
+            if (!injector) {
+                clientLogger.error('commandExecutor', `Missing injector "${opDef.injector}" for op ${payload.operation}`);
+            } else {
+                try {
+                    injector(workflow, payload.injectionParams || {});
+                    // Standalone injector params are already written into the
+                    // workflow. Remove them so the generic title injector below
+                    // cannot re-match names like `flip` against a `Flip` node.
+                    Object.keys(payload.injectionParams || {}).forEach(key => {
+                        delete params[key];
+                    });
+                    clientLogger.info('commandExecutor', `Applied injector "${opDef.injector}"`);
+                } catch (err) {
+                    exec.onError?.(err);
+                    return;
+                }
+            }
+        }
+
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
         // — or "preview" when this is a preview-only run on a multi-stage workflow.
         // Only images/gifs from these nodes are treated as final results.
-        const _captureTitle = payload.previewOnly === true ? 'preview' : 'output';
+        const _captureTitle = payload.previewOnly === true && String(payload.operation || '').endsWith('_ms')
+            ? 'preview'
+            : 'output';
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id =>
                 workflow[id]._meta?.title?.toLowerCase() === _captureTitle

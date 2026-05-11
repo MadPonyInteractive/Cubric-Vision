@@ -80,6 +80,38 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsResizeProps (Organism — js/components/Organisms/MpiToolOptionsResize)
+ * @property {Object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
+ * @property {'image'|'video'} kind
+ * @property {Object|null} [currentItem] - Selected history item used to seed source dimensions
+ *
+ * Persists project.toolSettings.resize:
+ * { width, height, upscale_method, keep_proportion, pad_color: {r,g,b},
+ *   crop_position, divisible_by, flip, rotation }
+ *
+ * Image mode runs debounced live previews via commandExecutor without saving
+ * history. Emits: 'apply' full resize params object; parent block appends the
+ * resized result as a new history entry.
+ */
+
+/**
+ * @typedef {Object} MpiColorPickerProps (Primitive — js/components/Primitives/MpiColorPicker)
+ * @property {string|{r:number,g:number,b:number}} [value='#000000'] - Initial RGB or #rrggbb color
+ * @property {string} [info] - Info Bar description
+ *
+ * HSV visual picker with saturation/value square, hue slider, and RGB/hex
+ * precision inputs. Supports pointer dragging and keyboard arrow adjustment.
+ *
+ * Instance methods (on instance.el):
+ *   getRGB()          — returns { r, g, b }
+ *   setRGB(r, g, b)   — updates color and emits change
+ *   setHex(hex)       — updates color from #rrggbb and emits change
+ *   getHex()          — returns #rrggbb
+ *
+ * Emits: 'change' { r, g, b, hex }
+ */
+
+/**
  * MpiOptionSelector `buttons` variant (extends MpiOptionSelector):
  *   buttons: [{ icon, label?, value, info? }]
  *   triggerIcon?, triggerSize?, triggerVariant?, triggerActive?, popupTitle?, info?
@@ -111,7 +143,7 @@
  * @typedef {Object} MpiHistoryToolsProps (Compound — js/components/Compounds/MpiHistoryTools)
  * @property {'image'|'video'} mode - Selects the built-in tool list for the workspace.
  *
- * Built-in image tools: prompt, crop, mask.
+ * Built-in image tools: prompt, crop, resize, mask.
  * Built-in video tools: prompt, crop, videoUpscale, interpolate.
  *
  * Instance methods (on instance.el):
@@ -372,11 +404,12 @@
  * @property {string} [name='info'] - Key from the ICONS registry.
  *   Fill icons: generate, play, pause, stop, check, close, plus, minus, trash, edit, copy,
  *     download, upload, refresh, search, heart, enhance, bolt, sparkle, layers,
- *     media, image, compare, crop, chat, text, translate, folder, settings, help, info, grid,
+ *     media, image, compare, crop, resize, chat, text, translate, folder, settings, help, info, grid,
  *     video, audio, upscaler, detailer, mask, unload, menu, back, chevronDown, chevronRight,
  *     volumeOff, volumeLow, volumeHigh, negative.
  *   Stroke icons (use stroke=true): ratio_1_1, ratio_3_4, ratio_4_3, ratio_4_5, ratio_5_4,
- *     ratio_5_8, ratio_8_5, ratio_9_16, ratio_16_9, gallery, refresh_stroke, seed.
+ *     ratio_5_8, ratio_8_5, ratio_9_16, ratio_16_9, gallery, refresh_stroke, seed,
+ *     flipX_stroke, flipY_stroke.
  * @property {'xs'|'sm'|'md'|'lg'|'xl'} [size='md'] - Icon size
  * @property {'muted'|'accent'|'primary'|'danger'|'success'} [color] - BEM color modifier
  * @property {boolean} [stroke=false] - Stroke/outline mode — use for ratio rect icons

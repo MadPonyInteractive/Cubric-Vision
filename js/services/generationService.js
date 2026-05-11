@@ -233,8 +233,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             return;
         }
 
-        const width  = injectionParams.Width  || 0;
-        const height = injectionParams.Height || 0;
+        const width  = injectionParams.Width  || injectionParams.width  || 0;
+        const height = injectionParams.Height || injectionParams.height || 0;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,

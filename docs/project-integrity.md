@@ -66,6 +66,37 @@ Located at `<projectFolder>/project.json`. Example structure:
 
 **Key field: \****`history[]`** — Array of UUID strings (NOT full objects). Each UUID corresponds to a `.meta/<uuid>.json` file in the Media folder.
 
+### `toolSettings`
+
+`toolSettings` stores per-project, per-tool UI settings. Components must not
+write this object directly. Tool panels emit `settings:tool:update`; the
+singleton `projectService` queues, merges, and saves the update through
+`/update-project-settings`.
+
+Known keys:
+
+```json
+{
+  "videoUpscale": {
+    "upscaleModel": null
+  },
+  "resize": {
+    "width": 1024,
+    "height": 1024,
+    "upscale_method": "lanczos",
+    "keep_proportion": "crop",
+    "pad_color": { "r": 0, "g": 0, "b": 0 },
+    "crop_position": "center",
+    "divisible_by": 1,
+    "flip": "none",
+    "rotation": "none"
+  }
+}
+```
+
+`getToolSettings(project, toolKey, defaults)` accepts tool-specific defaults.
+Existing callers that omit `defaults` still receive `{ upscaleModel: null }`.
+
 ### `.meta/<uuid>.json` Sidecar Files
 
 Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item. Example:

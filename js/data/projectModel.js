@@ -361,10 +361,11 @@ export function setModelSettings(project, modelId, updates) {
  * Returns a default if no entry exists yet (does not mutate the project).
  * @param {Project} project
  * @param {string} toolKey  - Command key, e.g. 'videoUpscale'
- * @returns {{ upscaleModel: string|null }}
+ * @param {Object} [defaults]
+ * @returns {Object}
  */
-export function getToolSettings(project, toolKey) {
-    return (project.toolSettings ?? {})[toolKey] ?? { upscaleModel: null };
+export function getToolSettings(project, toolKey, defaults = { upscaleModel: null }) {
+    return (project.toolSettings ?? {})[toolKey] ?? defaults;
 }
 
 /**

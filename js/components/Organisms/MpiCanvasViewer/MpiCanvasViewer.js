@@ -501,6 +501,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 canvas.setCropRatio(_activeCropRatio);
             } else if (mode === 'mask') {
                 canvas.activeMode = 'mask';
+            } else if (mode === 'resize') {
+                canvas.activeMode = 'resize';
             } else if (mode !== 'automask') {
                 canvas.activeMode = 'none';
             }
@@ -510,6 +512,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         function _exitMode() {
             if (_currentMode === 'none') return;
+            if (_currentMode === 'resize') canvas.clearPreviewImage?.();
             _currentMode = 'none';
             canvas.activeMode = 'none';
             emit('mode-changed', { mode: 'none' });
@@ -526,6 +529,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
             if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
+            if (mode !== 'resize' && _currentMode === 'resize')    _currentMode = 'none';
             if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
             if (mode !== 'compare' && _comparingActive)            _comparingActive = false;
 
@@ -667,6 +671,24 @@ export const MpiCanvasViewer = ComponentFactory.create({
         };
 
         el.exitMode = () => _exitMode();
+
+        el.enterResizeMode = async () => {
+            await el.swapToCanvas?.();
+            _enterMode('resize');
+            const dims = _currentItem?.pixelDimensions || {};
+            emit('resize-source-ready', {
+                width: dims.w || canvas.img?.width || 0,
+                height: dims.h || canvas.img?.height || 0,
+            });
+        };
+
+        el.exitResizeMode = () => {
+            if (_currentMode === 'resize') _exitMode();
+            else canvas.clearPreviewImage?.();
+        };
+
+        el.setResizePreview = (blobUrl) => canvas.setPreviewImage(blobUrl);
+        el.clearResizePreview = () => canvas.clearPreviewImage();
 
         el.getCurrentMaskDataURL = () => {
             // Preview mode: live canvas is destroyed. Return cached composite.
@@ -897,6 +919,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _cv.inst.on('modechange', ({ mode }) => {
                 if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
                 if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
+                if (mode !== 'resize' && _currentMode === 'resize')     _currentMode = 'none';
                 if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
                 if (mode !== 'compare' && _comparingActive)             _comparingActive = false;
                 if (_loadingComparison) return;

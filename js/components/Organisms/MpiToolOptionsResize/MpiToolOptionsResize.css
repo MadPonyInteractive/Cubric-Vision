@@ -1,0 +1,62 @@
+.mpi-tool-options-resize {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-2);
+    width: 100%;
+}
+
+.mpi-tool-options-resize__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding-bottom: var(--s-2);
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.mpi-tool-options-resize__section-label {
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.mpi-tool-options-resize__pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-resize__row {
+    width: 100%;
+}
+
+.mpi-tool-options-resize__row[hidden] {
+    display: none;
+}
+
+.mpi-tool-options-resize__row .mpi-dropdown,
+.mpi-tool-options-resize__row .mpi-input,
+.mpi-tool-options-resize__pair .mpi-input {
+    width: 100%;
+}
+
+.mpi-tool-options-resize__row .mpi-radio-group {
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.mpi-tool-options-resize__row .mpi-radio-group__btn {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mpi-tool-options-resize__actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.mpi-tool-options-resize__actions > div {
+    flex: 0 0 auto;
+}

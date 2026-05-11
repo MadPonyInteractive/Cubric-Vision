@@ -214,6 +214,28 @@ export const commands = {
         promptRequired: false,
         universal: true,
     },
+    resize: {
+        label: 'Resize',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+        injector: 'resize',
+    },
+    resizeVideo: {
+        label: 'Resize Video',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresVideo: 1,
+        mediaInputs: [
+            { key: 'inputVideo', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+        injector: 'resize',
+    },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.
@@ -231,6 +253,8 @@ export const commands = {
         stub: true,
     },
 };
+
+export const COMMANDS = commands;
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 

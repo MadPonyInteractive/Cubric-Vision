@@ -13,6 +13,7 @@
 | `previewStage` | `MpiButton` (size: sm, toggleable, icon: frameForward) | `"Preview_Only"` (`MpiBoolean.inputs.boolean`) | run payload `previewOnly: boolean`; `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (key endsWith `_ms`) so non-multi-stage workflows do not receive a stray `Preview_Only` field | `t2v_ms`, `i2v_ms` |
 | `duration` | `MpiProgressBar` (interactive, wheel, handle, suffix `s`) | `"Duration"` (`MpiInt.inputs.int`) | `{ Duration: 1..30 }` (int, step 1) | `t2v`, `i2v`, `t2v_ms`, `i2v_ms` |
 | `motionIntensity` | `MpiProgressBar` (interactive, wheel, handle) | `"Motion_Intensity"` (`MpiFloat.inputs.float`) | `{ Motion_Intensity: 0..1 }` (float, step 0.01) | `i2v`, `i2v_ms` |
+| `resize` | `MpiToolOptionsResize` (tool panel) | `"Resize Image v2"`, `"ImageFlip"`, `"Image Rotate"`, Boolean node titled `"Flip"` | `{ width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }` via standalone injector, not `_buildParams` | `resize`, `resizeVideo` |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -30,8 +31,9 @@
 MpiPromptBox 'run' event
   → { operation, positive, negative, mediaItems, injectionParams }
   → MpiGalleryBlock / MpiGroupHistoryBlock runCommand() call
-  → commandExecutor.runCommand({ operation, modelId, positive, negative, mediaItems, maskDataUrl, injectionParams })
+    → commandExecutor.runCommand({ operation, modelId, positive, negative, mediaItems, maskDataUrl, injectionParams })
     → _buildParams() merges injectionParams + model settings (loras, upscale, checkpoint)
+    → if COMMANDS[operation].injector exists, commandExecutor applies INJECTORS[name](workflow, injectionParams)
     → ComfyUIController.runWorkflow(workflowFile, params, onProgress)
       → nodes targeted by _meta.title (case-insensitive)
       → "Output" node captures final result images
@@ -39,6 +41,8 @@ MpiPromptBox 'run' event
 ```
 
 **Group History selected-entry invariant:** `MpiGroupHistoryBlock` owns `_currentIdx` and promotes the clicked history item via `entry-selected`. Prompt-driven operations must inject `_group.history[_currentIdx]` when the user has not supplied a dropped image. Auto-mask detection is owned by `MpiCanvasViewer`; because the viewer survives history switches, it must resolve `_currentItem.filePath` at detect time rather than reusing `initialImageUrl`.
+
+**Standalone workflow injectors:** Universal tool-panel operations can declare `injector: '<name>'` in `commandRegistry.js`. `commandExecutor.runCommand()` loads workflow JSON, applies `INJECTORS[name](workflow, payload.injectionParams || {})`, removes those consumed `injectionParams` from the generic title-keyed params map, then submits the mutated workflow object to `ComfyUIController.runWorkflow()`. Injectors must use `_meta.title` lookups, not numeric node IDs. Current injector: `resize` in `js/services/workflowInjectors/resizeInjector.js`, shared by `resize` and `resizeVideo`. The consume step prevents collisions such as `flip` matching the Boolean node titled `Flip` and overwriting the injector's boolean value.
 
 ## Model Settings Injection
 
@@ -126,6 +130,8 @@ controlId: {
 
 **Operation-level vs payload-level signals:** most controls flow through `getInjectionParams()` → merged into `injectionParams` → `commandExecutor._buildParams()` → ComfyUI. Exception: `previewStage` exposes itself through `el.getRunPayload().previewOnly` because the executor needs the flag *before* params merge (to select capture-title filter). Default to the standard `getInjectionParams()` path unless executor needs out-of-band knowledge.
 
+**Resize live preview:** `MpiToolOptionsResize` uses `runCommand({ operation: 'resize', previewOnly: true })` as a client-side "do not save" hint only. `commandExecutor` still captures the `"Output"` node for non-`_ms` operations; the `"Preview"` capture-title switch is restricted to `_ms` workflows.
+
 ---
 
 ## Operations and their controls[] (from commandRegistry.js)
@@ -147,6 +153,8 @@ controlId: {
 | `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | (none)              | universal   |
 | `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | (none)              | universal   |
 | `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | (none)              | universal   |
+| `resize`          | Resize             | image     | 1              | —             | —            | no             | (none)              | universal   |
+| `resizeVideo`     | Resize Video       | video     | 0              | 1             | —            | no             | (none)              | universal   |
 
 > `status: active` — operation has a workflow file and is working.
 > `status: stub` — operation is defined but not yet implemented (`stub: true` in commandRegistry).

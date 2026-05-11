@@ -45,6 +45,14 @@ export const MyComponent = ComponentFactory.create({
 - Self-close on `ui:close-all-popups`.
 - Use `MutationObserver` to remove portal from `document.body` when anchor is removed from DOM.
 
+## New Resize Tool Components
+
+- `MpiColorPicker` (Primitive): HSV visual picker with saturation/value square, hue slider, RGB/hex precision inputs, and a lightweight portaled popup. Emits `change { r, g, b, hex }` and exposes `getRGB`, `setRGB`, `setHex`, `getHex`.
+- `MpiToolOptionsResize` (Organism): Group History tool panel for resize/flip/rotate. Mounts width/height inputs, method/proportion/crop-position dropdowns, `MpiColorPicker`, divisible-by input, flip/rotation radio groups, and Apply. Persists to `project.toolSettings.resize` through `settings:tool:update`. Image mode debounces live Comfy previews without saving history; Apply appends a new history entry and preserves the source item.
+
+Group History image toolbar now includes `resize` under Transform. The mediator
+registry maps `resize` and future `resizeVideo` to `MpiToolOptionsResize`.
+
 ## Hotkeys
 
 - `Hotkeys.bind(id, fn)` to bind — `id` is a stable registry id from `hotkeyRegistry.js`.

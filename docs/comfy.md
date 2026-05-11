@@ -23,6 +23,7 @@ Orchestrates a full generation request.
 - `_depFilename(depId)`: Maps dep ID to filename.
 - `_resolveWorkflowFile(operation, modelId)`: Returns workflow JSON path.
 - `_buildParams(payload)`: Builds the title→value map for injection. Merges `payload.injectionParams` (from PromptBox controls) into the params object alongside standard fields (Positive, Negative, Seed, media slots).
+- Operation-specific injectors: if `COMMANDS[payload.operation].injector` is set, `runCommand()` applies `INJECTORS[name](workflow, payload.injectionParams || {})` after loading workflow JSON and before submitting it.
 - Execution handles expose `promptId`, `seed`, and `onPromptAck`. `generationService` stores `promptId` in `activeGenerations` and saves the resolved seed on generated items.
 
 ## Generation Flow — Cue + Loop
@@ -55,6 +56,39 @@ WAN uses `Lora_High_1` ... `Lora_High_6` and `Lora_Low_1` ... `Lora_Low_6`.
 ComfyUI nodes may expose either `strength` or `strength_model`; the injector supports both.
 
 **Static filenames for uploads** (e.g. `mpi_detailer_input.png`) enable ComfyUI execution caching.
+
+### Workflow Injectors
+
+Most workflow mutation is handled by the standard title-keyed params map passed
+to `ComfyUIController.runWorkflow()`. Some tool-panel utility workflows need
+more specific mutation than `_buildParams()` provides. Those operations declare
+an injector in `commandRegistry.js`:
+
+```javascript
+resize: {
+    universal: true,
+    injector: 'resize',
+}
+```
+
+`commandExecutor.runCommand()` resolves the injector from
+`js/services/workflowInjectors/index.js` and calls it with the loaded workflow
+JSON plus `payload.injectionParams`. The injector mutates the workflow object in
+place and must target nodes by `_meta.title`, not numeric node IDs. After the
+injector runs, those consumed operation-specific params are removed from the
+generic title-keyed params map so names like `flip` cannot collide with a
+workflow node titled `Flip`.
+
+Current injector:
+- `resize` (`js/services/workflowInjectors/resizeInjector.js`) shared by
+  `resize` and `resizeVideo`. It writes Resize Image v2, ImageFlip, Image Rotate,
+  and the Boolean node titled Flip. Media inputs (`Input_Image`, `Input_Video`) and
+  Output capture remain handled by the standard command executor/controller path.
+
+Image resize live preview calls `runCommand` directly and uses
+`previewOnly: true` only as a client-side "do not save" hint. The executor still
+captures the workflow `Output` node for resize; only `_ms` video preview
+workflows switch capture to `Preview`.
 
 ## assetService (`js/services/assetService.js`)
 

@@ -12,7 +12,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
 **Goal:** Plumbing in place. Universal op `resize` resolves to `resize.json`, kjnodes installs with engine, executor routes through a new injector. No UI yet — verify via console logs.
 
-- [ ] **1.1 — Wire universal workflow + dependency + commandRegistry entries**
+- [x] **1.1 — Wire universal workflow + dependency + commandRegistry entries**
 
     Touch four files together — they are tightly coupled and only work as a set.
 
@@ -52,7 +52,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Open browser dev tools. In the console, type `(await import('/js/data/modelConstants/universal_workflows.js')).UNIVERSAL_WORKFLOWS.resize` — confirm `{ workflow: 'resize.json' }` returns. Then `(await import('/js/data/commandRegistry.js')).COMMANDS.resize.injector` — confirm `'resize'` returns. Then in Settings → Engine status (or wherever engine deps list), confirm `comfyui-kjnodes` shows as a universal dep to install.
 
-- [ ] **1.2 — Create resize workflow injector**
+- [x] **1.2 — Create resize workflow injector**
 
     Create new folder + file: `js/services/workflowInjectors/resizeInjector.js`.
 
@@ -97,7 +97,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Look at the code — confirm `js/services/workflowInjectors/resizeInjector.js` exists, exports `injectResize`, and uses `_meta.title` lookups (not hardcoded numeric ids). Confirm `js/services/workflowInjectors/index.js` exists with the `INJECTORS` registry export.
 
-- [ ] **1.3 — Route commandExecutor through injector when op declares one**
+- [x] **1.3 — Route commandExecutor through injector when op declares one**
 
     In `js/services/commandExecutor.js`:
 
@@ -120,7 +120,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** In dev tools console, dispatch a fake resize payload via `commandExecutor.runCommand({ operation: 'resize', model: {id:null, mediaType:'image'}, mediaItems: [<any existing image item>], injectionParams: { width: 512, height: 512, upscale_method: 'lanczos', keep_proportion: 'crop', pad_color: {r:255,g:105,b:180}, crop_position: 'center', divisible_by: 2, flip: 'none', rotation: 'none' } })`. Check the network tab for the `/comfy/queue` POST — confirm the submitted workflow JSON has the injected values on nodes 1, 3, 4, 6. Log message "Applied injector resize" should appear.
 
-- [ ] **1.4 — Generalize `getToolSettings` signature**
+- [x] **1.4 — Generalize `getToolSettings` signature**
 
     In `js/data/projectModel.js:366`:
     ```js
@@ -139,30 +139,32 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
 **Goal:** Resize tool appears in the toolbar (image workspace), opens an options panel with every control rendering and persisting to `project.toolSettings.resize`. No Comfy execution yet. Apply button disabled or no-op.
 
-- [ ] **2.1 — Create MpiColorPicker primitive**
+- [x] **2.1 — Create MpiColorPicker primitive**
 
     New files:
     - `js/components/Primitives/MpiColorPicker/MpiColorPicker.js`
     - `js/components/Primitives/MpiColorPicker/MpiColorPicker.css`
 
-    Use `ComponentFactory.create()`. Render: a button-style trigger showing the current swatch + hex (e.g. `[■] #ff69b4`). On click, open a popup (use the same `MpiPopup` primitive used by `MpiOptionSelector`) containing:
+    Use `ComponentFactory.create()`. Render: a button-style trigger showing the current swatch + hex (e.g. `[■] #ff69b4`). On click, open a portaled popup containing:
+    - HSV saturation/value square with draggable circular handle.
+    - Hue slider with draggable handle.
     - 3 `MpiInput` number fields for R / G / B (0-255, step 1, min 0, max 255).
     - 1 `MpiInput` text field for hex (`#rrggbb`, normalized to lower-case on blur).
     - Swatch preview at the top.
 
-    Two-way sync: editing R/G/B updates the hex field; editing hex updates R/G/B. Emit `'change' { r, g, b, hex }` on any committed change. Instance methods: `getRGB()`, `setRGB(r,g,b)`, `setHex(hex)`.
+    Two-way sync: dragging HSV controls updates R/G/B + hex; editing R/G/B updates the hex field and visual handles; editing hex updates R/G/B and visual handles. Emit `'change' { r, g, b, hex }` on any committed change. Instance methods: `getRGB()`, `setRGB(r,g,b)`, `setHex(hex)`.
 
     Document props in `js/components/types.js` (after the existing color-related types or near the end). Register CSS in `js/shell/preloadStyles.js` in the Primitives section.
 
     **Verify:** Open the component test gallery (`/test-components` or wherever Primitives are previewed). Mount `MpiColorPicker.mount(container, { value: '#ff69b4' })`. Click the swatch — popup opens. Type `0a0a0a` in hex — R/G/B fields show 10/10/10. Type 255 in R — hex updates to `#ff0a0a`. Listener on `'change'` fires with `{ r:255, g:10, b:10, hex:'#ff0a0a' }`.
 
-- [ ] **2.2 — Add `resize` icon to icon registry**
+- [x] **2.2 — Add `resize` icon to icon registry**
 
     In `js/utils/icons.js`, add a new entry `resize` to the `ICONS` object. Use a Material-Design-style 24x24 SVG path representing scale/resize (e.g. arrows pointing into corners from outside, or a rectangle with corner pull markers). Keep stroke/fill conventions consistent with neighboring entries.
 
     **Verify:** In dev tools console: `(await import('/js/utils/icons.js')).renderIcon('resize')` — confirm an SVG string is returned (not undefined). Mount a quick `MpiButton.mount(document.body, { icon: 'resize', label: 'test' })` — confirm icon renders without console errors.
 
-- [ ] **2.3 — Create MpiToolOptionsResize organism (UI + settings persistence, no Comfy yet)**
+- [x] **2.3 — Create MpiToolOptionsResize organism (UI + settings persistence, no Comfy yet)**
 
     New files:
     - `js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js`
@@ -197,7 +199,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
     2. Change keep_proportion to `pad` — crop_position dropdown disappears, pad_color picker appears.
     3. Click Apply — listener on `'apply'` receives the full params object.
 
-- [ ] **2.4 — Add resize sub-tool to MpiHistoryTools (image workspace only for now)**
+- [x] **2.4 — Add resize sub-tool to MpiHistoryTools (image workspace only for now)**
 
     In `js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js`:
 
@@ -211,7 +213,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Open the app, navigate to an image group history workspace. The left-rail toolbar shows a new Resize button under the Transform group, below Crop. Hover — tooltip says "Resize". Click — `MpiHistoryTools` emits `'activate' { mode: 'resize' }` (check console with a temporary log added in MpiGroupHistoryBlock's tools listener, or via the existing log if there is one).
 
-- [ ] **2.5 — Mount MpiToolOptionsResize via MpiGroupHistoryBlock mediator**
+- [x] **2.5 — Mount MpiToolOptionsResize via MpiGroupHistoryBlock mediator**
 
     In `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js`:
 
@@ -236,9 +238,9 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
 ## Phase 3 — Live preview + Apply (image workspace)
 
-**Goal:** Image-workspace resize tool is end-to-end functional. Live Comfy preview repaints the canvas on every control change (debounced). Apply commits the result via `replaceItemId`, replacing the source history item in place.
+**Goal:** Image-workspace resize tool is end-to-end functional. Live Comfy preview repaints the canvas on every control change (debounced). Apply appends the resized result as a new history entry, preserving the source item.
 
-- [ ] **3.1 — MpiCanvas / MpiCanvasViewer resize preview API**
+- [x] **3.1 — MpiCanvas / MpiCanvasViewer resize preview API**
 
     Add a small API surface so the tool can swap the canvas image to a preview blob and restore on cancel:
 
@@ -253,7 +255,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Look at the code — confirm the 4 new methods exist on MpiCanvas and the 4 wrappers on MpiCanvasViewer. Confirm `this.img` is not reassigned to anything other than `HTMLImageElement` in any of the new code paths.
 
-- [ ] **3.2 — Live preview round-trip in MpiToolOptionsResize**
+- [x] **3.2 — Live preview round-trip in MpiToolOptionsResize**
 
     In `MpiToolOptionsResize.js` extend the existing change handlers from Phase 2:
 
@@ -270,22 +272,18 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
 
     **Verify:** Open the Resize tool on an image. Change Width to 256 — within ~1s, the canvas updates to show the resized result. Change keep_proportion to `pad` and pad_color to bright pink — canvas updates to show the padded result with pink borders. Switch tools (e.g. to Crop) — canvas restores to the original full-res image. No new history entry is added during preview changes.
 
-- [ ] **3.3 — Apply: commit via save-generation + replaceItemId**
+- [x] **3.3 — Apply: commit via save-generation as a new history entry**
 
     Wire the Apply button flow end-to-end in `MpiGroupHistoryBlock._handleApply`:
 
     For `mode === 'resize'` (and `'resizeVideo'` in Phase 4):
     1. Determine `currentItem` (the focused image history item).
-    2. Call `commandExecutor.runCommand` with the full resize params **and** a config containing `replaceItemId: currentItem.id`.
-    3. `commandExecutor` already routes the resulting save through `generationService` which forwards `replaceItemId` to `/project/save-generation` (see investigation findings: generationService.js:203, 289-316).
-    4. On success:
-       - Emit `'resize-applied' { item: <new item from save response> }` from the viewer (mirror crop's `'crop-applied'`).
-       - MpiGroupHistoryBlock's existing `crop-applied` listener pattern (line ~792) — clone it for `resize-applied` to refresh the history card.
-       - Clear the canvas preview (`viewer.el.clearResizePreview()`).
-       - Show a success toast.
+    2. Call `generationService.startGeneration` with the full resize params and the current item as `mediaItems[0]`. Do **not** pass `replaceItemId`.
+    3. Let the existing Group History `generation:complete` listener append the new item, select it, and refresh the viewer/list.
+    4. On success, clear the canvas preview (`viewer.el.clearResizePreview()`) and show a success toast.
     5. On error: toast the error message; do not clear preview.
 
-    **Verify:** Open an image group with at least one item. Open the Resize tool, set Width=512, Height=512, keep_proportion=`crop`. Click Apply. Within a few seconds, a success toast appears, the history card thumb updates, and the source item now has dimensions 512×512 (check sidecar JSON at `<project>/Media/.meta/<uuid>.json` — `pixelDimensions.w: 512, pixelDimensions.h: 512`; same uuid as before; no `frozenParams` field). The old media file is gone from disk; the new media file replaces it.
+    **Verify:** Open an image group with at least one item. Open the Resize tool, set Width=512, Height=512, keep_proportion=`crop`. Click Apply. Within a few seconds, a success toast appears and the history list has one additional entry named `resize_###`; the original source item remains available. The new entry sidecar has `pixelDimensions.w: 512, pixelDimensions.h: 512` and no `frozenParams` field.
 
 ---
 
@@ -307,7 +305,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
        - When `kind === 'video'`, the seed dims come from the video sidecar (`videoMeta.width / height`) rather than MpiCanvasViewer's `resize-source-ready` event. Wire whichever source the video viewer exposes.
        - The apply path uses `mediaType: 'video'` on save-generation; the existing generationService video-save branch should handle this.
 
-    **Verify:** Open a video group history workspace. The left toolbar Transform group now shows Crop + Resize. Click Resize. The options panel mounts with seeded width/height matching the source video. Change Width=512, click Apply. Within ~tens of seconds, the source video is replaced in place with a 512-wide version (same uuid, dimensions updated in sidecar, old video file gone).
+    **Verify:** Open a video group history workspace. The left toolbar Transform group now shows Crop + Resize. Click Resize. The options panel mounts with seeded width/height matching the source video. Change Width=512, click Apply. Within ~tens of seconds, a new resized video entry is appended while the source video remains available.
 
 ---
 
@@ -323,7 +321,7 @@ Scope source: kanban entry "Resize tool" (BACKLOG → PLANNING). Workflow files 
        | `resizeVideo` | Resize Video | video | 0 | 1 | — | no | (none) | universal |
        ```
        Plus a short note in the Injection section: "Resize uses a standalone injector (`js/services/workflowInjectors/resizeInjector.js`) routed via the `injector` field on the op definition. It does not go through `_buildParams` for its tool-specific params."
-    2. `.claude/rules/component-events.md` — add `resize → MpiToolOptionsResize` and `resizeVideo → MpiToolOptionsResize` to the TOOL_OPTIONS_REGISTRY snippet and the prose list of video tool options (line ~488 per investigation). Add `'resize-applied' { item }` to the viewer event list.
+    2. `.claude/rules/component-events.md` — add `resize → MpiToolOptionsResize` and `resizeVideo → MpiToolOptionsResize` to the TOOL_OPTIONS_REGISTRY snippet and the prose list of video tool options (line ~488 per investigation). Document that Apply appends a new history entry and does not replace the source item.
     3. `.claude/rules/component-mounts.md` — update the Image and Video mode tool lists (line ~52-59): `prompt, crop, mask, resize` and `prompt, crop, videoUpscale, interpolate, resizeVideo`. Update the TOOL_OPTIONS_REGISTRY snippet to match component-events.md.
     4. `.claude/rules/component-state.md` — add `project.toolSettings.resize` to the toolSettings section with the full shape: `{ width, height, upscale_method, keep_proportion, pad_color: {r,g,b}, crop_position, divisible_by, flip, rotation }`. Persisted via `updateProjectJson`. Restored via `getToolSettings(project, 'resize', defaults)`.
 

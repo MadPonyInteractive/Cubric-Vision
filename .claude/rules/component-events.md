@@ -22,6 +22,12 @@ EMITS:   `change` `{ checked: boolean }`
 LISTENS: (none)
 API:     `el.isChecked()` → boolean · `el.setChecked(bool)` — imperative sync
 
+### MpiColorPicker
+EMITS:   `change` `{ r: number, g: number, b: number, hex: string }`
+LISTENS: `ui:close-all-popups` — closes the portaled picker popup
+API:     `el.getRGB()` · `el.setRGB(r, g, b)` · `el.setHex(hex)` · `el.getHex()`
+NOTE:    Primitive HSV visual picker with saturation/value square, hue slider, RGB/hex precision inputs, lightweight portaled floating popup, pointer/keyboard support, and MutationObserver cleanup.
+
 ### MpiDragList
 EMITS:   `reorder` `{ items: any[], indices: number[] }`
 LISTENS: (none)
@@ -156,6 +162,7 @@ API:     `el.setMode(mode)` — activate programmatically; re-activating current
          `el.setDisabled(map)` — bulk update `{ [toolMode]: { disabled: bool, reason?: string } }`; sub-modes accepted
          `el.getActiveMode()` — read current mode
 NOTE:    Radio behaviour: re-click active tool = no-op. `mask` is now a flat tool (no group/sub-modes). `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
+         Image Transform group contains `crop` and `resize`; video Transform remains `crop` only until video resize wiring lands.
 
 ### MpiNumberSelector
 EMITS:   `change`       `{ value: string }` — user picked a new value
@@ -322,16 +329,25 @@ EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
          `mask-ready`    `{ hasMask }` — mask painted or cleared
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
+         `resize-source-ready` `{ width, height }` — resize mode entered with source dimensions
          `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
 LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
 API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canvas mask (no clear). Used by auto-detect thumb-pick flow.
          `setAutoMaskModel/setAutoMaskUseBox` — reset thumbs+picks only; do NOT clear existing paint.
          `runAutoMaskDetect` — reset thumbs+picks, run detection; do NOT clear existing paint.
+         `enterResizeMode/exitResizeMode`, `setResizePreview/clearResizePreview` — image resize live-preview surface.
 
 ### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
 EMITS:   (none)
 LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while mounted; unbound in destroy)
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
+
+### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
+EMITS:   `apply` `{ width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }`
+GLOBAL EMITS (via Events.emit, consumed by projectService):
+         `settings:tool:update` `{ toolKey: 'resize', key, value }` — debounced per-control persistence to `project.toolSettings.resize`
+LISTENS: `resize-source-ready` from MpiCanvasViewer when image resize mode enters
+NOTE:    Image mode enters `viewer.el.enterResizeMode()`, runs debounced Comfy previews through `runCommand` without saving history, paints them via `viewer.el.setResizePreview(blobUrl)`, and clears preview on destroy. Apply emits the payload; `MpiGroupHistoryBlock` appends the resized result as a new history entry. The panel uses `MpiColorPicker` for `pad_color`.
 
 ---
 
@@ -485,6 +501,7 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          MpiMediaDropOverlay onDrop: loops dropped files, uploads each + calls _pb.el.injectMedia() per file (organism handle on Block) (no history card created)
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
+         Resize tool → MpiToolOptionsResize. Image resize live-previews through Comfy and Apply appends a new history entry, preserving the source item.
          **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
          **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelIdByType` (filtered by `modeKind`), `s_installedModelIds`, `project:changed`.
          **PromptBox model list:** `s_installedModelIds` listener also calls `_pb?.el?.setModelList?(getModelsByType(modeKind).filter(m => m.installed !== false))` — live dropdown refresh on install/uninstall.

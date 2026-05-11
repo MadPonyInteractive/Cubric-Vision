@@ -77,16 +77,6 @@
 
 ## PLANNING
 
-### Resize tool
-
-  - tags: [PLAN]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: true
-    ```md
-    Plan file: docs/plans/2026-05-11-resize-tool.md
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -107,6 +97,22 @@
     ```
 
 ## IMPLEMENTING
+
+### Resize tool
+
+  - tags: [PLAN]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: true
+  - steps:
+      - [x] Foundation workflow dependency executor
+      - [x] Tool UI organism color picker
+      - [x] Live preview Apply
+      - [ ] Video workspace support
+      - [ ] Docs rules follow-up
+    ```md
+    Plan file: docs/plans/2026-05-11-resize-tool.md
+    ```
 
 ### Setup video generation
 

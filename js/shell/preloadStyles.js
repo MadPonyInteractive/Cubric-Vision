@@ -13,6 +13,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiInput/MpiInput.css',
   'js/components/Primitives/MpiDropdown/MpiDropdown.css',
   'js/components/Primitives/MpiRadioGroup/MpiRadioGroup.css',
+  'js/components/Primitives/MpiColorPicker/MpiColorPicker.css',
   'js/components/Primitives/MpiPopup/MpiPopup.css',
   'js/components/Primitives/MpiToast/MpiToast.css',
   'js/components/Primitives/MpiScrollableBox/MpiScrollableBox.css',
@@ -65,6 +66,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.css',
   'js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.css',
   'js/components/Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.css',
+  'js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.css',
 
   // Blocks
   'js/components/Blocks/MpiModelsModal/MpiModelsModal.css',

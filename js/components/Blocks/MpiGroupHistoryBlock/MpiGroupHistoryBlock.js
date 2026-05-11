@@ -17,6 +17,7 @@ import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOp
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
+import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -56,6 +57,8 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
+    resize:       MpiToolOptionsResize,
+    resizeVideo:  MpiToolOptionsResize,
 };
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
@@ -241,7 +244,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const Compound = TOOL_OPTIONS_REGISTRY[mode];
             if (!Compound || !slot) return;
 
-            _options = Compound.mount(slot, { viewer, kind: modeKind });
+            _options = Compound.mount(slot, { viewer, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
 
             // Options compounds emit 'apply'; mediator routes to _handleApply.
             _options.on?.('apply', (payload) => _handleApply(mode, payload));
@@ -269,11 +272,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (mode === 'interpolate') {
                 return _runVideoTool('interpolate', { Interp_Multiplier: payload.multiplier ?? 2 });
             }
+            if (mode === 'resize' || mode === 'resizeVideo') {
+                if (mode === 'resize') return _handleResizeApply(payload);
+                clientLogger.info('MpiGroupHistoryBlock', `Resize video apply payload ${JSON.stringify(payload)}`);
+            }
         }
 
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
             videoUpscale: 'Upscale', interpolate: 'Interpolate',
+            resize: 'Resize', resizeVideo: 'Resize',
         };
 
         historyTools.on('activate', ({ mode }) => {
@@ -355,7 +363,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _refreshOpOptions();
             _group = group;
             _currentIdx = _group.selectedIndex;
-            historyList.el.appendEntry(item);
+            if (_group.history?.some(entry => entry.id === item.id)) {
+                historyList.el.replaceEntry?.(item);
+            } else {
+                historyList.el.appendEntry(item);
+            }
             Events.emit('history:stats-dirty', { group: _group });
             if (isVideo) {
                 viewer.el.exitCropMode?.();
@@ -589,6 +601,47 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }
 
         // ── Video snapshot / crop helpers ────────────────────────────────────
+
+        function _handleResizeApply(payload = {}) {
+            const currentItem = _group.history[_currentIdx];
+            if (!currentItem?.filePath) { _showToast('No source image', 'error'); return; }
+            const mediaItems = [{
+                id:        currentItem.id,
+                url:       resolveMediaUrl(currentItem.filePath),
+                mediaType: 'image',
+                source:    'history',
+            }];
+            const imageModel = { id: null, mediaType: 'image' };
+
+            _setGenerating(true);
+            _activeExec = startGeneration(
+                {
+                    operation: 'resize',
+                    model: imageModel,
+                    positive: '',
+                    negative: '',
+                    mediaItems,
+                    injectionParams: payload,
+                },
+                {
+                    onCancel: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                    },
+                    onError: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                        _showToast('Resize failed', 'error');
+                    },
+                    onComplete: ({ item }) => {
+                        _activeExec = null;
+                        viewer.el.clearResizePreview?.();
+                        _showToast('Resize applied', 'success');
+                    },
+                },
+                { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
+            );
+        }
 
         async function _handleCropSnapshot() {
             const project = state.currentProject;

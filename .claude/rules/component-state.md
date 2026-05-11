@@ -43,6 +43,8 @@
 
 > **Per-model slider controls persist under `modelSettings[modelId]`:** `duration` (int 1..30, default 5) for `t2v`/`i2v`/`t2v_ms`/`i2v_ms`; `motionIntensity` (float 0..1, default 0) for `i2v`/`i2v_ms`. Both written via `settings:model:update` and recalled by `PromptBoxControls.mount()` via `getModelSettings()`. Clamp + coerce on both save and recall — older builds may have written out-of-range values.
 
+> **Resize tool settings persist under `project.toolSettings.resize`:** shape is `{ width, height, upscale_method, keep_proportion, pad_color: { r, g, b }, crop_position, divisible_by, flip, rotation }`. `MpiToolOptionsResize` reads them with `getToolSettings(project, 'resize', defaults)` and writes each control through `Events.emit('settings:tool:update', { toolKey: 'resize', key, value })`; `projectService` is still the sole writer to `project.json`. `getToolSettings(project, toolKey, defaults = { upscaleModel: null })` accepts tool-specific defaults so non-upscale tools do not inherit an upscale-only shape.
+
 > **Model LoRA settings shape:** most models, including LTX, use the flat shape `modelSettings[modelId].loras: Array<6>`. Models that declare `model.loraStages` (WAN) use a staged object, e.g. `loras: { high: Array<6>, low: Array<6> }`. `MpiModelSettings`, `commandExecutor`, and preview `loraSnapshot` handling must support both shapes.
 
 > **Cue queue depth is local:** `state.generationQueueCount` includes the active Cue dispatch plus pending jobs. StatusBar subtracts the active dispatch and only displays pending depth, e.g. `GENERATING (2 queued)`. Do not poll ComfyUI queue depth for Cue mode.
