@@ -502,12 +502,24 @@ export function runCommand(payload) {
         const outputUrls = [];
         let _samplingStartFired = false;
         let _modelInitializing = hasTerminalPhaseSampler;
+        // Tool-panel previews (e.g. resize thumbnail round-trip) bypass
+        // generationService and call runCommand directly with
+        // `suppressLifecycleEvents: true`. They must not emit StatusBar
+        // lifecycle signals — there is no `tool:running`/`tool:idle` pair
+        // wrapping them, so any sampling-start/loading-model emit would
+        // strand StatusBar in the active state.
+        // NOTE: do NOT gate on `previewOnly` alone — multi-stage `_ms`
+        // previews flow through generationService and DO want lifecycle
+        // events.
+        const _suppressLifecycleEvents = payload.suppressLifecycleEvents === true;
         const emitSamplingStart = () => {
             if (_samplingStartFired) return;
             if (_modelInitializing) return;
             _modelInitializing = false;
             _samplingStartFired = true;
-            Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+            if (!_suppressLifecycleEvents) {
+                Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+            }
             exec.onSamplingStart?.();
         };
         const isImmediateWorkNode = (nodeId) => IMMEDIATE_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
@@ -532,11 +544,11 @@ export function runCommand(payload) {
             comfyEventSource = new EventSource('/comfy/events/stream');
             comfyEventSource.addEventListener('comfy:model-initializing', () => {
                 _modelInitializing = true;
-                if (!_samplingStartFired) Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
             comfyEventSource.addEventListener('comfy:model-init-complete', () => {
                 _modelInitializing = false;
-                if (!_samplingStartFired) Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
         }
         const onMessage = (msg) => {
@@ -593,7 +605,7 @@ export function runCommand(payload) {
 
                 if (nodeId !== null) {
                     const nodeKind = weightMap.nodes[nodeId]?.kind;
-                    if (!_samplingStartFired && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
+                    if (!_samplingStartFired && !_suppressLifecycleEvents && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
                         Events.emit('tool:loading-model', { tool: 'groupHistory' });
                     } else if (!_modelInitializing && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
                         emitSamplingStart();

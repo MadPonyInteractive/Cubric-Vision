@@ -48,13 +48,11 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
  *   setMaskOpacity(opacity)
  *   clearMask()
  *   getMaskDataURL(bg, fg)
- *   setPreviewImage(blobUrl)  — resize-mode-only temporary preview image
- *   clearPreviewImage()       — clears resize preview and restores original image
  *   setCropRatio(ratio)
  *   getCropRect()
  *   destroy()
  *
- * Active modes: 'none' | 'mask' | 'crop' | 'compare' | 'resize'
+ * Active modes: 'none' | 'mask' | 'crop' | 'compare'
  * Setting activeMode to any value automatically exits all other modes.
  *
  * Emits:
@@ -143,8 +141,6 @@ class _CanvasCore {
 
         // Processed bitmap (forward-compat hook for raw tool re-add).
         this._processedBitmap = null;
-        this._previewImg = null;
-        this._previewBlobUrl = null;
 
         // Comparison playback state — populated when before/after is a video.
         this._videoBefore = null;     // HTMLVideoElement | null
@@ -194,7 +190,7 @@ class _CanvasCore {
     }
 
     // ── Active Mode (mutual exclusion) ────────────────────────────────────────
-    // Valid values: 'none' | 'mask' | 'crop' | 'compare' | 'resize'
+    // Valid values: 'none' | 'mask' | 'crop' | 'compare'
     get activeMode() { return this._activeMode; }
     set activeMode(v) {
         if (this._activeMode === v) return;
@@ -261,7 +257,6 @@ class _CanvasCore {
         }
         // Close ImageBitmap if held — GPU memory not released until .close()
         if (this._processedBitmap instanceof ImageBitmap) this._processedBitmap.close();
-        this._revokePreviewBlob();
         this.baseCanvas = null;
         this.overlayCanvas = null;
         this.screenUICanvas = null;
@@ -273,7 +268,6 @@ class _CanvasCore {
         this.ctx = null;
         this.img = null;
         this._processedBitmap = null;
-        this._previewImg = null;
     }
 
     async setMaskDataURL(dataUrl) {
@@ -298,8 +292,6 @@ class _CanvasCore {
     clearImage() {
         this._stopComparePlayback();
         this._teardownBeforeVideo();
-        this._revokePreviewBlob();
-        this._previewImg = null;
         this.img = new Image();
         this.img.crossOrigin = 'anonymous';
         this._activeMode = 'none';
@@ -321,8 +313,6 @@ class _CanvasCore {
                 this.img = new Image();
                 this.img.crossOrigin = 'anonymous';
             }
-            this._revokePreviewBlob();
-            this._previewImg = null;
             await new Promise((resolve, reject) => {
                 this.img.onload = resolve;
                 this.img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
@@ -669,13 +659,7 @@ class _CanvasCore {
     isCompareVideoPair() { return this._hasAnyCompareVideo(); }
 
     _displayImage() {
-        return this._previewImg || this.img;
-    }
-
-    _revokePreviewBlob() {
-        if (!this._previewBlobUrl) return;
-        try { URL.revokeObjectURL(this._previewBlobUrl); } catch (_) {}
-        this._previewBlobUrl = null;
+        return this.img;
     }
 
     _sizeImageCanvases(width, height) {
@@ -689,35 +673,6 @@ class _CanvasCore {
         this.overlayCanvas.style.height = height + 'px';
         this.stackEl.style.width  = width + 'px';
         this.stackEl.style.height = height + 'px';
-    }
-
-    async setPreviewImage(blobUrl) {
-        if (this.activeMode !== 'resize' || !blobUrl) return;
-        const preview = new Image();
-        preview.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-            preview.onload = resolve;
-            preview.onerror = () => reject(new Error(`Preview image failed to load: ${blobUrl}`));
-            preview.src = blobUrl;
-        });
-        if (this.activeMode !== 'resize' || !this.baseCanvas) return;
-        this._revokePreviewBlob();
-        this._previewBlobUrl = blobUrl.startsWith('blob:') ? blobUrl : null;
-        this._previewImg = preview;
-
-        const ratio = Math.min(1, MAX_TEXTURE_SIZE / Math.max(preview.width, preview.height));
-        this._sizeImageCanvases(Math.round(preview.width * ratio), Math.round(preview.height * ratio));
-        await this.resetView();
-    }
-
-    async clearPreviewImage() {
-        if (!this._previewImg) return;
-        this._revokePreviewBlob();
-        this._previewImg = null;
-        if (!this.img?.width || !this.baseCanvas) return;
-        const ratio = Math.min(1, MAX_TEXTURE_SIZE / Math.max(this.img.width, this.img.height));
-        this._sizeImageCanvases(Math.round(this.img.width * ratio), Math.round(this.img.height * ratio));
-        await this.resetView();
     }
 
     async resetView() {
@@ -770,7 +725,7 @@ class _CanvasCore {
         ctx.clearRect(0, 0, this.baseCanvas.width, this.baseCanvas.height);
         const src = (this._beforeKind === 'video' && this._videoBefore)
             ? this._videoBefore
-            : (this._previewImg || this._processedBitmap || this.img);
+            : (this._processedBitmap || this.img);
         if (!_isDrawable(src)) return;
         ctx.drawImage(src, 0, 0, this.baseCanvas.width, this.baseCanvas.height);
     }
@@ -1030,8 +985,7 @@ export const MpiCanvas = ComponentFactory.create({
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks',
             'setCropRatio','getCropRect',
-            'setProcessedImage','clearProcessedImage',
-            'setPreviewImage','clearPreviewImage'
+            'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });
     }

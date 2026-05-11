@@ -39,7 +39,7 @@ function start({ scope, groupId = null, tempId = null, operation, modelId, place
     const id = crypto.randomUUID();
     const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId };
     _registry.set(id, entry);
-    Events.emit('generation:started', { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId });
+    Events.emit('generation:started', { id, scope, groupId, tempId, operation, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId });
     return { id };
 }
 

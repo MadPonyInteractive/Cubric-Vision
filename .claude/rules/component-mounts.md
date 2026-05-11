@@ -88,7 +88,7 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 
 - `MpiToolOptionsCrop`   props: `{ viewer, kind: 'image'|'video' }`   — family `MpiDropdown` (SDXL/FLUX/SOCIAL/FREE) + orientation `MpiRadioGroup` (icon-only, sdxl/flux only) + ratio `MpiRadioGroup` (icon-only, hidden for FREE) + apply (image) / snapshot+save (video) buttons. Pushes ratio to `viewer.el.setCropRatio(ratio|null)` — `null` = FREE (no aspect lock). Emits `apply { kind: 'image'|'video-save'|'video-snapshot' }`. Crop drag honors Shift modifier (scales from rect center) via `Hotkeys.register('shift', …)` inside `CropManager`/`cropTool`.
 - `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
-- `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, Apply `MpiButton`. Image mode debounces live Comfy previews into `viewer.el.setResizePreview(blobUrl)` without saving history; Apply appends a new history entry and preserves the source item. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
+- `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, inline preview `<img>` slot, Apply `MpiButton`. Live preview runs the **image** `resize` workflow on a 512px-longest-edge thumbnail extracted from `viewer.el.getSourceElement()` (HTMLImageElement or HTMLVideoElement), with `width`/`height`/`divisible_by` proportionally scaled to thumb space. Result paints into the inline preview slot — viewer is never touched. Apply appends a new full-resolution entry via `startGeneration` (`resize` for image, `resizeVideo` for video); preserves the source. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
 
@@ -101,7 +101,7 @@ Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 
 - `MpiVideoPlayer`   props: `{ fps, controls }`   slot: `[data-mount="player"]` inside viewer
 
-**Instance API (on `el`):** `loadVideo(url, meta)`, `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
+**Instance API (on `el`):** `loadVideo(url, meta)`, `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `getSourceElement()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
 
 ---
 
@@ -211,7 +211,7 @@ Builds its own tool list from `mode: 'image'|'video'` prop. All tools — flat o
 - `MpiButton` (every tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled, extraClasses:'mpi-ibtn--rail' }`   slot: per-button wrapper div appended to the group's `__slot` — wrapper required because `ComponentFactory.mount` writes `container.innerHTML` and would clobber siblings otherwise. `toggleable:false` enforces radio behaviour (re-click = no-op)
 
 **Image mode tools:** `prompt`, `crop`, `resize`, `mask`
-**Video mode tools:** `prompt`, `crop`, `videoUpscale`, `interpolate`
+**Video mode tools:** `prompt`, `crop`, `resizeVideo`, `videoUpscale`, `interpolate`
 
 **Instance API (on `el`):**
 - `setMode(mode)` — activate programmatically; emits `activate { mode }`; re-activating current = no-op

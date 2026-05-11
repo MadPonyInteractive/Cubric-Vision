@@ -32,7 +32,7 @@ import { qs, gid } from '../../../utils/dom.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
-import { updateGroup, addGroup, saveGeneration } from '../../../services/projectService.js';
+import { updateGroup, addGroup } from '../../../services/projectService.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -273,8 +273,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 return _runVideoTool('interpolate', { Interp_Multiplier: payload.multiplier ?? 2 });
             }
             if (mode === 'resize' || mode === 'resizeVideo') {
-                if (mode === 'resize') return _handleResizeApply(payload || {});
-                clientLogger.info('MpiGroupHistoryBlock', `Resize video apply payload ${JSON.stringify(payload)}`);
+                return _handleResizeApply(mode, payload || {});
             }
         }
 
@@ -327,9 +326,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
             if (entry.status !== 'running') continue;
             _myGenIds.add(entry.id);
-            _setGenerating(true);
+            const _isResize = entry.operation === 'resize' || entry.operation === 'resizeVideo';
+            if (_isResize) _setBusy(true);
+            else _setGenerating(true);
             if (entry.latestPreviewUrl) {
-                _setGenerating(false);
+                if (_isResize) _setBusy(false);
+                else _setGenerating(false);
                 _applyPreview(entry.latestPreviewUrl);
             }
         }
@@ -345,9 +347,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        _unsubs.push(Events.on('generation:started', ({ id, scope, groupId }) => {
-            if (scope === 'groupHistory' && groupId === _group.id) {
-                _myGenIds.add(id);
+        _unsubs.push(Events.on('generation:started', ({ id, scope, groupId, operation }) => {
+            if (scope !== 'groupHistory' || groupId !== _group.id) return;
+            _myGenIds.add(id);
+            // Tool-only transforms (resize) skip the mascot — model ops only.
+            if (operation === 'resize' || operation === 'resizeVideo') {
+                _setBusy(true);
+            } else {
                 _setGenerating(true);
             }
         }));
@@ -388,17 +394,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     hasAudio:   item.hasAudio,
                 });
             } else {
-                const _isResize = item?.operation === 'resize';
                 viewer.el.exitMode?.();
                 viewer.el.loadEntry?.(item, _currentIdx);
                 viewer.el.setMaskHidden?.(false);
-                // Resize tool stays mounted across Apply — re-enter resize mode
-                // so the next control change paints a preview on the new entry.
-                if (_isResize) {
-                    Promise.resolve(viewer.el.enterResizeMode?.()).then(() => {
-                        _options?.el?.setCurrentItem?.(item);
-                    });
-                }
+            }
+            // Resize tool stays mounted across Apply — re-target the active
+            // item so its thumbnail re-extracts and the inline preview
+            // refreshes on the new entry.
+            if (item?.operation === 'resize' || item?.operation === 'resizeVideo') {
+                _options?.el?.setCurrentItem?.(item);
             }
         }));
 
@@ -620,76 +624,29 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Video snapshot / crop helpers ────────────────────────────────────
 
-        async function _handleResizeApply(payload = {}) {
-            const { params: resizeParams = payload, previewUrl = null } = payload;
+        function _handleResizeApply(mode, payload = {}) {
+            const resizeParams = payload?.params || payload || {};
             const currentItem = _group.history[_currentIdx];
-            if (!currentItem?.filePath) { _showToast('No source image', 'error'); return; }
-
-            // Fast path: latest cached preview matches current params — save the
-            // comfy output directly without re-running the workflow.
-            if (previewUrl && state.currentProject?.folderPath) {
-                try {
-                    _setBusy(true);
-                    const itemId = crypto.randomUUID();
-                    const saved = await saveGeneration({
-                        folderPath:      state.currentProject.folderPath,
-                        comfyViewUrl:    previewUrl,
-                        itemId,
-                        operation:       'resize',
-                        meta:            { prompt: '', negativePrompt: '', modelId: null, seed: -1 },
-                        generationMs:    null,
-                        pixelDimensions: { w: resizeParams.width || 0, h: resizeParams.height || 0 },
-                        mediaType:       'image',
-                    });
-                    if (!saved?.success) throw new Error('save-generation returned failure');
-                    const filePath = `/project-file?path=${encodeURIComponent(saved.filePath)}`;
-                    const displayName = saved.displayName || saved.filename?.replace(/\.[^.]+$/, '') || 'resize';
-                    const newItem = createImageItem({
-                        id:              itemId,
-                        filePath,
-                        operation:       'resize',
-                        displayName,
-                        pixelDimensions: { w: saved.pixelDimensions?.w ?? resizeParams.width ?? 0, h: saved.pixelDimensions?.h ?? resizeParams.height ?? 0 },
-                    });
-                    const updated = appendToHistory(_group, newItem);
-                    await updateGroup(updated);
-                    _group = updated;
-                    _currentIdx = _group.selectedIndex;
-                    viewer.el.clearResizePreview?.();
-                    historyList.el.appendEntry(newItem);
-                    viewer.el.exitMode?.();
-                    await viewer.el.loadEntry?.(newItem, _currentIdx);
-                    viewer.el.setMaskHidden?.(false);
-                    // Resize tool is still mounted — re-enter resize mode so the
-                    // next control change can paint a preview on the new entry.
-                    await viewer.el.enterResizeMode?.();
-                    _options?.el?.setCurrentItem?.(newItem);
-                    Events.emit('history:stats-dirty', { group: _group });
-                    _setBusy(false);
-                    _showToast('Resize applied', 'success');
-                } catch (err) {
-                    clientLogger.warn('MpiGroupHistoryBlock', 'Resize save failed', err);
-                    _setBusy(false);
-                    _showToast('Resize failed', 'error');
-                }
+            const wantVideo = mode === 'resizeVideo';
+            const mediaType = wantVideo ? 'video' : 'image';
+            if (!currentItem?.filePath) {
+                _showToast(wantVideo ? 'No source video' : 'No source image', 'error');
                 return;
             }
 
-            // Fallback: no cached preview (e.g. params changed since last preview
-            // or preview never ran). Run a fresh resize through generationService.
             const mediaItems = [{
                 id:        currentItem.id,
                 url:       resolveMediaUrl(currentItem.filePath),
-                mediaType: 'image',
+                mediaType,
                 source:    'history',
             }];
-            const imageModel = { id: null, mediaType: 'image' };
+            const opModel = { id: null, mediaType };
 
             _setBusy(true);
             _activeExec = startGeneration(
                 {
-                    operation: 'resize',
-                    model: imageModel,
+                    operation: wantVideo ? 'resizeVideo' : 'resize',
+                    model: opModel,
                     positive: '',
                     negative: '',
                     mediaItems,
@@ -705,10 +662,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                         _setBusy(false);
                         _showToast('Resize failed', 'error');
                     },
-                    onComplete: ({ item }) => {
+                    onComplete: () => {
                         _activeExec = null;
-                        viewer.el.clearResizePreview?.();
-                        _showToast('Resize applied', 'success');
                     },
                 },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }

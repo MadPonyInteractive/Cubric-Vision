@@ -75,7 +75,8 @@ const VIDEO_TOOLS = [
         mode: 'transform',
         label: 'Transform',
         group: [
-            { mode: 'crop', icon: 'crop', info: 'Crop' },
+            { mode: 'crop',        icon: 'crop',          info: 'Crop'   },
+            { mode: 'resizeVideo', icon: 'resize_stroke', info: 'Resize' },
         ],
     },
     {

@@ -169,6 +169,8 @@ export const MpiVideoViewer = ComponentFactory.create({
             return captureFrameBlob(_videoElement, rect);
         };
 
+        el.getSourceElement = () => _videoElement;
+
         el.enterUpscaleMode    = () => el.setAttribute('data-mode', 'upscale');
         el.exitUpscaleMode     = () => el.setAttribute('data-mode', 'idle');
         el.enterInterpolateMode = () => el.setAttribute('data-mode', 'interpolate');

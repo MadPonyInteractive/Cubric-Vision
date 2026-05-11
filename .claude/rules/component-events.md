@@ -162,7 +162,7 @@ API:     `el.setMode(mode)` — activate programmatically; re-activating current
          `el.setDisabled(map)` — bulk update `{ [toolMode]: { disabled: bool, reason?: string } }`; sub-modes accepted
          `el.getActiveMode()` — read current mode
 NOTE:    Radio behaviour: re-click active tool = no-op. `mask` is now a flat tool (no group/sub-modes). `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
-         Image Transform group contains `crop` and `resize`; video Transform remains `crop` only until video resize wiring lands.
+         Image Transform group contains `crop` and `resize`. Video Transform contains `crop` and `resizeVideo`. Both resize entries route to the same `MpiToolOptionsResize` compound via `TOOL_OPTIONS_REGISTRY`; the compound branches on `props.kind`.
 
 ### MpiNumberSelector
 EMITS:   `change`       `{ value: string }` — user picked a new value
@@ -321,6 +321,7 @@ NOTE:    Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Imports 
 EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer
          `crop-change`  `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
 LISTENS: (none — tool bars are owned by MpiGroupHistoryBlock, not viewer)
+API:     `getSourceElement()` — returns the underlying `HTMLVideoElement` so external tools (e.g. resize) can sample the current frame for thumbnail extraction.
 NOTE:    Viewer owns display + crop overlay state only. Bar action events (`crop-save-snapshot`,
          `crop-save-video`, `upscale-run`, etc.) now emitted by Block-owned MpiToolActionBars.
 
@@ -329,13 +330,12 @@ EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
          `mask-ready`    `{ hasMask }` — mask painted or cleared
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
-         `resize-source-ready` `{ width, height }` — resize mode entered with source dimensions
          `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
 LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
 API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canvas mask (no clear). Used by auto-detect thumb-pick flow.
          `setAutoMaskModel/setAutoMaskUseBox` — reset thumbs+picks only; do NOT clear existing paint.
          `runAutoMaskDetect` — reset thumbs+picks, run detection; do NOT clear existing paint.
-         `enterResizeMode/exitResizeMode`, `setResizePreview/clearResizePreview` — image resize live-preview surface.
+         `getSourceElement()` — returns the underlying `HTMLImageElement` so external tools (e.g. resize) can sample the source for thumbnail extraction. Read-only, never reassign.
 
 ### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
 EMITS:   (none)
@@ -343,13 +343,13 @@ LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
 
 ### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
-EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }, previewUrl: string|null }` — `previewUrl` is the last successful preview's comfy view URL when the cached params match the current params; null otherwise. Block fast-path uses `previewUrl` directly via `saveGeneration` (no Comfy re-run); falls back to `startGeneration` when null.
+EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation } }` — full-resolution params; payload is intentionally minimal. The block always re-runs the workflow at full resolution via `startGeneration`; there is no fast-path / preview-URL reuse.
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:tool:update` `{ toolKey: 'resize', key, value }` — debounced per-control persistence to `project.toolSettings.resize`
-LISTENS: `resize-source-ready` from MpiCanvasViewer when image resize mode enters
-API:     `el.setCurrentItem(item)` — re-target active history item without remount; invalidates preview cache, cancels in-flight preview, clears canvas preview, schedules a fresh preview. Block calls this from `historyList.on('entry-selected')` AND from inside `_handleResizeApply` after `loadEntry` so the new entry previews.
+LISTENS: (none — read-only access to viewer via `viewer.el.getSourceElement()`)
+API:     `el.setCurrentItem(item)` — re-target active history item without remount; cancels in-flight preview, re-extracts the thumbnail from the new source (uses `awaitNextLoad: true` for video so the next `loadeddata` is awaited rather than sampling a stale frame), then schedules a fresh preview. Block calls this from `historyList.on('entry-selected')` AND from `generation:complete` for `resize`/`resizeVideo` items.
          `el.getParams()` — read current params.
-NOTE:    Image mode enters `viewer.el.enterResizeMode()`, runs debounced Comfy previews through `runCommand` without saving history, paints them via `viewer.el.setResizePreview(blobUrl)`, and clears preview on destroy. Setup fires an initial `schedulePreview()` so the user sees the tool's effect without touching a control. Apply caches the comfy view URL keyed by `JSON.stringify(params)`; any control change clears the cache. Block treats resize as a tool-only transform — uses `_setBusy` (no mascot) instead of `_setGenerating`, and the Apply success toast (`'Resize applied'`) comes from the block (StatusBar `tool:idle` for `type === 'resize'` is silent). After Apply the block re-enters resize mode and re-targets `_options.el.setCurrentItem(newItem)`. The panel uses `MpiColorPicker` for `pad_color`.
+NOTE:    Preview is **thumbnail-based**, NOT canvas-resident. The compound extracts a 512px-longest-edge PNG thumbnail from the source via `js/utils/thumbnail.js` (`extractThumbnail`, `waitForVideoFrame`) and runs the **image** `resize` workflow on the thumbnail with proportionally-scaled `width`/`height`/`divisible_by`. Result paints into an inline `<img>` slot inside the panel between the Transform section and the Apply button — the viewer canvas/video stays untouched and interactive. This is true for both `kind: 'image'` and `kind: 'video'` (video grabs the first frame). Preview submits via `runCommand({ ..., previewOnly: true, suppressLifecycleEvents: true })` so StatusBar lifecycle signals (`tool:sampling-start` / `tool:loading-model`) are not emitted — there is no `tool:running`/`tool:idle` pair wrapping a tool-panel preview. Apply emits `{ params }` and the block routes to `startGeneration` (`resize` op for image, `resizeVideo` for video). Apply is **append-only** — never replaces the source. Block treats both ops as tool-only transforms via `_setBusy` (no mascot) — see component-events.md MpiGroupHistoryBlock entry. Setup fires an initial `schedulePreview()` so the user sees the tool's effect without touching a control. The panel uses `MpiColorPicker` for `pad_color`. Width/Height are NEVER auto-seeded from the source; the user owns dimensions (defaults `1024x1024` from `DEFAULTS`, persisted thereafter).
 
 ---
 
@@ -468,7 +468,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
 - Listens to `tool:sampling-start` → calls `updateLabel('Generating...')` and starts elapsed timer
 - Listens to `tool:cancelled` → calls `cancel()`
-- Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast). Reads `type` from the payload; for tool-only transforms (`resize`, `resizeVideo`) passes `silent: true` so the owning block can fire its own bespoke toast (e.g. `'Resize applied'`) without doubling up.
+- Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast) for all groupHistory ops, including `resize` / `resizeVideo`. The earlier resize-specific silent gate was removed; the block emits no bespoke toast and StatusBar owns the only completion signal.
 - Listens to `state.generationQueueCount` → appends pending Cue depth to the active label only, e.g. `GENERATING (2 queued)`
 
 **Pattern notes:**
@@ -486,9 +486,9 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 Owns the Group History workspace. Mounts MpiHistoryTools, MpiCanvasViewer (image) or MpiVideoViewer (video), MpiHistoryList, MpiMediaDropOverlay, and wires them via Events.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `radial:will-open` — pre-render hook; calls `refreshGroupHistoryRadial(_opOptions())` so radial mirrors PromptBox availability (live mask check via `viewer.el.hasMask()`)
-         `generation:started` `{ id, scope, groupId }` — seeds `_myGenIds` if scope+groupId match; shows generating state on canvas
+         `generation:started` `{ id, scope, groupId, operation }` — seeds `_myGenIds` if scope+groupId match. Branches on `operation`: tool-only transforms (`resize`/`resizeVideo`) call `_setBusy(true)` (no mascot); everything else calls `_setGenerating(true)` (mascot + spinner). `operation` is added to the `generation:started` payload by `activeGenerations.start` so listeners can route without inspecting the registry.
          `generation:preview` `{ id, url }` — loads preview into canvasViewer if id in `_myGenIds`
-         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state. **Snapshot `_wasReplace = _group.history?.some(entry => entry.id === item.id)` BEFORE reassigning `_group = group`** — `group` is the post-append snapshot so `.some(...)` would always be true and route every completion to `replaceEntry` (which silently bails for new ids not yet in the list). Mascot animation is gated on `item.operation` — `resize`/`resizeVideo` (tool transforms) skip the mascot. Resize fast-path Apply also needs `await viewer.el.enterResizeMode()` + `_options?.el?.setCurrentItem?.(item)` after `loadEntry` because `exitMode` resets `_currentMode = 'none'` and `loadEntry`'s `_modeToRestore` capture never re-enters resize.
+         `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state. **Snapshot `_wasReplace = _group.history?.some(entry => entry.id === item.id)` BEFORE reassigning `_group = group`** — `group` is the post-append snapshot so `.some(...)` would always be true and route every completion to `replaceEntry` (which silently bails for new ids not yet in the list). Mascot animation is gated on `item.operation` — `resize`/`resizeVideo` (tool transforms) skip the mascot. Resize tool stays mounted across Apply: after `loadVideo`/`loadEntry` the block calls `_options?.el?.setCurrentItem?.(item)` so the compound re-extracts the source thumbnail and refreshes the inline preview on the new entry. There is no canvas-mode re-enter step (the Phase 3 `enterResizeMode`/`exitResizeMode` viewer API is gone).
          `generation:error` `{ id }` — clears generating state
          `generation:cancelled` `{ id }` — clears generating state
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
@@ -503,7 +503,7 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          MpiMediaDropOverlay onDrop: loops dropped files, uploads each + calls _pb.el.injectMedia() per file (organism handle on Block) (no history card created)
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
-         Resize tool → MpiToolOptionsResize. Image resize live-previews through Comfy and Apply appends a new history entry, preserving the source item.
-         **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
+         Resize tool → MpiToolOptionsResize. Live-previews through Comfy on a 512px thumbnail extracted from the source via `viewer.el.getSourceElement()` (HTMLImageElement for image, HTMLVideoElement for video — first frame). Apply appends a new history entry, preserving the source item.
+         **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, resizeVideo → MpiToolOptionsResize, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
          **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelIdByType` (filtered by `modeKind`), `s_installedModelIds`, `project:changed`.
          **PromptBox model list:** `s_installedModelIds` listener also calls `_pb?.el?.setModelList?(getModelsByType(modeKind).filter(m => m.installed !== false))` — live dropdown refresh on install/uninstall.

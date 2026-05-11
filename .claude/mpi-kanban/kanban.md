@@ -98,22 +98,6 @@
 
 ## IMPLEMENTING
 
-### Resize tool
-
-  - tags: [PLAN]
-  - priority: medium
-  - workload: Normal
-  - defaultExpanded: true
-  - steps:
-      - [x] Foundation workflow dependency executor
-      - [x] Tool UI organism color picker
-      - [x] Live preview Apply
-      - [ ] Video workspace support
-      - [ ] Docs rules follow-up
-    ```md
-    Plan file: docs/plans/2026-05-11-resize-tool.md
-    ```
-
 ### Setup video generation
 
   - tags: [Implementation completion]
@@ -125,6 +109,43 @@
     ```
 
 ## COMPLETED
+
+### Resize tool
+
+  - tags: [PLAN]
+  - priority: medium
+  - workload: Normal
+  - defaultExpanded: false
+  - steps:
+      - [x] Foundation workflow dependency executor
+      - [x] Tool UI organism color picker
+      - [x] Live preview Apply
+      - [x] Video workspace support
+      - [x] Docs rules follow-up
+    ```md
+    Plan file: docs/plans/2026-05-11-resize-tool.md
+
+    Universal resize tool shipped for both image and video workspaces.
+    Live preview pivoted from canvas-resident to thumbnail-based: 512px-
+    longest-edge thumbnail extracted from `viewer.el.getSourceElement()`,
+    submitted via `runCommand({ previewOnly: true,
+    suppressLifecycleEvents: true })` against the image `resize` workflow
+    with proportionally-scaled W/H/divisible_by. Result paints into an
+    inline preview slot inside `MpiToolOptionsResize` — viewer canvas/
+    video stays untouched. Apply emits `{ params }` and the block always
+    re-runs the workflow at full resolution via `startGeneration`
+    (`resize` for image, `resizeVideo` for video). Append-only — never
+    replaces the source. New `js/utils/thumbnail.js` provides
+    `extractThumbnail` + `waitForVideoFrame({ awaitNextLoad })` so video
+    sources don't sample stale frames after src swap. Phase 3
+    `MpiCanvas.setPreviewImage`/`MpiCanvasViewer.enterResizeMode` API
+    deleted. `commandExecutor` gained `suppressLifecycleEvents` payload
+    flag; multi-stage `_ms` previews still fire StatusBar lifecycle
+    events as before. Mascot gated via `operation` field on
+    `generation:started` (added to `activeGenerations.start` emit).
+    Phase 5.3 (follow-up "Tool panel UI refresh — Stage mockup match"
+    kanban entry) intentionally skipped.
+    ```
 
 ### Introduce video compared tool
 

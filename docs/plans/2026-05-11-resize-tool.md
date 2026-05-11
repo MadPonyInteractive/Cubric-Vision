@@ -374,7 +374,7 @@ about these so they replicate the same patterns for video:
 
 **Goal:** Same tool, same UI, video items. The injector already supports the video workflow (title-based lookups); this phase just registers the op, adds the toolbar entry, and exercises the video LoadVideo input path.
 
-- [ ] **4.1 — Add resizeVideo sub-tool to VIDEO_TOOLS + verify video wiring**
+- [x] **4.1 — Add resizeVideo sub-tool to VIDEO_TOOLS + verify video wiring**
 
     1. In `js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js`, add to `VIDEO_TOOLS.transform.group`:
        ```js
@@ -390,13 +390,87 @@ about these so they replicate the same patterns for video:
 
     **Verify:** Open a video group history workspace. The left toolbar Transform group now shows Crop + Resize. Click Resize. The options panel mounts with seeded width/height matching the source video. Change Width=512, click Apply. Within ~tens of seconds, a new resized video entry is appended while the source video remains available.
 
+### Phase 4 — Implementation deviations (2026-05-11 follow-up)
+
+Phase 4 shipped with a major rearchitecture vs. the original plan text. The
+brief above describes per-mediatype enter/exit hooks on viewers and a video
+preview path; the actual implementation pivoted to a unified
+**thumbnail-based preview** that works the same for image and video. Phase 5
+implementers and rule-file editors should follow these notes:
+
+1. **Thumbnail-based preview, not viewer-canvas preview.** The compound now
+   extracts a 512px-longest-edge PNG thumbnail from the source via a new
+   util `js/utils/thumbnail.js` (`extractThumbnail`, `waitForVideoFrame`).
+   Preview always runs the **image** `resize` workflow on the thumbnail,
+   regardless of whether the source is image or video. Width/Height/
+   `divisible_by` are scaled proportionally to thumbnail space; pad color,
+   flip, rotation, crop_position, upscale_method, keep_proportion pass
+   through unchanged. Result paints into an inline `<img>` slot inside the
+   tool panel between the Transform section and the Apply button — the
+   viewer canvas/video stays untouched and interactive. Mockup reference:
+   `docs/redesign/c-stage/editor-video.html` (CROP PREVIEW box pattern).
+
+2. **Viewer integration is read-only.** Both `MpiCanvasViewer` and
+   `MpiVideoViewer` expose `el.getSourceElement()` returning the underlying
+   `HTMLImageElement` / `HTMLVideoElement`. No mode entry/exit, no preview
+   swap, no source-ready event. The compound owns its thumbnail cache and
+   refreshes via `el.setCurrentItem(item)`.
+
+3. **Phase 3 viewer/canvas preview API deleted.** The shipped Phase 3
+   `MpiCanvas.setPreviewImage`/`clearPreviewImage`/`_previewImg`/
+   `_previewBlobUrl`/`_revokePreviewBlob` and `MpiCanvasViewer.enterResizeMode`/
+   `exitResizeMode`/`setResizePreview`/`clearResizePreview`/
+   `resize-source-ready` event are gone. The canvas `'resize'` activeMode
+   value is no longer used; valid modes are `'none'|'mask'|'crop'|'compare'`.
+
+4. **Apply always re-runs the workflow at full res.** No fast-path. Image
+   uses `resize` op; video uses `resizeVideo` op. Both go through
+   `startGeneration` with `injectionParams: params`. The thumbnail preview
+   URL is NOT reusable for save (it's a 512px result). Block's
+   `_handleResizeApply(mode, payload)` is the single entry point for both
+   ops; `mediaType` is derived from `mode === 'resizeVideo'`.
+
+5. **Apply emit shape simplified.** Compound emits `apply` `{ params }`
+   only — no `previewUrl` field. Earlier shipped `{ params, previewUrl }`
+   shape removed when the fast-path was deleted.
+
+6. **Apply is append-only, never replace.** Matches existing tool transforms
+   (videoUpscale, interpolate). The `generation:complete` listener appends
+   the new item to `_group.history` via `appendEntry`. Source remains.
+
+7. **Width/Height never auto-seed from the source.** Per user direction —
+   the user owns dimensions. `getToolSettings` returns the persisted values
+   or `DEFAULTS.width/height = 1024`. The previous `defaultsForItem` and
+   `resize-source-ready` seeders are deleted.
+
+8. **Tool-vs-model busy contract retained.** `_setBusy` (no mascot,
+   `viewer.el.setGenerating?.()` only) is used for both `resize` and
+   `resizeVideo`. `generation:complete` listener gates mascot on
+   `item.operation !== 'resize' && item.operation !== 'resizeVideo'`.
+   StatusBar `tool:idle` no longer special-cases resize — `'Generation
+   finished'` toast fires for all completions; the bespoke `'Resize
+   applied'` block toast was removed (was redundant once the StatusBar
+   silent-gate was undone).
+
+9. **Re-target after Apply.** `generation:complete` calls
+   `_options?.el?.setCurrentItem?.(item)` for resize/resizeVideo so the
+   thumbnail re-extracts on the new entry and the inline preview refreshes.
+   The earlier `await viewer.el.enterResizeMode()` re-enter dance is gone
+   (no canvas mode anymore).
+
+10. **`resize_stroke` icon used in BOTH toolbars.** Image and video
+    transform groups both use `resize_stroke` for the Resize button.
+
+11. **`saveGeneration` import removed from `MpiGroupHistoryBlock.js`** —
+    no longer needed once the fast-path was deleted.
+
 ---
 
 ## Phase 5 — Docs, rules, follow-up kanban entry
 
 **Goal:** Documentation and rule files reflect the new tool. New kanban entry created to track the crop+mask UI refresh and toolSettings parity.
 
-- [ ] **5.1 — Sync `.claude/rules/*.md` files**
+- [x] **5.1 — Sync `.claude/rules/*.md` files**
 
     1. `.claude/rules/component-comfy.md` — add two rows in the operations table (around line 131-150 per investigation):
        ```
@@ -410,7 +484,7 @@ about these so they replicate the same patterns for video:
 
     **Verify:** Look at the four rule files — confirm each contains the new resize entries described above. Run a grep for `resize` across `.claude/rules/` — count matches per file matches the expected updates.
 
-- [ ] **5.2 — Sync `docs/` files**
+- [x] **5.2 — Sync `docs/` files**
 
     1. `docs/PROJECT.md` — no structural change; if there is a universal commands list, add `resize` and `resizeVideo` to it.
     2. `docs/comfy.md` — add a short "Workflow injectors" subsection under or near the existing "Workflow Injection Pattern" section: when an op declares `injector: '<name>'`, executor delegates workflow JSON mutation to `js/services/workflowInjectors/<name>Injector.js`. Used for tool-panel-driven utility workflows (resize, future: paint, color-correct).

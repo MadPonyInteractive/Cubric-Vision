@@ -85,10 +85,25 @@ Current injector:
   and the Boolean node titled Flip. Media inputs (`Input_Image`, `Input_Video`) and
   Output capture remain handled by the standard command executor/controller path.
 
-Image resize live preview calls `runCommand` directly and uses
-`previewOnly: true` only as a client-side "do not save" hint. The executor still
-captures the workflow `Output` node for resize; only `_ms` video preview
-workflows switch capture to `Preview`.
+Resize live preview (image AND video workspaces) calls `runCommand` directly with
+`previewOnly: true` AND `suppressLifecycleEvents: true`. The compound extracts a
+512px-longest-edge thumbnail from the source via `viewer.el.getSourceElement()`
+(HTMLImageElement on the canvas viewer, HTMLVideoElement first frame on the
+video viewer) and submits it through the **image** `resize` workflow with
+`width`/`height`/`divisible_by` proportionally scaled to thumbnail space. The
+result paints into an inline `<img>` slot inside the resize tool panel — viewer
+canvas / video stays untouched. `previewOnly` is the existing client-side
+"do not save" hint; `suppressLifecycleEvents: true` suppresses
+`tool:sampling-start` / `tool:loading-model` emits because tool-panel previews
+bypass `generationService` and have no `tool:running`/`tool:idle` pair to
+bracket them — without suppression, StatusBar would be left in active state with
+its elapsed timer running. Multi-stage `_ms` previews go through
+`generationService` and DO want lifecycle events; the suppression is gated on
+the explicit flag, NOT on `previewOnly`. The executor still captures the
+workflow `Output` node for resize; only `_ms` video preview workflows switch
+capture to `Preview`. Apply (image or video) always re-runs the workflow at
+full resolution via `startGeneration`; there is no fast-path / preview-URL
+reuse.
 
 ## assetService (`js/services/assetService.js`)
 

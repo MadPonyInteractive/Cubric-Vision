@@ -60,3 +60,58 @@
 .mpi-tool-options-resize__actions > div {
     flex: 0 0 auto;
 }
+
+/* ── Inline preview ─────────────────────────────────────────────────────── */
+
+.mpi-tool-options-resize__preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding-bottom: var(--s-2);
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.mpi-tool-options-resize__preview-label {
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.mpi-tool-options-resize__preview-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--surface-canvas);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.mpi-tool-options-resize__preview-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    image-rendering: auto;
+    background-image:
+        linear-gradient(45deg, var(--surface-2) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--surface-2) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--surface-2) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--surface-2) 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+}
+
+.mpi-tool-options-resize__preview-spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: oklch(0.16 0.02 350 / 0.4);
+    pointer-events: none;
+}
