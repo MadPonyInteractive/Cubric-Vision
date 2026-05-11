@@ -65,6 +65,18 @@ export const MpiHistoryList = ComponentFactory.create({
 
         // ── Dims helper ───────────────────────────────────────────────────────
 
+        function _formatFps(value) {
+            const fps = Number(value);
+            if (!Number.isFinite(fps) || fps <= 0) return null;
+            return `${Number.isInteger(fps) ? fps : fps.toFixed(1)} fps`;
+        }
+
+        function _formatDuration(value) {
+            const duration = Number(value);
+            if (!Number.isFinite(duration) || duration <= 0) return null;
+            return `${Math.max(1, Math.round(duration))}s`;
+        }
+
         function _dimsLabel(item, idx) {
             const w = item.pixelDimensions?.w;
             const h = item.pixelDimensions?.h;
@@ -78,10 +90,10 @@ export const MpiHistoryList = ComponentFactory.create({
                 _dimsLogged = true;
             }
             const dims = (w && w > 0) ? `${w}×${h}` : '?×?';
-            const ms = item.generationMs;
-            if (ms && ms > 0) {
-                const sec = Math.max(1, Math.round(ms / 1000));
-                return `${dims} · ${sec}s`;
+            if (item.type === 'video' || _isVideo) {
+                const duration = _formatDuration(item.duration ?? item.videoMeta?.duration);
+                const fps = _formatFps(item.fps ?? item.videoMeta?.fps);
+                return [dims, duration, fps].filter(Boolean).join(' \u00b7 ');
             }
             return dims;
         }
