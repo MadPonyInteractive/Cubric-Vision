@@ -408,14 +408,14 @@
     opacity: 0.92;
 }
 
-/* Hover-only top/bottom gradient scrims — fade in to give legibility behind
- * top badge and bottom overlay text without permanently darkening clean image. */
+/* Hover-only scrims — fade in to give legibility behind top badges, side icon
+ * column, and bottom overlay text without permanently darkening clean image.
+ * `::before` = full-card radial vignette (corners + edges).
+ * `::after`  = bottom linear boost for overlay text on busy images. */
 .mpi-group-card__media::before,
 .mpi-group-card__media::after {
     content: '';
     position: absolute;
-    left: 0;
-    right: 0;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -423,20 +423,21 @@
 }
 
 .mpi-group-card__media::before {
-    top: 0;
-    height: 35%;
-    background: linear-gradient(to bottom,
-        oklch(0 0 0 / 0.65) 0%,
-        oklch(0 0 0 / 0.25) 60%,
-        transparent 100%);
+    inset: 0;
+    background: radial-gradient(ellipse 75% 70% at 50% 50%,
+        transparent 0%,
+        oklch(0 0 0 / 0.35) 55%,
+        oklch(0 0 0 / 0.75) 100%);
 }
 
 .mpi-group-card__media::after {
+    left: 0;
+    right: 0;
     bottom: 0;
     height: 45%;
     background: linear-gradient(to top,
-        oklch(0 0 0 / 0.7) 0%,
-        oklch(0 0 0 / 0.3) 60%,
+        oklch(0 0 0 / 0.75) 0%,
+        oklch(0 0 0 / 0.35) 60%,
         transparent 100%);
 }
 
@@ -581,11 +582,13 @@
     display: none;
 }
 
-/* Hide the standard fav/reuse hover icons on preview cards so the badge owns
- * the top-right and the action row owns the bottom. */
-.mpi-group-card--preview .mpi-group-card__fav-wrap,
+/* Preview cards: stack fav + reuse below the PREVIEW / stage2 / assets badges
+ * (top-right column) so all top-right chrome shares the same axis. */
+.mpi-group-card--preview .mpi-group-card__fav-wrap {
+    top: 5.4rem;
+}
 .mpi-group-card--preview .mpi-group-card__reuse-wrap {
-    display: none;
+    top: 7.3rem;
 }
 
 .mpi-group-card__preview-actions {

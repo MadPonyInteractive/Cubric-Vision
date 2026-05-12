@@ -165,6 +165,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: width || 1280,
     height: height || 800,
+    minWidth: 950,
+    minHeight: 500,
     x: x,
     y: y,
     frame: false, // Frameless window

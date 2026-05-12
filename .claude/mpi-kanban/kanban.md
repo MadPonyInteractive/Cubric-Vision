@@ -123,6 +123,24 @@
 
 ## COMPLETED
 
+### Gallery preview-card polish + filter set + window min size + landing title
+
+  - tags: [ux, gallery, window]
+  - priority: medium
+  - workload: Easy
+  - defaultExpanded: false
+    ```md
+    Session 2026-05-12: misc UI polish.
+    - Preview cards: un-suppressed heart + reuse icons (CSS `display:none` block removed). Re-stacked top-right column: PREVIEW badge → stage2 → assets → fav (top:5.4rem) → reuse (top:7.3rem). Existing event wiring re-shared with normal cards (no JS changes).
+    - Gallery filter set extended: added `Previews` tab (filter = `g.history[selectedIndex].stage === 'preview'`); renamed `Favorites` UI label → `Favs` (sidecar field stays `favourite`, filter value stays `favorites`). New slot `data-filter="previews"` in tabs DOM.
+    - Card hover scrim: `::before` swapped from top linear to full-card radial vignette (ellipse 75%×70%, transparent center → 0.35 → 0.75 at corners). `::after` bottom linear bumped 0.7→0.75. Side icons + corner badges now legible over bright images.
+    - Electron window minWidth: 950, minHeight: 500 in main.js BrowserWindow ctor.
+    - Project landing row title `h3` → `h4` at js/shell/projectUI.js:264 to keep long names from pushing the asset count outside the row (h4 uses smaller default size via styles/01_base.css h1..h6 rule).
+    
+    Files: js/components/Compounds/MpiGalleryGrid/{MpiGalleryGrid.js, MpiGalleryGrid.css}, js/state.js, main.js, js/shell/projectUI.js.
+    Memory: feedback_landing_rows_shell_dom.md (new).
+    ```
+
 ### Multi-stage workflow latents
 
   - tags: [PLAN]

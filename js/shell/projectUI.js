@@ -261,9 +261,9 @@ function _buildProjectRow(project) {
   const meta = document.createElement('div');
   meta.className = 'mpi-landing__pl-meta';
 
-  const h3 = document.createElement('h3');
-  h3.textContent = project.name;
-  meta.appendChild(h3);
+  const h4 = document.createElement('h4');
+  h4.textContent = project.name;
+  meta.appendChild(h4);
 
   const sub = document.createElement('span');
   sub.className = 'mpi-landing__pl-sub';
