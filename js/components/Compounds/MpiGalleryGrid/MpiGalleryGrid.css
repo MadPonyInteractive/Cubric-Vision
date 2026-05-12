@@ -164,6 +164,9 @@
 .mpi-gallery-grid__grid {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     padding: 1rem;
     display: flex;
     flex-direction: column;

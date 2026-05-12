@@ -88,16 +88,6 @@
     In the video history workspace, we are going to implement a feature so that the user can continue from the last frame and that creates a new video with the previous video + the generated video after. The last frame can be extracted from the last frame of the current video and injected in an image-to-video workflow displaying the prompt box. Please let the user know about the implementation briefing and concerns, and how this is supposed to happen. If it's a new PromptBoxControls.js, if it's a new tool, brainstorm with the user use cases of how to implement this.
     ```
 
-### Media Gallery Buggy Behavior
-
-  - tags: [Bug]
-  - priority: high
-  - workload: Hard
-  - defaultExpanded: false
-    ```md
-    Scrolling the Media Gallery with the mouse wheel creates snapping motion and flickering of the cards. Changing the size of the grid flickers all the cards to a gray background and only then displays the cards' content. In some cases, depending on the window size and the cards that are in the gallery, the gallery size starts flickering and doesn't stop until there's a window size change or the gallery zooms in and out constantly. Overall, the gallery seems quite buggy and cannot ship like this.  Suggestion: add the console log to refresh or rehydrate functions to see how much and how many times it's getting refreshed. There might be something that is causing this and needs to be addressed.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -122,6 +112,34 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Media Gallery Buggy Behavior
+
+  - tags: [Bug]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+    ```md
+    Session 2026-05-12: improved gallery visual stability without changing
+    generation semantics.
+    - `MpiGalleryGrid` moved from full card rebuilds to keyed card reuse by
+      `group.id`, preserving DOM and grid-owned state across setGroups, sort,
+      resize, and size-slider rerenders.
+    - Latent preview updates now preload the next blob frame before swapping,
+      so generating cards keep the current preview visible instead of flashing
+      gray between ComfyUI preview frames.
+    - Aspect ratios prefer MediaItem/group dimension data and a per-group cache
+      instead of DOM natural dimensions as the primary layout source.
+    - ResizeObserver rerenders are gated to real width changes; grid scrollbar
+      gutter is stable; manual wheel forwarding only applies on empty grid
+      space to avoid double-scroll/snapping over cards.
+    - Imported media now carries measured pixelDimensions into in-memory
+      gallery cards, matching persisted sidecar shape and stabilizing first
+      render layout for imports/snapshots.
+    Verified with `npm run lint -- --quiet`, targeted ESLint/node syntax
+    checks, and a browser smoke test covering keyed reuse, selection clearing,
+    latent preview swaps, and placeholder-to-final replacement.
+    ```
 
 ### Gallery preview-card polish + filter set + window min size + landing title
 

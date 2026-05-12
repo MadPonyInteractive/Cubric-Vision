@@ -76,6 +76,7 @@ export const MpiGalleryDropOverlay = ComponentFactory.create({
                 filename: uploaded.filename,
                 itemId: uploaded.itemId,
                 thumbPath: uploaded.thumbPath,
+                pixelDimensions: uploaded.pixelDimensions,
                 mediaType,
             });
         });

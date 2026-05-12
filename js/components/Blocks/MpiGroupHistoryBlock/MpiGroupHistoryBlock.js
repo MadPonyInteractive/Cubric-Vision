@@ -686,6 +686,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     filePath: uploaded.filePath,
                     uploaded: true,
                     operation: 'snapshot',
+                    pixelDimensions: uploaded.pixelDimensions,
                 });
                 const group = createItemGroup('image', { name: displayName });
                 const finalGroup = appendToHistory(group, item);
@@ -695,6 +696,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     url: uploaded.filePath,
                     filename: uploaded.filename,
                     itemId: uploaded.itemId,
+                    pixelDimensions: uploaded.pixelDimensions,
                     mediaType: 'image',
                 });
                 _showToast('Snapshot saved to gallery', 'success');

@@ -17,7 +17,7 @@ import { measureMediaDimensions } from '../utils/mediaDimensions.js';
  * @param {Object} [opts]
  * @param {string} [opts.filenamePrefix='imported'] - Filename prefix (e.g. 'snapshot') before _NNN.<ext>
  * @param {string} [opts.operation='imported'] - Sidecar operation field (e.g. 'snapshot')
- * @returns {Promise<{filePath: string, filename: string, itemId: string}|null>}
+ * @returns {Promise<{filePath: string, filename: string, itemId: string, thumbPath: string|null, pixelDimensions: {w: number, h: number}}|null>}
  */
 export async function uploadMediaFile(file, mediaType, projectFolderPath, projectId, opts = {}) {
     if (!projectFolderPath || !projectId) {
@@ -54,7 +54,13 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'upload failed');
         const filePath = `/project-file?path=${encodeURIComponent(data.filePath)}`;
-        return { filePath, filename: data.filename, itemId, thumbPath: data.thumbPath || null };
+        return {
+            filePath,
+            filename: data.filename,
+            itemId,
+            thumbPath: data.thumbPath || null,
+            pixelDimensions: { w: width, h: height },
+        };
     } catch (e) {
         clientLogger.warn('mediaUploadService', 'Media save failed:', e);
         return null;

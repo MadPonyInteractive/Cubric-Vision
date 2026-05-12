@@ -2,7 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
-import { ce, qs, qsa, on } from '/js/utils/dom.js';
+import { ce, qs, on } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
@@ -10,6 +10,7 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiGalleryGrid — Compound: adaptive grid of ItemGroup cards with size slider
@@ -80,10 +81,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {import('../../../data/projectModel.js').ItemGroup[]} */
         let _groups = props.groups || [];
 
-        /** @type {Map<string, {card: object, el: HTMLElement}>} */
+        /** @type {Map<string, {card: object, el: HTMLElement, renderKey?: string}>} */
         const _cardMap = new Map();
 
         const _stabilizedIds = new Set();
+        /** @type {Map<string, {key: string, ratio: number}>} */
+        const _aspectRatioCache = new Map();
 
         // Group ids whose preview card is mid-Continue. Survives setGroups
         // rebuilds — re-applied to fresh cards inside _rerenderJustified so
@@ -208,7 +211,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         slider.on('input', ({ value }) => {
             state.gallerySizeLevel = value;
             _cardWidth = SIZE_MAP[value] || 288;
-            _rerenderJustified();
+            _rerenderJustified('size');
         });
 
         const incrementSlider = () => {
@@ -357,6 +360,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
             });
 
             let _videoThumb = null;
+
+            function _isPreviewLoaded() {
+                return previewImg?.classList.contains('mpi-group-card__preview-img--loaded')
+                    && !!previewImg.getAttribute('src');
+            }
+
             function _ensurePreviewImage() {
                 if (previewImg) return previewImg;
                 previewImg = document.createElement('img');
@@ -371,12 +380,35 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
 
             function _setPreviewImageSrc(img, url) {
-                img.classList.remove('mpi-group-card__preview-img--loaded');
-                spinner.style.display = '';
-                img.src = url;
-                if (img.complete && img.naturalWidth > 0) {
+                if (!url) return;
+                if (img.dataset.previewSrc === url) {
+                    if (_isPreviewLoaded()) spinner.style.display = 'none';
+                    return;
+                }
+                if (img.dataset.pendingPreviewSrc === url) return;
+
+                img.dataset.pendingPreviewSrc = url;
+                if (!_isPreviewLoaded()) spinner.style.display = '';
+
+                const next = new Image();
+                next.onload = () => {
+                    if (img.dataset.pendingPreviewSrc !== url) return;
+                    img.src = url;
+                    img.dataset.previewSrc = url;
+                    delete img.dataset.pendingPreviewSrc;
                     img.classList.add('mpi-group-card__preview-img--loaded');
                     spinner.style.display = 'none';
+                };
+                next.onerror = () => {
+                    if (img.dataset.pendingPreviewSrc === url) delete img.dataset.pendingPreviewSrc;
+                    if (!img.dataset.previewSrc) {
+                        img.classList.remove('mpi-group-card__preview-img--loaded');
+                        spinner.style.display = '';
+                    }
+                };
+                next.src = url;
+                if (next.complete && next.naturalWidth > 0) {
+                    next.onload();
                 }
             }
 
@@ -391,6 +423,23 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 thumb = nextThumb;
             }
 
+            function _cacheLoadedAspectRatio(mediaEl) {
+                const w = mediaEl.naturalWidth || mediaEl.videoWidth || 0;
+                const h = mediaEl.naturalHeight || mediaEl.videoHeight || 0;
+                if (!group?.id || w <= 0 || h <= 0) return;
+                _setAspectRatioCache(group, w / h);
+            }
+
+            function _requestStabilizingRender(mediaEl) {
+                if (!group?.id) return;
+                _cacheLoadedAspectRatio(mediaEl);
+                if (_getDataAspectRatio(group)) return;
+                const key = _ratioCacheKey(group);
+                if (_stabilizedIds.has(key)) return;
+                _stabilizedIds.add(key);
+                _rerenderJustified('media-load');
+            }
+
             function _swapThumbToImage(src, selected) {
                 let imageThumb = thumb instanceof HTMLImageElement ? thumb : null;
                 if (!imageThumb || imageThumb.classList.contains('mpi-group-card__thumb--video')) {
@@ -402,20 +451,29 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _videoThumb = null;
                 }
                 imageThumb.style.visibility = '';
-                imageThumb.classList.remove('mpi-group-card__thumb--loaded');
                 imageThumb.onload = () => {
                     imageThumb.classList.add('mpi-group-card__thumb--loaded');
                     cardEl.classList.remove('mpi-group-card--missing');
-                    if (group?.id && !_stabilizedIds.has(group.id)) {
-                        _stabilizedIds.add(group.id);
-                        _rerenderJustified();
-                    }
+                    _requestStabilizingRender(imageThumb);
                 };
                 imageThumb.onerror = () => {
                     cardEl.classList.add('mpi-group-card--missing');
                     _swapThumbToEmpty();
                     emit('media-missing', { group, itemId: selected?.id });
                 };
+
+                if (imageThumb.getAttribute('src') === src) {
+                    if (imageThumb.complete && imageThumb.naturalWidth > 0) {
+                        imageThumb.classList.add('mpi-group-card__thumb--loaded');
+                        cardEl.classList.remove('mpi-group-card--missing');
+                        _cacheLoadedAspectRatio(imageThumb);
+                    }
+                    return;
+                }
+
+                if (!imageThumb.classList.contains('mpi-group-card__thumb--loaded')) {
+                    imageThumb.classList.remove('mpi-group-card__thumb--loaded');
+                }
                 imageThumb.src = src;
             }
 
@@ -448,10 +506,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _videoThumb.draggable = true;
                     _videoThumb.addEventListener('loadeddata', () => {
                         cardEl.classList.remove('mpi-group-card--missing');
-                        if (group?.id && !_stabilizedIds.has(group.id)) {
-                            _stabilizedIds.add(group.id);
-                            _rerenderJustified();
-                        }
+                        _requestStabilizingRender(_videoThumb);
                     });
                     _videoThumb.addEventListener('error', () => {
                         cardEl.classList.add('mpi-group-card--missing');
@@ -463,6 +518,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         _videoThumb.pause();
                         _videoThumb.currentTime = 0;
                     });
+                    _videoThumb.dataset.mpiDragBound = '1';
                     _videoThumb.addEventListener('dragstart', (e) => {
                         const sel = group?.history?.[group.selectedIndex];
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
@@ -546,12 +602,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
                 subEl.textContent = [dimStr, timeStr, snippet].filter(Boolean).join(' · ');
 
-                thumb.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('application/mpi-media', JSON.stringify({
-                        groupId: group.id, itemId: selected?.id,
-                        filePath: selected?.filePath, type: group.type,
-                    }));
-                });
+                if (!thumb.dataset.mpiDragBound) {
+                    thumb.dataset.mpiDragBound = '1';
+                    thumb.addEventListener('dragstart', (e) => {
+                        const sel = group?.history?.[group.selectedIndex];
+                        e.dataTransfer.setData('application/mpi-media', JSON.stringify({
+                            groupId: group.id, itemId: sel?.id,
+                            filePath: sel?.filePath, type: group.type,
+                        }));
+                    });
+                }
 
                 _favourite = group?.favourite || false;
                 _favBtn.el.setActive(_favourite);
@@ -629,7 +689,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _generating = true;
                 cardEl.classList.add('mpi-group-card--generating');
                 preview.classList.add('mpi-group-card__preview--visible');
-                spinner.style.display = '';
+                spinner.style.display = previewUrl && _isPreviewLoaded() ? 'none' : '';
                 if (thumb.getAttribute('src') !== EMPTY_IMAGE_SRC) {
                     thumb.style.visibility = '';
                 } else {
@@ -656,6 +716,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 preview.classList.remove('mpi-group-card__preview--visible');
                 _clearPreviewImage();
                 _render();
+            };
+
+            cardEl.setGroup = (newGroup) => {
+                if (newGroup) group = newGroup;
             };
 
             cardEl.setShowInfo = (val) => {
@@ -712,6 +776,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.refreshGroup = (newGroup) => {
                 if (newGroup) group = newGroup;
+                if (!group?.isGenerating) {
+                    _generating = false;
+                    cardEl.classList.remove('mpi-group-card--generating');
+                    preview.classList.remove('mpi-group-card__preview--visible');
+                    _clearPreviewImage();
+                }
                 _render();
             };
 
@@ -728,27 +798,125 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const GAP = 8;
 
-        function _getAspectRatio(group) {
-            const cardEntry = _cardMap.get(group.id);
-            if (cardEntry) {
-                const thumb = qs('.mpi-group-card__thumb', cardEntry.el);
-                if (thumb) {
-                    if (thumb.naturalWidth > 0) return thumb.naturalWidth / thumb.naturalHeight;
-                    if (thumb.videoWidth   > 0) return thumb.videoWidth   / thumb.videoHeight;
-                }
-            }
-            const sel = group.history?.[group.selectedIndex];
+        function _ratioCacheKey(group) {
+            const sel = group?.history?.[group.selectedIndex];
+            return [group?.id || '', sel?.id || '', sel?.filePath || ''].join('|');
+        }
+
+        function _getDataAspectRatio(group) {
+            const sel = group?.history?.[group.selectedIndex];
             const px = sel?.pixelDimensions;
-            if (px?.w && px?.h) return px.w / px.h;
-            if (group.width && group.height) return group.width / group.height;
+            if (px?.w > 0 && px?.h > 0) return px.w / px.h;
+            if (group?.width > 0 && group?.height > 0) return group.width / group.height;
+            return null;
+        }
+
+        function _setAspectRatioCache(group, ratio) {
+            if (!group?.id || !Number.isFinite(ratio) || ratio <= 0) return;
+            _aspectRatioCache.set(group.id, { key: _ratioCacheKey(group), ratio });
+        }
+
+        function _getCachedAspectRatio(group) {
+            const cached = _aspectRatioCache.get(group?.id);
+            if (!cached || cached.key !== _ratioCacheKey(group)) return null;
+            return cached.ratio;
+        }
+
+        function _getAspectRatio(group) {
+            const dataRatio = _getDataAspectRatio(group);
+            if (dataRatio) {
+                _setAspectRatioCache(group, dataRatio);
+                return dataRatio;
+            }
+            const cachedRatio = _getCachedAspectRatio(group);
+            if (cachedRatio) return cachedRatio;
             return 1.0;
         }
 
         let _renderTimeout = null;
+        let _pendingRenderReasons = new Set();
+        let _lastObservedGridWidth = null;
+        let _lastRenderLogAt = 0;
 
-        function _rerenderJustified() {
+        function _getGroupRenderKey(group) {
+            const sel = group?.history?.[group.selectedIndex];
+            const dims = sel?.pixelDimensions;
+            return [
+                group?.id || '',
+                group?.name || '',
+                group?.type || '',
+                group?.selectedIndex ?? '',
+                group?.favourite ? 'fav' : '',
+                group?.isGenerating ? 'generating' : '',
+                sel?.id || '',
+                sel?.filePath || '',
+                sel?.thumbPath || '',
+                sel?.type || '',
+                sel?.stage || '',
+                sel?.operation || '',
+                sel?.modelId || '',
+                sel?.uploaded ? 'uploaded' : '',
+                dims?.w || '',
+                dims?.h || '',
+                sel?.duration || '',
+                sel?.generationMs || '',
+                sel?.prompt || '',
+            ].join('|');
+        }
+
+        function _getCardEntry(group) {
+            const renderKey = _getGroupRenderKey(group);
+            let entry = _cardMap.get(group.id);
+            if (!entry) {
+                const { card, wrapper } = _makeCard(group);
+                entry = { card, el: wrapper, renderKey };
+                _cardMap.set(group.id, entry);
+                return entry;
+            }
+
+            entry.card.el.setGroup?.(group);
+            if (entry.renderKey !== renderKey) {
+                entry.card.el.refreshGroup?.(group);
+                entry.renderKey = renderKey;
+            }
+            return entry;
+        }
+
+        function _cleanupDetachedState(activeIds) {
+            for (const [id, entry] of _cardMap) {
+                if (activeIds.has(id)) continue;
+                entry.el.remove();
+                _cardMap.delete(id);
+            }
+            for (const [id] of _aspectRatioCache) {
+                if (!activeIds.has(id) && !_groups.some(g => g.id === id)) {
+                    _aspectRatioCache.delete(id);
+                }
+            }
+            for (const key of _stabilizedIds) {
+                const id = String(key).split('|')[0];
+                if (!activeIds.has(id) && !_groups.some(g => g.id === id)) {
+                    _stabilizedIds.delete(key);
+                }
+            }
+        }
+
+        function _logRender(reason, data) {
+            const enabled = window.localStorage?.getItem('mpi_gallery_layout_debug') === '1';
+            if (!enabled) return;
+            const now = Date.now();
+            if (now - _lastRenderLogAt < 500) return;
+            _lastRenderLogAt = now;
+            clientLogger.info('MpiGalleryGrid', `layout ${JSON.stringify({ reason, ...data })}`);
+        }
+
+        function _rerenderJustified(reason = 'manual') {
+            _pendingRenderReasons.add(reason);
             if (_renderTimeout) clearTimeout(_renderTimeout);
             _renderTimeout = setTimeout(() => {
+                const renderReason = [..._pendingRenderReasons].join(',');
+                _pendingRenderReasons.clear();
+
                 const { order, filter } = state.gallerySort;
 
                 let display = _groups.filter(g => {
@@ -774,7 +942,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 const gridStyle    = getComputedStyle(grid);
                 const paddingX     = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
-                const containerWidth = grid.clientWidth - paddingX;
+                const containerWidth = Math.max(1, grid.clientWidth - paddingX);
 
                 const items = allGroups.map(group => ({
                     id: group.id,
@@ -783,9 +951,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 const rows = buildJustifiedRows(items, containerWidth, _cardWidth, GAP);
 
-                qsa('.mpi-gallery-grid__row', grid).forEach(row => row.remove());
-
                 const allGroupsMap = new Map(allGroups.map(g => [g.id, g]));
+                const activeIds = new Set(allGroups.map(g => g.id));
+                const fragment = document.createDocumentFragment();
+                const prevScrollTop = grid.scrollTop;
 
                 rows.forEach(({ items: rowItems, rowHeight }) => {
                     const rowEl = ce('div', { className: 'mpi-gallery-grid__row' });
@@ -793,7 +962,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                     rowItems.forEach(({ id, width, height }) => {
                         const group = allGroupsMap.get(id);
-                        const { card, wrapper } = _makeCard(group);
+                        const entry = _getCardEntry(group);
+                        const { card } = entry;
+                        const wrapper = entry.el;
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
                         wrapper.style.width  = `${width}px`;
                         wrapper.style.height = `${height}px`;
@@ -804,23 +975,42 @@ export const MpiGalleryGrid = ComponentFactory.create({
                             card.el.setGenerating(group.latestPreviewUrl ?? null);
                         }
 
-                        _cardMap.set(id, { card, el: wrapper });
                     });
 
-                    grid.appendChild(rowEl);
+                    fragment.appendChild(rowEl);
                 });
 
+                _cleanupDetachedState(activeIds);
+                grid.replaceChildren(fragment);
+                if (grid.scrollTop !== prevScrollTop) {
+                    const maxScrollTop = Math.max(0, grid.scrollHeight - grid.clientHeight);
+                    grid.scrollTop = Math.min(prevScrollTop, maxScrollTop);
+                }
+
+                _syncCardSelectedState();
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
                 _continuingIds.forEach(id => _cardMap.get(id)?.card?.el?.setContinuing?.(true));
                 _queuedContinueIds.forEach(id => _cardMap.get(id)?.card?.el?.setQueuedContinue?.(true));
                 _stage2Counts.forEach((n, id) => _cardMap.get(id)?.card?.el?.setStage2Count?.(n));
                 _previewWarnings.forEach((s, id) => _cardMap.get(id)?.card?.el?.setPreviewAssetsWarning?.(s));
+
+                _logRender(renderReason, {
+                    groups: allGroups.length,
+                    rows: rows.length,
+                    width: containerWidth,
+                    cardWidth: _cardWidth,
+                });
             }, 16);
         }
 
         // ── ResizeObserver ───────────────────────────────────────────────────
 
-        const resizeObserver = new ResizeObserver(() => { _rerenderJustified(); });
+        const resizeObserver = new ResizeObserver((entries) => {
+            const width = Math.round(entries[0]?.contentRect?.width || grid.clientWidth || 0);
+            if (width === _lastObservedGridWidth) return;
+            _lastObservedGridWidth = width;
+            _rerenderJustified('resize');
+        });
         resizeObserver.observe(grid);
         _unsubs.push(() => resizeObserver.disconnect());
 
@@ -829,8 +1019,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // areas where Electron sometimes drops wheel-to-scroll on flex parents.
         _unsubs.push(on(grid, 'wheel', (e) => {
             if (e.ctrlKey) return;
+            if (e.target?.closest?.('.mpi-group-card')) return;
+            e.preventDefault();
             grid.scrollTop += e.deltaY;
-        }, { passive: true }));
+        }, { passive: false }));
 
         // ── Info toggle button ───────────────────────────────────────────────
 
@@ -889,18 +1081,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         _unsubs.push(Events.on('state:changed', ({ key }) => {
-            if (key === 'gallerySort') { _syncTabActive(); _rerenderJustified(); }
+            if (key === 'gallerySort') { _syncTabActive(); _rerenderJustified('sort'); }
         }));
 
-        _rerenderJustified();
+        _rerenderJustified('init');
 
         // ── Public API ───────────────────────────────────────────────────────
 
         el.setGroups = (groups) => {
-            _groups = groups;
+            _groups = groups || [];
             _selectedIds.clear();
-            _stabilizedIds.clear();
-            _rerenderJustified();
+            _rerenderJustified('setGroups');
         };
 
         el.updatePreview = (tempId, previewUrl) => {
@@ -912,6 +1103,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (!entry) return;
             entry.el.remove();
             _cardMap.delete(groupId);
+            _aspectRatioCache.delete(groupId);
+            for (const key of _stabilizedIds) {
+                if (String(key).startsWith(`${groupId}|`)) _stabilizedIds.delete(key);
+            }
             _groups = _groups.filter(g => g.id !== groupId);
         };
 
@@ -964,7 +1159,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const idx = _groups.findIndex(g => g.id === newGroup.id);
             if (idx !== -1) _groups[idx] = newGroup;
             const entry = _cardMap.get(newGroup.id);
-            entry?.card?.el?.refreshGroup?.(newGroup);
+            if (entry) {
+                entry.card?.el?.refreshGroup?.(newGroup);
+                entry.renderKey = _getGroupRenderKey(newGroup);
+            }
         };
 
         el.setSelectionMode = (val) => {

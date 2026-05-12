@@ -266,7 +266,14 @@ export const MpiPromptBox = ComponentFactory.create({
 
                 if (uploaded) {
                     emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
-                    Events.emit('media:imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, thumbPath: uploaded.thumbPath, mediaType });
+                    Events.emit('media:imported', {
+                        url: uploaded.filePath,
+                        filename: uploaded.filename,
+                        itemId: uploaded.itemId,
+                        thumbPath: uploaded.thumbPath,
+                        pixelDimensions: uploaded.pixelDimensions,
+                        mediaType,
+                    });
                 }
             }));
         }

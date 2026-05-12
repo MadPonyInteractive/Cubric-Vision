@@ -118,6 +118,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         filename: uploaded.filename,
                         itemId: uploaded.itemId,
                         thumbPath: uploaded.thumbPath,
+                        pixelDimensions: uploaded.pixelDimensions,
                         mediaType,
                     });
                     if (inject) {
@@ -902,20 +903,39 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
+            const dims = pixelDimensions?.w > 0 && pixelDimensions?.h > 0
+                ? pixelDimensions
+                : null;
             const displayName = filename
                 ? filename.replace(/\.[^.]+$/, '')
                 : (isVideo ? 'Imported Video' : 'Imported Image');
 
             const id = itemId || filename.replace(/\.[^.]+$/, '');
             const item = isVideo
-                ? createVideoItem({ id, filePath: url, thumbPath, uploaded: true, operation: 'imported' })
-                : createImageItem({ id, filePath: url, uploaded: true, operation: 'imported' });
+                ? createVideoItem({
+                    id,
+                    filePath: url,
+                    thumbPath,
+                    uploaded: true,
+                    operation: 'imported',
+                    pixelDimensions: dims || { w: 0, h: 0 },
+                })
+                : createImageItem({
+                    id,
+                    filePath: url,
+                    uploaded: true,
+                    operation: 'imported',
+                    pixelDimensions: dims || { w: 0, h: 0 },
+                });
 
-            const group = createItemGroup(mediaType, { name: displayName });
+            const group = createItemGroup(mediaType, {
+                name: displayName,
+                ...(dims ? { width: dims.w, height: dims.h } : {}),
+            });
             const finalGroup = appendToHistory(group, item);
 
             const currentGroups = state.currentProject?.itemGroups || [];
