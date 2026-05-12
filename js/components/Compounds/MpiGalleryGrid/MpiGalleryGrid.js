@@ -5,7 +5,7 @@ import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
-import { getCommand } from '../../../data/commandRegistry.js';
+import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -44,9 +44,9 @@ import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
  *   'gc-remove'   { groupId }            — all history entries missing; remove from grid
  *   'selection-start' {}                 — selection mode activated (hide PromptBox)
  *   'selection-end'   {}                 — selection mode exited (show PromptBox)
- *   'preview:continue'    { group, item } — preview-stage card Continue clicked
- *   'preview:discard'     { group, item } — preview-stage card Discard clicked
- *   'preview:pop-continue'{ group, item } — Pop clicked while card is queued for Continue
+ *   'preview:continue'    { group, item } — preview-stage card Continue clicked (branches into new card)
+ *   'preview:finish'      { group, item } — preview-stage card Finish clicked (replaces preview with final)
+ *   'preview:pop-continue'{ group, item } — Pop clicked while card is queued for Finish
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -87,8 +87,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Group ids whose preview card is mid-Continue. Survives setGroups
         // rebuilds — re-applied to fresh cards inside _rerenderJustified so
         // the spinner doesn't flash off when the grid is rebuilt.
+        // `_continuingIds` / `_queuedContinueIds` apply to the Finish path only
+        // (preview → final replace). Branching Continue uses `_stage2Counts`
+        // to render a small xN badge instead of taking over the whole card.
         const _continuingIds = new Set();
         const _queuedContinueIds = new Set();
+        /** @type {Map<string, number>} groupId → pending+running stage-2 jobs. */
+        const _stage2Counts = new Map();
+        /**
+         * @type {Map<string, { mode: 'fallback' | 'blocked', missing?: Array }>}
+         * groupId → preview-assets validation state. `fallback` shows an amber
+         * "Cold fallback" badge (latent missing, snapshots OK). `blocked` shows
+         * a red "Missing assets" badge and hides Continue/Finish. Re-applied in
+         * _rerenderJustified so debounced rebuilds don't drop badge state.
+         */
+        const _previewWarnings = new Map();
 
         const grid = qs('.mpi-gallery-grid__grid', el);
         const sliderWrap = qs('.mpi-gallery-grid__slider-wrap', el);
@@ -233,10 +246,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
                 <div class="mpi-group-card__preview-badge">PREVIEW</div>
+                <div class="mpi-group-card__stage2-badge" hidden></div>
+                <div class="mpi-group-card__assets-badge" hidden></div>
                 <div class="mpi-group-card__continue-spinner"></div>
                 <div class="mpi-group-card__preview-actions">
                     <div class="mpi-group-card__continue-wrap"></div>
-                    <div class="mpi-group-card__discard-wrap"></div>
+                    <div class="mpi-group-card__finish-wrap"></div>
                 </div>
                 <div class="mpi-group-card__queued-actions">
                     <div class="mpi-group-card__pop-wrap"></div>
@@ -259,8 +274,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const favWrap      = qs('.mpi-group-card__fav-wrap', cardEl);
             const reuseWrap    = qs('.mpi-group-card__reuse-wrap', cardEl);
             const continueWrap = qs('.mpi-group-card__continue-wrap', cardEl);
-            const discardWrap  = qs('.mpi-group-card__discard-wrap', cardEl);
+            const finishWrap   = qs('.mpi-group-card__finish-wrap', cardEl);
             const popWrap      = qs('.mpi-group-card__pop-wrap', cardEl);
+            const stage2Badge  = qs('.mpi-group-card__stage2-badge', cardEl);
+            const assetsBadge  = qs('.mpi-group-card__assets-badge', cardEl);
 
             let _generating = false;
             let _showInfo   = false;
@@ -294,8 +311,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             const _continueBtn = MpiButton.mount(continueWrap, {
                 icon: 'frameForward', size: 'sm', variant: 'primary',
-                info: 'Continue: finalize this preview',
-                label: 'Continue',
+                info: 'Create new from this preview',
             });
 
             _continueBtn.on('click', (e) => {
@@ -305,18 +321,26 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 emit('preview:continue', { group, item: selected });
             });
 
-            const _discardBtn = MpiButton.mount(discardWrap, {
-                icon: 'trash', size: 'sm', variant: 'ghost',
-                info: 'Discard preview',
-                label: 'Discard',
+            const _finishBtn = MpiButton.mount(finishWrap, {
+                icon: 'check', size: 'sm', variant: 'primary',
+                info: 'Complete this video',
             });
 
-            _discardBtn.on('click', (e) => {
+            _finishBtn.on('click', (e) => {
                 e.originalEvent?.stopPropagation();
                 const selected = group?.history?.[group.selectedIndex];
                 if (!selected) return;
-                emit('preview:discard', { group, item: selected });
+                emit('preview:finish', { group, item: selected });
             });
+
+            // Branching Continue is per-op (allowsBranchingContinue). When the
+            // op disallows it (e.g. LTX, future single-LoRA models), hide the
+            // Continue button — only Finish + Discard remain.
+            const _sel0 = group?.history?.[group.selectedIndex];
+            const _allowBranch = _sel0?.operation
+                ? commandAllowsBranchingContinue(_sel0.operation)
+                : false;
+            continueWrap.style.display = _allowBranch ? '' : 'none';
 
             const _popBtn = MpiButton.mount(popWrap, {
                 icon: 'close', size: 'sm', variant: 'primary',
@@ -547,11 +571,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (favWrap.contains(e.target)) return;
                 if (reuseWrap.contains(e.target)) return;
                 if (continueWrap.contains(e.target)) return;
-                if (discardWrap.contains(e.target)) return;
+                if (finishWrap.contains(e.target)) return;
 
-                // Preview-stage cards are not history-clickable.
+                // Preview-stage cards behave like any other card for
+                // selection (shift/ctrl/right-click) but cannot be
+                // "opened" into history — they stay on the gallery.
                 const _selectedNow = group?.history?.[group.selectedIndex];
-                if (_selectedNow?.stage === 'preview') return;
+                const _isPreviewNow = _selectedNow?.stage === 'preview';
 
                 if (e.shiftKey) {
                     e.preventDefault();
@@ -560,7 +586,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _toggleSelect(group.id);
                 } else if (_selectionMode) {
                     _toggleSelect(group.id);
-                } else {
+                } else if (!_isPreviewNow) {
                     emit('open-group', { group });
                 }
             });
@@ -642,6 +668,45 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.setQueuedContinue = (val) => {
                 cardEl.classList.toggle('mpi-group-card--queued-continue', !!val);
+            };
+
+            cardEl.setStage2Count = (n) => {
+                const count = Math.max(0, Number(n) || 0);
+                if (count <= 0) {
+                    stage2Badge.hidden = true;
+                    stage2Badge.textContent = '';
+                    return;
+                }
+                stage2Badge.hidden = false;
+                stage2Badge.textContent = `x${count}`;
+            };
+
+            cardEl.setPreviewAssetsWarning = (state) => {
+                // null / undefined → clear badge + restore action buttons.
+                cardEl.classList.remove(
+                    'mpi-group-card--assets-fallback',
+                    'mpi-group-card--assets-blocked',
+                );
+                if (!state || (!state.mode)) {
+                    assetsBadge.hidden = true;
+                    assetsBadge.textContent = '';
+                    assetsBadge.removeAttribute('title');
+                    return;
+                }
+                if (state.mode === 'fallback') {
+                    assetsBadge.hidden = false;
+                    assetsBadge.textContent = 'Cold';
+                    assetsBadge.title = 'Latent missing — stage 1 will rerun (slower).';
+                    cardEl.classList.add('mpi-group-card--assets-fallback');
+                } else if (state.mode === 'blocked') {
+                    assetsBadge.hidden = false;
+                    assetsBadge.textContent = 'Missing';
+                    const list = Array.isArray(state.missing) && state.missing.length
+                        ? state.missing.map(m => m.kind === 'snapshot' ? `${m.role} image` : m.kind).join(', ')
+                        : 'support assets';
+                    assetsBadge.title = `Cannot continue/finish — missing ${list}. Delete this preview.`;
+                    cardEl.classList.add('mpi-group-card--assets-blocked');
+                }
             };
 
             cardEl.refreshGroup = (newGroup) => {
@@ -746,6 +811,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
                 _continuingIds.forEach(id => _cardMap.get(id)?.card?.el?.setContinuing?.(true));
                 _queuedContinueIds.forEach(id => _cardMap.get(id)?.card?.el?.setQueuedContinue?.(true));
+                _stage2Counts.forEach((n, id) => _cardMap.get(id)?.card?.el?.setStage2Count?.(n));
+                _previewWarnings.forEach((s, id) => _cardMap.get(id)?.card?.el?.setPreviewAssetsWarning?.(s));
             }, 16);
         }
 
@@ -860,6 +927,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (val) _queuedContinueIds.add(groupId);
             else     _queuedContinueIds.delete(groupId);
             _cardMap.get(groupId)?.card?.el?.setQueuedContinue?.(!!val);
+        };
+
+        el.setStage2Count = (groupId, n) => {
+            const count = Math.max(0, Number(n) || 0);
+            if (count <= 0) _stage2Counts.delete(groupId);
+            else            _stage2Counts.set(groupId, count);
+            _cardMap.get(groupId)?.card?.el?.setStage2Count?.(count);
+        };
+
+        /**
+         * Push preview-assets validation state onto a card.
+         * @param {string} groupId
+         * @param {{ mode: 'fallback' | 'blocked', missing?: Array }|null} state
+         */
+        el.setPreviewAssetsWarning = (groupId, state) => {
+            if (!state || !state.mode) _previewWarnings.delete(groupId);
+            else                       _previewWarnings.set(groupId, state);
+            _cardMap.get(groupId)?.card?.el?.setPreviewAssetsWarning?.(state);
         };
 
         el.clearAllQueuedContinue = () => {

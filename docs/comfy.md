@@ -105,6 +105,49 @@ capture to `Preview`. Apply (image or video) always re-runs the workflow at
 full resolution via `startGeneration`; there is no fast-path / preview-URL
 reuse.
 
+### Multi-stage workflow input defaults
+
+Multi-stage video workflows (`t2v_ms`, `i2v_ms`) include `LoadLatent` even when a
+normal or preview run will branch away from it. ComfyUI still validates the
+node's selected latent, so the app prepares workflow input defaults before every
+`_ms` submission.
+
+- Source: `comfy_workflows/input/ComfyUI_00001_.latent`
+- Destination: active engine `ComfyUI/input/ComfyUI_00001_.latent`
+- Backend route: `POST /comfy/prepare-workflow-inputs`
+- Caller: `commandExecutor` before `ComfyUIController.runWorkflow(...)` for
+  operation keys ending in `_ms`
+
+This default latent is not the user's saved preview latent. Preview latents are
+captured from `SaveLatent` outputs and persisted under the project as preview
+support assets.
+
+### WAN multi-stage: baked vs live LoRAs
+
+WAN's two-file `_ms` workflows split the sampler into a high-noise stage-1 pass
+and a low-noise stage-2 pass. Practical consequences for users:
+
+- **High-noise (stage-1) LoRAs are baked into the preview latent.** When you
+  hit Preview, the high-noise sampler runs with whatever LoRAs are set in the
+  `Lora_High_*` slots and `SaveLatent` writes the result. The latent is the
+  final word on the high-noise contribution — changing high-noise LoRAs after
+  preview has no effect on Continue/Finish.
+- **Low-noise (stage-2) LoRAs stay live.** The stage-2 file is authored by
+  bypassing the stage-1 sampler in ComfyUI and saving the API JSON. Each
+  Continue/Finish reads the `Lora_Low_*` slots from the current PromptBox
+  settings, so the same preview can branch into multiple final videos with
+  different low-noise looks.
+- **Cold fallback (latent missing) reruns stage-1 with the *current* LoRA
+  settings** — the original high-noise LoRAs at preview time are recorded on
+  the sidecar's `loraSnapshot` for traceability but are NOT replayed. Users
+  who want to reproduce the preview exactly must restore those LoRAs by hand
+  before clicking Continue/Finish on a card showing the "Cold" badge.
+
+LTX and future single-LoRA multi-stage ops use the same two-file convention
+but omit the WAN dual-LoRA story: their `Lora_*` injection is flat, the
+`allowsBranchingContinue` flag is `false` so the preview card only exposes
+Finish, and Continue is hidden because stage-2 LoRAs do not vary the result.
+
 ## assetService (`js/services/assetService.js`)
 
 Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. Called lazily on ModelSettings open.

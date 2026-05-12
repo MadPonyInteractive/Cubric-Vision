@@ -17,6 +17,63 @@
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
+> **Multi-stage workflow files:** Each `_ms` op resolves to TWO workflow files —
+> `<name>.json` (stage-1) and `<name>_stage2.json` (stage-2). The stage-2 file
+> is authored in ComfyUI by toggling the stage-1 KSampler to Bypass mode and
+> using Save (API). On a stage-2 run (`payload.isStage2 === true`),
+> `commandExecutor._toStage2Filename` swaps the basename before fetch.
+>
+> **LoadLatent injection (always-on for `_ms`):** Before every stage-1 run,
+> `commandExecutor` calls `POST /comfy/prepare-workflow-inputs` to copy the
+> repo-owned default latent `comfy_workflows/input/ComfyUI_00001_.latent` into
+> the active ComfyUI `input/` folder, then injects
+> `LoadLatent: 'ComfyUI_00001_.latent'`. On stage-2 runs, the per-preview
+> `<previewUuid>.latent` is copied in by `POST /comfy/stage-preview-latent` and
+> the same `LoadLatent` slot receives that filename. ComfyUI validates the
+> `LoadLatent` selector on every submission regardless of reachability, so the
+> param must always be set.
+>
+> **Preview → Continue (branching) vs Finish (replace):** Preview cards expose
+> two icon-only buttons (Continue, Finish). Continue enqueues a stage-2 run
+> with NO `replaceItemId` — the final lands as a new gallery card and the
+> preview card stays for further branches. The preview card shows a small
+> `xN` badge (via `grid.el.setStage2Count(groupId, n)`) reflecting how many
+> stage-2 jobs are pending+running from that preview. Finish enqueues a
+> stage-2 WITH `replaceItemId: item.id` — the stage-2 output overwrites the
+> preview sidecar (preview is replaced by the final video). Continue is
+> gated per-op by `commandAllowsBranchingContinue(opKey)` (read from
+> `commands[opKey].allowsBranchingContinue` in `commandRegistry.js`); when
+> `false`, only the Finish button renders (planned: LTX and future
+> single-LoRA multi-stage ops). Removing a preview without finishing it is
+> done through the normal multi-select Delete flow; the backend DELETE
+> route auto-cleans `<projectMedia>/.latents/<itemId>.latent` plus
+> `<projectMedia>/.preview-assets/<itemId>/` when the sidecar's `stage` is
+> `'preview'`. Preview cards also participate in normal selection (shift /
+> ctrl / right-click) like any other card — only the "open into history"
+> action is suppressed because previews stay on the gallery.
+>
+> **Preview asset validation + cold fallback:** Before each Continue/Finish
+> dispatch, the block calls `projectService.validatePreviewAssets(itemId)`
+> (→ `GET /project-media/:projectId/validate-preview-assets`). Result drives
+> the warning badge on the preview card via
+> `grid.el.setPreviewAssetsWarning(groupId, state)`:
+>
+> - `null` / fast path → no badge, fast stage-2 path runs as above.
+> - `{ mode: 'fallback' }` (amber) → latent missing but `frozenParams`
+>   complete and any required I2V snapshots present. Continue reruns
+>   stage-1 (`previewOnly: true`, `replaceItemId: previewId`) to rebuild
+>   the latent in place, then on `gallery:item-updated` auto-enqueues the
+>   stage-2 branch with the refreshed latent. Finish runs the full base
+>   `_ms` workflow with `previewOnly: false` and `replaceItemId` — a single
+>   submission, no `isStage2` swap, no `LoadLatent` override.
+> - `{ mode: 'blocked' }` (red) → no fast path and no fallback. Continue
+>   and Finish buttons are hidden by the CSS modifier on the card; user
+>   recovers by deleting the preview.
+>
+> The validation kick fires on gallery mount and on every
+> `gallery:item-updated` for the affected group. Click-time re-validation
+> closes the TOCTOU window between badge render and button press.
+
 > **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted per-model as `modelSettings[modelId].batch`.
 
 ---

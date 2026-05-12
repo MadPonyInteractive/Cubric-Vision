@@ -515,6 +515,72 @@
     display: inline-block;
 }
 
+/* Stage-2 pending counter badge: small `xN` chip on preview card showing how
+ * many branching Continue jobs are queued/running from this preview. Anchored
+ * below PREVIEW badge so both can sit at the top-right corner. */
+.mpi-group-card__stage2-badge {
+    position: absolute;
+    top: 2.2rem;
+    right: 0.7rem;
+    padding: 0.18rem 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--ink-1);
+    background: color-mix(in oklch, var(--accent-cool) 80%, transparent);
+    border-radius: var(--r-1);
+    pointer-events: none;
+    z-index: 5;
+    line-height: 1;
+}
+
+.mpi-group-card__stage2-badge[hidden] {
+    display: none !important;
+}
+
+/* Preview support-asset warning badge. Anchored below the stage-2 badge.
+ * Amber `--assets-fallback` = latent missing, stage-1 will rerun (slower).
+ * Red   `--assets-blocked`  = required snapshots missing too; Continue/Finish
+ *                             hidden so user must Delete the preview. */
+.mpi-group-card__assets-badge {
+    position: absolute;
+    top: 3.8rem;
+    right: 0.7rem;
+    padding: 0.18rem 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+    border-radius: var(--r-1);
+    pointer-events: auto;
+    z-index: 5;
+    line-height: 1;
+    cursor: help;
+}
+
+.mpi-group-card__assets-badge[hidden] {
+    display: none !important;
+}
+
+.mpi-group-card--assets-fallback .mpi-group-card__assets-badge {
+    background: color-mix(in oklch, var(--accent-warn) 80%, transparent);
+    color: var(--ink-1);
+}
+
+.mpi-group-card--assets-blocked .mpi-group-card__assets-badge {
+    background: var(--accent-heat);
+    color: var(--ink-1);
+}
+
+/* Blocked: no fast path, no fallback — hide Continue + Finish so the user can
+ * only Delete (multi-select Delete still cleans the latent/snapshot dirs). */
+.mpi-group-card--assets-blocked .mpi-group-card__preview-actions {
+    display: none;
+}
+
 /* Hide the standard fav/reuse hover icons on preview cards so the badge owns
  * the top-right and the action row owns the bottom. */
 .mpi-group-card--preview .mpi-group-card__fav-wrap,

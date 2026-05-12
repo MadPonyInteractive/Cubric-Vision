@@ -155,6 +155,12 @@ export const commands = {
         requiresImages: 0,
         promptRequired: true,
         components: ['qualityTier', 'duration', 'ratio', 'previewStage'],
+        // Preview cards from this op show a Continue button (branch stage-2 to
+        // a NEW card) in addition to Finish (replace preview with final).
+        // WAN supports branching because its low-stage LoRAs vary the stage-2
+        // result; future models without per-stage LoRA variance (LTX, image-_ms)
+        // should leave this false and surface only the Finish button.
+        allowsBranchingContinue: true,
     },
     i2v_ms: {
         label: 'Image to Video',
@@ -166,6 +172,7 @@ export const commands = {
         ],
         promptRequired: false,
         components: ['qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        allowsBranchingContinue: true,
     },
     extend: {
         label: 'Extend',
@@ -356,4 +363,17 @@ export function getCommandMediaInputs(key) {
  */
 export function getCommandComponents(key) {
     return commands[key]?.components ?? [];
+}
+
+/**
+ * Whether an `_ms` operation's preview card should expose a branching Continue
+ * button (creates a NEW final card per click, preview stays). When false, the
+ * preview card only exposes Finish (preview→final replacement). WAN sets this
+ * true because per-stage LoRAs make branching meaningful; LTX and future
+ * single-LoRA models leave it false.
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function commandAllowsBranchingContinue(key) {
+    return commands[key]?.allowsBranchingContinue === true;
 }

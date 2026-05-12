@@ -33,6 +33,9 @@ const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
+const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
+    'ComfyUI_00001_.latent',
+]);
 
 function _broadcastComfyEvent(event, data) {
     const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -102,6 +105,74 @@ router.get('/comfy/events/stream', (req, res) => {
     req.on('close', () => {
         _comfyEventClients.delete(res);
     });
+});
+
+/**
+ * POST /comfy/prepare-workflow-inputs
+ * Copies repo-owned workflow input defaults into the active ComfyUI input folder.
+ * Multi-stage workflows can fail validation if LoadLatent has no selectable
+ * default, even when Is_Continue=false, so this runs before every _ms submit.
+ */
+router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
+    try {
+        const sourceDir = path.join(__dirname, '..', 'comfy_workflows', 'input');
+        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+        await fs.ensureDir(inputDir);
+
+        const copied = [];
+        for (const filename of WORKFLOW_INPUT_DEFAULTS) {
+            const source = path.join(sourceDir, filename);
+            const target = path.join(inputDir, filename);
+            if (!(await fs.pathExists(source))) {
+                return res.status(500).json({
+                    success: false,
+                    error: `Workflow input default missing: ${filename}`,
+                });
+            }
+            await fs.copy(source, target, { overwrite: true });
+            copied.push(filename);
+        }
+
+        res.json({ success: true, copied });
+    } catch (err) {
+        logger.error('comfy', 'prepare workflow inputs failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * POST /comfy/stage-preview-latent
+ * Body: { sourcePath: string, engineInputName: string }
+ * Copies a project-owned preview latent into the active ComfyUI input folder so
+ * the next `_ms` Continue run can load it via the LoadLatent node. `sourcePath`
+ * must point inside a project (decoded /project-file URL or absolute project
+ * path). `engineInputName` is the basename written into ComfyUI input/.
+ */
+router.post('/comfy/stage-preview-latent', async (req, res) => {
+    try {
+        const { sourcePath, engineInputName } = req.body || {};
+        if (!sourcePath || typeof sourcePath !== 'string') {
+            return res.status(400).json({ success: false, error: 'sourcePath required' });
+        }
+        if (!engineInputName || typeof engineInputName !== 'string' || engineInputName.includes('/') || engineInputName.includes('\\')) {
+            return res.status(400).json({ success: false, error: 'engineInputName must be a bare filename' });
+        }
+
+        const resolvedSource = path.normalize(sourcePath);
+        if (!(await fs.pathExists(resolvedSource))) {
+            return res.status(404).json({ success: false, error: `Preview latent missing: ${resolvedSource}` });
+        }
+
+        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+        await fs.ensureDir(inputDir);
+        const target = path.join(inputDir, engineInputName);
+        await fs.copy(resolvedSource, target, { overwrite: true });
+
+        res.json({ success: true, copied: engineInputName });
+    } catch (err) {
+        logger.error('comfy', 'stage-preview-latent failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 /**

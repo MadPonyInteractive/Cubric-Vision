@@ -26,6 +26,7 @@ const path   = require('path');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload } = require('./shared');
+const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 
@@ -62,6 +63,206 @@ function updateProjectJson(jsonPath, updater) {
 
     projectJsonQueues.set(key, next);
     return next;
+}
+
+function projectFileUrl(filePath) {
+    return `/project-file?path=${encodeURIComponent(filePath)}`;
+}
+
+function relativeProjectPath(projectRoot, filePath) {
+    return path.relative(projectRoot, filePath).replace(/\\/g, '/');
+}
+
+function safeJoinInside(baseDir, ...parts) {
+    const resolvedBase = path.resolve(baseDir);
+    const resolved = path.resolve(path.join(resolvedBase, ...parts.filter(Boolean)));
+    if (resolved !== resolvedBase && !resolved.startsWith(`${resolvedBase}${path.sep}`)) {
+        throw new Error('Resolved path escapes allowed directory');
+    }
+    return resolved;
+}
+
+function decodeProjectFilePath(value) {
+    if (!value || typeof value !== 'string') return null;
+    try {
+        const url = new URL(value, 'http://127.0.0.1');
+        if (url.pathname.endsWith('/project-file') || url.pathname === '/project-file') {
+            const raw = url.searchParams.get('path');
+            return raw ? path.normalize(raw) : null;
+        }
+    } catch (_) {
+        const match = value.match(/[?&]path=([^&]+)/);
+        if (match) return path.normalize(decodeURIComponent(match[1]));
+    }
+    return null;
+}
+
+function extFromDataUrl(dataUrl) {
+    const match = String(dataUrl || '').match(/^data:image\/([a-zA-Z0-9.+-]+);/);
+    if (!match) return '.png';
+    const kind = match[1].toLowerCase();
+    if (kind === 'jpeg') return '.jpg';
+    if (/^[a-z0-9]+$/.test(kind)) return `.${kind}`;
+    return '.png';
+}
+
+async function copySnapshotSource(sourceUrl, targetPath) {
+    if (!sourceUrl || typeof sourceUrl !== 'string') {
+        throw new Error('Snapshot source URL missing');
+    }
+
+    if (sourceUrl.startsWith('data:')) {
+        const match = sourceUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) throw new Error('Unsupported data URL snapshot source');
+        await fs.writeFile(targetPath, Buffer.from(match[2], 'base64'));
+        return;
+    }
+
+    const projectPath = decodeProjectFilePath(sourceUrl);
+    if (projectPath) {
+        if (!(await fs.pathExists(projectPath))) throw new Error(`Snapshot source missing: ${projectPath}`);
+        // Cold-fallback Continue replays the preview from its own previously
+        // materialized snapshot — source and destination paths can coincide.
+        // Skip the copy in that case to avoid fs-extra's same-path error.
+        if (path.resolve(projectPath) === path.resolve(targetPath)) return;
+        await fs.copy(projectPath, targetPath, { overwrite: true });
+        return;
+    }
+
+    if (/^https?:\/\//i.test(sourceUrl)) {
+        await streamDownload(sourceUrl, targetPath);
+        return;
+    }
+
+    const localPath = path.normalize(sourceUrl);
+    if (!(await fs.pathExists(localPath))) throw new Error(`Snapshot source missing: ${localPath}`);
+    if (path.resolve(localPath) === path.resolve(targetPath)) return;
+    await fs.copy(localPath, targetPath, { overwrite: true });
+}
+
+function snapshotExt(sourceUrl) {
+    if (String(sourceUrl || '').startsWith('data:')) return extFromDataUrl(sourceUrl);
+    const projectPath = decodeProjectFilePath(sourceUrl);
+    const sourcePath = projectPath || sourceUrl || '';
+    const ext = path.extname(sourcePath.split('?')[0]).toLowerCase();
+    return ext && ext.length <= 8 ? ext : '.png';
+}
+
+function resolveComfyOutputFile(fileInfo) {
+    if (!fileInfo?.filename) return null;
+    const engineRoot = getEngineRoot();
+    const type = fileInfo.type || 'output';
+    const root = type === 'input'
+        ? getComfyPath(engineRoot, 'input')
+        : type === 'temp'
+            ? getComfyPath(engineRoot, 'temp')
+            : getComfyPath(engineRoot, 'output');
+    return safeJoinInside(root, fileInfo.subfolder || '', fileInfo.filename);
+}
+
+async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, frozenParams, previewAssets }) {
+    if (stage !== 'preview' || !previewAssets) {
+        return { frozenParams, previewAssets: null };
+    }
+
+    const result = {
+        latent: null,
+        snapshots: [],
+    };
+    let nextFrozenParams = frozenParams ? { ...frozenParams } : frozenParams;
+    const frozenMediaItems = Array.isArray(nextFrozenParams?.mediaItems)
+        ? nextFrozenParams.mediaItems.map(item => ({ ...item }))
+        : [];
+
+    const latentDir = path.join(mediaDir, '.latents');
+    const latentInfo = previewAssets.latent;
+    if (latentInfo?.filename) {
+        const sourcePath = resolveComfyOutputFile(latentInfo);
+        const filename = `${itemId}.latent`;
+        const targetPath = path.join(latentDir, filename);
+        try {
+            if (!sourcePath || !(await fs.pathExists(sourcePath))) {
+                throw new Error(sourcePath ? `Latent source missing: ${sourcePath}` : 'Latent source missing');
+            }
+            await fs.ensureDir(latentDir);
+            await fs.move(sourcePath, targetPath, { overwrite: true });
+            result.latent = {
+                filename,
+                relativePath: relativeProjectPath(projectRoot, targetPath),
+                filePath: projectFileUrl(targetPath),
+                engineInputName: filename,
+                source: latentInfo,
+                status: 'available',
+            };
+        } catch (err) {
+            logger.warn('project', 'preview latent materialization failed', err.message);
+            result.latent = {
+                engineInputName: filename,
+                source: latentInfo,
+                status: 'missing',
+                error: err.message,
+            };
+        }
+    } else {
+        result.latent = {
+            status: 'missing',
+            error: 'SaveLatent output was not reported by ComfyUI',
+        };
+    }
+
+    const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
+    if (snapshotRequests.length) {
+        const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
+        await fs.ensureDir(snapshotDir);
+
+        for (const request of snapshotRequests) {
+            if (!request?.url || (request.role !== 'startFrame' && request.role !== 'endFrame')) continue;
+            const ext = snapshotExt(request.url);
+            const filename = `${request.role}${ext}`;
+            const targetPath = path.join(snapshotDir, filename);
+            const meta = {
+                role: request.role,
+                mediaType: request.mediaType || 'image',
+                originalUrl: request.url,
+                filename,
+                relativePath: relativeProjectPath(projectRoot, targetPath),
+                filePath: projectFileUrl(targetPath),
+                status: 'available',
+            };
+            try {
+                await copySnapshotSource(request.url, targetPath);
+            } catch (err) {
+                logger.warn('project', 'preview snapshot materialization failed', err.message);
+                meta.status = 'missing';
+                meta.error = err.message;
+            }
+            result.snapshots.push(meta);
+
+            if (meta.status === 'available') {
+                const idx = frozenMediaItems.findIndex(item =>
+                    (request.id && item.id === request.id) ||
+                    (request.role && item.role === request.role)
+                );
+                if (idx !== -1) {
+                    frozenMediaItems[idx] = {
+                        ...frozenMediaItems[idx],
+                        originalUrl: frozenMediaItems[idx].originalUrl || frozenMediaItems[idx].url,
+                        url: meta.filePath,
+                        source: 'previewAsset',
+                    };
+                }
+            }
+        }
+    }
+
+    if (nextFrozenParams && Array.isArray(nextFrozenParams.mediaItems)) {
+        nextFrozenParams = {
+            ...nextFrozenParams,
+            mediaItems: frozenMediaItems,
+        };
+    }
+
+    return { frozenParams: nextFrozenParams, previewAssets: result };
 }
 
 // ── Project CRUD ──────────────────────────────────────────────────────────────
@@ -359,6 +560,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             const metaDir = path.join(mediaDir, '.meta');
             const uuidMetaPath = path.join(metaDir, `${itemId}.json`);
             let thumbAbsPath = null;
+            let isPreviewStage = false;
             if (await fs.pathExists(uuidMetaPath)) {
                 try {
                     const sidecar = await fs.readJson(uuidMetaPath);
@@ -366,6 +568,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                         const m = sidecar.thumbPath.match(/path=(.+)$/);
                         if (m) thumbAbsPath = decodeURIComponent(m[1]);
                     }
+                    isPreviewStage = sidecar?.stage === 'preview';
                 } catch (_) { /* non-fatal */ }
                 await fs.remove(uuidMetaPath);
             }
@@ -376,6 +579,23 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             if (thumbAbsPath && await fs.pathExists(thumbAbsPath)) {
                 try { await fs.remove(thumbAbsPath); }
                 catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
+            }
+
+            // Preview-stage cleanup: drop the saved stage-1 latent and any
+            // start/end-frame snapshots that materializePreviewAssets created.
+            // Multi-select Delete on the gallery and the Discard button both
+            // route through this endpoint, so cleanup happens for either path.
+            if (isPreviewStage) {
+                const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
+                if (await fs.pathExists(latentPath)) {
+                    try { await fs.remove(latentPath); }
+                    catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+                }
+                const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
+                if (await fs.pathExists(snapshotDir)) {
+                    try { await fs.remove(snapshotDir); }
+                    catch (e) { logger.warn('project', 'preview snapshot dir remove failed', e.message); }
+                }
             }
         }
 
@@ -393,6 +613,135 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
         }
     } catch (err) {
         logger.error('project', 'delete failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Preview support asset validation. Reads the per-item sidecar and stats the
+// project latent + any required snapshot files on disk, then derives whether
+// Continue/Finish can take the fast latent path or must fall back to a stage-1
+// rerun from snapshots + frozenParams. T2V previews carry no snapshots, so
+// snapshot status does not gate fallback for them.
+router.get('/project-media/:projectId/validate-preview-assets', async (req, res) => {
+    try {
+        const { folderPath, itemId } = req.query;
+        if (!folderPath || !itemId) {
+            return res.status(400).json({ success: false, error: 'folderPath + itemId required' });
+        }
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaPath = path.join(mediaDir, '.meta', `${itemId}.json`);
+        if (!(await fs.pathExists(metaPath))) {
+            return res.status(404).json({ success: false, error: 'Sidecar not found' });
+        }
+
+        const sidecar = await fs.readJson(metaPath);
+        if (sidecar?.stage !== 'preview') {
+            return res.json({
+                success: true,
+                stage: sidecar?.stage || null,
+                canFastPath:        false,
+                canColdFallback:    false,
+                blocked:             false,
+                latent:              null,
+                snapshots:           [],
+                missing:             [],
+                notPreview:          true,
+            });
+        }
+
+        const previewAssets = sidecar.previewAssets || {};
+        const frozenParams  = sidecar.frozenParams || null;
+        const missing       = [];
+
+        // Latent
+        let latentStatus = 'missing';
+        let latentDiskPath = null;
+        const latentInfo = previewAssets.latent;
+        if (latentInfo?.engineInputName || latentInfo?.filename || latentInfo?.filePath || latentInfo?.relativePath) {
+            const candidates = [];
+            if (latentInfo.filePath) {
+                const decoded = decodeProjectFilePath(latentInfo.filePath);
+                if (decoded) candidates.push(decoded);
+            }
+            if (latentInfo.relativePath) {
+                candidates.push(path.join(folderPath, latentInfo.relativePath));
+            }
+            const filename = latentInfo.filename || latentInfo.engineInputName || `${itemId}.latent`;
+            candidates.push(path.join(mediaDir, '.latents', filename));
+
+            for (const candidate of candidates) {
+                if (await fs.pathExists(candidate)) {
+                    latentStatus  = 'available';
+                    latentDiskPath = candidate;
+                    break;
+                }
+            }
+        }
+        if (latentStatus !== 'available') missing.push({ kind: 'latent' });
+
+        // Snapshots (I2V only — T2V sidecars carry empty/no snapshots array)
+        const snapshotResults = [];
+        const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
+        for (const snap of snapshotRequests) {
+            if (!snap?.role) continue;
+            let status = 'missing';
+            let diskPath = null;
+            const candidates = [];
+            if (snap.filePath) {
+                const decoded = decodeProjectFilePath(snap.filePath);
+                if (decoded) candidates.push(decoded);
+            }
+            if (snap.relativePath) {
+                candidates.push(path.join(folderPath, snap.relativePath));
+            }
+            if (snap.filename) {
+                candidates.push(path.join(mediaDir, '.preview-assets', itemId, snap.filename));
+            }
+            for (const candidate of candidates) {
+                if (await fs.pathExists(candidate)) {
+                    status = 'available';
+                    diskPath = candidate;
+                    break;
+                }
+            }
+            snapshotResults.push({
+                role: snap.role,
+                mediaType: snap.mediaType || 'image',
+                status,
+                filePath: status === 'available' ? projectFileUrl(diskPath) : null,
+            });
+            if (status !== 'available') missing.push({ kind: 'snapshot', role: snap.role });
+        }
+
+        // frozenParams completeness — minimal sanity check for cold fallback.
+        const frozenComplete = !!(frozenParams
+            && typeof frozenParams.seed !== 'undefined'
+            && typeof frozenParams.prompt === 'string'
+            && frozenParams.dims
+            && typeof frozenParams.dims.w === 'number'
+            && typeof frozenParams.dims.h === 'number');
+
+        const canFastPath = latentStatus === 'available';
+        // Cold fallback requires frozenParams + all declared snapshots present.
+        // For T2V, snapshotRequests is empty, so snapshots condition is trivially true.
+        const allSnapshotsPresent = snapshotResults.every(s => s.status === 'available');
+        const canColdFallback = !canFastPath && frozenComplete && allSnapshotsPresent;
+        const blocked = !canFastPath && !canColdFallback;
+
+        res.json({
+            success: true,
+            stage: 'preview',
+            canFastPath,
+            canColdFallback,
+            blocked,
+            latent: { status: latentStatus, filePath: latentDiskPath ? projectFileUrl(latentDiskPath) : null, engineInputName: latentInfo?.engineInputName || `${itemId}.latent` },
+            snapshots: snapshotResults,
+            frozenComplete,
+            missing,
+        });
+    } catch (err) {
+        logger.error('project', 'validate-preview-assets error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -728,7 +1077,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId } = req.body;
+        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -801,6 +1150,21 @@ router.post('/project/save-generation', async (req, res) => {
 
         // Download from ComfyUI server-side
         await streamDownload(comfyViewUrl, filePath);
+
+        let materializedFrozenParams = frozenParams;
+        let materializedPreviewAssets = null;
+        if (!replaceItemId) {
+            const materialized = await materializePreviewAssets({
+                projectRoot: normalizedFolderPath,
+                mediaDir,
+                itemId: id,
+                stage,
+                frozenParams,
+                previewAssets,
+            });
+            materializedFrozenParams = materialized.frozenParams;
+            materializedPreviewAssets = materialized.previewAssets;
+        }
 
         // Determine pixel dimensions: prefer client-supplied (from ratio control),
         // else probe saved file via Sharp (covers upscale/detail/edit/change/remove
@@ -876,8 +1240,9 @@ router.post('/project/save-generation', async (req, res) => {
             // frozenParams + loraSnapshot intentionally omitted.
         } else {
             if (stage)         metaContent.stage         = stage;
-            if (frozenParams)  metaContent.frozenParams  = frozenParams;
+            if (materializedFrozenParams)  metaContent.frozenParams  = materializedFrozenParams;
             if (loraSnapshot)  metaContent.loraSnapshot  = loraSnapshot;
+            if (materializedPreviewAssets) metaContent.previewAssets = materializedPreviewAssets;
         }
         const metaPath = path.join(metaDir, `${id}.json`);
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
@@ -981,6 +1346,7 @@ router.post('/project/save-generation', async (req, res) => {
             stage:         metaContent.stage         ?? null,
             frozenParams:  metaContent.frozenParams  ?? null,
             loraSnapshot:  metaContent.loraSnapshot  ?? null,
+            previewAssets: metaContent.previewAssets ?? null,
             generationMs:  metaContent.generationMs  ?? null,
         });
     } catch (err) {

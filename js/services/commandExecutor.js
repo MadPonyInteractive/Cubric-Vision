@@ -48,6 +48,64 @@ function _collectComfyOutputUrls(nodeOutput, target) {
     }
 }
 
+function _collectComfyLatents(nodeOutput, target) {
+    if (!Array.isArray(nodeOutput?.latents)) return;
+    nodeOutput.latents.forEach(latent => {
+        if (latent?.filename) target.push({ ...latent });
+    });
+}
+
+async function _prepareWorkflowInputs(payload) {
+    if (!String(payload.operation || '').endsWith('_ms')) return;
+    const res = await fetch('/comfy/prepare-workflow-inputs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation: payload.operation }),
+    });
+    if (!res.ok) {
+        let message = `prepare-workflow-inputs returned ${res.status}`;
+        try {
+            const data = await res.json();
+            if (data?.error) message = data.error;
+        } catch (_) { /* keep status message */ }
+        throw new Error(message);
+    }
+}
+
+/**
+ * Decode a /project-file?path=... URL to an absolute filesystem path.
+ * Returns the input unchanged if it doesn't match the project-file pattern.
+ */
+function _decodeProjectFileUrl(value) {
+    if (!value || typeof value !== 'string') return value;
+    if (value.includes('project-file?path=') || value.includes('project-file%3Fpath%3D')) {
+        const match = value.match(/[?&]path=([^&]+)/);
+        if (match) {
+            try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
+        }
+    }
+    return value;
+}
+
+async function _stagePreviewLatent(payload) {
+    if (!payload?.loadLatentName || !payload?.previewLatentFilePath) return;
+    const engineInputName = payload.loadLatentName;
+    const sourcePath = _decodeProjectFileUrl(payload.previewLatentFilePath);
+    const res = await fetch('/comfy/stage-preview-latent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourcePath, engineInputName }),
+    });
+    if (!res.ok) {
+        let message = `stage-preview-latent returned ${res.status}`;
+        try {
+            const data = await res.json();
+            if (data?.error) message = data.error;
+        } catch (_) { /* keep status message */ }
+        throw new Error(message);
+    }
+}
+
 /**
  * @typedef {Object} RunPayload
  * @property {string}   operation    - Command key (e.g. 't2i', 'upscale')
@@ -79,7 +137,7 @@ function _collectComfyOutputUrls(nodeOutput, target) {
  * @typedef {Object} Execution
  * @property {function(string):void}   onPreview  - Called with each latent preview URL
  * @property {function(number):void}   onProgress - Called with 0–1 progress value from ComfyUI
- * @property {function(string[]):void} onComplete - Called with final output URLs on success
+ * @property {function(string[], {latents?: object[]}):void} onComplete - Called with final output URLs and side outputs on success
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running generation
  */
@@ -115,6 +173,17 @@ function _resolveWorkflowFile(modelId, operation) {
 }
 
 /**
+ * Stage-2 workflow filename derivation. Convention: `<base>.json` + `<base>_stage2.json`.
+ * Stage-2 workflows have the stage-1 sampler bypassed (saved via ComfyUI's
+ * Save (API) with that node's bypass toggled on) and the `Is_Continue` /
+ * `Preview_Only` booleans pre-baked so no per-run injection is needed.
+ */
+function _toStage2Filename(file) {
+    if (!file || typeof file !== 'string') return file;
+    return file.replace(/\.json$/i, '_stage2.json');
+}
+
+/**
  * Builds the title-keyed param map that comfyController.runWorkflow injects
  * into the workflow via title-based node matching.
  *
@@ -137,7 +206,16 @@ function _buildParams(payload) {
     Object.assign(params, injectionParams);
 
     if (String(payload.operation || '').endsWith('_ms')) {
+        // Preview_Only only applies to the stage-1 workflow. Stage-2 workflows
+        // (resolved via _stage2 filename swap) have no Preview_Only node, and
+        // comfyController defensively strips this param when the node is absent.
         params['Preview_Only'] = payload.previewOnly === true;
+        // LoadLatent is always required for _ms workflows. ComfyUI validates the
+        // node even when its output is unreached. Stage-1 uses the default
+        // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged
+        // by /comfy/stage-preview-latent. Default applies when no explicit
+        // loadLatentName is supplied (every stage-1 run).
+        params['LoadLatent'] = payload.loadLatentName || 'ComfyUI_00001_.latent';
     }
 
     // Map media to operation-declared Comfy input slots. Slots are role-first:
@@ -430,6 +508,9 @@ export function runCommand(payload) {
         let workflowFile;
         try {
             workflowFile = _resolveWorkflowFile(payload.modelId, payload.operation);
+            if (payload.isStage2 === true) {
+                workflowFile = _toStage2Filename(workflowFile);
+            }
         } catch (err) {
             exec.onError?.(err);
             return;
@@ -472,6 +553,23 @@ export function runCommand(payload) {
             }
         }
 
+        try {
+            await _prepareWorkflowInputs(payload);
+        } catch (err) {
+            clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
+            exec.onError?.(err);
+            return;
+        }
+
+        try {
+            await _stagePreviewLatent(payload);
+        } catch (err) {
+            clientLogger.error('commandExecutor', 'Failed to stage preview latent', err);
+            Events.emit('ui:error', { title: 'Stage-2 setup failed', message: err.message });
+            exec.onError?.(err);
+            return;
+        }
+
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
         // — or "preview" when this is a preview-only run on a multi-stage workflow.
         // Only images/gifs from these nodes are treated as final results.
@@ -485,6 +583,13 @@ export function runCommand(payload) {
         );
 
         // Map nodeId → class_type for loader detection
+        const saveLatentNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id].class_type === 'SaveLatent' ||
+                workflow[id]._meta?.title?.toLowerCase() === 'savelatent'
+            )
+        );
+
         const nodeClassMap = {};
         for (const [id, node] of Object.entries(workflow)) {
             if (node.class_type) nodeClassMap[id] = node.class_type;
@@ -500,6 +605,7 @@ export function runCommand(payload) {
 
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
+        const latentOutputs = [];
         let _samplingStartFired = false;
         let _modelInitializing = hasTerminalPhaseSampler;
         // Tool-panel previews (e.g. resize thumbnail round-trip) bypass
@@ -617,16 +723,19 @@ export function runCommand(payload) {
                 // node === null: execution complete signal
                 aggregator.onExecutionSuccess();
                 closeComfyEventSource();
-                exec.onComplete?.(outputUrls);
+                exec.onComplete?.(outputUrls, { latents: latentOutputs });
                 return;
             }
 
             if (msg.type === 'executed') {
                 const nodeId = msg.data?.node;
-                if (!outputNodeIds.has(nodeId)) return; // ignore non-Output nodes
-
                 const nodeOutput = msg.data?.output;
-                _collectComfyOutputUrls(nodeOutput, outputUrls);
+                if (saveLatentNodeIds.has(nodeId)) {
+                    _collectComfyLatents(nodeOutput, latentOutputs);
+                }
+                if (outputNodeIds.has(nodeId)) {
+                    _collectComfyOutputUrls(nodeOutput, outputUrls);
+                }
             }
         };
 

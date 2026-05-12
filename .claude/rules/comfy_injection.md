@@ -57,7 +57,8 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |
 | `"Box"` | `inputs.boolean` | Box (true) vs segment (false) |
 | `"Selected_Masks_Input"` | `inputs.text` / `picks` | Comma-separated mask indices |
-| `"Preview_Only"` | `inputs.boolean` | **Required on multi-stage video workflows** (ops with `_ms` suffix). Boolean toggle: `true` halts the workflow at the preview stage; `false`/absent runs full final stage. See "Multi-stage video workflows" below. |
+| `"Preview_Only"` | `inputs.boolean` | **Required on multi-stage base workflows** (ops with `_ms` suffix). Boolean toggle: `true` halts the workflow at the preview stage. Defensive-strip in `comfyController` removes the param when no matching node exists (the `_stage2.json` sibling workflow intentionally lacks this node). See "Multi-stage video workflows" below. |
+| `"LoadLatent"` | `inputs.latent` | **Required on every multi-stage workflow** (base + `_stage2`). Filename basename of the latent in the active ComfyUI `input/` folder. Always injected by `commandExecutor`: stage-1 runs receive the default `ComfyUI_00001_.latent`; stage-2 runs receive the per-preview `<previewUuid>.latent` staged by `POST /comfy/stage-preview-latent`. |
 | `"Output"` | read-only | **Required** — final output node for result capture. Nodes without this title are ignored; capture `images` and VHS `gifs` payloads. |
 | `"Preview"` | read-only | **Required on multi-stage video workflows** — the node whose `gifs[]` payload carries the preview clip when `Preview_Only=true`. `commandExecutor.js` switches its capture-title filter from `"output"` → `"preview"` for preview-only runs; without the exact title, the executed message is silently dropped and the run reports "no output returned". |
 | `"Detected"` | read-only | **Required** — auto-masking preview output node |
@@ -84,18 +85,47 @@ standard title map.
 
 ## Multi-stage video workflows
 
-Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass, gated by a `Preview_Only` boolean node inside the workflow JSON.
+Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass that consumes the saved stage-1 latent. The two phases are implemented as **two separate workflow files** rather than one branched workflow, because ComfyUI's `/prompt` API has no runtime node-bypass flag — a single-file branched workflow always executes every node referenced in the dependency graph regardless of any `MpiIfElse`/boolean gating.
 
-**Authoring contract:** every `_ms` workflow file MUST contain:
+**Two-file convention:**
+- `<name>.json` — stage-1 (preview) workflow. Contains `SaveLatent`, `Preview_Only`, `Preview` and `Output` capture nodes, full sampler chain.
+- `<name>_stage2.json` — stage-2 workflow. **Authored by saving the API JSON with the stage-1 KSampler node toggled to Bypass mode in the ComfyUI graph editor.** ComfyUI's "Save (API)" export then deletes the bypassed node and rewires every consumer to the bypassed node's upstream feeder slot (Comfy's standard splice behavior). The result is a stage-2-only graph where `LoadLatent` feeds directly into the low-noise sampler.
+
+`commandExecutor._resolveWorkflowFile` returns `<name>.json` normally; when `payload.isStage2 === true`, `_toStage2Filename` swaps the basename to `<name>_stage2.json`.
+
+**Authoring contract:**
+
+Stage-1 base file MUST contain:
 - A `MpiBoolean` node titled `"Preview_Only"` whose `inputs.boolean` gates the preview/final branch.
+- A `LoadLatent` node titled `"LoadLatent"` (kept for ComfyUI validation; never reached by stage-1's data flow).
+- A `SaveLatent` node titled `"SaveLatent"` that emits the stage-1 latent on preview runs.
 - A capture node titled exactly `"Preview"` (typically `VHS_VideoCombine` saving to `temp/`) whose `gifs[]` payload is the preview clip.
-- A capture node titled exactly `"Output"` (typically `VHS_VideoCombine` saving to `output/`) whose `gifs[]` payload is the final clip.
+- A capture node titled exactly `"Output"` (typically `VHS_VideoCombine` saving to `output/`) whose `gifs[]` payload is the full-run final clip.
+
+Stage-2 sibling file (`_stage2.json`) MUST contain:
+- A `LoadLatent` node titled `"LoadLatent"` whose `inputs.latent` is the per-preview filename injected at runtime.
+- A capture node titled exactly `"Output"`.
+- NO `Preview_Only` node, NO `SaveLatent`, NO stage-1 sampler (these vanish when the base file is exported with stage-1 KSampler bypassed).
+
+The `Is_Continue` boolean node is **no longer used** — branch selection happens via the file swap, not an injected boolean. Workflow authors may keep an `Is_Continue` node in stage-1 files for graph clarity, but the app does not inject it.
 
 Single-stage workflows (no `_ms`) MUST NOT have the `Preview_Only` node and need only the `Output` capture node.
 
-**Symptom of missing node:** when the user toggles "Preview initial stage" in PromptBox and runs, the gen completes a full final video instead of stopping at preview. `comfyController.runWorkflow` defensively scans for the node when `Preview_Only` is present in params; if missing, it strips the param and emits a `clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation')`. Check the dev console / `logs/app.log` first when preview mode silently produces a full video.
+**LoadLatent injection contract:** ComfyUI validates the `LoadLatent` selector even when the workflow branches away from it. The app always injects `LoadLatent`:
+- Stage-1 runs (Preview ON or OFF): `LoadLatent = 'ComfyUI_00001_.latent'`. The default lives at `comfy_workflows/input/ComfyUI_00001_.latent` and is copied into the active engine `input/` folder by `POST /comfy/prepare-workflow-inputs` before every `_ms` submission.
+- Stage-2 runs (Continue/Finish): `LoadLatent = '<previewUuid>.latent'`. The per-preview latent lives in `<project>/Media/.latents/<previewUuid>.latent`; `POST /comfy/stage-preview-latent` copies it into the active engine `input/` folder before the stage-2 submission.
 
-**Fix:** add a `Preview_Only` boolean node to the workflow JSON, wire it into the stage-branching logic (typically a Switch node before the final SaveVideo). Keep the title spelled exactly `Preview_Only` — case-insensitive match but spacing/underscores must be exact.
+Engine-input copies are NOT proactively cleaned per-run. The server's existing `cleanComfyUITempFiles` shutdown hook (SIGTERM/SIGINT in `server.js`) empties `input/` and `output/` on app exit. Mid-session bloat is bounded by uuid uniqueness — each preview owns one staged latent and stage-2 reads it; subsequent reruns overwrite the same name.
+
+**Preview support-asset validation + cold fallback:** Before Continue/Finish dispatches, `MpiGalleryBlock` calls `projectService.validatePreviewAssets(itemId)` which hits `GET /project-media/:projectId/validate-preview-assets`. The route stats the project latent (`Media/.latents/<id>.latent`) and any I2V snapshots (`Media/.preview-assets/<id>/<role>.<ext>`) recorded on the sidecar and returns one of three states:
+
+- `canFastPath` — latent present. Continue branches to stage-2 (existing fast path); Finish runs stage-2 with `replaceItemId`.
+- `canColdFallback` — latent missing, `frozenParams` complete, all required snapshots present. Continue reruns stage-1 with `previewOnly=true` + `replaceItemId=<previewId>` to rebuild the latent in place, then on `gallery:item-updated` auto-enqueues the stage-2 branch. Finish runs the full base `_ms` workflow with `previewOnly=false` + `replaceItemId` — no `isStage2` swap, no `LoadLatent` override — so stage-1+stage-2 fuse in a single submission.
+- `blocked` — neither path possible. Card shows red "Missing" badge and hides Continue/Finish; user deletes the preview to recover (`DELETE /project-media` route cleans `.latents/<id>.latent` + `.preview-assets/<id>/` when sidecar `stage === 'preview'`).
+
+T2V previews carry no snapshot array, so snapshot validation is a no-op for them — only latent state gates Continue/Finish. Cold-fallback Continue's stage-1 rerun reuses the existing materialization route; the `copySnapshotSource` helper now guards same-path copies because the rerun reads the preview's own already-materialized snapshot into the destination path of the same name.
+
+**Symptom of missing Preview_Only node:** when the user toggles "Preview initial stage" in PromptBox and runs, the gen completes a full final video instead of stopping at preview. `comfyController.runWorkflow` defensively scans for the node when `Preview_Only` is present in params; if missing, it strips the param and emits a `clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation')`. Check the dev console / `logs/app.log` first when preview mode silently produces a full video.
 
 ## Image & Mask Uploads
 Pass `Input_Image` / `Input_Mask` as Data URIs, blob URLs, http URLs, or local project paths — controller uploads them automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching; overwrite the file when content changes.

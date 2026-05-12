@@ -52,6 +52,7 @@ const generateId = () => crypto.randomUUID();
  *   pixelDimensions: {w: number, h: number},
  *   duration: number,
  *   fps: number,
+ *   previewAssets?: Object,
  * }} VideoItem
  */
 

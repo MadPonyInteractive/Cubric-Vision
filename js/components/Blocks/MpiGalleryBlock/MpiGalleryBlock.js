@@ -32,7 +32,7 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { addGroup, updateGroup, removeGroup, persistGroups } from '../../../services/projectService.js';
+import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets } from '../../../services/projectService.js';
 import {
     createImageItem,
     createVideoItem,
@@ -185,60 +185,100 @@ export const MpiGalleryBlock = ComponentFactory.create({
             Events.emit('workspace:inject-prompts', { positive, negative });
         });
 
-        // ── Preview-stage Continue / Discard ────────────────────────────────────
-        const _previewDiscardDialog = MpiOkCancel.mount(document.createElement('div'), {
-            title:       'Discard preview',
-            text:        'Discard this preview? The preview clip and its sidecar will be permanently deleted.',
-            okLabel:     'Discard',
-            cancelLabel: 'Cancel',
-        });
-        let _pendingDiscard = null;
+        // Preview-stage cards are deleted through the normal multi-select
+        // Delete flow (shift-select + Delete or context menu). The backend
+        // DELETE /project-media/:id/:filename?itemId=... route reads the
+        // sidecar before unlinking and, when stage === 'preview', also drops
+        // the saved stage-1 latent under .latents/<itemId>.latent plus any
+        // .preview-assets/<itemId>/ snapshot folder. No dedicated Discard
+        // button is needed on preview cards.
 
-        _previewDiscardDialog.on('ok', async () => {
-            const project = state.currentProject;
-            const target = _pendingDiscard;
-            _pendingDiscard = null;
-            if (!project || !target) return;
-
-            const { group: g, item } = target;
-            const fp = item?.filePath;
-            if (fp) {
-                const filename = extractFilenameFromPath(fp);
-                if (filename) {
-                    fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`, {
-                        method: 'DELETE',
-                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'preview discard: delete file failed:', err));
-                    fetch(`/project-media/${project.id}/${encodeURIComponent(`${item.id}.json`)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
-                        method: 'DELETE',
-                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'preview discard: delete sidecar failed:', err));
-                }
-            }
-            removeGroup(g.id);
-            grid.el.removeCard(g.id);
-            Events.emit('gallery:item-removed', { groupId: g.id, itemId: item?.id });
-        });
-
-        grid.on('preview:discard', ({ group: g, item }) => {
-            _pendingDiscard = { group: g, item };
-            _previewDiscardDialog.el.show();
-        });
-
-        // Track Continue runs. `_queuedContinueGroupIds` = waiting in Cue queue;
-        // `_continuingGroupIds` = currently running. Both maps `groupId → itemId`
-        // so cue-queue removal can target the exact replaceItemId job.
-        // Grid mirrors via markContinuing / markQueuedContinue (debounced render
-        // re-applies state from internal Sets).
+        // Finish path (preview → final replace): _queuedContinueGroupIds /
+        // _continuingGroupIds drive the "Queued…" / "Generating final…" overlays
+        // and force the card into a busy state.
         const _continuingGroupIds = new Set();
         const _queuedContinueGroupIds = new Map(); // groupId → itemId
 
+        // Branching Continue path (preview stays, stage-2 lands as new card):
+        // per-group pending+running count → drives the small `xN` badge.
+        // Multiple clicks bump the count; no whole-card overlay.
+        const _stage2BranchCounts = new Map(); // groupId → number
+
+        const _bumpStage2 = (groupId, delta) => {
+            const next = Math.max(0, (_stage2BranchCounts.get(groupId) || 0) + delta);
+            if (next <= 0) _stage2BranchCounts.delete(groupId);
+            else           _stage2BranchCounts.set(groupId, next);
+            grid.el.setStage2Count(groupId, next);
+            _refreshPbGenerating();
+        };
+
         const _refreshPbGenerating = () => {
-            const busy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
+            let stage2Total = 0;
+            _stage2BranchCounts.forEach(v => { stage2Total += v; });
+            const busy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0 || stage2Total > 0;
             _pb?.el?.setGenerating?.(busy);
         };
 
-        grid.on('preview:continue', ({ group: g, item }) => {
+        // ── Preview support-asset validation ─────────────────────────────────
+        // Per-group cached validation result, used to gate Continue/Finish and
+        // drive the card warning badge (Cold fallback / Missing assets).
+        // groupId → { canFastPath, canColdFallback, blocked, missing, latent, snapshots }
+        const _previewValidation = new Map();
+
+        const _applyValidationToCard = (groupId, report) => {
+            if (!report) {
+                grid.el.setPreviewAssetsWarning?.(groupId, null);
+                return;
+            }
+            if (report.canFastPath) {
+                grid.el.setPreviewAssetsWarning?.(groupId, null);
+            } else if (report.canColdFallback) {
+                grid.el.setPreviewAssetsWarning?.(groupId, { mode: 'fallback', missing: report.missing });
+            } else if (report.blocked) {
+                grid.el.setPreviewAssetsWarning?.(groupId, { mode: 'blocked', missing: report.missing });
+            } else {
+                grid.el.setPreviewAssetsWarning?.(groupId, null);
+            }
+        };
+
+        const _validatePreviewForGroup = async (group) => {
+            const item = group?.history?.[group.selectedIndex];
+            if (!item || item.stage !== 'preview') {
+                _previewValidation.delete(group.id);
+                grid.el.setPreviewAssetsWarning?.(group.id, null);
+                return null;
+            }
+            try {
+                const report = await validatePreviewAssets(item.id);
+                if (!report || report.success === false) return null;
+                _previewValidation.set(group.id, report);
+                _applyValidationToCard(group.id, report);
+                return report;
+            } catch (err) {
+                clientLogger.warn('MpiGalleryBlock', 'validatePreviewAssets failed', err);
+                return null;
+            }
+        };
+
+        const _validateAllPreviews = () => {
+            const groups = state.currentProject?.itemGroups || [];
+            for (const g of groups) {
+                const item = g.history?.[g.selectedIndex];
+                if (item?.stage === 'preview') {
+                    _validatePreviewForGroup(g).catch(() => {});
+                }
+            }
+        };
+
+        grid.on('preview:continue', async ({ group: g, item }) => {
             if (!item?.frozenParams) {
                 clientLogger.warn('MpiGalleryBlock', 'preview:continue without frozenParams', item);
+                return;
+            }
+            // Loop-armed jobs auto-refire from live PB state and would loop the
+            // Continue indefinitely. Block until user disarms loop.
+            if (state.loopArmed) {
+                StatusBar.notify('Disarm Loop before continuing a preview.', 'warning');
                 return;
             }
             const model = MODELS.find(m => m.id === item.modelId);
@@ -252,8 +292,28 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 return;
             }
 
-            // Already queued or running for this group — ignore re-clicks.
-            if (_continuingGroupIds.has(g.id) || _queuedContinueGroupIds.has(g.id)) return;
+            // Re-validate at click time (TOCTOU: render-time badge may be
+            // stale if the user moved/deleted the latent in another window).
+            const report = await _validatePreviewForGroup(g);
+            if (!report) {
+                StatusBar.notify('Preview validation failed — cannot continue.', 'warning');
+                return;
+            }
+            if (report.blocked) {
+                StatusBar.notify('Preview support assets missing — cannot continue. Delete the preview and rerun.', 'warning');
+                return;
+            }
+
+            // Block Continue (branching) while Finish is in flight on this card.
+            // Finish replaces the preview; queuing branch jobs against a
+            // disappearing preview would leak.
+            if (_continuingGroupIds.has(g.id) || _queuedContinueGroupIds.has(g.id)) {
+                StatusBar.notify('Finish is in progress for this preview.', 'warning');
+                return;
+            }
+
+            const latentInfo = item.previewAssets?.latent;
+            const isColdFallback = !report.canFastPath && report.canColdFallback;
 
             // Sync PB to the preview's model + op so the user sees Cue progress
             // for the multi-stage workflow that originally produced the preview.
@@ -286,20 +346,212 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (dims.h) injectionParams.Height = dims.h;
             if (frozen.seed != null) injectionParams.Seed = frozen.seed;
 
-            const config = {
-                operation:     item.operation,
-                model,
-                positive:      frozen.prompt   || '',
-                negative:      frozen.negative || '',
-                mediaItems:    Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
-                injectionParams,
-                previewOnly:   false,
-                replaceItemId: item.id,
+            // Build a placeholder + dispatcher for the stage-2 branch job.
+            // Used either directly (fast path) or as a follow-up after the
+            // stage-1 rerun completes (cold fallback).
+            const _bumpAndDispatchStage2 = (latentName, latentFilePath) => {
+                _bumpStage2(g.id, +1);
+
+                const _tempId = crypto.randomUUID();
+                const _previewThumbUrl = item.thumbPath
+                    ? resolveMediaUrl(item.thumbPath)
+                    : (item.filePath ? resolveMediaUrl(item.filePath) : '');
+                const _placeholderGroup = {
+                    id: _tempId,
+                    type: model.mediaType || 'video',
+                    name: 'Generating...',
+                    history: _previewThumbUrl ? [{
+                        id: `${_tempId}-input-preview`,
+                        type: 'image',
+                        filePath: _previewThumbUrl,
+                        name: 'Generating...',
+                        displayName: 'Generating...',
+                        operation: item.operation,
+                        inputPreview: true,
+                        pixelDimensions: { w: 0, h: 0 },
+                    }] : [],
+                    selectedIndex: 0,
+                    width:  injectionParams.Width  || item.pixelDimensions?.w || 1024,
+                    height: injectionParams.Height || item.pixelDimensions?.h || 1024,
+                    isGenerating: true,
+                };
+
+                let _settled = false;
+                const _dec = () => { if (_settled) return; _settled = true; _bumpStage2(g.id, -1); };
+
+                const stage2Config = {
+                    operation:        item.operation,
+                    model,
+                    positive:         frozen.prompt   || '',
+                    negative:         frozen.negative || '',
+                    mediaItems:       Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
+                    injectionParams,
+                    previewOnly:      false,
+                    // Branching Continue: NO replaceItemId. Final lands as a new
+                    // gallery card; preview card stays for further branches.
+                    isStage2:              true,
+                    loadLatentName:        latentName,
+                    previewLatentFilePath: latentFilePath,
+                };
+                enqueueGeneration(stage2Config, {
+                    onCancel:   _dec,
+                    onError:    _dec,
+                    onComplete: _dec,
+                }, {
+                    scope: 'gallery',
+                    tempId: _tempId,
+                    placeholderGroup: _placeholderGroup,
+                });
             };
 
-            // Mark queued. If nothing is currently running, enqueueGeneration
-            // will dispatch immediately and `generation:started` flips us to
-            // continuing. Otherwise the card stays in "Queued..." state.
+            if (!isColdFallback) {
+                // Fast path: latent is on disk, jump straight to stage-2.
+                _bumpAndDispatchStage2(latentInfo.engineInputName, latentInfo.filePath);
+                return;
+            }
+
+            // Cold fallback: rerun stage-1 from frozenParams + snapshots to
+            // rebuild the project latent in place (replaceItemId = preview id),
+            // then auto-enqueue the stage-2 branch when stage-1 completes.
+            StatusBar.notify('Preview latent missing — running stage 1 from saved snapshots, then stage 2.', 'info');
+
+            const stage1Config = {
+                operation:        item.operation,
+                model,
+                positive:         frozen.prompt   || '',
+                negative:         frozen.negative || '',
+                mediaItems:       Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
+                injectionParams,
+                previewOnly:      true,
+                // Rebuild the preview latent under the preview's own itemId.
+                replaceItemId:    item.id,
+            };
+
+            // We need the resulting latent metadata to fire stage-2. Subscribe
+            // once to gallery:item-updated for this group, then unsubscribe.
+            let _chainSettled = false;
+            const _settle = () => { _chainSettled = true; };
+            const _chainUnsub = Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
+                if (groupId !== g.id || _chainSettled) return;
+                const refreshedItem = updatedGroup?.history?.find(h => h.id === item.id);
+                const newLatent = refreshedItem?.previewAssets?.latent;
+                if (!newLatent || newLatent.status !== 'available' || !newLatent.engineInputName || !newLatent.filePath) {
+                    StatusBar.notify('Stage 1 rerun finished but latent was not produced.', 'warning');
+                    _settle();
+                    _chainUnsub();
+                    return;
+                }
+                _settle();
+                _chainUnsub();
+                _bumpAndDispatchStage2(newLatent.engineInputName, newLatent.filePath);
+            });
+
+            enqueueGeneration(stage1Config, {
+                onCancel: () => { if (!_chainSettled) { _settle(); _chainUnsub(); } },
+                onError:  () => { if (!_chainSettled) { _settle(); _chainUnsub(); } },
+                onComplete: () => { /* gallery:item-updated drives the chain */ },
+            }, { scope: 'gallery' });
+        });
+
+        // ── Preview Finish (preview → final replace) ────────────────────────────
+        grid.on('preview:finish', async ({ group: g, item }) => {
+            if (!item?.frozenParams) {
+                clientLogger.warn('MpiGalleryBlock', 'preview:finish without frozenParams', item);
+                return;
+            }
+            if (state.loopArmed) {
+                StatusBar.notify('Disarm Loop before finishing a preview.', 'warning');
+                return;
+            }
+            const model = MODELS.find(m => m.id === item.modelId);
+            if (!model) {
+                StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot finish.`, 'warning');
+                return;
+            }
+            if (model.installed === false) {
+                const name = model.label || model.name || model.id;
+                StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to finish.`, 'warning');
+                return;
+            }
+
+            // Click-time re-validation (catches assets that vanished since
+            // the badge was last computed).
+            const report = await _validatePreviewForGroup(g);
+            if (!report) {
+                StatusBar.notify('Preview validation failed — cannot finish.', 'warning');
+                return;
+            }
+            if (report.blocked) {
+                StatusBar.notify('Preview support assets missing — cannot finish. Delete the preview and rerun.', 'warning');
+                return;
+            }
+
+            if (_continuingGroupIds.has(g.id) || _queuedContinueGroupIds.has(g.id)) return;
+            if ((_stage2BranchCounts.get(g.id) || 0) > 0) {
+                StatusBar.notify('Wait for pending stage-2 jobs to finish before replacing this preview.', 'warning');
+                return;
+            }
+
+            const latentInfo = item.previewAssets?.latent;
+            const isColdFallback = !report.canFastPath && report.canColdFallback;
+
+            const modelMismatch = activeModelId !== model.id;
+            const opMismatch    = activeOperation !== item.operation;
+            if (modelMismatch || opMismatch) {
+                if (modelMismatch) {
+                    activeModel   = model;
+                    activeModelId = model.id;
+                    setSelectedModelId(model.mediaType, model.id);
+                    _pb?.el?.setModel?.(model);
+                    refreshRadial({ imageCount, videoCount, modelId: model.id });
+                }
+                if (item.operation) {
+                    activeOperation = item.operation;
+                    _pb?.el?.setOperation?.(item.operation);
+                }
+                const name = model.label || model.name || model.id;
+                StatusBar.notify(`Switched to "${name}" — finishing preview.`, 'info');
+            }
+
+            const frozen = item.frozenParams || {};
+            const dims = frozen.dims || {};
+            const injectionParams = { ...(frozen.injectionParams || {}) };
+            if (dims.w) injectionParams.Width  = dims.w;
+            if (dims.h) injectionParams.Height = dims.h;
+            if (frozen.seed != null) injectionParams.Seed = frozen.seed;
+
+            // Finish config differs by path:
+            // - Fast path: run stage-2 file (isStage2) against existing latent.
+            // - Cold fallback: run the full _ms workflow with previewOnly=false
+            //   (no preview gating, no isStage2 swap, no LoadLatent override) —
+            //   stage-1+stage-2 fused. Both replace the preview via replaceItemId.
+            const config = isColdFallback ? {
+                operation:        item.operation,
+                model,
+                positive:         frozen.prompt   || '',
+                negative:         frozen.negative || '',
+                mediaItems:       Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
+                injectionParams,
+                previewOnly:      false,
+                replaceItemId:    item.id,
+            } : {
+                operation:        item.operation,
+                model,
+                positive:         frozen.prompt   || '',
+                negative:         frozen.negative || '',
+                mediaItems:       Array.isArray(frozen.mediaItems) ? frozen.mediaItems : [],
+                injectionParams,
+                previewOnly:      false,
+                isStage2:              true,
+                loadLatentName:        latentInfo.engineInputName,
+                previewLatentFilePath: latentInfo.filePath,
+                replaceItemId:    item.id,
+            };
+
+            if (isColdFallback) {
+                StatusBar.notify('Preview latent missing — running full workflow to finish.', 'info');
+            }
+
             _queuedContinueGroupIds.set(g.id, item.id);
             grid.el.markQueuedContinue(g.id, true);
             _refreshPbGenerating();
@@ -309,7 +561,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 grid.el.markContinuing(g.id, false);
                 _refreshPbGenerating();
             };
-
             const _clearQueued = () => {
                 if (_queuedContinueGroupIds.has(g.id)) {
                     _queuedContinueGroupIds.delete(g.id);
@@ -319,19 +570,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
             };
 
             const callbacks = {
-                // onCancel fires for both: cleared-while-pending (clearCueQueue/
-                // removeCueJob) AND user-cancelled-mid-run. In the queued case
-                // _continuingGroupIds is empty, so _clearContinuing is a no-op
-                // and _clearQueued does the work.
-                onCancel: () => { _clearQueued(); _clearContinuing(); },
-                onError:  () => { _clearQueued(); _clearContinuing(); },
-                onComplete: () => { /* cleared when gallery:item-updated fires */ },
+                onCancel:   () => { _clearQueued(); _clearContinuing(); },
+                onError:    () => { _clearQueued(); _clearContinuing(); },
+                onComplete: () => { /* cleared via gallery:item-updated below */ },
             };
-            enqueueGeneration(config, callbacks, { scope: 'gallery', _continueGroupId: g.id });
+            enqueueGeneration(config, callbacks, { scope: 'gallery' });
         });
 
-        // When a Continue job actually starts dispatching, flip its card from
-        // "Queued..." → "Generating final...".
+        // Finish path: queued→running overlay swap. Branching Continue uses
+        // the xN badge instead and never enters these overlays.
         _unsubs.push(Events.on('generation:started', ({ scope, replaceItemId }) => {
             if (scope !== 'gallery' || !replaceItemId) return;
             for (const [groupId, itemId] of _queuedContinueGroupIds) {
@@ -346,8 +593,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
         }));
 
-        // Pop button on a queued card → remove its job from the cue queue.
-        // removeCueJob fires the job's onCancel which clears the marker.
+        // Pop button on a queued Finish card → remove its job from the cue queue.
         grid.on('preview:pop-continue', ({ group: g, item }) => {
             if (!_queuedContinueGroupIds.has(g.id)) return;
             removeCueJob(job => job.config?.replaceItemId === item.id);
@@ -361,7 +607,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 grid.el.markContinuing(groupId, false);
                 _refreshPbGenerating();
             }
+            // A preview item may have been replaced (Finish) or its support
+            // assets refreshed via cold fallback. Re-validate this group only.
+            _validatePreviewForGroup(updatedGroup).catch(() => {});
         }));
+
+        // Initial validation kick covering whatever preview cards already sit
+        // in the gallery when this block mounts. Fire-and-forget; results
+        // arrive via _validatePreviewForGroup → setPreviewAssetsWarning.
+        _validateAllPreviews();
 
         // ── Media missing (garbage collection) ───────────────────────────────────
         grid.on('media-missing', ({ group: g, itemId }) => {

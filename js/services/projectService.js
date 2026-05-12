@@ -362,12 +362,43 @@ export async function persistGroups() {
  * Save a generation result to the project folder.
  * @returns {{ success: boolean, filePath?: string, filename?: string }}
  */
-export async function saveGeneration({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId }) {
+export async function saveGeneration({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }) {
     const res = await fetch('/project/save-generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, replaceItemId }),
+        body: JSON.stringify({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }),
     });
     if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
     return res.json();
+}
+
+/**
+ * Validate that a preview item's support assets (project latent + any required
+ * snapshots) still exist on disk. Used by the gallery to gate Continue/Finish:
+ *
+ *   canFastPath      — latent present, fast stage-2 path is available.
+ *   canColdFallback  — latent missing but frozenParams + snapshots present;
+ *                      stage-1 can be rerun to rebuild the latent.
+ *   blocked          — neither path is possible; preview must be deleted.
+ *
+ * @param {string} itemId
+ * @returns {Promise<object|null>}  validation report, or null if no project.
+ */
+export async function validatePreviewAssets(itemId) {
+    if (!state.currentProject?.folderPath || !itemId) return null;
+    const projectId = state.currentProject.id || 'unknown';
+    const url = `/project-media/${encodeURIComponent(projectId)}/validate-preview-assets`
+              + `?folderPath=${encodeURIComponent(state.currentProject.folderPath)}`
+              + `&itemId=${encodeURIComponent(itemId)}`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) {
+            clientLogger.warn('projectService', 'validate-preview-assets returned', res.status);
+            return null;
+        }
+        return await res.json();
+    } catch (err) {
+        clientLogger.error('projectService', 'validate-preview-assets failed', err);
+        return null;
+    }
 }

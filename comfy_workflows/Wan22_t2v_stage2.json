@@ -324,44 +324,6 @@
       "title": "Mpi From Checkpoint"
     }
   },
-  "740": {
-    "inputs": {
-      "add_noise": true,
-      "noise_seed": [
-        "717",
-        0
-      ],
-      "cfg": 1,
-      "model": [
-        "738",
-        0
-      ],
-      "positive": [
-        "823",
-        0
-      ],
-      "negative": [
-        "823",
-        1
-      ],
-      "sampler": [
-        "726",
-        0
-      ],
-      "sigmas": [
-        "731",
-        0
-      ],
-      "latent_image": [
-        "823",
-        2
-      ]
-    },
-    "class_type": "SamplerCustom",
-    "_meta": {
-      "title": "Generating Motion Preview (High Noise).."
-    }
-  },
   "743": {
     "inputs": {
       "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. low angle cowboy shot, ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
@@ -426,8 +388,8 @@
         0
       ],
       "input": [
-        "740",
-        1
+        "823",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -763,7 +725,7 @@
   },
   "887": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiBoolean",
     "_meta": {
@@ -781,7 +743,7 @@
         0
       ],
       "false": [
-        "740",
+        "738",
         0
       ]
     },

@@ -91,30 +91,6 @@
       "title": "Resize Image v2"
     }
   },
-  "482": {
-    "inputs": {
-      "images": [
-        "460",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "483": {
-    "inputs": {
-      "images": [
-        "480",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
   "487": {
     "inputs": {
       "model": [
@@ -243,26 +219,6 @@
       "title": "CLIP Text Encode (Negative Prompt)"
     }
   },
-  "724": {
-    "inputs": {
-      "tile_size": 128,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 16,
-      "samples": [
-        "768",
-        1
-      ],
-      "vae": [
-        "739",
-        2
-      ]
-    },
-    "class_type": "VAEDecodeTiled",
-    "_meta": {
-      "title": "VAE Decode 1 (Tiled)"
-    }
-  },
   "725": {
     "inputs": {
       "scheduler": "simple",
@@ -285,26 +241,6 @@
     "class_type": "KSamplerSelect",
     "_meta": {
       "title": "KSamplerSelect"
-    }
-  },
-  "727": {
-    "inputs": {
-      "tile_size": 128,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 16,
-      "samples": [
-        "733",
-        0
-      ],
-      "vae": [
-        "735",
-        2
-      ]
-    },
-    "class_type": "VAEDecodeTiled",
-    "_meta": {
-      "title": "VAE Decode 2 (Tiled)"
     }
   },
   "729": {
@@ -564,40 +500,6 @@
       "title": "Concatenate"
     }
   },
-  "746": {
-    "inputs": {
-      "boolean": true,
-      "true": [
-        "732",
-        0
-      ],
-      "false": [
-        "727",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "High VRAM Decode"
-    }
-  },
-  "749": {
-    "inputs": {
-      "boolean": true,
-      "true": [
-        "737",
-        0
-      ],
-      "false": [
-        "724",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "High VRAM Decode"
-    }
-  },
   "751": {
     "inputs": {
       "string": "tattoo, speech, talking, moving lips"
@@ -717,35 +619,10 @@
       "title": "Mpi If Else Inverted"
     }
   },
-  "772": {
-    "inputs": {
-      "index": -1,
-      "images": [
-        "746",
-        0
-      ]
-    },
-    "class_type": "MpiGetImageAtIndex",
-    "_meta": {
-      "title": "Mpi Get Image At Index"
-    }
-  },
-  "773": {
-    "inputs": {
-      "images": [
-        "772",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Last_Frame"
-    }
-  },
   "774": {
     "inputs": {
       "passthrough": [
-        "746",
+        "732",
         0
       ]
     },
@@ -769,7 +646,7 @@
   "776": {
     "inputs": {
       "passthrough": [
-        "749",
+        "737",
         0
       ]
     },
@@ -946,35 +823,6 @@
       "title": "Lora_Low_1"
     }
   },
-  "821": {
-    "inputs": {
-      "sampler_name": "euler_ancestral"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "822": {
-    "inputs": {
-      "sampler_name": "uni_pc_bh2"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "823": {
-    "inputs": {
-      "scheduler": "beta",
-      "steps": 5,
-      "denoise": 1
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
   "825": {
     "inputs": {
       "width": [
@@ -1145,7 +993,7 @@
   },
   "844": {
     "inputs": {
-      "latent": "wan22_i2v_00001_.latent"
+      "latent": "ComfyUI_00001_.latent"
     },
     "class_type": "LoadLatent",
     "_meta": {

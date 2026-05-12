@@ -21,7 +21,7 @@
   },
   "95": {
     "inputs": {
-      "unet_name": "Wan_22_t2v_High.safetensors",
+      "unet_name": "Wan_22_i2v_High.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -31,12 +31,64 @@
   },
   "96": {
     "inputs": {
-      "unet_name": "Wan_22_t2v_Low.safetensors",
+      "unet_name": "Wan_22_i2v_Low.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
     "_meta": {
       "title": "Load Diffusion Model"
+    }
+  },
+  "460": {
+    "inputs": {
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "841",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "480": {
+    "inputs": {
+      "width": [
+        "460",
+        1
+      ],
+      "height": [
+        "460",
+        2
+      ],
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 2,
+      "device": "cpu",
+      "image": [
+        "839",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   },
   "487": {
@@ -82,14 +134,14 @@
   "635": {
     "inputs": {
       "seconds": [
-        "838",
+        "842",
         0
       ],
       "fps": 16
     },
     "class_type": "MpiWanSeconds",
     "_meta": {
-      "title": "Mpi Wan Seconds"
+      "title": "Duration"
     }
   },
   "637": {
@@ -119,7 +171,7 @@
   },
   "717": {
     "inputs": {
-      "int": 9554843544356
+      "int": 31
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -170,7 +222,7 @@
   "725": {
     "inputs": {
       "scheduler": "simple",
-      "steps": 6,
+      "steps": 5,
       "denoise": 1,
       "model": [
         "738",
@@ -183,6 +235,15 @@
     }
   },
   "726": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "729": {
     "inputs": {
       "sampler_name": "euler"
     },
@@ -206,7 +267,7 @@
   },
   "731": {
     "inputs": {
-      "step": 3,
+      "step": 2,
       "sigmas": [
         "725",
         0
@@ -236,25 +297,22 @@
   "733": {
     "inputs": {
       "add_noise": false,
-      "noise_seed": [
-        "717",
-        0
-      ],
+      "noise_seed": 0,
       "cfg": 1,
       "model": [
         "730",
         0
       ],
       "positive": [
-        "823",
+        "830",
         0
       ],
       "negative": [
-        "823",
-        1
+        "831",
+        0
       ],
       "sampler": [
-        "726",
+        "729",
         0
       ],
       "sigmas": [
@@ -268,7 +326,7 @@
     },
     "class_type": "SamplerCustom",
     "_meta": {
-      "title": "Generating final step (Low Noise).."
+      "title": "Generating final step (Low Noise)..."
     }
   },
   "735": {
@@ -324,47 +382,50 @@
       "title": "Mpi From Checkpoint"
     }
   },
-  "740": {
+  "741": {
     "inputs": {
-      "add_noise": true,
-      "noise_seed": [
-        "717",
+      "width": [
+        "480",
+        1
+      ],
+      "height": [
+        "480",
+        2
+      ],
+      "length": [
+        "635",
         0
       ],
-      "cfg": 1,
-      "model": [
-        "738",
-        0
-      ],
+      "batch_size": 1,
       "positive": [
-        "823",
+        "744",
         0
       ],
       "negative": [
-        "823",
-        1
-      ],
-      "sampler": [
-        "726",
+        "723",
         0
       ],
-      "sigmas": [
-        "731",
-        0
-      ],
-      "latent_image": [
-        "823",
+      "vae": [
+        "739",
         2
+      ],
+      "start_image": [
+        "460",
+        0
+      ],
+      "end_image": [
+        "480",
+        0
       ]
     },
-    "class_type": "SamplerCustom",
+    "class_type": "WanFirstLastFrameToVideo",
     "_meta": {
-      "title": "Generating Motion Preview (High Noise).."
+      "title": "WanFirstLastFrameToVideo"
     }
   },
   "743": {
     "inputs": {
-      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. low angle cowboy shot, ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
+      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -419,6 +480,75 @@
       "title": "Preview_Only"
     }
   },
+  "759": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Use_End_Image"
+    }
+  },
+  "765": {
+    "inputs": {
+      "boolean": [
+        "759",
+        0
+      ],
+      "true": [
+        "741",
+        0
+      ],
+      "false": [
+        "825",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "766": {
+    "inputs": {
+      "boolean": [
+        "759",
+        0
+      ],
+      "true": [
+        "741",
+        1
+      ],
+      "false": [
+        "825",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "767": {
+    "inputs": {
+      "boolean": [
+        "759",
+        0
+      ],
+      "true": [
+        "741",
+        2
+      ],
+      "false": [
+        "825",
+        4
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "lat"
+    }
+  },
   "768": {
     "inputs": {
       "boolean": [
@@ -426,8 +556,24 @@
         0
       ],
       "input": [
-        "740",
-        1
+        "765",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "770": {
+    "inputs": {
+      "boolean": [
+        "752",
+        0
+      ],
+      "input": [
+        "846",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -450,7 +596,7 @@
   "775": {
     "inputs": {
       "passthrough": [
-        "883",
+        "770",
         0
       ]
     },
@@ -639,21 +785,27 @@
       "title": "Lora_Low_1"
     }
   },
-  "823": {
+  "825": {
     "inputs": {
       "width": [
-        "827",
-        0
+        "480",
+        1
       ],
       "height": [
-        "828",
-        0
+        "480",
+        2
       ],
       "length": [
         "635",
         0
       ],
       "batch_size": 1,
+      "motion_amplitude": [
+        "832",
+        0
+      ],
+      "color_protect": true,
+      "correct_strength": 0.01,
       "positive": [
         "744",
         0
@@ -665,32 +817,121 @@
       "vae": [
         "739",
         2
+      ],
+      "start_image": [
+        "460",
+        0
       ]
     },
-    "class_type": "WanImageToVideo",
+    "class_type": "PainterI2VAdvanced",
     "_meta": {
-      "title": "WanImageToVideo"
+      "title": "PainterI2VAdvanced"
     }
   },
-  "827": {
+  "830": {
     "inputs": {
-      "int": 320
+      "boolean": [
+        "759",
+        0
+      ],
+      "true": [
+        "765",
+        0
+      ],
+      "false": [
+        "825",
+        2
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "831": {
+    "inputs": {
+      "boolean": [
+        "759",
+        0
+      ],
+      "true": [
+        "766",
+        0
+      ],
+      "false": [
+        "825",
+        3
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "832": {
+    "inputs": {
+      "input_min": 0,
+      "input_max": 1,
+      "output_min": 1,
+      "output_max": 1.6,
+      "clamp": true,
+      "mode": "linear",
+      "value": [
+        "833",
+        0
+      ]
+    },
+    "class_type": "MpiNormalizeValue",
+    "_meta": {
+      "title": "Mpi Normalize Value"
+    }
+  },
+  "833": {
+    "inputs": {
+      "float": 0
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Motion_Intensity"
+    }
+  },
+  "836": {
+    "inputs": {
+      "int": 368
     },
     "class_type": "MpiInt",
     "_meta": {
       "title": "Width"
     }
   },
-  "828": {
+  "837": {
     "inputs": {
-      "int": 176
+      "int": 640
     },
     "class_type": "MpiInt",
     "_meta": {
       "title": "Height"
     }
   },
-  "838": {
+  "839": {
+    "inputs": {
+      "image": "Girl_with_cat_202603182027.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "End_Frame"
+    }
+  },
+  "841": {
+    "inputs": {
+      "image": "Detailed_00005_small.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Start_Frame"
+    }
+  },
+  "842": {
     "inputs": {
       "int": 1
     },
@@ -699,43 +940,11 @@
       "title": "Duration"
     }
   },
-  "883": {
-    "inputs": {
-      "boolean": [
-        "752",
-        0
-      ],
-      "input": [
-        "888",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "884": {
-    "inputs": {
-      "boolean": [
-        "886",
-        0
-      ],
-      "input": [
-        "883",
-        1
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "885": {
+  "843": {
     "inputs": {
       "filename_prefix": "wan22",
       "samples": [
-        "884",
+        "848",
         1
       ]
     },
@@ -744,44 +953,36 @@
       "title": "SaveLatent"
     }
   },
-  "886": {
+  "844": {
     "inputs": {
-      "mode": "a_true_b_false",
-      "a": [
-        "752",
-        0
-      ],
-      "b": [
-        "887",
-        0
-      ]
+      "latent": "ComfyUI_00001_.latent"
     },
-    "class_type": "MpiBooleanCompare",
+    "class_type": "LoadLatent",
     "_meta": {
-      "title": "Mpi Boolean Compare"
+      "title": "LoadLatent"
     }
   },
-  "887": {
+  "845": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiBoolean",
     "_meta": {
       "title": "Is_Continue"
     }
   },
-  "888": {
+  "846": {
     "inputs": {
       "boolean": [
-        "887",
+        "845",
         0
       ],
       "true": [
-        "893",
+        "844",
         0
       ],
       "false": [
-        "740",
+        "738",
         0
       ]
     },
@@ -790,13 +991,37 @@
       "title": "Mpi If Else"
     }
   },
-  "893": {
+  "848": {
     "inputs": {
-      "latent": "ComfyUI_00001_.latent"
+      "boolean": [
+        "849",
+        0
+      ],
+      "input": [
+        "770",
+        1
+      ]
     },
-    "class_type": "LoadLatent",
+    "class_type": "MpiIfElseInverted",
     "_meta": {
-      "title": "LoadLatent"
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "849": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "752",
+        0
+      ],
+      "b": [
+        "845",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
     }
   }
 }

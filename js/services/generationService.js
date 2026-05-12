@@ -188,6 +188,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         maskDataUrl,
         injectionParams,
         previewOnly: config.previewOnly === true,
+        isStage2: config.isStage2 === true,
+        loadLatentName: config.loadLatentName,
+        previewLatentFilePath: config.previewLatentFilePath,
     });
 
     const { id: _regId } = activeGenerations.start({
@@ -219,7 +222,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         samplingStartTime ??= Date.now();
     };
 
-    exec.onComplete = async (urls) => {
+    exec.onComplete = async (urls, outputInfo = {}) => {
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
@@ -244,6 +247,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         let _previewStage = opts.stage;
         let _previewFrozen = opts.frozenParams;
         let _previewLoraSnapshot = opts.loraSnapshot;
+        let _previewAssets = opts.previewAssets;
         const _frozenMediaItems = mediaItems
             .filter(item => item?.url && item?.mediaType)
             .map((item, index) => ({
@@ -267,6 +271,20 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 dims:     { w: width, h: height },
                 injectionParams: frozenInjection,
                 mediaItems: _frozenMediaItems,
+            };
+            _previewAssets = {
+                latent: Array.isArray(outputInfo.latents) ? outputInfo.latents[0] || null : null,
+                snapshots: _frozenMediaItems
+                    .filter(item =>
+                        item.mediaType === 'image' &&
+                        (item.role === 'startFrame' || item.role === 'endFrame')
+                    )
+                    .map(item => ({
+                        id: item.id,
+                        role: item.role,
+                        mediaType: item.mediaType,
+                        url: item.url,
+                    })),
             };
             const _proj = state.currentProject;
             if (_proj && model.id) {
@@ -318,6 +336,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         stage:        _previewStage,
                         frozenParams: _previewFrozen,
                         loraSnapshot: _previewLoraSnapshot,
+                        previewAssets: _previewAssets,
                         replaceItemId: (_replaceItemId && i === 0) ? _replaceItemId : undefined,
                     });
                     if (data.success) {
@@ -360,6 +379,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 if (savedData?.stage)        baseProps.stage        = savedData.stage;
                 if (savedData?.frozenParams) baseProps.frozenParams = savedData.frozenParams;
                 if (savedData?.loraSnapshot) baseProps.loraSnapshot = savedData.loraSnapshot;
+                if (savedData?.previewAssets) baseProps.previewAssets = savedData.previewAssets;
             }
             const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);
@@ -419,7 +439,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const firstGroup = groups[0];
             // Single emit — handler reads state.currentProject.itemGroups (already
             // contains all N groups via addGroup) and rebuilds grid with them.
-            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds });
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery' });
             callbacks.onComplete?.({ item: firstItem, group: firstGroup });
         }
 

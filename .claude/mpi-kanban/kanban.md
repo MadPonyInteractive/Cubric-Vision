@@ -8,9 +8,22 @@
     ```md
     Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
     Scope:
-    - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` and `LTX23_i2v.json` exist.
-    - Verify LTX uses the existing preview-gate flow: Preview_Only, Preview output, Output final, Continue, Discard.
-    - LTX uses the standard flat LoRA shape, not staged WAN-style LoRAs.
+    - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
+      `LTX23_t2v_stage2.json`) and `LTX23_i2v.json` (+ `LTX23_i2v_stage2.json`)
+      exist.
+    - LTX uses the two-file multi-stage contract (no `Is_Continue` injection):
+      stage-1 file contains `Preview_Only` + `SaveLatent` + `Preview` + `Output`;
+      stage-2 sibling is authored by bypassing the stage-1 KSampler in ComfyUI
+      and Save (API). See `.claude/rules/comfy_injection.md` § "Multi-stage
+      video workflows".
+    - LTX uses the standard flat LoRA shape, not staged WAN-style LoRAs. Because
+      stage-2 LoRAs do not vary the result for LTX, set
+      `commands[op].allowsBranchingContinue = false` so preview cards expose
+      only the Discard + Finish buttons (no Continue). Finish replaces the
+      preview with the final video via `replaceItemId`.
+    - When LTX-class image models are added (future, lower-grade-GPU image
+      ops), they get the same treatment: two-file `_ms` workflow, Finish-only
+      preview card.
     ```
 
 ### Patreon landing page images
@@ -109,6 +122,51 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Multi-stage workflow latents
+
+  - tags: [PLAN]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: false
+  - steps:
+      - [x] Persist preview support assets
+      - [x] Branch Continue + Finish from stage-2 workflow
+      - [x] Missing assets and fallback
+      - [x] Documentation and rules sync
+    ```md
+    Plan file: docs/plans/2026-05-11-multi-stage-workflow-latents.md
+
+    Multi-stage video preview cards now durable + reusable for both T2V and
+    I2V. Step 1: preview-stage saves project latent under
+    `Media/.latents/<id>.latent`; I2V also snapshots Start_Frame/End_Frame
+    into `Media/.preview-assets/<id>/`. Step 2 pivoted from runtime
+    `Is_Continue` gating to a two-file workflow convention
+    (`<name>.json` + `<name>_stage2.json`); stage-2 file authored in ComfyUI
+    by toggling stage-1 KSampler to Bypass + Save (API); app swaps filename
+    via `commandExecutor._toStage2Filename` when `payload.isStage2 === true`.
+    Preview card gained Continue (branching — NEW card, gated by per-op
+    `allowsBranchingContinue`) + Finish (replaces preview via
+    `replaceItemId`). `Is_Continue` injection dropped everywhere.
+
+    Step 3 (2026-05-12): added preview-asset validation + cold fallback.
+    `GET /project-media/:projectId/validate-preview-assets` stats latent +
+    snapshots, returns canFastPath/canColdFallback/blocked. Gallery card
+    shows amber "Cold" badge when latent missing but frozenParams +
+    snapshots present (Continue reruns stage-1 in place then auto-fires
+    stage-2; Finish runs full _ms with previewOnly=false + replaceItemId as
+    single submission), red "Missing" badge when blocked (Continue/Finish
+    hidden, user deletes preview). Click-time re-validation closes TOCTOU
+    window. Preview card selection bug fixed — shift/ctrl/right-click now
+    work like any other card; only "open into history" suppressed.
+    `copySnapshotSource` got same-path guard so cold-fallback stage-1
+    rerun reading its own materialized snapshot doesn't error.
+
+    Step 4: docs + rules synced — `.claude/rules/comfy_injection.md`,
+    `.claude/rules/component-comfy.md`, `.claude/rules/component-events.md`,
+    `docs/project-integrity.md`, `docs/comfy.md` (WAN baked-vs-live LoRA
+    note + cold-fallback caveat).
+    ```
 
 ### Resize tool
 

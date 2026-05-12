@@ -429,7 +429,7 @@ export const ComfyUIController = {
                 'value', 'text', 'int', 'float', 'boolean', 'string',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
-                'denoise', 'seed', 'noise_seed', 'video', 'audio'
+                'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent'
             ];
             for (const t of targets) {
                 if (t in node.inputs) {
