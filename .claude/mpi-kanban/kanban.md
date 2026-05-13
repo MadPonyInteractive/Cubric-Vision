@@ -101,12 +101,14 @@
 
 ## IMPLEMENTING
 
+## COMPLETED
+
 ### Continue from last frame.
 
   - tags: [PLAN]
   - priority: high
   - workload: Hard
-  - defaultExpanded: true
+  - defaultExpanded: false
   - steps:
       - [x] Foundations selection-order roles gate
       - [x] Video-viewer context menu frames
@@ -116,9 +118,20 @@
       - [x] Selection badges docs sync
     ```md
     Plan file: docs/plans/2026-05-12-continue-from-last-frame.md
-    ```
 
-## COMPLETED
+    Shipped 2026-05-13. Video-history workspace gained right-click "Set as
+    start/end frame" + MpiToolOptionsPrompt toolbar (Extend / Create new) +
+    ffmpeg-concat-based Extend (extended_NNN.mp4 + sidecar extendedFrom)
+    and Combine context-menu (history + gallery, combined_NNN.mp4) with
+    chronological click order. Selection-order numeric badges + history
+    "Extended from" row added. `historyMode` PromptBox context flag forces
+    Preview_Only=false for _ms ops; PromptBox media strip hidden in
+    history. Rule files + docs/PROJECT.md synced; 9 memory entries written
+    (history-no-multistage, selection-order-chronological, ffmpeg-concat-
+    strategy, video-workspace-no-latents, concat-crop-zoom, real-extend-op-
+    future, history-toolbar-i2v-gate, right-top-slot-empty-visibility,
+    thumb-css-only-aspect).
+    ```
 
 ### Media Gallery Buggy Behavior
 
