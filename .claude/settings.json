@@ -16,7 +16,9 @@
     "codex@openai-codex": false,
     "taches-cc-resources@taches-cc-resources": false,
     "skill-creator@claude-plugins-official": false,
-    "mpi-kanban@mpi-local": true
+    "mpi-kanban@mpi-local": false,
+    "shopify-plugin@shopify-ai-toolkit": false,
+    "mpi-kanban@mad-pony-interactive": true
   },
   "extraKnownMarketplaces": {},
   "mcpServers": {},
