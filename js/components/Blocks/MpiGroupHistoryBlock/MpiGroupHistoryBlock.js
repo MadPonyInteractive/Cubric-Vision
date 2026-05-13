@@ -156,10 +156,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return !!activeModel && _opOptions().some(o => !o.disabled);
         }
 
+        /**
+         * Active model exposes frame-driven ops (i2v* / v2v*) that accept external
+         * media drops. PromptBox must be visible even with no chips staged so the
+         * user can drop a start/end-frame image (or input video) from outside.
+         */
+        function _modelHasFrameOps() {
+            const ops = activeModel?.supportedOps;
+            if (!Array.isArray(ops)) return false;
+            return ops.some(op => op.startsWith('i2v') || op.startsWith('v2v'));
+        }
+
+        /** Unified PromptBox-visible gate used across mount/show paths. */
+        function _shouldShowPromptBox() {
+            return _hasPromptOps() || _modelHasFrameOps();
+        }
+
         const _firstAvailable = _opOptions().find(o => !o.disabled);
+        const _firstFrameOp = activeModel?.supportedOps?.find(op => op.startsWith('i2v') || op.startsWith('v2v'));
         let activeOperation = _hasPromptOps()
             ? (_firstAvailable?.value ?? 'upscale')
-            : (isVideo ? 't2v' : 'generate');
+            : (_firstFrameOp || (isVideo ? 't2v' : 'generate'));
         let _currentIdx = _group.selectedIndex ?? 0;
         let _currentSelectionIndices = [];
         let _compareOverlay = null;
@@ -245,20 +262,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             if (mode === 'prompt') {
                 if (!isVideo) await viewer.el.swapToPreview?.();
-                // Video-history prompt mode: force-mount PromptBox so the
-                // toolbar can inject a frame (which then unblocks i2v ops).
-                // Image-history keeps the gated path.
-                const _modelHasI2V = Array.isArray(activeModel?.supportedOps)
-                    && activeModel.supportedOps.some(op => op.startsWith('i2v'));
-                if (isVideo && _modelHasI2V) {
+                // Force-mount PromptBox whenever the active model supports
+                // frame-driven ops (i2v*/v2v*) so the user can drop a
+                // start/end-frame (or input video) from outside — even before
+                // any chip is staged. Otherwise fall back to the gated path.
+                const hasFrameOps = _modelHasFrameOps();
+                if (hasFrameOps) {
                     if (!_pb?.el) _mountPromptBoxIfNeeded({ force: true });
                 } else if (!_pb?.el) {
                     _mountPromptBoxIfNeeded();
                 }
-                if (_pb?.el && (_hasPromptOps() || (isVideo && _modelHasI2V))) _pb.el.show();
+                if (_pb?.el && _shouldShowPromptBox()) _pb.el.show();
                 // Mount frame-slot toolbar organism into #right-top-slot for
                 // video-history when the active model supports any i2v op.
-                if (isVideo && _pb?.el && _modelHasI2V) {
+                if (isVideo && _pb?.el && hasFrameOps) {
                     _options = MpiToolOptionsPrompt.mount(slot, {
                         promptBox: _pb,
                         project: state.currentProject,
@@ -514,9 +531,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             refreshGroupHistoryRadial(opts);
         }
 
-        /** Gate prompt tool button disabled state based on _hasPromptOps(). */
+        /** Gate prompt tool button disabled state. Frame-ops models stay enabled
+         *  even without staged media so the user can drop a frame to unlock. */
         function _syncPromptToolDisabled() {
-            const has = _hasPromptOps();
+            const has = _shouldShowPromptBox();
             historyTools.el.setDisabled?.({
                 prompt: {
                     disabled: !has,
@@ -533,7 +551,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // `force: true` bypasses that gate — used when an external action
             // (e.g. frame-grab from context menu) is about to inject media
             // that will unblock an op.
-            if (!force && !_hasPromptOps()) return false;
+            if (!force && !_shouldShowPromptBox()) return false;
 
             _pb?.el?.destroy?.();
             _pb = MpiPromptBox.mount(gid('prompt-box-mount'), {
@@ -608,9 +626,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _syncPromptToolDisabled();
         _mountPromptBoxIfNeeded();
 
-        // Initial tool: prompt if available, else crop.
-        if (_hasPromptOps()) historyTools.el.setMode('prompt');
-        else                 historyTools.el.setMode('crop');
+        // Initial tool: prompt if available (including frame-drop unlock), else crop.
+        if (_shouldShowPromptBox()) historyTools.el.setMode('prompt');
+        else                        historyTools.el.setMode('crop');
 
         // ── Generation runners ───────────────────────────────────────────────
 
@@ -829,7 +847,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _currentSelectionIndices = indices;
             if (!isVideo) viewer.el.setCompareEnabled?.(indices.length === 2);
             if (indices.length === 0) {
-                if (_hasPromptOps()) _pb?.el?.show();
+                if (_shouldShowPromptBox()) _pb?.el?.show();
                 return;
             }
             // Any selection: ensure viewer is not in a tool mode.
@@ -855,7 +873,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 viewer.el.clearCompare?.();
                 viewer.el.setCompareEnabled?.(false);
             }
-            if (_hasPromptOps()) _pb?.el?.show();
+            if (_shouldShowPromptBox()) _pb?.el?.show();
         });
 
         historyList.on('compare-requested', async ({ indices }) => {
@@ -1040,7 +1058,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 viewer.el.clearCompare?.();
                 viewer.el.setCompareEnabled?.(false);
             }
-            if (historyTools.el.getActiveMode?.() === 'prompt' && _hasPromptOps()) {
+            if (historyTools.el.getActiveMode?.() === 'prompt' && _shouldShowPromptBox()) {
                 _pb?.el?.show();
             }
 

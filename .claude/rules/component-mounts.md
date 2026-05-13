@@ -75,8 +75,8 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Video groups** (`_group.type === 'video'`):
 - `MpiVideoViewer`   props: `{ fps, controls }`   slot: `#centre-slot`
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsPrompt` (prompt mode, video + i2v-capable model only)
-- `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (video model exposes prompt ops); Block keeps handle in `_pb`. In video-history workspace, `_hasPromptOps()` is bypassed when active video model exposes any `i2v*` op so the toolbar can mount before frames are injected.
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsPrompt` (prompt mode, video + frame-ops-capable model: `_modelHasFrameOps()` — any `i2v*`/`v2v*` op)
+- `MpiPromptBox` (Organism) into `#prompt-box-mount` — gated by `_shouldShowPromptBox() = _hasPromptOps() || _modelHasFrameOps()`. `_modelHasFrameOps()` matches any `supportedOps` starting with `i2v` or `v2v`. Frame-ops capability bypass keeps PromptBox visible BEFORE any chip lands so the user can drop a start/end-frame image (or input video) from outside; the existing media-change listener unlocks the op as soon as a chip is staged. Block keeps handle in `_pb`.
 
 > **Video-history workspace gates:**
 > - `#right-top-slot` visibility under `--prompt-active` is `:empty`-scoped — slot stays visible whenever a child mounts. Image-history prompt mode keeps slot empty + hidden.
