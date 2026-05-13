@@ -247,7 +247,17 @@ export const MpiVideoPlayer = ComponentFactory.create({
             const doSeek = (value) => {
                 console.log('[seek] →', value);
                 if (video.duration) {
-                    video.currentTime = (value / 1000) * video.duration;
+                    const target = (value / 1000) * video.duration;
+                    const frameStep = 1 / _fps;
+                    const maxSeek = Math.max(0, video.duration - frameStep);
+                    const clamped = Math.min(target, maxSeek);
+                    const wasLoop = video.loop;
+                    if (wasLoop) video.loop = false;
+                    video.currentTime = clamped;
+                    if (wasLoop) {
+                        const restore = () => { video.loop = true; video.removeEventListener('seeked', restore); };
+                        video.addEventListener('seeked', restore);
+                    }
                 }
             };
 
@@ -261,6 +271,7 @@ export const MpiVideoPlayer = ComponentFactory.create({
             progressSlider.on('change', ({ value }) => {
                 doSeek(value);
                 isSeeking = false;
+                if (value >= 1000 && video.loop) video.pause();
             });
             // Volume slider — real-time during drag + commit on mouseup
             const doVolume = (value) => {
@@ -282,18 +293,30 @@ export const MpiVideoPlayer = ComponentFactory.create({
                 emit('change', { volume: video.volume, muted: video.muted });
             });
 
-            // Frame-back button: seek backward by 1/_fps
+            // Frame-back button: seek backward by 1/_fps (wraps to end when looping)
             frameBackBtn.on('click', () => {
                 video.pause();
                 const frameStep = 1 / _fps;
-                video.currentTime = Math.max(0, video.currentTime - frameStep);
+                const cur = video.currentTime;
+                const dur = video.duration;
+                if (video.loop && cur - frameStep < 0 && Number.isFinite(dur) && dur > 0) {
+                    video.currentTime = Math.max(0, dur - frameStep);
+                } else {
+                    video.currentTime = Math.max(0, cur - frameStep);
+                }
             });
 
-            // Frame-forward button: seek forward by 1/_fps
+            // Frame-forward button: seek forward by 1/_fps (wraps to 0 when looping)
             frameForwardBtn.on('click', () => {
                 video.pause();
                 const frameStep = 1 / _fps;
-                video.currentTime = Math.min(video.duration, video.currentTime + frameStep);
+                const cur = video.currentTime;
+                const dur = video.duration;
+                if (video.loop && Number.isFinite(dur) && dur > 0 && cur + frameStep > dur) {
+                    video.currentTime = 0;
+                } else {
+                    video.currentTime = Math.min(dur, cur + frameStep);
+                }
             });
 
             // Loop toggle button
