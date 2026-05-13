@@ -18,6 +18,7 @@ import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOp
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
+import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -38,14 +39,18 @@ import {
     appendToHistory,
     removeHistoryEntry,
     createImageItem,
+    createVideoItem,
     createItemGroup,
 } from '../../../data/projectModel.js';
+import { truncateCardName } from '../../../utils/displayHelpers.js';
+import { trackConcatJob } from '../../../services/concatProgress.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
+import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
@@ -107,9 +112,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // group's mediaType. Persisting here would clobber the sibling-type
         // slot (e.g. entering image history would wipe a video selection).
 
+        // Live media context — counts reflect (a) the implicit "current item"
+        // (1 image in image groups, 1 video in video groups) PLUS (b) any
+        // chips the user has staged in PromptBox via inject (e.g. start/end
+        // frame). `_refreshOpOptions` recomputes from PromptBox state so
+        // I2V ops unlock the moment a frame chip lands.
         const _baseCtx = isVideo
             ? { imageCount: 0, videoCount: 1 }
             : { imageCount: 1, videoCount: 0 };
+        function _syncBaseCtxFromPromptBox() {
+            const img = Number(_pb?.el?.imageCount) || 0;
+            const vid = Number(_pb?.el?.videoCount) || 0;
+            _baseCtx.imageCount = isVideo ? img : Math.max(1, img);
+            _baseCtx.videoCount = isVideo ? Math.max(1, vid) : vid;
+        }
 
         let _canvasHasMask = false;
 
@@ -229,9 +245,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             if (mode === 'prompt') {
                 if (!isVideo) await viewer.el.swapToPreview?.();
-                // Lazy-mount in case model became available after boot.
-                if (!_pb?.el) _mountPromptBoxIfNeeded();
-                if (_hasPromptOps()) _pb?.el?.show();
+                // Video-history prompt mode: force-mount PromptBox so the
+                // toolbar can inject a frame (which then unblocks i2v ops).
+                // Image-history keeps the gated path.
+                const _modelHasI2V = Array.isArray(activeModel?.supportedOps)
+                    && activeModel.supportedOps.some(op => op.startsWith('i2v'));
+                if (isVideo && _modelHasI2V) {
+                    if (!_pb?.el) _mountPromptBoxIfNeeded({ force: true });
+                } else if (!_pb?.el) {
+                    _mountPromptBoxIfNeeded();
+                }
+                if (_pb?.el && (_hasPromptOps() || (isVideo && _modelHasI2V))) _pb.el.show();
+                // Mount frame-slot toolbar organism into #right-top-slot for
+                // video-history when the active model supports any i2v op.
+                if (isVideo && _pb?.el && _modelHasI2V) {
+                    _options = MpiToolOptionsPrompt.mount(slot, {
+                        promptBox: _pb,
+                        project: state.currentProject,
+                    });
+                }
                 return;
             }
 
@@ -339,12 +371,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         /** Inline replacement for strategy.onGenerationPreview / onRehydratePreview. */
         function _applyPreview(url) {
             if (isVideo) {
-                viewer.el.loadVideo?.(url, { fps: _group.fps || 24 })?.catch?.(() => {});
-            } else {
-                viewer.el.isComparisonMode = false;
-                if (url?.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
-                viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
+                // Video workspace: latents are PNG/JPG frames, useless to play
+                // in a video element. Skip painting them so the viewer stays
+                // free for the user to queue more ops while generation runs.
+                return;
             }
+            viewer.el.isComparisonMode = false;
+            if (url?.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
+            viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
         }
 
         _unsubs.push(Events.on('generation:started', ({ id, scope, groupId, operation }) => {
@@ -360,6 +394,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
             if (!_myGenIds.has(id)) return;
+            // Video workspace: preview latents are static frames, not playable.
+            // Leave viewer in its current state so user can queue more ops.
+            if (isVideo) return;
             viewer.el.setGenerating?.(false);
             // keep mascot visible — generation still running (latents incoming)
             _applyPreview(url);
@@ -460,6 +497,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 ..._baseCtx,
                 hasMask: _canvasHasMask,
                 filterNoInputOps: true,
+                historyMode: true,
             });
             const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
             if (!currentStillOk) {
@@ -488,8 +526,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return has;
         }
 
-        function _mountPromptBoxIfNeeded() {
-            if (_pb?.el || !_hasPromptOps() || !activeModel) return false;
+        function _mountPromptBoxIfNeeded({ force = false } = {}) {
+            if (_pb?.el) return true;
+            if (!activeModel) return false;
+            // Normal path requires an op the current media context unlocks.
+            // `force: true` bypasses that gate — used when an external action
+            // (e.g. frame-grab from context menu) is about to inject media
+            // that will unblock an op.
+            if (!force && !_hasPromptOps()) return false;
 
             _pb?.el?.destroy?.();
             _pb = MpiPromptBox.mount(gid('prompt-box-mount'), {
@@ -504,6 +548,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 ..._baseCtx,
                 hasMask: false,
                 filterNoInputOps: true,
+                historyMode: true,
             });
 
             _unsubs.push(_pb.on('settings', () => _settingsOverlay.el.open({ modelId: activeModel.id })));
@@ -521,11 +566,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _syncPromptToolDisabled();
             }));
             _unsubs.push(_pb.on('operation-change', ({ operation }) => { activeOperation = operation; }));
+            _unsubs.push(_pb.on('media-change', () => {
+                // PromptBox media count drives op availability in history
+                // workspace (frame-grab inject must unlock i2v immediately).
+                _syncBaseCtxFromPromptBox();
+                _refreshOpOptions();
+                _syncPromptToolDisabled();
+            }));
             _unsubs.push(_pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams, previewOnly }) => {
                 const maskDataUrl = viewer.el.hasMask?.()
                     ? viewer.el.getCurrentMaskDataURL?.()
                     : null;
-                _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams, previewOnly });
+                // History workspace forces single-stage execution. `historyMode: true`
+                // is plumbed into the executor payload so `Preview_Only` is forced
+                // to false on `_ms` ops regardless of any stale previewStage toggle.
+                _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams, previewOnly, historyMode: true });
             }));
             _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
@@ -561,7 +616,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         let _activeExec = null;
 
-        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false }) {
+        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -591,7 +646,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);
 
             return {
-                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly },
+                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
                 opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id },
             };
         }
@@ -824,6 +879,130 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.setMaskHidden?.(false);
         });
 
+        historyList.on('combine-requested', async ({ indices }) => {
+            if (!isVideo || !Array.isArray(indices) || indices.length < 2) return;
+            const project = state.currentProject;
+            if (!project?.folderPath) { _showToast('No project context', 'error'); return; }
+            historyList.el.exitSelectMode();
+            // History list emits chronological indices (per Phase 1.1) — map
+            // to source itemIds in click order, not numerical order.
+            const itemIds = indices
+                .map(i => _group.history[i]?.id)
+                .filter(Boolean);
+            if (itemIds.length < 2) { _showToast('Need ≥2 video items', 'error'); return; }
+            await _runCombine(itemIds);
+        });
+
+        historyList.on('add-to-gallery', async ({ index }) => {
+            if (typeof index !== 'number') return;
+            const item = _group.history[index];
+            if (!item?.filePath) { _showToast('No source media', 'error'); return; }
+            historyList.el.exitSelectMode();
+            await _addItemToGallery(item, isVideo ? 'video' : 'image');
+        });
+
+        async function _runCombine(itemIds) {
+            const project = state.currentProject;
+            if (!project?.folderPath) return;
+            const jobId = `combine-${Date.now()}`;
+            try {
+                const concatPromise = trackConcatJob({
+                    jobId,
+                    label: `Combining ${itemIds.length} videos`,
+                });
+                const resp = await fetch('/combine-videos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId, folderPath: project.folderPath, itemIds }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data?.success || !data?.item) {
+                    throw new Error(data?.error || 'combine-videos failed');
+                }
+                try { await concatPromise; } catch (_) { /* HTTP already succeeded */ }
+
+                const ext = data.item;
+                const newItem = createVideoItem({
+                    id:              ext.id,
+                    filePath:        ext.filePath,
+                    operation:       ext.operation || 'combine',
+                    displayName:     truncateCardName(ext.displayName || 'combine'),
+                    modelId:         null,
+                    pixelDimensions: ext.pixelDimensions || { w: 0, h: 0 },
+                    thumbPath:       ext.thumbPath ?? null,
+                    fps:             ext.fps ?? 0,
+                    duration:        ext.duration ?? 0,
+                    frameCount:      ext.frameCount ?? 0,
+                    hasAudio:        ext.hasAudio ?? false,
+                    videoMeta:       ext.videoMeta ?? null,
+                });
+                // History workspace: append to current group (video group only).
+                _group = appendToHistory(_group, newItem);
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.appendEntry(newItem);
+                viewer.el.loadVideo?.(resolveMediaUrl(newItem.filePath), { fps: newItem.fps || _group.fps || 24 });
+                _showToast('Videos combined');
+            } catch (err) {
+                clientLogger.error('MpiGroupHistoryBlock', 'combine failed', err);
+                const _short = String(err.message || 'unknown').split('\n')[0].slice(0, 160);
+                _showToast(`Combine failed: ${_short}`, 'error');
+            }
+        }
+
+        async function _addItemToGallery(item, mediaType) {
+            const project = state.currentProject;
+            if (!project?.folderPath || !project?.id) return;
+            try {
+                // Resolve source path → File via fetch → re-upload via the
+                // shared upload helper (writes a new sidecar with a new id).
+                const url = resolveMediaUrl(item.filePath);
+                const fetchResp = await fetch(url);
+                if (!fetchResp.ok) throw new Error(`fetch source failed: ${fetchResp.status}`);
+                const blob = await fetchResp.blob();
+                const filename = extractFilenameFromPath(item.filePath) || `media.${mediaType === 'video' ? 'mp4' : 'png'}`;
+                const file = new File([blob], filename, { type: blob.type });
+                const uploaded = await uploadMediaFile(file, mediaType, project.folderPath, project.id, {
+                    filenamePrefix: 'gallery',
+                    operation: 'add-to-gallery',
+                });
+                if (!uploaded) throw new Error('upload returned null');
+                // Build a fresh gallery group from the uploaded item.
+                const displayName = truncateCardName((uploaded.filename || filename).replace(/\.[^.]+$/, ''));
+                const newItem = mediaType === 'video'
+                    ? createVideoItem({
+                        id:              uploaded.itemId || crypto.randomUUID(),
+                        filePath:        uploaded.filePath,
+                        operation:       'add-to-gallery',
+                        displayName,
+                        pixelDimensions: uploaded.pixelDimensions || item.pixelDimensions || { w: 0, h: 0 },
+                        thumbPath:       uploaded.thumbPath ?? null,
+                        fps:             item.fps ?? 0,
+                        duration:        item.duration ?? 0,
+                        frameCount:      item.frameCount ?? 0,
+                        hasAudio:        item.hasAudio ?? false,
+                    })
+                    : createImageItem({
+                        id:              uploaded.itemId || crypto.randomUUID(),
+                        filePath:        uploaded.filePath,
+                        operation:       'add-to-gallery',
+                        displayName,
+                        pixelDimensions: uploaded.pixelDimensions || item.pixelDimensions || { w: 0, h: 0 },
+                    });
+                const newGroup = createItemGroup(mediaType, {
+                    name: newItem.displayName,
+                    width: newItem.pixelDimensions?.w || 0,
+                    height: newItem.pixelDimensions?.h || 0,
+                });
+                const populated = appendToHistory(newGroup, newItem);
+                await addGroup(populated);
+                _showToast('Added to gallery');
+            } catch (err) {
+                clientLogger.error('MpiGroupHistoryBlock', 'add-to-gallery failed', err);
+                _showToast(`Add to gallery failed: ${err.message}`, 'error');
+            }
+        }
+
         historyList.on('delete-selected', ({ indices }) => {
             if (!indices.length) return;
             historyList.el.exitSelectMode();
@@ -888,6 +1067,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     ..._baseCtx,
                     hasMask: _canvasHasMask,
                     filterNoInputOps: true,
+                    historyMode: true,
                 });
             });
 
@@ -981,6 +1161,143 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Clear on teardown so a stale set doesn't flash if Tab is held during
         // navigation back to gallery.
         _unsubs.push(() => clearGroupHistoryRadial());
+
+        // ── Video-viewer context menu (Set as start/end frame) ──────────────
+        // Wired only in video groups. Right-click on the video element emits
+        // `video-viewer:context-menu`; we build a menu with two frame-grab
+        // entries. Items disabled when no installed video model supports I2V.
+
+        /** @returns {boolean} */
+        function _anyInstalledModelHasI2V() {
+            return getModelsByType('video')
+                .filter(m => m.installed !== false)
+                .some(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')));
+        }
+
+        /** @returns {Object|null} */
+        function _findFirstI2VCapableModel() {
+            return getModelsByType('video')
+                .filter(m => m.installed !== false)
+                .find(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')))
+                || null;
+        }
+
+        async function _setFrameFromVideo(role) {
+            if (!isVideo) return;
+            const project = state.currentProject;
+            if (!project?.folderPath || !project?.id) return;
+            try {
+                const snap = await viewer.el.captureSnapshot?.();
+                if (!snap?.blob) { _showToast('Capture failed', 'error'); return; }
+                const file = new File([snap.blob], `frame_${role}.png`, { type: 'image/png' });
+                const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
+                    filenamePrefix: `frame-${role}`,
+                    operation: 'frame-capture',
+                });
+                if (!uploaded) { _showToast('Frame save failed', 'error'); return; }
+
+                // Auto-switch model if the current video model lacks any I2V op.
+                const current = activeModel;
+                const hasI2V = Array.isArray(current?.supportedOps)
+                    && current.supportedOps.some(op => op.startsWith('i2v'));
+                if (!hasI2V) {
+                    const fallback = _findFirstI2VCapableModel();
+                    if (fallback) {
+                        setSelectedModelId('video', fallback.id, { markAsLast: false });
+                        _showToast(`Switched to ${fallback.label || fallback.id} for I2V`, 'info');
+                    }
+                }
+
+                // Pick a sensible op for the frame-grab flow: any installed
+                // op starting with `i2v` (matches i2v, i2v_ms, future variants).
+                // PromptBox.setOperation will re-eval as soon as the chip lands,
+                // but seeding with an I2V op avoids a mount-then-flip flicker.
+                if (Array.isArray(activeModel?.supportedOps)) {
+                    const i2vOp = activeModel.supportedOps.find(op => op.startsWith('i2v'));
+                    if (i2vOp) activeOperation = i2vOp;
+                }
+
+                // Force-mount PromptBox even if no op is currently available —
+                // injecting the frame will unblock i2v ops immediately after.
+                _mountPromptBoxIfNeeded({ force: true });
+                if (_pb?.el) {
+                    _pb.el.setOperation?.(activeOperation);
+                }
+
+                // Ensure PromptBox visible in prompt mode before injecting.
+                if (historyTools.el.getActiveMode?.() !== 'prompt') {
+                    historyTools.el.setMode('prompt');
+                }
+                _pb?.el?.show?.();
+
+                const injected = _pb?.el?.injectMedia?.({
+                    url: uploaded.filePath,
+                    mediaType: 'image',
+                    role,
+                });
+                if (injected === false) {
+                    _showToast('Active op cannot accept this frame', 'warning');
+                    return;
+                }
+
+                // Refresh op options + prompt-tool enabled state now that the
+                // media context changed.
+                _syncBaseCtxFromPromptBox();
+                _refreshOpOptions();
+                _syncPromptToolDisabled();
+                clientLogger.info('MpiGroupHistoryBlock', `Captured frame as ${role}`, {
+                    file: uploaded.filename,
+                });
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'frame capture failed', err);
+                _showToast('Frame capture failed', 'error');
+            }
+        }
+
+        if (isVideo) {
+            // Toolbar (MpiToolOptionsPrompt) Create new / Extend.
+            // Toolbar emits semantic events on the global bus; this block is
+            // the only listener (single video-history mount at a time, since
+            // mountOptions('prompt') guards mount on isVideo + I2V model).
+            _unsubs.push(Events.on('prompt-box-tools:create-new', () => {
+                if (!_pb?.el) return;
+                const payload = _pb.el.getRunPayload?.();
+                if (!payload) return;
+                _runGenerate({ ...payload, historyMode: true });
+            }));
+            _unsubs.push(Events.on('prompt-box-tools:extend', () => {
+                if (!_pb?.el) return;
+                const payload = _pb.el.getRunPayload?.();
+                if (!payload) return;
+                const currentItem = _group.history[_currentIdx];
+                if (!currentItem?.id) {
+                    _showToast('No source video to extend', 'error');
+                    return;
+                }
+                _runGenerate({
+                    ...payload,
+                    historyMode: true,
+                    extend: true,
+                    sourceItemId: currentItem.id,
+                });
+            }));
+
+            _unsubs.push(Events.on('video-viewer:context-menu', ({ x, y }) => {
+                const disabled = !_anyInstalledModelHasI2V();
+                const reason = disabled ? 'No installed video model supports I2V' : '';
+                MpiContextMenu.show({
+                    x, y,
+                    items: [
+                        { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
+                        { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
+                    ],
+                    onSelect: (key) => {
+                        if (key === 'set-start') _setFrameFromVideo('startFrame');
+                        else if (key === 'set-end') _setFrameFromVideo('endFrame');
+                    },
+                });
+            }));
+        }
 
         // ── Cleanup ───────────────────────────────────────────────────────────
 

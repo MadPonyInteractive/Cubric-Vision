@@ -78,16 +78,6 @@
     - Separate git repo — commit independently.
     ```
 
-### Continue from last frame.
-
-  - tags: [Feature]
-  - priority: medium
-  - workload: Hard
-  - defaultExpanded: false
-    ```md
-    In the video history workspace, we are going to implement a feature so that the user can continue from the last frame and that creates a new video with the previous video + the generated video after. The last frame can be extracted from the last frame of the current video and injected in an image-to-video workflow displaying the prompt box. Please let the user know about the implementation briefing and concerns, and how this is supposed to happen. If it's a new PromptBoxControls.js, if it's a new tool, brainstorm with the user use cases of how to implement this.
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -110,6 +100,23 @@
     ```
 
 ## IMPLEMENTING
+
+### Continue from last frame.
+
+  - tags: [PLAN]
+  - priority: high
+  - workload: Hard
+  - defaultExpanded: true
+  - steps:
+      - [x] Foundations selection-order roles gate
+      - [x] Video-viewer context menu frames
+      - [x] PromptBox toolbar organism
+      - [x] Server ffmpeg concat route
+      - [x] Wire Extend Combine menus
+      - [x] Selection badges docs sync
+    ```md
+    Plan file: docs/plans/2026-05-12-continue-from-last-frame.md
+    ```
 
 ## COMPLETED
 

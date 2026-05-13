@@ -20,6 +20,8 @@
  *   'selection-exited'  {}                          — select mode ended
  *   'delete-selected'   { indices }                 — delete action from context menu
  *   'compare-requested' { indices: [number, number] } — compare action from context menu
+ *   'combine-requested' { indices }                  — combine selected videos (video group, ≥2)
+ *   'add-to-gallery'    { index }                    — add single selected entry to gallery
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -121,11 +123,24 @@ export const MpiHistoryList = ComponentFactory.create({
             dims.className = 'mpi-history-list__dims';
             dims.textContent = _dimsLabel(item, idx);
 
+            const extended = document.createElement('div');
+            extended.className = 'mpi-history-list__extended-from';
+            const extName = item.extendedFrom?.displayName;
+            if (extName) {
+                extended.textContent = `↳ ${extName}`;
+            } else {
+                extended.style.display = 'none';
+            }
+
             const status = document.createElement('span');
             status.className = 'mpi-history-list__status';
 
-            meta.append(label, dims);
-            card.append(thumb, meta, status);
+            const badge = document.createElement('span');
+            badge.className = 'mpi-history-list__badge mpi-selection-order-badge';
+            badge.style.display = 'none';
+
+            meta.append(label, dims, extended);
+            card.append(thumb, meta, status, badge);
 
             card.addEventListener('mousedown', (e) => {
                 if (e.shiftKey) e.preventDefault();
@@ -133,6 +148,10 @@ export const MpiHistoryList = ComponentFactory.create({
 
             card.addEventListener('click', (e) => {
                 if (e.shiftKey) {
+                    // First shift-click without prior selection anchors at the
+                    // currently-active entry, not at the stale _anchor (which
+                    // defaults to 0 until something else moves it).
+                    if (!_selectMode && _selection.size === 0) _anchor = _selectedIdx;
                     _rangeSelect(idx);
                 } else if (e.ctrlKey || e.metaKey) {
                     if (!_selectMode && _selection.size === 0) {
@@ -164,19 +183,27 @@ export const MpiHistoryList = ComponentFactory.create({
                 }
 
                 const compareDisabled = _selection.size !== 2;
+                const combineDisabled = !_isVideo || _selection.size < 2;
+                const addToGalleryDisabled = _selection.size !== 1;
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
                     items: [
-                        { key: 'compare', icon: 'compare', label: 'Compare', disabled: compareDisabled },
-                        { key: 'delete',  icon: 'trash',   label: 'Delete',  danger: true },
+                        { key: 'compare',        icon: 'compare', label: 'Compare',        disabled: compareDisabled },
+                        { key: 'combine',        icon: 'merge',   label: 'Combine',        disabled: combineDisabled },
+                        { key: 'add-to-gallery', icon: 'plus',    label: 'Add to gallery', disabled: addToGalleryDisabled },
+                        { key: 'delete',         icon: 'trash',   label: 'Delete',         danger: true },
                     ],
                     onSelect: (key) => {
                         if (key === 'delete') {
                             emit('delete-selected', { indices: [..._selection] });
                         } else if (key === 'compare') {
+                            emit('compare-requested', { indices: [..._selection] });
+                        } else if (key === 'combine') {
+                            emit('combine-requested', { indices: [..._selection] });
+                        } else if (key === 'add-to-gallery') {
                             const idxs = [..._selection];
-                            emit('compare-requested', { indices: idxs });
+                            emit('add-to-gallery', { index: idxs[0] });
                         }
                     },
                 });
@@ -204,6 +231,25 @@ export const MpiHistoryList = ComponentFactory.create({
             _historyCards.forEach((card, idx) => {
                 card.classList.toggle('mpi-history-list__card--active',   idx === _selectedIdx);
                 card.classList.toggle('mpi-history-list__card--selected', _selection.has(idx));
+            });
+            _applyBadgeNumbers();
+        }
+
+        function _applyBadgeNumbers() {
+            const order = [..._selection];
+            const showBadges = order.length >= 2;
+            const numberByIdx = new Map();
+            if (showBadges) order.forEach((sel, i) => numberByIdx.set(sel, i + 1));
+            _historyCards.forEach((card, idx) => {
+                const badge = qs('.mpi-history-list__badge', card);
+                if (!badge) return;
+                const n = numberByIdx.get(idx);
+                if (n) {
+                    badge.textContent = `#${n}`;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
             });
         }
 
@@ -233,10 +279,13 @@ export const MpiHistoryList = ComponentFactory.create({
         }
 
         function _rangeSelect(idx) {
-            const from = Math.min(_anchor, idx);
-            const to   = Math.max(_anchor, idx);
+            // Direction-aware: walk from anchor to idx so insertion order
+            // reflects chronology (anchor first, click target last).
+            // `[..._selection]` therefore returns chronological order even after
+            // a shift-range rebuild. See `el.getSelectionOrder` below.
             _selection.clear();
-            for (let i = from; i <= to; i++) _selection.add(i);
+            const step = idx >= _anchor ? 1 : -1;
+            for (let i = _anchor; i !== idx + step; i += step) _selection.add(i);
             _selectMode = true;
             _applyCardStates();
             emit('selection-changed', { indices: [..._selection], anchor: _anchor });
@@ -296,6 +345,14 @@ export const MpiHistoryList = ComponentFactory.create({
         el.exitSelectMode = () => {
             _exitSelectMode();
         };
+
+        /**
+         * Indices of currently selected history cards in click order.
+         * Set iteration preserves insertion order; `_rangeSelect` walks the
+         * range in click direction so the result is always chronological.
+         * @returns {number[]}
+         */
+        el.getSelectionOrder = () => [..._selection];
 
         // ── Init ──────────────────────────────────────────────────────────────
 

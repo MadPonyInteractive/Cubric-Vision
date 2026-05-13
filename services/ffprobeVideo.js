@@ -4,8 +4,17 @@
  * services/ffprobeVideo.js — probe video files with bundled ffprobe.
  *
  * Exports:
- *   probeVideo(inputPath) -> { fps, duration, frameCount, hasAudio, width, height }
+ *   probeVideo(inputPath) -> {
+ *     fps, duration, frameCount, hasAudio, width, height,
+ *     codecName, pixFmt, rFrameRate,
+ *     audioCodecName, audioSampleRate, audioChannels, audioChannelLayout,
+ *   }
  *     Returns null on failure (caller decides fallback).
+ *
+ *   codecName/pixFmt/rFrameRate let concat callers decide between the fast
+ *   concat-demuxer (-c copy) and the slower concat-filter re-encode path.
+ *   audio* fields cover audio-aware concat (silent track padding for mixed
+ *   audio/no-audio sets, future LTX audio output).
  */
 
 const { execFile } = require('child_process');
@@ -49,6 +58,13 @@ async function probeVideo(inputPath) {
             hasAudio:   !!aStream,
             width:      vStream.width  || 0,
             height:     vStream.height || 0,
+            codecName:  vStream.codec_name || '',
+            pixFmt:     vStream.pix_fmt    || '',
+            rFrameRate: vStream.r_frame_rate || '',
+            audioCodecName:     aStream?.codec_name     || '',
+            audioSampleRate:    Number(aStream?.sample_rate) || 0,
+            audioChannels:      Number(aStream?.channels)    || 0,
+            audioChannelLayout: aStream?.channel_layout      || '',
         };
     } catch (err) {
         logger.warn('project', `ffprobe failed for ${inputPath}: ${err.message}`);

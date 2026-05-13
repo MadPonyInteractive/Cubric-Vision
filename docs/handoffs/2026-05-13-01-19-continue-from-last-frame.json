@@ -1,0 +1,94 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-05-13T01:19:20Z",
+  "session": {
+    "name": "Continue from last frame — Phases 4 + 5 complete",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Implement the 'Continue from last frame' plan: right-click video → set as start/end frame → I2V generation, plus Extend/Combine via ffmpeg concat. 6 phases total.",
+    "status": "in_progress",
+    "summary": "Phases 1–5 complete and verified live. Phase 4 shipped audio-aware ffmpeg concat service + /extend-video + /combine-videos routes + SSE bridge. Phase 5.1 wired toolbar Extend/Create new buttons to the existing PromptBox run path; Extend adds a post-step concat. Phase 5.2 added Combine (history + gallery context menus) + Add to gallery (history single-select). Verified live with WAN I2V — Extend produces extended_NNN.mp4 from source + generation; Combine produces combined_NNN.mp4 from N selected items in chronological order. Phase 6 (selection-order badges + 'Extended from' history row + docs/rules/memory sync) is next."
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-12-continue-from-last-frame.md",
+    "completed": [
+      "1.1 — Selection-order tracking on history + gallery",
+      "1.2 — Role-aware injectMedia in MpiPromptBox",
+      "1.3 — History-workspace context gate (historyMode flag + Preview_Only=false + previewStage hidden)",
+      "2.1 — Right-click video viewer → MpiContextMenu with Set as start/end frame",
+      "2.2 — Frame-grab onClick: snapshot → upload → inject with role + auto-switch model",
+      "3.0 — Hide PromptBox media strip in history workspace",
+      "3.1 — MpiToolOptionsPrompt organism + mount in #right-top-slot",
+      "4.1 — services/videoConcat.js + routes/videoConcat.js + js/services/concatProgress.js SSE bridge",
+      "5.1 — Toolbar Extend/Create new submit paths (Extend post-step concat into existing history slot)",
+      "5.2 — Card context menus: Combine + Add to gallery (history + gallery surfaces)"
+    ],
+    "pending": [
+      "Phase 6.1 — Numeric selection-order badges (history + gallery)",
+      "Phase 6.2 — History card 'Extended from <name>' row + docs/rules/memory sync"
+    ]
+  },
+  "kanban_entry": "Continue from last frame.",
+  "next_action": {
+    "description": "Execute Phase 6.1 — numeric selection-order badges on MpiHistoryList + MpiGalleryGrid cards. Render `#N` (1-based index from getSelectionOrder()) when _selection.size >= 2. History badge uses existing __status cell position; gallery badge top-center (top:0.6rem; left:50%; transform:translateX(-50%)). Shared CSS class for visual parity, position differs. Z-index above thumb, below queued-preview center indicator. Re-render badges on every selection mutation. Then Phase 6.2 — 'Extended from <displayName>' meta row on history cards when sidecar has extendedFrom; sync .claude/rules/*.md (components, component-mounts, component-events, component-state, component-comfy), docs/PROJECT.md, and add memory entries (feedback_history_no_multistage.md, feedback_selection_order_chronological.md, feedback_ffmpeg_concat_strategy.md, feedback_video_workspace_no_latents.md, feedback_concat_crop_zoom.md).",
+    "command": "/mpi-kanban:mpi-execute-next"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 4.1 — services/videoConcat.js: audio-aware. Fast path = concat-demuxer copy when all inputs match codec_name + pix_fmt + width + height + r_frame_rate AND audio shape (all silent OR all same codec/sample_rate/channels). Fallback = concat-filter with per-input scale=W:H:force_original_aspect_ratio=increase + crop=W:H (crop-zoom, matches ComfyUI Combine nodes) + setsar=1 + fps normalize + format=yuv420p + setpts=PTS-STARTPTS. Audio: anullsrc-padded for silent inputs when any input has audio; -an when all silent. Real audio resampled to AAC stereo 48kHz. spawn-based stderr parsing for time= progress. ffprobeVideo extended with codec_name, pix_fmt, r_frame_rate, audioCodecName, audioSampleRate, audioChannels, audioChannelLayout.",
+      "Phase 4.1 — routes/videoConcat.js: GET /concat/events/stream (SSE channel separate from /comfy/events/stream), POST /combine-videos { folderPath, itemIds, jobId? }, POST /extend-video { folderPath, sourceItemId, generatedFilePath, jobId?, modelId?, prompt?, negativePrompt?, seed?, frozenParams?, op? }. Sequenced output via _nextSequencedName scan pattern from routes/projects.js:1133-1148 — combined_NNN.mp4 / extended_NNN.mp4. Sidecar via shared _writeOutputSidecar(); extend adds extendedFrom: { id, displayName }. extend route deletes intermediate generated file (path-equality guards). Server route catch truncates ffmpeg stderr to first-line/200-char before responding so client toast doesn't dump the full filter trace.",
+      "Phase 4.1 — js/services/concatProgress.js: single EventSource opened eagerly at module import; events re-emitted on Events bus (`concat:progress` / `concat:done` / `concat:error`). trackConcatJob({ jobId, label }) returns a promise that bridges to StatusBar.progress.start/update/complete/cancel, resolves on concat:done, rejects on concat:error. Multiple in-flight jobs de-multiplexed by jobId.",
+      "Phase 5.1 — generationService.startGeneration extended with config.extend + config.sourceItemId. After save-generation produces the intermediate, if extend=true: resolve absolute generated path from intermediate.filePath URL, POST /extend-video, await trackConcatJob, then DELETE the intermediate sidecar via /project-media/<projectId>/<filename>?folderPath=...&itemId=... (server removed the .mp4 inside /extend-video). builtItems[0] swapped to the extended item built via createVideoItem (carries extendedFrom). Concat failure path: short single-line toast via ui:error, intermediate stays as regular history entry — no work lost.",
+      "Phase 5.1 — MpiGroupHistoryBlock: video-only Events listeners for `prompt-box-tools:create-new` (= _runGenerate(getRunPayload, historyMode:true)) and `prompt-box-tools:extend` (same + extend:true, sourceItemId:<currentItem.id>). _generationFromPromptPayload propagates extend/sourceItemId through to config.",
+      "Phase 5.2 — MpiHistoryList context menu adds Combine (disabled !_isVideo || size<2) + Add to gallery (disabled size!==1). Emits `combine-requested { indices }` (chronological per Phase 1.1) and `add-to-gallery { index }`. MpiGalleryGrid menu adds Combine (disabled size<2 || any selected group !=='video'); emits `combine { groups }` with click-order iteration of _selectedIds. New `merge` icon added to js/utils/icons.js.",
+      "Phase 5.2 — MpiGroupHistoryBlock _runCombine(itemIds) POST /combine-videos, appends to current video group. _addItemToGallery(item, mediaType) refetches source blob via fetch, re-uploads via shared uploadMediaFile, creates createItemGroup + addGroup. MpiGalleryBlock grid.on('combine') gates video-only, lands fresh gallery group via createItemGroup + addGroup. Both surfaces truncate error messages to first-line/160-char before showing toast.",
+      "Video workspace UX fix: _applyPreview in MpiGroupHistoryBlock short-circuits for isVideo. Latent previews are PNG/JPG frames, not playable in <video>; previously crashed loadVideo and left viewer black. New behavior: viewer stays on previously-loaded video during generation so the user can queue more ops in parallel. Mascot + StatusBar still drive feedback.",
+      "Concat dim mismatch (832x480 source vs 640x368 generation) initially crashed concat filter with EINVAL. Fix: per-input scale=W:H:force_original_aspect_ratio=increase + center crop=W:H — matches ComfyUI Combine node behavior. No black-bar pad, no stretch; edges trimmed to preserve aspect.",
+      "Toast dump bug: ffmpeg stderr (multi-paragraph filter trace) was reaching MpiToast verbatim. Three-layer truncation: server route response (first line, 200 char), generationService catch (160 char), Block combine catches (160 char). Full stderr still goes to logs/app.log via clientLogger.error + server logger.error.",
+      "Real-extend op note: future video models with multi-frame temporal context (VACE etc.) will supersede the current concat-based Extend. They write extendedFrom themselves via save-generation; /extend-video concat route becomes the fallback path OR is deleted. Out of scope for this plan — captured here so a future session doesn't try to design that in."
+    ],
+    "constraints": [
+      "DO NOT pre-wire `prompt-box-tools:extend` or `prompt-box-tools:create-new` listeners anywhere outside MpiGroupHistoryBlock (single video-history mount at a time).",
+      "DO NOT paint latent previews on MpiVideoViewer during generation — user wants the player free for parallel ops. _applyPreview short-circuits for isVideo intentionally.",
+      "DO NOT switch concat-filter back to scale-decrease + pad — crop-zoom (scale-increase + center crop) is the chosen behavior per ComfyUI parity. If a real letterbox option is ever needed, add a second `mode` param; do not change the default.",
+      "DO NOT surface raw ffmpeg stderr in user-visible toasts. Always truncate to first-line/short-char. Full trace must stay in logs/app.log.",
+      "DO NOT add new state keys for selection-order badges in Phase 6.1 — the badge derives from the existing _selection / _selectedIds Set insertion order via el.getSelectionOrder() (Phase 1.1).",
+      "Combine + Extend share concatVideos() + _writeOutputSidecar(); keep them shared. Differences belong in the route handlers, not the service."
+    ],
+    "files_modified": [
+      "services/ffprobeVideo.js",
+      "services/videoConcat.js",
+      "routes/videoConcat.js",
+      "server.js",
+      "js/services/concatProgress.js",
+      "js/services/generationService.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Compounds/MpiHistoryList/MpiHistoryList.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/utils/icons.js"
+    ],
+    "files_to_read_first": [
+      "docs/plans/2026-05-12-continue-from-last-frame.md",
+      "js/components/Compounds/MpiHistoryList/MpiHistoryList.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      ".claude/rules/components.md",
+      ".claude/rules/component-mounts.md",
+      ".claude/rules/component-events.md",
+      ".claude/rules/component-state.md",
+      ".claude/rules/component-comfy.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-comfy.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "resume_prompt": "You are picking up an in-flight implementation of the kanban entry 'Continue from last frame.' (in IMPLEMENTING). Phases 1–5 of docs/plans/2026-05-12-continue-from-last-frame.md are done and verified live (Extend produces extended_NNN.mp4, Combine produces combined_NNN.mp4 with crop-zoom matching ComfyUI Combine nodes, history/gallery context menus + toolbar Extend/Create new all wired). Phase 6 (Phase 6.1 numeric selection-order badges + Phase 6.2 'Extended from' history row + docs/rules/memory sync) is next. Read docs/handoffs/2026-05-13-01-19-continue-from-last-frame.json for full context — critical constraints include: keep latent-preview short-circuit for video workspace, keep crop-zoom (no pad), truncate any ffmpeg stderr at three layers before user-visible toasts, do NOT pre-wire prompt-box-tools listeners outside MpiGroupHistoryBlock. Phase 6.1 derives badge numbers from existing el.getSelectionOrder() — no new state keys. Phase 6.2 finishes with rule + memory sync (feedback_history_no_multistage.md, feedback_selection_order_chronological.md, feedback_ffmpeg_concat_strategy.md, feedback_video_workspace_no_latents.md, feedback_concat_crop_zoom.md). Run /mpi-kanban:mpi-execute-next to brief and execute Phase 6.1. Honor the brief-before-code and verified-after gates."
+}

@@ -113,7 +113,10 @@
     background: var(--surface-canvas);
 }
 
-.mpi-group-history-block--prompt-active .mpi-group-history-block__right-top {
+/* Prompt mode: keep the slot only when it actually hosts a toolbar
+ * (e.g. MpiToolOptionsPrompt in video-history). Empty in image-history
+ * prompt mode — hide entirely to avoid a stray padded bar. */
+.mpi-group-history-block--prompt-active .mpi-group-history-block__right-top:empty {
     display: none;
 }
 

@@ -147,13 +147,16 @@ NOTE:    `items` shape: `[{ key, icon?, label, kbd?, separator?, disabled?, dang
 
 ### MpiHistoryList
 EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
-         `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift/right-click updated selection
+         `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift/right-click updated selection (`indices` chronological — see API note)
          `selection-exited`  `{}` — selection mode ended (count → 0)
          `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu
          `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
+         `combine-requested` `{ indices: number[] }` — Combine chosen from context menu (video group, ≥2 selected, chronological order)
+         `add-to-gallery`    `{ index: number }` — Add to gallery chosen from context menu (exactly 1 selected)
 LISTENS: (none)
 API:     `el.setActiveIndex(idx)` · `el.setGroups(history)` · `el.appendEntry(item)` · `el.removeEntries(indices)` · `el.exitSelectMode()`
-NOTE:    Selection: plain-click single-selects; ctrl/cmd-click first-time seeds anchor+selection from current active entry then toggles clicked; shift-click range-selects. Right-click on unselected entry replaces selection. Dev-mode gate: if `APP_CONFIG.dev_mode` truthy, skips `e.preventDefault()` on contextmenu so Electron inspect-element works.
+         `el.getSelectionOrder()` → `number[]` in chronological click order. Set insertion order alone is fragile across shift-range rebuilds (direction-aware walk in `_rangeSelect` keeps anchor first, target last). First shift-click without prior selection anchors at `_selectedIdx` (the currently-active entry), not at the stale default `_anchor = 0`.
+NOTE:    Selection: plain-click single-selects; ctrl/cmd-click first-time seeds anchor+selection from current active entry then toggles clicked; shift-click range-selects. Right-click on unselected entry replaces selection. Dev-mode gate: if `APP_CONFIG.dev_mode` truthy, skips `e.preventDefault()` on contextmenu so Electron inspect-element works. Selection-order numeric badge (`#N`) renders on each selected card when `_selection.size >= 2`; hidden below.
 
 ### MpiHistoryTools
 EMITS:   `activate` `{ mode: string }` — any mode change (user click or `setMode`). No `deactivate` event.
@@ -314,6 +317,8 @@ EMITS:   `play`        `{ time: number }`
          `timeupdate`  `{ time: number, duration: number }`
          `change`      `{ volume: number, muted: boolean }`
          `loop-change` `{ loop: boolean }`
+GLOBAL EMITS (via Events.emit):
+         `video-viewer:context-menu` `{ x, y }` — right-click on the video element (native menu suppressed). Consumed by MpiGroupHistoryBlock to open MpiContextMenu with "Set as start frame" / "Set as end frame" items (disabled when no installed model exposes any `i2v*` op).
 LISTENS: (none)
 NOTE:    Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Imports only Primitives (`MpiButton`, `MpiProgressBar`). Volume control inlined. Loop + fullscreen + frame-step buttons included.
 
@@ -351,6 +356,22 @@ API:     `el.setCurrentItem(item)` — re-target active history item without rem
          `el.getParams()` — read current params.
 NOTE:    Preview is **thumbnail-based**, NOT canvas-resident. The compound extracts a 512px-longest-edge PNG thumbnail from the source via `js/utils/thumbnail.js` (`extractThumbnail`, `waitForVideoFrame`) and runs the **image** `resize` workflow on the thumbnail with proportionally-scaled `width`/`height`/`divisible_by`. Result paints into an inline `<img>` slot inside the panel between the Transform section and the Apply button — the viewer canvas/video stays untouched and interactive. This is true for both `kind: 'image'` and `kind: 'video'` (video grabs the first frame). Preview submits via `runCommand({ ..., previewOnly: true, suppressLifecycleEvents: true })` so StatusBar lifecycle signals (`tool:sampling-start` / `tool:loading-model`) are not emitted — there is no `tool:running`/`tool:idle` pair wrapping a tool-panel preview. Apply emits `{ params }` and the block routes to `startGeneration` (`resize` op for image, `resizeVideo` for video). Apply is **append-only** — never replaces the source. Block treats both ops as tool-only transforms via `_setBusy` (no mascot) — see component-events.md MpiGroupHistoryBlock entry. Setup fires an initial `schedulePreview()` so the user sees the tool's effect without touching a control. The panel uses `MpiColorPicker` for `pad_color`. Width/Height are NEVER auto-seeded from the source; the user owns dimensions (defaults `1024x1024` from `DEFAULTS`, persisted thereafter).
 
+### MpiToolOptionsPrompt (Organism — js/components/Organisms/MpiToolOptionsPrompt/)
+EMITS:   (none on local bus — buttons emit on global Events bus)
+GLOBAL EMITS (via Events.emit):
+         `prompt-box-tools:extend`     `{}` — Extend button click. Listened to by MpiGroupHistoryBlock only.
+         `prompt-box-tools:create-new` `{}` — Create new button click. Listened to by MpiGroupHistoryBlock only.
+LISTENS: PromptBox `media-change` — re-renders thumb slots from `promptBox.el.getMediaByRole(role)` for `startFrame` / `endFrame`.
+NOTE:    Video-history-only toolbar. Mount gate: `isVideo && activeModel.supportedOps.some(op => op.startsWith('i2v'))` — NOT `_hasPromptOps()` (capacity-based gate would hide the toolbar before user can inject the frame that unblocks it; block force-mounts PromptBox in this branch). Mounted into `#right-top-slot`; `__right-top` visibility under `--prompt-active` is `:empty`-scoped, so the slot becomes visible when this organism mounts a child. Thumb sizing CSS-only (`max-height` + `object-fit: contain`). Single listener for both prompt-box-tools events lives in MpiGroupHistoryBlock — do NOT pre-wire them anywhere else.
+
+### concatProgress (service — js/services/concatProgress.js)
+EMITS (Events bus, keyed by `jobId`):
+         `concat:progress` `{ jobId: string, ratio: number }` — 0..1 progress from ffmpeg `time=` stderr lines
+         `concat:done`     `{ jobId: string, item: HistoryItem }` — concat finished, sidecar written
+         `concat:error`    `{ jobId: string, error: string }` — first-line truncated (full stderr stays in logs/app.log)
+LISTENS: own SSE channel `/concat/events/stream` (separate from `/comfy/events/stream`); single EventSource opened eagerly on module import.
+API:     `trackConcatJob({ jobId, label })` → Promise. Bridges to `StatusBar.progress.start/update/complete/cancel`; resolves on `concat:done`, rejects on `concat:error`. Multiple in-flight jobs de-multiplexed by `jobId`.
+
 ---
 
 ## Blocks
@@ -366,6 +387,7 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `reuse`           `{ positive: string, negative: string }`
          `select`          `{ group: ItemGroup, selected: boolean }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
+         `combine`         `{ groups: ItemGroup[] }` — Combine chosen from context menu (≥2 selected, all `type === 'video'`; click-order via Set insertion)
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
          `preview:continue`     `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card. Block runs `validatePreviewAssets(item.id)` first. Fast path: enqueue stage-2 with `isStage2: true` and NO `replaceItemId` (final lands as a NEW gallery card; preview stays). Cold fallback: enqueue stage-1 rerun (`previewOnly: true`, `replaceItemId: item.id`) to rebuild the latent in place; then on `gallery:item-updated` auto-enqueue the stage-2 branch. Blocked: toast + no-op. Gated by `commandAllowsBranchingContinue(item.operation)` — button is hidden when the op disallows branching.
@@ -378,6 +400,8 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
 LISTENS: (none — internal MpiButton tab events handled internally)
 API:     `el.setStage2Count(groupId, n)` — write the small `xN` badge on a preview card reflecting how many branching Continue jobs are queued/running.
          `el.setPreviewAssetsWarning(groupId, state)` — write the warning badge on a preview card. `state` is `null` for clear; `{ mode: 'fallback', missing? }` renders an amber "Cold" badge (latent missing, stage-1 will rerun); `{ mode: 'blocked', missing? }` renders a red "Missing" badge and hides the Continue/Finish action row via a card CSS modifier. State Map is re-applied inside `_rerenderJustified` so debounced rebuilds don't drop badges.
+         `el.getSelectionOrder()` → `string[]` — selected group ids in click order via Set iteration. Used by Combine handler in MpiGalleryBlock to sequence concat inputs chronologically.
+         Card API: `cardEl.setSelectionBadge(n)` — numeric `#N` badge top-center when `_selectedIds.size >= 2`; `0` clears. Re-applied in `_syncCardSelectedState` (every selection mutation) AND in the initial-state branch of `_makeCard` so debounced `_rerenderJustified` keyed-reuse paths stay consistent.
 NOTE:    Tab buttons (order/filter) write directly to `state.gallerySort`; active-state sync via `_syncTabActive()` on `state:changed`. Card selection: ctrl/cmd-click toggles, shift-click range-selects, right-click opens `MpiContextMenu`. Preview cards participate in selection like any other card; "open into history" suppressed. No `MpiSelectionBar` or `MpiCheckbox`.
 
 ### MpiPromptBox
@@ -402,7 +426,11 @@ LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea v
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 API:     `el.getRunPayload()` returns the current live run payload. Loop re-fire reads it via `getNextGeneration` callback so prompt/model/control changes apply to the next iteration.
          `el.setModel(model)` / `el.setModelList(list)` auto-pick `activeOperation` for current media context (image/video counts) and emit `operation-change` when the picked op differs. Block-side `model-change` listeners must NOT force-reset op to `model.supportedOps[0]` — only override when current op is unsupported by the new model.
-         `el.injectMedia({ url, mediaType })` adds one item to the strip (overflow evicts oldest of same type). Bulk callers should query `el.remainingCapacity(mediaType)` first and inject only that many — exceeding capacity silently evicts earlier items, which is rarely what bulk drops want.
+         `el.injectMedia({ url, mediaType, role? })` adds one item to the strip (overflow evicts oldest of same type). Optional `role` ('startFrame' | 'endFrame') is honored by `_withAssignedRoles` so role-tagged chips map to their slot regardless of insertion order. Bulk callers should query `el.remainingCapacity(mediaType)` first and inject only that many — exceeding capacity silently evicts earlier items, which is rarely what bulk drops want.
+         `el.getMediaByRole(role)` returns the chip currently tagged with that role, or `null`.
+         `el.removeMediaByRole(role)` drops the role-tagged chip from `_media`.
+         `el.swapMediaRoles(roleA, roleB)` swaps role tags on existing chips (no re-upload).
+         `el.updateContext({ historyMode })` flips the `mpi-prompt-box--history-mode` root modifier (CSS hides the media strip; chips still exist) and propagates `historyMode: true` through generation payloads.
 GESTURE: Cue button — tap = enqueue 1 job. Hold ≥700ms = arm loop (color sweep fills button left→right; suppresses trailing click). Tap while armed = disarm. Hold while armed = no-op.
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
@@ -422,6 +450,7 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `models:open` — when zero image models installed
          `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
+         `grid.on('combine')` handler: POSTs `/combine-videos { folderPath, itemIds, jobId }` (item ids derived from each group's `getSelectedItem`); awaits `trackConcatJob`; on success creates fresh video group via `createVideoItem` + `createItemGroup` + `addGroup`, then snapshots pre-add `currentGroups` and calls `grid.el.setGroups([populated, ...currentGroups])` so the new card appears immediately (keyed reuse preserves existing cards' DOM/state). Errors truncated to first line / 160 chars via `ui:error`. Full ffmpeg stderr stays in `logs/app.log`.
 NOTE:    Reads `state.s_selectedModelIdByType` (via `resolveActiveModel('image')`), `state.currentProject`; writes selected model via `setSelectedModelId(model.mediaType, id)` (in `js/utils/modelHelpers.js`), `state.currentProject`. NEVER writes at mount time.
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview
          Cancel targets the first running gallery entry. Clear calls `clearPendingQueue()`.
@@ -510,6 +539,14 @@ NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          **Active tool:** block-local `_options` (current MpiToolOptions* instance). NOT in global `state`. `mountOptions(mode)` is the mediator — destroys previous instance, mounts new one into `#right-top-slot`. `prompt` mode toggles `--prompt-active` CSS class (shows PromptBox, hides slot). No channel bus for tool events.
          **Image groups:** mask tool → MpiToolOptionsMask (unified auto+manual panel; no apply button; additive composite). Auto-detect composites onto existing manual paint. B/E hotkeys owned by panel while mounted.
          Resize tool → MpiToolOptionsResize. Live-previews through Comfy on a 512px thumbnail extracted from the source via `viewer.el.getSourceElement()` (HTMLImageElement for image, HTMLVideoElement for video — first frame). Apply appends a new history entry, preserving the source item.
-         **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, resizeVideo → MpiToolOptionsResize, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate. PromptBox only if `_hasPromptOps()` true.
+         **Video groups:** MpiVideoViewer mounted instead of MpiCanvasViewer. Tool options in `#right-top-slot` via mediator: crop → MpiToolOptionsCrop, resizeVideo → MpiToolOptionsResize, videoUpscale → MpiToolOptionsUpscale, interpolate → MpiToolOptionsInterpolate, prompt → MpiToolOptionsPrompt (video + i2v-capable model only). PromptBox only if `_hasPromptOps()` true — bypassed in video-history workspace when the active video model exposes any `i2v*` op so the toolbar can mount before frames are injected. Block force-mounts PromptBox + passes `historyMode: true` via `updateContext` so the media strip is hidden and `Preview_Only` is forced `false` for any `_ms` op.
+         **Video-history extras:**
+         - Listens for `video-viewer:context-menu { x, y }` (right-click on video). Opens `MpiContextMenu` with `Set as start frame` / `Set as end frame` items (disabled when no installed model exposes `i2v*`). Click handler snapshots the frame via `viewer.el.captureSnapshot()`, uploads via shared upload helper, auto-switches the selected video model to an i2v-capable installed model when current lacks i2v, then calls `_pb.el.injectMedia({ url, mediaType: 'image', role })` and `mountOptions('prompt')`.
+         - Listens for `prompt-box-tools:create-new` (Events bus) → runs `_runGenerate(getRunPayload, historyMode:true)`. Standard I2V save; lands as new history entry.
+         - Listens for `prompt-box-tools:extend` (Events bus) → same submit path with `extend:true` and `sourceItemId:<currentItem.id>` plumbed into `config.extend` / `config.sourceItemId`. `generationService.startGeneration` runs the I2V, POSTs `/extend-video` after save-generation, awaits `trackConcatJob`, then DELETEs the intermediate sidecar via `/project-media/<projectId>/<filename>?folderPath=...&itemId=...` and swaps `builtItems[0]` to the extended item (carries `extendedFrom`). Concat failure path: short single-line `ui:error` toast, intermediate stays as regular history entry — no work lost.
+         - Listens for `combine-requested { indices }` from MpiHistoryList → `_runCombine(itemIds)` POSTs `/combine-videos`, appends to current video group.
+         - Listens for `add-to-gallery { index }` from MpiHistoryList → `_addItemToGallery(item, mediaType)` refetches source blob, re-uploads via shared `uploadMediaFile`, creates fresh gallery group via `createItemGroup` + `addGroup`. Toast "Added to gallery".
+         - Single video-history mount at a time — do NOT pre-wire `prompt-box-tools:extend` / `prompt-box-tools:create-new` listeners outside this block.
+         - `_applyPreview` short-circuits for `isVideo`. Latent previews are PNGs that can't load into `<video>`; viewer stays on the previously-loaded video so the user can queue parallel ops. Mascot + StatusBar still drive feedback.
          **PromptBox gating:** `_hasPromptOps()` returns true iff active model exposes ≥1 enabled op (not strategy type). Recomputed on `s_selectedModelIdByType` (filtered by `modeKind`), `s_installedModelIds`, `project:changed`.
          **PromptBox model list:** `s_installedModelIds` listener also calls `_pb?.el?.setModelList?(getModelsByType(modeKind).filter(m => m.installed !== false))` — live dropdown refresh on install/uninstall.

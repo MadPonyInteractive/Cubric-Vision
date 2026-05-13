@@ -290,6 +290,12 @@
     display: none;
 }
 
+/* History workspace: toolbar organism (MpiToolOptionsPrompt) owns frame thumbs.
+ * Strip stays in DOM with chip data intact; only rendering suppressed. */
+.mpi-prompt-box--history-mode .mpi-prompt-box-media-strip {
+    display: none;
+}
+
 .mpi-prompt-box-media-strip__chip {
     position: relative;
     width: 5rem;

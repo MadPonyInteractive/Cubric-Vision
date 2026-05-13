@@ -33,6 +33,7 @@ import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets } from '../../../services/projectService.js';
+import { trackConcatJob } from '../../../services/concatProgress.js';
 import {
     createImageItem,
     createVideoItem,
@@ -165,6 +166,71 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const itemB = getSelectedItem(g[1]);
             if (!itemA || !itemB) return;
             _compareOverlay.el.open(itemA, itemB);
+        });
+
+        // ── Combine ─────────────────────────────────────────────────────────────
+        // Gallery context-menu Combine on multi-selected video groups. groups[]
+        // arrives in chronological click order (preserved by grid Set iteration).
+        // Maps to each group's selected history item id, then concatenates.
+        grid.on('combine', async ({ groups: g }) => {
+            const project = state.currentProject;
+            if (!project?.folderPath) return;
+            if (!Array.isArray(g) || g.length < 2) return;
+            if (!g.every(grp => grp?.type === 'video')) return;
+            const itemIds = g
+                .map(grp => getSelectedItem(grp)?.id)
+                .filter(Boolean);
+            if (itemIds.length < 2) return;
+            const jobId = `combine-${Date.now()}`;
+            try {
+                const concatPromise = trackConcatJob({
+                    jobId,
+                    label: `Combining ${itemIds.length} videos`,
+                });
+                const resp = await fetch('/combine-videos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId, folderPath: project.folderPath, itemIds }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data?.success || !data?.item) {
+                    throw new Error(data?.error || 'combine-videos failed');
+                }
+                try { await concatPromise; } catch (_) {}
+                const ext = data.item;
+                const newItem = createVideoItem({
+                    id:              ext.id,
+                    filePath:        ext.filePath,
+                    operation:       ext.operation || 'combine',
+                    displayName:     truncateCardName(ext.displayName || 'combine'),
+                    modelId:         null,
+                    pixelDimensions: ext.pixelDimensions || { w: 0, h: 0 },
+                    thumbPath:       ext.thumbPath ?? null,
+                    fps:             ext.fps ?? 0,
+                    duration:        ext.duration ?? 0,
+                    frameCount:      ext.frameCount ?? 0,
+                    hasAudio:        ext.hasAudio ?? false,
+                    videoMeta:       ext.videoMeta ?? null,
+                });
+                const newGroup = createItemGroup('video', {
+                    name: newItem.displayName,
+                    width: newItem.pixelDimensions?.w || 0,
+                    height: newItem.pixelDimensions?.h || 0,
+                });
+                const populated = appendToHistory(newGroup, newItem);
+                const currentGroups = state.currentProject?.itemGroups || [];
+                await addGroup(populated);
+                // Mirror the add-to-gallery pattern at line ~1003: render the
+                // new group at the head of the grid immediately so the user
+                // sees the combined entry without leaving + re-entering the
+                // gallery. Keyed reuse in MpiGalleryGrid preserves DOM/state
+                // for existing cards, so this is safe.
+                grid.el.setGroups([populated, ...currentGroups]);
+            } catch (err) {
+                clientLogger.error('MpiGalleryBlock', 'combine failed', err);
+                const _short = String(err.message || 'unknown').split('\n')[0].slice(0, 160);
+                Events.emit('ui:error', { title: 'Combine failed', message: _short });
+            }
         });
 
         // ── Persist helper ──────────────────────────────────────────────────────

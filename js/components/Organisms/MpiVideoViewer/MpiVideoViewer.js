@@ -36,6 +36,7 @@ import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { captureFrameBlob } from '../../../utils/Video.js';
 import { qs, on } from '../../../utils/dom.js';
+import { Events } from '../../../events.js';
 
 export const MpiVideoViewer = ComponentFactory.create({
     name: 'MpiVideoViewer',
@@ -115,6 +116,14 @@ export const MpiVideoViewer = ComponentFactory.create({
         _resizeObserver.observe(stageEl);
         _resizeObserver.observe(_videoElement);
         _unsubs.push(() => _resizeObserver?.disconnect());
+
+        // Right-click anywhere on the viewer (including crop overlay) emits
+        // `video-viewer:context-menu`. Bound on the viewer root in capture
+        // phase so the crop overlay canvas can't preempt with native menu.
+        _unsubs.push(on(el, 'contextmenu', (e) => {
+            e.preventDefault();
+            Events.emit('video-viewer:context-menu', { x: e.clientX, y: e.clientY });
+        }));
 
         _unsubs.push(on(_videoElement, 'loadedmetadata', () => {
             if (_cropTool && _isInCropMode) {

@@ -75,8 +75,12 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Video groups** (`_group.type === 'video'`):
 - `MpiVideoViewer`   props: `{ fps, controls }`   slot: `#centre-slot`
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`
-- `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (video model exposes prompt ops); Block keeps handle in `_pb`
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsPrompt` (prompt mode, video + i2v-capable model only)
+- `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (video model exposes prompt ops); Block keeps handle in `_pb`. In video-history workspace, `_hasPromptOps()` is bypassed when active video model exposes any `i2v*` op so the toolbar can mount before frames are injected.
+
+> **Video-history workspace gates:**
+> - `#right-top-slot` visibility under `--prompt-active` is `:empty`-scoped — slot stays visible whenever a child mounts. Image-history prompt mode keeps slot empty + hidden.
+> - `_applyPreview` in MpiGroupHistoryBlock short-circuits for `isVideo`. Latent previews are PNGs and cannot load into `<video>`; viewer stays on the previously-loaded video so the user can queue parallel ops. Mascot + StatusBar still drive feedback.
 
 ---
 
@@ -91,6 +95,7 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 - `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, inline preview `<img>` slot, Apply `MpiButton`. Live preview runs the **image** `resize` workflow on a 512px-longest-edge thumbnail extracted from `viewer.el.getSourceElement()` (HTMLImageElement or HTMLVideoElement), with `width`/`height`/`divisible_by` proportionally scaled to thumb space. Result paints into the inline preview slot — viewer is never touched. Apply appends a new full-resolution entry via `startGeneration` (`resize` for image, `resizeVideo` for video); preserves the source. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
+- `MpiToolOptionsPrompt`   props: `{ promptBox, project }`   — video-history-only toolbar. Two frame thumbs (Start / End) with role-tagged drop targets + swap button + clear-slot `x` + two action `MpiButton`s (Extend, Create new). Subscribes to PromptBox `media-change` to mirror chips by role via `promptBox.el.getMediaByRole(role)`. Drop on thumb → uploads → `promptBox.el.injectMedia({ url, mediaType: 'image', role })`. Swap fires `promptBox.el.swapMediaRoles('startFrame', 'endFrame')`. `x` fires `promptBox.el.removeMediaByRole(role)`. Buttons emit `prompt-box-tools:extend` / `prompt-box-tools:create-new` on the Events bus. Single listener lives in MpiGroupHistoryBlock — do NOT pre-wire elsewhere. Thumb sizing is CSS-only (`max-height` + `object-fit: contain`); no aspect-ratio prop or JS measurement.
 
 ---
 

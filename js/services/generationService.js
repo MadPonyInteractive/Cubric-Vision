@@ -15,6 +15,7 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
+import { trackConcatJob } from './concatProgress.js';
 
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
@@ -150,6 +151,13 @@ function _emitPromptBoxGenerationEndIfIdle() {
  * @property {string}   [maskDataUrl]
  * @property {Object}   [injectionParams]
  * @property {boolean}  [previewOnly]   — multi-stage ops only; injects Preview_Only=true
+ * @property {boolean}  [historyMode]   — history workspace context; forces Preview_Only=false on _ms ops
+ * @property {boolean}  [extend]        — when true, after save-generation the saved video is
+ *                                       concatenated onto `sourceItemId` via /extend-video.
+ *                                       The intermediate item is deleted; the extended output
+ *                                       replaces it in the existing history group.
+ * @property {string}   [sourceItemId]  — required when extend=true; UUID of the source video
+ *                                       in the same project that the generation extends.
  */
 
 /**
@@ -188,6 +196,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         maskDataUrl,
         injectionParams,
         previewOnly: config.previewOnly === true,
+        historyMode: config.historyMode === true,
         isStage2: config.isStage2 === true,
         loadLatentName: config.loadLatentName,
         previewLatentFilePath: config.previewLatentFilePath,
@@ -257,7 +266,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 source:    item.source ?? null,
                 role:      item.role ?? null,
             }));
-        if (isVideo && config.previewOnly === true && _previewStage === undefined) {
+        if (isVideo && config.previewOnly === true && config.historyMode !== true && _previewStage === undefined) {
             _previewStage = 'preview';
             // Snapshot the full injectionParams map (minus Preview_Only, which is
             // a stage marker, not a user-controlled param). Continue replays this
@@ -383,6 +392,104 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             }
             const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);
+        }
+
+        // Extend post-process: concat the freshly-saved I2V output onto the
+        // source video. Replaces builtItems[0] with the extended output and
+        // deletes the intermediate item so only the extended video lands in
+        // the history group. Source video is untouched.
+        if (isVideo && config.extend === true && config.sourceItemId && state.currentProject?.folderPath) {
+            const intermediate = builtItems[0];
+            const generatedAbs = intermediate?.filePath
+                ? (() => {
+                    try {
+                        const u = new URL(intermediate.filePath, 'http://localhost');
+                        const raw = u.searchParams.get('path');
+                        return raw ? decodeURIComponent(raw) : '';
+                    } catch (_) { return ''; }
+                })()
+                : '';
+
+            if (!generatedAbs) {
+                clientLogger.warn('generationService', 'extend: intermediate filePath unresolved; skipping concat');
+            } else {
+                const jobId = `extend-${_regId}-${Date.now()}`;
+                try {
+                    const concatPromise = trackConcatJob({ jobId, label: 'Concatenating videos' });
+                    const resp = await fetch('/extend-video', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jobId,
+                            folderPath: state.currentProject.folderPath,
+                            sourceItemId: config.sourceItemId,
+                            generatedFilePath: generatedAbs,
+                            modelId: model.id,
+                            prompt:  positive,
+                            negativePrompt: negative,
+                            seed: exec.seed ?? -1,
+                            op: operation,
+                        }),
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok || !data?.success || !data?.item) {
+                        throw new Error(data?.error || 'extend-video failed');
+                    }
+                    // Wait for SSE-driven done event so StatusBar completes.
+                    // The HTTP response and SSE done fire close together; the
+                    // promise may resolve first or after — both are fine.
+                    try { await concatPromise; } catch (_) { /* HTTP path already succeeded */ }
+
+                    // Delete the intermediate sidecar/thumb (server already
+                    // removed the .mp4 inside /extend-video).
+                    try {
+                        const filename = generatedAbs.split(/[\\/]/).pop();
+                        await fetch(
+                            `/project-media/${state.currentProject.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(state.currentProject.folderPath)}&itemId=${encodeURIComponent(intermediate.id)}`,
+                            { method: 'DELETE' }
+                        );
+                    } catch (delErr) {
+                        clientLogger.warn('generationService', 'extend: intermediate sidecar cleanup failed', delErr);
+                    }
+
+                    // Swap intermediate → extended item. Server sidecar shape
+                    // maps cleanly through createVideoItem; preserve the new
+                    // server-assigned id so future history-group ops resolve.
+                    const ext = data.item;
+                    const extendedItem = createVideoItem({
+                        id:              ext.id,
+                        filePath:        ext.filePath,
+                        operation:       ext.operation || 'extend',
+                        displayName:     truncateCardName(ext.displayName || 'extend'),
+                        prompt:          ext.prompt || positive,
+                        negativePrompt:  ext.negativePrompt || negative,
+                        modelId:         ext.modelId || model.id,
+                        seed:            Number.isFinite(ext.seed) ? ext.seed : (exec.seed ?? -1),
+                        pixelDimensions: ext.pixelDimensions || resolvedDims,
+                        generationMs:    elapsedMs,
+                        thumbPath:       ext.thumbPath ?? null,
+                        fps:             ext.fps ?? 0,
+                        duration:        ext.duration ?? 0,
+                        frameCount:      ext.frameCount ?? 0,
+                        hasAudio:        ext.hasAudio ?? false,
+                        videoMeta:       ext.videoMeta ?? null,
+                        extendedFrom:    ext.extendedFrom ?? null,
+                    });
+                    builtItems[0] = extendedItem;
+                } catch (extErr) {
+                    clientLogger.error('generationService', 'extend post-step failed; keeping intermediate', extErr);
+                    // Surface a short, user-readable summary. ffmpeg dumps its
+                    // full stderr into err.message; truncate before showing.
+                    const _shortMsg = String(extErr.message || 'unknown error')
+                        .split('\n')[0]
+                        .slice(0, 160);
+                    Events.emit('ui:error', {
+                        title: 'Extend failed',
+                        message: `${_shortMsg}. Intermediate video kept in history.`,
+                    });
+                    // Intermediate stays as a regular new history entry.
+                }
+            }
         }
 
         // Project mutation. MUST await — addGroup/updateGroup are serialized

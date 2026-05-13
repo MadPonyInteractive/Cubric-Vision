@@ -171,10 +171,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const clickedIdx = _getRenderedIndex(groupId);
             if (anchorIdx === -1 || clickedIdx === -1) { _toggleSelect(groupId); return; }
 
-            const from = Math.min(anchorIdx, clickedIdx);
-            const to   = Math.max(anchorIdx, clickedIdx);
+            // Direction-aware walk from anchor → clicked so insertion order
+            // is chronological. `[..._selectedIds]` yields click order even
+            // after shift-range rebuild. See `el.getSelectionOrder` below.
             _selectedIds.clear();
-            for (let i = from; i <= to; i++) {
+            const step = clickedIdx >= anchorIdx ? 1 : -1;
+            for (let i = anchorIdx; i !== clickedIdx + step; i += step) {
                 _selectedIds.add(_renderedOrder[i].id);
             }
             if (!_selectionMode) _enterSelectionMode();
@@ -190,8 +192,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         function _syncCardSelectedState() {
+            const order = [..._selectedIds];
+            const showBadges = order.length >= 2;
+            const numberById = new Map();
+            if (showBadges) order.forEach((id, i) => numberById.set(id, i + 1));
             _cardMap.forEach(({ card }, id) => {
                 card.el.setSelected(_selectedIds.has(id));
+                card.el.setSelectionBadge?.(numberById.get(id) || 0);
             });
         }
 
@@ -247,6 +254,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     </div>
                 </div>
                 <div class="mpi-group-card__top-badge"></div>
+                <div class="mpi-group-card__order-badge mpi-selection-order-badge" style="display:none"></div>
                 <div class="mpi-group-card__fav-wrap"></div>
                 <div class="mpi-group-card__reuse-wrap"></div>
                 <div class="mpi-group-card__preview-badge">PREVIEW</div>
@@ -626,6 +634,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.toggle('mpi-group-card--selected', val);
             };
 
+            const _orderBadge = qs('.mpi-group-card__order-badge', cardEl);
+            cardEl.setSelectionBadge = (n) => {
+                if (n && n > 0) {
+                    _orderBadge.textContent = `#${n}`;
+                    _orderBadge.style.display = '';
+                } else {
+                    _orderBadge.style.display = 'none';
+                }
+            };
+
             // ── Click handling ───────────────────────────────────────────────
             cardEl.addEventListener('click', (e) => {
                 if (_generating) return;
@@ -661,19 +679,31 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
 
                 const compareDisabled = _selectedIds.size !== 2;
+                // Combine: ≥2 selected AND every selected group is a video group.
+                // Selection order preserved via _selectedIds Set insertion order
+                // — passed through el.getSelectionOrder() at handler time.
+                const _selectedVideoCount = Array.from(_selectedIds)
+                    .map(id => _groups.find(g => g.id === id))
+                    .filter(g => g && g.type === 'video').length;
+                const combineDisabled = _selectedIds.size < 2 || _selectedVideoCount !== _selectedIds.size;
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
                     items: [
                         { key: 'compare',  icon: 'compare',  label: 'Compare',  disabled: compareDisabled },
+                        { key: 'combine',  icon: 'merge',    label: 'Combine',  disabled: combineDisabled },
                         { key: 'download', icon: 'download', label: 'Download' },
                         { key: 'delete',   icon: 'trash',    label: 'Delete',   danger: true },
                     ],
                     onSelect: (key) => {
-                        const selected = Array.from(_selectedIds)
+                        // Use insertion-order id list to preserve chronological
+                        // click sequence for Combine output. Map → group objects.
+                        const orderedIds = Array.from(_selectedIds);
+                        const selected = orderedIds
                             .map(id => _groups.find(g => g.id === id))
                             .filter(Boolean);
                         if (key === 'compare')  emit('compare',  { groups: selected });
+                        if (key === 'combine')  emit('combine',  { groups: selected });
                         if (key === 'download') emit('download', { groups: selected });
                         if (key === 'delete')   emit('delete',   { groups: selected });
                         _exitSelectionMode();
@@ -682,7 +712,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
             });
 
             // Apply initial selection state
-            if (_selectedIds.has(group.id)) cardEl.setSelected(true);
+            if (_selectedIds.has(group.id)) {
+                cardEl.setSelected(true);
+                if (_selectedIds.size >= 2) {
+                    const idx = [..._selectedIds].indexOf(group.id);
+                    if (idx >= 0) cardEl.setSelectionBadge(idx + 1);
+                }
+            }
 
             // ── Public methods ───────────────────────────────────────────────
             cardEl.setGenerating = (previewUrl = null) => {
@@ -1169,6 +1205,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             if (val) _enterSelectionMode();
             else     _exitSelectionMode();
         };
+
+        /**
+         * IDs of currently selected gallery cards in click order.
+         * Set iteration preserves insertion order; `_rangeSelect` walks the
+         * range in click direction so the result is always chronological.
+         * @returns {string[]}
+         */
+        el.getSelectionOrder = () => [..._selectedIds];
 
         el.setGeneratingCard = (wrapper, width, height) => {
             const generatingSlot = qs('.mpi-gallery-grid__generating-slot', el);

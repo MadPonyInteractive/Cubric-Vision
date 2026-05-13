@@ -374,6 +374,28 @@
     opacity: 0.4;
 }
 
+/* Selection-order badge — top-center, above thumb, below queued-preview indicator */
+.mpi-group-card__order-badge.mpi-selection-order-badge {
+    position: absolute;
+    top: 0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    padding: 3px 8px;
+    background: var(--accent-heat);
+    color: var(--surface-base);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: var(--r-2);
+    line-height: 1;
+    pointer-events: none;
+    z-index: 5;
+}
+
 /* ── Bottom-left overlay: name + sub (dims · time · "prompt") ────────────── */
 
 .mpi-group-card__overlay {

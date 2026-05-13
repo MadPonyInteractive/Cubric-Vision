@@ -209,7 +209,10 @@ function _buildParams(payload) {
         // Preview_Only only applies to the stage-1 workflow. Stage-2 workflows
         // (resolved via _stage2 filename swap) have no Preview_Only node, and
         // comfyController defensively strips this param when the node is absent.
-        params['Preview_Only'] = payload.previewOnly === true;
+        // History workspace forces single-stage execution: `historyMode` from
+        // the payload overrides any previewStage toggle so re-generation from
+        // history never produces a preview card.
+        params['Preview_Only'] = payload.historyMode === true ? false : (payload.previewOnly === true);
         // LoadLatent is always required for _ms workflows. ComfyUI validates the
         // node even when its output is unreached. Stage-1 uses the default
         // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged

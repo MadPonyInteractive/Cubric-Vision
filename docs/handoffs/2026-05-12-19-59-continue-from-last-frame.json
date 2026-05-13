@@ -1,0 +1,84 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-05-12T18:59:56Z",
+  "session": {
+    "name": "Continue from last frame — Phase 1+2 implementation",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Implement the 'Continue from last frame' plan: right-click video → set as start/end frame → I2V generation, plus Extend/Combine via ffmpeg concat. 6 phases total.",
+    "status": "in_progress",
+    "summary": "Phases 1 and 2 complete and verified live. Phase 3 expanded with a new 3.0 step (hide PromptBox media strip in history workspace) before resuming the toolbar organism work in 3.1."
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-12-continue-from-last-frame.md",
+    "completed": [
+      "1.1 — Selection-order tracking on history + gallery (getSelectionOrder API + direction-aware shift-range)",
+      "1.2 — Role-aware injectMedia in MpiPromptBox (role plumbed through _tryAddMedia; same-role chip displaced before capacity cap)",
+      "1.3 — History-workspace context gate (historyMode flag end-to-end; Preview_Only forced false on _ms ops; previewStage control hidden)",
+      "2.1 — Right-click on video viewer → MpiContextMenu with 'Set as start frame' + 'Set as end frame' (bound at MpiVideoViewer root so crop overlay does not preempt)",
+      "2.2 — Frame-grab onClick: captureSnapshot → uploadMediaFile → auto-switch to first i2v-capable model → force-mount PromptBox → injectMedia with role"
+    ],
+    "pending": [
+      "3.0 — Hide PromptBox media strip in history workspace (new step added after Phase 2 retest revealed chip strip overlapping the video player)",
+      "3.1 — Build MpiToolOptionsPrompt organism + mount in #right-top-slot",
+      "Phase 4 — Server ffmpeg concat route (/extend-video, /combine-videos) + sidecar fields",
+      "Phase 5 — Wire toolbar Extend/Create new + card context-menu items (Combine, Add to gallery)",
+      "Phase 6 — Numeric selection-order badges + 'Extended from' history row + docs/rules sync"
+    ]
+  },
+  "kanban_entry": "Continue from last frame.",
+  "next_action": {
+    "description": "Execute Phase 3 starting with the new 3.0 step (hide PromptBox media strip when _context.historyMode === true). Plan briefs first, waits for user 'go'. Then 3.1 builds MpiToolOptionsPrompt organism per the plan body.",
+    "command": "/mpi-kanban:mpi-execute-next"
+  },
+  "context": {
+    "key_decisions": [
+      "historyMode is a context flag, not a per-op flag. Plumbed through PromptBox.updateContext → getRunPayload → generationService → runCommand → commandExecutor._buildParams. Single source of truth: PromptBox._context.historyMode === true.",
+      "contextmenu listener lives on MpiVideoViewer root (capture bubble from all children incl. crop overlay canvas). Originally placed on MpiVideoPlayer's <video> element but the crop overlay canvas sat above it and let the native menu through.",
+      "_baseCtx in MpiGroupHistoryBlock is now mutable and synced from PromptBox via _syncBaseCtxFromPromptBox() on every media-change event, so I2V ops unlock immediately when a frame chip lands. Without this, _baseCtx.imageCount stays 0 in video groups and the prompt tool button stays disabled forever.",
+      "Frame-grab path force-mounts PromptBox via _mountPromptBoxIfNeeded({ force: true }), bypassing the _hasPromptOps gate because injecting the frame is what unlocks the i2v op in the first place (catch-22 otherwise).",
+      "Verify 7 from plan Phase 2.2 (T2V-only auto-switch) was dropped — T2V is disabled in history workspace anyway. Auto-switch code retained for future non-I2V video models but is cheap dead code today.",
+      "_ms gate in commandExecutor: Preview_Only = historyMode ? false : (previewOnly === true). Branchless, single line. Catches every current and future _ms op (t2v_ms, i2v_ms, LTX _ms when it ships).",
+      "Selection-order Sets preserve insertion order on .add(); _rangeSelect now walks direction-aware (anchor → clicked, step ±1) so shift-range backward produces chronological [5,4,3,2] not [2,3,4,5]. Existing selection-changed event payloads unchanged (just chronological now)."
+    ],
+    "constraints": [
+      "DO NOT bind contextmenu on MpiVideoPlayer's video element — crop overlay canvas sits above and preempts. Bind on MpiVideoViewer root instead.",
+      "DO NOT add an op-level flag for historyMode. Use the context flag pattern already in PromptBox._context.",
+      "DO NOT call _tryAddMedia directly from outside MpiPromptBox. Use el.injectMedia({ url, mediaType, role }) — single source of truth, fires media-change.",
+      "Media chip role tag MUST match the slot key from getCommandMediaInputs(op) exactly ('startFrame', 'endFrame'). _withAssignedRoles maps role → slot.key before falling back to type-order matching.",
+      "Phase 3.0 must hide via CSS modifier on PromptBox root, not by removing _mediaItems. Drop-overlay and inject paths still need the chip data.",
+      "WAN is NOT the only multi-stage model. Any model with supportedOps including i2v or i2v_ms qualifies. Gate is generic via op.startsWith('i2v')."
+    ],
+    "files_modified": [
+      "js/components/Compounds/MpiHistoryList/MpiHistoryList.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+      "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+      "js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "js/components/types.js",
+      "docs/plans/2026-05-12-continue-from-last-frame.md",
+      ".claude/mpi-kanban/kanban.md"
+    ],
+    "files_to_read_first": [
+      "docs/plans/2026-05-12-continue-from-last-frame.md",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-comfy.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "resume_prompt": "You are picking up an in-flight implementation of the kanban entry 'Continue from last frame.' (in IMPLEMENTING). Phases 1 and 2 of docs/plans/2026-05-12-continue-from-last-frame.md are done and verified live; Phase 3 is next, starting with a NEW step 3.0 (hide PromptBox media strip in history workspace via a `mpi-prompt-box--history-mode` root modifier — chips stay in _mediaItems, only the strip rendering is suppressed). Read docs/handoffs/2026-05-12-19-59-continue-from-last-frame.json for full context including key decisions (historyMode is a context flag plumbed PromptBox→generationService→commandExecutor; contextmenu bound on MpiVideoViewer root not MpiVideoPlayer; _baseCtx is now live-synced from PromptBox via _syncBaseCtxFromPromptBox on media-change; frame-grab force-mounts PromptBox via _mountPromptBoxIfNeeded({ force: true })). Run /mpi-kanban:mpi-execute-next to brief and execute 3.0. Honor the brief-before-code and verified-after gates."
+}

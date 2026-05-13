@@ -94,9 +94,42 @@
     color: var(--ink-4);
 }
 
+.mpi-history-list__extended-from {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
 /* Status dot / kicker column */
 .mpi-history-list__status {
     font-size: var(--t-2xs);
     color: var(--ink-3);
     flex-shrink: 0;
+}
+
+/* Selection-order badge — sits in the status column when multi-select */
+.mpi-history-list__badge.mpi-selection-order-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    background: var(--accent-heat);
+    color: var(--surface-base);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: var(--r-2);
+    line-height: 1;
+}
+
+/* When badge is showing, suppress the "active" kicker so they don't stack */
+.mpi-history-list__card--selected .mpi-history-list__status::after {
+    content: none;
 }

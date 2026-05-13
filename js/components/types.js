@@ -95,6 +95,23 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsPromptProps (Organism — js/components/Organisms/MpiToolOptionsPrompt)
+ * @property {Object} promptBox - Live MpiPromptBox instance handle (mount return)
+ * @property {Object} project - Current project { id, folderPath } for thumb drop uploads
+ *
+ * Renders two role-tagged frame thumb slots (startFrame / endFrame) with a
+ * swap button between them and Extend / Create new action buttons.
+ * Mirrors PromptBox media chips via the `media-change` event.
+ *
+ * Emits via Events bus:
+ *   'prompt-box-tools:extend'
+ *   'prompt-box-tools:create-new'
+ *
+ * Requires PromptBox instance API: getMediaByRole(role), removeMediaByRole(role),
+ *   swapMediaRoles(roleA, roleB), injectMedia({ url, mediaType, role }).
+ */
+
+/**
  * @typedef {Object} MpiColorPickerProps (Primitive — js/components/Primitives/MpiColorPicker)
  * @property {string|{r:number,g:number,b:number}} [value='#000000'] - Initial RGB or #rrggbb color
  * @property {string} [info] - Info Bar description
@@ -336,9 +353,12 @@
  *   setModel(model)       — sync internal model dropdown to a new model (no remount)
  *   setModelList(list)    — update the available models list in the dropdown
  *   updateContext({ imageCount, videoCount, hasMask })
- *   injectMedia({ url, mediaType }) → boolean
+ *   injectMedia({ url, mediaType, role? }) → boolean
  *     — Adds media chip if model accepts the type; fires warning toast and returns
  *       false if incompatible. Single source of truth for all inject paths.
+ *       Optional `role` tags the chip to a slot key (e.g. 'startFrame',
+ *       'endFrame'); `_withAssignedRoles` honors explicit role over type-order
+ *       fallback. Role-tagged inject displaces any prior chip with the same role.
  *
  * Emits:
  *   'model-change'      { model }
@@ -770,6 +790,7 @@
  *   updatePreview(tempId, previewUrl) — push latent preview to a generating card during generation
  *   removeCard(groupId)               — remove a single card by ID without full re-render
  *   setSelectionMode(val)             — toggle selection mode on UI
+ *   getSelectionOrder()               — IDs of selected cards in chronological click order
  *   setGeneratingCard(wrapper, w, h)  — mount an external generating card in the grid's top slot
  *   clearGeneratingCard()             — remove the external generating card
  *
@@ -806,6 +827,7 @@
  *   appendEntry(item)            — add a new entry card at the end
  *   removeEntries(indices)       — remove cards at given sorted-descending indices
  *   exitSelectMode()             — programmatically exit select mode
+ *   getSelectionOrder()          — indices of selected cards in chronological click order
  *
  * Emits:
  *   'entry-selected'    { idx, item }                  — card clicked (single-select)

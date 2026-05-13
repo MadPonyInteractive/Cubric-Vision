@@ -31,7 +31,10 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
  *   el.getMediaItems()
  *   el.clearMedia()
  *   el.removeMedia(id)
- *   el.injectMedia({ url, mediaType })
+ *   el.injectMedia({ url, mediaType, role? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame')
+ *   el.getMediaByRole(role)         — returns role-assigned item or undefined
+ *   el.removeMediaByRole(role)      — removes the chip currently assigned to that role
+ *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
  *   el.remainingCapacity(mediaType) → number of free media slots for type
  *                                     under the current operation
  *   el.injectPrompts({ positive, negative })
@@ -203,18 +206,29 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
-        function _tryAddMedia({ url, file, mediaType, source }) {
+        function _tryAddMedia({ url, file, mediaType, source, role }) {
             const maxCount = _maxMediaForCurrentOperation(mediaType);
             if (maxCount <= 0) { _showIncompatibleToast(); return; }
 
             const sameType = _mediaItems.filter(m => m.mediaType === mediaType);
+            // Role-aware replacement: if the new item carries an explicit role,
+            // displace any existing item already tagged with that role first
+            // (so "Set as end frame" overwrites a prior end-frame chip
+            // regardless of capacity).
+            if (role) {
+                const sameRole = _mediaItems.find(m => m.role === role && m.mediaType === mediaType);
+                if (sameRole) _removeItem(sameRole.id);
+            }
+
+            const afterRoleDrop = _mediaItems.filter(m => m.mediaType === mediaType);
             if (maxCount === 1) {
-                sameType.forEach(item => _removeItem(item.id));
-            } else if (sameType.length >= maxCount) {
-                _removeItem(sameType[0].id);
+                afterRoleDrop.forEach(item => _removeItem(item.id));
+            } else if (afterRoleDrop.length >= maxCount) {
+                _removeItem(afterRoleDrop[0].id);
             }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
+            if (role) item.role = role;
             _mediaItems.push(item);
             _emitMediaChange();
         }
@@ -284,6 +298,23 @@ export const MpiPromptBox = ComponentFactory.create({
         el.getMediaItems = () => _withAssignedRoles();
         el.clearMedia    = () => [..._mediaItems].forEach(m => _removeItem(m.id));
         el.removeMedia   = (id) => _removeItem(id);
+        el.getMediaByRole = (role) => _withAssignedRoles().find(m => m.role === role);
+        el.removeMediaByRole = (role) => {
+            const item = _withAssignedRoles().find(m => m.role === role);
+            if (item) _removeItem(item.id);
+        };
+        el.swapMediaRoles = (roleA, roleB) => {
+            const assigned = _withAssignedRoles();
+            const a = assigned.find(m => m.role === roleA);
+            const b = assigned.find(m => m.role === roleB);
+            if (!a && !b) return;
+            // Mutate the live _mediaItems so role tags flip without re-upload.
+            const liveA = a ? _mediaItems.find(m => m.id === a.id) : null;
+            const liveB = b ? _mediaItems.find(m => m.id === b.id) : null;
+            if (liveA) liveA.role = roleB;
+            if (liveB) liveB.role = roleA;
+            _emitMediaChange();
+        };
 
         el.setOperation = (key) => {
             activeOperation = key;
@@ -294,8 +325,14 @@ export const MpiPromptBox = ComponentFactory.create({
         };
 
         el.updateContext = (ctx) => {
+            const prevHistoryMode = _context.historyMode === true;
             _context = { ..._context, ...ctx };
             _refreshOpDropdown();
+            const nextHistoryMode = _context.historyMode === true;
+            if (prevHistoryMode !== nextHistoryMode) {
+                el.classList.toggle('mpi-prompt-box--history-mode', nextHistoryMode);
+                _refreshOpSlot();
+            }
         };
 
         el.setGenerating = (active) => {
@@ -442,6 +479,9 @@ export const MpiPromptBox = ComponentFactory.create({
         }
         _renderStrip([]);
 
+        // Init-time history-mode class (props.context may carry historyMode at mount)
+        if (_context.historyMode === true) el.classList.add('mpi-prompt-box--history-mode');
+
         function _showIncompatibleToast() {
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
@@ -454,9 +494,9 @@ export const MpiPromptBox = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
-        el.injectMedia = ({ url, mediaType }) => {
+        el.injectMedia = ({ url, mediaType, role }) => {
             if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
-            _tryAddMedia({ url, file: null, mediaType, source: 'app' });
+            _tryAddMedia({ url, file: null, mediaType, source: 'app', role });
             return true;
         };
 
@@ -741,6 +781,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 const ctrl = PROMPT_BOX_CONTROLS[componentId];
                 if (!ctrl) continue;
 
+                // History workspace forces single-stage execution; the
+                // multi-stage preview toggle is never shown there. Persisted
+                // per-model previewStage value is left untouched so the toggle
+                // restores in gallery contexts.
+                if (componentId === 'previewStage' && _context.historyMode === true) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
@@ -787,7 +833,8 @@ export const MpiPromptBox = ComponentFactory.create({
         el.getRunPayload = () => {
             const injectionParams = getInjectionParamsFromControls(_activeControls);
             const previewCtrl = _activeControls.get('previewStage');
-            const previewOnly = previewCtrl?.getValue?.() === true;
+            const historyMode = _context.historyMode === true;
+            const previewOnly = !historyMode && previewCtrl?.getValue?.() === true;
             return {
                 operation:  activeOperation,
                 positive:   positiveValue,
@@ -795,6 +842,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 mediaItems: el.getMediaItems(),
                 injectionParams,
                 previewOnly,
+                historyMode,
             };
         };
 

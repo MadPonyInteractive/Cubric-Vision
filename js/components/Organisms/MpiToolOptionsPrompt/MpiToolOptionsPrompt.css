@@ -1,0 +1,118 @@
+.mpi-tool-options-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-2);
+    align-items: stretch;
+}
+
+.mpi-tool-options-prompt__frames {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-prompt__slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-1);
+    min-width: 0;
+}
+
+.mpi-tool-options-prompt__label {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.mpi-tool-options-prompt__thumb {
+    position: relative;
+    width: 100%;
+    min-height: 5rem;
+    max-height: 10rem;
+    background: var(--surface-3);
+    border: 1px dashed var(--line);
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+
+.mpi-tool-options-prompt__thumb--filled {
+    border-style: solid;
+    border-color: var(--accent-heat);
+    background: var(--surface-2);
+}
+
+.mpi-tool-options-prompt__slot--drag-over .mpi-tool-options-prompt__thumb {
+    border-color: var(--accent-heat);
+    background: var(--surface-2);
+}
+
+.mpi-tool-options-prompt__thumb-img {
+    max-width: 100%;
+    max-height: 10rem;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+.mpi-tool-options-prompt__thumb-clear {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-1);
+    color: var(--ink-1);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    cursor: pointer;
+    padding: 0;
+}
+
+.mpi-tool-options-prompt__thumb-clear:hover {
+    background: var(--accent-heat);
+    color: var(--ink-on-accent, var(--surface-1));
+}
+
+.mpi-tool-options-prompt__swap {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    cursor: pointer;
+    padding: 0;
+    align-self: center;
+}
+
+.mpi-tool-options-prompt__swap:hover {
+    color: var(--accent-heat);
+    border-color: var(--accent-heat);
+}
+
+.mpi-tool-options-prompt__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    justify-content: center;
+}
+
+.mpi-tool-options-prompt__actions > div {
+    flex: 0 0 auto;
+}
