@@ -31,6 +31,7 @@ const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 
 const projectJsonQueues = new Map();
+const itemMetaQueues = new Map();
 
 async function writeJsonAtomic(filePath, data) {
     const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
@@ -62,6 +63,40 @@ function updateProjectJson(jsonPath, updater) {
         });
 
     projectJsonQueues.set(key, next);
+    return next;
+}
+
+/**
+ * Per-sidecar atomic update queue. Mirrors updateProjectJson but for
+ * .meta/<uuid>.json item sidecars. Concurrent writers (trim handle drag
+ * + auto-save, etc.) serialize on a per-path key so the last reader-then-
+ * writer pair sees prior writes. Missing sidecar starts from {}.
+ *
+ * @param {string} metaPath
+ * @param {(prev: object) => Promise<object>|object} updater
+ * @returns {Promise<object>} the merged sidecar after write
+ */
+function updateItemMeta(metaPath, updater) {
+    const key = path.resolve(metaPath).toLowerCase();
+    const previous = itemMetaQueues.get(key) || Promise.resolve();
+
+    const next = previous
+        .catch(() => {})
+        .then(async () => {
+            let meta = {};
+            if (await fs.pathExists(metaPath)) meta = await fs.readJson(metaPath);
+            const updated = await updater(meta);
+            await fs.ensureDir(path.dirname(metaPath));
+            await writeJsonAtomic(metaPath, updated);
+            return updated;
+        })
+        .finally(() => {
+            if (itemMetaQueues.get(key) === next) {
+                itemMetaQueues.delete(key);
+            }
+        });
+
+    itemMetaQueues.set(key, next);
     return next;
 }
 
@@ -765,18 +800,19 @@ router.get('/project-media/:projectId/download/:filename', async (req, res) => {
 router.post('/project-media/:projectId/update-meta', async (req, res) => {
     try {
         const { folderPath } = req.query;
-        const { filename, updates } = req.body;
-        if (!folderPath || !filename || !updates) {
-            return res.status(400).json({ success: false, error: 'folderPath, filename and updates required' });
+        const { itemId, filename, updates } = req.body;
+        if (!folderPath || !updates || (!itemId && !filename)) {
+            return res.status(400).json({ success: false, error: 'folderPath, updates and (itemId or filename) required' });
         }
         const mediaDir = path.join(folderPath, 'Media');
-        const metaPath = path.join(mediaDir, filename + '.json');
-        let meta = {};
-        if (await fs.pathExists(metaPath)) meta = await fs.readJson(metaPath);
-        meta = { ...meta, ...updates };
-        await fs.ensureDir(mediaDir);
-        await fs.writeJson(metaPath, meta, { spaces: 2 });
-        res.json({ success: true, metadata: meta });
+        // Single source of truth: Media/.meta/<uuid>.json. Legacy
+        // Media/<filename>.json path retained only as fallback for callers
+        // that have not yet been updated to send itemId.
+        const metaPath = itemId
+            ? path.join(mediaDir, '.meta', `${itemId}.json`)
+            : path.join(mediaDir, filename + '.json');
+        const merged = await updateItemMeta(metaPath, (prev) => ({ ...prev, ...updates }));
+        res.json({ success: true, metadata: merged });
     } catch (err) {
         logger.error('project', 'update-meta failed', err);
         res.status(500).json({ success: false, error: err.message });

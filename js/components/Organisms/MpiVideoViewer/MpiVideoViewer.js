@@ -2,9 +2,9 @@
  * MpiVideoViewer — Organism: video display with crop-box overlay.
  *
  * Mirrors MpiCanvasViewer role but for video. Internally composes:
- * - MpiVideoPlayer (Compound) for rendering + controls
+ * - MpiVideoSurface (Compound) for the bare <video> + click-to-toggle
+ * - MpiVideoControlBar (Compound) for transport + embedded MpiTrimBar
  * - An overlay canvas (absolute-positioned) for crop-box drawing
- * - A reserved timeline slot (empty, for deferred trim tool)
  *
  * Tool action bars (crop, upscale, interpolate) are owned by the parent Block,
  * not this viewer. Viewer only owns display + crop overlay state.
@@ -23,15 +23,18 @@
  *   exitUpscaleMode()                 — reset data-mode="idle"
  *   enterInterpolateMode()            — set data-mode="interpolate"
  *   exitInterpolateMode()             — reset data-mode="idle"
- *   destroy()                         — clean up player, cropTool, observers, listeners
+ *   destroy()                         — clean up surface, control bar, cropTool, observers, listeners
  *
  * Emits:
- *   'play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change' — forwarded from MpiVideoPlayer
- *   'crop-change'  { rect }  — crop rect changed (on cropTool onChange)
+ *   'play', 'pause', 'ended', 'timeupdate' — forwarded from MpiVideoSurface
+ *   'change'   { volume, muted }            — forwarded from MpiVideoSurface 'volumechange'
+ *   'loop-change' { loop }                  — forwarded from MpiVideoControlBar
+ *   'crop-change' { rect }                  — crop rect changed (on cropTool onChange)
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiVideoPlayer } from '../../Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiVideoSurface } from '../../Compounds/MpiVideoSurface/MpiVideoSurface.js';
+import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
 import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { captureFrameBlob } from '../../../utils/Video.js';
@@ -45,10 +48,10 @@ export const MpiVideoViewer = ComponentFactory.create({
     template: () => `
         <div class="mpi-video-viewer" data-mode="idle">
             <div class="mpi-video-viewer__stage">
-                <div data-mount="player" class="mpi-video-viewer__player"></div>
+                <div data-mount="surface" class="mpi-video-viewer__player"></div>
                 <canvas class="mpi-video-viewer__overlay"></canvas>
             </div>
-            <div class="mpi-video-viewer__timeline"></div>
+            <div class="mpi-video-viewer__timeline" data-mount="control-bar"></div>
         </div>
     `,
 
@@ -59,24 +62,38 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         // ── State ────────────────────────────────────────────────────────
 
-        let _playerInstance = null;
+        let _surfaceInstance = null;
+        let _controlBarInstance = null;
         let _cropTool = null;
         let _resizeObserver = null;
         let _videoElement = null;
         let _isInCropMode = false;
         let _cropRatio = SOCIAL_RATIOS[0].ratio;
 
-        // ── Player mount ─────────────────────────────────────────────────
+        // ── Surface + control bar mounts ─────────────────────────────────
 
-        const playerMount = qs('[data-mount="player"]', el);
-        _playerInstance = MpiVideoPlayer.mount(playerMount, { fps, controls });
+        const surfaceMount = qs('[data-mount="surface"]', el);
+        _surfaceInstance = MpiVideoSurface.mount(surfaceMount, { fps });
 
-        const playerEventNames = ['play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change'];
-        playerEventNames.forEach((eventName) => {
-            _playerInstance.on(eventName, (payload) => emit(eventName, payload));
-        });
+        if (controls) {
+            const controlBarMount = qs('[data-mount="control-bar"]', el);
+            _controlBarInstance = MpiVideoControlBar.mount(controlBarMount, { fps });
+            _controlBarInstance.el.attachSurface(_surfaceInstance);
+        }
 
-        _videoElement = _playerInstance.el.getVideoElement();
+        // Forward the same six external events the viewer used to emit.
+        // 5 from surface, loop-change from control bar. 'change' (volume/mute)
+        // synthesised from surface 'volumechange' to keep the legacy contract.
+        _surfaceInstance.on('play',           (p) => emit('play',           p));
+        _surfaceInstance.on('pause',          (p) => emit('pause',          p));
+        _surfaceInstance.on('ended',          (p) => emit('ended',          p));
+        _surfaceInstance.on('timeupdate',     (p) => emit('timeupdate',     p));
+        _surfaceInstance.on('volumechange',   (p) => emit('change',         p));
+        _surfaceInstance.on('loadedmetadata', (p) => emit('loadedmetadata', p));
+        _controlBarInstance?.on('loop-change',  (p) => emit('loop-change',  p));
+        _controlBarInstance?.on('range-change', (p) => emit('range-change', p));
+
+        _videoElement = _surfaceInstance.el.getVideoElement();
 
         // ── Overlay canvas setup ─────────────────────────────────────────
 
@@ -136,11 +153,28 @@ export const MpiVideoViewer = ComponentFactory.create({
         // ── Instance API ─────────────────────────────────────────────────
 
         el.loadVideo = (url, meta = {}) => {
-            if (!url || !_playerInstance?.el) return;
-            if (meta.fps && _playerInstance.el._setFps) _playerInstance.el._setFps(meta.fps);
-            if (meta.frameCount && _playerInstance.el._setFrameCount) _playerInstance.el._setFrameCount(meta.frameCount);
-            if (_playerInstance.el._setSrc) _playerInstance.el._setSrc(url);
+            if (!url || !_surfaceInstance?.el) return;
+            if (meta.fps) {
+                _surfaceInstance.el._setFps(meta.fps);
+                _controlBarInstance?.el.setFps(meta.fps);
+            }
+            if (meta.frameCount) {
+                _surfaceInstance.el._setFrameCount(meta.frameCount);
+                _controlBarInstance?.el.setFrameCount(meta.frameCount);
+            }
+            // Persisted trim range — applied after loadedmetadata resets to
+            // full clip (control bar listens). One-shot.
+            const trim = meta.trim;
+            if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out)) {
+                _controlBarInstance?.el.setPendingTrim?.(+trim.in, +trim.out);
+            } else {
+                _controlBarInstance?.el.setPendingTrim?.(null);
+            }
+            _surfaceInstance.el._setSrc(url);
         };
+
+        el.setRangeQuiet = (i, o) => _controlBarInstance?.el.setRangeQuiet(i, o);
+        el.getRange      = () => _controlBarInstance?.el.getRange();
 
         el.enterCropMode = (initialRect = null) => {
             if (_isInCropMode) return;
@@ -195,8 +229,10 @@ export const MpiVideoViewer = ComponentFactory.create({
             _unsubs.length = 0;
             _resizeObserver?.disconnect();
             _resizeObserver = null;
-            _playerInstance?.destroy?.();
-            _playerInstance = null;
+            _controlBarInstance?.destroy?.();
+            _controlBarInstance = null;
+            _surfaceInstance?.destroy?.();
+            _surfaceInstance = null;
             _cropTool?.destroy?.();
             _cropTool = null;
             _videoElement = null;

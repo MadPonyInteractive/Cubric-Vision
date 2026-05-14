@@ -234,6 +234,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:   ci.duration,
                     frameCount: ci.frameCount,
                     hasAudio:   ci.hasAudio,
+                    trim:       ci.trim,
                 });
             }
         } else {
@@ -446,6 +447,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:   item.duration,
                     frameCount: item.frameCount,
                     hasAudio:   item.hasAudio,
+                    trim:       item.trim,
                 });
             } else {
                 viewer.el.exitMode?.();
@@ -814,6 +816,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:   data.item.duration,
                     frameCount: data.item.frameCount,
                     hasAudio:   data.item.hasAudio,
+                    trim:       data.item.trim,
                 });
                 _showToast('Cropped video saved', 'success');
             } catch (err) {
@@ -831,6 +834,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:   item.duration,
                     frameCount: item.frameCount,
                     hasAudio:   item.hasAudio,
+                    trim:       item.trim,
                 });
             } else {
                 // Viewer's loadEntry restores active tool mode internally.
@@ -959,7 +963,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _currentIdx = _group.selectedIndex;
                 _persistGroup();
                 historyList.el.appendEntry(newItem);
-                viewer.el.loadVideo?.(resolveMediaUrl(newItem.filePath), { fps: newItem.fps || _group.fps || 24 });
+                viewer.el.loadVideo?.(resolveMediaUrl(newItem.filePath), { fps: newItem.fps || _group.fps || 24, trim: newItem.trim });
                 _showToast('Videos combined');
             } catch (err) {
                 clientLogger.error('MpiGroupHistoryBlock', 'combine failed', err);
@@ -1050,7 +1054,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Load the new current entry (if any).
             const cur = _group.history[_currentIdx];
             if (cur) {
-                if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24 });
+                if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24, trim: cur.trim });
                 else         viewer.el.loadEntry?.(cur, _currentIdx);
             }
 
@@ -1101,6 +1105,33 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _syncPromptToolDisabled();
                 _mountPromptBoxIfNeeded();
             });
+        }
+
+        // ── Video-viewer-only events: trim persistence ─────────────────────────
+
+        if (isVideo) {
+            let _trimTimer = null;
+            const _flushTrim = (rangeIn, rangeOut) => {
+                const project = state.currentProject;
+                const item = _group.history[_currentIdx];
+                if (!project?.id || !project?.folderPath || !item?.id) return;
+                const isFull = !(rangeOut > rangeIn) || (rangeIn <= 1e-3 && Math.abs(rangeOut - (item.duration || 0)) <= 1e-3);
+                const updates = isFull ? { trim: null } : { trim: { in: +rangeIn, out: +rangeOut } };
+                // Mirror in-memory item (sidecar parity per feedback memory).
+                if (isFull) delete item.trim; else item.trim = updates.trim;
+                fetch(`/project-media/${project.id}/update-meta?folderPath=${encodeURIComponent(project.folderPath)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itemId: item.id, updates })
+                }).catch((err) => clientLogger.warn('MpiGroupHistoryBlock', 'trim persist failed', err));
+            };
+
+            viewer.on('range-change', ({ in: i, out: o }) => {
+                if (_trimTimer) clearTimeout(_trimTimer);
+                _trimTimer = setTimeout(() => { _trimTimer = null; _flushTrim(i, o); }, 250);
+            });
+
+            _unsubs.push(() => { if (_trimTimer) { clearTimeout(_trimTimer); _trimTimer = null; } });
         }
 
         // ── Radial → operation sync ───────────────────────────────────────────

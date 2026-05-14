@@ -1,0 +1,88 @@
+/* ── MpiVideoControlBar — video transport + trim row ────────────────────── */
+/* Stage tokens only. Mocks: editor-video.html .timeline rows. */
+
+.mpi-video-control-bar {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-bar);
+    border-top: 1px solid var(--line);
+    padding: 8px 12px 6px;
+    gap: 4px;
+}
+
+.mpi-video-control-bar__trim {
+    /* Host for MpiTrimBar — leaves vertical breathing room baked into MpiTrimBar's own padding. */
+    width: 100%;
+}
+
+.mpi-video-control-bar__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mpi-video-control-bar__left,
+.mpi-video-control-bar__right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Time display — tabular-nums + monospace per Stage spec */
+.mpi-video-control-bar__time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-xs, 0.8rem);
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-variant-numeric: tabular-nums;
+    margin-left: 8px;
+}
+
+.mpi-video-control-bar__current {
+    color: var(--ink-1);
+    min-width: 8ch;
+    text-align: right;
+}
+
+.mpi-video-control-bar__duration {
+    min-width: 8ch;
+    color: var(--ink-4);
+}
+
+.mpi-video-control-bar__separator { opacity: 0.3; }
+
+/* Volume composite */
+.mpi-video-control-bar__volume {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mpi-video-control-bar__volume-slider {
+    flex: 1;
+    min-width: 80px;
+    max-width: 160px;
+    margin: 0 6px 0 3px;
+}
+
+.mpi-video-control-bar__volume-slider .mpi-progress {
+    height: 6px;
+}
+
+.mpi-video-control-bar__volume-slider .mpi-progress__track {
+    background: var(--surface-3);
+}
+
+.mpi-video-control-bar__volume-slider .mpi-progress__track-fill {
+    background: var(--accent-heat);
+}
+
+/* Active button accent */
+.mpi-video-control-bar .mpi-button.is-active {
+    border-color: var(--accent-heat);
+    color: var(--accent-heat);
+}

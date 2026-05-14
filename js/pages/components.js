@@ -56,6 +56,7 @@ import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/Mpi
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 import { MpiViewerCorners } from '../components/Compounds/MpiViewerCorners/MpiViewerCorners.js';
+import { MpiTrimBar } from '../components/Compounds/MpiTrimBar/MpiTrimBar.js';
 
 // Organisms
 
@@ -1174,6 +1175,26 @@ function mountAll() {
         // Quick toggle to exercise setChipEnabled
         setTimeout(() => corners.el.setChipEnabled(1, false), 0);
         console.log('[gallery] MpiViewerCorners mounted; chip #1 starts disabled. Call corners.el.setChipEnabled(1, true) in console to re-enable.');
+    });
+
+    // ── MpiTrimBar (Compound) ───────────────────────────────────────────────────
+    mount('preview-trim-bar-default', () => {
+        const slotEl = slot('preview-trim-bar-default');
+
+        const trim = MpiTrimBar.mount(slotEl, {
+            duration: 14.74,
+            fps: 30,
+            value: 4.5,
+            inPoint: 1.0,
+            outPoint: 12.5
+        });
+
+        trim.on('seek',         ({ time }) => console.log('[gallery] trim seek',         time.toFixed(3)));
+        trim.on('in-change',    ({ time }) => console.log('[gallery] trim in-change',    time.toFixed(3)));
+        trim.on('out-change',   ({ time }) => console.log('[gallery] trim out-change',   time.toFixed(3)));
+        trim.on('range-change', ({ in: i, out: o }) => console.log('[gallery] trim range-change', i.toFixed(3), '→', o.toFixed(3)));
+
+        console.log('[gallery] MpiTrimBar mounted: duration 14.74s @ 30fps, in=1.0, out=12.5, playhead=4.5. Drag handles + playhead, click track to jump.');
     });
 
     // ── MpiStartingComfy (Compound) ─────────────────────────────────────────────

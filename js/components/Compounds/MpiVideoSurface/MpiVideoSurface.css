@@ -1,0 +1,22 @@
+/* ── MpiVideoSurface — bare video display surface ──────────────────────── */
+/* No controls, no overlay; lives inside MpiVideoViewer's stage. */
+
+.mpi-video-surface {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--surface-0);
+    overflow: hidden;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mpi-video-surface__video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    cursor: pointer;
+}

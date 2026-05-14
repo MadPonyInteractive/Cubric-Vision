@@ -158,6 +158,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`sourceItemId`** — UUID of the source item, present on crop/upscale/interpolate outputs. Traces lineage back to original.
 - **`sourceGroupId`** — Group ID of the source item, present on crop outputs.
 - **`videoMeta`** — Object containing raw ffprobe output fields (optional; used for future enrichment).
+- **`trim`** — Optional `{ in: number, out: number }` in seconds. Persisted by `MpiVideoControlBar` via `MpiGroupHistoryBlock` on `range-change` (debounced 250ms), written through `POST /project-media/:projectId/update-meta` and the per-sidecar `updateItemMeta()` queue in `routes/projects.js`. Absent / `null` ⇒ "no trim set" — control bar lazy-defaults to `{ in: 0, out: duration }` on each `loadedmetadata`. Range-aware ops (snapshot clamp, Continue from `out`, ffmpeg `-ss`/`-to` slice) read this in Phase E.
 
 > **Note:** `fps`, `duration`, `frameCount`, `hasAudio` are probed once at import/upload/generated-save time and written into the sidecar. They are available in memory as `item.fps`, `item.duration`, etc. after hydration.
 

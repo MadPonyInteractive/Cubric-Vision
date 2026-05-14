@@ -966,6 +966,97 @@
  */
 
 /**
+ * @typedef {Object} MpiTrimBarProps (Compound — js/components/Compounds/MpiTrimBar)
+ * @property {number} [duration=0]   - Total clip length in seconds
+ * @property {number} [fps=30]       - Snap granularity for handles + playhead
+ * @property {number} [value=0]      - Initial playhead in seconds (clamped to [in,out])
+ * @property {number} [inPoint=0]    - Initial in-point in seconds
+ * @property {number} [outPoint]     - Initial out-point in seconds (defaults to duration)
+ *
+ * Self-contained two-handle trim seek bar. Track is 44px tall; trim handles
+ * and the playhead overflow ±8px top/bottom and must NOT be clipped by the
+ * parent. Stage tokens only (--accent-heat / --surface-bar / --line / --ink-1).
+ *
+ * Pointer drag coalesces on RAF; final value re-emits on pointerup so
+ * downstream consumers see a stable end state.
+ *
+ * Instance methods (on instance.el):
+ *   setDuration(d)                — replace duration; clamps in/out/value
+ *   setFps(fps)                   — change snap granularity
+ *   setValue(t) / setValueQuiet(t)
+ *   setRange(in, out) / setRangeQuiet(in, out)
+ *   getValue()                    — current playhead seconds
+ *   getRange()                    — { in, out }
+ *   destroy()                     — cancel RAF + drop listeners
+ *
+ * Emits (component-local):
+ *   'seek'         { time }       — playhead committed (drag end or click)
+ *   'in-change'    { time }       — in handle committed
+ *   'out-change'   { time }       — out handle committed
+ *   'range-change' { in, out }    — fired alongside in/out commits
+ */
+
+/**
+ * @typedef {Object} MpiVideoSurfaceProps (Compound — js/components/Compounds/MpiVideoSurface)
+ * @property {string}  [src]           - Video source URL
+ * @property {string}  [poster]        - Poster image URL
+ * @property {boolean} [autoplay=false]
+ * @property {boolean} [loop=true]
+ * @property {boolean} [muted=false]
+ * @property {number}  [volume=1.0]
+ * @property {number}  [fps=24]        - Frame rate for frameStep / seek clamp
+ *
+ * Bare <video> surface with click-to-toggle play. Owns no transport UI;
+ * MpiVideoControlBar drives it via attachSurface(). Preserves the loop-
+ * disable / seeked-restore dance and frame-step wrap-on-loop semantics
+ * from the legacy MpiVideoPlayer.
+ *
+ * Instance methods (on instance.el):
+ *   _setSrc(url)            — replace src + reload
+ *   _play() / _pause()
+ *   seek(seconds)           — clamps to [0, duration - 1/fps]; preserves loop dance
+ *   frameStep(±1)           — pauses first; wraps when video.loop
+ *   getVideoElement()       — raw <video> ref
+ *   _setFps(fps) / _setFrameCount(n)
+ *   getFps() / getFrameCount()
+ *   _setVolume(v) / _setMuted(m)
+ *   destroy()               — stop, clear src, drop listeners
+ *
+ * Emits (component-local):
+ *   'play' / 'pause' / 'ended'   { time }
+ *   'timeupdate'                 { time, duration }
+ *   'loadedmetadata'             { duration }
+ *   'volumechange'               { volume, muted }
+ */
+
+/**
+ * @typedef {Object} MpiVideoControlBarProps (Compound — js/components/Compounds/MpiVideoControlBar)
+ * @property {number} [fps=24]
+ *
+ * Transport + trim row for video. Mounts MpiTrimBar internally + the
+ * play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display.
+ * Drives a sibling MpiVideoSurface via attachSurface(instance). Owns the
+ * window-global video hotkeys (rebound/unbound on attach/detach).
+ *
+ * Range UX is wired but visual-only at this phase — defaults to the full
+ * clip on each loadedmetadata. Persistence + range-aware ops land in
+ * Phase D/E of the trim plan.
+ *
+ * Instance methods (on instance.el):
+ *   attachSurface(instance)         — wire to a MpiVideoSurface instance
+ *   detachSurface()                 — drop surface listeners + hotkeys
+ *   setRange(in, out) / setRangeQuiet(in, out)
+ *   getRange() / getValue()
+ *   setVolume(v) / setMuted(m)
+ *   setFrameCount(n)
+ *   setFps(fps)
+ *   destroy()
+ *
+ * Emits (component-local):
+ *   'loop-change' { loop }
+ */
+
+/**
  * @typedef {Object} MpiErrorDialogProps (Compound — js/components/Compounds/MpiErrorDialog)
  * @property {string}  [title='An error occurred'] - Dialog title
  * @property {string}  [message='']               - Error detail shown to the user

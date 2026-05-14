@@ -1,0 +1,98 @@
+/* ── MpiTrimBar — video trim seek bar ──────────────────────────────────── */
+/* Stage tokens only. Track 44px tall; handles + playhead overflow ±8px to
+   match the editor-video mockup (.timeline). No overflow:hidden on the
+   track. */
+
+.mpi-trim-bar {
+    width: 100%;
+    padding: 8px 0;            /* breathing room for handle/playhead overflow */
+    box-sizing: border-box;
+}
+
+.mpi-trim-bar__track {
+    position: relative;
+    width: 100%;
+    height: 44px;
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* Range fill between in/out — flat heat tint with top/bottom marker lines.
+   Per mockup: subtle 12% heat fill, full-strength heat top + bottom borders. */
+.mpi-trim-bar__selection {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
+    border-top: 1px solid var(--accent-heat);
+    border-bottom: 1px solid var(--accent-heat);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* In/Out trim handles — 4px stems with 12x4 caps top + bottom. */
+.mpi-trim-bar__handle {
+    position: absolute;
+    top: -8px;
+    bottom: -8px;
+    width: 4px;
+    margin-left: -2px;          /* center on left% */
+    background: var(--accent-heat);
+    z-index: 3;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.mpi-trim-bar__handle::before,
+.mpi-trim-bar__handle::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 4px;
+    background: var(--accent-heat);
+}
+
+.mpi-trim-bar__handle::before { top: -3px; }
+.mpi-trim-bar__handle::after  { bottom: -3px; }
+
+.mpi-trim-bar__handle:focus-visible {
+    outline: 1px solid var(--ink-1);
+    outline-offset: 2px;
+}
+
+/* Playhead — 2px stem with downward triangle arrow on top. */
+.mpi-trim-bar__playhead {
+    position: absolute;
+    top: -8px;
+    bottom: -8px;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--ink-1);
+    z-index: 2;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.mpi-trim-bar__playhead::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--ink-1);
+}
+
+.mpi-trim-bar__playhead:focus-visible {
+    outline: 1px solid var(--accent-heat);
+    outline-offset: 2px;
+}

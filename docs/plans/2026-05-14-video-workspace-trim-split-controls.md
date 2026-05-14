@@ -100,6 +100,19 @@ Hard-won quirks from `MpiVideoPlayer.js`:
 
 - [x] **Phase A.1** — `MpiViewerCorners` Compound (`js/components/Compounds/MpiViewerCorners/{js,css}`). Registered in `preloadStyles.js`, documented in `types.js`, dev-gallery card mounted in `tpl-components.html` + `js/pages/components.js`. Chip strip is flat text per `editor.html` mockup (`gap:16px`, uppercase, no boxes/borders).
 - [x] **Phase A.2** — `MpiCanvasViewer` `__compare-overlay` markup deleted; chip strip now routed through `MpiViewerCorners`. Public API preserved: `setCompareEnabled`, `setActiveToolLabel`, `compare-clicked` emit. Old `mpi-canvas-viewer__compare*` CSS removed.
+- [x] **Phase B** — `MpiTrimBar` Compound (`js/components/Compounds/MpiTrimBar/{js,css}`). Two-handle trim seek bar + playhead per `editor-video.html` mockup (44px track, ±8px overflow handles w/ 12×4 caps, 2px playhead w/ triangle, 12% heat selection fill). Stage tokens only. Pointer drag coalesces on RAF, commits on `pointerup`. Track click drags playhead from cursor. Frame-snap via `Math.round(t*fps)/fps`. Constraints `0 ≤ in+frame ≤ out ≤ duration`, playhead clamped to `[in, out]`. API: `setDuration`, `setFps`, `setValue(Quiet)`, `setRange(Quiet)`, `getValue`, `getRange`. Emits `seek`, `in-change`, `out-change`, `range-change`. Registered in `preloadStyles.js`, documented in `types.js`, dev-gallery card mounted at `preview-trim-bar-default` (duration 14.74s @ 30fps, in=1.0, out=12.5, value=4.5).
+- [x] **Phase C** — `MpiVideoPlayer` monolith split into `MpiVideoSurface` + `MpiVideoControlBar`, both mounted by `MpiVideoViewer`.
+    - `MpiVideoSurface` (`js/components/Compounds/MpiVideoSurface/{js,css}`) — bare `<video>` + click-toggle (skipped via `[data-no-toggle]` ancestors). API: `_setSrc`, `_play`, `_pause`, `seek` (loop-disable/seeked-restore dance preserved), `frameStep(±1)` (wrap-on-loop preserved), `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`. Emits `play/pause/ended/timeupdate/loadedmetadata/volumechange`. Destroy stops + clears src.
+    - `MpiVideoControlBar` (`js/components/Compounds/MpiVideoControlBar/{js,css}`) — owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded `MpiTrimBar`. API: `attachSurface(instance)`, `detachSurface()`, `setRange(Quiet)`, `getRange`, `getValue`, `setVolume`, `setMuted`, `setFrameCount`, `setFps`, `destroy`. Emits `loop-change`. Hotkeys (`video.playPause/frame.back/frame.forward/volume.up/volume.down/loop`) bound on `attachSurface`, unbound on `detachSurface`/`destroy`. Range default = full clip on each `loadedmetadata` (persistence in Phase D).
+    - `MpiVideoViewer` reshaped — `[data-mount="surface"]` mounts `MpiVideoSurface`; `__timeline` slot now hosts `MpiVideoControlBar`. Controls flag still respected. Forwards same 6 external events: `play/pause/ended/timeupdate` from surface, `change` synthesised from surface `volumechange`, `loop-change` from control bar. Crop tool, snapshot, `getSourceElement`, `loadVideo` API stable; `loadVideo` now propagates `meta.fps`/`frameCount` to BOTH surface + control bar. Destroy chains control bar → surface.
+    - CSS registered in `preloadStyles.js`; both compounds documented in `types.js`. Dev-gallery `MpiVideoPlayer` card untouched (Phase G).
+- [x] **Phase D** — Trim persistence + I/O/X hotkeys.
+    - `routes/projects.js` — added `updateItemMeta(metaPath, updater)` per-sidecar queue (mirrors `updateProjectJson()` shape: serialize on path key, read → updater → `writeJsonAtomic` temp-rename). `POST /project-media/:projectId/update-meta` now routes through it (request shape unchanged).
+    - `MpiVideoControlBar` emits `range-change`; new `el.setPendingTrim(in, out)` stashes a one-shot range applied on the next `loadedmetadata` (survives the default full-clip reset). `I` / `O` / `X` hotkeys bound on `attachSurface`, unbound on `detachSurface` — set in/out to current playhead (clamped) or reset range to `[0, duration]`.
+    - `MpiVideoViewer` forwards `loadedmetadata` + `range-change`; `loadVideo(url, meta)` propagates `meta.trim` to `setPendingTrim`. New convenience: `el.setRangeQuiet`, `el.getRange`.
+    - `MpiGroupHistoryBlock` — listens to `viewer.on('range-change')` (debounced 250ms) and `POST /project-media/:projectId/update-meta` with `{ trim: { in, out } }` (or `{ trim: null }` when range == full clip). Mirrors in-memory `item.trim` for sidecar parity. All 6 `viewer.el.loadVideo(...)` call sites pass `trim: item.trim`.
+    - `js/managers/hotkeyRegistry.js` — three new ids registered with category `video`: `video.trim.in` (`I`), `video.trim.out` (`O`), `video.trim.clear` (`X`).
+    - Sidecar field `trim` documented in `docs/project-integrity.md`.
 
 ## Remaining Work
 
@@ -139,7 +152,7 @@ later in Phase F.
 Goal: build the trim seek bar as a self-contained Compound, validated on
 the dev gallery before any wiring into the video workspace.
 
-- [ ] Create `js/components/Compounds/MpiTrimBar/MpiTrimBar.{js,css}`.
+- [x] Create `js/components/Compounds/MpiTrimBar/MpiTrimBar.{js,css}`.
       Props: `duration`, `fps`, `value` (playhead seconds), `inPoint`,
       `outPoint`. Emits component-local `seek { time }`,
       `in-change { time }`, `out-change { time }`, `range-change { in, out
@@ -170,7 +183,7 @@ Goal: replace the monolith with two siblings, both mounted by
 `MpiVideoViewer`. Range UX is visual-only at this stage (no persistence,
 no op rewiring).
 
-- [ ] Create `js/components/Compounds/MpiVideoSurface/MpiVideoSurface.{js,
+- [x] Create `js/components/Compounds/MpiVideoSurface/MpiVideoSurface.{js,
       css}`. Owns the bare `<video>` element + the click-to-toggle-play
       gesture. Emits component-local `play/pause/ended/timeupdate/
       loadedmetadata/volumechange`. API: `el._setSrc(url)`,
@@ -183,7 +196,7 @@ no op rewiring).
       `MpiVideoViewer` player mount with `MpiVideoSurface` temporarily; the
       video loads, plays/pauses on click, frame-stepping via the public API
       works in console, no console errors.
-- [ ] Create `js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.
+- [x] Create `js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.
       {js,css}`. Owns play/frame±/loop/audio/fullscreen/frames-toggle
       buttons, time display, and embeds `MpiTrimBar`. API:
       `el.attachSurface(surfaceEl)` (direct ref wiring; parent-child events
@@ -205,7 +218,7 @@ no op rewiring).
       **Verify:** Mount in a temporary harness on the dev gallery; full
       control parity with the old player (play/pause, frame-step,
       loop-wrap, frame-counter, volume slider+mute, fullscreen, hotkeys).
-- [ ] Reshape `MpiVideoViewer`. Mount `MpiVideoSurface` in the stage area
+- [x] Reshape `MpiVideoViewer`. Mount `MpiVideoSurface` in the stage area
       (replaces the old player mount). Mount `MpiVideoControlBar` into the
       pre-existing `.mpi-video-viewer__timeline` slot. Call
       `controlBar.attachSurface(surfaceEl)` after both mount. Forward the
@@ -227,7 +240,7 @@ no op rewiring).
 Goal: range survives reload, with safe concurrent writes, and is settable
 without touching the mouse.
 
-- [ ] Add a per-sidecar atomic write helper. Either (a) extend the
+- [x] Add a per-sidecar atomic write helper. Either (a) extend the
       `/project-media/:projectId/update-meta` route in
       `routes/projects.js:765-784` with a per-path queue + `writeJsonAtomic`
       mirroring `updateProjectJson()`, or (b) add a new `updateItemMeta
@@ -236,7 +249,7 @@ without touching the mouse.
       **Verify:** Hit the route in a tight loop from a test page or curl
       with two parallel `update-meta` calls on the same sidecar; final
       JSON contains both updates' fields and parses cleanly.
-- [ ] Wire trim persistence in `MpiGroupHistoryBlock` (or the appropriate
+- [x] Wire trim persistence in `MpiGroupHistoryBlock` (or the appropriate
       video-workspace owner). On `MpiTrimBar` `range-change`, debounce
       ~250ms, then `POST /project-media/:projectId/update-meta` with
       `{ trim: { in, out } }` on the active item. On item load, read
@@ -247,7 +260,7 @@ without touching the mouse.
       the in/out handles, navigate away to another item and back, reload
       the app — the range restores. Two videos hold independent ranges.
       A clip with no `trim` field still loads with full-range defaults.
-- [ ] Register three new hotkey ids in `js/managers/hotkeyRegistry.js`:
+- [x] Register three new hotkey ids in `js/managers/hotkeyRegistry.js`:
       `video.trim.in` (`I`), `video.trim.out` (`O`), `video.trim.clear`
       (`X`). Bind them inside `MpiVideoControlBar`'s setup via
       `Hotkeys.bind(...)`; the handlers set the in/out to the current

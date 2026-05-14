@@ -310,25 +310,48 @@ LISTENS: (none)
 
 ## Organisms
 
-### MpiVideoPlayer
-EMITS:   `play`        `{ time: number }`
-         `pause`       `{ time: number }`
-         `ended`       `{ time: number }`
-         `timeupdate`  `{ time: number, duration: number }`
-         `change`      `{ volume: number, muted: boolean }`
-         `loop-change` `{ loop: boolean }`
-GLOBAL EMITS (via Events.emit):
-         `video-viewer:context-menu` `{ x, y }` — right-click on the video element (native menu suppressed). Consumed by MpiGroupHistoryBlock to open MpiContextMenu with "Set as start frame" / "Set as end frame" items (disabled when no installed model exposes any `i2v*` op).
-LISTENS: (none)
-NOTE:    Compound (lives at `js/components/Compounds/MpiVideoPlayer/`). Imports only Primitives (`MpiButton`, `MpiProgressBar`). Volume control inlined. Loop + fullscreen + frame-step buttons included.
+### MpiVideoSurface (Compound — js/components/Compounds/MpiVideoSurface/)
+EMITS:   `play`           `{ time: number }`
+         `pause`          `{ time: number }`
+         `ended`          `{ time: number }`
+         `timeupdate`     `{ time: number, duration: number }`
+         `loadedmetadata` `{ duration: number }`
+         `volumechange`   `{ volume: number, muted: boolean }`
+LISTENS: (none — driven externally via instance API)
+NOTE:    Bare `<video>` surface + click-to-toggle (skipped on `[data-no-toggle]` ancestors). Owns no transport UI; MpiVideoControlBar drives via `attachSurface(instance)`. Preserves loop-disable/seeked-restore + frame-step wrap-on-loop semantics.
+
+### MpiVideoControlBar (Compound — js/components/Compounds/MpiVideoControlBar/)
+EMITS:   `loop-change`  `{ loop: boolean }`
+         `range-change` `{ in: number, out: number }` — forwarded from embedded MpiTrimBar
+LISTENS: surface events `play/pause/timeupdate/loadedmetadata/volumechange` (via `attachSurface(instance)`)
+HOTKEYS: binds `video.playPause/frame.back/frame.forward/volume.up/volume.down/loop` + `video.trim.in/out/clear` on `attachSurface`; unbinds on `detachSurface`/`destroy`.
+NOTE:    Owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded MpiTrimBar. On every surface `loadedmetadata` resets range to `[0, duration]` UNLESS `setPendingTrim(in, out)` was called first (one-shot).
+
+### MpiTrimBar (Compound — js/components/Compounds/MpiTrimBar/)
+EMITS:   `seek`         `{ time: number }` — playhead committed (drag end / track click)
+         `in-change`    `{ time: number }` — in handle committed
+         `out-change`   `{ time: number }` — out handle committed
+         `range-change` `{ in: number, out: number }` — fired alongside in/out commits
+LISTENS: (none — pure pointer drag state)
+NOTE:    Two-handle trim seek bar. Pointer drag coalesces on RAF; commits on `pointerup`. Frame-snap via `Math.round(t*fps)/fps`. Constraints: `0 ≤ in+frame ≤ out ≤ duration`; playhead clamped to `[in, out]`.
 
 ### MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/)
-EMITS:   `play`, `pause`, `ended`, `timeupdate`, `change`, `loop-change` — forwarded from MpiVideoPlayer
-         `crop-change`  `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
+EMITS:   `play`, `pause`, `ended`, `timeupdate` — forwarded from MpiVideoSurface
+         `change`        `{ volume, muted }` — forwarded from surface `volumechange`
+         `loadedmetadata` `{ duration }` — forwarded from surface
+         `loop-change`   `{ loop }` — forwarded from MpiVideoControlBar
+         `range-change`  `{ in, out }` — forwarded from MpiVideoControlBar
+         `crop-change`   `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
+GLOBAL EMITS (via Events.emit):
+         `video-viewer:context-menu` `{ x, y }` — right-click on viewer (native menu suppressed). Consumed by MpiGroupHistoryBlock for "Set as start/end frame" context menu.
 LISTENS: (none — tool bars are owned by MpiGroupHistoryBlock, not viewer)
-API:     `getSourceElement()` — returns the underlying `HTMLVideoElement` so external tools (e.g. resize) can sample the current frame for thumbnail extraction.
-NOTE:    Viewer owns display + crop overlay state only. Bar action events (`crop-save-snapshot`,
-         `crop-save-video`, `upscale-run`, etc.) now emitted by Block-owned MpiToolActionBars.
+API:     `loadVideo(url, meta)` — `meta.trim = { in, out }` propagates to control bar's `setPendingTrim` (one-shot, applied on next `loadedmetadata`).
+         `getSourceElement()` — returns underlying `HTMLVideoElement` so external tools (resize/snapshot) can sample current frame.
+         `setRangeQuiet(in, out)`, `getRange()` — proxy to control bar.
+NOTE:    Viewer owns display + crop overlay state only. Bar action events (`crop-save-snapshot`, `crop-save-video`, `upscale-run`, etc.) emitted by Block-owned MpiToolActionBars.
+
+### MpiVideoPlayer (Compound — DEPRECATED, dev-gallery only)
+NOTE:    Legacy monolith. No longer used by MpiVideoViewer. Still mounted on the components dev gallery; will be deleted in Phase G of the video trim plan.
 
 ### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
 EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
@@ -526,6 +549,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state. **Snapshot `_wasReplace = _group.history?.some(entry => entry.id === item.id)` BEFORE reassigning `_group = group`** — `group` is the post-append snapshot so `.some(...)` would always be true and route every completion to `replaceEntry` (which silently bails for new ids not yet in the list). Mascot animation is gated on `item.operation` — `resize`/`resizeVideo` (tool transforms) skip the mascot. Resize tool stays mounted across Apply: after `loadVideo`/`loadEntry` the block calls `_options?.el?.setCurrentItem?.(item)` so the compound re-extracts the source thumbnail and refreshes the inline preview on the new entry. There is no canvas-mode re-enter step (the Phase 3 `enterResizeMode`/`exitResizeMode` viewer API is gone).
          `generation:error` `{ id }` — clears generating state
          `generation:cancelled` `{ id }` — clears generating state
+         `viewer.range-change` (component-local on MpiVideoViewer, video groups only) `{ in, out }` — debounced 250ms; POSTs `/project-media/:projectId/update-meta` with `{ itemId, updates: { trim } }` (or `{ trim: null }` at full clip). Mirrors `item.trim` in memory for sidecar parity.
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result

@@ -318,6 +318,33 @@ export const HOTKEY_REGISTRY = [
         description:      'Toggle loop',
         allowWhileTyping: false,
     },
+    {
+        id:               'video.trim.in',
+        key:              'i',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Set trim in to playhead',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.trim.out',
+        key:              'o',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Set trim out to playhead',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.trim.clear',
+        key:              'x',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Reset trim range',
+        allowWhileTyping: false,
+    },
 
     // ── Compare Overlay ───────────────────────────────────────────────────────
     {

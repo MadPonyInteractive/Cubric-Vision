@@ -101,12 +101,12 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 
 ## MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js)
 
-Wraps `MpiVideoPlayer` + crop overlay canvas. Mounted by `MpiGroupHistoryBlock` for video groups.
-Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
+Wraps a `MpiVideoSurface` + `MpiVideoControlBar` (when `controls !== false`) + crop overlay canvas. Mounted by `MpiGroupHistoryBlock` for video groups. Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer.
 
-- `MpiVideoPlayer`   props: `{ fps, controls }`   slot: `[data-mount="player"]` inside viewer
+- `MpiVideoSurface`     props: `{ fps }`   slot: `[data-mount="surface"]` inside viewer stage
+- `MpiVideoControlBar`  props: `{ fps }`   slot: `[data-mount="control-bar"]` inside `.mpi-video-viewer__timeline`. Wired to surface via `controlBar.el.attachSurface(surfaceInstance)` after both mount.
 
-**Instance API (on `el`):** `loadVideo(url, meta)`, `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `getSourceElement()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
+**Instance API (on `el`):** `loadVideo(url, meta)` — `meta.trim = { in, out }` propagates to control bar's `setPendingTrim` (one-shot, applied on next `loadedmetadata`). Plus `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot()`, `getSourceElement()`, `setRangeQuiet(in, out)`, `getRange()`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`
 
 ---
 
@@ -201,11 +201,33 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ---
 
-## MpiVideoPlayer.js (Compound — js/components/Compounds/MpiVideoPlayer — internal mounts, when `controls !== false`)
+## MpiVideoSurface.js (Compound — js/components/Compounds/MpiVideoSurface — bare surface)
 
-- `MpiButton` (play/pause)   props: `{ icon:'play', iconActive:'pause', active, size:'md', info }`   slot: `.mpi-video-player__play-pause-wrapper`
-- `MpiProgressBar` (seek slider)   props: `{ min:0, max:1000, step:1, value:0, info, variant:'primary' }`   slot: `.mpi-video-player__slider-wrapper`
-- `MpiVolumeControl`   props: `{ volume, muted }`   slot: `.mpi-video-player__volume-wrapper`
+Owns the bare `<video>` element + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics.
+
+**Instance API (on `el`):** `_setSrc`, `_play`, `_pause`, `seek(seconds)`, `frameStep(±1)`, `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`, `destroy`. Emits component-local `play/pause/ended/timeupdate/loadedmetadata/volumechange`.
+
+---
+
+## MpiVideoControlBar.js (Compound — js/components/Compounds/MpiVideoControlBar — transport + trim)
+
+Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + embedded `MpiTrimBar`. Drives a sibling `MpiVideoSurface` via `attachSurface(instance)`. Owns the 6 video hotkeys + 3 trim hotkeys (bound on `attachSurface`, unbound on `detachSurface`/`destroy`).
+
+- `MpiButton` (play, frame-back, frame-forward, frames-toggle, loop, mute, fullscreen) — slots `[data-mount="play|frame-back|frame-forward|frames-toggle|loop|mute|fullscreen"]`
+- `MpiProgressBar` (volume) — slot `[data-mount="volume"]`
+- `MpiTrimBar` — slot `[data-mount="trim"]` (props: `{ duration: 0, fps, value: 0, inPoint: 0, outPoint: 0 }`; updated via `setDuration`/`setRangeQuiet` on surface `loadedmetadata`)
+
+**Instance API (on `el`):** `attachSurface(instance)`, `detachSurface()`, `setRange(Quiet)`, `getRange`, `getValue`, `setVolume`, `setMuted`, `setFrameCount`, `setFps`, `setPendingTrim(in, out)` (one-shot for next `loadedmetadata`), `destroy`. Emits `loop-change`, `range-change`.
+
+---
+
+## MpiTrimBar.js (Compound — js/components/Compounds/MpiTrimBar — two-handle trim seek bar)
+
+Self-contained 44px track + two trim handles (in/out, ±8px overflow w/ 12×4 caps) + 2px playhead w/ triangle arrow + 12% heat selection fill. Stage tokens only. No internal sub-component mounts. Pointer drag coalesces on RAF; commits on `pointerup`. Track click drags playhead from cursor.
+
+**Instance API (on `el`):** `setDuration`, `setFps`, `setValue(Quiet)`, `setRange(Quiet)`, `getValue`, `getRange`, `destroy`. Emits component-local `seek`, `in-change`, `out-change`, `range-change`.
+
+> Legacy `MpiVideoPlayer` (Compound) is still on disk and still mounted on the dev gallery (`js/pages/components.js`). It is no longer used by `MpiVideoViewer` and will be deleted in Phase G of the video trim plan along with the dev-gallery migration to `MpiVideoSurface` + `MpiVideoControlBar`.
 
 ---
 
