@@ -44,16 +44,6 @@
     - Explore adding to settings additive folders for models.
     ```
 
-### Trim tool
-
-  - tags: [feature]
-  - priority: medium
-  - defaultExpanded: true
-    ```md
-    - Add trim tool to video workspace.
-    Use redesign mock-up as a guide for a visual identity.
-    ```
-
 ### Port redesign to Cubric Studio website
 
   - tags: [feature, design]
@@ -100,5 +90,23 @@
     ```
 
 ## IMPLEMENTING
+
+### Video workspace trim + split controls
+
+  - tags: [feature, video]
+  - priority: high
+  - defaultExpanded: true
+    ```md
+    Plan file: docs/plans/2026-05-14-video-workspace-trim-split-controls.md
+
+    Phase A — Top-right viewer chip primitive — DONE
+      - MpiViewerCorners Compound created (js/css), registered in preloadStyles,
+        documented in types.js, dev-gallery card mounted.
+      - MpiCanvasViewer compare overlay migrated onto MpiViewerCorners; public
+        API preserved (setCompareEnabled, setActiveToolLabel, compare-clicked
+        emit). Chip strip now flat text per editor.html mockup (no boxes).
+
+    Next: Phase B — MpiTrimBar Compound (dev-gallery validated before wiring).
+    ```
 
 ## COMPLETED

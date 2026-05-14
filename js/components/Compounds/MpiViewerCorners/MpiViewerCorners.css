@@ -1,0 +1,67 @@
+/* ── MpiViewerCorners — top-right chip strip over viewer media ─────────── */
+
+.mpi-viewer-corners {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 6;
+}
+
+.mpi-viewer-corners__top-right {
+    position: absolute;
+    top: var(--s-4);
+    right: var(--s-4);
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: oklch(0.30 0.02 350 / 0.85);
+    border: 1px solid var(--line);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+    pointer-events: auto;
+}
+
+/* ── Dot separator between chips ──────────────────────────────────────── */
+.mpi-viewer-corners__sep {
+    margin: 0 8px;
+    color: var(--ink-3);
+}
+
+/* ── Individual chip — flat text inside shared box ────────────────────── */
+
+.mpi-viewer-corners__chip {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    line-height: 1;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: color var(--t-fast) var(--ease),
+                opacity var(--t-fast) var(--ease);
+}
+
+.mpi-viewer-corners__chip--accent {
+    color: var(--accent-heat);
+}
+
+.mpi-viewer-corners__chip--button {
+    cursor: pointer;
+}
+
+.mpi-viewer-corners__chip--button:hover:not(.mpi-viewer-corners__chip--disabled) {
+    color: var(--accent-heat);
+}
+
+.mpi-viewer-corners__chip--disabled {
+    opacity: 0.4;
+    cursor: default;
+    color: var(--ink-3);
+}

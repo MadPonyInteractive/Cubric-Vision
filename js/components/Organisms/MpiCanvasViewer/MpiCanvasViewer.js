@@ -30,6 +30,7 @@ import { MpiCanvas } from '../../Primitives/MpiCanvas/MpiCanvas.js';
 import { MpiMaskedImagePreview } from '../../Primitives/MpiMaskedImagePreview/MpiMaskedImagePreview.js';
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiAutoMaskThumbs } from '../../Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
+import { MpiViewerCorners } from '../../Compounds/MpiViewerCorners/MpiViewerCorners.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { hasMaskContent } from '../../../utils/maskUtils.js';
 import { runAutoMask } from '../../../services/commandExecutor.js';
@@ -55,10 +56,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         <div class="mpi-canvas-viewer">
             <div class="mpi-canvas-viewer__wrap" id="canvas-wrap"></div>
             <div class="mpi-canvas-viewer__spinner" id="spinner-wrap"></div>
-            <div class="mpi-canvas-viewer__compare-overlay" id="compare-overlay">
-                <span class="mpi-canvas-viewer__compare-tool" id="compare-tool-label"></span>
-                <button class="mpi-canvas-viewer__compare-btn" id="compare-btn" disabled>Compare</button>
-            </div>
+            <div class="mpi-canvas-viewer__corners" id="corners-mount"></div>
         </div>
     `,
 
@@ -699,26 +697,40 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.setMaskHidden = (hidden) => { canvas.maskHidden = hidden; };
 
         // ── Compare overlay API ───────────────────────────────────────────────
+        // Top-right chip strip via MpiViewerCorners — two chips:
+        //   [0] active tool label (static, hidden when empty)
+        //   [1] Compare button
 
-        const _compareOverlay = qs('#compare-overlay', el);
-        const _compareToolLabel = qs('#compare-tool-label', el);
-        const _compareBtn = qs('#compare-btn', el);
+        let _toolLabel = '';
+        let _compareEnabled = false;
+
+        const _cornersInst = MpiViewerCorners.mount(qs('#corners-mount', el));
+
+        function _renderCorners() {
+            const items = [];
+            if (_toolLabel) items.push({ text: _toolLabel });
+            items.push({
+                text: 'Compare',
+                accent: _compareEnabled,
+                disabled: !_compareEnabled,
+                onClick: () => emit('compare-clicked')
+            });
+            _cornersInst.el.setTopRight(items);
+        }
 
         /** Enable/disable the Compare button. Called by MpiGroupHistoryBlock on selection-changed. */
         el.setCompareEnabled = (enabled) => {
-            _compareBtn.disabled = !enabled;
-            _compareBtn.classList.toggle('mpi-canvas-viewer__compare-btn--active', enabled);
+            _compareEnabled = !!enabled;
+            _renderCorners();
         };
 
         /** Update the active tool label shown before "Compare". */
         el.setActiveToolLabel = (label) => {
-            _compareToolLabel.textContent = label ? `${label} ·` : '';
+            _toolLabel = label || '';
+            _renderCorners();
         };
 
-        _compareBtn.addEventListener('click', () => {
-            if (_compareBtn.disabled) return;
-            emit('compare-clicked');
-        });
+        _renderCorners();
 
         // ── Tool-driver surface (consumed by MpiToolOptions* compounds) ─────
         // These methods expose the canvas-viewer's internal tool actions so that
@@ -928,6 +940,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _previewInst = null;
             _cv.inst?.el?.destroy?.();
             autoMaskThumbs?.el?.destroy?.();
+            _cornersInst?.el?.destroy?.();
         };
 
         // ── Init: load initial image ─────────────────────────────────────────

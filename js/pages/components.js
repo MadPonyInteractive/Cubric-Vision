@@ -55,6 +55,7 @@ import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorD
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
 import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
+import { MpiViewerCorners } from '../components/Compounds/MpiViewerCorners/MpiViewerCorners.js';
 
 // Organisms
 
@@ -1147,6 +1148,32 @@ function mountAll() {
                 { filePath: 'https://picsum.photos/seed/after/800/600', name: 'upscaled_001' }
             );
         });
+    });
+
+    // ── MpiViewerCorners (Compound) ─────────────────────────────────────────────
+    mount('preview-viewer-corners-default', () => {
+        const slotEl = slot('preview-viewer-corners-default');
+        // Faux viewer surface so the absolute-positioned chip strip has a parent
+        // big enough to demonstrate placement.
+        slotEl.style.position = 'relative';
+        slotEl.style.minHeight = '160px';
+        slotEl.style.background = 'var(--surface-canvas, var(--surface-0))';
+
+        const cornersHost = document.createElement('div');
+        cornersHost.style.position = 'absolute';
+        cornersHost.style.inset = '0';
+        slotEl.appendChild(cornersHost);
+
+        const corners = MpiViewerCorners.mount(cornersHost, {
+            topRight: [
+                { text: 'CROP · 1:1' },
+                { text: 'Compare', onClick: () => console.log('[gallery] viewer-corners Compare clicked'), accent: true }
+            ]
+        });
+
+        // Quick toggle to exercise setChipEnabled
+        setTimeout(() => corners.el.setChipEnabled(1, false), 0);
+        console.log('[gallery] MpiViewerCorners mounted; chip #1 starts disabled. Call corners.el.setChipEnabled(1, true) in console to re-enable.');
     });
 
     // ── MpiStartingComfy (Compound) ─────────────────────────────────────────────

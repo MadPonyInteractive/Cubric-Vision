@@ -940,6 +940,32 @@
  */
 
 /**
+ * @typedef {Object} MpiViewerCornersChipItem
+ * @property {string}     text         - Chip label (will be rendered as-is; CSS uppercases)
+ * @property {boolean}    [accent]     - Use ink-1 color instead of muted ink-3
+ * @property {boolean}    [disabled]   - Greyed out + click suppressed
+ * @property {() => void} [onClick]    - Provide to render as a clickable button; omit for static label
+ */
+
+/**
+ * @typedef {Object} MpiViewerCornersProps (Compound — js/components/Compounds/MpiViewerCorners)
+ * @property {MpiViewerCornersChipItem[]} [topRight] - Initial chip list (top-right slot)
+ *
+ * Top-right chip strip overlay for viewers (canvas + video). Stage-token only.
+ * Mount as a sibling inside a position:relative viewer wrap; the corners element
+ * fills its parent (`inset: 0`) and is pointer-events:none except on chips.
+ *
+ * Instance methods (on instance.el):
+ *   setTopRight(items)            — replace chip list (full re-render)
+ *   setChipEnabled(index, bool)   — toggle disabled state in place
+ *   setChipText(index, text)      — update chip text in place
+ *   setChipAccent(index, bool)    — toggle accent (ink-1) color
+ *   destroy()                     — drop all click listeners
+ *
+ * Emits: none (use the per-chip onClick callback).
+ */
+
+/**
  * @typedef {Object} MpiErrorDialogProps (Compound — js/components/Compounds/MpiErrorDialog)
  * @property {string}  [title='An error occurred'] - Dialog title
  * @property {string}  [message='']               - Error detail shown to the user

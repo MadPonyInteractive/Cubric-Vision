@@ -1,0 +1,89 @@
+{
+  "schema": "mpi-handoff/v1",
+  "generated_at": "2026-05-14T14:30:00+01:00",
+  "session": {
+    "name": "Video workspace trim/split — Phase A (viewer corner chips)",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Implement the video workspace trim + split controls plan (docs/plans/2026-05-14-video-workspace-trim-split-controls.md). Start with Phase A and proceed phase-by-phase.",
+    "status": "in_progress",
+    "summary": "Phase A complete: MpiViewerCorners Compound built, image workspace's hard-coded compare overlay migrated onto it. Chip strip now matches mockup — single dark box with border, dot-separated uppercase items, accent-heat for hover/active. Next: Phase B (MpiTrimBar Compound, isolated, dev-gallery validated)."
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-14-video-workspace-trim-split-controls.md",
+    "completed": [
+      "Phase A.1 — Create MpiViewerCorners Compound (js/css), register in preloadStyles, document in types.js, mount on dev gallery with two chips",
+      "Phase A.2 — Migrate MpiCanvasViewer __compare-overlay markup onto MpiViewerCorners; preserve public API (setCompareEnabled, setActiveToolLabel, compare-clicked emit); delete obsolete mpi-canvas-viewer__compare* CSS",
+      "Visual polish after user feedback — single shared box per mockup (oklch(0.30 0.02 350 / 0.85), border --line, 6px 12px padding, t-2xs/0.18em), dot separators auto-inserted between chips, accent uses --accent-heat"
+    ],
+    "pending": [
+      "Phase B.1 — Create MpiTrimBar Compound (js/components/Compounds/MpiTrimBar/{js,css}). Props: duration, fps, value (playhead seconds), inPoint, outPoint. Three draggable handles (in/out/playhead) + range fill, overflow ±8px, frame-snap, RAF/mouseup seek coalescing, public setValueQuiet/setRangeQuiet, on()/off() unsubs + el.destroy(). Register CSS, document in types.js, mount on dev gallery with duration: 14.74, fps: 30, inPoint: 1.0, outPoint: 12.5",
+      "Phase C — Split MpiVideoPlayer into MpiVideoSurface + MpiVideoControlBar; reshape MpiVideoViewer",
+      "Phase D — Trim persistence (per-sidecar atomic writes) + hotkeys (I/O/X)",
+      "Phase E — Range-aware ops (loop-within-range, frame-step clamp, snapshot, extend, crop export)",
+      "Parallel Batch — chip content for video workspace + viewer bg + control-bar polish",
+      "Phase G — Wrapper cleanup, delete MpiVideoPlayer"
+    ]
+  },
+  "kanban_entry": "Video workspace trim + split controls",
+  "knowledge_preservation": {
+    "completed": [
+      "Plan file ## Completed section updated with Phase A.1 + A.2 entries",
+      "Plan file Phase A todo checkboxes marked [x]",
+      "Kanban entry moved PLANNING → IMPLEMENTING with Phase A status note + next-step pointer to Phase B"
+    ],
+    "pending": [
+      "Per CLAUDE.md cardinal rule 3: after Phase G ships, ask user about updating .claude/rules/component-mounts.md / component-events.md / component-state.md / components.md (§ Stage design baseline) to reflect the split + corner chip primitive",
+      "After Phase D, consider feedback_item_sidecar_atomic_writes.md memory (only if a new per-sidecar queue helper is introduced)",
+      "After Phase E, consider feedback_trim_range_ops.md memory capturing 'ops always read out when range set' convention"
+    ]
+  },
+  "next_action": {
+    "description": "Begin Phase B.1: build MpiTrimBar Compound in isolation. Create js/components/Compounds/MpiTrimBar/MpiTrimBar.{js,css}. Props duration/fps/value/inPoint/outPoint, three draggable elements (in handle, out handle, playhead) plus track + range fill, overflow handles ±8px top/bottom with end-caps per editor-video.html mockup, frame-snap on fps, RAF or mouseup seek-commit (per feedback_chromium_seek_coalescing memory), constraints 0 ≤ in ≤ playhead ≤ out ≤ duration, setValueQuiet/setRangeQuiet for external sync, on()/off() helpers + el.destroy. Register css in preloadStyles.js, document props in types.js, mount on dev gallery (tpl-components.html + js/pages/components.js) with duration: 14.74, fps: 30, inPoint: 1.0, outPoint: 12.5 to verify before any wiring into video workspace.",
+    "command": "/mpi-kanban:mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Chip strip style: matched editor-video.html .ratio-readout pattern — single span-style box, oklch(0.30 0.02 350 / 0.85) background, 1px --line border, 6px 12px padding, t-2xs font + 0.18em tracking, dots inserted between items. User rejected earlier per-chip pill style and earlier flat-text-no-box style; this is the third iteration that finally matches the mockup.",
+      "Accent color = --accent-heat (red) for hover/active chips, NOT --ink-1. Confirmed against mockup screenshot.",
+      "Tool-label chip text no longer manually appends ' ·' — separator is auto-rendered between chips by the component. Adjusted in MpiCanvasViewer setActiveToolLabel path.",
+      "Hide-when-empty: topRightEl.style.display flips none/'' based on _items.length so an empty chip set leaves no visible empty box.",
+      "Public viewer API preserved unchanged so MpiGroupHistoryBlock and other callers need zero changes from Phase A."
+    ],
+    "constraints": [
+      "Stage tokens only — no hardcoded hex. New border/background uses oklch literal because the mockup itself uses one (no token exists yet for this surface tint).",
+      "BEM naming: .mpi-viewer-corners__chip, --accent, --button, --disabled, __sep.",
+      "ComponentFactory.create() pattern; el.destroy() collects unsubs; MpiCanvasViewer.destroy now also calls _cornersInst.el.destroy().",
+      "Phase B MpiTrimBar must follow feedback_chromium_seek_coalescing.md (coalesce playhead-drag seeks on RAF or commit only on mouseup — do NOT write video.currentTime on every pixel).",
+      "Phase B is isolated — no wiring into video workspace yet, dev-gallery validation only.",
+      "MpiVideoPlayer monolith stays untouched until Phase C (split) and Phase G (deletion). Dev gallery still mounts the old MpiVideoPlayer for now."
+    ],
+    "files_modified": [
+      "js/components/Compounds/MpiViewerCorners/MpiViewerCorners.js (new)",
+      "js/components/Compounds/MpiViewerCorners/MpiViewerCorners.css (new)",
+      "js/shell/preloadStyles.js (added MpiViewerCorners.css line)",
+      "js/components/types.js (added MpiViewerCornersProps + MpiViewerCornersChipItem typedefs above MpiErrorDialogProps)",
+      "js/pages/components.js (added import + mount block for preview-viewer-corners-default)",
+      "templates/tpl-components.html (added card under Compounds grid after MpiCompareOverlay)",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js (template swapped __compare-overlay → __corners host; setCompareEnabled/setActiveToolLabel rewritten to call _cornersInst.el.setTopRight via _renderCorners; destroy chain extended)",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css (removed all .mpi-canvas-viewer__compare* rules; added small __corners host rule)",
+      ".claude/mpi-kanban/kanban.md (moved trim entry PLANNING → IMPLEMENTING, added Phase A status body + Phase B pointer)",
+      "docs/plans/2026-05-14-video-workspace-trim-split-controls.md (Completed section + Phase A checkboxes marked done)"
+    ],
+    "files_to_read_first": [
+      "docs/plans/2026-05-14-video-workspace-trim-split-controls.md (full plan — Phase B section ~lines 136-164)",
+      "docs/redesign/c-stage/editor-video.html (trim bar markup + .timeline / .tl-* classes for mockup parity)",
+      "js/components/Compounds/MpiViewerCorners/MpiViewerCorners.js (Phase A reference for Compound shape, on()/off() unsubs, el.destroy pattern)",
+      "js/components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js (current monolith — for seek+loop dance lines 247-262 and frame-step wrap lines 296-320; Phase B's MpiTrimBar drives the surface that will eventually replace this)",
+      "js/components/Primitives/MpiProgressBar/MpiProgressBar.js (single-handle reference; MpiTrimBar is custom two-handle + playhead from scratch)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/components.md (§ Stage design baseline — BEM, factory, destroy contract)",
+    ".claude/rules/dos_and_donts.md (tokens only, on()/off(), qs helpers, icons)",
+    ".claude/rules/events.md (component-local emit vs global Events bus — MpiTrimBar emits component-local seek/in-change/out-change/range-change)",
+    ".claude/rules/state.md (Phase D only — trim sidecar field via update-meta)"
+  ],
+  "resume_prompt": "You are resuming an in-flight implementation of the video workspace trim + split controls plan (docs/plans/2026-05-14-video-workspace-trim-split-controls.md, kanban entry 'Video workspace trim + split controls' in IMPLEMENTING). Phase A is complete — MpiViewerCorners Compound exists at js/components/Compounds/MpiViewerCorners/ and MpiCanvasViewer's compare overlay now routes through it with chip styling matching docs/redesign/c-stage/editor-video.html (single dark box with --line border, dot separators, --accent-heat for active). Read docs/handoffs/2026-05-14-14-30-video-trim-phase-a.json for full context, then read the plan file's Phase B section and editor-video.html for the trim-bar mockup. Run /mpi-kanban:mpi-continue and begin Phase B.1: build MpiTrimBar Compound in isolation (js/components/Compounds/MpiTrimBar/{js,css}) with props duration/fps/value/inPoint/outPoint, three draggable handles + range fill, frame-snap, RAF/mouseup seek coalescing per feedback_chromium_seek_coalescing memory, component-local seek/in-change/out-change/range-change emits, setValueQuiet/setRangeQuiet, on()/off() unsubs + el.destroy. Register CSS in preloadStyles.js, document props in types.js, mount on dev gallery (tpl-components.html + js/pages/components.js) with duration: 14.74, fps: 30, inPoint: 1.0, outPoint: 12.5. Do not wire into the video workspace yet — that is Phase C. Do not commit; user runs commits manually."
+}
