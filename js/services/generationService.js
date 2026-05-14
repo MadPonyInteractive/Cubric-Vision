@@ -158,6 +158,10 @@ function _emitPromptBoxGenerationEndIfIdle() {
  *                                       replaces it in the existing history group.
  * @property {string}   [sourceItemId]  — required when extend=true; UUID of the source video
  *                                       in the same project that the generation extends.
+ * @property {number}   [trimIn]        — optional; when extend=true, slice the source video
+ *                                       starting at `trimIn` seconds before concatenation.
+ * @property {number}   [trimOut]       — optional; when extend=true, slice the source video
+ *                                       ending at `trimOut` seconds before concatenation.
  */
 
 /**
@@ -416,20 +420,26 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 const jobId = `extend-${_regId}-${Date.now()}`;
                 try {
                     const concatPromise = trackConcatJob({ jobId, label: 'Concatenating videos' });
+                    const extendBody = {
+                        jobId,
+                        folderPath: state.currentProject.folderPath,
+                        sourceItemId: config.sourceItemId,
+                        generatedFilePath: generatedAbs,
+                        modelId: model.id,
+                        prompt:  positive,
+                        negativePrompt: negative,
+                        seed: exec.seed ?? -1,
+                        op: operation,
+                    };
+                    if (Number.isFinite(+config.trimIn) && Number.isFinite(+config.trimOut)
+                        && +config.trimOut > +config.trimIn) {
+                        extendBody.trimIn  = +config.trimIn;
+                        extendBody.trimOut = +config.trimOut;
+                    }
                     const resp = await fetch('/extend-video', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            jobId,
-                            folderPath: state.currentProject.folderPath,
-                            sourceItemId: config.sourceItemId,
-                            generatedFilePath: generatedAbs,
-                            modelId: model.id,
-                            prompt:  positive,
-                            negativePrompt: negative,
-                            seed: exec.seed ?? -1,
-                            op: operation,
-                        }),
+                        body: JSON.stringify(extendBody),
                     });
                     const data = await resp.json();
                     if (!resp.ok || !data?.success || !data?.item) {

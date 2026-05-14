@@ -18,7 +18,7 @@
  *   exitCropMode()                    — disable crop overlay
  *   getCropRect()                     — returns current normalized crop rect { x, y, w, h }
  *   setCropRatio(ratio)               — set aspect ratio lock (null = free)
- *   captureSnapshot()                 — returns { blob, dataUrl } of current frame, respecting crop if active
+ *   captureSnapshot({ time }?)        — returns { blob, dataUrl }; optional `time` seeks first; clamps playhead to active range otherwise
  *   enterUpscaleMode()                — set data-mode="upscale" (visual state for parent)
  *   exitUpscaleMode()                 — reset data-mode="idle"
  *   enterInterpolateMode()            — set data-mode="interpolate"
@@ -203,13 +203,33 @@ export const MpiVideoViewer = ComponentFactory.create({
             if (_cropTool && _isInCropMode) _cropTool.setRatio(ratio);
         };
 
-        el.captureSnapshot = async () => {
+        el.captureSnapshot = async ({ time } = {}) => {
             let rect = { x: 0, y: 0, width: 1, height: 1 };
             if (_isInCropMode) {
                 const cropRect = el.getCropRect();
                 if (cropRect) {
                     rect = { x: cropRect.x, y: cropRect.y, width: cropRect.w, height: cropRect.h };
                 }
+            }
+            // Resolve target time: explicit > clamp current playhead to active
+            // range > leave alone. Avoids regressing snapshots when playhead
+            // drifts outside [in, out] (defensive — shouldn't happen post-Phase E.1).
+            const range = _controlBarInstance?.el.getRange?.();
+            let target = Number.isFinite(+time) ? +time : null;
+            if (target === null && range && Number.isFinite(+range.in) && Number.isFinite(+range.out)) {
+                const cur = _videoElement?.currentTime ?? 0;
+                if (cur < range.in || cur > range.out) target = range.in;
+            }
+            if (target !== null && _videoElement
+                && Math.abs((_videoElement.currentTime || 0) - target) > 1e-3) {
+                await new Promise(resolve => {
+                    const onSeeked = () => {
+                        _videoElement.removeEventListener('seeked', onSeeked);
+                        resolve();
+                    };
+                    _videoElement.addEventListener('seeked', onSeeked);
+                    _surfaceInstance?.el.seek(target);
+                });
             }
             return captureFrameBlob(_videoElement, rect);
         };

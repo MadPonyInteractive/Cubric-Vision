@@ -24,8 +24,10 @@
  *   _play() / _pause()
  *   seek(seconds)           — preserves loop-disable/seeked-restore dance
  *                             (clamps to duration - 1/fps to avoid past-end)
- *   frameStep(direction)    — direction = +1/-1; pauses first; wraps to
- *                             [0, dur-1/fps] when video.loop
+ *   frameStep(direction, range?) — direction = +1/-1; pauses first.
+ *                             range = { rangeIn, rangeOut } clamps wrap edges
+ *                             to that window when video.loop; otherwise wraps
+ *                             to [0, dur-1/fps].
  *   getVideoElement()
  *   _setFps(fps) / _setFrameCount(n)
  *   _setVolume(v) / _setMuted(m)
@@ -148,20 +150,54 @@ export const MpiVideoSurface = ComponentFactory.create({
         };
 
         // ── frameStep with wrap-on-loop (preserved from monolith) ──────────
-        el.frameStep = (direction) => {
+        // Optional range clamps wrap-edges to a trim window. Caller passes
+        // `loop` explicitly because native <video>.loop is forced off when a
+        // sub-clip range is active (control bar emulates loop via timeupdate);
+        // we still want wrap-on-loop behavior driven by user intent.
+        //
+        // Step semantics work in INTEGER frame space to avoid float
+        // off-by-ones at range edges. Range timestamps are half-open
+        // `[lo, hi)` — visible frames are `floor(lo*fps) … floor(hi*fps)-1`.
+        el.frameStep = (direction, range = null) => {
             const dur = video.duration;
             if (!Number.isFinite(dur) || dur <= 0) return;
             const dir = direction < 0 ? -1 : 1;
-            const frameStep = 1 / _fps;
+            const fs  = 1 / _fps;
             video.pause();
-            const cur = video.currentTime;
+
+            const hasRange = range
+                && Number.isFinite(+range.rangeIn)
+                && Number.isFinite(+range.rangeOut)
+                && +range.rangeOut > +range.rangeIn;
+            const loSec = hasRange ? +range.rangeIn  : 0;
+            const hiSec = hasRange ? Math.min(dur, +range.rangeOut) : dur;
+            const wantLoop = (range && typeof range.loop === 'boolean')
+                ? range.loop
+                : video.loop;
+
+            const loFrame   = Math.round(loSec * _fps);
+            // Out timestamp is inclusive: range covers frames
+            // `loFrame … round(hiSec*fps)`. For a full-clip range with
+            // `hi = duration`, this lands on the final decodable frame index.
+            const lastFrame = Math.max(loFrame, Math.round(hiSec * _fps));
+            const curFrame  = Math.round(video.currentTime * _fps);
+
+            let nextFrame;
             if (dir < 0) {
-                if (video.loop && cur - frameStep < 0) video.currentTime = Math.max(0, dur - frameStep);
-                else                                   video.currentTime = Math.max(0, cur - frameStep);
+                if (curFrame <= loFrame) {
+                    nextFrame = wantLoop ? lastFrame : loFrame;
+                } else {
+                    nextFrame = curFrame - 1;
+                }
             } else {
-                if (video.loop && cur + frameStep > dur) video.currentTime = 0;
-                else                                     video.currentTime = Math.min(dur, cur + frameStep);
+                if (curFrame >= lastFrame) {
+                    nextFrame = wantLoop ? loFrame : lastFrame;
+                } else {
+                    nextFrame = curFrame + 1;
+                }
             }
+
+            video.currentTime = nextFrame * fs;
         };
 
         // ── Cleanup ───────────────────────────────────────────────────────

@@ -80,6 +80,19 @@ export const MpiVideoControlBar = ComponentFactory.create({
         let _out = 0;
         let _duration = 0;
 
+        // Loop intent — independent of native video.loop. When range is a
+        // strict subset of the clip we disable native loop and emulate the
+        // wrap inside timeupdate so loop honors [in, out].
+        let _loopIntent = false;
+
+        const _isFullRange = () => _in <= 1e-3 && _out >= _duration - 1e-3;
+
+        const _syncNativeLoop = () => {
+            if (!_surface) return;
+            const v = _surface.getVideoElement();
+            v.loop = _loopIntent && _isFullRange();
+        };
+
         // One-shot pending trim applied after the next loadedmetadata.
         // Set via setPendingTrim() before _setSrc — survives the default
         // full-clip reset that loadedmetadata performs.
@@ -142,6 +155,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
         });
         trim.on('range-change', ({ in: i, out: o }) => {
             _in = i; _out = o;
+            _syncNativeLoop();
             emit('range-change', { in: i, out: o });
         });
 
@@ -152,15 +166,16 @@ export const MpiVideoControlBar = ComponentFactory.create({
             v.paused ? _surface._play() : _surface._pause();
         });
 
-        frameBackBtn.on('click', () => _surface?.frameStep(-1));
-        frameFwdBtn.on('click',  () => _surface?.frameStep(+1));
+        const _activeRange = () => ({ rangeIn: _in, rangeOut: _out, loop: _loopIntent });
+        frameBackBtn.on('click', () => _surface?.frameStep(-1, _activeRange()));
+        frameFwdBtn.on('click',  () => _surface?.frameStep(+1, _activeRange()));
 
         loopBtn.on('click', () => {
             if (!_surface) return;
-            const v = _surface.getVideoElement();
-            v.loop = !v.loop;
-            loopBtn.el.classList.toggle('is-active', v.loop);
-            emit('loop-change', { loop: v.loop });
+            _loopIntent = !_loopIntent;
+            _syncNativeLoop();
+            loopBtn.el.classList.toggle('is-active', _loopIntent);
+            emit('loop-change', { loop: _loopIntent });
         });
 
         framesToggleBtn.on('click', () => {
@@ -220,7 +235,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
             // Reset UI to surface state
             volumeSlider.el.setValueQuiet(Math.round(video.volume * 100));
             muteBtn.el.classList.toggle('is-active', video.muted);
-            loopBtn.el.classList.toggle('is-active', video.loop);
+            _loopIntent = !!video.loop;
+            loopBtn.el.classList.toggle('is-active', _loopIntent);
             _renderTime(video.currentTime || 0, video.duration || 0);
             trim.el.setFps(_fps);
             if (Number.isFinite(video.duration) && video.duration > 0) {
@@ -229,6 +245,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 trim.el.setRangeQuiet(0, _duration);
                 _in = 0; _out = _duration;
             }
+            _syncNativeLoop();
             _syncPlayBtn();
 
             // Subscribe to surface component events
@@ -238,6 +255,17 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 addCb(surfaceInstance, 'timeupdate',    ({ time, duration }) => {
                     _renderTime(time, duration);
                     if (duration > 0) trim.el.setValueQuiet(time);
+                    // Range-loop emulation — only during natural playback.
+                    // Frame-step + manual seeks set currentTime directly and
+                    // must NOT be re-routed back into the range (the surface's
+                    // frameStep already handles range-aware wrapping).
+                    if (_isFullRange() || _out <= _in) return;
+                    const v = _surface?.getVideoElement();
+                    if (!v || v.paused) return;
+                    if (time >= _out - 1e-3) {
+                        if (_loopIntent) _surface.seek(_in);
+                        else             _surface._pause();
+                    }
                 }),
                 addCb(surfaceInstance, 'loadedmetadata', ({ duration }) => {
                     _duration = duration || 0;
@@ -254,6 +282,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                     }
                     _pendingTrim = null;
                     trim.el.setRangeQuiet(_in, _out);
+                    _syncNativeLoop();
                     _renderTime(video.currentTime || 0, _duration);
                 }),
                 addCb(surfaceInstance, 'volumechange', ({ volume, muted }) => {
@@ -264,8 +293,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
             // Bind hotkeys (unbind on detach)
             _hotkeyUnsubs.push(Hotkeys.bind('video.playPause',     () => { video.paused ? _surface._play() : _surface._pause(); }));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.back',    () => _surface.frameStep(-1)));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.forward', () => _surface.frameStep(+1)));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.back',    () => _surface.frameStep(-1, _activeRange())));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.forward', () => _surface.frameStep(+1, _activeRange())));
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.up',     () => _adjustVolume(+10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.down',   () => _adjustVolume(-10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));

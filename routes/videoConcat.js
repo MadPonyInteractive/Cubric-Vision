@@ -225,6 +225,8 @@ router.post('/combine-videos', async (req, res) => {
  *   seed?:               number,
  *   frozenParams?:       object,   // echoed into sidecar (advisory)
  *   op?:                 string,   // operation key from caller (advisory)
+ *   trimIn?:             number,   // optional; slice source video starting at this offset (s)
+ *   trimOut?:            number,   // optional; slice source video ending at this offset (s)
  * }
  * Response: { success, item, method }
  */
@@ -234,6 +236,7 @@ router.post('/extend-video', async (req, res) => {
         jobId: clientJobId,
         modelId, prompt, negativePrompt, seed,
         frozenParams, op,
+        trimIn, trimOut,
     } = req.body || {};
     const jobId = clientJobId || `extend-${Date.now()}`;
     let outputPath = '';
@@ -271,7 +274,20 @@ router.post('/extend-video', async (req, res) => {
 
         _broadcast('concat:progress', { jobId, ratio: 0 });
         const onProgress = _makeProgressEmitter(jobId);
-        const result = await concatVideos([sourcePath, resolvedGenPath], outputPath, { onProgress });
+
+        // Build per-input range list. Source is index 0; only it carries trim.
+        const inputRanges = [null, null];
+        const tIn  = Number(trimIn);
+        const tOut = Number(trimOut);
+        if (Number.isFinite(tIn) && Number.isFinite(tOut) && tOut > tIn) {
+            inputRanges[0] = { in: tIn, out: tOut };
+        }
+
+        const result = await concatVideos(
+            [sourcePath, resolvedGenPath],
+            outputPath,
+            { onProgress, inputRanges },
+        );
 
         const displayName = sourceSidecar.displayName || sourceSidecar.name || sourceItemId.slice(0, 8);
         const extraFields = {

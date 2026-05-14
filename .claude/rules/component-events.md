@@ -318,14 +318,14 @@ EMITS:   `play`           `{ time: number }`
          `loadedmetadata` `{ duration: number }`
          `volumechange`   `{ volume: number, muted: boolean }`
 LISTENS: (none — driven externally via instance API)
-NOTE:    Bare `<video>` surface + click-to-toggle (skipped on `[data-no-toggle]` ancestors). Owns no transport UI; MpiVideoControlBar drives via `attachSurface(instance)`. Preserves loop-disable/seeked-restore + frame-step wrap-on-loop semantics.
+NOTE:    Bare `<video>` surface + click-to-toggle (skipped on `[data-no-toggle]` ancestors). Owns no transport UI; MpiVideoControlBar drives via `attachSurface(instance)`. Preserves loop-disable/seeked-restore + frame-step wrap-on-loop semantics. `frameStep(dir, range?)` operates in integer frame space and accepts `{ rangeIn, rangeOut, loop }`; out timestamp is inclusive (`round(hi*fps)` is the last visible frame).
 
 ### MpiVideoControlBar (Compound — js/components/Compounds/MpiVideoControlBar/)
 EMITS:   `loop-change`  `{ loop: boolean }`
          `range-change` `{ in: number, out: number }` — forwarded from embedded MpiTrimBar
 LISTENS: surface events `play/pause/timeupdate/loadedmetadata/volumechange` (via `attachSurface(instance)`)
 HOTKEYS: binds `video.playPause/frame.back/frame.forward/volume.up/volume.down/loop` + `video.trim.in/out/clear` on `attachSurface`; unbinds on `detachSurface`/`destroy`.
-NOTE:    Owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded MpiTrimBar. On every surface `loadedmetadata` resets range to `[0, duration]` UNLESS `setPendingTrim(in, out)` was called first (one-shot).
+NOTE:    Owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded MpiTrimBar. On every surface `loadedmetadata` resets range to `[0, duration]` UNLESS `setPendingTrim(in, out)` was called first (one-shot). Loop intent is tracked internally; when active range is a strict subset of the clip, native `video.loop` is forced off and the loop is emulated via `timeupdate` (`seek(_in)` at `_out` if loop on; `_pause()` otherwise). Range-loop branch gates on `!video.paused` so frame-step is not re-routed.
 
 ### MpiTrimBar (Compound — js/components/Compounds/MpiTrimBar/)
 EMITS:   `seek`         `{ time: number }` — playhead committed (drag end / track click)

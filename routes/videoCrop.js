@@ -9,7 +9,9 @@
  *   cropRect:    { x, y, width, height } — normalized 0..1 relative to source frame,
  *   outFileName: string  (optional, default "video_crop_<timestamp>.mp4"),
  *   groupId:     string  (optional — for caller context, echoed back),
- *   itemId:      string  (optional — source item id, echoed back)
+ *   itemId:      string  (optional — source item id, echoed back),
+ *   trimIn:      number  (optional — slice source starting at this offset, seconds),
+ *   trimOut:     number  (optional — slice source ending at this offset, seconds)
  * }
  *
  * Spawns ffmpeg with -vf crop and h264+aac encode (audio copied if present).
@@ -45,7 +47,7 @@ function _resolveInput(raw) {
 router.post('/api/video/crop', async (req, res) => {
     let outputPath = '';
     try {
-        const { folderPath, sourcePath, cropRect, outFileName, groupId, itemId } = req.body || {};
+        const { folderPath, sourcePath, cropRect, outFileName, groupId, itemId, trimIn, trimOut } = req.body || {};
         if (!folderPath || !sourcePath || !cropRect) {
             return res.status(400).json({ success: false, error: 'folderPath, sourcePath, cropRect required' });
         }
@@ -92,16 +94,23 @@ router.post('/api/video/crop', async (req, res) => {
         }
         outputPath = path.join(mediaDir, finalName);
 
-        // 4. Run ffmpeg
-        const args = [
-            '-y',
+        // 4. Run ffmpeg. Apply optional temporal trim via input-seek
+        // (`-ss <in> -to <out>` before `-i`) — fast + keyframe-accurate; the
+        // re-encode below produces clean GOPs regardless.
+        const tIn  = Number(trimIn);
+        const tOut = Number(trimOut);
+        const hasTrim = Number.isFinite(tIn) && Number.isFinite(tOut) && tOut > tIn;
+
+        const args = ['-y'];
+        if (hasTrim) args.push('-ss', String(tIn), '-to', String(tOut));
+        args.push(
             '-i', inputPath,
             '-vf', `crop=${cropW}:${cropH}:${cropX}:${cropY}`,
             '-c:v', 'libx264',
             '-preset', 'medium',
             '-crf', '18',
             '-pix_fmt', 'yuv420p',
-        ];
+        );
         if (srcMeta.hasAudio) args.push('-c:a', 'aac', '-b:a', '192k');
         else                  args.push('-an');
         args.push(outputPath);

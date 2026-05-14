@@ -106,6 +106,16 @@ Hard-won quirks from `MpiVideoPlayer.js`:
     - `MpiVideoControlBar` (`js/components/Compounds/MpiVideoControlBar/{js,css}`) — owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded `MpiTrimBar`. API: `attachSurface(instance)`, `detachSurface()`, `setRange(Quiet)`, `getRange`, `getValue`, `setVolume`, `setMuted`, `setFrameCount`, `setFps`, `destroy`. Emits `loop-change`. Hotkeys (`video.playPause/frame.back/frame.forward/volume.up/volume.down/loop`) bound on `attachSurface`, unbound on `detachSurface`/`destroy`. Range default = full clip on each `loadedmetadata` (persistence in Phase D).
     - `MpiVideoViewer` reshaped — `[data-mount="surface"]` mounts `MpiVideoSurface`; `__timeline` slot now hosts `MpiVideoControlBar`. Controls flag still respected. Forwards same 6 external events: `play/pause/ended/timeupdate` from surface, `change` synthesised from surface `volumechange`, `loop-change` from control bar. Crop tool, snapshot, `getSourceElement`, `loadVideo` API stable; `loadVideo` now propagates `meta.fps`/`frameCount` to BOTH surface + control bar. Destroy chains control bar → surface.
     - CSS registered in `preloadStyles.js`; both compounds documented in `types.js`. Dev-gallery `MpiVideoPlayer` card untouched (Phase G).
+- [x] **Phase E** — Range-aware ops + loop-within-range.
+    - `MpiVideoSurface.frameStep(direction, range?)` — accepts `{ rangeIn, rangeOut, loop }`. Frame-step works in integer frame space (`round(t*fps)`) to avoid float drift at range edges. Out timestamp is inclusive: `round(hi*fps)` is the last visible frame. `loop` is passed explicitly because native `video.loop` is forced off when range is a strict subset of the clip.
+    - `MpiVideoControlBar` — tracks `_loopIntent` separately from `video.loop`. `_syncNativeLoop()` disables native loop when range ≠ full clip; the `timeupdate` listener emulates loop (`_surface.seek(_in)` at `_out` if loop on; `_surface._pause()` otherwise). Range-loop branch gates on `!video.paused` so frame-step paused state is not re-routed.
+    - `MpiVideoViewer.captureSnapshot({ time }?)` — optional `time` triggers `seek + await 'seeked' + capture`; otherwise defensively clamps playhead to active range if outside.
+    - `MpiGroupHistoryBlock._setFrameFromVideo(role)` — passes `time: item.trim.out` to `captureSnapshot` when trim is set. `prompt-box-tools:extend` payload carries `trimIn`/`trimOut`; `/api/video/crop` POST body carries `trimIn`/`trimOut`.
+    - `js/services/generationService.js` — `/extend-video` body forwards `trimIn/trimOut` from `GenerationConfig`.
+    - `services/videoConcat.js` — `concatVideos(inputs, out, { onProgress, inputRanges })`: per-input `-ss/-to` input-seek in filter path; demuxer fast-path bypassed when any range present; `totalDurationSec` uses sliced lengths.
+    - `routes/videoConcat.js` `/extend-video` accepts `trimIn/trimOut` and builds `inputRanges=[{in,out}, null]`.
+    - `routes/videoCrop.js` `/api/video/crop` accepts `trimIn/trimOut`; inserts `-ss <in> -to <out>` before `-i`. Output sidecar omits `trim`; duration/frameCount from output probe.
+
 - [x] **Phase D** — Trim persistence + I/O/X hotkeys.
     - `routes/projects.js` — added `updateItemMeta(metaPath, updater)` per-sidecar queue (mirrors `updateProjectJson()` shape: serialize on path key, read → updater → `writeJsonAtomic` temp-rename). `POST /project-media/:projectId/update-meta` now routes through it (request shape unchanged).
     - `MpiVideoControlBar` emits `range-change`; new `el.setPendingTrim(in, out)` stashes a one-shot range applied on the next `loadedmetadata` (survives the default full-clip reset). `I` / `O` / `X` hotkeys bound on `attachSurface`, unbound on `detachSurface` — set in/out to current playhead (clamped) or reset range to `[0, duration]`.
@@ -275,7 +285,7 @@ without touching the mouse.
 
 Goal: every operation that reads a timestamp respects the active range.
 
-- [ ] **Loop-within-range + frame-step clamp.** Inside
+- [x] **Loop-within-range + frame-step clamp.** Inside
       `MpiVideoControlBar`'s `timeupdate` handler, if `time >= out` then
       `surface.seek(in)` (only when `loop=true`; otherwise pause at `out`).
       Update `surface.frameStep(±1)` to accept an optional `{ rangeIn,
@@ -285,7 +295,7 @@ Goal: every operation that reads a timestamp respects the active range.
       enable loop, press play — playhead loops within the range. Disable
       loop, press play — playhead pauses at `out`. Frame-step at `in - 1
       frame` wraps to `out`, frame-step at `out + 1 frame` wraps to `in`.
-- [ ] **Snapshot at clamped playhead.** Update
+- [x] **Snapshot at clamped playhead.** Update
       `MpiVideoViewer.captureSnapshot()` (or its caller in the block) to
       clamp `video.currentTime` to `[in, out]` before
       `captureFrameBlob(...)`. If the playhead is outside the range
@@ -294,7 +304,7 @@ Goal: every operation that reads a timestamp respects the active range.
       already in `captureFrameBlob`). **Verify:** Set a range, scrub
       playhead inside, snapshot — saved frame matches the playhead.
       Mid-range hotkey-snapshot also matches.
-- [ ] **"Continue from last frame" / Extend uses `out`.** Update the
+- [x] **"Continue from last frame" / Extend uses `out`.** Update the
       I2V frame-capture handler `_setFrameFromVideo(role)` in
       `MpiGroupHistoryBlock.js` (~lines 1203–1273) to use
       `outPoint` when a range is set (otherwise current behavior). Update
@@ -303,7 +313,7 @@ Goal: every operation that reads a timestamp respects the active range.
       "Set as end frame" in the context menu — the captured frame is at
       00:06, not the playhead. Run an extend with a range — concat
       starts from the `out` frame.
-- [ ] **Video concat / extend route gets temporal range.** Update
+- [x] **Video concat / extend route gets temporal range.** Update
       `POST /extend-video` in `routes/videoConcat.js:215-280` to accept
       optional `{ trimIn, trimOut }`; pass them to `videoConcat.js` so the
       source clip is sliced via `-ss <in> -to <out>` (or `-ss <in> -t <out
@@ -313,7 +323,7 @@ Goal: every operation that reads a timestamp respects the active range.
       range on a clip, run extend — the resulting video starts from the
       trimmed source slice, not the full source. No range → behavior
       unchanged.
-- [ ] **Crop export honors the range.** Update `POST /api/video/crop` in
+- [x] **Crop export honors the range.** Update `POST /api/video/crop` in
       `routes/videoCrop.js:45-174` to accept `{ trimIn, trimOut }` and
       include `-ss <in> -to <out>` in the ffmpeg command when present. Set
       `duration`, `frameCount`, and clear `trim` on the new sidecar
@@ -369,7 +379,12 @@ moves to the new pieces.
 
 ## Plan Drift
 
-- None yet.
+- 2026-05-14 — Phase E framestep wrap-edge semantic: out-handle is INCLUSIVE
+  (range covers frames `loFrame … round(hiSec*fps)`, not `… -1`). Original
+  plan implicitly assumed half-open `[lo, hi)`; live behavior reads
+  `_out = duration` for full clip and users expect back-from-frame-0 to wrap
+  to the last decodable frame. Step works in integer frame space (`round(t*fps)`)
+  to avoid float-tolerance off-by-ones at edges.
 
 ## Verification
 

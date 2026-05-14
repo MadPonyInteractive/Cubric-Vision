@@ -14,13 +14,17 @@
  *   - Otherwise → concat-filter path (re-encodes video + audio).
  *
  * Exports:
- *   concatVideos(inputPaths, outputPath, { onProgress } = {}) -> Promise<{
+ *   concatVideos(inputPaths, outputPath, { onProgress, inputRanges } = {}) -> Promise<{
  *     method: 'demuxer' | 'filter',
  *     hasAudio: boolean,
  *     totalDurationSec: number,
  *   }>
  *
  *   onProgress(ratio) is called with ratio in [0, 1] as ffmpeg reports it.
+ *   inputRanges (optional) is an array same length as inputPaths; each entry
+ *   is `{ in, out }` (seconds) or null. When any entry is set, the demuxer
+ *   fast-path is bypassed and the filter path slices each input via input-
+ *   seek (`-ss <in> -to <out>` before `-i`).
  *
  *   Throws on failure. Caller cleans up partial output.
  */
@@ -126,10 +130,16 @@ async function _runFilterPath(probes, inputPaths, outputPath, opts) {
     const inputArgs  = [];
     const filterSegs = [];
     const concatTags = [];
+    const ranges     = Array.isArray(opts.inputRanges) ? opts.inputRanges : [];
 
-    // Real inputs first (indices 0..n-1)
-    for (const p of inputPaths) {
-        inputArgs.push('-i', p);
+    // Real inputs first (indices 0..n-1). When a per-input range is provided,
+    // prepend `-ss <in> -to <out>` for input-seek (fast + keyframe-accurate).
+    for (let i = 0; i < inputPaths.length; i++) {
+        const r = ranges[i];
+        if (r && Number.isFinite(+r.in) && Number.isFinite(+r.out) && +r.out > +r.in) {
+            inputArgs.push('-ss', String(+r.in), '-to', String(+r.out));
+        }
+        inputArgs.push('-i', inputPaths[i]);
     }
 
     // Concat filter rejects mismatched dimensions. Snap each input to the
@@ -166,7 +176,11 @@ async function _runFilterPath(probes, inputPaths, outputPath, opts) {
                     `[${i}:a:0]asetpts=PTS-STARTPTS,aresample=${SILENT_SAMPLE_RATE},aformat=sample_fmts=fltp:channel_layouts=${SILENT_CHANNEL_LAYOUT}[${aLabel}]`
                 );
             } else {
-                const dur = Math.max(0.001, Number(p.duration) || 0);
+                const r = ranges[i];
+                const sliced = (r && Number.isFinite(+r.in) && Number.isFinite(+r.out) && +r.out > +r.in)
+                    ? (+r.out - +r.in)
+                    : Number(p.duration) || 0;
+                const dur = Math.max(0.001, sliced);
                 filterSegs.push(
                     `anullsrc=channel_layout=${SILENT_CHANNEL_LAYOUT}:sample_rate=${SILENT_SAMPLE_RATE},atrim=duration=${dur.toFixed(3)},asetpts=PTS-STARTPTS[${aLabel}]`
                 );
@@ -207,7 +221,7 @@ async function _runFilterPath(probes, inputPaths, outputPath, opts) {
     await _runFfmpeg(args, opts);
 }
 
-async function concatVideos(inputPaths, outputPath, { onProgress } = {}) {
+async function concatVideos(inputPaths, outputPath, { onProgress, inputRanges } = {}) {
     if (!Array.isArray(inputPaths) || inputPaths.length < 2) {
         throw new Error('concatVideos requires at least 2 input paths');
     }
@@ -224,13 +238,26 @@ async function concatVideos(inputPaths, outputPath, { onProgress } = {}) {
         probes.push(probe);
     }
 
-    const totalDurationSec = probes.reduce((s, p) => s + (Number(p.duration) || 0), 0);
+    const ranges = Array.isArray(inputRanges) ? inputRanges : [];
+    const hasAnyRange = ranges.some(r =>
+        r && Number.isFinite(+r.in) && Number.isFinite(+r.out) && +r.out > +r.in);
+
+    const _effectiveDuration = (i) => {
+        const r = ranges[i];
+        if (r && Number.isFinite(+r.in) && Number.isFinite(+r.out) && +r.out > +r.in) {
+            return +r.out - +r.in;
+        }
+        return Number(probes[i].duration) || 0;
+    };
+
+    const totalDurationSec = probes.reduce((s, _p, i) => s + _effectiveDuration(i), 0);
     const anyAudio = probes.some(p => p.hasAudio);
-    const opts = { totalDurationSec, onProgress };
+    const opts = { totalDurationSec, onProgress, inputRanges: ranges };
 
     await fs.ensureDir(path.dirname(outputPath));
 
-    if (_canFastPath(probes)) {
+    // Per-input slicing requires re-encoding; demuxer copy cannot honor it.
+    if (!hasAnyRange && _canFastPath(probes)) {
         logger.info('project', `concat fast-path (demuxer copy) for ${inputPaths.length} inputs`);
         try {
             await _runDemuxerPath(inputPaths, outputPath, opts);
@@ -241,7 +268,7 @@ async function concatVideos(inputPaths, outputPath, { onProgress } = {}) {
         }
     }
 
-    logger.info('project', `concat filter-path for ${inputPaths.length} inputs (anyAudio=${anyAudio})`);
+    logger.info('project', `concat filter-path for ${inputPaths.length} inputs (anyAudio=${anyAudio}, sliced=${hasAnyRange})`);
     await _runFilterPath(probes, inputPaths, outputPath, opts);
     return { method: 'filter', hasAudio: anyAudio, totalDurationSec };
 }

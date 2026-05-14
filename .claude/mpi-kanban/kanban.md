@@ -160,10 +160,32 @@
       - hotkeyRegistry: video.trim.in/out/clear registered (I/O/X).
       - Sidecar field `trim` documented in docs/project-integrity.md.
 
-    Next: Phase E — range-aware ops (loop-within-range + frame-step
-    clamp, snapshot at clamped playhead, "Continue from last frame"/
-    Extend uses outPoint, /extend-video + /api/video/crop accept
-    { trimIn, trimOut } and slice with -ss/-to).
+    Phase E — Range-aware ops + loop-within-range — DONE
+      - MpiVideoSurface.frameStep(dir, range?) now accepts
+        { rangeIn, rangeOut, loop }; works in integer frame space
+        (round(t*fps)); out-handle INCLUSIVE so back-from-0 wraps to
+        round(hi*fps).
+      - MpiVideoControlBar tracks _loopIntent independent of
+        video.loop; _syncNativeLoop() forces native loop off when
+        range is strict subset; timeupdate emulates loop
+        (seek(_in)/_pause at _out); gated on !video.paused so
+        frame-step is not re-routed.
+      - MpiVideoViewer.captureSnapshot({ time }?) seeks + awaits
+        'seeked' before captureFrameBlob; defensively clamps when
+        playhead drifts outside range.
+      - MpiGroupHistoryBlock — _setFrameFromVideo uses
+        item.trim.out; prompt-box-tools:extend payload + crop POST
+        body carry trimIn/trimOut.
+      - generationService forwards trimIn/trimOut to /extend-video.
+      - services/videoConcat.js — concatVideos({ inputRanges })
+        with per-input -ss/-to in filter path; demuxer fast-path
+        bypassed when any range present.
+      - routes/videoConcat.js + routes/videoCrop.js accept
+        trimIn/trimOut; videoCrop inserts -ss/-to before -i and
+        omits trim from output sidecar.
+
+    Next: Phase F (chip strip per mockup) + Parallel polish batch +
+    Phase G (delete legacy MpiVideoPlayer, migrate dev gallery).
     ```
 
 ## COMPLETED

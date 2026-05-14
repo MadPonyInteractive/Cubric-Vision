@@ -792,16 +792,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _showToast('Cropping video…', 'info');
             try {
+                const cropBody = {
+                    folderPath: project.folderPath,
+                    sourcePath,
+                    cropRect: { x: rect.x, y: rect.y, width: rect.w, height: rect.h },
+                    groupId: _group.id,
+                    itemId:  currentItem?.id,
+                };
+                const trim = currentItem?.trim;
+                if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
+                    cropBody.trimIn  = +trim.in;
+                    cropBody.trimOut = +trim.out;
+                }
                 const res = await fetch('/api/video/crop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        folderPath: project.folderPath,
-                        sourcePath,
-                        cropRect: { x: rect.x, y: rect.y, width: rect.w, height: rect.h },
-                        groupId: _group.id,
-                        itemId:  currentItem?.id,
-                    }),
+                    body: JSON.stringify(cropBody),
                 });
                 const data = await res.json();
                 if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
@@ -1236,7 +1242,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const project = state.currentProject;
             if (!project?.folderPath || !project?.id) return;
             try {
-                const snap = await viewer.el.captureSnapshot?.();
+                // Range-aware: prefer outPoint when active trim covers a
+                // subset; otherwise fall through to live playhead.
+                const cur = _group?.history?.[_currentIdx];
+                const trim = cur?.trim;
+                const snapOpts = (trim && Number.isFinite(+trim.out)) ? { time: +trim.out } : {};
+                const snap = await viewer.el.captureSnapshot?.(snapOpts);
                 if (!snap?.blob) { _showToast('Capture failed', 'error'); return; }
                 const file = new File([snap.blob], `frame_${role}.png`, { type: 'image/png' });
                 const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
@@ -1323,12 +1334,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     _showToast('No source video to extend', 'error');
                     return;
                 }
-                _runGenerate({
+                const trim = currentItem.trim;
+                const extendCfg = {
                     ...payload,
                     historyMode: true,
                     extend: true,
                     sourceItemId: currentItem.id,
-                });
+                };
+                if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
+                    extendCfg.trimIn  = +trim.in;
+                    extendCfg.trimOut = +trim.out;
+                }
+                _runGenerate(extendCfg);
             }));
 
             _unsubs.push(Events.on('video-viewer:context-menu', ({ x, y }) => {

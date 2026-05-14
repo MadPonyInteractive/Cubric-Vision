@@ -203,15 +203,15 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ## MpiVideoSurface.js (Compound — js/components/Compounds/MpiVideoSurface — bare surface)
 
-Owns the bare `<video>` element + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics.
+Owns the bare `<video>` element + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics. Frame-step works in integer frame space (`round(t * fps)`) — float comparisons at range edges drift by a frame.
 
-**Instance API (on `el`):** `_setSrc`, `_play`, `_pause`, `seek(seconds)`, `frameStep(±1)`, `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`, `destroy`. Emits component-local `play/pause/ended/timeupdate/loadedmetadata/volumechange`.
+**Instance API (on `el`):** `_setSrc`, `_play`, `_pause`, `seek(seconds)`, `frameStep(direction, range?)` (`range = { rangeIn, rangeOut, loop }` — when present, wraps at range edges; `loop` is required when caller has disabled native `video.loop` for range emulation), `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`, `destroy`. Emits component-local `play/pause/ended/timeupdate/loadedmetadata/volumechange`.
 
 ---
 
 ## MpiVideoControlBar.js (Compound — js/components/Compounds/MpiVideoControlBar — transport + trim)
 
-Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + embedded `MpiTrimBar`. Drives a sibling `MpiVideoSurface` via `attachSurface(instance)`. Owns the 6 video hotkeys + 3 trim hotkeys (bound on `attachSurface`, unbound on `detachSurface`/`destroy`).
+Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + embedded `MpiTrimBar`. Drives a sibling `MpiVideoSurface` via `attachSurface(instance)`. Owns the 6 video hotkeys + 3 trim hotkeys (bound on `attachSurface`, unbound on `detachSurface`/`destroy`). Loop intent is tracked separately from `video.loop`: when the active range is a strict subset of the clip, native `video.loop` is forced off and the loop is emulated via `timeupdate` (`seek(_in)` at `_out` if loop on; `_pause()` otherwise). Range-loop emulation gates on `!video.paused` so frame-step (which pauses first) is not re-routed.
 
 - `MpiButton` (play, frame-back, frame-forward, frames-toggle, loop, mute, fullscreen) — slots `[data-mount="play|frame-back|frame-forward|frames-toggle|loop|mute|fullscreen"]`
 - `MpiProgressBar` (volume) — slot `[data-mount="volume"]`
