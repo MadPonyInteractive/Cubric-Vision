@@ -42,11 +42,7 @@
     grid-area: centre;
     position: relative;
     overflow: hidden;
-    background: radial-gradient(
-        ellipse at 50% 45%,
-        var(--surface-bar) 0%,
-        oklch(0.20 0.020 350) 100%
-    );
+    background: oklch(0.20 0.020 350);
 }
 
 /* ── Right panel — props bar (top) + history list (bottom) scroll as one ───── */

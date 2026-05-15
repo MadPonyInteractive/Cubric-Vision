@@ -15,15 +15,6 @@
     position: relative;
 }
 
-/* Radial vignette — darkens corners, keeps canvas centre clean */
-.mpi-canvas-viewer__wrap::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 60%, var(--surface-canvas, var(--surface-0)) 100%);
-    pointer-events: none;
-    z-index: 2;
-}
 
 /* ── Canvas dock — sticky bottom action band ─────────────────────────────── */
 .mpi-canvas-viewer__dock {

@@ -116,7 +116,9 @@ Hard-won quirks from `MpiVideoPlayer.js`:
     - `routes/videoConcat.js` `/extend-video` accepts `trimIn/trimOut` and builds `inputRanges=[{in,out}, null]`.
     - `routes/videoCrop.js` `/api/video/crop` accepts `trimIn/trimOut`; inserts `-ss <in> -to <out>` before `-i`. Output sidecar omits `trim`; duration/frameCount from output probe.
 
-- [x] **Phase D** — Trim persistence + I/O/X hotkeys.
+- [x] **Parallel Batch — chip content + visual polish (Tasks 1+2)** — 2026-05-15.
+    - Task 1 (chips): `MpiViewerCorners` exposed on `MpiVideoViewer` via `#corners-mount` slot + `el.setTopRight(items)` passthrough. CSS `.mpi-video-viewer__corners { position:absolute; inset:0; pointer-events:none; z-index:6 }`. `MpiGroupHistoryBlock._renderVideoChips()` assembles `[OP-accent · m:ss · Nfps]`; refresh wired on `historyTools activate`, `viewer.range-change`, `viewer.loadedmetadata`, initial mount. Trimmed duration uses range when set, else item.duration. Crop-ratio chip deferred (no live ratio source in block today).
+    - Task 2 (dim bg): root cause was three over-painting surfaces stacking over the block radial — `MpiVideoSurface.css` painted `--surface-0`, `MpiCanvasViewer __wrap::after` painted vignette, `MpiMaskedImagePreview` painted `--surface-canvas`. Flattened all to `transparent` and replaced the block `__centre` radial gradient with flat `oklch(0.20 0.020 350)` (the radial-outer color). Image + video workspaces now match. Also cleaned dead `.mpi-video-viewer__track / __playhead / __trim-handle` rules (legacy from pre-split).
     - `routes/projects.js` — added `updateItemMeta(metaPath, updater)` per-sidecar queue (mirrors `updateProjectJson()` shape: serialize on path key, read → updater → `writeJsonAtomic` temp-rename). `POST /project-media/:projectId/update-meta` now routes through it (request shape unchanged).
     - `MpiVideoControlBar` emits `range-change`; new `el.setPendingTrim(in, out)` stashes a one-shot range applied on the next `loadedmetadata` (survives the default full-clip reset). `I` / `O` / `X` hotkeys bound on `attachSurface`, unbound on `detachSurface` — set in/out to current playhead (clamped) or reset range to `[0, duration]`.
     - `MpiVideoViewer` forwards `loadedmetadata` + `range-change`; `loadVideo(url, meta)` propagates `meta.trim` to `setPendingTrim`. New convenience: `el.setRangeQuiet`, `el.getRange`.
@@ -335,21 +337,8 @@ Goal: every operation that reads a timestamp respects the active range.
 
 Run only after Phase E lands. Three independent diffs.
 
-- [ ] Add top-right chips to the video workspace via
-      `MpiViewerCorners`. Content per mockup intent: op label (`CROP` /
-      `TRIM` / `EXTEND` / etc.), ratio when in crop mode, and clip length
-      / fps. Owner: `MpiGroupHistoryBlock.js` (mount chip slot + assemble
-      array from active state). Briefings: components.md, events.md,
-      state.md. **Verify:** Each workspace mode lights up the right
-      chips; clicking the op chip is a no-op (read-only) or wired to a
-      shortcut if mockup expects it; chip backdrop is visible over bright
-      media.
-- [ ] Fix the video viewer's bright background. Single token swap on
-      `.mpi-video-viewer__stage` (or the equivalent surface wrapper) —
-      adopt the same dim surface token used by `MpiCanvasViewer`. No new
-      tokens. Owner: `MpiVideoViewer.css` only. Briefings: dos_and_donts.md
-      (token-only colors). **Verify:** Side-by-side with image workspace,
-      the dim background matches; mascot/icons remain readable.
+- [x] **Done 2026-05-15** — Top-right chips on video workspace via `MpiViewerCorners` (see Completed section above for details).
+- [x] **Done 2026-05-15** — Dim viewer bg. Resolution differed from plan: the issue wasn't a single token swap on `__stage` — three child surfaces were over-painting bright tokens (`MpiVideoSurface` `--surface-0`, `MpiCanvasViewer __wrap::after` vignette, `MpiMaskedImagePreview` `--surface-canvas`). All flattened to `transparent`; block `__centre` radial replaced with flat `oklch(0.20 0.020 350)`. Image + video stages now visually identical.
 - [ ] Match the Stage mockup polish for the new control bar +
       trim bar. Tighten heights to spec (track 44px or reduced per user
       preference, buttons 28–32px), tabular-nums on time display,
@@ -379,6 +368,12 @@ moves to the new pieces.
 
 ## Plan Drift
 
+- 2026-05-15 — Parallel Batch Task 2 (dim viewer bg) was scoped as a single
+  token swap on `.mpi-video-viewer__stage`. Reality: three over-painting
+  child surfaces (`MpiVideoSurface`, `MpiCanvasViewer __wrap::after`,
+  `MpiMaskedImagePreview`) and an outer block radial gradient. Resolution
+  required flattening all four surfaces, not a one-line swap. Image
+  workspace pulled into the same flat dark for consistency.
 - 2026-05-14 — Phase E framestep wrap-edge semantic: out-handle is INCLUSIVE
   (range covers frames `loFrame … round(hiSec*fps)`, not `… -1`). Original
   plan implicitly assumed half-open `[lo, hi)`; live behavior reads

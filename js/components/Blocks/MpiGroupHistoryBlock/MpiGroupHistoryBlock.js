@@ -333,14 +333,42 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             resize: 'Resize', resizeVideo: 'Resize',
         };
 
+        // Video viewer top-right chip strip: [op] · [mm:ss] · [Nfps].
+        let _videoChipMode = '';
+        const _fmtClipTime = (sec) => {
+            if (!Number.isFinite(+sec) || sec <= 0) return '';
+            const s = Math.max(0, +sec);
+            const m = Math.floor(s / 60);
+            const r = Math.floor(s % 60);
+            return `${m}:${String(r).padStart(2, '0')}`;
+        };
+        const _renderVideoChips = () => {
+            if (!isVideo) return;
+            const item = _group.history[_currentIdx] || {};
+            const range = viewer.el.getRange?.();
+            const fullDur = +item.duration || 0;
+            const clipDur = (range && Number.isFinite(+range.in) && Number.isFinite(+range.out))
+                ? Math.max(0, range.out - range.in)
+                : fullDur;
+            const fps = +item.fps || +_group.fps || 0;
+            const items = [];
+            if (_videoChipMode) items.push({ text: (TOOL_LABELS[_videoChipMode] || _videoChipMode).toUpperCase(), accent: true });
+            const t = _fmtClipTime(clipDur);
+            if (t) items.push({ text: t });
+            if (fps) items.push({ text: `${Math.round(fps)}fps` });
+            viewer.el.setTopRight?.(items);
+        };
+
         historyTools.on('activate', ({ mode }) => {
             if (_currentSelectionIndices.length > 0) historyList.el.exitSelectMode();
             mountOptions(mode);
             if (!isVideo) viewer.el.setActiveToolLabel?.(TOOL_LABELS[mode] ?? mode);
+            else { _videoChipMode = mode || ''; _renderVideoChips(); }
         });
 
         // Set initial overlay label (no active tool yet)
         if (!isVideo) viewer.el.setActiveToolLabel?.('');
+        else _renderVideoChips();
 
         // ── Active-generation registry / spinner ──────────────────────────────
 
@@ -1133,9 +1161,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             };
 
             viewer.on('range-change', ({ in: i, out: o }) => {
+                _renderVideoChips();
                 if (_trimTimer) clearTimeout(_trimTimer);
                 _trimTimer = setTimeout(() => { _trimTimer = null; _flushTrim(i, o); }, 250);
             });
+            viewer.on('loadedmetadata', () => _renderVideoChips());
 
             _unsubs.push(() => { if (_trimTimer) { clearTimeout(_trimTimer); _trimTimer = null; } });
         }

@@ -5,7 +5,7 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: var(--surface-0);
+    background: transparent;
 }
 
 .mpi-video-viewer__stage {
@@ -15,17 +15,28 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--surface-canvas, var(--surface-0));
+    background: transparent;
 }
 
 .mpi-video-viewer__player {
     width: 100%;
     height: 100%;
+    position: relative;
+    z-index: 1;
 }
 
 .mpi-video-viewer__overlay {
     position: absolute;
     pointer-events: none;
+    z-index: 3;
+}
+
+/* Corner chip strip host — fills stage for absolute placement */
+.mpi-video-viewer__corners {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 6;
 }
 
 /* When in crop mode, overlay is interactive */
@@ -36,31 +47,6 @@
 .mpi-video-viewer__timeline {
     min-height: 0;
     flex-shrink: 0;
-    background: var(--surface-2);
+    background: var(--surface-bar);
     border-top: 1px solid var(--line);
-}
-
-/* ── Video timeline track ────────────────────────────────────────────────── */
-.mpi-video-viewer__track {
-    height: 44px;
-    background: oklch(0.78 0.14 220 / 0.12);
-    position: relative;
-}
-
-.mpi-video-viewer__playhead {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1.5px;
-    background: var(--ink-1);
-}
-
-.mpi-video-viewer__trim-handle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 6px;
-    background: var(--accent-heat);
-    cursor: ew-resize;
-    border-radius: var(--r-1);
 }

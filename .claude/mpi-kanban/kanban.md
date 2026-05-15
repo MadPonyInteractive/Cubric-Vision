@@ -184,8 +184,26 @@
         trimIn/trimOut; videoCrop inserts -ss/-to before -i and
         omits trim from output sidecar.
 
-    Next: Phase F (chip strip per mockup) + Parallel polish batch +
-    Phase G (delete legacy MpiVideoPlayer, migrate dev gallery).
+    Parallel Batch — Tasks 1+2 — DONE 2026-05-15
+      - Task 1 (chips): MpiViewerCorners wired on MpiVideoViewer via
+        new #corners-mount slot + el.setTopRight() passthrough.
+        MpiGroupHistoryBlock._renderVideoChips() assembles
+        [OP-accent · m:ss · Nfps]; refresh on historyTools activate /
+        viewer range-change / loadedmetadata / initial mount. Trimmed
+        duration uses live range when set. Crop-ratio chip deferred.
+      - Task 2 (dim bg): root cause not a single token swap as plan
+        assumed. Three over-painting surfaces stacked above block
+        centre radial — MpiVideoSurface (--surface-0),
+        MpiCanvasViewer __wrap::after vignette, MpiMaskedImagePreview
+        (--surface-canvas). All flattened to transparent; block
+        __centre radial replaced with flat oklch(0.20 0.020 350).
+        Image + video stages now visually identical.
+      - Cleaned dead legacy CSS in MpiVideoViewer.css
+        (__track/__playhead/__trim-handle from pre-split).
+
+    Next: Parallel Batch Task 3 (control bar + trim bar polish to
+    mockup) + Phase G (delete legacy MpiVideoPlayer, migrate dev
+    gallery).
     ```
 
 ## COMPLETED

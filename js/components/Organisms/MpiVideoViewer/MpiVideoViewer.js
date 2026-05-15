@@ -23,6 +23,7 @@
  *   exitUpscaleMode()                 — reset data-mode="idle"
  *   enterInterpolateMode()            — set data-mode="interpolate"
  *   exitInterpolateMode()             — reset data-mode="idle"
+ *   setTopRight(items)                — set corner chip strip (see MpiViewerCorners props)
  *   destroy()                         — clean up surface, control bar, cropTool, observers, listeners
  *
  * Emits:
@@ -35,6 +36,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiVideoSurface } from '../../Compounds/MpiVideoSurface/MpiVideoSurface.js';
 import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
+import { MpiViewerCorners } from '../../Compounds/MpiViewerCorners/MpiViewerCorners.js';
 import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { captureFrameBlob } from '../../../utils/Video.js';
@@ -50,6 +52,7 @@ export const MpiVideoViewer = ComponentFactory.create({
             <div class="mpi-video-viewer__stage">
                 <div data-mount="surface" class="mpi-video-viewer__player"></div>
                 <canvas class="mpi-video-viewer__overlay"></canvas>
+                <div class="mpi-video-viewer__corners" id="corners-mount"></div>
             </div>
             <div class="mpi-video-viewer__timeline" data-mount="control-bar"></div>
         </div>
@@ -64,6 +67,7 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         let _surfaceInstance = null;
         let _controlBarInstance = null;
+        let _cornersInstance = null;
         let _cropTool = null;
         let _resizeObserver = null;
         let _videoElement = null;
@@ -94,6 +98,9 @@ export const MpiVideoViewer = ComponentFactory.create({
         _controlBarInstance?.on('range-change', (p) => emit('range-change', p));
 
         _videoElement = _surfaceInstance.el.getVideoElement();
+
+        // ── Top-right chip strip ─────────────────────────────────────────
+        _cornersInstance = MpiViewerCorners.mount(qs('#corners-mount', el));
 
         // ── Overlay canvas setup ─────────────────────────────────────────
 
@@ -176,6 +183,8 @@ export const MpiVideoViewer = ComponentFactory.create({
         el.setRangeQuiet = (i, o) => _controlBarInstance?.el.setRangeQuiet(i, o);
         el.getRange      = () => _controlBarInstance?.el.getRange();
 
+        el.setTopRight = (items) => _cornersInstance?.el.setTopRight(items);
+
         el.enterCropMode = (initialRect = null) => {
             if (_isInCropMode) return;
             _isInCropMode = true;
@@ -251,6 +260,9 @@ export const MpiVideoViewer = ComponentFactory.create({
             _resizeObserver = null;
             _controlBarInstance?.destroy?.();
             _controlBarInstance = null;
+            _cornersInstance?.el?.destroy?.();
+            _cornersInstance?.destroy?.();
+            _cornersInstance = null;
             _surfaceInstance?.destroy?.();
             _surfaceInstance = null;
             _cropTool?.destroy?.();
