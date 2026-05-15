@@ -12,6 +12,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiHistoryTools } from '../../Compounds/MpiHistoryTools/MpiHistoryTools.js';
 import { MpiCanvasViewer } from '../../Organisms/MpiCanvasViewer/MpiCanvasViewer.js';
 import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js';
+import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
@@ -78,6 +79,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 <div class="mpi-group-history-block__right-top"    id="right-top-slot"></div>
                 <div class="mpi-group-history-block__right-bottom" id="right-bottom-slot"></div>
             </div>
+            <div class="mpi-group-history-block__controls" id="controls-slot"></div>
             <div class="mpi-group-history-block__bottom"></div>
         </div>
     `,
@@ -203,13 +205,26 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const centreSlot = qs('#centre-slot', el);
         const viewer = isVideo
-            ? MpiVideoViewer.mount(centreSlot, { fps: 24, controls: true })
+            ? MpiVideoViewer.mount(centreSlot, { fps: 24 })
             : MpiCanvasViewer.mount(centreSlot, {
                 initialImageUrl: resolveMediaUrl(_group.history[_currentIdx]?.filePath),
                 initialIdx:      _currentIdx,
                 initialItem:     _group.history[_currentIdx] || null,
                 groupId:         _group.id,
             });
+
+        // ── Video control bar — full-block-width row below the viewer ─────
+        let videoControlBar = null;
+        if (isVideo) {
+            const controlsSlot = qs('#controls-slot', el);
+            videoControlBar = MpiVideoControlBar.mount(controlsSlot, { fps: 24, showTrim: true });
+            viewer.el.attachControlBar(videoControlBar);
+            _unsubs.push(() => {
+                try { viewer.el.detachControlBar?.(); } catch (_) { /* noop */ }
+                try { videoControlBar?.destroy?.(); } catch (_) { /* noop */ }
+                videoControlBar = null;
+            });
+        }
 
         const _mascotEl = document.createElement('img');
         _mascotEl.className = 'mascot-peek';
@@ -1160,7 +1175,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 }).catch((err) => clientLogger.warn('MpiGroupHistoryBlock', 'trim persist failed', err));
             };
 
-            viewer.on('range-change', ({ in: i, out: o }) => {
+            videoControlBar?.on('range-change', ({ in: i, out: o }) => {
                 _renderVideoChips();
                 if (_trimTimer) clearTimeout(_trimTimer);
                 _trimTimer = setTimeout(() => { _trimTimer = null; _flushTrim(i, o); }, 250);

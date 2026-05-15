@@ -339,35 +339,64 @@ Run only after Phase E lands. Three independent diffs.
 
 - [x] **Done 2026-05-15** — Top-right chips on video workspace via `MpiViewerCorners` (see Completed section above for details).
 - [x] **Done 2026-05-15** — Dim viewer bg. Resolution differed from plan: the issue wasn't a single token swap on `__stage` — three child surfaces were over-painting bright tokens (`MpiVideoSurface` `--surface-0`, `MpiCanvasViewer __wrap::after` vignette, `MpiMaskedImagePreview` `--surface-canvas`). All flattened to `transparent`; block `__centre` radial replaced with flat `oklch(0.20 0.020 350)`. Image + video stages now visually identical.
-- [ ] Match the Stage mockup polish for the new control bar +
-      trim bar. Tighten heights to spec (track 44px or reduced per user
-      preference, buttons 28–32px), tabular-nums on time display,
-      letter-spacing on uppercase labels, heat color for active states.
-      Owner: `MpiVideoControlBar.css` + `MpiTrimBar.css` only.
-      Briefings: dos_and_donts.md, `docs/redesign/c-stage/editor-video.
-      html`. **Verify:** Visual diff against the mockup is within
-      acceptable tolerance; user signs off.
+- [x] **Done 2026-05-15** — Polish + architectural restructure. Resolution
+      differed from plan: instead of just CSS polish, user requested full-width
+      transport bar spanning the app window (like the prompt box) with the
+      trim seek bar inline between left/right button groups. Implementation:
+      - `MpiVideoControlBar` template flattened to a single row `[left
+        buttons + time] [trim flex:1] [right buttons]`. New `showTrim` prop
+        (default `true`) makes the embedded `MpiTrimBar` optional; when
+        `false`, no trim mount, no I/O/X hotkeys, range API no-ops. Stage bg
+        `oklch(0.30 0.020 350)` per mockup.
+      - `MpiTrimBar` track shrunk 44→28px with 10×3 caps + 5×7 playhead
+        triangle, sized for inline-mode use beside transport buttons.
+      - `MpiVideoViewer` no longer mounts a control bar internally. New API:
+        `attachControlBar(instance)` / `detachControlBar()` /
+        `getSurfaceInstance()`. Viewer.destroy() only detaches the bar's
+        surface ref; bar lifetime is external.
+      - `MpiGroupHistoryBlock`: new `__controls` grid row spanning all 3
+        columns below the centre row. Block mounts `MpiVideoControlBar` into
+        `#controls-slot` for video groups, calls `viewer.attachControlBar`.
+        `range-change` listener moved from `viewer.on` to
+        `videoControlBar.on`.
+      - Rules synced: `.claude/rules/component-mounts.md` +
+        `.claude/rules/component-events.md` updated to reflect block-owned
+        bar + `showTrim` prop + removed forwarded events from viewer.
 
 ### Phase G: Wrapper cleanup
 
 Goal: remove the legacy `MpiVideoPlayer` monolith after the dev gallery
 moves to the new pieces.
 
-- [ ] Migrate `js/pages/components.js:57` to mount `MpiVideoSurface` +
-      `MpiVideoControlBar` (with `attachSurface`) instead of
-      `MpiVideoPlayer`. Re-validate the dev gallery still renders cleanly.
-      **Verify:** Open the components dev page — the video preview section
-      shows both new components with full controls working; no console
-      errors.
-- [ ] Delete `js/components/Compounds/MpiVideoPlayer/`. Remove its entry
-      from `preloadStyles.js` and `types.js`. Grep for any remaining
-      `MpiVideoPlayer` imports — there must be none. **Verify:** App
-      starts clean; image + video workspaces still work; `git grep
-      MpiVideoPlayer` returns nothing (or only intentional history
-      mentions in docs/memory).
+- [x] **Done 2026-05-15** — `js/pages/components.js` `preview-videoplayer-default`
+      card migrated to mount `MpiVideoSurface` + `MpiVideoControlBar`
+      (`attachSurface` after both mount). `tpl-components.html` card relabel
+      to "MpiVideoSurface + MpiVideoControlBar (split player)".
+- [x] **Done 2026-05-15** — `js/components/Compounds/MpiVideoPlayer/` directory
+      deleted. `js/shell/preloadStyles.js` entry removed.
+      `js/components/types.js` — `MpiVideoPlayerProps` typedef deleted;
+      `MpiVideoViewerProps` updated to match new API; added
+      `MpiVideoControlBarProps`. Stale `MpiVideoPlayer` comment in
+      `MpiVolumeControl.js` scrubbed. `grep -r MpiVideoPlayer js/ templates/`
+      returns zero live-code hits (only docs/plans/archives mention it
+      historically).
 
 ## Plan Drift
 
+- 2026-05-15 — Parallel Batch Task 3 + Phase G shipped together with a
+  significant architectural change beyond what the plan described. Original
+  scope was CSS polish only on `MpiVideoControlBar.css` + `MpiTrimBar.css`.
+  User requested the transport bar span the full app window (like the
+  prompt box) with the trim seek bar inline between the left/right button
+  clusters, and made trim optional for future trim-less consumers.
+  Resolution: (a) flattened `MpiVideoControlBar` to a single-row layout with
+  `showTrim` prop; (b) externalised the control bar from `MpiVideoViewer`
+  via `attachControlBar(instance)`; (c) added a new full-width
+  `__controls` grid row to `MpiGroupHistoryBlock` that owns the bar mount;
+  (d) re-routed the `range-change` listener from viewer → bar.
+  Memory: `feedback_controlbar_block_owned.md` +
+  `feedback_controlbar_showtrim_optional.md`. Rules:
+  `component-mounts.md` + `component-events.md` updated.
 - 2026-05-15 — Parallel Batch Task 2 (dim viewer bg) was scoped as a single
   token swap on `.mpi-video-viewer__stage`. Reality: three over-painting
   child surfaces (`MpiVideoSurface`, `MpiCanvasViewer __wrap::after`,

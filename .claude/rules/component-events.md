@@ -322,10 +322,11 @@ NOTE:    Bare `<video>` surface + click-to-toggle (skipped on `[data-no-toggle]`
 
 ### MpiVideoControlBar (Compound — js/components/Compounds/MpiVideoControlBar/)
 EMITS:   `loop-change`  `{ loop: boolean }`
-         `range-change` `{ in: number, out: number }` — forwarded from embedded MpiTrimBar
+         `range-change` `{ in: number, out: number }` — forwarded from embedded MpiTrimBar (only fires when `showTrim` is true)
 LISTENS: surface events `play/pause/timeupdate/loadedmetadata/volumechange` (via `attachSurface(instance)`)
-HOTKEYS: binds `video.playPause/frame.back/frame.forward/volume.up/volume.down/loop` + `video.trim.in/out/clear` on `attachSurface`; unbinds on `detachSurface`/`destroy`.
-NOTE:    Owns play/frame±/loop/audio/fullscreen/frames-toggle + time display + embedded MpiTrimBar. On every surface `loadedmetadata` resets range to `[0, duration]` UNLESS `setPendingTrim(in, out)` was called first (one-shot). Loop intent is tracked internally; when active range is a strict subset of the clip, native `video.loop` is forced off and the loop is emulated via `timeupdate` (`seek(_in)` at `_out` if loop on; `_pause()` otherwise). Range-loop branch gates on `!video.paused` so frame-step is not re-routed.
+HOTKEYS: binds `video.playPause/frame.back/frame.forward/volume.up/volume.down/loop` on `attachSurface`; trim hotkeys `video.trim.in/out/clear` bound only when `showTrim` is true. Unbinds on `detachSurface`/`destroy`.
+PROPS:   `fps` (default 24), `showTrim` (default true). When `showTrim: false`, MpiTrimBar is not mounted; `setRange`/`setRangeQuiet`/`setPendingTrim` no-op; `getRange()`/`getValue()` return `null`.
+NOTE:    Single horizontal row layout `[left buttons + time] [trim flex:1] [right buttons]`. Mounted full-width by the parent Block (NOT by the viewer). Wired to a surface via `attachSurface(surfaceInstance)`. On every surface `loadedmetadata` resets range to `[0, duration]` UNLESS `setPendingTrim(in, out)` was called first (one-shot). Loop intent is tracked internally; when active range is a strict subset of the clip, native `video.loop` is forced off and the loop is emulated via `timeupdate` (`seek(_in)` at `_out` if loop on; `_pause()` otherwise). Range-loop branch gates on `!video.paused` so frame-step is not re-routed.
 
 ### MpiTrimBar (Compound — js/components/Compounds/MpiTrimBar/)
 EMITS:   `seek`         `{ time: number }` — playhead committed (drag end / track click)
@@ -339,19 +340,16 @@ NOTE:    Two-handle trim seek bar. Pointer drag coalesces on RAF; commits on `po
 EMITS:   `play`, `pause`, `ended`, `timeupdate` — forwarded from MpiVideoSurface
          `change`        `{ volume, muted }` — forwarded from surface `volumechange`
          `loadedmetadata` `{ duration }` — forwarded from surface
-         `loop-change`   `{ loop }` — forwarded from MpiVideoControlBar
-         `range-change`  `{ in, out }` — forwarded from MpiVideoControlBar
          `crop-change`   `{ rect: { x, y, w, h } }` — crop rect updated (normalized 0–1)
 GLOBAL EMITS (via Events.emit):
          `video-viewer:context-menu` `{ x, y }` — right-click on viewer (native menu suppressed). Consumed by MpiGroupHistoryBlock for "Set as start/end frame" context menu.
 LISTENS: (none — tool bars are owned by MpiGroupHistoryBlock, not viewer)
-API:     `loadVideo(url, meta)` — `meta.trim = { in, out }` propagates to control bar's `setPendingTrim` (one-shot, applied on next `loadedmetadata`).
-         `getSourceElement()` — returns underlying `HTMLVideoElement` so external tools (resize/snapshot) can sample current frame.
-         `setRangeQuiet(in, out)`, `getRange()` — proxy to control bar.
-NOTE:    Viewer owns display + crop overlay state only. Bar action events (`crop-save-snapshot`, `crop-save-video`, `upscale-run`, etc.) emitted by Block-owned MpiToolActionBars.
-
-### MpiVideoPlayer (Compound — DEPRECATED, dev-gallery only)
-NOTE:    Legacy monolith. No longer used by MpiVideoViewer. Still mounted on the components dev gallery; will be deleted in Phase G of the video trim plan.
+API:     `attachControlBar(instance)` / `detachControlBar()` — wire an external MpiVideoControlBar; viewer internally calls `instance.el.attachSurface(viewerSurfaceInstance)`. Control bar lifetime is owned externally; `viewer.destroy()` only `detachSurface()` on the bar.
+         `getSurfaceInstance()` — returns MpiVideoSurface instance.
+         `loadVideo(url, meta)` — `meta.fps`/`meta.frameCount`/`meta.trim` proxied to the attached control bar; `meta.trim = { in, out }` propagates as `setPendingTrim` (one-shot, applied on next `loadedmetadata`).
+         `getSourceElement()` — underlying `HTMLVideoElement` for external tools (resize/snapshot).
+         `setRangeQuiet(in, out)`, `getRange()` — proxy to attached control bar.
+NOTE:    Viewer no longer forwards `loop-change`/`range-change` — block listens directly on the control bar instance. Viewer owns display + crop overlay + chip strip state only.
 
 ### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
 EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
@@ -549,7 +547,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
          `generation:complete` `{ id, item, group }` — appends history entry, updates canvas/video viewer, clears generating state. **Snapshot `_wasReplace = _group.history?.some(entry => entry.id === item.id)` BEFORE reassigning `_group = group`** — `group` is the post-append snapshot so `.some(...)` would always be true and route every completion to `replaceEntry` (which silently bails for new ids not yet in the list). Mascot animation is gated on `item.operation` — `resize`/`resizeVideo` (tool transforms) skip the mascot. Resize tool stays mounted across Apply: after `loadVideo`/`loadEntry` the block calls `_options?.el?.setCurrentItem?.(item)` so the compound re-extracts the source thumbnail and refreshes the inline preview on the new entry. There is no canvas-mode re-enter step (the Phase 3 `enterResizeMode`/`exitResizeMode` viewer API is gone).
          `generation:error` `{ id }` — clears generating state
          `generation:cancelled` `{ id }` — clears generating state
-         `viewer.range-change` (component-local on MpiVideoViewer, video groups only) `{ in, out }` — debounced 250ms; POSTs `/project-media/:projectId/update-meta` with `{ itemId, updates: { trim } }` (or `{ trim: null }` at full clip). Mirrors `item.trim` in memory for sidecar parity.
+         `controlBar.range-change` (component-local on MpiVideoControlBar instance, video groups only) `{ in, out }` — debounced 250ms; POSTs `/project-media/:projectId/update-meta` with `{ itemId, updates: { trim } }` (or `{ trim: null }` at full clip). Mirrors `item.trim` in memory for sidecar parity. Block-owned `MpiVideoControlBar` mount lives in `#controls-slot`; subscribed via `videoControlBar.on('range-change', ...)`, NOT via the viewer.
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result

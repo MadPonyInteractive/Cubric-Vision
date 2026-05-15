@@ -3,10 +3,11 @@
 .mpi-group-history-block {
     display: grid;
     grid-template-columns: 64px 1fr 360px;
-    grid-template-rows: 0px 1fr;
+    grid-template-rows: 0px 1fr auto;
     grid-template-areas:
-        "header header header"
-        "left   centre right";
+        "header   header   header"
+        "left     centre   right"
+        "controls controls controls";
     height: 100%;
     overflow: hidden;
     background: var(--surface-1);
@@ -119,6 +120,16 @@
 /* ── Right-bottom: history list — scrolls with parent column ───────────────── */
 .mpi-group-history-block__right-bottom {
     flex: 0 0 auto;
+}
+
+/* ── Controls row — full-width video transport (only mounted for video) ──── */
+.mpi-group-history-block__controls {
+    grid-area: controls;
+    min-width: 0;
+}
+
+.mpi-group-history-block__controls:empty {
+    display: none;
 }
 
 /* ── Bottom: floating PromptBox — shell-managed ─────────────────────────────── */

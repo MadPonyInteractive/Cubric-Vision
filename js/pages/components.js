@@ -54,9 +54,10 @@ import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEn
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiCompareOverlay } from '../components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiAutoMaskThumbs } from '../components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js';
-import { MpiVideoPlayer } from '../components/Compounds/MpiVideoPlayer/MpiVideoPlayer.js';
 import { MpiViewerCorners } from '../components/Compounds/MpiViewerCorners/MpiViewerCorners.js';
 import { MpiTrimBar } from '../components/Compounds/MpiTrimBar/MpiTrimBar.js';
+import { MpiVideoSurface } from '../components/Compounds/MpiVideoSurface/MpiVideoSurface.js';
+import { MpiVideoControlBar } from '../components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
 
 // Organisms
 
@@ -450,18 +451,28 @@ function mountAll() {
         setupDz(baseProps);
     });
 
-    // ── MpiVideoPlayer (Compound) ────────────────────────────────────────────────
+    // ── MpiVideoSurface + MpiVideoControlBar (split player) ──────────────────────
     mount('preview-videoplayer-default', () => {
-        const vp = MpiVideoPlayer.mount(slot('preview-videoplayer-default'), {
-            src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-            poster: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.png',
-            muted: true,
-            autoplay: false,
-            volume: 0.75
-        });
+        const host = slot('preview-videoplayer-default');
+        host.innerHTML = `
+            <div style="display:flex;flex-direction:column;width:100%;gap:8px;">
+                <div data-dev-mount="surface" style="height:240px;background:var(--surface-canvas);"></div>
+                <div data-dev-mount="control-bar"></div>
+            </div>
+        `;
+        const surfaceSlot = host.querySelector('[data-dev-mount="surface"]');
+        const controlSlot = host.querySelector('[data-dev-mount="control-bar"]');
 
-        vp.on('play', () => console.log('[gallery] video play'));
-        vp.on('pause', () => console.log('[gallery] video pause'));
+        const surface = MpiVideoSurface.mount(surfaceSlot, { fps: 30 });
+        surface.el._setSrc('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+        surface.el._setMuted(true);
+        surface.el._setVolume(0.75);
+
+        const bar = MpiVideoControlBar.mount(controlSlot, { fps: 30, showTrim: true });
+        bar.el.attachSurface(surface);
+
+        surface.on('play',  () => console.log('[gallery] video play'));
+        surface.on('pause', () => console.log('[gallery] video pause'));
     });
 
 

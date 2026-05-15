@@ -268,40 +268,57 @@
  */
 
 /**
- * @typedef {Object} MpiVideoPlayerProps (Compound — js/components/Compounds/MpiVideoPlayer)
- * @property {string} [src] - Video source URL
- * @property {string} [poster] - Poster image URL
- * @property {boolean} [autoplay=false] - Auto-play on mount
- * @property {boolean} [loop=false] - Loop playback
- * @property {boolean} [muted=false] - Start muted
- * @property {number} [volume=1.0] - Initial volume (0–1)
- * @property {boolean} [controls=true] - Show custom UI controls overlay
- *
- * Emits:
- * 'play' { time: number }
- * 'pause' { time: number }
- * 'ended' { time: number }
- * 'timeupdate' { time: number, duration: number }
- * 'change' { volume: number, muted: boolean }
- */
-
-/**
  * @typedef {Object} MpiVideoViewerProps (Organism — js/components/Organisms/MpiVideoViewer)
- * @property {number} [fps=24] - Frame rate for video playback (passed to MpiVideoPlayer)
- * @property {boolean} [controls=true] - Show video player controls
+ * @property {number} [fps=24] - Frame rate for video playback (passed to MpiVideoSurface)
+ *
+ * Note: The control bar (MpiVideoControlBar) is NOT mounted by the viewer.
+ * The parent Block mounts MpiVideoControlBar and wires it via
+ * `viewer.el.attachControlBar(instance)`.
  *
  * Instance methods (on instance.el):
- *   loadVideo(url, meta = {})         — load video URL; meta may include { fps, duration, frameCount, hasAudio }
+ *   loadVideo(url, meta = {})         — load video URL; meta may include
+ *                                       { fps, duration, frameCount, hasAudio, trim }.
+ *                                       fps/frameCount/trim proxy to the attached control bar.
+ *   attachControlBar(instance)        — wire an external MpiVideoControlBar
+ *   detachControlBar()                — drop the attached control bar ref
+ *   getSurfaceInstance()              — MpiVideoSurface instance
  *   enterCropMode(initialRect = null) — enable crop overlay with optional initial normalized rect
  *   exitCropMode()                    — disable crop overlay
  *   getCropRect()                     — returns current normalized crop rect { x, y, w, h }
  *   setCropRatio(ratio)               — set aspect ratio lock (null = free)
- *   captureSnapshot()                 — returns { blob, dataUrl } of current frame, respecting active crop
- *   destroy()                         — clean up player, cropTool, observers, listeners
+ *   captureSnapshot({ time }?)        — returns { blob, dataUrl } of current frame, respecting active crop
+ *   setTopRight(items)                — top-right chip strip passthrough
+ *   destroy()                         — clean up surface, cropTool, observers, listeners
  *
  * Emits:
- *   'play', 'pause', 'ended', 'timeupdate', 'change', 'loop-change' — forwarded from MpiVideoPlayer
+ *   'play', 'pause', 'ended', 'timeupdate' — forwarded from MpiVideoSurface
+ *   'change' { volume, muted }              — forwarded from surface volumechange
+ *   'loadedmetadata' { duration }
  *   'crop-change' { rect: { x, y, w, h } } — crop rect changed
+ */
+
+/**
+ * @typedef {Object} MpiVideoControlBarProps (Compound — js/components/Compounds/MpiVideoControlBar)
+ * @property {number}  [fps=24]      - Frame rate for time display + trim snapping
+ * @property {boolean} [showTrim=true] - When false, the embedded MpiTrimBar is
+ *                                       not mounted; trim hotkeys (I/O/X) and
+ *                                       range API become no-ops. Use for
+ *                                       audio-only or trim-less surfaces.
+ *
+ * Instance methods (on instance.el):
+ *   attachSurface(surfaceInstance) — wire to MpiVideoSurface
+ *   detachSurface()                — drop surface listeners + hotkeys
+ *   setRange(in, out)
+ *   setRangeQuiet(in, out)
+ *   getRange()                     — { in, out } or null when showTrim=false
+ *   getValue()                     — playhead seconds or null
+ *   setPendingTrim(in, out)        — one-shot trim applied on next loadedmetadata
+ *   setVolume(v) / setMuted(m)
+ *   setFps(fps) / setFrameCount(n)
+ *
+ * Emits:
+ *   'loop-change'  { loop: boolean }
+ *   'range-change' { in: number, out: number }
  */
 
 /**
@@ -1008,8 +1025,7 @@
  *
  * Bare <video> surface with click-to-toggle play. Owns no transport UI;
  * MpiVideoControlBar drives it via attachSurface(). Preserves the loop-
- * disable / seeked-restore dance and frame-step wrap-on-loop semantics
- * from the legacy MpiVideoPlayer.
+ * disable / seeked-restore dance and frame-step wrap-on-loop semantics.
  *
  * Instance methods (on instance.el):
  *   _setSrc(url)            — replace src + reload

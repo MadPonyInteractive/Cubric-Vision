@@ -9,13 +9,18 @@
  * persistence + range-aware ops land in Phase D/E.
  *
  * Props:
- * @param {number} [fps=24]
+ * @param {number}  [fps=24]
+ * @param {boolean} [showTrim=true]  - When false the embedded MpiTrimBar is
+ *                                     not mounted and trim hotkeys/range API
+ *                                     become no-ops. Use for audio-only or
+ *                                     trim-less surfaces.
  *
  * Instance API (on el):
  *   attachSurface(surfaceEl)        — wire to MpiVideoSurface el
  *   detachSurface()                 — drop surface listeners + hotkeys
- *   setRange(in, out) / setRangeQuiet(in, out)
- *   getRange() / getValue()
+ *   setRange(in, out) / setRangeQuiet(in, out)   (no-op when showTrim=false)
+ *   getRange() / getValue()                       (returns null when showTrim=false)
+ *   setPendingTrim(in, out)                       (no-op when showTrim=false)
  *   setVolume(v) / setMuted(m)
  *   setFrameCount(n)
  *   destroy()
@@ -38,29 +43,27 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-video-control-bar" data-no-toggle>
+            <div class="mpi-video-control-bar__left">
+                <div data-mount="play"></div>
+                <div data-mount="frame-back"></div>
+                <div data-mount="frame-forward"></div>
+                <div class="mpi-video-control-bar__time">
+                    <span class="mpi-video-control-bar__current">00:00.00</span>
+                    <span class="mpi-video-control-bar__separator">/</span>
+                    <span class="mpi-video-control-bar__duration">00:00.00</span>
+                </div>
+            </div>
+
             <div class="mpi-video-control-bar__trim" data-mount="trim"></div>
 
-            <div class="mpi-video-control-bar__row">
-                <div class="mpi-video-control-bar__left">
-                    <div data-mount="play"></div>
-                    <div data-mount="frame-back"></div>
-                    <div data-mount="frame-forward"></div>
-                    <div class="mpi-video-control-bar__time">
-                        <span class="mpi-video-control-bar__current">00:00.00</span>
-                        <span class="mpi-video-control-bar__separator">/</span>
-                        <span class="mpi-video-control-bar__duration">00:00.00</span>
-                    </div>
+            <div class="mpi-video-control-bar__right">
+                <div data-mount="frames-toggle"></div>
+                <div data-mount="loop"></div>
+                <div class="mpi-video-control-bar__volume">
+                    <div data-mount="mute"></div>
+                    <div class="mpi-video-control-bar__volume-slider" data-mount="volume"></div>
                 </div>
-
-                <div class="mpi-video-control-bar__right">
-                    <div data-mount="frames-toggle"></div>
-                    <div data-mount="loop"></div>
-                    <div class="mpi-video-control-bar__volume">
-                        <div data-mount="mute"></div>
-                        <div class="mpi-video-control-bar__volume-slider" data-mount="volume"></div>
-                    </div>
-                    <div data-mount="fullscreen"></div>
-                </div>
+                <div data-mount="fullscreen"></div>
             </div>
         </div>
     `,
@@ -74,6 +77,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
         let _showFrames = true;
         let _surface = null;
         let _surfaceUnsubs = [];
+        const _showTrim = props.showTrim !== false;
 
         // Active range — defaults set on loadedmetadata.
         let _in = 0;
@@ -115,9 +119,11 @@ export const MpiVideoControlBar = ComponentFactory.create({
             interactive: true, handle: true, variant: 'primary'
         });
 
-        const trim = MpiTrimBar.mount(qs('[data-mount="trim"]', el), {
-            duration: 0, fps: _fps, value: 0, inPoint: 0, outPoint: 0
-        });
+        const trim = _showTrim
+            ? MpiTrimBar.mount(qs('[data-mount="trim"]', el), {
+                  duration: 0, fps: _fps, value: 0, inPoint: 0, outPoint: 0
+              })
+            : null;
 
         const currentTimeEl = qs('.mpi-video-control-bar__current', el);
         const durationEl    = qs('.mpi-video-control-bar__duration', el);
@@ -149,15 +155,17 @@ export const MpiVideoControlBar = ComponentFactory.create({
         };
 
         // ── Trim wiring (visual sync) ─────────────────────────────────────
-        trim.on('seek', ({ time }) => {
-            if (!_surface) return;
-            _surface.seek(time);
-        });
-        trim.on('range-change', ({ in: i, out: o }) => {
-            _in = i; _out = o;
-            _syncNativeLoop();
-            emit('range-change', { in: i, out: o });
-        });
+        if (trim) {
+            trim.on('seek', ({ time }) => {
+                if (!_surface) return;
+                _surface.seek(time);
+            });
+            trim.on('range-change', ({ in: i, out: o }) => {
+                _in = i; _out = o;
+                _syncNativeLoop();
+                emit('range-change', { in: i, out: o });
+            });
+        }
 
         // ── Button wiring ─────────────────────────────────────────────────
         playBtn.on('click', () => {
@@ -238,11 +246,11 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _loopIntent = !!video.loop;
             loopBtn.el.classList.toggle('is-active', _loopIntent);
             _renderTime(video.currentTime || 0, video.duration || 0);
-            trim.el.setFps(_fps);
+            trim?.el.setFps(_fps);
             if (Number.isFinite(video.duration) && video.duration > 0) {
                 _duration = video.duration;
-                trim.el.setDuration(_duration);
-                trim.el.setRangeQuiet(0, _duration);
+                trim?.el.setDuration(_duration);
+                trim?.el.setRangeQuiet(0, _duration);
                 _in = 0; _out = _duration;
             }
             _syncNativeLoop();
@@ -254,7 +262,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 addCb(surfaceInstance, 'pause',         () => _syncPlayBtn()),
                 addCb(surfaceInstance, 'timeupdate',    ({ time, duration }) => {
                     _renderTime(time, duration);
-                    if (duration > 0) trim.el.setValueQuiet(time);
+                    if (duration > 0) trim?.el.setValueQuiet(time);
                     // Range-loop emulation — only during natural playback.
                     // Frame-step + manual seeks set currentTime directly and
                     // must NOT be re-routed back into the range (the surface's
@@ -269,7 +277,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 }),
                 addCb(surfaceInstance, 'loadedmetadata', ({ duration }) => {
                     _duration = duration || 0;
-                    trim.el.setDuration(_duration);
+                    trim?.el.setDuration(_duration);
                     if (_pendingTrim
                         && Number.isFinite(_pendingTrim.in)
                         && Number.isFinite(_pendingTrim.out)
@@ -281,7 +289,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                         _in = 0; _out = _duration;
                     }
                     _pendingTrim = null;
-                    trim.el.setRangeQuiet(_in, _out);
+                    trim?.el.setRangeQuiet(_in, _out);
                     _syncNativeLoop();
                     _renderTime(video.currentTime || 0, _duration);
                 }),
@@ -299,19 +307,21 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.down',   () => _adjustVolume(-10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));
 
-            _hotkeyUnsubs.push(Hotkeys.bind('video.trim.in', () => {
-                if (!_surface) return;
-                const cur = _surface.getVideoElement().currentTime || 0;
-                trim.el.setRange(cur, _out > cur ? _out : _duration);
-            }));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.trim.out', () => {
-                if (!_surface) return;
-                const cur = _surface.getVideoElement().currentTime || 0;
-                trim.el.setRange(_in < cur ? _in : 0, cur);
-            }));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.trim.clear', () => {
-                trim.el.setRange(0, _duration);
-            }));
+            if (trim) {
+                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.in', () => {
+                    if (!_surface) return;
+                    const cur = _surface.getVideoElement().currentTime || 0;
+                    trim.el.setRange(cur, _out > cur ? _out : _duration);
+                }));
+                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.out', () => {
+                    if (!_surface) return;
+                    const cur = _surface.getVideoElement().currentTime || 0;
+                    trim.el.setRange(_in < cur ? _in : 0, cur);
+                }));
+                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.clear', () => {
+                    trim.el.setRange(0, _duration);
+                }));
+            }
         };
 
         el.detachSurface = () => {
@@ -326,10 +336,10 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _surface = null;
         };
 
-        el.setRangeQuiet = (i, o) => trim.el.setRangeQuiet(i, o);
-        el.setRange      = (i, o) => trim.el.setRange(i, o);
-        el.getRange      = () => trim.el.getRange();
-        el.getValue      = () => trim.el.getValue();
+        el.setRangeQuiet = (i, o) => trim?.el.setRangeQuiet(i, o);
+        el.setRange      = (i, o) => trim?.el.setRange(i, o);
+        el.getRange      = () => trim?.el.getRange() ?? null;
+        el.getValue      = () => trim?.el.getValue() ?? null;
 
         /**
          * Stash a trim range to apply on the NEXT loadedmetadata. Pass null
@@ -338,6 +348,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
          * @param {number} [outSec]
          */
         el.setPendingTrim = (inSec, outSec) => {
+            if (!trim) return;
             if (inSec === null || inSec === undefined) { _pendingTrim = null; return; }
             const i = +inSec, o = +outSec;
             if (Number.isFinite(i) && Number.isFinite(o) && o > i) {
@@ -363,7 +374,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             const n = Number(fps);
             if (!Number.isFinite(n) || n <= 0) return;
             _fps = n;
-            trim.el.setFps(_fps);
+            trim?.el.setFps(_fps);
             _surface?._setFps(_fps);
         };
 
@@ -371,7 +382,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             el.detachSurface();
             _unsubs.forEach(fn => { try { fn(); } catch (_) { /* noop */ } });
             _unsubs.length = 0;
-            try { trim.destroy(); } catch (_) { /* noop */ }
+            try { trim?.destroy(); } catch (_) { /* noop */ }
             try { playBtn.destroy(); } catch (_) { /* noop */ }
             try { frameBackBtn.destroy(); } catch (_) { /* noop */ }
             try { frameFwdBtn.destroy(); } catch (_) { /* noop */ }

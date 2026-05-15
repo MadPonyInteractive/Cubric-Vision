@@ -91,11 +91,14 @@
 
 ## IMPLEMENTING
 
+## COMPLETED
+
 ### Video workspace trim + split controls
 
   - tags: [feature, video]
   - priority: high
-  - defaultExpanded: true
+  - defaultExpanded: false
+  - completed: 2026-05-15
     ```md
     Plan file: docs/plans/2026-05-14-video-workspace-trim-split-controls.md
 
@@ -201,9 +204,21 @@
       - Cleaned dead legacy CSS in MpiVideoViewer.css
         (__track/__playhead/__trim-handle from pre-split).
 
-    Next: Parallel Batch Task 3 (control bar + trim bar polish to
-    mockup) + Phase G (delete legacy MpiVideoPlayer, migrate dev
-    gallery).
+    Parallel Batch Task 3 + Phase G — DONE 2026-05-15
+      - Architectural change beyond CSS polish: control bar moved from
+        viewer to a new full-width #controls-slot grid row in
+        MpiGroupHistoryBlock. MpiVideoControlBar accepts showTrim prop
+        (default true) and lays out as a single row [left+time] [trim
+        flex] [right]. MpiTrimBar shrunk from 44px to 28px for inline
+        use. MpiVideoViewer exposes attachControlBar/detachControlBar/
+        getSurfaceInstance; no longer forwards loop-change/range-change.
+        Block listens to range-change directly on the bar instance for
+        trim persistence.
+      - Phase G: dev gallery card migrated to MpiVideoSurface +
+        MpiVideoControlBar; legacy MpiVideoPlayer dir deleted along with
+        its preloadStyles entry + types.js typedef + stale comment in
+        MpiVolumeControl.js.
+      - Rules synced: component-mounts.md + component-events.md.
+      - Memory added: feedback_controlbar_block_owned.md +
+        feedback_controlbar_showtrim_optional.md.
     ```
-
-## COMPLETED

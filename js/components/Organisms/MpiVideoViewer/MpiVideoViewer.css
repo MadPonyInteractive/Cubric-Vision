@@ -43,10 +43,3 @@
 .mpi-video-viewer[data-mode="crop"] .mpi-video-viewer__overlay {
     pointer-events: auto;
 }
-
-.mpi-video-viewer__timeline {
-    min-height: 0;
-    flex-shrink: 0;
-    background: var(--surface-bar);
-    border-top: 1px solid var(--line);
-}

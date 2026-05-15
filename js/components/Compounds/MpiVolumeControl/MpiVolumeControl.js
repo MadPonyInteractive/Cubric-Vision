@@ -121,7 +121,7 @@ export const MpiVolumeControl = ComponentFactory.create({
             emit('change', { volume, muted });
         });
 
-        // External API for programmatic updates (used by MpiVideoPlayer)
+        // External API for programmatic updates
         el._setVolume = (v) => {
             volume = v;
             if (!muted) {

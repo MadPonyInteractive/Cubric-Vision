@@ -1,25 +1,18 @@
-/* ── MpiVideoControlBar — video transport + trim row ────────────────────── */
-/* Stage tokens only. Mocks: editor-video.html .timeline rows. */
+/* ── MpiVideoControlBar — video transport + (optional) trim row ─────────── */
+/* Stage tokens only. Single horizontal row spanning full container width.
+   Layout: [left buttons + time] [trim flex:1] [right buttons].
+   Mockup ref: editor-video.html .timeline / .tl-controls row. */
 
 .mpi-video-control-bar {
     display: flex;
-    flex-direction: column;
-    background: var(--surface-bar);
-    border-top: 1px solid var(--line);
-    padding: 8px 12px 6px;
-    gap: 4px;
-}
-
-.mpi-video-control-bar__trim {
-    /* Host for MpiTrimBar — leaves vertical breathing room baked into MpiTrimBar's own padding. */
-    width: 100%;
-}
-
-.mpi-video-control-bar__row {
-    display: flex;
+    flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: var(--s-4);
+    width: 100%;
+    background: oklch(0.30 0.020 350);
+    border-top: 1px solid var(--line);
+    padding: 8px 16px;
+    box-sizing: border-box;
 }
 
 .mpi-video-control-bar__left,
@@ -27,6 +20,17 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: 0 0 auto;
+}
+
+/* Trim slot — flex middle. Empty (no-trim mode) collapses cleanly. */
+.mpi-video-control-bar__trim {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mpi-video-control-bar__trim:empty {
+    display: none;
 }
 
 /* Time display — tabular-nums + monospace per Stage spec */

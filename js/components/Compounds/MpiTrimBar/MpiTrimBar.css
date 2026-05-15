@@ -1,7 +1,7 @@
 /* ── MpiTrimBar — video trim seek bar ──────────────────────────────────── */
-/* Stage tokens only. Track 44px tall; handles + playhead overflow ±8px to
-   match the editor-video mockup (.timeline). No overflow:hidden on the
-   track. */
+/* Stage tokens only. Inline-mode height: 28px track with ±8px handle/playhead
+   overflow. Mockup `.tl-track` is 44px in its own row; embedded inline beside
+   transport buttons it shrinks. */
 
 .mpi-trim-bar {
     width: 100%;
@@ -12,7 +12,7 @@
 .mpi-trim-bar__track {
     position: relative;
     width: 100%;
-    height: 44px;
+    height: 28px;
     background: var(--surface-bar);
     border: 1px solid var(--line);
     cursor: pointer;
@@ -21,8 +21,7 @@
     touch-action: none;
 }
 
-/* Range fill between in/out — flat heat tint with top/bottom marker lines.
-   Per mockup: subtle 12% heat fill, full-strength heat top + bottom borders. */
+/* Range fill between in/out — flat heat tint with top/bottom marker lines. */
 .mpi-trim-bar__selection {
     position: absolute;
     top: 0;
@@ -34,7 +33,7 @@
     z-index: 1;
 }
 
-/* In/Out trim handles — 4px stems with 12x4 caps top + bottom. */
+/* In/Out trim handles — 4px stems with 10x3 caps top + bottom. */
 .mpi-trim-bar__handle {
     position: absolute;
     top: -8px;
@@ -53,13 +52,13 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    width: 12px;
-    height: 4px;
+    width: 10px;
+    height: 3px;
     background: var(--accent-heat);
 }
 
-.mpi-trim-bar__handle::before { top: -3px; }
-.mpi-trim-bar__handle::after  { bottom: -3px; }
+.mpi-trim-bar__handle::before { top: -2px; }
+.mpi-trim-bar__handle::after  { bottom: -2px; }
 
 .mpi-trim-bar__handle:focus-visible {
     outline: 1px solid var(--ink-1);
@@ -87,9 +86,9 @@
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 8px solid var(--ink-1);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--ink-1);
 }
 
 .mpi-trim-bar__playhead:focus-visible {
