@@ -135,7 +135,15 @@ export const MpiVideoControlBar = ComponentFactory.create({
             if (isDuration && Number.isFinite(_frameCount) && _frameCount > 0) {
                 return String(_frameCount).padStart(4, '0');
             }
-            return String(Math.max(0, Math.round(s * _fps))).padStart(4, '0');
+            // Prefer effective fps from frameCount/duration when known, so the
+            // current-frame readout stays in lockstep with the trim bar at
+            // boundary frames on NTSC-style clips.
+            let effFps = _fps;
+            if (Number.isFinite(_frameCount) && _frameCount > 1
+                && Number.isFinite(_duration) && _duration > 0) {
+                effFps = _frameCount / _duration;
+            }
+            return String(Math.max(0, Math.round(s * effFps))).padStart(4, '0');
         };
 
         const _renderTime = (cur, dur) => {
@@ -148,6 +156,24 @@ export const MpiVideoControlBar = ComponentFactory.create({
             }
         };
 
+        // Map a raw video.currentTime to the visual playhead time on the trim
+        // bar. Frame index N is rendered at `N/(lastIdx) * _duration` so the
+        // first frame sits at 0% and the last frame sits at 100%, regardless
+        // of NTSC-style PTS drift or our quarter-frame seek bias.
+        const _displayTime = (time) => {
+            if (!_surface) return time;
+            const dur = _duration;
+            if (!Number.isFinite(dur) || dur <= 0) return time;
+            const fc = _frameCount;
+            if (!fc || fc < 2) return time;
+            const effFps = fc / dur;
+            const lastIdx = fc - 1;
+            let idx = Math.round(time * effFps);
+            if (idx < 0) idx = 0;
+            else if (idx > lastIdx) idx = lastIdx;
+            return (idx / lastIdx) * dur;
+        };
+
         const _syncPlayBtn = () => {
             if (!_surface) return;
             const v = _surface.getVideoElement();
@@ -157,6 +183,10 @@ export const MpiVideoControlBar = ComponentFactory.create({
         // ── Trim wiring (visual sync) ─────────────────────────────────────
         if (trim) {
             trim.on('seek', ({ time }) => {
+                if (!_surface) return;
+                _surface.seek(time);
+            });
+            trim.on('seek-preview', ({ time }) => {
                 if (!_surface) return;
                 _surface.seek(time);
             });
@@ -262,7 +292,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 addCb(surfaceInstance, 'pause',         () => _syncPlayBtn()),
                 addCb(surfaceInstance, 'timeupdate',    ({ time, duration }) => {
                     _renderTime(time, duration);
-                    if (duration > 0) trim?.el.setValueQuiet(time);
+                    if (duration > 0) trim?.el.setValueQuiet(_displayTime(time));
                     // Range-loop emulation — only during natural playback.
                     // Frame-step + manual seeks set currentTime directly and
                     // must NOT be re-routed back into the range (the surface's
@@ -306,6 +336,29 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.up',     () => _adjustVolume(+10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.down',   () => _adjustVolume(-10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.first',   () => {
+                if (!_surface) return;
+                _surface.getVideoElement().pause();
+                _surface.seek(_in);
+            }));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.last',    () => {
+                if (!_surface) return;
+                const v = _surface.getVideoElement();
+                v.pause();
+                // Prefer measured fps from frameCount/duration over declared
+                // _fps — declared 30 often masks an actual 29.97 timebase
+                // and integer frame math then lands one frame short.
+                const frameCount = _surface.getFrameCount?.();
+                const dur = v.duration;
+                const effFps = (frameCount && Number.isFinite(dur) && dur > 0)
+                    ? frameCount / dur
+                    : _fps;
+                const fs = effFps > 0 ? (1 / effFps) : 0;
+                // Seek just past the last frame's PTS so Chromium lands on
+                // it; surface.seek() clamps to a safe maxSeek inside duration.
+                const lastFrameTime = Math.max(_in, _out - fs * 0.5);
+                _surface.seek(lastFrameTime);
+            }));
 
             if (trim) {
                 _hotkeyUnsubs.push(Hotkeys.bind('video.trim.in', () => {

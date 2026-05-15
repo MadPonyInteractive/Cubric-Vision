@@ -132,9 +132,14 @@ export const MpiHelp = ComponentFactory.create({
                                 <li><span>SPACE</span><span>Play / pause</span></li>
                                 <li><span>&larr;</span><span>Previous frame</span></li>
                                 <li><span>&rarr;</span><span>Next frame</span></li>
+                                <li><span>0</span><span>Jump to first frame</span></li>
+                                <li><span>1</span><span>Jump to last frame</span></li>
                                 <li><span>&uarr;</span><span>Volume +10%</span></li>
                                 <li><span>&darr;</span><span>Volume -10%</span></li>
                                 <li><span>L</span><span>Toggle loop</span></li>
+                                <li><span>I</span><span>Set trim in to playhead</span></li>
+                                <li><span>O</span><span>Set trim out to playhead</span></li>
+                                <li><span>X</span><span>Reset trim range</span></li>
                             </ul>
                         </div>
 
@@ -143,8 +148,8 @@ export const MpiHelp = ComponentFactory.create({
                             <h4>Compare</h4>
                             <ul>
                                 <li><span>SPACE</span><span>Play / pause both videos</span></li>
-                                <li><span>&larr;</span><span>Previous frame (no loop)</span></li>
-                                <li><span>&rarr;</span><span>Next frame (no loop)</span></li>
+                                <li><span>&larr;</span><span>Prev frame</span></li>
+                                <li><span>&rarr;</span><span>Next frame</span></li>
                                 <li><span>L</span><span>Toggle loop</span></li>
                             </ul>
                         </div>

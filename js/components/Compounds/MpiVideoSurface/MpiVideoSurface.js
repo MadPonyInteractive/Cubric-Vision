@@ -125,6 +125,19 @@ export const MpiVideoSurface = ComponentFactory.create({
         el.getFps        = () => _fps;
         el.getFrameCount = () => _frameCount;
 
+        // Effective fps: prefer measured fps from frameCount/duration when both
+        // are known — declared fps (e.g. "30") often drifts from the file's
+        // actual PTS spacing (e.g. 29.97 for NTSC), causing integer frame
+        // indexing to collide on repeated frames or fall short of the last
+        // frame. Falls back to declared _fps until duration is loaded.
+        const _effectiveFps = () => {
+            const dur = video.duration;
+            if (_frameCount && Number.isFinite(dur) && dur > 0) {
+                return _frameCount / dur;
+            }
+            return _fps;
+        };
+
         el._setVolume = (v) => {
             video.volume = Math.max(0, Math.min(1, +v || 0));
         };
@@ -137,8 +150,9 @@ export const MpiVideoSurface = ComponentFactory.create({
         el.seek = (seconds) => {
             const dur = video.duration;
             if (!Number.isFinite(dur) || dur <= 0) return;
-            const frameStep = 1 / _fps;
-            const maxSeek = Math.max(0, dur - frameStep);
+            const eff = _effectiveFps();
+            const frameStep = 1 / eff;
+            const maxSeek = Math.max(0, dur - frameStep * 0.5);
             const clamped = Math.max(0, Math.min(maxSeek, +seconds || 0));
             const wasLoop = video.loop;
             if (wasLoop) video.loop = false;
@@ -162,7 +176,8 @@ export const MpiVideoSurface = ComponentFactory.create({
             const dur = video.duration;
             if (!Number.isFinite(dur) || dur <= 0) return;
             const dir = direction < 0 ? -1 : 1;
-            const fs  = 1 / _fps;
+            const eff = _effectiveFps();
+            const fs  = 1 / eff;
             video.pause();
 
             const hasRange = range
@@ -175,12 +190,12 @@ export const MpiVideoSurface = ComponentFactory.create({
                 ? range.loop
                 : video.loop;
 
-            const loFrame   = Math.round(loSec * _fps);
+            const loFrame   = Math.round(loSec * eff);
             // Out timestamp is inclusive: range covers frames
-            // `loFrame … round(hiSec*fps)`. For a full-clip range with
+            // `loFrame … round(hiSec*eff)`. For a full-clip range with
             // `hi = duration`, this lands on the final decodable frame index.
-            const lastFrame = Math.max(loFrame, Math.round(hiSec * _fps));
-            const curFrame  = Math.round(video.currentTime * _fps);
+            const lastFrame = Math.max(loFrame, Math.round(hiSec * eff));
+            const curFrame  = Math.round(video.currentTime * eff);
 
             let nextFrame;
             if (dir < 0) {
@@ -197,7 +212,13 @@ export const MpiVideoSurface = ComponentFactory.create({
                 }
             }
 
-            video.currentTime = nextFrame * fs;
+            // Bias by a quarter-frame toward the target so the seek lands
+            // PAST the frame boundary even when float math (or NTSC-style
+            // 29.97 timebase) leaves `nextFrame * fs` slightly before the
+            // actual PTS of the intended frame. Chromium picks the frame
+            // whose PTS <= currentTime, so without the bias a step can
+            // re-land on the previous frame (visible as "repeated frames").
+            video.currentTime = nextFrame * fs + 0.25 * fs;
         };
 
         // ── Cleanup ───────────────────────────────────────────────────────

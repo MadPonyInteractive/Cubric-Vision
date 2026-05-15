@@ -330,11 +330,12 @@ NOTE:    Single horizontal row layout `[left buttons + time] [trim flex:1] [righ
 
 ### MpiTrimBar (Compound — js/components/Compounds/MpiTrimBar/)
 EMITS:   `seek`         `{ time: number }` — playhead committed (drag end / track click)
+         `seek-preview` `{ time: number }` — playhead value during drag (throttled ~50ms; playhead role only)
          `in-change`    `{ time: number }` — in handle committed
          `out-change`   `{ time: number }` — out handle committed
          `range-change` `{ in: number, out: number }` — fired alongside in/out commits
 LISTENS: (none — pure pointer drag state)
-NOTE:    Two-handle trim seek bar. Pointer drag coalesces on RAF; commits on `pointerup`. Frame-snap via `Math.round(t*fps)/fps`. Constraints: `0 ≤ in+frame ≤ out ≤ duration`; playhead clamped to `[in, out]`.
+NOTE:    Two-handle trim seek bar. Pointer drag coalesces on RAF; commits on `pointerup`. Frame-snap via `Math.round(t*fps)/fps`. Constraints: `0 ≤ in+frame ≤ out ≤ duration`; playhead clamped to `[in, out]`. `seek-preview` enables live-scrub on the host video without re-firing on every RAF tick.
 
 ### MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/)
 EMITS:   `play`, `pause`, `ended`, `timeupdate` — forwarded from MpiVideoSurface

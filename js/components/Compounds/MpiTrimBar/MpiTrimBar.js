@@ -23,6 +23,7 @@
  *
  * Emits (component-local):
  *   'seek'         { time }       — playhead committed (drag end or click)
+ *   'seek-preview' { time }       — playhead value during drag (throttled ~50ms)
  *   'in-change'    { time }       — in handle committed
  *   'out-change'   { time }       — out handle committed
  *   'range-change' { in, out }    — fired alongside in/out commits
@@ -78,6 +79,9 @@ export const MpiTrimBar = ComponentFactory.create({
         let _dragRole = null;
         let _pendingSeconds = null;     // RAF coalesce buffer
         let _rafId = 0;
+        let _lastPreviewTs = 0;         // last seek-preview emit timestamp
+        let _lastPreviewValue = null;   // last seek-preview value emitted
+        const PREVIEW_MIN_MS = 50;      // throttle floor between previews
 
         function _frameStep() {
             return _fps > 0 ? (1 / _fps) : 0;
@@ -140,7 +144,18 @@ export const MpiTrimBar = ComponentFactory.create({
             if (_pendingSeconds == null || !_dragRole) return;
             const target = _pendingSeconds;
             _pendingSeconds = null;
-            if (_applyDrag(target)) _renderPositions();
+            const role = _dragRole;
+            if (_applyDrag(target)) {
+                _renderPositions();
+                if (role === 'playhead') {
+                    const now = performance.now();
+                    if (_value !== _lastPreviewValue && (now - _lastPreviewTs) >= PREVIEW_MIN_MS) {
+                        _lastPreviewTs = now;
+                        _lastPreviewValue = _value;
+                        emit('seek-preview', { time: _value });
+                    }
+                }
+            }
         }
 
         function _onPointerMove(ev) {
@@ -160,6 +175,8 @@ export const MpiTrimBar = ComponentFactory.create({
             }
             const role = _dragRole;
             _dragRole = null;
+            _lastPreviewTs = 0;
+            _lastPreviewValue = null;
             try { ev.target.releasePointerCapture?.(ev.pointerId); } catch (_) { /* noop */ }
 
             if (role === 'in') {
