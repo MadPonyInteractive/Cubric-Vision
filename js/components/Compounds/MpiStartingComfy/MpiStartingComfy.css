@@ -19,8 +19,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: radial-gradient(circle at center, oklch(0.72 0.20 6 / 0.2) 0%, transparent 70%);
 }
 
 .mpi-starting-comfy__img {
