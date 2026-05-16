@@ -65,32 +65,6 @@
     Reference: docs\plans\2026-05-16-port-stage-to-docs.md (archived spec).
     ```
 
-### Mascot + logo recolor across all surfaces
-
-  - tags: [design, brand, assets]
-  - priority: medium
-  - defaultExpanded: false
-    ```md
-    Update mascot + logo PNGs to Stage mauve across:
-    - CubricStudio app (c:\AI\Mpi\CubricStudio\assets\)
-    - Cubric Studio (Website) (c:\AI\Mpi\Cubric Studio (Website)\assets\)
-    - Cubric Studio (Docs) (c:\AI\Mpi\Cubric Studio (Docs)\)
-    
-    Source recipe: c:\AI\Mpi\CubricStudio\docs\redesign\RECOLOR.md
-    Photoshop pass on source PNGs. Drop CSS hue-rotate stopgap filters
-    everywhere after assets land.
-    
-    Targets per RECOLOR.md:
-    - Body: oklch(0.50 0.022 350)
-    - Eyes: oklch(0.82 0.13 220) frost cyan
-    - Emblem + C: oklch(0.72 0.20 6) heat pink
-    - Outline: oklch(0.22 0.02 350) deep mauve
-    
-    Files to refresh (non-exhaustive):
-    - logo.png / favicon.png / lettering.png
-    - comfy_robot_engine*.png (mascot family — hi/ho/arms variants)
-    ```
-
 ## PLANNING
 
 ### Cross-platform portable distribution
@@ -115,6 +89,31 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Mascot + logo + lettering recolor ported across all surfaces
+
+  - tags: [design, brand, assets]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Recolored PNGs (Photoshop pass per docs/redesign/RECOLOR.md) landed in app
+    media/assets/ and synced to siblings. App is canonical source.
+
+    Synced files (hash-verified):
+    - CubricStudio_Redesign/assets/: 6 files (Lettering, comfy_robot_engine*, logo)
+      + CubricStudio_Redesign/logo.png (root copy).
+    - Cubric Studio (Website)/assets/: logo.png + comfy_robot_engine{,_arms,_hi,_ho}.png.
+    - Cubric Studio (Docs)/assets/: logo.png + renamed mascots:
+        comfy_robot_engine      -> mascot_idle
+        comfy_robot_engine_arms -> mascot_success
+        comfy_robot_engine_hi   -> mascot_happy
+        comfy_robot_engine_ho   -> mascot_surprised
+
+    Lettering.png not referenced by Website/Docs HTML — skipped there.
+
+    Follow-up: Website + Docs are separate git repos; commit + push from each.
+    Website push still gated on app-downloadable per project_website_push_gate.md.
+    ```
 
 ### Tool-options polish — crop redesign + radio primitive + video tool persistence
 
