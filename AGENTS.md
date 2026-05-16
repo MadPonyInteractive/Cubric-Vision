@@ -27,3 +27,11 @@ When the user asks Codex to remember something, update the existing Claude Markd
 For MPI workflow planning, handoff, session-end, or kanban-related requests, use the Codex bridge for the user's Claude plugin:
 
 - `C:\Users\Fabio\.claude\plugins\cache\mpi-local\mpi-kanban\0.2.0\AGENTS.md`
+
+## Project-Local Codex Skills
+
+For Cubric Studio user-facing documentation work, use the project-local skill:
+
+- `.agents/skills/cubric-user-docs/SKILL.md`
+
+This skill covers the sibling docs website, source-grounded writing, approval-first docs edits, and screenshot/GIF capture planning.
