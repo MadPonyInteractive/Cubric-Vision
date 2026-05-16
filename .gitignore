@@ -22,6 +22,7 @@ comfy_workflows/scripts/
 .agent
 .claude/settings.local.json
 .claude/playwright-cli
+.claude/skills/mpi-component-audit/.last-audit.json
 .playwright
 .playwright-cli
 playwright-report/
