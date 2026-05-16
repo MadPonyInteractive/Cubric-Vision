@@ -9,21 +9,21 @@
     Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
     Scope:
     - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
-      `LTX23_t2v_stage2.json`) and `LTX23_i2v.json` (+ `LTX23_i2v_stage2.json`)
-      exist.
+    `LTX23_t2v_stage2.json`) and `LTX23_i2v.json` (+ `LTX23_i2v_stage2.json`)
+    exist.
     - LTX uses the two-file multi-stage contract (no `Is_Continue` injection):
-      stage-1 file contains `Preview_Only` + `SaveLatent` + `Preview` + `Output`;
-      stage-2 sibling is authored by bypassing the stage-1 KSampler in ComfyUI
-      and Save (API). See `.claude/rules/comfy_injection.md` § "Multi-stage
-      video workflows".
+    stage-1 file contains `Preview_Only` + `SaveLatent` + `Preview` + `Output`;
+    stage-2 sibling is authored by bypassing the stage-1 KSampler in ComfyUI
+    and Save (API). See `.claude/rules/comfy_injection.md` § "Multi-stage
+    video workflows".
     - LTX uses the standard flat LoRA shape, not staged WAN-style LoRAs. Because
-      stage-2 LoRAs do not vary the result for LTX, set
-      `commands[op].allowsBranchingContinue = false` so preview cards expose
-      only the Discard + Finish buttons (no Continue). Finish replaces the
-      preview with the final video via `replaceItemId`.
+    stage-2 LoRAs do not vary the result for LTX, set
+    `commands[op].allowsBranchingContinue = false` so preview cards expose
+    only the Discard + Finish buttons (no Continue). Finish replaces the
+    preview with the final video via `replaceItemId`.
     - When LTX-class image models are added (future, lower-grade-GPU image
-      ops), they get the same treatment: two-file `_ms` workflow, Finish-only
-      preview card.
+    ops), they get the same treatment: two-file `_ms` workflow, Finish-only
+    preview card.
     ```
 
 ### Patreon landing page images
@@ -44,28 +44,51 @@
     - Explore adding to settings additive folders for models.
     ```
 
-### Port redesign to Cubric Studio website
+### Cubric Studio Docs subdomain + finish docs site
 
-  - tags: [feature, design]
+  - tags: [docs, infra, content]
   - priority: medium
   - defaultExpanded: false
     ```md
-    - Port new design from `c:\AI\Mpi\CubricStudio_Redesign\` to `c:\AI\Mpi\Cubric Studio (Website)\`.
-    - Single-page marketing site. Apply OKLCH tokens, Stage component primitives, mascot/logo recolor per RECOLOR.md.
-    - Reference spec: `docs/redesign/PRODUCT.md`, `DESIGN.md`, `c-stage/landing.html`.
-    - Separate git repo — commit independently.
+    Stage redesign port shipped + pushed to GitHub (Cubric-Studio-Docs main @ a2647b8).
+    Remaining work:
+    - Set up `docs.cubric.studio` (or chosen) subdomain via Namecheap → GitHub Pages.
+    - Configure CNAME (already present in repo root) + GitHub Pages source = main / root.
+    - Verify HTTPS once DNS propagates.
+    - Address small UI polish items deferred from port session.
+    - Flesh out actual documentation content: real screenshots, real videos
+      (replace VIDEO/SCREENSHOT placeholders), expand thin pages
+      (gallery, history, workflows), add search wiring (Algolia DocSearch
+      or static Lunr), add new pages as features land.
+    
+    Target repo: c:\AI\Mpi\Cubric Studio (Docs)\
+    Reference: docs\plans\2026-05-16-port-stage-to-docs.md (archived spec).
     ```
 
-### Port redesign to Cubric Studio documentation site
+### Mascot + logo recolor across all surfaces
 
-  - tags: [feature, design]
+  - tags: [design, brand, assets]
   - priority: medium
   - defaultExpanded: false
     ```md
-    - Port new design from `c:\AI\Mpi\CubricStudio_Redesign\` to `c:\AI\Mpi\Cubric Studio (Docs)\`.
-    - Documentation website. Apply OKLCH tokens, Stage component primitives, doc-appropriate type scale.
-    - Reference spec: `docs/redesign/PRODUCT.md`, `DESIGN.md`.
-    - Separate git repo — commit independently.
+    Update mascot + logo PNGs to Stage mauve across:
+    - CubricStudio app (c:\AI\Mpi\CubricStudio\assets\)
+    - Cubric Studio (Website) (c:\AI\Mpi\Cubric Studio (Website)\assets\)
+    - Cubric Studio (Docs) (c:\AI\Mpi\Cubric Studio (Docs)\)
+    
+    Source recipe: c:\AI\Mpi\CubricStudio\docs\redesign\RECOLOR.md
+    Photoshop pass on source PNGs. Drop CSS hue-rotate stopgap filters
+    everywhere after assets land.
+    
+    Targets per RECOLOR.md:
+    - Body: oklch(0.50 0.022 350)
+    - Eyes: oklch(0.82 0.13 220) frost cyan
+    - Emblem + C: oklch(0.72 0.20 6) heat pink
+    - Outline: oklch(0.22 0.02 350) deep mauve
+    
+    Files to refresh (non-exhaustive):
+    - logo.png / favicon.png / lettering.png
+    - comfy_robot_engine*.png (mascot family — hi/ho/arms variants)
     ```
 
 ## PLANNING
@@ -93,132 +116,41 @@
 
 ## COMPLETED
 
+### Port Stage redesign → Cubric Studio Docs
+
+  - tags: [PLAN, design, product]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Plan file: docs\plans\2026-05-16-port-stage-to-docs.md
+    Target repo: c:\AI\Mpi\Cubric Studio (Docs)\ (pushed to origin/main @ a2647b8)
+    Shipped: tokens.css NEW, base.css + docs.css rewrite, router.js rewrite,
+    toc.js NEW (scroll-spy), all 8 pages restyled with kicker eyebrows,
+    mascot kept to home only, hotkey table → docs-table + kbd primitives.
+    Stage exception (sidebar nav-link active border-left) documented in code.
+    Verified: 8 routes navigate, zero console errors, banned-token grep clean.
+    Follow-up tracked in backlog entry "Cubric Studio Docs subdomain + finish docs site".
+    ```
+
 ### Video workspace trim + split controls
 
   - tags: [feature, video]
   - priority: high
   - defaultExpanded: false
-  - completed: 2026-05-15
+
+### Port Stage redesign → Cubric Studio Website
+
+  - tags: [PLAN, design, brand]
+  - priority: medium
+  - defaultExpanded: false
     ```md
-    Plan file: docs/plans/2026-05-14-video-workspace-trim-split-controls.md
-
-    Phase A — Top-right viewer chip primitive — DONE
-      - MpiViewerCorners Compound created (js/css), registered in preloadStyles,
-        documented in types.js, dev-gallery card mounted.
-      - MpiCanvasViewer compare overlay migrated onto MpiViewerCorners; public
-        API preserved (setCompareEnabled, setActiveToolLabel, compare-clicked
-        emit). Chip strip now flat text per editor.html mockup (no boxes).
-
-    Phase B — MpiTrimBar Compound — DONE
-      - js/components/Compounds/MpiTrimBar/{js,css} created. 44px track + two
-        4px heat handles (12x4 caps, ±8px overflow) + 2px ink-1 playhead w/
-        triangle + 12% heat selection fill, per editor-video.html mockup.
-        Stage tokens only.
-      - Pointer drag coalesces on RAF, commits on pointerup. Track click drags
-        playhead from cursor. Frame-snap via Math.round(t*fps)/fps. Invariant
-        0 ≤ in+frame ≤ out ≤ duration; playhead clamped to [in,out].
-      - API: setDuration / setFps / setValue(Quiet) / setRange(Quiet) /
-        getValue / getRange / destroy. Emits seek, in-change, out-change,
-        range-change. Registered in preloadStyles + types.js. Dev-gallery
-        card at preview-trim-bar-default (14.74s @ 30fps, in=1.0, out=12.5).
-
-    Phase C — Split MpiVideoPlayer → Surface + ControlBar — DONE
-      - MpiVideoSurface Compound (js/css): bare <video> + click-toggle.
-        Preserves loop-disable/seeked-restore dance + frame-step wrap-on-
-        loop. API: _setSrc/_play/_pause/seek/frameStep/getVideoElement/
-        _setFps/_setFrameCount/_setVolume/_setMuted/destroy. Emits play/
-        pause/ended/timeupdate/loadedmetadata/volumechange.
-      - MpiVideoControlBar Compound (js/css): play/frame±/loop/audio/
-        fullscreen/frames-toggle + time display + embedded MpiTrimBar.
-        API: attachSurface(instance)/detachSurface/setRange(Quiet)/
-        getRange/getValue/setVolume/setMuted/setFrameCount/setFps/destroy.
-        Emits loop-change. Owns the 6 video.* hotkeys; bound on attach,
-        unbound on detach/destroy. Range = full clip on each
-        loadedmetadata; persistence in Phase D.
-      - MpiVideoViewer reshaped: surface in stage, control bar in
-        __timeline slot. Forwards same 6 external events (play/pause/
-        ended/timeupdate from surface, change ← surface volumechange,
-        loop-change from control bar). Crop/snapshot/getSourceElement/
-        loadVideo API stable.
-      - CSS registered in preloadStyles; both compounds in types.js JSDoc.
-        Dev-gallery MpiVideoPlayer card untouched (Phase G).
-
-    Phase D — Trim persistence + I/O/X hotkeys — DONE
-      - routes/projects.js: added updateItemMeta(metaPath, updater)
-        per-sidecar queue (mirror of updateProjectJson — serialize on
-        path key, read→updater→writeJsonAtomic temp-rename).
-        POST /project-media/:projectId/update-meta now routes through
-        it; request shape unchanged.
-      - MpiVideoControlBar emits range-change; new
-        el.setPendingTrim(in,out) stashes one-shot range applied on
-        the next loadedmetadata (survives the full-clip reset).
-        I/O/X hotkeys bound on attachSurface, unbound on detach.
-      - MpiVideoViewer forwards loadedmetadata + range-change.
-        loadVideo(url, meta) propagates meta.trim to setPendingTrim.
-        New convenience: el.setRangeQuiet, el.getRange.
-      - MpiGroupHistoryBlock: viewer.on('range-change') debounced 250ms
-        → POST update-meta with { trim:{in,out} } (or { trim:null } at
-        full clip). Mirrors item.trim in memory. All 6 loadVideo call
-        sites pass trim: item.trim.
-      - hotkeyRegistry: video.trim.in/out/clear registered (I/O/X).
-      - Sidecar field `trim` documented in docs/project-integrity.md.
-
-    Phase E — Range-aware ops + loop-within-range — DONE
-      - MpiVideoSurface.frameStep(dir, range?) now accepts
-        { rangeIn, rangeOut, loop }; works in integer frame space
-        (round(t*fps)); out-handle INCLUSIVE so back-from-0 wraps to
-        round(hi*fps).
-      - MpiVideoControlBar tracks _loopIntent independent of
-        video.loop; _syncNativeLoop() forces native loop off when
-        range is strict subset; timeupdate emulates loop
-        (seek(_in)/_pause at _out); gated on !video.paused so
-        frame-step is not re-routed.
-      - MpiVideoViewer.captureSnapshot({ time }?) seeks + awaits
-        'seeked' before captureFrameBlob; defensively clamps when
-        playhead drifts outside range.
-      - MpiGroupHistoryBlock — _setFrameFromVideo uses
-        item.trim.out; prompt-box-tools:extend payload + crop POST
-        body carry trimIn/trimOut.
-      - generationService forwards trimIn/trimOut to /extend-video.
-      - services/videoConcat.js — concatVideos({ inputRanges })
-        with per-input -ss/-to in filter path; demuxer fast-path
-        bypassed when any range present.
-      - routes/videoConcat.js + routes/videoCrop.js accept
-        trimIn/trimOut; videoCrop inserts -ss/-to before -i and
-        omits trim from output sidecar.
-
-    Parallel Batch — Tasks 1+2 — DONE 2026-05-15
-      - Task 1 (chips): MpiViewerCorners wired on MpiVideoViewer via
-        new #corners-mount slot + el.setTopRight() passthrough.
-        MpiGroupHistoryBlock._renderVideoChips() assembles
-        [OP-accent · m:ss · Nfps]; refresh on historyTools activate /
-        viewer range-change / loadedmetadata / initial mount. Trimmed
-        duration uses live range when set. Crop-ratio chip deferred.
-      - Task 2 (dim bg): root cause not a single token swap as plan
-        assumed. Three over-painting surfaces stacked above block
-        centre radial — MpiVideoSurface (--surface-0),
-        MpiCanvasViewer __wrap::after vignette, MpiMaskedImagePreview
-        (--surface-canvas). All flattened to transparent; block
-        __centre radial replaced with flat oklch(0.20 0.020 350).
-        Image + video stages now visually identical.
-      - Cleaned dead legacy CSS in MpiVideoViewer.css
-        (__track/__playhead/__trim-handle from pre-split).
-
-    Parallel Batch Task 3 + Phase G — DONE 2026-05-15
-      - Architectural change beyond CSS polish: control bar moved from
-        viewer to a new full-width #controls-slot grid row in
-        MpiGroupHistoryBlock. MpiVideoControlBar accepts showTrim prop
-        (default true) and lays out as a single row [left+time] [trim
-        flex] [right]. MpiTrimBar shrunk from 44px to 28px for inline
-        use. MpiVideoViewer exposes attachControlBar/detachControlBar/
-        getSurfaceInstance; no longer forwards loop-change/range-change.
-        Block listens to range-change directly on the bar instance for
-        trim persistence.
-      - Phase G: dev gallery card migrated to MpiVideoSurface +
-        MpiVideoControlBar; legacy MpiVideoPlayer dir deleted along with
-        its preloadStyles entry + types.js typedef + stale comment in
-        MpiVolumeControl.js.
-      - Rules synced: component-mounts.md + component-events.md.
-      - Memory added: feedback_controlbar_block_owned.md +
-        feedback_controlbar_showtrim_optional.md.
+    Plan file: docs\plans\2026-05-16-port-stage-to-website.md
+    Target repo: c:\AI\Mpi\Cubric Studio (Website)\ (separate git)
+    Register: brand · Color strategy: Drenched mauve
+    Spec: docs\redesign\PRODUCT.md, DESIGN.md, c-stage\landing.html
+    Driver: $impeccable shape (gate passed)
+    Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
+    index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
+    asymmetric strips, no gradient-text outside wordmark, no card-grid features.
     ```
+
