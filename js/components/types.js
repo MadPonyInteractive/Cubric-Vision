@@ -288,6 +288,7 @@
  *   setCropRatio(ratio)               — set aspect ratio lock (null = free)
  *   captureSnapshot({ time }?)        — returns { blob, dataUrl } of current frame, respecting active crop
  *   setTopRight(items)                — top-right chip strip passthrough
+ *   resetView()                       — fit video back to stage (zoom=1, no pan)
  *   destroy()                         — clean up surface, cropTool, observers, listeners
  *
  * Emits:

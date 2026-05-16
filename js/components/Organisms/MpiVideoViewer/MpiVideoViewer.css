@@ -23,6 +23,18 @@
     height: 100%;
     position: relative;
     z-index: 1;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.mpi-video-viewer__stage[data-zoomed="true"],
+.mpi-video-viewer__stage[data-zoomed="true"] .mpi-video-surface__video {
+    cursor: move;
+}
+
+.mpi-video-viewer__stage[data-panning="true"],
+.mpi-video-viewer__stage[data-panning="true"] .mpi-video-surface__video {
+    cursor: move;
 }
 
 .mpi-video-viewer__overlay {
