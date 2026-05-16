@@ -326,8 +326,8 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             const w = clampInt(_sourceW, settings.width);
             const h = clampInt(_sourceH, settings.height);
             settings = { ...settings, width: w, height: h };
-            const wField = widthInput?.el?.querySelector?.('.mpi-input__field');
-            const hField = heightInput?.el?.querySelector?.('.mpi-input__field');
+            const wField = widthInput?.el ? qs('.mpi-input__field', widthInput.el) : null;
+            const hField = heightInput?.el ? qs('.mpi-input__field', heightInput.el) : null;
             if (wField) wField.value = String(w);
             if (hField) hField.value = String(h);
             persist('width', w);

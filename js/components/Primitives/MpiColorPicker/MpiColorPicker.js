@@ -102,6 +102,7 @@ export const MpiColorPicker = ComponentFactory.create({
                 g: clampChannel(props.value.g),
                 b: clampChannel(props.value.b),
             }
+            // eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
             : hexToRgb(props.value || '#000000');
         const hex = rgbToHex(rgb);
         const info = props.info ? `data-info="${props.info}"` : '';
@@ -129,6 +130,7 @@ export const MpiColorPicker = ComponentFactory.create({
                 g: clampChannel(props.value.g),
                 b: clampChannel(props.value.b),
             }
+            // eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
             : hexToRgb(props.value || '#000000');
         let hsv = rgbToHsv(rgb);
 

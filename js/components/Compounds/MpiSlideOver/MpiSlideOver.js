@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { Events } from '../../../events.js';
-import { on } from '../../../utils/dom.js';
+import { on, qs } from '../../../utils/dom.js';
 
 /**
  * MpiSlideOver — Right-edge slide-over panel (Stage Phase 8).
@@ -44,9 +44,9 @@ export const MpiSlideOver = ComponentFactory.create({
         </div>`,
 
     setup: (el, props, emit) => {
-        const titleEl = el.querySelector('.mpi-slide-over__title');
-        const closeBtn = el.querySelector('.mpi-slide-over__close');
-        const bodyEl = el.querySelector('.mpi-slide-over__body');
+        const titleEl = qs('.mpi-slide-over__title', el);
+        const closeBtn = qs('.mpi-slide-over__close', el);
+        const bodyEl = qs('.mpi-slide-over__body', el);
 
         titleEl.textContent = props.title || '';
 
