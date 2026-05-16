@@ -862,45 +862,22 @@ class _CanvasCore {
         const { x, y } = this.input.getMousePosition();
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
             const r = (this.mask.brushSize * scale) / 2;
-            if (this.mask.brushType === 'eraser') {
-                // Eraser: ink radial gradient (60%→25%→0%) + dashed ink outline
-                ctx.save();
-                const eraserGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                eraserGrad.addColorStop(0,   'oklch(0.20 0.020 350 / 0.60)');
-                eraserGrad.addColorStop(0.5, 'oklch(0.20 0.020 350 / 0.25)');
-                eraserGrad.addColorStop(1,   'oklch(0.20 0.020 350 / 0.00)');
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
-                ctx.fillStyle = eraserGrad;
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
-                ctx.strokeStyle = 'oklch(0.20 0.020 350 / 0.85)';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([4, 3]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.restore();
-            } else {
-                // Brush: heat radial gradient (60%→25%→0%) + dashed outline
-                ctx.save();
-                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0,   'oklch(0.72 0.20 6 / 0.60)');
-                grad.addColorStop(0.5, 'oklch(0.72 0.20 6 / 0.25)');
-                grad.addColorStop(1,   'oklch(0.72 0.20 6 / 0.00)');
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
-                ctx.strokeStyle = 'oklch(0.72 0.20 6 / 0.85)';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([4, 3]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.restore();
-            }
+            const isEraser = this.mask.brushType === 'eraser';
+            const color = isEraser ? 'oklch(0.20 0.020 350 / 0.95)' : 'oklch(0.72 0.20 6 / 0.95)';
+            const outline = isEraser ? 'oklch(0.20 0.020 350 / 0.85)' : 'oklch(0.72 0.20 6 / 0.85)';
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = outline;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.restore();
         }
     }
 

@@ -16,10 +16,12 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton }      from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiDropdown }    from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup }  from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qs }             from '../../../utils/dom.js';
 import { Hotkeys }        from '../../../managers/hotkeyManager.js';
+import { Events }         from '../../../events.js';
+import { state }          from '../../../state.js';
+import { getToolSettings } from '../../../data/projectModel.js';
 
 const DETECTION_MODELS_FALLBACK = [
     { label: 'Face',   value: 'bbox/face_yolov8n.pt' },
@@ -27,12 +29,15 @@ const DETECTION_MODELS_FALLBACK = [
     { label: 'Person', value: 'bbox/person_yolov8n-seg.pt' },
 ];
 
+const DEFAULTS = { model: null, useBox: true };
+
 export const MpiToolOptionsMask = ComponentFactory.create({
     name: 'MpiToolOptionsMask',
     css: ['js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.css'],
 
     template: () => `
         <div class="mpi-tool-options-mask">
+            <div class="mpi-tool-options-mask__section-label">Auto masking</div>
             <div class="mpi-tool-options-mask__section" id="auto-model-slot"></div>
             <div class="mpi-tool-options-mask__section" id="auto-mode-slot"></div>
             <div class="mpi-tool-options-mask__thumbs"  id="thumbs-slot"></div>
@@ -49,27 +54,40 @@ export const MpiToolOptionsMask = ComponentFactory.create({
 
         viewer.el.enterMode?.('mask');
 
+        const settings = { ...DEFAULTS, ...getToolSettings(state.currentProject || {}, 'mask', DEFAULTS) };
+
         // ── Auto section ─────────────────────────────────────────────────────
 
         const models = viewer.el.getDetectionModels?.() ?? DETECTION_MODELS_FALLBACK;
-        const modelDd = MpiDropdown.mount(qs('#auto-model-slot', el), {
-            options: models,
-            value: models[0].value,
-            info: 'Detection model',
-            direction: 'up',
-        });
-        modelDd.on('change', ({ value }) => viewer.el.setAutoMaskModel?.(value));
-        _children.push(modelDd);
+        const initialModel = models.some(m => m.value === settings.model) ? settings.model : models[0].value;
 
+        const modelRadio = MpiRadioGroup.mount(qs('#auto-model-slot', el), {
+            options: models.map(m => ({ ...m, info: m.info ?? `Detect ${m.label.toLowerCase()}` })),
+            value: initialModel,
+            name: 'mask-auto-model',
+        });
+        modelRadio.on('select', ({ value }) => {
+            viewer.el.setAutoMaskModel?.(value);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'model', value });
+        });
+        viewer.el.setAutoMaskModel?.(initialModel);
+        _children.push(modelRadio);
+
+        const initialUseBox = typeof settings.useBox === 'boolean' ? settings.useBox : true;
         const modeRadio = MpiRadioGroup.mount(qs('#auto-mode-slot', el), {
             options: [
                 { label: 'Box',     value: 'box',     info: 'Create Selections with boxes - Less artifacts but larger area' },
                 { label: 'Segment', value: 'segment', info: 'Precise masking with possible artifacts' },
             ],
-            value: 'box',
+            value: initialUseBox ? 'box' : 'segment',
             name: 'mask-auto-mode',
         });
-        modeRadio.on('select', ({ value }) => viewer.el.setAutoMaskUseBox?.(value === 'box'));
+        modeRadio.on('select', ({ value }) => {
+            const useBox = value === 'box';
+            viewer.el.setAutoMaskUseBox?.(useBox);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'useBox', value: useBox });
+        });
+        viewer.el.setAutoMaskUseBox?.(initialUseBox);
         _children.push(modeRadio);
 
         const thumbsEl = viewer.el.getAutoMaskThumbsEl?.();

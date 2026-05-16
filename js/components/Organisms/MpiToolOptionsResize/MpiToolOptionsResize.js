@@ -301,7 +301,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             _previewTimer = setTimeout(runPreview, 250);
         }
 
-        async function _refreshThumbnail({ awaitNextLoad = false } = {}) {
+        async function _refreshThumbnail({ awaitNextLoad = false, syncDims = false } = {}) {
             const sourceEl = viewer?.el?.getSourceElement?.();
             if (!sourceEl) { _thumbDataUrl = null; return; }
             if (sourceEl instanceof HTMLVideoElement) {
@@ -314,9 +314,25 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             _thumbH = thumb.height;
             _sourceW = thumb.sourceWidth;
             _sourceH = thumb.sourceHeight;
+            if (syncDims && _sourceW > 0 && _sourceH > 0) {
+                _syncDimInputsToSource();
+            }
             // Seed preview img with the unmodified thumbnail so the user sees
             // something immediately, before the first preview round-trip.
             if (_previewImg) _previewImg.src = _thumbDataUrl;
+        }
+
+        function _syncDimInputsToSource() {
+            const w = clampInt(_sourceW, settings.width);
+            const h = clampInt(_sourceH, settings.height);
+            settings = { ...settings, width: w, height: h };
+            const wField = widthInput?.el?.querySelector?.('.mpi-input__field');
+            const hField = heightInput?.el?.querySelector?.('.mpi-input__field');
+            if (wField) wField.value = String(w);
+            if (hField) hField.value = String(h);
+            persist('width', w);
+            persist('height', h);
+            syncConditionalRows();
         }
 
         async function runPreview() {
@@ -396,7 +412,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             // Caller (Block) just kicked off loadVideo / loadEntry — wait for
             // the next loadeddata so we don't sample a stale frame from the
             // previous source.
-            await _refreshThumbnail({ awaitNextLoad: kind === 'video' });
+            await _refreshThumbnail({ awaitNextLoad: kind === 'video', syncDims: true });
             schedulePreview();
         };
 
@@ -405,7 +421,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         // Kick off thumbnail extraction + initial preview so the user sees
         // the tool's effect on the active entry without touching a control.
         (async () => {
-            await _refreshThumbnail();
+            await _refreshThumbnail({ syncDims: true });
             schedulePreview();
         })();
 

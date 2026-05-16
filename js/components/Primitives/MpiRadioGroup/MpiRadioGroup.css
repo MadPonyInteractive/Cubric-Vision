@@ -6,11 +6,11 @@
 .mpi-radio-group {
     display: inline-flex;
     flex-direction: row;
-    gap: 3px;
-    padding: 3px;
-    background: var(--surface-bar);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--ink-3);
+    border-radius: 0;
 }
 
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
@@ -21,14 +21,14 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    padding: 0.35rem 0.8rem;
+    padding: 10px 14px;
     background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--r-2);
+    border: none;
+    border-radius: 0;
     color: var(--ink-3);
     font-family: inherit;
     font-size: var(--t-xs);
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     transition: all var(--t-fast) var(--ease);
     white-space: nowrap;
@@ -36,7 +36,7 @@
 }
 
 .mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
-    background: var(--surface-bar);
+    background: color-mix(in oklch, var(--ink-1) 6%, transparent);
     color: var(--ink-2);
 }
 
@@ -73,6 +73,5 @@
 
 .mpi-radio-group__btn.is-active {
     background: var(--surface-bar);
-    border-color: var(--accent-heat);
     color: var(--accent-heat);
 }

@@ -47,22 +47,30 @@
 .mask-shape {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(ellipse at center,
-        oklch(0.72 0.20 6 / 0.60) 0%,
-        oklch(0.72 0.20 6 / 0.25) 50%,
-        oklch(0.72 0.20 6 / 0.00) 100%
-    );
+    background: transparent;
     outline: 1.5px dashed oklch(0.72 0.20 6 / 0.85);
     outline-offset: 0;
 }
 
+.mask-shape::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: oklch(0.72 0.20 6 / 0.95);
+    transform: translate(-50%, -50%);
+}
+
 .mask-shape--frost {
-    background: radial-gradient(ellipse at center,
-        oklch(0.78 0.14 220 / 0.60) 0%,
-        oklch(0.78 0.14 220 / 0.25) 50%,
-        oklch(0.78 0.14 220 / 0.00) 100%
-    );
+    background: transparent;
     outline-color: oklch(0.78 0.14 220 / 0.85);
+}
+
+.mask-shape--frost::after {
+    background: oklch(0.78 0.14 220 / 0.95);
 }
 
 /* ── Generation spinner — centred over the canvas ────────────────────────── */

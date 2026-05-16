@@ -12,6 +12,14 @@
     justify-content: center;
 }
 
+.mpi-tool-options-mask__section-label {
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
 .mpi-tool-options-mask__thumbs {
     min-height: 0;
     display: flex;

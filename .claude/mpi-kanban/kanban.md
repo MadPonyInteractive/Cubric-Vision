@@ -3,7 +3,7 @@
 ### LTX 2.3 video model integration
 
   - tags: [PLAN, video]
-  - priority: medium
+  - priority: high
   - defaultExpanded: false
     ```md
     Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
@@ -57,9 +57,9 @@
     - Verify HTTPS once DNS propagates.
     - Address small UI polish items deferred from port session.
     - Flesh out actual documentation content: real screenshots, real videos
-      (replace VIDEO/SCREENSHOT placeholders), expand thin pages
-      (gallery, history, workflows), add search wiring (Algolia DocSearch
-      or static Lunr), add new pages as features land.
+    (replace VIDEO/SCREENSHOT placeholders), expand thin pages
+    (gallery, history, workflows), add search wiring (Algolia DocSearch
+    or static Lunr), add new pages as features land.
     
     Target repo: c:\AI\Mpi\Cubric Studio (Docs)\
     Reference: docs\plans\2026-05-16-port-stage-to-docs.md (archived spec).
