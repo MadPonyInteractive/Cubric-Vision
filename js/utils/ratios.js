@@ -80,11 +80,11 @@ export const WAN_RATIOS = {
 
 // Ratios for social media image and video
 export const SOCIAL_RATIOS = [
+    { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" },
     { label: "4:5", ratio: 4 / 5, icon: "rect_4_5" },
     { label: "5:4", ratio: 5 / 4, icon: "rect_5_4" },
     { label: "16:9", ratio: 16 / 9, icon: "rect_16_9" },
-    { label: "9:16", ratio: 9 / 16, icon: "rect_9_16" },
-    { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" }
+    { label: "9:16", ratio: 9 / 16, icon: "rect_9_16" }
 ];
 
 // ── UI Mode Mapping ────────────────────────────────────────────────────────

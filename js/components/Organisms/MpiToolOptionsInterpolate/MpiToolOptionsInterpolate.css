@@ -1,13 +1,29 @@
 .mpi-tool-options-interpolate {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2, 0.5rem);
-    padding: var(--space-2, 0.5rem);
+    gap: var(--s-3);
+    padding: var(--s-2);
+    align-items: stretch;
+}
+
+.mpi-tool-options-interpolate__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    align-items: center;
+}
+
+.mpi-tool-options-interpolate__section-label {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
 }
 
 .mpi-tool-options-interpolate__row {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2, 0.5rem);
+    gap: var(--s-2);
     justify-content: center;
 }

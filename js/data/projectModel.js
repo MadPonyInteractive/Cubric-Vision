@@ -365,7 +365,7 @@ export function setModelSettings(project, modelId, updates) {
  * @param {Object} [defaults]
  * @returns {Object}
  */
-export function getToolSettings(project, toolKey, defaults = { upscaleModel: null }) {
+export function getToolSettings(project, toolKey, defaults = {}) {
     return (project.toolSettings ?? {})[toolKey] ?? defaults;
 }
 
@@ -374,17 +374,24 @@ export function getToolSettings(project, toolKey, defaults = { upscaleModel: nul
  * Does not mutate the original.
  * @param {Project} project
  * @param {string} toolKey
- * @param {{ upscaleModel?: string|null }} updates
+ * @param {Object} updates
  * @returns {Project}
  */
 export function setToolSettings(project, toolKey, updates) {
     const current = getToolSettings(project, toolKey);
+    const merged = { ...current, ...updates };
+    // Strip legacy `upscaleModel:null` noise that leaked from prior default
+    // value of getToolSettings(). Real upscale-model setting lives in
+    // modelSettings, not toolSettings.
+    if (merged.upscaleModel === null || merged.upscaleModel === undefined) {
+        delete merged.upscaleModel;
+    }
     return {
         ...project,
         updatedAt: new Date().toISOString(),
         toolSettings: {
             ...project.toolSettings,
-            [toolKey]: { ...current, ...updates },
+            [toolKey]: merged,
         },
     };
 }

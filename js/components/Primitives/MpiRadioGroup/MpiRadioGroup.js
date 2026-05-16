@@ -3,11 +3,11 @@ import { qs, qsa } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
 
 /**
- * MpiRadioGroup — Horizontal Button-Style Selection Primitive
+ * MpiRadioGroup — Button-Style Radio Selection Primitive
  *
- * Renders a row of toggle buttons where exactly one is active at a time.
- * Supports text labels, icons, icon-only mode, and per-option info strings
- * (data-info → status bar) and per-option emitted events.
+ * Row, grid, or "featured + grid" of toggle buttons; exactly one active at a time.
+ * Supports text labels, icons, icon-only mode, label-position (right/top),
+ * size variants, and grid layout with optional featured (full-width) first item.
  *
  * Option shape:
  *   string  — label & value identical, no icon, no info
@@ -17,8 +17,12 @@ import { renderIcon } from '../../../utils/icons.js';
  * @param {Array<string|{label:string,value:string,icon?:string,info?:string,disabled?:boolean}>} [options=[]]
  * @param {string}  [value=''] - Currently selected value
  * @param {string}  [name='radio'] - Group name (a11y)
- * @param {string}  [info] - Group-level info; per-option info overrides this on hover
+ * @param {string}  [info] - Group-level info; per-option info overrides on hover
  * @param {boolean} [iconOnly=false] - Hide labels, render icons only
+ * @param {'right'|'top'} [labelPosition='right'] - Label placement vs icon
+ * @param {'sm'|'md'|'lg'} [size='md'] - Button size variant
+ * @param {number} [columns] - If set, render as CSS grid with N columns
+ * @param {boolean} [featuredFirst=false] - First option spans full row (grid only)
  *
  * Emits:
  *   'select' { value, option }
@@ -33,8 +37,14 @@ export const MpiRadioGroup = ComponentFactory.create({
         const name     = props.name     || 'radio';
         const iconOnly = !!props.iconOnly;
         const groupInfo = props.info ?? '';
+        const labelPosition = props.labelPosition || 'right';
+        const size = props.size || 'md';
+        const columns = Number.isFinite(props.columns) ? props.columns : 0;
+        const featuredFirst = !!props.featuredFirst && columns > 0;
 
-        const buttonsHtml = options.map(opt => {
+        const iconSize = size === 'lg' ? 'md' : 'sm';
+
+        const buttonsHtml = options.map((opt, i) => {
             const isObj   = typeof opt !== 'string';
             const label   = isObj ? opt.label : opt;
             const val     = isObj ? opt.value : opt;
@@ -42,24 +52,33 @@ export const MpiRadioGroup = ComponentFactory.create({
             const info    = (isObj && opt.info) ? opt.info : groupInfo;
             const disabled = isObj && opt.disabled;
             const isActive = val === value ? 'is-active' : '';
-            const iconHtml = icon ? renderIcon(icon, 'sm') : '';
+            const iconHtml = icon ? renderIcon(icon, iconSize) : '';
             const labelHtml = iconOnly ? '' : `<span class="mpi-radio-group__label">${label}</span>`;
             const infoAttr = info ? `data-info="${info}"` : '';
             const disabledAttr = disabled ? 'disabled' : '';
             const iconCls = icon ? 'mpi-radio-group__btn--has-icon' : '';
             const onlyCls = iconOnly ? 'mpi-radio-group__btn--icon-only' : '';
+            const featuredCls = (featuredFirst && i === 0) ? 'mpi-radio-group__btn--featured' : '';
+            const labelPosCls = `mpi-radio-group__btn--label-${labelPosition}`;
+            const sizeCls = `mpi-radio-group__btn--${size}`;
+            // For stacked layout, icon goes first then label.
+            const content = (labelPosition === 'top')
+                ? `${iconHtml ? `<span class="mpi-radio-group__icon">${iconHtml}</span>` : ''}${labelHtml}`
+                : `${iconHtml ? `<span class="mpi-radio-group__icon">${iconHtml}</span>` : ''}${labelHtml}`;
             return `<button type="button"
-                            class="mpi-radio-group__btn ${iconCls} ${onlyCls} ${isActive}"
+                            class="mpi-radio-group__btn ${iconCls} ${onlyCls} ${labelPosCls} ${sizeCls} ${featuredCls} ${isActive}"
                             data-value="${val}"
                             ${infoAttr}
                             ${disabledAttr}>
-                ${iconHtml ? `<span class="mpi-radio-group__icon">${iconHtml}</span>` : ''}
-                ${labelHtml}
+                ${content}
             </button>`;
         }).join('');
 
+        const layoutCls = columns > 0 ? 'mpi-radio-group--grid' : 'mpi-radio-group--row';
+        const styleAttr = columns > 0 ? `style="--mpi-radio-cols:${columns};"` : '';
+
         return `
-            <div class="mpi-radio-group" role="group" aria-label="${name}">
+            <div class="mpi-radio-group ${layoutCls}" role="group" aria-label="${name}" ${styleAttr}>
                 ${buttonsHtml}
             </div>
         `;

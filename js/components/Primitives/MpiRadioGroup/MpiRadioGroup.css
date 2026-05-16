@@ -1,16 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MpiRadioGroup — Horizontal Button-Style Selection Primitive
+   MpiRadioGroup — Button-Style Radio Selection Primitive
    BEM block: .mpi-radio-group
 ═══════════════════════════════════════════════════════════════════════════ */
 
 .mpi-radio-group {
-    display: inline-flex;
-    flex-direction: row;
-    gap: 0;
-    padding: 0;
     background: transparent;
     border: 1px solid var(--ink-3);
     border-radius: 0;
+    padding: 0;
+    gap: 0;
+}
+
+/* ── Layout variants ───────────────────────────────────────────────────────── */
+
+.mpi-radio-group--row {
+    display: inline-flex;
+    flex-direction: row;
+}
+
+.mpi-radio-group--grid {
+    display: grid;
+    grid-template-columns: repeat(var(--mpi-radio-cols, 4), 1fr);
+    /* In grid mode the 1px outer border is shared by all cells via internal
+       separators; keep the outer border crisp. */
+}
+
+/* Featured first item spans full row in grid mode. */
+.mpi-radio-group--grid .mpi-radio-group__btn--featured {
+    grid-column: 1 / -1;
 }
 
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
@@ -35,6 +52,19 @@
     outline: none;
 }
 
+/* Grid mode: 1px gap acts as separator; wrapper background bleeds through
+   only behind active cells (transparent base for inactive). */
+.mpi-radio-group--grid {
+    gap: 1px;
+    background: transparent;
+}
+.mpi-radio-group--grid .mpi-radio-group__btn {
+    background: transparent;
+}
+.mpi-radio-group--grid .mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
+    background: color-mix(in oklch, var(--ink-1) 6%, transparent);
+}
+
 .mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
     background: color-mix(in oklch, var(--ink-1) 6%, transparent);
     color: var(--ink-2);
@@ -43,6 +73,34 @@
 .mpi-radio-group__btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+/* ── Label position ───────────────────────────────────────────────────────── */
+
+.mpi-radio-group__btn--label-top {
+    flex-direction: column-reverse;
+    gap: 0.35rem;
+}
+
+.mpi-radio-group__btn--label-right {
+    flex-direction: row;
+}
+
+/* ── Size variants ────────────────────────────────────────────────────────── */
+
+.mpi-radio-group__btn--sm {
+    padding: 6px 10px;
+    font-size: var(--t-2xs);
+}
+
+.mpi-radio-group__btn--md {
+    padding: 10px 14px;
+    font-size: var(--t-xs);
+}
+
+.mpi-radio-group__btn--lg {
+    padding: 14px 18px;
+    font-size: var(--t-sm);
 }
 
 /* ── Icon support ─────────────────────────────────────────────────────────── */
@@ -60,6 +118,16 @@
     height: 100%;
 }
 
+.mpi-radio-group__btn--lg .mpi-radio-group__icon {
+    width: 1.6rem;
+    height: 1.6rem;
+}
+
+.mpi-radio-group__btn--sm .mpi-radio-group__icon {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
 .mpi-radio-group__btn--icon-only {
     padding: 0.4rem;
 }
@@ -72,6 +140,6 @@
 /* ── Active state ─────────────────────────────────────────────────────────── */
 
 .mpi-radio-group__btn.is-active {
-    background: var(--surface-bar);
-    color: var(--accent-heat);
+    background: var(--accent-heat);
+    color: oklch(0.16 0.02 0);
 }

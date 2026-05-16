@@ -1,8 +1,8 @@
 /**
  * MpiToolOptionsUpscale — Organism: tool-options panel for Video Upscale.
  *
- * Self-contained: factor selector + model dropdown + run button.
- * Enters video viewer upscale mode in setup; exits in destroy.
+ * Model dropdown on top, Upscale Factor radio group below, Run button.
+ * Selections persist to project.json `toolSettings.videoUpscale`.
  *
  * Props:
  * @param {object} viewer - MpiVideoViewer instance
@@ -12,12 +12,34 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
+import { Events } from '../../../events.js';
+import { getToolSettings } from '../../../data/projectModel.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { qs } from '../../../utils/dom.js';
+
+const FACTOR_OPTIONS = [
+    { label: 'x1.5', value: 'x1.5' },
+    { label: 'x2',   value: 'x2'   },
+    { label: 'x3',   value: 'x3'   },
+    { label: 'x4',   value: 'x4'   },
+];
+const FACTOR_VALUES = new Set(FACTOR_OPTIONS.map(o => o.value));
+
+const DEFAULTS = Object.freeze({
+    factor: 'x2',
+    model:  '',
+});
+
+function coerceSettings(raw) {
+    return {
+        factor: FACTOR_VALUES.has(raw.factor) ? raw.factor : DEFAULTS.factor,
+        model:  typeof raw.model === 'string' ? raw.model : DEFAULTS.model,
+    };
+}
 
 export const MpiToolOptionsUpscale = ComponentFactory.create({
     name: 'MpiToolOptionsUpscale',
@@ -25,8 +47,14 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-tool-options-upscale">
-            <div class="mpi-tool-options-upscale__row" id="factor-slot"></div>
-            <div class="mpi-tool-options-upscale__row" id="model-slot"></div>
+            <div class="mpi-tool-options-upscale__section">
+                <div class="mpi-tool-options-upscale__section-label">Upscale Model</div>
+                <div class="mpi-tool-options-upscale__row" id="model-slot"></div>
+            </div>
+            <div class="mpi-tool-options-upscale__section">
+                <div class="mpi-tool-options-upscale__section-label">Upscale Factor</div>
+                <div class="mpi-tool-options-upscale__row" id="factor-slot"></div>
+            </div>
             <div class="mpi-tool-options-upscale__row" id="actions-slot"></div>
         </div>
     `,
@@ -35,49 +63,77 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
         const { viewer } = props;
         viewer.el.enterUpscaleMode?.();
 
-        const factorSel = MpiOptionSelector.mount(document.createElement('div'), {
-            variant: 'number',
-            values: ['x1.5', 'x2', 'x3', 'x4'],
-            value: 'x2',
-            popupTitle: 'FACTOR',
-            info: 'Upscale factor',
-        });
-        qs('#factor-slot', el).appendChild(factorSel.el);
+        const _initial = coerceSettings(
+            getToolSettings(state.currentProject || {}, 'videoUpscale', DEFAULTS)
+        );
+        let _factor = _initial.factor;
+        let _model  = _initial.model;
 
+        const _persistTimers = new Map();
+        const persist = (key, value) => {
+            clearTimeout(_persistTimers.get(key));
+            _persistTimers.set(key, setTimeout(() => {
+                Events.emit('settings:tool:update', { toolKey: 'videoUpscale', key, value });
+                _persistTimers.delete(key);
+            }, 200));
+        };
+
+        // ── Model dropdown ──────────────────────────────────────────────────
         const modelSlot = qs('#model-slot', el);
         let modelDd = null;
-        let modelValue = '';
 
         const _mountModelDd = () => {
             modelSlot.innerHTML = '';
             const opts = (state.upscaleModels || []).map(f => ({ label: f, value: f }));
+            const initial = opts.some(o => o.value === _model) ? _model : (opts[0]?.value ?? '');
             modelDd = MpiDropdown.mount(modelSlot, {
                 options: opts,
-                value: opts[0]?.value ?? '',
-                direction: 'up',
+                value: initial,
+                direction: 'down',
                 info: 'Upscale model',
             });
-            modelValue = opts[0]?.value ?? '';
-            modelDd.on('change', ({ value }) => { modelValue = value; });
+            if (initial !== _model) {
+                _model = initial;
+                persist('model', _model);
+            }
+            modelDd.on('change', ({ value }) => {
+                _model = value;
+                persist('model', _model);
+            });
         };
 
         if (state.upscaleModels?.length) _mountModelDd();
         else loadAssets().then(() => _mountModelDd());
 
+        // ── Factor radio group ──────────────────────────────────────────────
+        const factorRadio = MpiRadioGroup.mount(document.createElement('div'), {
+            options: FACTOR_OPTIONS,
+            value:   _factor,
+            name:    'upscale-factor',
+            info:    'Upscale factor',
+        });
+        qs('#factor-slot', el).appendChild(factorRadio.el);
+        factorRadio.on('select', ({ value }) => {
+            _factor = value;
+            persist('factor', _factor);
+        });
+
+        // ── Run ─────────────────────────────────────────────────────────────
         const runBtn = MpiButton.mount(document.createElement('div'), {
             icon: 'upscaler', label: 'Upscale', size: 'sm', variant: 'primary',
             info: 'Run video upscale',
         });
         qs('#actions-slot', el).appendChild(runBtn.el);
         runBtn.on('click', () => {
-            const factorStr = factorSel.el.getValue?.() ?? 'x2';
-            const factor = parseFloat(factorStr.replace('x', '')) || 2;
-            emit('apply', { factor, model: modelValue });
+            const factor = parseFloat(_factor.replace('x', '')) || 2;
+            emit('apply', { factor, model: _model });
         });
 
         el.destroy = () => {
             viewer.el.exitUpscaleMode?.();
-            factorSel.destroy?.();
+            _persistTimers.forEach(t => clearTimeout(t));
+            _persistTimers.clear();
+            factorRadio.destroy?.();
             modelDd?.destroy?.();
             runBtn.destroy?.();
         };

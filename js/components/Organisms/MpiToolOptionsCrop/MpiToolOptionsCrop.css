@@ -1,22 +1,40 @@
 .mpi-tool-options-crop {
     display: flex;
     flex-direction: column;
-    gap: var(--s-2);
+    gap: var(--s-3);
     padding: var(--s-2);
+    align-items: stretch;
+}
+
+.mpi-tool-options-crop__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
     align-items: center;
 }
 
+.mpi-tool-options-crop__section-label {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
 .mpi-tool-options-crop__family,
-.mpi-tool-options-crop__orientation,
-.mpi-tool-options-crop__ratios {
+.mpi-tool-options-crop__orientation {
     display: flex;
     justify-content: center;
 }
 
-.mpi-tool-options-crop__family:empty,
-.mpi-tool-options-crop__orientation:empty,
-.mpi-tool-options-crop__ratios:empty {
-    display: none;
+.mpi-tool-options-crop__ratios {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.mpi-tool-options-crop__ratios > * {
+    width: 100%;
 }
 
 .mpi-tool-options-crop__actions {
@@ -24,59 +42,9 @@
     flex-wrap: wrap;
     gap: var(--s-2);
     justify-content: center;
+    padding-top: var(--s-1);
 }
 
 .mpi-tool-options-crop__actions > div {
     flex: 0 0 auto;
-}
-
-/* ── Video preset grid — 2×3 cards ──────────────────────────────────────── */
-.mpi-tool-options-crop__video-presets {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--s-2);
-    width: 100%;
-    padding: var(--s-2) 0;
-}
-
-.mpi-tool-options-crop__preset-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--s-1);
-    padding: var(--s-2);
-    background: var(--surface-3);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-    cursor: pointer;
-    transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
-}
-
-.mpi-tool-options-crop__preset-card:hover {
-    border-color: var(--ink-2);
-    background: var(--surface-2);
-}
-
-.mpi-tool-options-crop__preset-card--active {
-    border-color: var(--accent-heat);
-    background: oklch(0.72 0.20 6 / 0.10);
-}
-
-.mpi-tool-options-crop__preset-icon {
-    background: var(--line);
-    border-radius: var(--r-1);
-    flex-shrink: 0;
-}
-
-.mpi-tool-options-crop__preset-name {
-    font-size: var(--t-2xs);
-    color: var(--ink-2);
-    letter-spacing: 0.04em;
-    text-align: center;
-}
-
-.mpi-tool-options-crop__preset-dims {
-    font-size: var(--t-2xs);
-    color: var(--ink-3);
-    letter-spacing: 0.02em;
 }
