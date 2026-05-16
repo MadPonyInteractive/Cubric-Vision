@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../../factory.js';
 import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../../state.js';
 import { Storage } from '../../../../core/storage.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
@@ -29,6 +30,11 @@ export const MpiSettings = ComponentFactory.create({
                     <div class="mpi-settings__form-group">
                         <div class="mpi-settings__checkbox-slot" id="mpiSettingsAutoStartSlot"></div>
                         <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Pixel Rendering</label>
+                        <div id="mpiSettingsPixelModeSlot"></div>
+                        <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
                     </div>
                 </div>
 
@@ -66,6 +72,23 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 autoStartInst.on('change', ({ checked }) =>
                     Storage.setAutoStartComfy(checked));
+            }
+
+            // ── Pixel rendering mode ─────────────────────────────────────────
+            const pixelModeSlot = qs('#mpiSettingsPixelModeSlot', root);
+            if (pixelModeSlot) {
+                pixelModeSlot.innerHTML = '';
+                const current = state.pixelMode || 'auto';
+                const pixelInst = MpiRadioGroup.mount(pixelModeSlot, {
+                    name: 'pixel-mode',
+                    value: current,
+                    options: [
+                        { label: 'Auto', value: 'auto' },
+                        { label: 'Smooth', value: 'smooth' },
+                        { label: 'Pixel-perfect', value: 'pixel' },
+                    ],
+                });
+                pixelInst.on('select', ({ value }) => { state.pixelMode = value; });
             }
 
             // ── Ollama URL ───────────────────────────────────────────────────

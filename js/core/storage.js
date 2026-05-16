@@ -51,6 +51,9 @@ export const Storage = {
 
   getLastSelectedMediaType: () => get(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, 'image'),
   setLastSelectedMediaType: (v) => set(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, v),
+
+  getPixelMode:        () => get(STORAGE_KEYS.PIXEL_MODE, 'auto'),
+  setPixelMode:        (v) => set(STORAGE_KEYS.PIXEL_MODE, v),
 };
 
 export const Session = {

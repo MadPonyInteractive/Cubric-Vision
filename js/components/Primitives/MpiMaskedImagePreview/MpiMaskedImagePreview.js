@@ -23,6 +23,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { ViewManager }       from '../MpiCanvas/managers/ViewManager.js';
 import { qs }                from '../../../utils/dom.js';
+import { AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 
 export const MpiMaskedImagePreview = ComponentFactory.create({
     name: 'MpiMaskedImagePreview',
@@ -50,6 +51,8 @@ export const MpiMaskedImagePreview = ComponentFactory.create({
 
         function _applyTransform() {
             stackEl.style.transform = view.getCSSTransform();
+            const scale = view.scale || 1;
+            stackEl.dataset.zoomMode = scale >= AUTO_PIXEL_THRESHOLD ? 'pixel' : 'smooth';
         }
 
         // ── Pan / zoom ────────────────────────────────────────────────────────

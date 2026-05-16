@@ -61,6 +61,7 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
 
 import { ComponentFactory } from '../../factory.js';
 import { clientLogger }     from '../../../services/clientLogger.js';
+import { AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager }       from './managers/ViewManager.js';
 import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
@@ -106,9 +107,9 @@ class _CanvasCore {
         this.container.appendChild(this.stackEl);
 
         // Base canvas — image native px (size set in loadImage). Draws img + processed bitmap.
+        // image-rendering owned by styles/01_base.css (`html.pixel-mode-*` + stackEl data-zoom-mode).
         this.baseCanvas = document.createElement('canvas');
         this.baseCanvas.dataset.role = 'base';
-        this.baseCanvas.style.imageRendering = 'pixelated';
         this.baseCanvas.style.position = 'absolute';
         this.baseCanvas.style.top = '0';
         this.baseCanvas.style.left = '0';
@@ -116,9 +117,9 @@ class _CanvasCore {
         this.stackEl.appendChild(this.baseCanvas);
 
         // Overlay canvas — image native px. Mask/crop/grid (transparent).
+        // image-rendering owned by styles/01_base.css (`html.pixel-mode-*` + stackEl data-zoom-mode).
         this.overlayCanvas = document.createElement('canvas');
         this.overlayCanvas.dataset.role = 'overlay';
-        this.overlayCanvas.style.imageRendering = 'pixelated';
         this.overlayCanvas.style.position = 'absolute';
         this.overlayCanvas.style.top = '0';
         this.overlayCanvas.style.left = '0';
@@ -683,7 +684,11 @@ class _CanvasCore {
     }
 
     _applyTransform() {
-        if (this.stackEl) this.stackEl.style.transform = this.view.getCSSTransform();
+        if (!this.stackEl) return;
+        this.stackEl.style.transform = this.view.getCSSTransform();
+        // Auto-mode zoom hint — CSS only consumes this under `html.pixel-mode-auto`.
+        const scale = this.view.scale || 1;
+        this.stackEl.dataset.zoomMode = scale >= AUTO_PIXEL_THRESHOLD ? 'pixel' : 'smooth';
     }
 
     setGrid(h, v) {

@@ -84,6 +84,13 @@
     color: var(--ink-3);
 }
 
+.mpi-settings__field-label {
+    display: block;
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    margin-bottom: 6px;
+}
+
 .mpi-settings__error {
     font-size: var(--t-sm);
     color: var(--accent-heat);

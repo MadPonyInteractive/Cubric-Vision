@@ -69,3 +69,16 @@ Server routes that modify `project.json` MUST use `updateProjectJson()` in `rout
 - `settings:tool:update` `{ toolKey, key, value }` — to queue a partial tool setting write
 - `settings:model:select` `{ modelId }` — when a model is first selected (ensures key exists)
 - `settings:tool:select` `{ toolKey }` — when a tool is first opened (ensures key exists)
+
+---
+
+## Pixel Rendering Mode
+
+`state.pixelMode` (`'auto' | 'smooth' | 'pixel'`, default `'auto'`) controls global `image-rendering` for canvases, masked-preview imgs, and `<video>` surfaces.
+
+- Persisted to `localStorage` via `Storage.getPixelMode` / `setPixelMode` (key `mpi_pixel_mode`). Hydrated into `state.pixelMode` at module init in `js/state.js`.
+- `state:changed` subscriber in `state.js` mirrors writes to Storage and swaps `<html>` class `pixel-mode-{value}`. Initial class applied in `shell.js` boot.
+- CSS rules live in `styles/01_base.css` — never write `image-rendering` inline on canvas/img/video elements.
+- Auto mode: `MpiCanvas._applyTransform` + `MpiMaskedImagePreview._applyTransform` set `dataset.zoomMode = 'pixel' | 'smooth'` on the stack el from `view.scale` vs the exported `AUTO_PIXEL_THRESHOLD` constant (3.0 = 300%). CSS only consumes `data-zoom-mode` under `html.pixel-mode-auto`.
+- Video: in auto mode, video is always smooth (no zoom in viewer today). Static smooth/pixel modes apply uniformly.
+- New viewer surfaces that need to honor the toggle: add their selector to the four CSS rule blocks in `styles/01_base.css` (smooth / pixel / auto-base / auto-zoom).

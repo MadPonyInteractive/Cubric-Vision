@@ -74,7 +74,20 @@ const _state = {
     lastGeneration: null,            // { label: string, elapsed: number } — set by StatusBar on
                                      // complete(). Read by status bar idle display and future
                                      // meta-card consumers via 'generation:timing' event.
+
+    // ── Viewer rendering ───────────────────────────────────────────────────────
+    pixelMode: Storage.getPixelMode(),
+                                     // 'auto' (default) | 'smooth' | 'pixel'.
+                                     // auto = smooth at fit, pixelated above AUTO_PIXEL_THRESHOLD scale.
+                                     // Applied as `html.pixel-mode-{value}` class by shell + state listener.
+                                     // MpiCanvas + MpiMaskedImagePreview set per-stack `data-zoom-mode`
+                                     // which CSS reads only under `html.pixel-mode-auto`.
 };
+
+// Effective image-px → screen-px scale above which auto mode switches to nearest-neighbor.
+// 3.0 = 300%. AI images skew small (1K typical, 2-4K when upscaled), so threshold is lower
+// than Photoshop's 5.0 default.
+export const AUTO_PIXEL_THRESHOLD = 3.0;
 
 // Batching control for state mutations
 let _batching = false;
@@ -121,4 +134,11 @@ export function batchState(fn) {
 Events.on('state:changed', ({ key, value }) => {
     if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
     else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
+    else if (key === 'pixelMode') {
+        const mode = (value === 'smooth' || value === 'pixel') ? value : 'auto';
+        Storage.setPixelMode(mode);
+        const root = document.documentElement;
+        root.classList.remove('pixel-mode-auto', 'pixel-mode-smooth', 'pixel-mode-pixel');
+        root.classList.add(`pixel-mode-${mode}`);
+    }
 });

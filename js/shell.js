@@ -67,6 +67,12 @@ export async function initShell() {
   // 0. Init hotkey manager (attaches window listeners, registers builtins)
   Hotkeys.init();
 
+  // 0.1. Apply persisted pixel-mode preference to <html> for CSS-scoped image-rendering
+  {
+    const mode = (state.pixelMode === 'smooth' || state.pixelMode === 'pixel') ? state.pixelMode : 'auto';
+    document.documentElement.classList.add(`pixel-mode-${mode}`);
+  }
+
   // 1. Performance: Preload all styles to prevent FOUC
   preloadComponentStyles();
 

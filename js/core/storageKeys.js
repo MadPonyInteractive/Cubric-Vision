@@ -24,6 +24,9 @@ export const STORAGE_KEYS = {
 
   // Dev tools
   COMP_DEBUG:          'mpi_comp_debug',
+
+  // Viewer rendering
+  PIXEL_MODE:          'mpi_pixel_mode',
 };
 
 // --- sessionStorage keys ---

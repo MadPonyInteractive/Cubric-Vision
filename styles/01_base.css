@@ -291,6 +291,30 @@ h4 {
   animation: neonPulse 2s infinite ease-in-out;
 }
 
+/* ── Pixel rendering modes ───────────────────────────────────────────────────
+   Controlled by `state.pixelMode` ('auto' | 'smooth' | 'pixel') applied as a
+   `html.pixel-mode-*` class. Auto mode reads per-stack `data-zoom-mode` set by
+   MpiCanvas / MpiMaskedImagePreview from their live view scale.
+*/
+html.pixel-mode-pixel .mpi-canvas__stack canvas,
+html.pixel-mode-pixel .mpi-masked-preview__base,
+html.pixel-mode-pixel .mpi-masked-preview__masked,
+html.pixel-mode-pixel .mpi-video-surface__video { image-rendering: pixelated; }
+
+html.pixel-mode-smooth .mpi-canvas__stack canvas,
+html.pixel-mode-smooth .mpi-masked-preview__base,
+html.pixel-mode-smooth .mpi-masked-preview__masked,
+html.pixel-mode-smooth .mpi-video-surface__video { image-rendering: auto; }
+
+html.pixel-mode-auto .mpi-canvas__stack canvas,
+html.pixel-mode-auto .mpi-masked-preview__base,
+html.pixel-mode-auto .mpi-masked-preview__masked,
+html.pixel-mode-auto .mpi-video-surface__video { image-rendering: auto; }
+
+html.pixel-mode-auto .mpi-canvas__stack[data-zoom-mode="pixel"] canvas,
+html.pixel-mode-auto .mpi-masked-preview__stack[data-zoom-mode="pixel"] .mpi-masked-preview__base,
+html.pixel-mode-auto .mpi-masked-preview__stack[data-zoom-mode="pixel"] .mpi-masked-preview__masked { image-rendering: pixelated; }
+
 .spinner {
   width: 36px;
   height: 36px;
