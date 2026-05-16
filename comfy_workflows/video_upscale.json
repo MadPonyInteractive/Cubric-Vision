@@ -58,31 +58,6 @@
       "title": "Upscale Image By"
     }
   },
-  "717": {
-    "inputs": {
-      "index": -1,
-      "images": [
-        "745",
-        0
-      ]
-    },
-    "class_type": "MpiGetImageAtIndex",
-    "_meta": {
-      "title": "Mpi Get Image At Index"
-    }
-  },
-  "718": {
-    "inputs": {
-      "images": [
-        "717",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Last_Frame"
-    }
-  },
   "719": {
     "inputs": {
       "frame_rate": [
@@ -111,7 +86,7 @@
   "720": {
     "inputs": {
       "passthrough": [
-        "745",
+        "748",
         0
       ]
     },
@@ -170,21 +145,21 @@
       "title": "Video Info (Source) 🎥🅥🅗🅢"
     }
   },
-  "745": {
+  "748": {
     "inputs": {
-      "select": 2,
-      "any_1": [
+      "boolean": true,
+      "true": [
         "609",
         0
       ],
-      "any_2": [
+      "false": [
         "400",
         0
       ]
     },
-    "class_type": "MpiAnySwitch",
+    "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Upscale_Method"
+      "title": "Upscale_Using_Model"
     }
   }
 }
