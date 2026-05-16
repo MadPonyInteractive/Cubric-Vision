@@ -62,6 +62,7 @@ const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
+    imageUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
@@ -329,9 +330,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Mask compounds have no apply button — they only create a mask.
             // PromptBox runs the operation; this branch should never fire.
             if (mode === 'mask') return;
-            if (mode === 'videoUpscale') {
-                const injectionParams = { Upscale_Factor: payload.factor ?? 2 };
+            if (mode === 'videoUpscale' || mode === 'imageUpscale') {
+                const injectionParams = {
+                    Upscale_Factor: payload.factor ?? 2,
+                    Upscale_Using_Model: !!payload.model,
+                };
                 if (payload.model) injectionParams.Upscale_Model = payload.model;
+                if (mode === 'imageUpscale') return _runImageTool('imageUpscale', injectionParams);
                 return _runVideoTool('videoUpscale', injectionParams);
             }
             if (mode === 'interpolate') {
@@ -344,7 +349,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
-            videoUpscale: 'Upscale', interpolate: 'Interpolate',
+            videoUpscale: 'Upscale', imageUpscale: 'Upscale',
+            interpolate: 'Interpolate',
             resize: 'Resize', resizeVideo: 'Resize',
         };
 
@@ -735,6 +741,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _setGenerating(true);
             _activeExec = startGeneration(
                 { operation, model: videoModel, positive: '', negative: '', mediaItems, injectionParams },
+                { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
+                { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
+            );
+        }
+
+        function _runImageTool(operation, injectionParams = {}) {
+            const currentItem = _group.history[_currentIdx];
+            if (!currentItem?.filePath) { _showToast('No source image', 'error'); return; }
+            const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }];
+            const imageModel = { id: null, mediaType: 'image' };
+            _setGenerating(true);
+            _activeExec = startGeneration(
+                { operation, model: imageModel, positive: '', negative: '', mediaItems, injectionParams },
                 { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );

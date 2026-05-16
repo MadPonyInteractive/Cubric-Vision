@@ -1,14 +1,18 @@
 /**
- * MpiToolOptionsUpscale — Organism: tool-options panel for Video Upscale.
+ * MpiToolOptionsUpscale — Organism: tool-options panel for Image / Video Upscale.
  *
- * Model dropdown on top, Upscale Factor radio group below, Run button.
- * Selections persist to project.json `toolSettings.videoUpscale`.
+ * Model dropdown on top (with "None" entry that runs the workflow without an
+ * upscale model via the `Upscale_Using_Model` boolean), Upscale Factor radio
+ * group below, Run button. Selections persist to
+ * `toolSettings.{imageUpscale|videoUpscale}` per kind.
  *
  * Props:
- * @param {object} viewer - MpiVideoViewer instance
+ * @param {object} viewer - MpiCanvasViewer or MpiVideoViewer instance
+ * @param {'image'|'video'} [kind='video'] - Determines persistence key + workflow op
  *
  * Emits:
- *   'apply' { factor: number, model: string } — user pressed Run
+ *   'apply' { factor: number, model: string } — user pressed Run.
+ *     `model === ''` means "no upscale model" (None).
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -28,6 +32,8 @@ const FACTOR_OPTIONS = [
     { label: 'x4',   value: 'x4'   },
 ];
 const FACTOR_VALUES = new Set(FACTOR_OPTIONS.map(o => o.value));
+
+const NONE_OPTION = { label: 'None', value: '' };
 
 const DEFAULTS = Object.freeze({
     factor: 'x2',
@@ -61,10 +67,13 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         const { viewer } = props;
-        viewer.el.enterUpscaleMode?.();
+        const kind = props.kind === 'image' ? 'image' : 'video';
+        const toolKey = kind === 'image' ? 'imageUpscale' : 'videoUpscale';
+
+        if (kind === 'video') viewer.el.enterUpscaleMode?.();
 
         const _initial = coerceSettings(
-            getToolSettings(state.currentProject || {}, 'videoUpscale', DEFAULTS)
+            getToolSettings(state.currentProject || {}, toolKey, DEFAULTS)
         );
         let _factor = _initial.factor;
         let _model  = _initial.model;
@@ -73,7 +82,7 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
         const persist = (key, value) => {
             clearTimeout(_persistTimers.get(key));
             _persistTimers.set(key, setTimeout(() => {
-                Events.emit('settings:tool:update', { toolKey: 'videoUpscale', key, value });
+                Events.emit('settings:tool:update', { toolKey, key, value });
                 _persistTimers.delete(key);
             }, 200));
         };
@@ -84,13 +93,20 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
 
         const _mountModelDd = () => {
             modelSlot.innerHTML = '';
-            const opts = (state.upscaleModels || []).map(f => ({ label: f, value: f }));
-            const initial = opts.some(o => o.value === _model) ? _model : (opts[0]?.value ?? '');
+            const modelOpts = (state.upscaleModels || []).map(f => ({ label: f, value: f }));
+            const opts = [NONE_OPTION, ...modelOpts];
+            // Default: persisted value if still valid, else first real model, else None.
+            let initial;
+            if (_model === '' || modelOpts.some(o => o.value === _model)) {
+                initial = _model;
+            } else {
+                initial = modelOpts[0]?.value ?? '';
+            }
             modelDd = MpiDropdown.mount(modelSlot, {
                 options: opts,
                 value: initial,
                 direction: 'down',
-                info: 'Upscale model',
+                info: 'Upscale model (None = no model)',
             });
             if (initial !== _model) {
                 _model = initial;
@@ -109,7 +125,7 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
         const factorRadio = MpiRadioGroup.mount(document.createElement('div'), {
             options: FACTOR_OPTIONS,
             value:   _factor,
-            name:    'upscale-factor',
+            name:    `upscale-factor-${kind}`,
             info:    'Upscale factor',
         });
         qs('#factor-slot', el).appendChild(factorRadio.el);
@@ -121,7 +137,7 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
         // ── Run ─────────────────────────────────────────────────────────────
         const runBtn = MpiButton.mount(document.createElement('div'), {
             icon: 'upscaler', label: 'Upscale', size: 'sm', variant: 'primary',
-            info: 'Run video upscale',
+            info: kind === 'image' ? 'Run image upscale' : 'Run video upscale',
         });
         qs('#actions-slot', el).appendChild(runBtn.el);
         runBtn.on('click', () => {
@@ -130,7 +146,7 @@ export const MpiToolOptionsUpscale = ComponentFactory.create({
         });
 
         el.destroy = () => {
-            viewer.el.exitUpscaleMode?.();
+            if (kind === 'video') viewer.el.exitUpscaleMode?.();
             _persistTimers.forEach(t => clearTimeout(t));
             _persistTimers.clear();
             factorRadio.destroy?.();

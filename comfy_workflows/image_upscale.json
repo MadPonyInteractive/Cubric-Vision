@@ -1,0 +1,121 @@
+{
+  "400": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "scale_by": [
+        "739",
+        0
+      ],
+      "image": [
+        "749",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "607": {
+    "inputs": {
+      "upscale_model": [
+        "608",
+        0
+      ],
+      "image": [
+        "749",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "608": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Upscale_Model"
+    }
+  },
+  "609": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "scale_by": [
+        "742",
+        0
+      ],
+      "image": [
+        "607",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "739": {
+    "inputs": {
+      "float": 2
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Upscale_Factor"
+    }
+  },
+  "742": {
+    "inputs": {
+      "math_expression": "a/4",
+      "a": [
+        "739",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "748": {
+    "inputs": {
+      "images": [
+        "750",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "749": {
+    "inputs": {
+      "image": "mpi_input_image.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "750": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "609",
+        0
+      ],
+      "false": [
+        "400",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Upscale_Using_Model"
+    }
+  }
+}

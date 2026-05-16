@@ -14,6 +14,7 @@
 | `duration` | `MpiProgressBar` (interactive, wheel, handle, suffix `s`) | `"Duration"` (`MpiInt.inputs.int`) | `{ Duration: 1..30 }` (int, step 1) | `t2v`, `i2v`, `t2v_ms`, `i2v_ms` |
 | `motionIntensity` | `MpiProgressBar` (interactive, wheel, handle) | `"Motion_Intensity"` (`MpiFloat.inputs.float`) | `{ Motion_Intensity: 0..1 }` (float, step 0.01) | `i2v`, `i2v_ms` |
 | `resize` | `MpiToolOptionsResize` (tool panel) | `"Resize Image v2"`, `"ImageFlip"`, `"Image Rotate"`, Boolean node titled `"Flip"` | `{ width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }` via standalone injector, not `_buildParams` | `resize`, `resizeVideo` |
+| `upscale` | `MpiToolOptionsUpscale` (tool panel, shared image+video) | `"Upscale_Factor"` (MpiFloat), `"Upscale_Model"` (UpscaleModelLoader), `"Upscale_Using_Model"` (MpiBoolean gate) | `{ Upscale_Factor: number, Upscale_Using_Model: boolean, Upscale_Model?: filename }` — `Upscale_Model` injected only when user picks a model. When dropdown is `None`, `Upscale_Using_Model:false` flips the workflow's MpiIfElse to the no-model branch (plain `ImageScaleBy` lanczos). Persisted per-kind under `toolSettings.imageUpscale` / `toolSettings.videoUpscale`. | `imageUpscale`, `videoUpscale` |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -214,6 +215,7 @@ controlId: {
 | `extend`          | Extend             | video     | 0              | 1             | —            | no             | (none)              | active      |
 | `interpolate`     | Interpolate        | video     | 0              | —             | —            | no             | (none)              | universal   |
 | `videoUpscale`    | Video Upscale      | video     | 0              | —             | —            | no             | (none)              | universal   |
+| `imageUpscale`    | Image Upscale      | image     | 1              | —             | —            | no             | (none)              | universal   |
 | `autoMaskImg`     | Auto Masking       | image     | 1              | —             | —            | no             | (none)              | universal   |
 | `resize`          | Resize             | image     | 1              | —             | —            | no             | (none)              | universal   |
 | `resizeVideo`     | Resize Video       | video     | 0              | 1             | —            | no             | (none)              | universal   |

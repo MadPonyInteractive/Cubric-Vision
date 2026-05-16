@@ -55,6 +55,13 @@ const IMAGE_TOOLS = [
         ],
     },
     {
+        mode: 'enhance',
+        label: 'Enhance',
+        group: [
+            { mode: 'imageUpscale', icon: 'upscaler', info: 'Upscale' },
+        ],
+    },
+    {
         mode: 'mask',
         label: 'Mask',
         group: [

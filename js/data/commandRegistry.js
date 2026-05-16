@@ -211,6 +211,16 @@ export const commands = {
         promptRequired: false,
         universal: true,
     },
+    imageUpscale: {
+        label: 'Image Upscale',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+    },
     autoMaskImg: {
         label: 'Auto Masking',
         mediaType: MEDIA_TYPE.IMAGE,

@@ -51,6 +51,8 @@
 
 > **Resize tool settings persist under `project.toolSettings.resize`:** shape is `{ width, height, upscale_method, keep_proportion, pad_color: { r, g, b }, crop_position, divisible_by, flip, rotation }`. `MpiToolOptionsResize` reads them with `getToolSettings(project, 'resize', defaults)` and writes each control through `Events.emit('settings:tool:update', { toolKey: 'resize', key, value })`; `projectService` is still the sole writer to `project.json`. `getToolSettings(project, toolKey, defaults = { upscaleModel: null })` accepts tool-specific defaults so non-upscale tools do not inherit an upscale-only shape.
 
+> **Upscale tool settings persist per-kind:** `project.toolSettings.imageUpscale` and `project.toolSettings.videoUpscale`, each shaped `{ factor: 'x1.5'|'x2'|'x3'|'x4', model: string }`. `MpiToolOptionsUpscale` is shared between image and video — `kind` prop selects the bucket. `model === ''` means "None" (run workflow with `Upscale_Using_Model: false`, no `Upscale_Model` injected). Both buckets persisted via `settings:tool:update` with `toolKey` = `imageUpscale` or `videoUpscale`.
+
 > **Model LoRA settings shape:** most models, including LTX, use the flat shape `modelSettings[modelId].loras: Array<6>`. Models that declare `model.loraStages` (WAN) use a staged object, e.g. `loras: { high: Array<6>, low: Array<6> }`. `MpiModelSettings`, `commandExecutor`, and preview `loraSnapshot` handling must support both shapes.
 
 > **Cue queue depth is local:** `state.generationQueueCount` includes the active Cue dispatch plus pending jobs. StatusBar subtracts the active dispatch and only displays pending depth, e.g. `GENERATING (2 queued)`. Do not poll ComfyUI queue depth for Cue mode.

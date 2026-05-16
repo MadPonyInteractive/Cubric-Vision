@@ -19,6 +19,9 @@ export const UNIVERSAL_WORKFLOWS = {
     videoUpscale: {
         workflow: 'video_upscale.json',
     },
+    imageUpscale: {
+        workflow: 'image_upscale.json',
+    },
     autoMaskImg: {
         workflow: 'img_auto_mask.json',
     },

@@ -52,6 +52,7 @@ const OP_ICONS = {
     extend:      'video',
     interpolate: 'video',
     videoUpscale:'upscaler',
+    imageUpscale:'upscaler',
 };
 
 /**

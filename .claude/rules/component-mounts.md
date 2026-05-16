@@ -55,11 +55,14 @@ const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
+    imageUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
 };
 ```
+
+> `MpiToolOptionsUpscale` is shared by both image (`imageUpscale`) and video (`videoUpscale`). Block passes `kind: modeKind` ('image'|'video'). Organism keys persistence as `toolSettings.imageUpscale` / `toolSettings.videoUpscale` and only calls `viewer.el.enter/exitUpscaleMode()` for video (image canvas has no upscale overlay).
 
 **Both group types:**
 - `MpiHistoryTools`   props: `{ mode: 'image'|'video' }` — builds own tool list from `mode` prop   slot: `#left-slot`
@@ -70,7 +73,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsResize`
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsResize`, `MpiToolOptionsUpscale` (`kind:'image'`)
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 
 **Video groups** (`_group.type === 'video'`):
@@ -244,7 +247,7 @@ Builds its own tool list from `mode: 'image'|'video'` prop. All tools — flat o
 
 - `MpiButton` (every tool)   props: `{ icon, size:'sm', variant:'ghost', info, toggleable:false, active, disabled, extraClasses:'mpi-ibtn--rail' }`   slot: per-button wrapper div appended to the group's `__slot` — wrapper required because `ComponentFactory.mount` writes `container.innerHTML` and would clobber siblings otherwise. `toggleable:false` enforces radio behaviour (re-click = no-op)
 
-**Image mode tools:** `prompt`, `crop`, `resize`, `mask`
+**Image mode tools:** `prompt`, `crop`, `resize`, `imageUpscale`, `mask`
 **Video mode tools:** `prompt`, `crop`, `resizeVideo`, `videoUpscale`, `interpolate`
 
 **Instance API (on `el`):**

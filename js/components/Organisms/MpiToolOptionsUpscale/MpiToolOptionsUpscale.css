@@ -19,6 +19,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: center;
+    align-self: center;
 }
 
 .mpi-tool-options-upscale__row {
@@ -26,4 +27,17 @@
     flex-wrap: wrap;
     gap: var(--s-2);
     justify-content: center;
+}
+
+/* Model dropdown row: stretch across full tool-panel width so long model
+   filenames render without ellipsis and the portaled popup (which inherits
+   trigger width via getBoundingClientRect) is wide enough to stay readable.
+   Override the enclosing section's `align-items:center` which would otherwise
+   shrink the dropdown to content width. */
+.mpi-tool-options-upscale__section:has(#model-slot) {
+    align-items: stretch;
+}
+
+.mpi-tool-options-upscale #model-slot {
+    justify-content: stretch;
 }
