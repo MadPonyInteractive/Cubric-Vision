@@ -28,11 +28,6 @@
     filter: drop-shadow(0 0 10px oklch(0.72 0.20 6 / 0.3));
 }
 
-.mpi-starting-comfy__img--pulse {
-    animation: neonPulse 2.5s infinite ease-in-out;
-    border-radius: 50%;
-}
-
 .mpi-starting-comfy__content {
     display: flex;
     flex-direction: column;

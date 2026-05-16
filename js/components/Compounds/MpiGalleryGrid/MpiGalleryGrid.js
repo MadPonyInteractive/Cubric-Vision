@@ -500,6 +500,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _replaceThumb(bgThumb);
                 _videoThumb = null;
                 cardEl.classList.remove('mpi-group-card--missing');
+
+                // CSS background-image has no naturalWidth/onload — measure via
+                // hidden Image() so the card adopts input aspect when group dims
+                // are unset (no-ratio-control ops like upscale with grid OFF).
+                const probe = new Image();
+                probe.onload = () => _requestStabilizingRender(probe);
+                probe.src = src;
             }
 
             function _swapThumbToVideo(src) {

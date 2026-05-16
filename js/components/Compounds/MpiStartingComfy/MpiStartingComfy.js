@@ -21,7 +21,7 @@ export const MpiStartingComfy = ComponentFactory.create({
     template: (props) => `
         <div class="mpi-starting-comfy">
             <div class="mpi-starting-comfy__media">
-                <img src="/media/assets/comfy_robot_engine.png" alt="Starting Engine" class="mpi-starting-comfy__img mpi-starting-comfy__img--pulse" />
+                <img src="/media/assets/comfy_robot_engine.png" alt="Starting Engine" class="mpi-starting-comfy__img" />
             </div>
             <div class="mpi-starting-comfy__content">
                 <h2 class="mpi-starting-comfy__title gradient-text">${props.title || 'Starting ComfyUI Engine...'}</h2>

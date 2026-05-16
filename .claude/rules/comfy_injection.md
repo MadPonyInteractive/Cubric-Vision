@@ -53,7 +53,7 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
 | `"Upscale_Using_Model"` | `inputs.boolean` | MpiBoolean (MpiIfElse) gate on `image_upscale.json` / `video_upscale.json`. `true` → workflow routes through `Upscale_Model` + `ImageUpscaleWithModel` branch. `false` → bypasses model, runs plain `ImageScaleBy` lanczos. Injected by `MpiToolOptionsUpscale` based on dropdown selection (`None` = `false`). |
 | `"Interp_Multiplier"` | `inputs.float` | Frame multiplier for RIFE VFI (2, 3, 4) |
-| `"Auto_Grid"` / `"Creative"` | `inputs.boolean` | Upscaler toggles |
+| `"Auto_Grid"` | `inputs.boolean` | Use a grid toggles |
 | `"Grid_H"` / `"Grid_V"` | `inputs.int` / `inputs.value` | Grid splits |
 | `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |
 | `"Box"` | `inputs.boolean` | Box (true) vs segment (false) |

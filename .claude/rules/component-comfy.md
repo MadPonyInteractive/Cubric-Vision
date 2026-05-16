@@ -15,6 +15,9 @@
 | `motionIntensity` | `MpiProgressBar` (interactive, wheel, handle) | `"Motion_Intensity"` (`MpiFloat.inputs.float`) | `{ Motion_Intensity: 0..1 }` (float, step 0.01) | `i2v`, `i2v_ms` |
 | `resize` | `MpiToolOptionsResize` (tool panel) | `"Resize Image v2"`, `"ImageFlip"`, `"Image Rotate"`, Boolean node titled `"Flip"` | `{ width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation }` via standalone injector, not `_buildParams` | `resize`, `resizeVideo` |
 | `upscale` | `MpiToolOptionsUpscale` (tool panel, shared image+video) | `"Upscale_Factor"` (MpiFloat), `"Upscale_Model"` (UpscaleModelLoader), `"Upscale_Using_Model"` (MpiBoolean gate) | `{ Upscale_Factor: number, Upscale_Using_Model: boolean, Upscale_Model?: filename }` — `Upscale_Model` injected only when user picks a model. When dropdown is `None`, `Upscale_Using_Model:false` flips the workflow's MpiIfElse to the no-model branch (plain `ImageScaleBy` lanczos). Persisted per-kind under `toolSettings.imageUpscale` / `toolSettings.videoUpscale`. | `imageUpscale`, `videoUpscale` |
+| `useGrid` | `MpiButton` (size: sm, toggleable, icon: grid, label: 'Use Grid') | `"Auto_Grid"` (`MpiBoolean.inputs.boolean`) | `{ Auto_Grid: boolean }` | model-tied `upscale` |
+| `upscaleFactor` | `MpiRadioGroup` (size: sm, columns: 4) | `"Upscale_Factor"` (`MpiFloat.inputs.float`/`inputs.value`) | `{ Upscale_Factor: 1.5\|2\|3\|4 }` | model-tied `upscale` |
+| `denoise` | `MpiProgressBar` (interactive, wheel, handle) | `"Denoise"` (`MpiFloat.inputs.denoise`/`inputs.value`) | `{ Denoise: 0..1 }` (float, step 0.01) | model-tied `upscale` |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -125,6 +128,9 @@ MpiPromptBox 'run' event
 | `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (payload `operation` endsWith `_ms`) — single-stage workflows never receive the field, so a stale toggle from a prior `_ms` op cannot leak into them. Persisted per-model under `modelSettings[modelId].previewStage`. |
 | `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). Persisted per-model under `modelSettings[modelId].duration`. |
 | `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). Persisted per-model under `modelSettings[modelId].motionIntensity`. |
+| `useGrid` | `MpiButton` (toggleable, icon: grid, label: 'Use Grid') | `'Auto_Grid'` (`MpiBoolean.inputs.boolean`) | `false` | `{ Auto_Grid: boolean }`. Persisted per-model under `modelSettings[modelId].useGrid`. |
+| `upscaleFactor` | `MpiRadioGroup` (sm, 4 columns) under Stage-style label row (`UPSCALE` left) | `'Upscale_Factor'` (`MpiFloat.inputs.float`) | `2` | `{ Upscale_Factor: 1.5\|2\|3\|4 }`. Persisted per-model under `modelSettings[modelId].upscaleFactor`. |
+| `denoise` | `MpiProgressBar` under Stage-style label row (`DENOISE` left, live `X.XX` right) — own full-width row in popup | `'Denoise'` (`MpiFloat.inputs.denoise`) | `0.2` | `{ Denoise: 0..1 }` (float, step 0.01). Persisted per-model under `modelSettings[modelId].denoise`. |
 
 ---
 
@@ -203,7 +209,7 @@ controlId: {
 |-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|-------------|
 | `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio','batch']` | active      |
 | `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio','batch']` | active      |
-| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | (none)              | active      |
+| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | `['useGrid','upscaleFactor','denoise']`                      | active      |
 | `edit`            | Edit               | image     | 1              | —             | —            | yes            | (none)              | active      |
 | `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |

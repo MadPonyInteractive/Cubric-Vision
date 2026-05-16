@@ -820,6 +820,18 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     || (mediaItems || []).find(item => item?.mediaType === 'image');
                 const startFrameUrl = startFrame?.url ? resolveMediaUrl(startFrame.url) : '';
 
+                // Placeholder ratio rules:
+                //   - Ratio-control ops (t2i, i2i, t2v, i2v): use injected Width/Height.
+                //   - Grid-mode upscale (Auto_Grid=true): keep square (1024) since
+                //     tile previews arrive mixed shapes and a stable square box
+                //     is the best fit until completion overwrites dims.
+                //   - No-ratio-control ops without grid (upscale/detail/change/
+                //     remove/edit): leave 0/0 so the card adopts input thumb aspect
+                //     via _cacheLoadedAspectRatio.
+                const gridActive = injectionParams.Auto_Grid === true;
+                const placeholderW = injectionParams.Width  || (gridActive ? 1024 : 0);
+                const placeholderH = injectionParams.Height || (gridActive ? 1024 : 0);
+
                 const mkPlaceholder = (id) => ({
                     id,
                     type: cardType,
@@ -835,8 +847,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         pixelDimensions: { w: 0, h: 0 },
                     }] : [],
                     selectedIndex: 0,
-                    width: injectionParams.Width || 1024,
-                    height: injectionParams.Height || 1024,
+                    width:  placeholderW,
+                    height: placeholderH,
                     isGenerating: true,
                 });
 

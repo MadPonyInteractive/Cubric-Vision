@@ -14,6 +14,7 @@
 import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../state.js';
 import { getModelSettings } from '../../../data/projectModel.js';
 import { Events } from '../../../events.js';
@@ -434,6 +435,198 @@ export const PROMPT_BOX_CONTROLS = {
         getInjectionParams() {
             const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
             return { Motion_Intensity: v };
+        },
+    },
+
+    /**
+     * useGrid — Grid upscaling toggle for model-tied `upscale` op.
+     * Injects boolean into node titled "Auto_Grid". Persists per-model under
+     * modelSettings[modelId].useGrid.
+     */
+    useGrid: {
+        nodeTitle: 'Auto_Grid',
+        defaultValue: false,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const initialActive = saved.useGrid === true;
+            this.value = initialActive;
+
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'grid',
+                label: 'Use Grid',
+                labelPosition: 'right',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initialActive,
+                info: 'Use grid — tile-based upscaling for higher detail',
+            });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'useGrid',
+                        value: !!active,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value === true;
+        },
+        getInjectionParams() {
+            return { Auto_Grid: this.value === true };
+        },
+    },
+
+    /**
+     * upscaleFactor — Discrete factor picker (1.5, 2, 3, 4) for model-tied `upscale` op.
+     * Injects float into node titled "Upscale_Factor". Persists per-model under
+     * modelSettings[modelId].upscaleFactor.
+     */
+    upscaleFactor: {
+        nodeTitle: 'Upscale_Factor',
+        defaultValue: 2,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const savedNum = Number(saved.upscaleFactor ?? this.defaultValue);
+            const allowed = [1.5, 2, 3, 4];
+            const initial = allowed.includes(savedNum) ? savedNum : this.defaultValue;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Upscale';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: '1.5x', value: '1.5' },
+                    { label: '2x',   value: '2' },
+                    { label: '3x',   value: '3' },
+                    { label: '4x',   value: '4' },
+                ],
+                value: String(initial),
+                name: 'upscaleFactor',
+                size: 'sm',
+                columns: 4,
+                info: 'Upscale factor multiplier',
+            });
+
+            this._instance.on('change', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'upscaleFactor',
+                        value: v,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Upscale_Factor: v };
+        },
+    },
+
+    /**
+     * denoise — Denoise strength slider (float, 0..1, step 0.01) for model-tied `upscale` op.
+     * Injects float into node titled "Denoise". Persists per-model under
+     * modelSettings[modelId].denoise.
+     */
+    denoise: {
+        nodeTitle: 'Denoise',
+        defaultValue: 0.2,
+        mount(hostEl, opts = {}) {
+            const model = opts.model || {};
+            const modelId = model.id;
+
+            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const savedNum = Number(saved.denoise ?? this.defaultValue);
+            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const _fmt = (v) => Number(v).toFixed(2);
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Denoise';
+            const valEl = document.createElement('span');
+            valEl.className = 'mpi-prompt-box__slider-val';
+            valEl.textContent = _fmt(initial);
+            lblRow.appendChild(nameEl);
+            lblRow.appendChild(valEl);
+            hostEl.appendChild(lblRow);
+
+            const barHost = document.createElement('div');
+            barHost.className = 'mpi-prompt-box__slider-track';
+            hostEl.appendChild(barHost);
+
+            this._instance = MpiProgressBar.mount(barHost, {
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: initial,
+                interactive: true,
+                wheel: true,
+                handle: true,
+                variant: 'primary',
+                info: 'Denoise strength (0 = preserve, 1 = full re-render)',
+            });
+
+            const _renderLabel = (v) => { valEl.textContent = _fmt(v); };
+
+            this._instance.on('input', ({ value }) => {
+                _renderLabel(Math.min(1, Math.max(0, Number(value) || 0)));
+            });
+
+            this._instance.on('change', ({ value }) => {
+                const v = Math.min(1, Math.max(0, Number(value) || 0));
+                this.value = v;
+                _renderLabel(v);
+                if (modelId) {
+                    Events.emit('settings:model:update', {
+                        modelId,
+                        key: 'denoise',
+                        value: v,
+                    });
+                }
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
+            return { Denoise: v };
         },
     },
 

@@ -83,7 +83,7 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
-        components: [],
+        components: ['useGrid', 'upscaleFactor', 'denoise'],
     },
     edit: {
         label: 'Edit',
