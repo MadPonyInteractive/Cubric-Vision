@@ -208,6 +208,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
             try {
                 _loadingComparison = true;
                 _comparingActive = true;
+                _compareNameA = _labelOf(itemA);
+                _compareNameB = _labelOf(itemB);
+                _renderCorners();
                 await canvas.loadImage(_resolveUrl(itemA.filePath));
                 await canvas.loadComparisonImage(_resolveUrl(itemB.filePath));
                 // After comparison is fully loaded, emit the final mode-changed event
@@ -217,6 +220,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
             } finally {
                 _loadingComparison = false;
             }
+        }
+
+        function _labelOf(item) {
+            const raw = item?.name || item?.displayName || '';
+            if (raw) return raw.length > 28 ? raw.slice(0, 27) + '…' : raw;
+            const fp = (item?.filePath || '').replace(/\\/g, '/').split('/').pop() || '';
+            const dot = fp.lastIndexOf('.');
+            return dot > 0 ? fp.slice(0, dot) : fp;
         }
 
         // ── Auto-mask state + thumbs (bars/dropdowns moved to MpiToolOptions*) ─
@@ -525,7 +536,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
             if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
             if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
-            if (mode !== 'compare' && _comparingActive)            _comparingActive = false;
+            if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
+                _comparingActive = false;
+                _compareNameA = '';
+                _compareNameB = '';
+                _renderCorners();
+            }
 
             // Don't emit mode-changed while loading comparison — the intermediate
             // mode changes (back to 'none' from loadImage) shouldn't affect bottom bar
@@ -656,6 +672,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearCompare = () => {
             canvas.isComparisonMode = false;
             _comparingActive = false;
+            _compareNameA = '';
+            _compareNameB = '';
+            _renderCorners();
         };
 
         el.enterMode = (mode) => {
@@ -703,10 +722,19 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         let _toolLabel = '';
         let _compareEnabled = false;
+        let _compareNameA = '';
+        let _compareNameB = '';
 
         const _cornersInst = MpiViewerCorners.mount(qs('#corners-mount', el));
 
         function _renderCorners() {
+            // Compare mode: replace top-right chips with itemB name, show itemA name top-left.
+            if (_comparingActive && _compareNameA && _compareNameB) {
+                _cornersInst.el.setTopLeft([{ text: _compareNameA }]);
+                _cornersInst.el.setTopRight([{ text: _compareNameB }]);
+                return;
+            }
+            _cornersInst.el.setTopLeft([]);
             const items = [];
             if (_toolLabel) items.push({ text: _toolLabel });
             items.push({
@@ -914,7 +942,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
                 if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
                 if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
-                if (mode !== 'compare' && _comparingActive)             _comparingActive = false;
+                if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
+                    _comparingActive = false;
+                    _compareNameA = '';
+                    _compareNameB = '';
+                    _renderCorners();
+                }
                 if (_loadingComparison) return;
                 emit('mode-changed', { mode: _currentMode });
             });

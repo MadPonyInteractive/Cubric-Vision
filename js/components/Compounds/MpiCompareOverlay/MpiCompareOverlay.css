@@ -10,6 +10,12 @@
     gap: 0;
 }
 
+/* ── Override MpiOverlay surrounding chrome — match centre viewer dark ──────── */
+.mpi-overlay--tool:has(.mpi-compare-overlay),
+.mpi-overlay--body:has(.mpi-compare-overlay) {
+    background: oklch(0.20 0.020 350);
+}
+
 /* ── Root ─────────────────────────────────────────────────────── */
 .mpi-compare-overlay {
     position: relative;
@@ -19,7 +25,7 @@
     min-height: 320px;
     display: flex;
     flex-direction: column;
-    background: var(--surface-0);
+    background: oklch(0.20 0.020 350);
     border-radius: var(--r-2);
     overflow: hidden;
 }
@@ -51,12 +57,12 @@
 }
 
 .mpi-compare-overlay__label {
-    font-size: var(--t-xs);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    padding: 0.2rem 0.55rem;
-    border-radius: var(--r-2);
-    background: oklch(0.20 0.020 350 / 0.55);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    background: oklch(0.30 0.02 350 / 0.85);
+    border: 1px solid var(--line);
     color: var(--ink-1);
     max-width: 45%;
     overflow: hidden;
