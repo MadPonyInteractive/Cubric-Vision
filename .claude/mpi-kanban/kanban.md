@@ -42,6 +42,7 @@
   - defaultExpanded: false
     ```md
     - Explore adding to settings additive folders for models.
+    This would basically be adding multiple folders where the system can pull from. 
     ```
 
 ### Cubric Studio Docs subdomain + finish docs site
@@ -63,9 +64,19 @@
     
     Target repo: c:\AI\Mpi\Cubric Studio (Docs)\
     Reference: docs\plans\2026-05-16-port-stage-to-docs.md (archived spec).
+    Linked umbrella: docs\plans\2026-05-19-cubric-vision-foundation.md (docs child track).
     ```
 
 ## PLANNING
+
+### Cubric Vision foundation
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: true
+    ```md
+    Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
+    ```
 
 ### Cross-platform portable distribution
 
@@ -88,6 +99,16 @@
 
 ## IMPLEMENTING
 
+### Add missing prompt box parameters for individual operations.
+
+  - tags: [feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Ongoing task managed by the developer cooperating with agents
+    ```
+
 ## COMPLETED
 
 ### Mascot + logo + lettering recolor ported across all surfaces
@@ -98,19 +119,19 @@
     ```md
     Recolored PNGs (Photoshop pass per docs/redesign/RECOLOR.md) landed in app
     media/assets/ and synced to siblings. App is canonical source.
-
+    
     Synced files (hash-verified):
     - CubricStudio_Redesign/assets/: 6 files (Lettering, comfy_robot_engine*, logo)
-      + CubricStudio_Redesign/logo.png (root copy).
+    + CubricStudio_Redesign/logo.png (root copy).
     - Cubric Studio (Website)/assets/: logo.png + comfy_robot_engine{,_arms,_hi,_ho}.png.
     - Cubric Studio (Docs)/assets/: logo.png + renamed mascots:
-        comfy_robot_engine      -> mascot_idle
-        comfy_robot_engine_arms -> mascot_success
-        comfy_robot_engine_hi   -> mascot_happy
-        comfy_robot_engine_ho   -> mascot_surprised
-
+    comfy_robot_engine      -> mascot_idle
+    comfy_robot_engine_arms -> mascot_success
+    comfy_robot_engine_hi   -> mascot_happy
+    comfy_robot_engine_ho   -> mascot_surprised
+    
     Lettering.png not referenced by Website/Docs HTML — skipped there.
-
+    
     Follow-up: Website + Docs are separate git repos; commit + push from each.
     Website push still gated on app-downloadable per project_website_push_gate.md.
     ```
@@ -122,17 +143,17 @@
   - defaultExpanded: false
     ```md
     - Crop tool: dropdown → MpiRadioGroup family selector; ratio popup → inline
-      stacked-icon radio (1:1 featured + 4-col grid); section labels;
-      orientation/family index-mirrored label swap; persistence under
-      toolSettings.crop {family,orientation,label}.
+    stacked-icon radio (1:1 featured + 4-col grid); section labels;
+    orientation/family index-mirrored label swap; persistence under
+    toolSettings.crop {family,orientation,label}.
     - MpiRadioGroup extended with labelPosition (right|top), size (sm|md|lg),
-      columns (grid), featuredFirst (full-width first cell). Reused everywhere.
+    columns (grid), featuredFirst (full-width first cell). Reused everywhere.
     - Video Upscale: popup → MpiRadioGroup factor; model dropdown moved on top,
-      direction:'down' fix; persistence under toolSettings.videoUpscale.
+    direction:'down' fix; persistence under toolSettings.videoUpscale.
     - Video Interpolate: popup → MpiRadioGroup multiplier; persistence under
-      toolSettings.videoInterpolate.
+    toolSettings.videoInterpolate.
     - projectModel.js: getToolSettings default {}, setToolSettings strips
-      legacy upscaleModel:null noise on every write.
+    legacy upscaleModel:null noise on every write.
     - SOCIAL_RATIOS reordered so 1:1 is first.
     ```
 
@@ -173,4 +194,3 @@
     index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
     asymmetric strips, no gradient-text outside wordmark, no card-grid features.
     ```
-
