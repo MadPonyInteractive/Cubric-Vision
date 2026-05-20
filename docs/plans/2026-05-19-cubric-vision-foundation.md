@@ -81,13 +81,18 @@ These plans/entries are related to this foundation but should not be duplicated:
 
 ## Phase 1: Product And Brand Decisions
 
-- [ ] Lock the product naming hierarchy: `Cubric` / `Cubric Studio` as ecosystem language, `Cubric Vision` as the current app, and `Cubric Prompt`, `Cubric Audio`, `Cubric Video` as future app names. **Verify:** one short naming note exists in this plan or a child brand plan and has no contradictory app names.
+All four items below are completed by the brand-identity child plan
+`docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md`.
+See its Phase 5 "One-Page Brand Identity Decision Summary" for the
+authoritative sign-off.
 
-- [ ] Decide the minimum viable release branding scope: what must change before release versus what can wait for later identity polish. **Verify:** release-blocking brand items are separated from non-blocking brand exploration.
+- [x] Lock the product naming hierarchy: `Cubric` / `Cubric Studio` as ecosystem language, `Cubric Vision` as the current app, and `Cubric Prompt`, `Cubric Audio`, `Cubric Video` as future app names. **Locked:** ecosystem term is `Cubric ecosystem`; `Cubric Studio` is hub-only (not an app in v1). See child plan Canonical Naming Table.
 
-- [ ] Audit current logo, lettering, mascot, app icon, titlebar assets, and alt text for `Cubric Studio` assumptions. **Verify:** a concrete asset/text inventory exists with file paths and each item marked `rename`, `replace`, `defer`, or `keep`.
+- [x] Decide the minimum viable release branding scope: what must change before release versus what can wait for later identity polish. **Locked:** release-blocking set + non-blocking set enumerated in child plan Phase 4.
 
-- [ ] Decide whether the current mascot remains part of Cubric Vision v1 or becomes a broader Cubric ecosystem mascot later. **Verify:** no release surface depends on an unresolved mascot-letter variant system.
+- [x] Audit current logo, lettering, mascot, app icon, titlebar assets, and alt text for `Cubric Studio` assumptions. **Locked:** full inventory in child plan Phase 3 sections 3.A–3.G covering app + Website + Docs + external brand-assets folder. Every row carries `rename | replace | defer | keep` + bucket.
+
+- [x] Decide whether the current mascot remains part of Cubric Vision v1 or becomes a broader Cubric ecosystem mascot later. **Locked:** ecosystem operator family — one specialized mascot per app. Vision v1 ships Vision mascot only; other apps' variants stay external until those apps ship. Three states locked: `idle / greet / happy`. See child plan Phase 2.
 
 ## Phase 2: App Rename Surface
 

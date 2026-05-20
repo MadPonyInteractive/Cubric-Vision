@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cubric Accent Swatch Board</title>
+  <style>
+    :root {
+      --surface-0: oklch(0.50 0.022 350);
+      --surface-1: oklch(0.46 0.022 350);
+      --surface-2: oklch(0.42 0.022 350);
+      --surface-3: oklch(0.55 0.024 350);
+      --surface-bar: oklch(0.34 0.022 350);
+      --surface-canvas: oklch(0.28 0.020 350);
+      --ink-1: oklch(0.98 0.008 80);
+      --ink-2: oklch(0.85 0.012 80);
+      --ink-3: oklch(0.66 0.014 80);
+      --ink-4: oklch(0.50 0.018 80);
+      --line: oklch(0.72 0.018 350 / 0.16);
+      --line-soft: oklch(0.72 0.015 350 / 0.08);
+      --vision-a: oklch(0.72 0.20 6);
+      --vision-b: oklch(0.76 0.17 355);
+      --vision-c: oklch(0.69 0.18 12);
+      --prompt-a: oklch(0.84 0.15 88);
+      --prompt-b: oklch(0.80 0.16 72);
+      --prompt-c: oklch(0.88 0.13 102);
+      --audio-a: oklch(0.81 0.14 155);
+      --audio-b: oklch(0.84 0.11 170);
+      --audio-c: oklch(0.77 0.15 142);
+      --video-a: oklch(0.75 0.18 34);
+      --video-b: oklch(0.72 0.19 24);
+      --video-c: oklch(0.78 0.15 48);
+      --studio-a: oklch(0.78 0.028 80);
+      --studio-b: oklch(0.68 0.038 350);
+      --studio-c: oklch(0.73 0.022 20);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface-0);
+      color: var(--ink-1);
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    }
+
+    .board {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: var(--surface-1);
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      color: var(--ink-3);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .topbar strong {
+      color: var(--ink-1);
+      font-size: 13px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 0;
+    }
+
+    .hero {
+      padding: 48px;
+      background:
+        linear-gradient(90deg, var(--surface-canvas), oklch(0.23 0.020 350 / 0.88)),
+        var(--surface-canvas);
+      border-right: 1px solid var(--line);
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink-3);
+      font-size: 11px;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 28px;
+      height: 1px;
+      background: var(--sample-accent, var(--vision-a));
+    }
+
+    h1 {
+      margin: 72px 0 24px;
+      font-size: 58px;
+      line-height: 0.94;
+      letter-spacing: 0;
+    }
+
+    h1 span {
+      color: var(--sample-accent, var(--vision-a));
+    }
+
+    .hero p {
+      max-width: 28ch;
+      margin: 0 0 32px;
+      color: var(--ink-2);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .sample-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 160px;
+      height: 48px;
+      border: 1px solid var(--sample-accent, var(--vision-a));
+      background: var(--sample-accent, var(--vision-a));
+      color: oklch(0.18 0.018 350);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .swatches {
+      padding: 28px;
+      overflow: auto;
+      background:
+        linear-gradient(90deg, var(--surface-canvas) 0 18px, transparent 18px),
+        var(--surface-bar);
+    }
+
+    .surface-note {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 28px;
+    }
+
+    .surface-note__tile {
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      display: grid;
+      align-content: end;
+      gap: 6px;
+      color: var(--ink-3);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .surface-note__tile strong {
+      color: var(--ink-1);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section h2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 14px;
+      color: var(--ink-1);
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .section h2::before {
+      content: "";
+      width: 48px;
+      height: 1px;
+      background: var(--group-accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .chip {
+      min-height: 132px;
+      padding: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+
+    .chip__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink-3);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .chip__line {
+      height: 1px;
+      background: var(--accent);
+      align-self: center;
+    }
+
+    .chip__controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chip__track {
+      height: 3px;
+      background: var(--line);
+      position: relative;
+    }
+
+    .chip__track::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 58%;
+      background: var(--accent);
+    }
+
+    .chip__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .chip__button {
+      width: 38px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: oklch(0.18 0.018 350);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .chip__code {
+      color: var(--ink-4);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .chip--selected {
+      border-color: var(--accent);
+      background:
+        linear-gradient(180deg, color-mix(in oklch, var(--accent) 12%, transparent), transparent 52%),
+        var(--surface-2);
+    }
+
+    .chip--selected .chip__top span:last-child::after {
+      content: " selected";
+      color: var(--accent);
+      letter-spacing: 0.12em;
+    }
+
+    @media (max-width: 920px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="board">
+    <header class="topbar">
+      <strong>Cubric Accent Swatches</strong>
+      <span>Stage surface test</span>
+    </header>
+
+    <main>
+      <section class="hero" style="--sample-accent: var(--vision-a);">
+        <div class="kicker">Cubric Vision baseline</div>
+        <h1>Generate.<br>Refine.<br><span>Own it.</span></h1>
+        <p>Use this side to judge whether the accent survives as a small line, a word, and a primary action on the current mauve system.</p>
+        <div class="sample-button">New project</div>
+      </section>
+
+      <section class="swatches" aria-label="Accent candidates">
+        <div class="surface-note" aria-label="Stage surface context">
+          <div class="surface-note__tile" style="background: var(--surface-canvas);">
+            <strong>Canvas / media well</strong>
+            <span>primary mascot context</span>
+          </div>
+          <div class="surface-note__tile" style="background: var(--surface-bar);">
+            <strong>Status / quiet zones</strong>
+            <span>common app chrome</span>
+          </div>
+          <div class="surface-note__tile" style="background: var(--surface-1);">
+            <strong>Panels / overlays</strong>
+            <span>secondary context</span>
+          </div>
+          <div class="surface-note__tile" style="background: var(--surface-2);">
+            <strong>Controls / inputs</strong>
+            <span>small UI only</span>
+          </div>
+        </div>
+
+        <div class="section" style="--group-accent: var(--vision-a);">
+          <h2>Cubric Vision</h2>
+          <div class="grid">
+            <article class="chip" style="--accent: var(--vision-a);">
+              <div class="chip__top"><span>current heat</span><span>v-a</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.72 0.20 6)</div>
+            </article>
+            <article class="chip chip--selected" style="--accent: var(--vision-b);">
+              <div class="chip__top"><span>rose lift</span><span>v-b</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.76 0.17 355)</div>
+            </article>
+            <article class="chip" style="--accent: var(--vision-c);">
+              <div class="chip__top"><span>coral heat</span><span>v-c</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.69 0.18 12)</div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" style="--group-accent: var(--prompt-a);">
+          <h2>Cubric Prompt</h2>
+          <div class="grid">
+            <article class="chip" style="--accent: var(--prompt-a);">
+              <div class="chip__top"><span>clear yellow</span><span>p-a</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">P</div></div>
+              <div class="chip__code">oklch(0.84 0.15 88)</div>
+            </article>
+            <article class="chip" style="--accent: var(--prompt-b);">
+              <div class="chip__top"><span>amber text</span><span>p-b</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">P</div></div>
+              <div class="chip__code">oklch(0.80 0.16 72)</div>
+            </article>
+            <article class="chip chip--selected" style="--accent: var(--prompt-c);">
+              <div class="chip__top"><span>signal lemon</span><span>p-c</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">P</div></div>
+              <div class="chip__code">oklch(0.88 0.13 102)</div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" style="--group-accent: var(--audio-a);">
+          <h2>Cubric Audio</h2>
+          <div class="grid">
+            <article class="chip" style="--accent: var(--audio-a);">
+              <div class="chip__top"><span>mint meter</span><span>a-a</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">A</div></div>
+              <div class="chip__code">oklch(0.81 0.14 155)</div>
+            </article>
+            <article class="chip chip--selected" style="--accent: var(--audio-b);">
+              <div class="chip__top"><span>seafoam</span><span>a-b</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">A</div></div>
+              <div class="chip__code">oklch(0.84 0.11 170)</div>
+            </article>
+            <article class="chip" style="--accent: var(--audio-c);">
+              <div class="chip__top"><span>green signal</span><span>a-c</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">A</div></div>
+              <div class="chip__code">oklch(0.77 0.15 142)</div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" style="--group-accent: var(--video-a);">
+          <h2>Cubric Video</h2>
+          <div class="grid">
+            <article class="chip" style="--accent: var(--video-a);">
+              <div class="chip__top"><span>red orange</span><span>vd-a</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.75 0.18 34)</div>
+            </article>
+            <article class="chip" style="--accent: var(--video-b);">
+              <div class="chip__top"><span>hot coral</span><span>vd-b</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.72 0.19 24)</div>
+            </article>
+            <article class="chip chip--selected" style="--accent: var(--video-c);">
+              <div class="chip__top"><span>orange cut</span><span>vd-c</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">V</div></div>
+              <div class="chip__code">oklch(0.78 0.15 48)</div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" style="--group-accent: var(--studio-a);">
+          <h2>Cubric Studio Hub</h2>
+          <div class="grid">
+            <article class="chip chip--selected" style="--accent: var(--studio-a);">
+              <div class="chip__top"><span>warm neutral</span><span>s-a</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">S</div></div>
+              <div class="chip__code">oklch(0.78 0.028 80)</div>
+            </article>
+            <article class="chip" style="--accent: var(--studio-b);">
+              <div class="chip__top"><span>mauve neutral</span><span>s-b</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">S</div></div>
+              <div class="chip__code">oklch(0.68 0.038 350)</div>
+            </article>
+            <article class="chip" style="--accent: var(--studio-c);">
+              <div class="chip__top"><span>soft clay</span><span>s-c</span></div>
+              <div class="chip__line"></div>
+              <div class="chip__controls"><div class="chip__track"></div><div class="chip__dot"></div><div class="chip__button">S</div></div>
+              <div class="chip__code">oklch(0.73 0.022 20)</div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
