@@ -102,13 +102,17 @@ authoritative sign-off.
 
 ## Phase 2: App Rename Surface
 
-- [ ] Inventory all user-visible `Cubric Studio` strings in the app, package metadata, launch scripts, release scripts, docs, and tests. **Verify:** `rg "Cubric Studio|CubricStudio"` results are triaged into user-visible, internal-code, filesystem-path, and historical-doc categories.
+Completed 2026-05-20 via child plan
+`docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md` +
+kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
-- [ ] Rename user-facing app identity to `Cubric Vision` while preserving internal paths where changing them would risk project portability or release stability. **Verify:** app title, titlebar, landing, about panel, metadata description, and relevant launcher/package labels consistently present `Cubric Vision`.
+- [x] Inventory all user-visible `Cubric Studio` strings in the app, package metadata, launch scripts, release scripts, docs, and tests. **Done via brand-identity Phase 3.**
 
-- [ ] Decide how to handle default project folders such as `Documents/Cubric Studio/Projects`. **Verify:** migration/compatibility behavior is explicit before any folder name change ships.
+- [x] Rename user-facing app identity to `Cubric Vision` while preserving internal paths where changing them would risk project portability or release stability. **Done:** package.json, electron-builder, Start.bat, index.html title/meta/hero, APP_NAME constants, User-Agent header, About panel, projectUI version, MpiNewProject hint, lettering, mascot.
 
-- [ ] Update release/package artifact names only after the user-facing naming decision is locked. **Verify:** portable distribution plan and launchers agree on artifact names or explicitly defer artifact renaming.
+- [x] Decide how to handle default project folders such as `Documents/Cubric Studio/Projects`. **Done:** swapped to `Documents/Cubric Vision/Projects` with NO migration shim — legacy folder orphaned per user OK (test data only).
+
+- [x] Update release/package artifact names only after the user-facing naming decision is locked. **Done:** electron-builder productName/appId updated; portable distribution plan (separate) inherits new identifiers when it ships.
 
 ## Phase 3: Integration Foundation
 

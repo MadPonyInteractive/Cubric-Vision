@@ -230,7 +230,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _mascotEl = document.createElement('img');
         _mascotEl.className = 'mascot-peek';
         _mascotEl.id = 'mascot-peek';
-        _mascotEl.src = 'assets/mascot/mascot.png';
+        _mascotEl.src = 'assets/mascot/idle.png';
         _mascotEl.alt = '';
         centreSlot.appendChild(_mascotEl);
 
@@ -412,7 +412,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _setGenerating = (flag) => {
             viewer.el.setGenerating?.(flag);
-            if (flag) _mascotShow('assets/mascot/mascot.png');
+            if (flag) _mascotShow('assets/mascot/idle.png');
             // hide handled per-event below
         };
 
@@ -475,7 +475,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.setGenerating?.(false);
             // Tool-only transforms (resize) skip the mascot — model ops only.
             if (item?.operation !== 'resize' && item?.operation !== 'resizeVideo') {
-                _mascotShow('assets/mascot/mascot-arms.png');
+                _mascotShow('assets/mascot/happy.png');
                 _mascotHide(2000);
             }
             _canvasHasMask = false;

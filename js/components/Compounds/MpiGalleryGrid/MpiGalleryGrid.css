@@ -115,7 +115,7 @@
     height: 6px;
     border-radius: 50%;
     background: var(--accent-heat);
-    box-shadow: 0 0 6px oklch(0.72 0.20 6 / 0.55);
+    box-shadow: 0 0 6px oklch(0.76 0.17 355 / 0.55);
 }
 
 .mpi-gallery-grid__tab .mpi-btn__text {

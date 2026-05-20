@@ -31,8 +31,8 @@
   );
   background-size: 200% 100%;
   opacity: 0.28;
-  box-shadow: inset 0 -1px 0 0 oklch(0.72 0.20 6 / 0.25),
-              0 0 12px 0 oklch(0.72 0.20 6 / 0.12);
+  box-shadow: inset 0 -1px 0 0 oklch(0.76 0.17 355 / 0.25),
+              0 0 12px 0 oklch(0.76 0.17 355 / 0.12);
   transition: width var(--t-base) var(--ease), opacity var(--t-slow) var(--ease);
   pointer-events: none;
   animation: sb-shimmer 2.4s linear infinite;
@@ -45,8 +45,8 @@
 
 .shell-info__fill--flash {
   opacity: 0.55;
-  box-shadow: inset 0 -1px 0 0 oklch(0.72 0.20 6 / 0.6),
-              0 0 20px 4px oklch(0.72 0.20 6 / 0.25);
+  box-shadow: inset 0 -1px 0 0 oklch(0.76 0.17 355 / 0.6),
+              0 0 20px 4px oklch(0.76 0.17 355 / 0.25);
   transition: opacity var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
 }
 

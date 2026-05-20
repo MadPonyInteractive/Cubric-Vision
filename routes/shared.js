@@ -29,7 +29,7 @@ const ENGINE_ROOT = getEngineRoot();
  * Priority:
  *   1. .engine-config.json `projectsPath` (worktree share — opt-in)
  *   2. APP_DOCUMENTS env (set by main.js → app.getPath('documents'))
- *      → <Documents>/Cubric Studio/Projects
+ *      → <Documents>/Cubric Vision/Projects
  *   3. Dev fallback: <repo>/projects
  *
  * Cross-platform: app.getPath('documents') resolves the OS-native Documents
@@ -47,7 +47,7 @@ function getProjectsRoot() {
     } catch (_) { /* fall through */ }
 
     if (process.env.APP_DOCUMENTS) {
-        return path.join(process.env.APP_DOCUMENTS, 'Cubric Studio', 'Projects');
+        return path.join(process.env.APP_DOCUMENTS, 'Cubric Vision', 'Projects');
     }
     return path.join(__dirname, '..', 'projects');
 }
@@ -107,7 +107,7 @@ function streamDownload(url, localPath, onProgress) {
     const request = (targetUrl) => {
         return new Promise((resolve, reject) => {
             const protocol = targetUrl.startsWith('https') ? https : http;
-            protocol.get(targetUrl, { headers: { 'User-Agent': 'CubricStudio/1.0' } }, async (response) => {
+            protocol.get(targetUrl, { headers: { 'User-Agent': 'CubricVision/1.0' } }, async (response) => {
                 if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
                     const nextUrl = new URL(response.headers.location, targetUrl).href;
                     resolve(request(nextUrl));

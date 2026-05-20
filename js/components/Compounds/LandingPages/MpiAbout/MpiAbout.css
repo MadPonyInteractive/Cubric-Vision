@@ -19,12 +19,11 @@
 .mpi-about__logo {
     width: 80px;
     height: 80px;
-    filter: drop-shadow(0 0 20px oklch(0.72 0.20 6 / 0.5));
+    filter: drop-shadow(0 0 20px oklch(0.76 0.17 355 / 0.5));
 }
 
 .mpi-about__name {
-    height: 24px;
-    width: auto;
+    font-size: 28px;
     display: block;
     margin: 0;
 }

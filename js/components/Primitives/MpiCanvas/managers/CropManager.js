@@ -19,7 +19,7 @@ import { Hotkeys } from '../../../../managers/hotkeyManager.js';
 const CROP_SCRIM         = 'oklch(0.20 0.020 350 / 0.55)'; /* --surface-canvas */
 const CROP_BORDER        = 'oklch(0.95 0.005 80 / 0.85)';  /* --ink-1 */
 const CROP_THIRDS        = 'oklch(0.95 0.005 80 / 0.22)';  /* --ink-1 */
-const CROP_HANDLE_FILL   = 'oklch(0.72 0.20 6)';           /* --accent-heat */
+const CROP_HANDLE_FILL   = 'oklch(0.76 0.17 355)';           /* --accent-heat */
 const CROP_HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 export class CropManager {

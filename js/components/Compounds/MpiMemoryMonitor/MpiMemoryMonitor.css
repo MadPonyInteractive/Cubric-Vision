@@ -109,13 +109,13 @@
 /* Ctrl-held — deep clean signal */
 .mpi-mem-monitor__btn--ctrl .mpi-ibtn__icon {
     color: var(--accent-heat) !important;
-    filter: drop-shadow(0 0 8px oklch(0.72 0.20 6 / 0.7)) !important;
+    filter: drop-shadow(0 0 8px oklch(0.76 0.17 355 / 0.7)) !important;
     animation: mpi-mem-ctrl-pulse 1.5s infinite ease-in-out;
 }
 
 @keyframes mpi-mem-ctrl-pulse {
-    0%, 100% { filter: drop-shadow(0 0 5px oklch(0.72 0.20 6 / 0.4)); opacity: 1; }
-    50%       { filter: drop-shadow(0 0 15px oklch(0.72 0.20 6 / 0.9)); opacity: 0.8; }
+    0%, 100% { filter: drop-shadow(0 0 5px oklch(0.76 0.17 355 / 0.4)); opacity: 1; }
+    50%       { filter: drop-shadow(0 0 15px oklch(0.76 0.17 355 / 0.9)); opacity: 0.8; }
 }
 
 /* ── Status badge ───────────────────────────────────────────────────────────── */

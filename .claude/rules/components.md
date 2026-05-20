@@ -1,6 +1,6 @@
 # Component System Architecture & Rules
 
-> **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in Cubric Studio.
+> **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in Cubric Vision.
 
 ## Stage design baseline (post-redesign)
 
@@ -10,7 +10,10 @@ The Stage redesign (PORTING.md phases 0–10.2) is **merged to master**. All com
 - **No neon, no glass, no `backdrop-filter`.** Stage is content-forward: solid surfaces, 1px lines, sharp corners.
 - **Sharp corners by default.** `MpiButton` defaults to `shape: 'sharp'` (`--r-1: 0`). Pass `shape: 'pill'` to opt into rounded.
 - **Gradient text only on the wordmark.** No `background-clip: text` anywhere else.
-- **Wordmark font:** `--font-wordmark` = `'VT323'` (self-hosted at `assets/fonts/VT323.woff2`). Body type is `'JetBrains Mono'`.
+- **Wordmark font:** `--font-wordmark` = `'Russo One', 'JetBrains Mono', sans-serif` (self-hosted at `assets/fonts/RussoOne-Regular.woff2`). Body type is `'JetBrains Mono'`.
+- **Wordmark lockup:** Use `.mpi-wordmark` BEM with `.mpi-wordmark__suffix` for the app-name half. "Cubric" stays `--ink-1`, suffix takes `--accent-heat` (rose lift for Vision). Never reintroduce `assets/lettering.png` — wordmark is live text only. Titlebar variant `.mpi-wordmark--titlebar` for the 12px chrome size.
+- **Mascot states:** Canonical 4-file set in `assets/mascot/`: `logo.png` (head crop, also app/window icon), `idle.png`, `greet.png`, `happy.png`. Legacy `mascot{,-arms,-hi,-ho}.png` are retired — do not reintroduce. Block-owned mascot peek uses `idle` for default/generating, `happy` for generation-complete. Landing empty-state uses `greet`.
+- **App accent (`--accent-heat`):** rose lift `oklch(0.76 0.17 355)` — Cubric Vision identity accent. Drive accents via the token only; never hardcode the oklch value. Old magenta-red `oklch(0.72 0.20 6)` is retired.
 - **Slide-over is the canonical right-edge panel** for Settings / Help / About (replaces the legacy full-screen modal pattern). Trigger via `Events.emit('slide-over:open', { title, component })`. Do NOT mount `MpiSettings/MpiHelp/MpiAbout` directly — they are content blueprints; `MpiSlideOver` owns chrome and mounts the content into `.mpi-slide-over__body`.
 - **`MpiOptionSelector` ratio variant** renders the ratio/quality controls inside its own portaled popup. Controls inserted as raw templates there, including embedded `MpiRadioGroup.template()` quality buttons, must be handled by `MpiOptionSelector`'s delegated popup listeners because child component `setup()` does not run for raw template HTML. New `variant: 'buttons'` is a generic button-list popup.
 - **`MpiContextMenu` items** support `kbd` (right-aligned shortcut hint) and `separator: true` (divider line).

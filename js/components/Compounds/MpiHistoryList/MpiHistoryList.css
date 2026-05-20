@@ -50,7 +50,7 @@
 
 /* Select mode highlight */
 .mpi-history-list__card--selected {
-    background: oklch(0.72 0.20 6 / 0.08);
+    background: oklch(0.76 0.17 355 / 0.08);
 }
 
 .mpi-history-list__card--selected .mpi-history-list__status {

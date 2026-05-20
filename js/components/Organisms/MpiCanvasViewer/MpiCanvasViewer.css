@@ -48,7 +48,7 @@
     position: absolute;
     border-radius: 50%;
     background: transparent;
-    outline: 1.5px dashed oklch(0.72 0.20 6 / 0.85);
+    outline: 1.5px dashed oklch(0.76 0.17 355 / 0.85);
     outline-offset: 0;
 }
 
@@ -60,7 +60,7 @@
     width: 3px;
     height: 3px;
     border-radius: 50%;
-    background: oklch(0.72 0.20 6 / 0.95);
+    background: oklch(0.76 0.17 355 / 0.95);
     transform: translate(-50%, -50%);
 }
 

@@ -269,7 +269,7 @@ export async function deleteProject(project, { deleteFiles = true } = {}) {
     }
 
     // Always remove parent dir from extras registry when present.
-    // Works for imported projects; default-root projects (Documents/Cubric Studio/Projects)
+    // Works for imported projects; default-root projects (Documents/Cubric Vision/Projects)
     // are not stored in extras, so filtering is a safe no-op for them.
     const parentDir = folderPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/');
     const extras = Storage.getExtraProjectPaths().filter(p => p !== parentDir);

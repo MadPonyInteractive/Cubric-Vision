@@ -15,8 +15,8 @@ export const MpiAbout = ComponentFactory.create({
     template: () => `
         <div class="mpi-about">
             <div class="mpi-about__content">
-                <img src="assets/mascot/logo.png" alt="Cubric Studio" class="mpi-about__logo">
-                <img src="assets/lettering.png" alt="Cubric Studio" class="mpi-about__name">
+                <img src="assets/mascot/logo.png" alt="Cubric Vision" class="mpi-about__logo">
+                <span class="mpi-wordmark mpi-about__name" aria-label="Cubric Vision">Cubric<span class="mpi-wordmark__suffix">Vision</span></span>
                 <p class="mpi-about__desc">
                     A local AI workstation for image, video and audio generation, prompt engineering,
                     and creative workflows.

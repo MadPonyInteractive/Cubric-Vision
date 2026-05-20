@@ -15,8 +15,8 @@
 }
 
 .mpi-project-card:hover {
-    border-color: oklch(0.72 0.20 6 / 0.3);
-    box-shadow: 0 0 20px oklch(0.72 0.20 6 / 0.15), 0 10px 25px var(--surface-bar);
+    border-color: oklch(0.76 0.17 355 / 0.3);
+    box-shadow: 0 0 20px oklch(0.76 0.17 355 / 0.15), 0 10px 25px var(--surface-bar);
     transform: translateY(-4px);
 }
 

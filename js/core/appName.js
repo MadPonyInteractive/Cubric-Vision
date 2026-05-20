@@ -10,4 +10,4 @@
  * BEM CSS prefix `mpi-` is the brand namespace and intentionally separate.
  */
 
-export const APP_NAME = 'Cubric Studio';
+export const APP_NAME = 'Cubric Vision';

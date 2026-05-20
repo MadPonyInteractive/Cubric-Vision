@@ -1,43 +1,40 @@
 ## BACKLOG
 
-### Cubric Vision foundation - app-rename
+### Server log capture broken
 
-  - tags: [PLAN, brand, rename]
-  - priority: high
+  - tags: [bug, infra, deferred]
+  - priority: low
   - defaultExpanded: false
     ```md
-    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Consumes: docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md
-    (sign-off in its Phase 5; full inventory in Phase 3 sections 3.A–3.G;
-    release-blocking set in Phase 4).
+    logs/server.log frozen since 2026-04-17. The forked server.js process'
+    stdout/stderr are not captured by the main process logger, so today's
+    EADDRINUSE port-bind failure never made it into any log file (we only
+    found it via netstat).
 
-    Scope (option B — cross-repo release-blocking execution):
-    - App repo: every release-blocking row from inventory 3.A–3.D (package.json,
-      electron-builder, Start.bat, index.html, APP_NAME, User-Agent, About panel,
-      hint text, getProjectsRoot + migration shim, lettering retired, mascot
-      file swap, Electron icon regenerate, media/assets deletion).
-    - GitHub: rename MadPonyInteractive/Cubric-Studio -> Cubric-Vision (public)
-      and local CubricStudio dev -> Cubric-Vision-Dev.
-    - Patreon URL swap (patreon.com/cubricstudio -> patreon.com/madponyinteractive)
-      across all three repos.
-    - Website repo: release-blocking URL/CTA/footer fixes from inventory 3.E
-      (broken github.com/cubric-studio/cubric-studio URLs, Patreon URLs,
-      "Get Cubric Studio" CTA, footer copyright). Website ecosystem-landing
-      rewrite stays in its own existing plan.
-    - Docs repo: release-blocking URL fixes from inventory 3.F (GitHub +
-      Patreon URLs). Docs IA rewrite stays in its own existing plan.
-    - Lettering implementation: load Russo One 400 from Google Fonts; replace
-      lettering.png in app + sibling repos with live text rendering using the
-      locked "Cubric" + accent-colored suffix lockup pattern.
+    Fix sketch: in main.js `startServer()`, fork with `silent: true` and
+    pipe child stdout/stderr into routes/logger via `serverProcess.stdout/
+    .stderr.on('data', chunk => logger.info/error('server-stdout|stderr',
+    chunk.toString()))`. Also surface non-zero exit codes loudly.
 
-    Out of scope:
-    - HuggingFace org (locked keep).
-    - Website ecosystem-landing rewrite (separate existing plan).
-    - Docs IA rewrite (separate existing plan).
-    - Future hub repo creation (much later).
-    - External brand-assets folder migration (later, hub-creation concern).
+    Deferred 2026-05-20 — not release-blocking.
+    ```
 
-    Blocks: release-copy. Independent of: integration-contract, artifact-handoff.
+### Vision subdomain content (vision.cubric.studio)
+
+  - tags: [website, content, deferred]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Cubric Studio website (cubric.studio) is becoming the ecosystem landing.
+    Current single-app landing copy (hero, features, screenshots, CTAs) belongs
+    on a Vision-specific page at vision.cubric.studio.
+
+    Scope: move the current "Cubric Studio" landing content to a new Vision
+    subdomain site (or section), and rewrite cubric.studio as ecosystem landing
+    listing all apps (Vision, future Prompt/Audio/Video).
+
+    Coordinate with existing website plan
+    `docs\plans\2026-05-16-port-stage-to-website.md` and the docs-IA work.
     ```
 
 ### LTX 2.3 video model integration
@@ -116,8 +113,7 @@
   - defaultExpanded: false
     ```md
     Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Completed child: brand-identity (see COMPLETED).
-    Next executable child: app-rename (in BACKLOG; consumes brand-identity inventory).
+    Completed children: brand-identity + app-rename (see COMPLETED).
     Gated children: integration-contract, artifact-handoff, ecosystem-backend,
     shared-component-system, website, release-copy.
     Umbrella now includes TypeScript-first connector backend direction and a
@@ -189,6 +185,69 @@
     ```
 
 ## COMPLETED
+
+### Cubric Vision foundation - app-rename
+
+  - tags: [PLAN, brand, rename]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Completed 2026-05-20.
+
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Consumed: docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md
+    (sign-off in its Phase 5; full inventory in Phase 3 sections 3.A–3.G;
+    release-blocking set in Phase 4).
+
+    Shipped:
+    - App repo: package.json name/description, electron-builder productName/
+      appId, Start.bat, index.html title/meta/alt/hero, APP_NAME constants
+      (cjs+esm twins), User-Agent header, MpiAbout alt, MpiNewProject hint,
+      projectUI version label, routes/shared.js getProjectsRoot path
+      (Cubric Studio → Cubric Vision, no migration shim per user OK).
+    - Lettering: assets/lettering.png + media/assets/Lettering.png deleted.
+      Russo One 400 self-hosted at assets/fonts/RussoOne-Regular.woff2.
+      `.mpi-wordmark` BEM in styles/shell/titlebar.css; titlebar variant
+      .mpi-wordmark--titlebar (12px). index.html titlebar + MpiAbout swapped
+      to live-text spans. --font-wordmark token now Russo One.
+    - Accent: --accent-heat swapped to rose lift oklch(0.76 0.17 355).
+      Hardcoded oklch(0.72 0.20 6) sweep across 15 files (CSS + canvas JS).
+    - Mascot: assets/mascot/{logo,idle,greet,happy}.png from external
+      Vision-*.png crops. 4 legacy mascot{,-arms,-hi,-ho}.png deleted.
+      Code refs swapped (MpiGroupHistoryBlock x3, projectUI, MpiStartingComfy).
+    - Cleanup: media/assets/ (comfy_robot_engine* + logo.{png,psd} + PSDs)
+      all deleted; dual-tree rule retired for Vision repo.
+    - Icon: build/icon.png + favicon.png swapped to Vision head crop.
+    - GitHub: dev repo Cubric-Studio-Dev → Cubric-Vision-Dev; public
+      Cubric-Studio → Cubric-Vision (user). origin remote updated.
+    - Website (c:\AI\Mpi\Cubric Studio (Website)\): 8 GitHub URL fixes +
+      1 GitHub API URL fix in scripts/landing.js + 3 Patreon URL fixes +
+      CTA "Get Cubric Studio" → "Get Cubric Vision" + footer copyright.
+      Website push gate still applies — NOT pushed.
+    - Docs (c:\AI\Mpi\Cubric Studio (Docs)\): GitHub + Patreon URL fixes
+      in index.html. Title/lettering/home links kept (docs site IS hub).
+    - Bug fix: listProjects catch branch now shows friendly empty-state
+      mascot + "No projects yet" copy instead of "Could not load projects".
+    - Rule edits (.claude/rules/components.md): Stage design baseline now
+      lists Russo One wordmark + .mpi-wordmark BEM + canonical 4-mascot
+      state set + accent-heat rose-lift value.
+    - Memory: feedback_dual_asset_tree updated to RETIRED; new
+      feedback_lettering_wordmark + feedback_mascot_state_set +
+      project_app_rename_complete.
+
+    Out of scope (deferred):
+    - HuggingFace org (locked keep).
+    - Website ecosystem-landing rewrite (separate plan + new "Vision
+      subdomain content" backlog entry).
+    - Docs IA rewrite (separate "Cubric Studio Docs subdomain" backlog).
+    - Future hub repo creation.
+    - External brand-assets folder migration.
+    - Server log capture bug (new BACKLOG entry).
+
+    Lint clean (0 errors). User-verified visually: titlebar wordmark,
+    About panel, accent rose lift, mascot. Project create + generate
+    confirmed working after restart.
+    ```
 
 ### Cubric Vision foundation - brand-identity
 

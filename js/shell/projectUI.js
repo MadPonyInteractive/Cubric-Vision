@@ -45,7 +45,7 @@ export function initProjectUI() {
 
   // ── Hero version label ─────────────────────────────────────────────────────
   const versionEl = gid('heroVersion');
-  if (versionEl) versionEl.textContent = `Cubric Studio · v${APP_VERSION}`;
+  if (versionEl) versionEl.textContent = `Cubric Vision · v${APP_VERSION}`;
 
   // ── Hero nav: plain text links (Settings · Help · About) ─────────────────
   const navSlot = gid('landingActions');
@@ -173,7 +173,7 @@ export async function loadProjectGrid() {
     if (projects.length === 0) {
       projectGrid.innerHTML = `
         <div class="mpi-landing__empty">
-          <img class="mpi-landing__empty-mascot" src="assets/mascot/mascot-hi.png" alt="">
+          <img class="mpi-landing__empty-mascot" src="assets/mascot/greet.png" alt="">
           <strong>No projects yet</strong>
           <p>Click "+ New project" to create your first AI project.</p>
         </div>`;
@@ -183,7 +183,12 @@ export async function loadProjectGrid() {
     projects.forEach(p => projectGrid.appendChild(_buildProjectRow(p)));
   } catch (err) {
     clientLogger.error('projectUI', 'loadProjectGrid failed', err);
-    projectGrid.innerHTML = `<div class="mpi-landing__empty"><strong>Could not load projects.</strong></div>`;
+    projectGrid.innerHTML = `
+      <div class="mpi-landing__empty">
+        <img class="mpi-landing__empty-mascot" src="assets/mascot/greet.png" alt="">
+        <strong>No projects yet</strong>
+        <p>Click "+ New project" to create your first AI project.</p>
+      </div>`;
   }
 }
 

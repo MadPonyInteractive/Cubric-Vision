@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Cubric Studio — 01_base.css
+   Cubric Vision — 01_base.css
    Design tokens · Reset · Utilities · Animations
 ═══════════════════════════════════════════════════════════════ */
 
@@ -34,9 +34,16 @@
   font-weight: 400;
   font-style: normal;
 }
+@font-face {
+  font-family: 'Russo One';
+  src: url('../assets/fonts/RussoOne-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Cubric Studio — styles.css
+   Cubric Vision — styles.css
    Design system + App shell + Landing page + All tool/component styles
 ═══════════════════════════════════════════════════════════════════════════════ */
 
@@ -61,7 +68,7 @@
   --line-soft:       oklch(0.72 0.015 350 / 0.08);
 
   /* Accents */
-  --accent-heat:     oklch(0.72 0.20 6);     /* pink-magenta — primary actions, active states */
+  --accent-heat:     oklch(0.76 0.17 355);   /* rose lift — Cubric Vision app accent, primary actions, active states */
   --accent-frost:    oklch(0.82 0.13 220);   /* cyan — generative state, focus rings, frost lines */
   --accent-ok:       oklch(0.78 0.13 150);   /* success, ready */
   --accent-warn:     oklch(0.78 0.14 60);    /* warning */
@@ -100,7 +107,7 @@
   --t-slow: 480ms;
 
   /* Fonts */
-  --font-wordmark: 'VT323', monospace;
+  --font-wordmark: 'Russo One', 'JetBrains Mono', sans-serif;
 
   /* Shell */
   --titlebar-h: 32px;
@@ -277,12 +284,12 @@ h4 {
 
   0%,
   100% {
-    box-shadow: 0 0 5px oklch(0.72 0.20 6 / 0.15), 0 0 10px oklch(0.72 0.20 6 / 0.15);
-    border-color: oklch(0.72 0.20 6 / 0.3);
+    box-shadow: 0 0 5px oklch(0.76 0.17 355 / 0.15), 0 0 10px oklch(0.76 0.17 355 / 0.15);
+    border-color: oklch(0.76 0.17 355 / 0.3);
   }
 
   50% {
-    box-shadow: 0 0 12px oklch(0.72 0.20 6 / 0.3), 0 0 20px oklch(0.72 0.20 6 / 0.15);
+    box-shadow: 0 0 12px oklch(0.76 0.17 355 / 0.3), 0 0 20px oklch(0.76 0.17 355 / 0.15);
     border-color: var(--accent-heat);
   }
 }

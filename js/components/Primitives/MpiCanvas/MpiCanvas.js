@@ -10,10 +10,10 @@
 
 /* Stage canvas color constants — JS cannot use CSS vars in per-frame draws.
  * Values mirror MAPPING.md §9. Update here if tokens change in 01_base.css. */
-const BRUSH_CURSOR         = 'oklch(0.72 0.20 6)';        /* --accent-heat */
-const BRUSH_CURSOR_OUTLINE = 'oklch(0.72 0.20 6 / 0.8)';  /* --accent-heat 80% */
+const BRUSH_CURSOR         = 'oklch(0.76 0.17 355)';        /* --accent-heat */
+const BRUSH_CURSOR_OUTLINE = 'oklch(0.76 0.17 355 / 0.8)';  /* --accent-heat 80% */
 const BRUSH_ERASER         = 'oklch(0.20 0.020 350 / 0.8)'; /* --surface-canvas 80% */
-const BRUSH_DOT            = 'oklch(0.72 0.20 6)';         /* --accent-heat */
+const BRUSH_DOT            = 'oklch(0.76 0.17 355)';         /* --accent-heat */
 const SLIDER_ARROW         = 'oklch(0.66 0.014 80)';       /* --ink-3 */
 const GRID_LINE            = 'oklch(0.95 0.005 80 / 0.8)'; /* --ink-1 80% */
 const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50% */
@@ -868,8 +868,8 @@ class _CanvasCore {
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
             const r = (this.mask.brushSize * scale) / 2;
             const isEraser = this.mask.brushType === 'eraser';
-            const color = isEraser ? 'oklch(0.20 0.020 350 / 0.95)' : 'oklch(0.72 0.20 6 / 0.95)';
-            const outline = isEraser ? 'oklch(0.20 0.020 350 / 0.85)' : 'oklch(0.72 0.20 6 / 0.85)';
+            const color = isEraser ? 'oklch(0.20 0.020 350 / 0.95)' : 'oklch(0.76 0.17 355 / 0.95)';
+            const outline = isEraser ? 'oklch(0.20 0.020 350 / 0.85)' : 'oklch(0.76 0.17 355 / 0.85)';
             ctx.save();
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);

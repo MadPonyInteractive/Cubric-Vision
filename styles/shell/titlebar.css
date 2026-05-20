@@ -41,7 +41,7 @@ body.window-fullscreen .titlebar {
 .titlebar-logo-img {
   width: 16px;
   height: 16px;
-  filter: drop-shadow(0 0 8px oklch(0.72 0.20 6 / 0.3));
+  filter: drop-shadow(0 0 8px oklch(0.76 0.17 355 / 0.3));
 }
 
 .titlebar-text {
@@ -50,6 +50,27 @@ body.window-fullscreen .titlebar {
   font-size: var(--t-xs);
   letter-spacing: 0.02em;
   color: var(--ink-1);
+}
+
+/* ── Wordmark ─────────────────────────────────────────────────────────────────
+   Live Russo One lockup. "Cubric" in ink-1 + app suffix in accent.
+   Color is the only differentiator across hub/Vision/Prompt/Audio/Video. */
+.mpi-wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 400;
+  color: var(--ink-1);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mpi-wordmark__suffix {
+  color: var(--accent-heat);
+  margin-left: 0.3em;
+}
+
+.mpi-wordmark--titlebar {
+  font-size: 12px;
 }
 
 .window-controls {

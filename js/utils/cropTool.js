@@ -29,7 +29,7 @@
 const SCRIM         = 'oklch(0.20 0.020 350 / 0.55)'; /* --surface-canvas 55% */
 const CROP_BORDER   = 'oklch(0.95 0.005 80 / 0.85)';  /* --ink-1 85% */
 const CROP_THIRDS   = 'oklch(0.95 0.005 80 / 0.22)';  /* --ink-1 22% */
-const HANDLE_FILL   = 'oklch(0.72 0.20 6)';           /* --accent-heat */
+const HANDLE_FILL   = 'oklch(0.76 0.17 355)';           /* --accent-heat */
 const HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 import { Hotkeys } from '../managers/hotkeyManager.js';

@@ -5,4 +5,4 @@
  * name, update both files.
  */
 
-module.exports = { APP_NAME: 'Cubric Studio' };
+module.exports = { APP_NAME: 'Cubric Vision' };
