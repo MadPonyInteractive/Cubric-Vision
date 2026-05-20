@@ -1,0 +1,103 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d6cd2bcd-cd6a-4310-b65b-870397be4a5b",
+  "generated_at": "2026-05-19T11:53:52.3712749+01:00",
+  "from_session": null,
+  "to_role": "orchestrator",
+  "status": "open",
+  "session": {
+    "name": "Cubric Vision foundation brand identity brainstorming",
+    "branch": "unknown"
+  },
+  "goal": {
+    "original": "Address the Cubric Vision Foundation brand identity kanban entry through brainstorming/cooperation, including prompts for image/design tools.",
+    "status": "in_progress",
+    "summary": "Naming and accent colors are locked, mascot direction is selected, and external mascot assets are reportedly prepared. The next active topic is lettering: evaluate bold font-based wordmarks for Cubric Studio and app lockups instead of PNG lettering."
+  },
+  "plan": {
+    "file": "docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md",
+    "completed": [
+      "Captured product family naming: Cubric Studio as master hub, apps as Cubric Vision/Prompt/Audio/Video.",
+      "Captured selected app accents with OKLCH and HEX approximations.",
+      "Captured mascot direction: Studio coordinator face, app-specific specialized heads, head-only OS icons, full-body in-app animation variants.",
+      "Created and updated a standalone accent swatch board at docs/plans/2026-05-19-cubric-accent-swatch-board.html."
+    ],
+    "pending": [
+      "Continue lettering/font exploration and decide whether to replace image lettering with a font-based lockup system.",
+      "Create canonical naming table with app ids and subdomains.",
+      "Finish mascot scope and lettering treatment decisions in the plan.",
+      "Inventory app/website/docs brand text and assets, then classify release-blocking vs non-blocking rows."
+    ]
+  },
+  "kanban_entry": "Cubric Vision foundation - brand-identity",
+  "allowed_actions": [
+    "read",
+    "continue brainstorming",
+    "create design prompts",
+    "update brand plan",
+    "create standalone design artifacts",
+    "do not perform app rename implementation unless explicitly asked"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Updated docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md with accent HEX values, mascot direction, external asset folder, and lettering direction.",
+      "Updated docs/plans/2026-05-19-cubric-accent-swatch-board.html with selected accents and Stage surface context."
+    ],
+    "pending": [
+      "If new brand decisions become stable, update the active plan immediately.",
+      "Do not update .claude/rules/ without explicit approval.",
+      "If final mascot assets are to enter the app, remember the dual-tree asset rule: media/assets sources and runtime assets/mascot plus assets/lettering must mirror intentionally."
+    ]
+  },
+  "next_action": {
+    "description": "Help the user compare bold Google Fonts candidates for a font-based Cubric Studio wordmark, ideally by creating or guiding a side-by-side preview spelling 'Cubric Studio' and later app lockups.",
+    "command": "/mpi-kanban:mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Cubric Studio is the master hub for all Cubric applications.",
+      "App names follow Cubric <App>: Cubric Vision, Cubric Prompt, Cubric Audio, Cubric Video, and future Cubric apps.",
+      "Selected accents: Studio #C1B6A4, Vision #FC77AA, Prompt #EDE367, Audio #70E2C5, Video #FF9360.",
+      "Shared UI surfaces should remain Stage warm mauve; app accents are small, high-contrast identity signals.",
+      "Mascot system should be an operator family: Studio has the only normal face; Vision camera/lens, Prompt terminal/speech, Audio waveform/headphones, Video film/playhead.",
+      "OS/taskbar icons should be head-only. Full-body mascot variants are for in-app animation and states.",
+      "User prefers nailing brand identity even if it delays launch."
+    ],
+    "constraints": [
+      "No code rename in the brand-identity child plan; app-rename consumes the decisions and inventory later.",
+      "Website push gate still applies: do not push Website until app is downloadable, user review is done, and mascot/logo recolor is landed.",
+      "Photoshop does not accept OKLCH directly; use HEX conversions for raster work.",
+      "Nano Banana blue backgrounds caused blue fringing; prefer final Cubric deep canvas #31252A or a carefully handled flat background for future cutouts.",
+      "Current app Stage deep canvas token is approximately #31252A from oklch(0.28 0.020 350)."
+    ],
+    "files_modified": [
+      "docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md",
+      "docs/plans/2026-05-19-cubric-accent-swatch-board.html",
+      ".agents/mpi-kanban/state/handoffs/d6cd2bcd-cd6a-4310-b65b-870397be4a5b.json"
+    ],
+    "files_to_read_first": [
+      "CLAUDE.md",
+      ".claude/rules/dos_and_donts.md",
+      "docs/PROJECT.md",
+      "docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md",
+      "docs/plans/2026-05-19-cubric-vision-foundation.md",
+      "docs/redesign/PRODUCT.md",
+      "docs/redesign/DESIGN.md",
+      "C:\\Users\\Fabio\\.claude\\projects\\C--AI-Mpi-CubricStudio\\memory\\feedback_dual_asset_tree.md"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    "docs/PROJECT.md",
+    "docs/redesign/PRODUCT.md",
+    "docs/redesign/DESIGN.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-19T11:53:52.3712749+01:00",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d6cd2bcd-cd6a-4310-b65b-870397be4a5b.json and use /mpi-kanban:mpi-continue to continue the kanban entry \"Cubric Vision foundation - brand-identity\". You are continuing brand identity work, not app rename implementation. The next action is to help compare bold font-based lettering options for Cubric Studio and eventual Cubric Vision/Prompt/Audio/Video lockups."
+}
