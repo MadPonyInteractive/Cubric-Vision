@@ -23,6 +23,7 @@ Known architecture anchors:
 - Sidecars are likely the correct artifact handoff primitive for future Cubric apps, but they need a compatibility review before becoming cross-app contracts.
 - UUIDs need careful treatment. Project-local media UUIDs should not become accidental global cross-app identity unless explicitly designed as portable artifact identifiers.
 - Engine/model separation already exists through `engine/`, `llama_engine/`, `llama_models/`, and optional `.engine-config.json` overrides. Future apps should keep app settings and fragile engine environments independent while allowing models and artifacts to be shared deliberately.
+- Future Cubric hub/system work and future apps are now expected to use TypeScript. The cross-app backend/connector system is an ecosystem blocker and should be TypeScript-first. The current Cubric Vision component system is JavaScript-first; a long-term shared UI/component strategy must be decided before building Cubric Prompt or later apps, but it does not block Cubric Vision v1 shipping.
 - Website and docs repos already exist as sibling roots in the VS Code multi-root workspace:
   - `c:\AI\Mpi\Cubric Studio (Website)\`
   - `c:\AI\Mpi\Cubric Studio (Docs)\`
@@ -33,6 +34,7 @@ Open risks:
 - Renaming late in the release cycle can touch UI text, app metadata, launchers, packaging names, docs, websites, screenshots, Patreon copy, and existing plans.
 - Branding is now a release blocker. The current mascot/lettering system may not scale cleanly across Vision, Prompt, Audio, and Video.
 - The integration foundation can easily become overbuilt. The first release needs stable seams, not a full local runtime.
+- Component reuse can also become overbuilt. The immediate rename should not migrate the app to TypeScript, and shared component migration is out of scope for Cubric Vision v1. The foundation plan should still record that Cubric Prompt/future app work is blocked on deciding whether the component system becomes a TypeScript-ready shared package, remains Vision-local, or gets a typed adapter layer later.
 - Website/workspace organization needs to avoid both extremes: agents getting lost in one giant workspace, and each app owning its own website/doc site.
 
 ## Completed
@@ -64,6 +66,8 @@ Suggested child tracks:
 - `app-rename`
 - `integration-contract`
 - `artifact-handoff`
+- `ecosystem-backend`
+- `shared-component-system`
 - `website`
 - `release-copy`
 
@@ -76,6 +80,8 @@ These plans/entries are related to this foundation but should not be duplicated:
 - `Cubric Studio Docs subdomain + finish docs site` in BACKLOG tracks the docs-site follow-up work and references `docs/plans/2026-05-16-port-stage-to-docs.md`. Treat it as the docs child track for this umbrella until it is revised or replaced.
 - `Port Stage redesign -> Cubric Studio Website` is already captured in `docs/plans/2026-05-16-port-stage-to-website.md`. Treat it as prior website redesign context; create a new `cubric-vision-foundation-website` child plan only if the ecosystem landing/subdomain rewrite is too large to fold into the existing website work.
 - `Cross-platform portable distribution` is an adjacent release plan. Rename/package artifact work should coordinate with it, but this umbrella should not absorb the portable distribution plan.
+- `Cubric Vision foundation - ecosystem-backend` has child plan `docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md`. It defines the TypeScript-first connector/backend track that blocks Cubric Prompt/future app implementation, not Cubric Vision v1.
+- `docs/plans/2026-05-20-cubric-prompt-start-blockers.md` captures pre-repo blockers for starting Cubric Prompt after Vision release work.
 
 ## Remaining Work
 
@@ -128,7 +134,21 @@ authoritative sign-off.
 
 - [ ] Decide whether future Cubric apps consume a whole project folder, selected artifacts, or both. **Verify:** the foundation supports both without requiring hidden global state.
 
-## Phase 5: Engines, Models, And Per-App Settings
+## Phase 5: TypeScript Ecosystem Backend And Shared Component Direction
+
+- [ ] Define the TypeScript-first backend/connector system that lets Cubric apps discover and communicate with each other. **Verify:** the ecosystem connector is treated as the blocker for cross-app capability work, not as part of the app-rename child.
+
+- [ ] Define the TypeScript boundary for the ecosystem hub, connector backend, and future apps. **Verify:** hub/system and future app work are explicitly TypeScript-first, while Cubric Vision v1 remains shippable without a broad TypeScript migration.
+
+- [ ] Decide whether Cubric Vision's current component system is Vision-local implementation detail, a future shared Cubric UI package, or the source for a TypeScript-compatible successor. **Verify:** the plan states that this decision blocks Cubric Prompt/future app implementation, but does not block Cubric Vision v1 release.
+
+- [ ] Inventory the current component contracts that would matter for reuse: `ComponentFactory.create()`, BEM CSS, `js/components/types.js`, `js/utils/dom.js`, `Events`, `Hotkeys`, `Overlays`, and Stage tokens. **Verify:** reusable pieces are classified as stable contract, Vision-local implementation, or migration candidate.
+
+- [ ] Decide the lowest-risk bridge if future TypeScript apps need Cubric UI before a full rewrite: generated `.d.ts` files, JSDoc-typed JS, a small typed wrapper package, or a new TypeScript package that ports components selectively. **Verify:** the chosen bridge is scheduled before Cubric Prompt work and does not force a broad TypeScript migration into Cubric Vision v1.
+
+- [ ] Define package/workspace ownership for any shared UI layer. **Verify:** if a shared package is created, it has a clear repo/package name, versioning expectation, and dependency direction so Vision does not accidentally become the hub or shared-library owner forever.
+
+## Phase 6: Engines, Models, And Per-App Settings
 
 - [ ] Document the ecosystem resource principle: app settings remain independent; engines remain app-owned; stable assets such as ComfyUI models and LLaMA models may be shared deliberately. **Verify:** the principle is written in the plan family and does not imply Cubric Vision owns engines for other apps.
 
@@ -136,7 +156,7 @@ authoritative sign-off.
 
 - [ ] Identify what a future shared model/resource registry would need to know, without building it now. **Verify:** the notes distinguish current Cubric Vision behavior from future Cubric ecosystem runtime behavior.
 
-## Phase 6: Website, Docs, And Workspace Layout
+## Phase 7: Website, Docs, And Workspace Layout
 
 - [ ] Decide the website repo strategy: keep the current Website and Docs repos as shared Cubric ecosystem sites rather than placing a website inside every future app repo. **Verify:** one source-of-truth note describes which repo owns `cubric.studio` and which repo owns `docs.cubric.studio`.
 
@@ -150,7 +170,7 @@ authoritative sign-off.
 
 - [ ] Decide VS Code workspace organization for ecosystem work. Candidate: keep focused app workspaces plus an intentional multi-root ecosystem workspace that includes app repos, web, docs, and master planning. **Verify:** agents have clear root/kanban guidance and no website repo is embedded inside an app repo by accident.
 
-## Phase 7: Release Alignment
+## Phase 8: Release Alignment
 
 - [ ] Reconcile existing release, Patreon, website, docs, and portable distribution plans that currently say `Cubric Studio`. **Verify:** all release-blocking copy uses the locked name or has an explicit historical/deferred reason.
 
@@ -174,6 +194,7 @@ Final acceptance for this plan family:
 - Cubric Vision remains standalone and does not require Cubric Prompt, Audio, Video, or a visible hub.
 - The first integration foundation is action-based, minimal, and does not overbuild a full runtime before release.
 - Sidecar/project portability remains intact, including drag-and-drop project folders and template projects.
+- TypeScript direction for the ecosystem backend/hub/future apps is recorded, and any shared component-system decision is explicit before Cubric Prompt/future app implementation rather than assumed from Cubric Vision's current JavaScript implementation.
 - Existing engine/model sharing behavior remains independent per app and does not introduce global settings as a release dependency.
 - Website/docs ownership and subdomains are defined enough to proceed without scattering sites across future app repos.
 
@@ -183,6 +204,7 @@ Final acceptance for this plan family:
   - `.claude/rules/components.md` for UI rename and prompt action slots.
   - `.claude/rules/events.md` if optional integration events are added.
   - `.claude/rules/state.md` if app identity or capability state is stored.
+  - `docs/components.md`, `.claude/rules/components.md`, and `js/components/types.js` for any shared component-system or TypeScript-compatibility planning.
   - `docs/project-integrity.md` and `docs/projects.md` for sidecar/project portability.
   - `docs/versioning.md` if schema, app version, or operation compatibility changes.
 - Website/docs work targets sibling repos with separate git histories. Use absolute paths and do not run sibling git commands from the CubricStudio root.

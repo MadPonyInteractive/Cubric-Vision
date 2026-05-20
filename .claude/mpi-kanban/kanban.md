@@ -118,8 +118,43 @@
     Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
     Completed child: brand-identity (see COMPLETED).
     Next executable child: app-rename (in BACKLOG; consumes brand-identity inventory).
-    Gated children: integration-contract, artifact-handoff, website, release-copy.
+    Gated children: integration-contract, artifact-handoff, ecosystem-backend,
+    shared-component-system, website, release-copy.
+    Umbrella now includes TypeScript-first connector backend direction and a
+    shared component-system compatibility phase. Component-system work blocks
+    Cubric Prompt/future apps, not Cubric Vision v1; keep separate from
+    app-rename unless explicitly promoted.
     Linked docs child: "Cubric Studio Docs subdomain + finish docs site" in BACKLOG.
+    ```
+
+### Cubric Vision foundation - ecosystem-backend
+
+  - tags: [PLAN, architecture, typescript, integration]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
+    Scope: plan the TypeScript-first backend/connector system that lets Cubric
+    apps discover each other and request action-based capabilities. This is the
+    ecosystem blocker, but it is separate from the app-rename implementation.
+    ```
+
+### Cubric Vision foundation - shared-component-system
+
+  - tags: [PLAN, architecture, typescript]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Scope: plan whether Cubric Vision's JS component system remains Vision-local,
+    becomes a TypeScript-compatible shared Cubric UI package, or gets a typed
+    adapter/wrapper path for the TypeScript-first hub and future apps.
+
+    Blocks Cubric Prompt/future app implementation, not Cubric Vision v1. Must
+    stay separate from release-blocking app-rename unless explicitly promoted.
+    First outputs should be an inventory/classification of reusable component
+    contracts and a recommendation for the lowest-risk TypeScript bridge.
     ```
 
 ### Cross-platform portable distribution
