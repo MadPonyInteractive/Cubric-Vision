@@ -104,6 +104,14 @@ Out of scope:
 - Artifact reference shape: depends on Phase 4 handoff rules in the umbrella.
 - TypeScript package location/versioning: unresolved.
 - Install/discovery story: unresolved, especially cross-platform.
+- Portable distribution means there is no installer-owned registration step.
+  Apps are zip folders on Windows/macOS/Linux, so discovery must handle
+  launch-time registration plus cached or hub-scanned app folders.
+- Update story is now related: portable app updates can change capabilities, so
+  broker registry refresh must notice app version/protocol/manifest changes.
+- Portable update direction: full release artifacts for new users plus
+  ComfyUI-style `update/` scripts/bundles for existing portable folders. See
+  `docs/plans/2026-04-30-cross-platform-portable-distribution.md` Phase 6.
 
 ## Recommended MVP Shape
 
@@ -200,14 +208,26 @@ Why this is the right first step:
 ## Phase 4: Discovery And Transport
 
 - [ ] Decide local discovery mechanism.
-  **Verify:** installed app manifests can be found on Windows/macOS/Linux.
+  **Direction:** broker-owned discovery for portable app folders. Apps register
+  on launch; the broker may cache or scan known app folders. **Verify:** app
+  manifests can be found/refreshed on Windows/macOS/Linux without installers.
 
 - [ ] Decide first transport.
-  **Verify:** the transport supports local request/response, app unavailable
-  states, and basic authentication/trust boundaries.
+  **Direction:** broker-mediated transport behind the SDK; prefer OS-local
+  private channel over public localhost HTTP. **Verify:** the transport supports
+  local request/response, app unavailable states, and basic
+  authentication/trust boundaries.
 
 - [ ] Decide startup/lifecycle behavior.
-  **Verify:** Cubric Vision can remain standalone when the connector is absent.
+  **Direction:** hub-owned broker should be available during a Cubric app work
+  session and may stay alive in the background, with user-visible disable/shutdown
+  controls. **Verify:** Cubric Vision can remain standalone when the connector
+  is absent.
+
+- [ ] Decide portable app update relationship.
+  **Verify:** broker registry refresh compares app version, protocol version,
+  and manifest changes so newly added capabilities do not look missing after an
+  app update.
 
 ## Phase 5: Implementation Readiness
 

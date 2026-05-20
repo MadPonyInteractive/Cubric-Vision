@@ -112,6 +112,114 @@ Requirements:
 The specific schema library is still open. The important decision is that
 runtime validation is required, not optional.
 
+## Discovery And Transport Direction
+
+Discovery answers: "Which Cubric apps are installed, reachable, and able to
+handle a capability?"
+
+Transport answers: "How does a request get from one app to another?"
+
+The recommended direction is broker-owned discovery and broker-mediated
+transport. Cubric Vision should not scan for Cubric Prompt directly, and
+Cubric Prompt should not expose a broad unauthenticated localhost API. Product
+apps should talk to the Cubric Studio broker through the connector SDK, and the
+broker should own app registration, capability lookup, routing, permissions,
+and lifecycle.
+
+Recommended shape:
+
+```text
+Cubric Vision -> @cubric/connector -> Cubric Studio broker -> Cubric Prompt
+```
+
+The SDK remains transport-agnostic at the public API layer. Apps call
+`discoverApps`, `listCapabilities`, and `requestCapability`; the broker/client
+adapter decides whether the local implementation uses named pipes, sockets,
+localhost HTTP, or another OS-appropriate channel.
+
+### Transport Requirements
+
+The first real transport must:
+- Work on Windows, macOS, and Linux.
+- Be local-only.
+- Support request/response calls.
+- Support app unavailable and timeout states.
+- Carry app identity and protocol version.
+- Allow broker-side permission checks.
+- Avoid unauthenticated write/delete actions over a public localhost surface.
+- Be replaceable behind the SDK without changing app-facing request shapes.
+
+### Current Recommendation
+
+Use the SDK contract first, then implement a broker adapter that prefers an
+OS-local private channel over public localhost HTTP.
+
+Preference order for investigation:
+
+1. Broker-owned named pipe / Unix domain socket style transport.
+2. Broker-owned localhost HTTP only if bound to loopback with an auth token or
+   equivalent handshake.
+3. Direct app-to-app transport only for development fixtures or tests.
+
+This keeps the security model centered on the broker and avoids every app
+inventing its own discovery server.
+
+### Portable App Constraint
+
+Cubric apps ship as portable zip builds on Windows, macOS, and Linux. Users
+download, extract, and run an app folder. There is no normal installer that can
+be trusted to register apps with the operating system or with the broker.
+
+Discovery must therefore work for portable folders:
+- Each app bundle should include a connector manifest file.
+- Apps should register with the broker on launch.
+- The broker may keep a cached registry of previously seen apps.
+- Registration should also be possible from a hub-side scan/import flow later,
+  so an app can be known before it is launched.
+- Registration must refresh capabilities and protocol versions every launch so
+  portable app updates do not leave stale capabilities in the broker.
+
+This implies "both" registration modes:
+- **Launch registration:** required. The running app is the authority for its
+  current manifest and capabilities.
+- **Cached/pre-launch registration:** useful. The broker can remember or scan
+  portable app folders so other apps can show availability before the target
+  app is currently running.
+
+Because portable app updates are folder replacement/extraction events, update
+detection should compare manifest `appId`, `version`, `protocolVersion`, and a
+manifest hash or modified timestamp. If an app's manifest changes, the broker
+must refresh capabilities before reporting them to other apps.
+
+Portable update bundles should also refresh connector manifests. If a user runs
+an update script that adds Prompt capabilities or changes protocol support, the
+next app launch/registration must replace the broker's cached capability view.
+The broker should treat stale manifests as a normal update condition, not as a
+runtime error.
+
+### Broker Lifecycle Direction
+
+The broker should be hub-owned and normally available while the user is working
+with Cubric apps. A user in Cubric Vision may request Cubric Prompt repeatedly
+while building prompts, so startup latency should not happen on every request.
+
+Recommended lifecycle:
+- The Cubric Studio hub/broker starts when any Cubric app needs connector
+  services.
+- It may stay alive in the background for the user session.
+- Product apps should degrade cleanly when the broker is absent.
+- The broker should support an explicit shutdown/disable path for users who do
+  not want background services.
+
+### Decisions Still Open
+
+- Exact transport primitive for Windows/macOS/Linux.
+- Exact broker startup policy and user-visible controls.
+- Auth token or handshake mechanism.
+- Manifest registration path.
+- Hub-side scan/import UX for portable app folders.
+- Portable app update mechanism and how broker registry refresh ties into it.
+
 ## TypeScript Types
 
 ```ts
@@ -548,10 +656,11 @@ Unsupported capability:
 
 - Whether Cubric Vision should include a manifest-only SDK stub before v1 or
   defer all SDK integration until after release.
-- First discovery mechanism for installed apps.
+- First discovery mechanism for portable app folders.
 - First transport for broker-mediated requests.
 - Permission model for project context and asset import/export.
 - Which runtime schema library or JSON Schema tooling the SDK should use.
+- Portable app update strategy.
 
 ## Implementation Readiness Checklist
 

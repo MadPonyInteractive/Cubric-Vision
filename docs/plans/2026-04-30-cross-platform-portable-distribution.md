@@ -9,6 +9,12 @@
 - **macOS:** unzip → double-click `start.command` in Finder → app opens.
 - **Linux:** unzip → run `./start.sh` → app opens.
 
+**Update target:** every release publishes both a full portable artifact for
+new users and a portable update bundle/script for existing users. This follows
+the ComfyUI portable pattern: the app folder can include an `update/` directory
+with platform scripts the user runs manually to pull/apply only what is needed.
+This is not `electron-updater` and not an installer.
+
 **Primary constraint:** development happens on one Windows machine. Linux and macOS cannot be marked done without a real-host smoke test.
 
 ---
@@ -416,6 +422,9 @@ Equal-priority deliverable. macOS final validation requires real Mac (no Windows
 
 - [ ] **5.1. Tag `v0.0.1`**
 - [ ] **5.2. Upload three (or four with arch split) zips to GitHub Releases**
+- [ ] **5.2a. Upload matching update bundles once the update system exists**
+  - Full portable artifacts remain mandatory for new users.
+  - Update bundles are optional until Phase 6 lands.
 - [ ] **5.3. Release notes**
   - Per-platform unzip + launch instructions
   - First-run engine install ETA + disk usage
@@ -428,6 +437,89 @@ Equal-priority deliverable. macOS final validation requires real Mac (no Windows
 
 ---
 
+## Phase 6 — Portable update bundles
+
+Portable releases still need an update path. Users should not have to download
+the full app every time if they already have a working folder with engines,
+models, projects, and settings.
+
+Target UX:
+- **Windows:** open `update/update.bat`.
+- **macOS:** open `update/update.command`.
+- **Linux:** run `./update/update.sh`.
+
+Release artifact model:
+- Full portable artifact per platform remains the source of truth:
+  - Windows zip.
+  - Linux tarball.
+  - macOS zip per arch.
+- Update artifact per platform contains only the updater scripts, manifest, and
+  changed app files needed to patch an existing portable folder.
+- GitHub Releases publish both when the update system is ready:
+  - `CubricVision_windows.zip`
+  - `CubricVision_windows_update.zip`
+  - equivalent Linux/macOS names.
+
+Update scope:
+- Update app code, bundled resources, launchers, metadata, and connector
+  manifests.
+- Preserve user data:
+  - `engine/`
+  - `llama_engine/`
+  - `llama_models/`
+  - projects under Documents
+  - downloaded models and generated media
+  - local config files intended to survive updates
+- Do not silently delete user-modified files unless they are clearly generated
+  cache files.
+
+Implementation direction:
+- Add a version manifest to full releases and update bundles.
+- The update script verifies it is running from a Cubric portable root.
+- The update script checks current app version and target version.
+- The update script backs up replaced app files or creates a rollback folder.
+- The update script applies changed files atomically enough to avoid leaving the
+  app half-updated when extraction/copy fails.
+- The update script refreshes connector/app manifests after update so the
+  future broker sees new capabilities.
+- The app must be closed during update unless a later hub-owned updater can
+  coordinate process shutdown safely.
+
+Manifest fields to define:
+- `appId`
+- `displayName`
+- `fromVersion`
+- `toVersion`
+- `platform`
+- `arch`
+- `files[]`
+- `delete[]`
+- `preserve[]`
+- `sha256`
+- `connectorManifestHash`
+
+Open decisions:
+- Whether update bundles are binary deltas or simple changed-file bundles.
+  Recommendation for v1: changed-file bundles. They are simpler, inspectable,
+  and reliable for portable folders.
+- Whether the app checks GitHub for available updates or only links users to
+  the release page. Recommendation for v1: notify/link only, manual script
+  applies the update.
+- Whether the future Cubric Studio hub becomes the cross-app update manager.
+  Recommendation: yes, later. The hub can eventually coordinate updates for
+  Vision, Prompt, Audio, and Video, but the first portable updater should work
+  without the hub.
+
+Verify:
+- Update from N-1 to N on a copied portable folder.
+- Engine/model folders remain intact.
+- Projects still open after update.
+- Connector manifest/version changes are visible to the broker or future
+  registry after relaunch.
+- Failed update leaves either the old app working or a clear rollback path.
+
+---
+
 ## Recommended order of work
 
 1. Phase 0 (runtime fixes + portable root/env + ZIP extraction fix) — mostly Windows-locally testable. Do this before any build script work.
@@ -436,6 +528,8 @@ Equal-priority deliverable. macOS final validation requires real Mac (no Windows
 4. Phase 3 — Linux portable zip. Needs Linux host. Smoke gate before release.
 5. Phase 4 — macOS portable zip. Needs Mac host. Smoke gate before release.
 6. Phase 5 — release all three when each clears its smoke gate.
+7. Phase 6 — portable update bundles. Can ship after the first full portable
+   release, but should exist before frequent public update cadence.
 
 Linux and macOS do NOT block on Windows ship — once their host is available, they ship.
 
@@ -487,7 +581,8 @@ For this distribution project specifically, PRs touching installer/build code sh
 - Code signing (Win Authenticode / Apple Developer ID)
 - macOS notarization
 - SmartScreen reputation seeding
-- Auto-updates (electron-updater is a future-tier option)
+- Auto-updates via `electron-updater`
+- Silent background patching in v0.0.1
 - LLM model bundling in the first portable releases. Local Qwen/Gemma via llama.cpp is a later release track; DeepInfra remote inference comes after local LLM releases are stable.
 - Linux package formats beyond a tarball (no .deb, .rpm, snap, flatpak, AppImage)
 - Splitting `getComfyPath` into nine helpers (deferred until a real layout mismatch is observed)
@@ -509,5 +604,8 @@ All true per platform before that platform's zip is published:
 - Quit + relaunch preserves projects.
 - Moving the unzipped folder doesn't break the app (no absolute paths baked in).
 - LLM routes are non-blocking for non-LLM releases: absence of `llama_engine/` and `llama_models/` does not block app launch, ComfyUI install, or image/video generation.
+- Update bundles are not required for the first full portable artifact, but the
+  release notes must say whether users should download the full artifact or can
+  use an update bundle.
 
 Windows ships when Phase 2 acceptance is met. Linux ships when Phase 3 acceptance is met. macOS ships when Phase 4 acceptance is met. They release independently; one platform's delay does not block the others.
