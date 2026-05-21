@@ -126,7 +126,6 @@ Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip.
 
 > **MpiSettings is NOT mounted directly anymore.** It is a *content component* of `MpiSlideOver` — its body element is mounted inside `.mpi-slide-over__body` via `props.component.mount(bodyEl)` from inside `MpiSlideOver.setup()`. The legacy `el.show()/el.hide()` methods are gone. Field initialisation runs via `el.onOpen()`, which `MpiSlideOver` calls once on every open. Internal mounts inside `MpiSettings._initFields()` are unchanged:
 > - `MpiCheckbox`   props: `{ checked: Storage.getAutoStartComfy(), label:'Auto-start ComfyUI on Launch' }`   slot: `#mpiSettingsAutoStartSlot`
-> - `MpiInput` (Ollama URL)   props: `{ label:'Llama API URL', placeholder:'http://localhost:8080', value }`   slot: `#mpiSettingsOllamaUrlSlot`
 > - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
 > - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
 > - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`

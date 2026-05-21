@@ -4,8 +4,7 @@
  * RULES FOR AGENTS:
  * - All cross-cutting server concerns live here (download helper, process refs, path resolver).
  * - Do not copy these into route files — import them.
- * - Process state (activeLlamaProcess, etc.) is exported as a mutable object so all
- *   modules share the same reference.
+ * - Process state is exported as a mutable object so all modules share the same reference.
  */
 
 'use strict';
@@ -18,7 +17,7 @@ const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
 const { exec, spawn } = require('child_process');
-const { COMFY_DIR, getPythonBin, getComfyPath, getEngineRoot, getLlamaEngineRoot, getLlamaModelsRoot } = require('./platformEngine');
+const { COMFY_DIR, getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine');
 
 const _require = createRequire(__filename);
 
@@ -51,31 +50,16 @@ function getProjectsRoot() {
     }
     return path.join(__dirname, '..', 'projects');
 }
-const MODELS_ROOT = getLlamaModelsRoot();
-const LLM_CONFIG_PATH = path.join(__dirname, '..', 'dev_configs', 'llm_models.json');
-const LLAMA_ENGINE_ROOT = getLlamaEngineRoot();
 const SYS_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'system_dependencies.json');
-const LLAMA_SERVER_PORT = 8080;
 const COMFYUI_PORT = 8188;
 
 // ── Process State ─────────────────────────────────────────────────────────────
 // Mutable shared state — all route modules reference the same object.
 
 const processState = {
-    activeLlamaProcess: null,
     activeComfyProcess: null,
-    activeModelId: null,
     comfyNeedsRestart: false,
 };
-
-function stopLlamaServer() {
-    if (processState.activeLlamaProcess) {
-        logger.info('llm', 'Killing active llama-server process...');
-        processState.activeLlamaProcess.kill('SIGINT');
-        processState.activeLlamaProcess = null;
-    }
-    processState.activeModelId = null;
-}
 
 function stopComfyUI() {
     if (processState.activeComfyProcess) {
@@ -88,7 +72,6 @@ function stopComfyUI() {
 // Ensure child processes die if the node server shuts down
 ['exit', 'SIGINT', 'SIGTERM'].forEach(signal => {
     process.on(signal, () => {
-        if (processState.activeLlamaProcess) processState.activeLlamaProcess.kill('SIGKILL');
         if (processState.activeComfyProcess) processState.activeComfyProcess.kill('SIGKILL');
         if (signal !== 'exit') process.exit();
     });
@@ -416,14 +399,9 @@ async function cleanComfyUITempFiles() {
 
 module.exports = {
     getProjectsRoot,
-    MODELS_ROOT,
-    LLM_CONFIG_PATH,
-    LLAMA_ENGINE_ROOT,
     SYS_DEPS_PATH,
-    LLAMA_SERVER_PORT,
     COMFYUI_PORT,
     processState,
-    stopLlamaServer,
     stopComfyUI,
     streamDownload,
     runPipCommand,

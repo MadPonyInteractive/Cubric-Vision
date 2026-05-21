@@ -1,5 +1,5 @@
 /**
- * routes/engine.js — Engine binary provisioning routes (ComfyUI + llama-server).
+ * routes/engine.js — Engine binary provisioning routes (ComfyUI).
  *
  * Routes exposed:
  *   GET  /engine/status    — check if engine binary exists
@@ -15,25 +15,18 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, getLlamaBin, resolveDownloadConfig, getEngineRoot, getLlamaEngineRoot } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, getEngineRoot } = require('./platformEngine');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 const ENGINE_ROOT = getEngineRoot();
-const LLAMA_ENGINE_ROOT = getLlamaEngineRoot();
 
 router.get('/engine/status', async (req, res) => {
     try {
-        const type = req.query.type || 'comfy';
         if (!(await fs.pathExists(SYS_DEPS_PATH))) {
             return res.json({ success: true, exists: false });
         }
-        if (type === 'llama') {
-            const serverPath = path.join(LLAMA_ENGINE_ROOT, getLlamaBin());
-            res.json({ success: true, exists: await fs.pathExists(serverPath) });
-        } else {
-            const pythonPath = getPythonBin(ENGINE_ROOT);
-            res.json({ success: true, exists: await fs.pathExists(pythonPath) });
-        }
+        const pythonPath = getPythonBin(ENGINE_ROOT);
+        res.json({ success: true, exists: await fs.pathExists(pythonPath) });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
@@ -46,15 +39,14 @@ router.get('/engine/status', async (req, res) => {
  * Steps:
  * 1. Download the binary archive from system_dependencies.json
  * 2. Extract it to the target directory
- * 3. Patch it (bat flags, settings, server discovery)
+ * 3. Patch it (bat flags, settings)
  * 4. Write version stamp (.mpi_engine_version)
- * 5. Write extra_model_paths.yaml (ComfyUI only)
+ * 5. Write extra_model_paths.yaml
  * 6. Broadcast SSE events at key stages
- *
- * @param {string} type - 'comfy' or 'llama' (default: 'comfy')
  */
-async function _runEngineDownload(type) {
-    logger.info('engine', `_runEngineDownload started for type: ${type}`);
+async function _runEngineDownload() {
+    const type = 'comfy';
+    logger.info('engine', `_runEngineDownload started`);
     try {
         logger.info('engine', `Reading system dependencies from ${SYS_DEPS_PATH}`);
         const config = await fs.readJson(SYS_DEPS_PATH);
@@ -63,22 +55,12 @@ async function _runEngineDownload(type) {
         // Detect GPU and resolve download URLs
         const downloadConfig = await resolveDownloadConfig();
 
-        let engineInfo, targetDir;
-        if (type === 'llama') {
-            engineInfo = {
-                version: config.llamaServer.version,
-                filename: downloadConfig.llama.filename,
-                url: downloadConfig.llama.url,
-            };
-            targetDir = LLAMA_ENGINE_ROOT;
-        } else {
-            engineInfo = {
-                version: config.engine.version,
-                filename: downloadConfig.comfy.filename,
-                url: downloadConfig.comfy.url,
-            };
-            targetDir = ENGINE_ROOT;
-        }
+        const engineInfo = {
+            version: config.engine.version,
+            filename: downloadConfig.comfy.filename,
+            url: downloadConfig.comfy.url,
+        };
+        const targetDir = ENGINE_ROOT;
 
         if (!engineInfo) throw new Error('Engine info not found in configs');
 
@@ -86,14 +68,12 @@ async function _runEngineDownload(type) {
         let uwDepsTotalBytes = 0;
         let missingDepIds = [];
 
-        if (type === 'comfy') {
-            const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-            missingDepIds = missingDeps;
-            if (missingDeps.length > 0) {
-                logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
-                uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
-                logger.info('engine', `UW deps total size: ${(uwDepsTotalBytes / 1024 / 1024 / 1024).toFixed(2)} GB`);
-            }
+        const { missingDeps } = await checkUniversalWorkflowDepsStatus();
+        missingDepIds = missingDeps;
+        if (missingDeps.length > 0) {
+            logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
+            uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
+            logger.info('engine', `UW deps total size: ${(uwDepsTotalBytes / 1024 / 1024 / 1024).toFixed(2)} GB`);
         }
 
         // ── 2. Download engine using ResumableDownloader ────────────────────────
@@ -141,7 +121,7 @@ async function _runEngineDownload(type) {
         // Fire UW deps download immediately (parallel with engine download, skip custom node install for now)
         let uwModelJob = null;
         let uwDepsPromise = Promise.resolve();
-        if (type === 'comfy' && missingDepIds.length > 0) {
+        if (missingDepIds.length > 0) {
             logger.info('engine', `Firing ${missingDepIds.length} UW deps downloads (parallel)...`);
             uwDepsPromise = startUniversalWorkflowInstall(missingDepIds, true, true)  // true = skip custom node install
                 .then(modelJob => {
@@ -197,7 +177,7 @@ async function _runEngineDownload(type) {
         await uwDepsPromise;
 
         let uwInstallFailed = false;
-        if (type === 'comfy' && uwModelJob) {
+        if (uwModelJob) {
             logger.info('engine', 'Engine ready, finishing custom node installation...');
             try {
                 await finishCustomNodeInstall(uwModelJob, true);
@@ -212,47 +192,26 @@ async function _runEngineDownload(type) {
         broadcastEngineEvent('engine:patching', { status: 'patching' });
         logger.info('system', 'Patching engine...');
 
-        if (type === 'comfy') {
-            const batPath = path.join(targetDir, COMFY_DIR, 'run_nvidia_gpu.bat');
-            if (await fs.pathExists(batPath)) {
-                let content = await fs.readFile(batPath, 'utf8');
-                if (!content.includes('--enable-cors-header')) {
-                    logger.info('system', 'Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
-                    content = content.replace('ComfyUI\\main.py', 'ComfyUI\\main.py --listen 127.0.0.1 --preview-method taesd --enable-cors-header');
-                    await fs.writeFile(batPath, content, 'utf8');
-                }
+        const batPath = path.join(targetDir, COMFY_DIR, 'run_nvidia_gpu.bat');
+        if (await fs.pathExists(batPath)) {
+            let content = await fs.readFile(batPath, 'utf8');
+            if (!content.includes('--enable-cors-header')) {
+                logger.info('system', 'Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
+                content = content.replace('ComfyUI\\main.py', 'ComfyUI\\main.py --listen 127.0.0.1 --preview-method taesd --enable-cors-header');
+                await fs.writeFile(batPath, content, 'utf8');
             }
-            const settingsPath = getComfyPath(targetDir, 'user', 'default', 'comfy.settings.json');
-            try {
-                await fs.ensureDir(path.dirname(settingsPath));
-                let settings = {};
-                if (await fs.pathExists(settingsPath)) settings = await fs.readJson(settingsPath);
-                settings['Comfy.Execution.PreviewMethod'] = 'taesd';
-                settings['Comfy.PreviewMethod'] = 'taesd';
-                await fs.writeJson(settingsPath, settings, { spaces: 4 });
-                logger.info('system', 'ComfyUI settings updated to use TAESD previews.');
-            } catch (err) {
-                logger.warn('system', `Failed to update ComfyUI settings: ${err}`);
-            }
-        } else if (type === 'llama') {
-            const llamaBin = getLlamaBin();
-            const findServer = async (dir) => {
-                const items = await fs.readdir(dir);
-                for (const i of items) {
-                    const p = path.join(dir, i);
-                    if ((await fs.stat(p)).isDirectory()) {
-                        const nested = await findServer(p);
-                        if (nested) return nested;
-                    } else if (i === llamaBin) {
-                        return p;
-                    }
-                }
-                return null;
-            };
-            const found = await findServer(targetDir);
-            if (found && path.resolve(found) !== path.resolve(path.join(targetDir, llamaBin))) {
-                await fs.copy(found, path.join(targetDir, llamaBin));
-            }
+        }
+        const settingsPath = getComfyPath(targetDir, 'user', 'default', 'comfy.settings.json');
+        try {
+            await fs.ensureDir(path.dirname(settingsPath));
+            let settings = {};
+            if (await fs.pathExists(settingsPath)) settings = await fs.readJson(settingsPath);
+            settings['Comfy.Execution.PreviewMethod'] = 'taesd';
+            settings['Comfy.PreviewMethod'] = 'taesd';
+            await fs.writeJson(settingsPath, settings, { spaces: 4 });
+            logger.info('system', 'ComfyUI settings updated to use TAESD previews.');
+        } catch (err) {
+            logger.warn('system', `Failed to update ComfyUI settings: ${err}`);
         }
 
         // ── 5. Post-install: Write version stamp ───────────────────────────────
@@ -265,17 +224,15 @@ async function _runEngineDownload(type) {
         logger.info('engine', `Version stamp written: ${INSTALLED_ENGINE_VERSION}`);
 
         // ── 6. Post-install: Write extra_model_paths.yaml (if needed) ────────────
-        if (type === 'comfy') {
-            const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
+        const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
 
-            if (!(await fs.pathExists(extraConfigPath))) {
-                const mpiModelsDir = path.join(targetDir, 'mpi_models');
-                await fs.ensureDir(mpiModelsDir);
-                await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir), 'utf8');
-                logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
-            } else {
-                logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);
-            }
+        if (!(await fs.pathExists(extraConfigPath))) {
+            const mpiModelsDir = path.join(targetDir, 'mpi_models');
+            await fs.ensureDir(mpiModelsDir);
+            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir), 'utf8');
+            logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
+        } else {
+            logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);
         }
 
         // ── 7. Complete engine (UW deps fully done) ─────────────────────────────
@@ -298,13 +255,12 @@ async function _runEngineDownload(type) {
 }
 
 router.post('/engine/download', async (req, res) => {
-    const engineType = req.query.type || 'comfy';
-    logger.info('engine', `Download request received for type: ${engineType}`);
+    logger.info('engine', `Download request received`);
 
     res.json({ success: true, status: 'started' }); // respond immediately — NEVER block
 
-    logger.info('engine', `Starting async engine download for type: ${engineType}`);
-    _runEngineDownload(engineType).catch(e => {
+    logger.info('engine', `Starting async engine download`);
+    _runEngineDownload().catch(e => {
         logger.error('engine', 'Uncaught engine download error (already handled)', e);
     });
 });
@@ -399,7 +355,7 @@ router.post('/engine/upgrade', async (req, res) => {
         res.json({ success: true, status: 'upgrade-started' });
 
         // 3. Download + install new version async (SSE reports progress)
-        await _runEngineDownload(req.query.type || 'comfy');
+        await _runEngineDownload();
 
     } catch (e) {
         logger.error('system', 'Engine upgrade failed', e);

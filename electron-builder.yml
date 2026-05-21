@@ -8,6 +8,9 @@ directories:
 files:
   - "**/*"
   - "!engine/**"
+  - "!llama_engine/**"
+  - "!llama_models/**"
+  - "!.engine-config.json"
   - "!node_modules/ffmpeg-static/**"
   - "!node_modules/ffprobe-static/**"
   - "!*.log"

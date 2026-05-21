@@ -7,7 +7,7 @@
 # Responsibilities:
 #   1. Install node_modules if missing (per-worktree, gitignored, platform-specific).
 #   2. Bootstrap .engine-config.json on new worktree creation so the worktree
-#      points back at the master worktree's shared engine/llama/models folders
+#      points back at the master worktree's shared engine folder
 #      instead of triggering a fresh ~10GB engine download.
 #
 # See docs/worktrees.md for full context.
@@ -41,17 +41,15 @@ MAIN_WORKTREE=$(git worktree list --porcelain | awk '/^worktree / { print $2; ex
 CURRENT_WORKTREE=$(pwd)
 
 # If we ARE the main worktree, nothing to bootstrap — defaults already point at
-# local engine/llama_engine/llama_models folders.
+# local engine folder.
 if [ "$CURRENT_WORKTREE" = "$MAIN_WORKTREE" ]; then
     exit 0
 fi
 
-# Build absolute paths to main worktree's shared folders.
+# Build absolute path to main worktree's shared engine folder.
 # Convert forward-slash POSIX path to Windows-style backslashes for JSON
 # (Node's require/JSON.parse handles either, but matching existing convention).
 ENGINE_PATH="$MAIN_WORKTREE/engine"
-LLAMA_PATH="$MAIN_WORKTREE/llama_engine"
-LLAMA_MODELS_PATH="$MAIN_WORKTREE/llama_models"
 
 # Escape backslashes for JSON (Windows paths). On *nix this is a no-op since
 # the paths use forward slashes already, which JSON accepts as-is.
@@ -61,19 +59,13 @@ escape_json() {
 }
 
 ENGINE_PATH_JSON=$(escape_json "$ENGINE_PATH")
-LLAMA_PATH_JSON=$(escape_json "$LLAMA_PATH")
-LLAMA_MODELS_PATH_JSON=$(escape_json "$LLAMA_MODELS_PATH")
 
 cat > "$CONFIG_FILE" <<EOF
 {
-    "enginePath": "$ENGINE_PATH_JSON",
-    "llamaPath": "$LLAMA_PATH_JSON",
-    "llamaModelsPath": "$LLAMA_MODELS_PATH_JSON"
+    "enginePath": "$ENGINE_PATH_JSON"
 }
 EOF
 
 echo "[post-checkout] Bootstrapped $CONFIG_FILE pointing at main worktree:"
-echo "    enginePath:      $ENGINE_PATH"
-echo "    llamaPath:       $LLAMA_PATH"
-echo "    llamaModelsPath: $LLAMA_MODELS_PATH"
+echo "    enginePath: $ENGINE_PATH"
 echo "    (Edit or delete this file to change. See docs/worktrees.md.)"

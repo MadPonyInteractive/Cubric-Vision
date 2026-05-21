@@ -3,7 +3,7 @@
  *
  * Single source of truth for:
  * - Engine folder names (ComfyUI_windows_portable, etc.)
- * - Binary paths (python.exe, llama-server.exe)
+ * - Binary paths (python.exe)
  * - Download URL construction based on detected GPU
  *
  * GPU detection runs once during engine install/upgrade, results cached for the session.
@@ -17,9 +17,7 @@ const deps = require('../dev_configs/system_dependencies.json');
 const logger = require('./logger');
 
 const COMFY_VERSION = deps.engine.version;
-const LLAMA_VERSION = deps.llamaServer.version;
 const COMFY_BASE = `https://github.com/Comfy-Org/ComfyUI/releases/download/v${COMFY_VERSION}`;
-const LLAMA_BASE = `https://github.com/ggerganov/llama.cpp/releases/download/${LLAMA_VERSION}`;
 
 // Platform-specific engine folder name (only Windows has portable build)
 const COMFY_DIR_MAP = {
@@ -34,13 +32,6 @@ const PYTHON_BIN_PARTS_MAP = {
     win32: [COMFY_DIR_MAP.win32, 'python_embeded', 'python.exe'],
     darwin: ['ComfyUI_macos', 'venv', 'bin', 'python3'],
     linux: ['ComfyUI_linux', 'venv', 'bin', 'python3'],
-};
-
-// Llama binary names by platform
-const LLAMA_BIN_MAP = {
-    win32: 'llama-server.exe',
-    darwin: 'llama-server',
-    linux: 'llama-server',
 };
 
 // Cached GPU detection result for the session
@@ -64,14 +55,6 @@ function getPythonBin(engineRoot) {
  */
 function getComfyPath(engineRoot, ...parts) {
     return path.join(engineRoot, COMFY_DIR, 'ComfyUI', ...parts);
-}
-
-/**
- * Get the llama binary name for the current platform.
- * @returns {string} binary filename (e.g., 'llama-server.exe' on Windows)
- */
-function getLlamaBin() {
-    return LLAMA_BIN_MAP[process.platform] ?? LLAMA_BIN_MAP.win32;
 }
 
 /**
@@ -143,10 +126,10 @@ async function detectIntelArcGPU() {
 
 /**
  * Resolve GPU-specific download configuration.
- * Returns the correct engine and llama-server URLs + filenames.
+ * Returns the correct ComfyUI engine URL + filename for the detected GPU.
  * Result is cached for the session.
  *
- * @returns {Promise<{comfy: {url: string, filename: string}, llama: {url: string, filename: string}}>}
+ * @returns {Promise<{comfy: {url: string, filename: string}}>}
  */
 async function resolveDownloadConfig() {
     // Return cached result if available
@@ -165,7 +148,6 @@ async function resolveDownloadConfig() {
     ]);
 
     let comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';  // default
-    let llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cpu-x64.zip`; // default
 
     // ComfyUI variant selection
     if (nvidiaResult.hasGPU) {
@@ -176,26 +158,20 @@ async function resolveDownloadConfig() {
 
             if (cudaMajor > 12 || (cudaMajor === 12 && cudaMinor >= 7)) {
                 comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';
-                llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cuda-13.1-x64.zip`;
             } else if (cudaMajor === 12 && cudaMinor === 6) {
                 comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-                llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cuda-12.4-x64.zip`;
             } else {
                 // CUDA < 12.6 — use cu126 as safest fallback
                 comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-                llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cuda-12.4-x64.zip`;
             }
         } else {
             // CUDA version unknown — use cu126 as safe fallback
             comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-            llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cuda-12.4-x64.zip`;
         }
     } else if (hasAmd) {
         comfyFilename = 'ComfyUI_windows_portable_amd.7z';
-        llamaFilename = `llama-${LLAMA_VERSION}-bin-win-hip-radeon-x64.zip`;
     } else if (hasIntel) {
         comfyFilename = 'ComfyUI_windows_portable_intel.7z';
-        llamaFilename = `llama-${LLAMA_VERSION}-bin-win-cpu-x64.zip`; // Intel Arc uses CPU variant
     }
     // else: default to NVIDIA build, ComfyUI will handle fallback if no GPU
 
@@ -204,13 +180,9 @@ async function resolveDownloadConfig() {
             url: `${COMFY_BASE}/${comfyFilename}`,
             filename: 'ComfyUI_windows_portable.7z',
         },
-        llama: {
-            url: `${LLAMA_BASE}/${llamaFilename}`,
-            filename: 'llama_server_engine.zip',
-        },
     };
 
-    logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename}, Llama=${llamaFilename}`);
+    logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename}`);
 
     // Cache for session
     _gpuDetectionCache = result;
@@ -219,7 +191,7 @@ async function resolveDownloadConfig() {
 
 /**
  * Read .engine-config.json (gitignored, per-worktree). Returns parsed config or null.
- * Lets git worktrees share engine/llama_engine folders instead of duplicating.
+ * Lets git worktrees share the engine folder instead of duplicating.
  */
 function _readEngineConfig() {
     try {
@@ -246,43 +218,11 @@ function getEngineRoot() {
     return path.join(__dirname, '..', 'engine');
 }
 
-/**
- * Get the configured llama engine root path, with fallback to default.
- * Reads `llamaPath` key from .engine-config.json. Independent of `enginePath`
- * so a worktree can share llama, comfy, both, or neither.
- * @returns {string} llama engine root directory path
- */
-function getLlamaEngineRoot() {
-    const config = _readEngineConfig();
-    if (config && config.llamaPath && require('fs').existsSync(config.llamaPath)) {
-        return config.llamaPath;
-    }
-    return path.join(__dirname, '..', 'llama_engine');
-}
-
-/**
- * Get the configured llama models root path, with fallback to default.
- * Reads `llamaModelsPath` key from .engine-config.json. Lets worktrees share
- * downloaded LLM model files (often multi-GB) instead of duplicating.
- * @returns {string} llama models directory path
- */
-function getLlamaModelsRoot() {
-    const config = _readEngineConfig();
-    if (config && config.llamaModelsPath && require('fs').existsSync(config.llamaModelsPath)) {
-        return config.llamaModelsPath;
-    }
-    return path.join(__dirname, '..', 'llama_models');
-}
-
 module.exports = {
     COMFY_DIR,
     COMFY_VERSION,
-    LLAMA_VERSION,
     getPythonBin,
     getComfyPath,
-    getLlamaBin,
     resolveDownloadConfig,
     getEngineRoot,
-    getLlamaEngineRoot,
-    getLlamaModelsRoot,
 };

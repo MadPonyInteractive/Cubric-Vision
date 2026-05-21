@@ -28,9 +28,6 @@ export const Storage = {
   setComfyRootPath:     (v) => set(STORAGE_KEYS.COMFY_ROOT_PATH, v),
   removeComfyRootPath:  () => remove(STORAGE_KEYS.COMFY_ROOT_PATH),
 
-  getOllamaUrl:        () => get(STORAGE_KEYS.OLLAMA_URL, 'http://localhost:8080'),
-  setOllamaUrl:        (v) => set(STORAGE_KEYS.OLLAMA_URL, v),
-
   getComfyUrl:         () => get(STORAGE_KEYS.COMFY_URL, 'http://localhost:8188'),
   setComfyUrl:         (v) => set(STORAGE_KEYS.COMFY_URL, v),
 

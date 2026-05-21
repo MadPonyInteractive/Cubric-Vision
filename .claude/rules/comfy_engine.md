@@ -20,7 +20,7 @@
 See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for the registry structure.
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES
-1. **Path Centralization:** Never hardcode `'ComfyUI_windows_portable'`, `'python_embeded'`, or platform paths. Use `routes/platformEngine.js` helpers: `getPythonBin()`, `getComfyPath()`, `COMFY_DIR`, `getLlamaBin()`.
+1. **Path Centralization:** Never hardcode `'ComfyUI_windows_portable'`, `'python_embeded'`, or platform paths. Use `routes/platformEngine.js` helpers: `getPythonBin()`, `getComfyPath()`, `COMFY_DIR`.
 2. **Source of Truth:** `js/data/modelRegistry.js` is the single source of truth for ALL generative models. If you need to add a checkpoint, LoRA, or custom node, you add it to the `MODELS` or `DEPS` dictionary here.
 3. **Never Hardcode Install Status:** Never hardcode `installed: true` in the registry. Model presence is dynamically resolved at runtime by the backend `GET /comfy/models/check`.
 4. **No Direct Python Exec:** Do not attempt to spawn Python or run `pip` manually from arbitrary files. All engine management is strictly handled by `routes/comfy.js` and `routes/shared.js`.
@@ -37,14 +37,13 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 - **`COMFY_DIR`** — engine folder name (`'ComfyUI_windows_portable'` on Windows, etc.)
 - **`getPythonBin(engineRoot)`** — full path to Python executable
 - **`getComfyPath(engineRoot, ...parts)`** — shorthand for paths inside ComfyUI folder
-- **`getLlamaBin()`** — llama-server binary name for current platform
 - **`resolveDownloadConfig()`** — async GPU detection + returns correct download URLs + filenames
   - Detects NVIDIA (via `nvidia-smi`), AMD (via WMI), Intel Arc (via WMI)
   - Parses CUDA version from `nvidia-smi` header
-  - Returns: `{ comfy: { url, filename }, llama: { url, filename } }`
+  - Returns: `{ comfy: { url, filename } }`
   - Cached per session — called once during engine install/upgrade
 
-**Usage:** Import from platformEngine.js in `routes/shared.js`, `routes/engine.js`, `routes/comfy.js`, `routes/llm.js`, `main.js`, `routes/system.js`. Never hardcode path strings or binary names.
+**Usage:** Import from platformEngine.js in `routes/shared.js`, `routes/engine.js`, `routes/comfy.js`, `main.js`, `routes/system.js`. Never hardcode path strings or binary names.
 
 **Why:** Enables cross-platform builds and automatic GPU variant selection without configuration.
 

@@ -41,9 +41,6 @@ export const MpiSettings = ComponentFactory.create({
                 <div class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">External Connections</h3>
                     <div class="mpi-settings__form-group">
-                        <div id="mpiSettingsOllamaUrlSlot"></div>
-                    </div>
-                    <div class="mpi-settings__form-group">
                         <div id="mpiSettingsComfyUrlSlot"></div>
                     </div>
                     <div class="mpi-settings__form-group">
@@ -89,18 +86,6 @@ export const MpiSettings = ComponentFactory.create({
                     ],
                 });
                 pixelInst.on('select', ({ value }) => { state.pixelMode = value; });
-            }
-
-            // ── Ollama URL ───────────────────────────────────────────────────
-            const ollamaSlot = qs('#mpiSettingsOllamaUrlSlot', root);
-            if (ollamaSlot) {
-                ollamaSlot.innerHTML = '';
-                const ollamaInst = MpiInput.mount(ollamaSlot, {
-                    label: 'Llama API URL',
-                    placeholder: 'http://localhost:8080',
-                    value: Storage.getOllamaUrl() || 'http://localhost:8080',
-                });
-                ollamaInst.on('change', ({ value }) => Storage.setOllamaUrl(value));
             }
 
             // ── ComfyUI URL ──────────────────────────────────────────────────

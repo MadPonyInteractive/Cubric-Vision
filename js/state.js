@@ -39,10 +39,6 @@ const _state = {
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.
 
-    // ── Legacy — keep until LLM re-implementation ─────────────────────────────
-    g_abortControllers: {},     // Used by llmService.js
-    currentLoadedModel: null,   // Used by llmService.js
-
     // ── Download Manager ───────────────────────────────────────────────────────
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
     downloadQueueActive: false, // true when any download is in progress

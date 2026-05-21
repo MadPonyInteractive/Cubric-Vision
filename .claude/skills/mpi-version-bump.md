@@ -13,7 +13,7 @@ Use this skill whenever you're ready to cut a new release of Cubric Studio.
 
 I will read the following files to understand the current state:
 - `js/core/appVersion.js` — current APP_VERSION, SCHEMA_VERSION
-- `dev_configs/system_dependencies.json` — current COMFY_VERSION and LLAMA_VERSION
+- `dev_configs/system_dependencies.json` — current COMFY_VERSION
 - `js/core/operationRegistry.js` — all registered operations
 - `js/data/commandRegistry.js` — UI metadata for all operations
 - `js/data/modelConstants/models.js` — model/operation/workflow mappings
@@ -38,12 +38,7 @@ Current ComfyUI version: **X.Y.Z** (read from `dev_configs/system_dependencies.j
 
 If yes, provide new version (e.g., `0.19.0`). If no, press Enter to keep current.
 
-### Q3: Llama Server Version Changing?
-Current Llama version: **X** (read from `dev_configs/system_dependencies.json`)
-
-If yes, provide new version (e.g., `b8465`). If no, press Enter to keep current.
-
-### Q4: New Operations Being Added?
+### Q3: New Operations Being Added?
 List each new operation. For each:
 - **Key**: snake_case identifier (e.g., `my_new_op`)
 - **Label**: Display name (e.g., `My New Operation`)
@@ -81,17 +76,17 @@ Supporting models: sdxl-realistic,ill-anime-beauty
 Workflow filenames: upscale_2x_sdxl_realistic.json, upscale_2x_ill_anime_beauty.json
 ```
 
-### Q5: Operations Being Deprecated?
+### Q4: Operations Being Deprecated?
 List operation keys to mark as deprecated (e.g., `old_op_v1, legacy_filter`), or press Enter for none.
 
 **Important:** Deprecation does NOT remove operations — it marks them so the UI hides them but projects using them can still load.
 
-### Q6: Project Schema Version Changing?
+### Q5: Project Schema Version Changing?
 `y` or `n`
 
 If yes, the app's `SCHEMA_VERSION` will increment (from 1 to 2, etc.) and you'll need to implement a migration in `js/migrations/projectMigrations.js`. I will create a stub for you.
 
-### Q7: Notable Changelog Items?
+### Q6: Notable Changelog Items?
 Free-text description of what changed. Examples:
 - "Added image segmentation operation"
 - "Upgraded ComfyUI to support new video models"
@@ -130,11 +125,10 @@ Answer `n` to re-do the questions, `y` to continue.
 
 ### 4b. Edit `dev_configs/system_dependencies.json`
 
-If ComfyUI or Llama versions changed:
+If ComfyUI version changed:
 - Update `engine.version` to the new ComfyUI version
-- Update `llamaServer.version` to the new Llama version
 
-This is the **single source of truth** for engine versions. `routes/platformEngine.js` reads from this file.
+This is the **single source of truth** for the engine version. `routes/platformEngine.js` reads from this file.
 
 ### 4c. Edit `js/core/operationRegistry.js`
 
@@ -235,9 +229,6 @@ I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 ### ComfyUI Engine
 ComfyUI version unchanged (X.Y.Z) | Updated to X.Y.Z
 
-### Llama Server
-Llama version unchanged (X) | Updated to X
-
 ---
 
 ## Platform Update Checklist
@@ -323,14 +314,14 @@ A: Add the model to `js/data/modelConstants/models.js` with its `id`, `supported
 A: Add the `workflow` filename to `js/data/modelConstants/universal_workflows.js` and re-run the pre-release test. The test will fail if the workflow file is missing.
 
 **Q: Where does engine version get read?**
-A: `dev_configs/system_dependencies.json` is the single source of truth for engine and llama versions. `routes/platformEngine.js` reads this file at startup and exports `COMFY_VERSION` and `LLAMA_VERSION` for use by the rest of the app.
+A: `dev_configs/system_dependencies.json` is the single source of truth for the engine version. `routes/platformEngine.js` reads this file at startup and exports `COMFY_VERSION` for use by the rest of the app.
 
 ---
 
 ## See Also
 
 - `docs/versioning.md` — versioning system explained
-- `dev_configs/system_dependencies.json` — engine and llama-server versions (single source of truth)
+- `dev_configs/system_dependencies.json` — engine version (single source of truth)
 - `routes/platformEngine.js` — reads system_dependencies.json and exports version constants
 - `docs/releases/` — all past release notes
 - `scripts/pre_release_test.py` — pre-release test suite

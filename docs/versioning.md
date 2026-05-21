@@ -20,10 +20,6 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
   "engine": {
     "name": "ComfyUI Portable",
     "version": "0.18.0"
-  },
-  "llamaServer": {
-    "name": "Llama.cpp Backend Server",
-    "version": "b8464"
   }
 }
 ```
@@ -38,13 +34,13 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
   - **Major** (x.0.0 → (x+1).0.0): Breaking changes (schema change, significant architectural shift).
 - **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`) and release notes file naming.
 
-### COMFY_VERSION & LLAMA_VERSION
+### COMFY_VERSION
 
-- **Purpose:** Identifies which ComfyUI portable engine and llama-server are bundled with this release.
+- **Purpose:** Identifies which ComfyUI portable engine is bundled with this release.
 - **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
 - **Where:** Stored in `dev_configs/system_dependencies.json` (single source of truth).
 - **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json`.
-- **Access:** `routes/platformEngine.js` reads these values at startup and exports `COMFY_VERSION` and `LLAMA_VERSION` for use by `engine.js` and download manager.
+- **Access:** `routes/platformEngine.js` reads this value at startup and exports `COMFY_VERSION` for use by `engine.js` and download manager.
 - **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 
 ### SCHEMA_VERSION
@@ -234,8 +230,8 @@ These helpers compare `APP_VERSION` against each operation's `appVersionIntroduc
 ## References
 
 - `js/core/appVersion.js` — APP_VERSION and SCHEMA_VERSION constants
-- `dev_configs/system_dependencies.json` — engine and llama-server versions (single source of truth)
-- `routes/platformEngine.js` — reads system_dependencies.json and exports COMFY_VERSION / LLAMA_VERSION
+- `dev_configs/system_dependencies.json` — engine version (single source of truth)
+- `routes/platformEngine.js` — reads system_dependencies.json and exports COMFY_VERSION
 - `js/core/operationRegistry.js` — operation registry
 - `js/managers/versioningManager.js` — version queries
 - `js/migrations/projectMigrations.js` — schema migration functions

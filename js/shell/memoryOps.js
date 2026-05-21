@@ -1,9 +1,8 @@
 /**
  * memoryOps.js — Global VRAM and RAM release operations.
- * Communicates with ComfyUI and LLM services.
+ * Communicates with ComfyUI.
  */
 
-import { unloadModel } from '../services/llmService.js';
 import { Hotkeys } from '../managers/hotkeyManager.js';
 
 /**
@@ -16,10 +15,7 @@ export async function triggerMemoryRelease(isDeep = false, monitorEl) {
   if (monitorEl?.showStatus) monitorEl.showStatus(statusPrefix);
 
   try {
-    // 1. Unload LLM
-    await unloadModel().catch(err => console.error('[shell/memoryOps] LLM unload failed:', err));
-
-    // 2. Unload ComfyUI models
+    // Unload ComfyUI models
     const comfyRes = await fetch('/comfy/unload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

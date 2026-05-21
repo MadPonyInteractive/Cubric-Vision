@@ -7,7 +7,6 @@
  *   routes/shared.js   — shared constants, utilities, process state
  *   routes/system.js   — /system/stats, /choose-folder, /open-folder
  *   routes/projects.js — /create-project, /list-projects, /project-media/*, etc.
- *   routes/llm.js      — /llm/models, /llm/download, /llm/generate, etc.
  *   routes/engine.js   — /engine/status, /engine/download
  *   routes/comfy.js    — /comfy/*, /comfy/workflows, /comfy/model/download, etc.
  *
@@ -37,7 +36,6 @@ app.use(express.static(__dirname));
 const logger        = require('./routes/logger');
 const systemRoutes  = require('./routes/system');
 const projectRoutes = require('./routes/projects');
-const llmRoutes     = require('./routes/llm');
 const engineRoutes  = require('./routes/engine');
 const comfyRoutes   = require('./routes/comfy');
 const videoCropRoutes = require('./routes/videoCrop');
@@ -50,7 +48,6 @@ logger.info('system', 'Server initialization started');
 
 app.use(systemRoutes);
 app.use(projectRoutes);
-app.use(llmRoutes);
 app.use(engineRoutes);
 app.use(comfyRoutes);
 app.use(videoCropRoutes);
@@ -67,7 +64,6 @@ app.listen(port, '127.0.0.1', () => {
     import('axios').then(mod => {
         const axios = mod.default;
         // Inject into routes that need it
-        llmRoutes.setAxios(axios);
         comfyRoutes.setAxios(axios);
 
         logger.info('system', `Server started at http://127.0.0.1:${port}`);

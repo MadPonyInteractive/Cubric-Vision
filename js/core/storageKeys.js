@@ -10,7 +10,6 @@
 export const STORAGE_KEYS = {
   // Engine settings
   COMFY_ROOT_PATH:     'mpi_comfy_root_path',
-  OLLAMA_URL:          'mpi_ollama_url',
   COMFY_URL:           'mpi_comfy_url',
   AUTO_START_COMFY:    'mpi_auto_start_comfy',
 

@@ -2,9 +2,5 @@
   "engine": {
     "name": "ComfyUI Portable",
     "version": "0.19.3"
-  },
-  "llamaServer": {
-    "name": "Llama.cpp Backend Server",
-    "version": "b8464"
   }
 }

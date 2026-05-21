@@ -6,7 +6,7 @@
  * Usage:
  *   const logger = require('./logger');
  *   logger.info('comfy', 'ComfyUI started');
- *   logger.warn('llm', 'Model not found');
+ *   logger.warn('comfy', 'Model not found');
  *   logger.error('system', 'Server crashed', err);
  *
  * Log file location:

@@ -22,7 +22,6 @@ const logger = require('./logger');
 const {
     COMFYUI_PORT,
     processState,
-    stopLlamaServer,
     stopComfyUI,
     resolveComfyPath,
     cleanEmptyDirs,

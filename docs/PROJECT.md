@@ -31,7 +31,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 | Shell | [shell.md](shell.md) | navigation, overlayManager, hotkeyManager, shell.js |
 | Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, seed.js, and all js/utils/ |
 | Events | [events.md](events.md) | EventBus, canonical event names, cross-component communication |
-| Worktrees | [worktrees.md](worktrees.md) | Git worktree setup, `.engine-config.json` for sharing engine/llama/models, post-checkout hook |
+| Worktrees | [worktrees.md](worktrees.md) | Git worktree setup, `.engine-config.json` for sharing the ComfyUI engine folder, post-checkout hook |
 
 ## Rendering Architecture (MpiCanvas)
 
