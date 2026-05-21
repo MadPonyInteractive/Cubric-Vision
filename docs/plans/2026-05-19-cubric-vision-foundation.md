@@ -153,13 +153,13 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 - [x] Define the TypeScript boundary for the ecosystem hub, connector backend, and future apps. **Done:** hub/system and future apps are TypeScript-first; Cubric Vision v1 remains JavaScript and standalone with only a manifest stub.
 
-- [ ] Decide whether Cubric Vision's current component system is Vision-local implementation detail, a future shared Cubric UI package, or the source for a TypeScript-compatible successor. **Verify:** the plan states that this decision blocks Cubric Prompt/future app implementation, but does not block Cubric Vision v1 release.
+- [x] Decide whether Cubric Vision's current component system is Vision-local implementation detail, a future shared Cubric UI package, or the source for a TypeScript-compatible successor. **Done:** `docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md` locks the lightweight direction: share Stage tokens and design rules, keep Cubric Vision's JS component runtime Vision-local, and do not import Vision components into future TypeScript apps.
 
-- [ ] Inventory the current component contracts that would matter for reuse: `ComponentFactory.create()`, BEM CSS, `js/components/types.js`, `js/utils/dom.js`, `Events`, `Hotkeys`, `Overlays`, and Stage tokens. **Verify:** reusable pieces are classified as stable contract, Vision-local implementation, or migration candidate.
+- [x] Inventory the current component contracts that would matter for reuse: `ComponentFactory.create()`, BEM CSS, `js/components/types.js`, `js/utils/dom.js`, `Events`, `Hotkeys`, `Overlays`, and Stage tokens. **Done:** the shared-component child plan classifies contracts as stable shared design contract, reusable implementation candidate, Vision-local implementation, or migration risk.
 
-- [ ] Decide the lowest-risk bridge if future TypeScript apps need Cubric UI before a full rewrite: generated `.d.ts` files, JSDoc-typed JS, a small typed wrapper package, or a new TypeScript package that ports components selectively. **Verify:** the chosen bridge is scheduled before Cubric Prompt work and does not force a broad TypeScript migration into Cubric Vision v1.
+- [x] Decide the lowest-risk bridge if future TypeScript apps need Cubric UI before a full rewrite: generated `.d.ts` files, JSDoc-typed JS, a small typed wrapper package, or a new TypeScript package that ports components selectively. **Done:** Cubric Prompt v1 should build its UI natively in TypeScript using the Stage UI contract; generated `.d.ts`, JSDoc-typing Vision, wrappers around Vision JS, and full TS ports are rejected for now.
 
-- [ ] Define package/workspace ownership for any shared UI layer. **Verify:** if a shared package is created, it has a clear repo/package name, versioning expectation, and dependency direction so Vision does not accidentally become the hub or shared-library owner forever.
+- [x] Define package/workspace ownership for any shared UI layer. **Done:** any future shared UI package belongs in the future hub repo `C:\AI\Mpi\Cubric-Studio\` as `packages/ui-tokens` and, only if later justified, `packages/ui-primitives`. Hub/shared packages must not depend on Cubric Vision.
 
 ## Phase 6: Engines, Models, And Per-App Settings
 
