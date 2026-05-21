@@ -4,7 +4,7 @@
 **Parent plan:** `docs/plans/2026-05-19-cubric-vision-foundation.md`
 **Kanban entry:** `Cubric Vision foundation - shared-component-system`
 **Priority:** medium
-**Status:** decision ready
+**Status:** implementation ready
 
 ## Purpose
 
@@ -191,11 +191,14 @@ Dependency direction:
 - Cubric Vision may later consume shared tokens if that becomes worthwhile, but
   it is not required for v1.
 
-## Implementation Follow-Ups
+## Implementation Scope
 
-No implementation is required before Cubric Vision v1.
+The shared component system is ready for lightweight implementation. This does
+not mean porting Cubric Vision components. The implementation should codify the
+shared Stage UI contract and, only if needed by a future app, create a tiny
+hub-owned token package.
 
-Recommended future follow-ups, in order:
+Recommended implementation sequence:
 
 1. Create a short `docs/specs/cubric-stage-ui-contract.md` describing tokens,
    typography, BEM, icon rules, overlay/hotkey lifecycle, and per-app accent
