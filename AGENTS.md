@@ -14,7 +14,7 @@ Treat `.claude/rules/` as the project architecture source of truth. Do not modif
 
 Project-specific Claude memory is available at:
 
-- `C:\Users\Fabio\.claude\projects\C--AI-Mpi-CubricStudio\memory\MEMORY.md`
+- `C:\Users\Fabio\.claude\projects\C--AI-Mpi-Cubric-Vision\memory\MEMORY.md`
 
 Use that memory index selectively. Load topic files from the same memory directory only when they are relevant to the current task.
 
@@ -24,9 +24,9 @@ For memory behavior, follow the user's global Claude memory rules in:
 
 When the user asks Codex to remember something, update the existing Claude Markdown memory system rather than creating Codex-only memory files. Before removing or modifying an existing memory entry, confirm the current content and proposed change with the user.
 
-For MPI workflow planning, handoff, session-end, or kanban-related requests, use the Codex bridge for the user's Claude plugin:
+For MPI workflow planning, handoff, session-end, or kanban-related requests, use the installed Codex-native `mpi-kanban` plugin workflows (`$mpi-*` skills or natural-language MPI requests).
 
-- `C:\Users\Fabio\.claude\plugins\cache\mpi-local\mpi-kanban\0.2.0\AGENTS.md`
+Do not pin this project to a specific Claude plugin cache path. If a bridge file is ever needed for troubleshooting, resolve the current `mpi-kanban@mad-pony-interactive` install from Claude's `installed_plugins.json` instead of hardcoding a versioned path here.
 
 ## Project-Local Codex Skills
 

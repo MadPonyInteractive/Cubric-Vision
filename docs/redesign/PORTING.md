@@ -1,12 +1,12 @@
 # Cubric Studio — Stage Porting Guide
 
-How to port the Stage mockups in this folder to the real app at `C:\AI\Mpi\CubricStudio\`. Read `PRODUCT.md` and `DESIGN.md` first; this doc is the file-by-file mapping.
+How to port the Stage mockups in this folder to the real app at `C:\AI\Mpi\Cubric-Vision\`. Read `PRODUCT.md` and `DESIGN.md` first; this doc is the file-by-file mapping.
 
 ## Working assumptions
 
 - App is Electron + vanilla JS, no framework, no preprocessor.
 - CSS is loaded via a facade (`styles.css`) that imports `styles/01_base.css` + `styles/shell/*.css`. Each component owns its own `MpiX.css` file under `js/components/<Category>/<MpiX>/`.
-- All work happens in a worktree. **Do not edit files in `C:\AI\Mpi\CubricStudio\` from the main session — the user will create a worktree first.**
+- All work happens in a worktree. **Do not edit files in `C:\AI\Mpi\Cubric-Vision\` from the main session — the user will create a worktree first.**
 - Components register through `js/shell/preloadStyles.js`. Renaming or deleting a component requires updating that manifest.
 
 ## Phase 0 — One-time setup in the worktree

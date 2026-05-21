@@ -89,8 +89,10 @@ These plans/entries are related to this foundation but should not be duplicated:
 - `docs/plans/2026-05-20-cubric-prompt-start-blockers.md` captures pre-repo blockers for starting Cubric Prompt after Vision release work.
 - `Cubric Vision foundation - shared-component-system` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md`.
 - `Cubric Vision foundation - connector-broker-stage-1-2` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md`.
-- `Cubric Vision foundation - website-ecosystem-landing` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md` but intentionally deferred until app-first work is further along.
-- `Cubric Vision foundation - release-readiness-copy-audit` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md`.
+- `Cubric Vision foundation - artifact-handoff-project-portability` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-artifact-handoff-project-portability.md`.
+- `Cubric Vision foundation - model-resource-registry` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-model-resource-registry.md`.
+- `Cubric Vision foundation - website-ecosystem-landing` is deferred in `docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md` until after app work, hub readiness, and cross-platform portable distribution are ready.
+- `Cubric Vision foundation - release-readiness-copy-audit` is deferred in `docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md` until the app is close to public release.
 
 ## Remaining Work
 
@@ -137,15 +139,15 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 ## Phase 4: Artifact Handoff And Project Portability
 
-- [ ] Review sidecar schema for fields future apps need: prompt, negative prompt, seed, model id, operation, media type, dimensions, video metadata, source lineage, generation timings, trim, and preview assets. **Verify:** each future handoff use case maps to existing sidecar fields or a clearly named proposed field.
+- [x] Review sidecar schema for fields future apps need: prompt, negative prompt, seed, model id, operation, media type, dimensions, video metadata, source lineage, generation timings, trim, and preview assets. **Done:** `docs/plans/2026-05-21-cubric-vision-foundation-artifact-handoff-project-portability.md` maps each need to existing sidecar fields and defers any richer lineage to a future optional field/schema plan.
 
 - [x] Define which identifiers are project-local and which, if any, are portable cross-app artifact identifiers. **Done:** `docs/specs/cubric-connector-sdk.md` states `itemId` is project-local unless a future global artifact id is explicitly introduced.
 
 - [x] Define a minimal portable artifact reference shape for app-to-app handoff. It should prefer project-relative paths and sidecar ids when inside a Cubric project, with absolute paths only when needed for external files. **Done:** `CubricArtifactRef` is defined in `docs/specs/cubric-connector-sdk.md` and implemented in the Stage 0 connector schemas.
 
-- [ ] Preserve template project behavior: projects with settings and selected models but no assets must remain shareable. **Verify:** any proposed metadata additions do not require media files to exist for a template project to load.
+- [x] Preserve template project behavior: projects with settings and selected models but no assets must remain shareable. **Done:** artifact-handoff child plan locks template projects as valid with `project.json`, settings, optional empty groups, and no required media/sidecars.
 
-- [ ] Decide whether future Cubric apps consume a whole project folder, selected artifacts, or both. **Verify:** the foundation supports both without requiring hidden global state.
+- [x] Decide whether future Cubric apps consume a whole project folder, selected artifacts, or both. **Done:** future apps may consume both. Selected media uses `CubricArtifactRef`; broader context/templates use `CubricProjectRef` plus the portable project folder. No hidden global state or running Vision process is required.
 
 ## Phase 5: TypeScript Ecosystem Backend And Shared Component Direction
 
@@ -167,31 +169,31 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 - [x] Preserve the existing `engine/`, `llama_engine/`, `llama_models/`, and `.engine-config.json` model-sharing patterns as Cubric Vision implementation details for this release. **Done:** connector Stage 0 and app rename did not introduce a global settings store or engine ownership change.
 
-- [ ] Identify what a future shared model/resource registry would need to know, without building it now. **Verify:** the notes distinguish current Cubric Vision behavior from future Cubric ecosystem runtime behavior.
+- [x] Identify what a future shared model/resource registry would need to know, without building it now. **Done:** `docs/plans/2026-05-21-cubric-vision-foundation-model-resource-registry.md` locks this as a future hub-owned descriptive registry, not a Cubric Vision v1 implementation, shared settings store, or shared engine environment.
 
 ## Phase 7: Website, Docs, And Workspace Layout
 
-- [ ] Decide the website repo strategy: keep the current Website and Docs repos as shared Cubric ecosystem sites rather than placing a website inside every future app repo. **Verify:** one source-of-truth note describes which repo owns `cubric.studio` and which repo owns `docs.cubric.studio`.
+- [x] Decide the website repo strategy: keep the current Website and Docs repos as shared Cubric ecosystem sites rather than placing a website inside every future app repo. **Deferred:** website/docs/subdomain work is not a Cubric Vision Foundation blocker. It remains captured by `docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md` and the existing docs backlog entry.
 
-- [ ] Define the subdomain map: `cubric.studio`, `vision.cubric.studio`, `prompt.cubric.studio`, `audio.cubric.studio`, `video.cubric.studio`, and `docs.cubric.studio`. **Verify:** site copy/docs plan uses the same subdomain map.
+- [x] Define the subdomain map: `cubric.studio`, `vision.cubric.studio`, `prompt.cubric.studio`, `audio.cubric.studio`, `video.cubric.studio`, and `docs.cubric.studio`. **Deferred:** keep the established map as planning context, but implement websites/subdomains after app work, hub readiness, and portable distribution.
 
-- [ ] Update the main website direction from single-app `Cubric Studio` to ecosystem landing page with product pages. **Verify:** website plan identifies the current landing as becoming `Cubric Vision` product content under the broader Cubric site.
+- [x] Update the main website direction from single-app `Cubric Studio` to ecosystem landing page with product pages. **Deferred:** website implementation happens after portable distribution is ready and tested, before release/social push.
 
-- [ ] Revise the existing docs-site work instead of creating a duplicate docs child plan. The current linked entry is `Cubric Studio Docs subdomain + finish docs site`, with context in `docs/plans/2026-05-16-port-stage-to-docs.md`. **Verify:** that entry/plan either explicitly adopts the Cubric ecosystem IA or a replacement child plan is created with a clear supersedes note.
+- [x] Revise the existing docs-site work instead of creating a duplicate docs child plan. The current linked entry is `Cubric Studio Docs subdomain + finish docs site`, with context in `docs/plans/2026-05-16-port-stage-to-docs.md`. **Deferred:** keep the existing docs backlog entry as the docs child track; revise it when website/docs work becomes active.
 
-- [ ] Update docs IA to support all apps: `/vision`, `/prompt`, `/audio`, `/video`, `/integrations`, and future `/runtime` if needed. **Verify:** the linked docs work has app-specific sections and one shared integrations section.
+- [x] Update docs IA to support all apps: `/vision`, `/prompt`, `/audio`, `/video`, `/integrations`, and future `/runtime` if needed. **Deferred:** IA update belongs with the docs-site follow-up, not the current app foundation cleanup.
 
-- [ ] Decide VS Code workspace organization for ecosystem work. Candidate: keep focused app workspaces plus an intentional multi-root ecosystem workspace that includes app repos, web, docs, and master planning. **Verify:** agents have clear root/kanban guidance and no website repo is embedded inside an app repo by accident.
+- [x] Decide VS Code workspace organization for ecosystem work. Candidate: keep focused app workspaces plus an intentional multi-root ecosystem workspace that includes app repos, web, docs, and master planning. **Deferred:** current guidance remains CubricStudio as master planning root; any new ecosystem workspace setup belongs with hub/portable/site work.
 
 ## Phase 8: Release Alignment
 
-- [ ] Reconcile existing release, Patreon, website, docs, and portable distribution plans that currently say `Cubric Studio`. **Verify:** all release-blocking copy uses the locked name or has an explicit historical/deferred reason.
+- [x] Reconcile existing release, Patreon, website, docs, and portable distribution plans that currently say `Cubric Studio`. **Deferred:** release/social copy audit is captured by `docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md` and should run after portable distribution is ready and tested.
 
-- [ ] Update docs/rules only where current architecture source-of-truth would become misleading after the rename or integration foundation. **Verify:** any `.claude/rules/` update is explicitly approved before editing, per project rules.
+- [x] Update docs/rules only where current architecture source-of-truth would become misleading after the rename or integration foundation. **Done/deferred:** no additional `.claude/rules/` edits are required by this foundation cleanup; future rule edits still require explicit approval.
 
-- [ ] Run a final naming consistency audit before release. **Verify:** grep results for `Cubric Studio`, `CubricStudio`, `Cubric Vision`, `cubric.studio`, and app ids are reviewed and acceptable for release.
+- [x] Run a final naming consistency audit before release. **Deferred:** final naming audit belongs to the release-readiness-copy-audit plan, after app work and portable distribution.
 
-- [ ] Run the normal app verification after implementation. **Verify:** `npm run build` plus the relevant runtime/smoke tests pass, or failures are documented with release impact.
+- [x] Run the normal app verification after implementation. **Deferred:** final release verification belongs to release readiness, not this decision umbrella.
 
 ## Plan Drift
 
@@ -199,6 +201,22 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
   app rename, connector Stage 0, app id, manifest stub, integration map, and
   artifact-ref contract have now been reconciled against the child plans,
   specs, shipped connector package, and project memory.
+- 2026-05-21: Artifact handoff and project portability decisions were locked in
+  `2026-05-21-cubric-vision-foundation-artifact-handoff-project-portability.md`.
+  Phase 4 now supports both selected artifact refs and whole project folder
+  context while keeping artifact ids project-local and template projects valid.
+- 2026-05-21: Model/resource registry decision was closed in
+  `2026-05-21-cubric-vision-foundation-model-resource-registry.md`. No v1
+  implementation is required; any future registry is hub-owned and descriptive,
+  not a shared settings store or shared engine environment.
+- 2026-05-21: Foundation cleanup: Phase 7 website/docs/subdomain work and Phase
+  8 release/social/audit work are explicitly deferred out of the foundation
+  umbrella. Intended sequence is: finish current app implementation work, make
+  hub system readiness solid, complete and test cross-platform portable
+  distribution, then handle website/Patreon/social/docs release surfaces, then
+  release. LTX 2.3 and additional workflows/features happen after release; the
+  Prompt app waits until Cubric Vision is mature enough to move from alpha
+  toward v1.
 
 ## Verification
 

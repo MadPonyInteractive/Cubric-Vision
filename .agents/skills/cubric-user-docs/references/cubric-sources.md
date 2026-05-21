@@ -6,9 +6,9 @@ Use this reference to choose the app sources to read before drafting user docume
 
 Start with:
 
-- `C:\AI\Mpi\CubricStudio\docs\PROJECT.md`
-- `C:\AI\Mpi\CubricStudio\docs\workspaces.md`
-- `C:\AI\Mpi\CubricStudio\docs\data.md`
+- `C:\AI\Mpi\Cubric-Vision\docs\PROJECT.md`
+- `C:\AI\Mpi\Cubric-Vision\docs\workspaces.md`
+- `C:\AI\Mpi\Cubric-Vision\docs\data.md`
 
 Then read only the files relevant to the requested page or feature.
 

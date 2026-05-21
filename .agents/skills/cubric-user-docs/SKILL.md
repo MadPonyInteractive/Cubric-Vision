@@ -7,7 +7,7 @@ description: Use when creating or updating Cubric Studio user-facing documentati
 
 Create user-facing Cubric Studio documentation that is accurate, visual, and ready for the static docs site.
 
-This skill is project-local to `C:\AI\Mpi\CubricStudio` and writes documentation assets to the sibling docs repo at `C:\AI\Mpi\Cubric Studio (Docs)`.
+This skill is project-local to `C:\AI\Mpi\Cubric-Vision` and writes documentation assets to the sibling docs repo at `C:\AI\Mpi\Cubric Studio (Docs)`.
 
 ## Required Workflow
 

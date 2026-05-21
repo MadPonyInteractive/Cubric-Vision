@@ -33,6 +33,11 @@
     subdomain site (or section), and rewrite cubric.studio as ecosystem landing
     listing all apps (Vision, future Prompt/Audio/Video).
 
+    Sequencing lock 2026-05-21: do not start website/subdomain/social work
+    until current app implementation work is finished, hub readiness is solid,
+    and cross-platform portable distribution is ready and tested. Public-site
+    work happens before release, not before portable distribution.
+
     Coordinate with existing website plan
     `docs\plans\2026-05-16-port-stage-to-website.md` and the docs-IA work.
     ```
@@ -43,6 +48,10 @@
   - priority: high
   - defaultExpanded: false
     ```md
+    Sequencing lock 2026-05-21: post-release only. Do not start before
+    current app work, hub readiness, cross-platform portable distribution,
+    website/Patreon/social release surfaces, and the first public release.
+
     Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
     Scope:
     - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
@@ -106,66 +115,29 @@
 
 ## PLANNING
 
-### Cubric Vision foundation
+### Cubric hub readiness before portable distribution
 
-  - tags: [PLAN]
+  - tags: [PLAN, hub, integration, release]
   - priority: high
   - defaultExpanded: false
     ```md
-    Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Completed children/work: brand-identity + app-rename (see COMPLETED),
-    Cubric Vision connector manifest stub, @cubric/connector Stage 0 MVP at
-    C:\AI\Mpi\Cubric-Studio\packages\connector\.
-    Memory note:
-    C:\Users\Fabio\.claude\projects\C--AI-Mpi-CubricStudio\memory\project_connector_sdk_mvp.md
-    Active child plans: ecosystem-backend, shared-component-system,
-    connector-broker-stage-1-2, website-ecosystem-landing,
-    release-readiness-copy-audit. Website remains app-last/deferred.
-    Linked docs child: "Cubric Studio Docs subdomain + finish docs site" in BACKLOG.
-    ```
+    Sequencing lock 2026-05-21: this comes after the current Cubric Vision app
+    implementation work, and before cross-platform portable distribution.
 
-### Cubric Vision foundation - shared-component-system
+    Goal: make sure the hub/connector foundation is ready enough that portable
+    packaging will not have to be reworked around app identity, connector
+    manifests, broker startup assumptions, bundled hub artifacts, or update
+    manifest expectations.
 
-  - tags: [PLAN, architecture, typescript]
-  - priority: medium
-  - defaultExpanded: false
-    ```md
-    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md
-    Scope: plan whether Cubric Vision's JS component system remains Vision-local,
-    becomes a TypeScript-compatible shared Cubric UI package, or gets a typed
-    adapter/wrapper path for the TypeScript-first hub and future apps.
+    Inputs:
+    - docs/specs/cubric-connector-sdk.md
+    - docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
+    - docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md
+    - resources/cubric/connector-manifest.json
 
-    Blocks Cubric Prompt/future app implementation, not Cubric Vision v1. Must
-    stay separate from release-blocking app-rename unless explicitly promoted.
-    First outputs should be an inventory/classification of reusable component
-    contracts and a recommendation for the lowest-risk TypeScript bridge.
-    ```
-
-### Cubric Vision foundation - website-ecosystem-landing
-
-  - tags: [PLAN, website, deferred]
-  - priority: low
-  - defaultExpanded: false
-    ```md
-    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md
-    Scope: reconcile the existing Website Stage redesign with the final
-    ecosystem/vision split. Explicitly app-last: do not implement or push until
-    Cubric Vision app/release work is ready enough to show.
-    ```
-
-### Cubric Vision foundation - release-readiness-copy-audit
-
-  - tags: [PLAN, release, audit]
-  - priority: medium
-  - defaultExpanded: false
-    ```md
-    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md
-    Scope: define the final naming/copy/package metadata audit and verification
-    checklist for Cubric Vision release readiness after app-first implementation
-    work is further along.
+    Expected output: a concrete implementation/readiness checklist or child
+    plan. Do not expand into Cubric Prompt work. Prompt starts only after
+    Cubric Vision is mature enough to move from alpha toward v1.
     ```
 
 ### Cross-platform portable distribution
@@ -175,6 +147,9 @@
   - defaultExpanded: false
     ```md
     Plan file: docs\plans\2026-04-30-cross-platform-portable-distribution.md
+    Sequencing lock 2026-05-21: start after current app implementation work and
+    hub readiness. After portable distribution is ready and tested, handle
+    website/Patreon/social/docs release surfaces before public release.
     ```
 
 ### Madpony Patreon Revamp (User Action)
@@ -200,6 +175,85 @@
     ```
 
 ## COMPLETED
+
+### Cubric Vision foundation
+
+  - tags: [PLAN]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Completed/closed 2026-05-21.
+
+    Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
+
+    Outcome: foundation decisions are closed. Completed children/work:
+    brand-identity, app-rename, ecosystem-backend, connector-broker-stage-1-2,
+    shared-component-system, artifact-handoff-project-portability,
+    model-resource-registry, Cubric Vision connector manifest stub, and
+    @cubric/connector Stage 0 MVP at C:\AI\Mpi\Cubric-Studio\packages\connector\.
+
+    Deferred out of this umbrella:
+    - Website/subdomain/docs/social work waits until app implementation, hub
+      readiness, and cross-platform portable distribution are ready/tested.
+    - Release-readiness copy/audit runs near release.
+    - LTX 2.3 and new workflows/features happen after release.
+    - Cubric Prompt starts only after Cubric Vision is mature enough to move
+      from alpha toward v1.
+    ```
+
+### Cubric Vision foundation - artifact-handoff-project-portability
+
+  - tags: [PLAN, architecture, portability, integration]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Completed (decision) 2026-05-21.
+
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-artifact-handoff-project-portability.md
+
+    Outcome: selected media handoff uses CubricArtifactRef; broader
+    context/templates use CubricProjectRef plus the portable project folder.
+    Sidecars already cover the needed future-app metadata. Artifact ids remain
+    project-local; no global artifact id and no Cubric Vision runtime connector
+    implementation in this phase.
+    ```
+
+### Cubric Vision foundation - model-resource-registry
+
+  - tags: [PLAN, architecture, models, deferred]
+  - priority: low
+  - defaultExpanded: false
+    ```md
+    Completed (decision) 2026-05-21.
+
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-model-resource-registry.md
+
+    Outcome: no Cubric Vision v1 implementation. Future shared model/resource
+    registry, if needed, is hub-owned and descriptive only: local resource roots,
+    model/resource files, compatibility, hash/version/status. It is not a shared
+    settings store, does not centralize model selection, and does not force apps
+    to share one engine environment.
+    ```
+
+### Cubric Vision foundation - shared-component-system
+
+  - tags: [PLAN, architecture, typescript]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Completed (decision) 2026-05-21.
+
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md
+
+    Outcome: share the Stage visual contract, not Cubric Vision's JavaScript
+    component runtime. Vision's ComponentFactory system stays Vision-local.
+    Future TypeScript apps should build native UI using the Stage tokens/design
+    rules; a tiny hub-owned tokens/primitives package can be planned later only
+    if a real future app needs it.
+    ```
 
 ### Cubric Vision foundation - connector-broker-stage-1-2
 

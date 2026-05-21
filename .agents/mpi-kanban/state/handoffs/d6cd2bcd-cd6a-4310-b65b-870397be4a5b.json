@@ -4,7 +4,7 @@
   "generated_at": "2026-05-19T11:53:52.3712749+01:00",
   "from_session": null,
   "to_role": "orchestrator",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "Cubric Vision foundation brand identity brainstorming",
     "branch": "unknown"
@@ -94,6 +94,11 @@
     "docs/redesign/DESIGN.md"
   ],
   "recent_events": [
+    {
+      "at": "2026-05-21T00:00:00+01:00",
+      "event": "handoff_superseded",
+      "note": "Brand identity and app rename work are completed and reconciled in the umbrella plan and kanban. Do not resume this stale handoff for current foundation work."
+    },
     {
       "at": "2026-05-19T11:53:52.3712749+01:00",
       "event": "handoff_created"

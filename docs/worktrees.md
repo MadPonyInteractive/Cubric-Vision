@@ -1,6 +1,6 @@
 # Git Worktrees — Setup & Behavior
 
-> Project name: **Cubric Studio**. Root folder is `CubricStudio/`; paths in this doc reflect the on-disk folder name.
+> Project name: **Cubric Vision**. Root folder is `Cubric-Vision/`; paths in this doc reflect the on-disk folder name.
 
 ## Purpose
 
@@ -26,9 +26,9 @@ Gitignored file at repo/worktree root. Optional. Each key independently override
 
 ```json
 {
-    "enginePath": "C:\\AI\\Mpi\\CubricStudio\\engine",
-    "llamaPath": "C:\\AI\\Mpi\\CubricStudio\\llama_engine",
-    "llamaModelsPath": "C:\\AI\\Mpi\\CubricStudio\\llama_models"
+    "enginePath": "C:\\AI\\Mpi\\Cubric-Vision\\engine",
+    "llamaPath": "C:\\AI\\Mpi\\Cubric-Vision\\llama_engine",
+    "llamaModelsPath": "C:\\AI\\Mpi\\Cubric-Vision\\llama_models"
 }
 ```
 
@@ -45,11 +45,11 @@ All three helpers live in `routes/platformEngine.js`. Each:
 
 ### Per-Worktree Workflow
 
-1. `git worktree add ../CubricStudio-feature feature-branch`
+1. `git worktree add ../Cubric-Vision-feature feature-branch`
 2. post-checkout hook fires automatically:
    - Runs `npm ci` to install node_modules
    - Auto-generates `.engine-config.json` pointing back at the main worktree's `engine/`, `llama_engine/`, `llama_models/` folders
-3. `cd ../CubricStudio-feature` and launch — engine/models read from main worktree
+3. `cd ../Cubric-Vision-feature` and launch — engine/models read from main worktree
 
 No manual config edit needed for the standard case. To override, edit or delete `.engine-config.json` in the worktree (deleting reverts to per-worktree defaults).
 
@@ -119,13 +119,13 @@ Since the YAML lives inside shared `enginePath`, all worktrees pointing at the s
 
 ```bash
 # create worktree
-git worktree add ../CubricStudio-myfeature myfeature
+git worktree add ../Cubric-Vision-myfeature myfeature
 
 # list worktrees
 git worktree list
 
 # remove worktree
-git worktree remove ../CubricStudio-myfeature
+git worktree remove ../Cubric-Vision-myfeature
 ```
 
 After `add`: drop `.engine-config.json` in new worktree root, then launch.
