@@ -4,8 +4,67 @@
 **Parent plan:** `docs/plans/2026-05-19-cubric-vision-foundation.md`
 **Kanban entry:** `Cubric Vision foundation - connector-broker-stage-1-2`
 **Priority:** high
-**Status:** implementation brief ready
+**Status:** Stage 1-2 shipped 2026-05-21 — `@cubric/broker` + connector
+transport layer landed in `C:\AI\Mpi\Cubric-Studio\packages\`. 56 tests pass
+(connector 36, broker 20 incl. 4 integration). See "Implementation Result"
+below.
 **Implementation brief:** `docs/plans/2026-05-21-connector-broker-stage-1-2-implementation-brief.md`
+
+## Implementation Result
+
+Shipped 2026-05-21 in `C:\AI\Mpi\Cubric-Studio\` (hub repo, not yet a git
+repo — flag for `git init` follow-up).
+
+`packages/connector` (extended):
+- `src/transport/frame.ts` — 4-byte length-prefixed JSON, `FrameDecoder` with
+  fragmented/multi-frame/8 MiB-limit handling.
+- `src/transport/localEndpoint.ts` — Windows named pipe + POSIX UDS resolution,
+  `CUBRIC_BROKER_ENDPOINT` override, user-hash derivation, metadata path.
+- `src/transport/localConnection.ts` — `connectLocal()` with timeout + retries.
+- `src/brokerClient.ts` — `createBrokerConnectorClient()` implementing
+  `CubricConnectorClient` over IPC, with HELLO → READY, request correlation,
+  timeout mapping, transport-error → `APP_UNAVAILABLE` mapping.
+- Public exports added to `src/index.ts`.
+- Tests: `tests/frame.test.ts` (8) + `tests/brokerClient.test.ts` (2).
+
+`packages/broker` (new):
+- `package.json`, `tsconfig.json` matching connector style.
+- `src/token.ts` — 32-byte base64url session token + `timingSafeEqual` compare.
+- `src/connectionMetadata.ts` — atomic write + cleanup; POSIX 0700/0600.
+- `src/handshake.ts` — token check, protocolVersion match, manifest file +
+  hash + schema + appId-match validation, optional trust list.
+- `src/router.ts` — DISCOVER_APPS, LIST_CAPABILITIES, REQUEST_CAPABILITY
+  (returns `CAPABILITY_UNSUPPORTED` per Stage 1-2 scope).
+- `src/brokerServer.ts` — `startBrokerServer()`; one socket per session,
+  HELLO-first enforcement, ERROR-on-violation + close, metadata
+  write/delete, UDS unlink-on-shutdown.
+- `src/endpoint.ts` — re-exports endpoint helpers from connector.
+- `src/cli.ts` — `cubric-broker [--smoke] [--endpoint X] [--metadata Y]`,
+  SIGINT/SIGTERM clean shutdown.
+- `src/index.ts` — public API.
+- Tests: `tests/metadata.test.ts` (9), `tests/handshake.test.ts` (7),
+  `tests/broker.integration.test.ts` (4 — in-process broker + real SDK
+  client over UDS/named pipe; covers HELLO/READY, DISCOVER_APPS,
+  LIST_CAPABILITIES, REQUEST_CAPABILITY → CAPABILITY_UNSUPPORTED,
+  shutdown metadata delete, untrusted-app PERMISSION_DENIED).
+
+Acceptance criteria status:
+- [x] Both packages build + typecheck clean.
+- [x] One spawned broker + one SDK client complete HELLO/READY over local IPC.
+- [x] Bad-token, protocol-mismatch, unavailable-broker, timeout,
+  invalid-manifest, malformed-frame all map to expected error codes.
+- [x] No Electron dependency.
+- [x] No Cubric Vision runtime code changed.
+- [x] Stage 3 deferred (no `ensureBroker()`, no registry persistence, no
+  permission UI, no scan/import).
+
+Follow-ups outside this stage:
+- Hub repo `git init` + first commit so future work is version-controlled.
+- Workspace tooling (npm workspaces / pnpm) at hub root.
+- Spawn-based integration test (current integration uses in-process broker;
+  shipped `cli.ts` enables true cross-process tests in Stage 3+).
+- Stage 3: `ensureBroker()` startup policy, registry persistence, portable
+  app scan/import, permission grant UX.
 
 ## Purpose
 
