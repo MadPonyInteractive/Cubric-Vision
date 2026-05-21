@@ -5,6 +5,9 @@
 **Kanban entry:** `Cubric Vision foundation - ecosystem-backend`
 **Priority:** high
 **Track:** `ecosystem-backend`
+**Status:** complete (planning) — 2026-05-21. All phases locked; Stage 0 SDK
+shipped at `C:\AI\Mpi\Cubric-Studio\packages\connector`. Broker/runtime work
+continues in `docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md`.
 
 ## Purpose
 
@@ -180,9 +183,13 @@ Why this is the right first step:
 
 ## Phase 2: Capability Schema
 
-- [ ] Finalize initial capability vocabulary. **Drafted:** see
-  `docs/specs/cubric-connector-sdk.md`. **Verify:** capability ids are
-  action-based and not provider-prefixed.
+- [x] Finalize initial capability vocabulary. **Locked:** see
+  `docs/specs/cubric-connector-sdk.md` §"App Identity" (lines 68-79). Initial
+  vocab: `prompt.enhance`, `prompt.translate`, `prompt.format.model`,
+  `asset.import`, `asset.export`, `project.context.read`. Action-based,
+  lowercase dotted; provider app id carried separately on the request envelope.
+  New capabilities added only by extending the Zod `CubricCapabilityId` enum
+  and bumping `protocolVersion`.
 
 - [x] Write request/response TypeScript interfaces. **Drafted:** see
   `docs/specs/cubric-connector-sdk.md`. **Verify:** examples cover
@@ -208,9 +215,14 @@ Why this is the right first step:
   `docs/specs/cubric-connector-sdk.md`. **Verify:** absolute paths are allowed
   only when no project-relative context exists.
 
-- [ ] Align UUID rules with project portability.
-  **Verify:** artifact ids are not treated as global cross-app identity unless
-  a future global id is explicitly introduced.
+- [x] Align UUID rules with project portability. **Locked:** see
+  `docs/specs/cubric-connector-sdk.md` §"Artifact Reference Examples"
+  (lines 961-989). `itemId` is project-local — scoped by `projectId` +
+  `sidecarRelativePath`. Receivers MUST resolve via project context, never
+  treat `itemId` as a global key. Cross-app identity requires an explicit
+  future `globalArtifactId` field; until then artifacts handed off without
+  project context use `CubricExternalFileRef` (absolute path) or
+  `CubricTextArtifactRef`.
 
 ## Phase 4: Discovery And Transport
 

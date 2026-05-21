@@ -43,6 +43,9 @@ Open risks:
 - [x] Chose action-based capability naming over provider-based naming.
 - [x] Chose per-app settings and per-app engine profiles, with shareable models/artifacts where useful.
 - [x] Captured the umbrella kanban entry.
+- [x] Shipped Cubric Vision brand identity and app rename tracks.
+- [x] Shipped the Stage 0 connector SDK MVP: `C:\AI\Mpi\Cubric-Studio\packages\connector\`.
+- [x] Added Cubric Vision manifest-only connector stub at `resources/cubric/connector-manifest.json`.
 
 ## Plan Structure
 
@@ -81,7 +84,13 @@ These plans/entries are related to this foundation but should not be duplicated:
 - `Port Stage redesign -> Cubric Studio Website` is already captured in `docs/plans/2026-05-16-port-stage-to-website.md`. Treat it as prior website redesign context; create a new `cubric-vision-foundation-website` child plan only if the ecosystem landing/subdomain rewrite is too large to fold into the existing website work.
 - `Cross-platform portable distribution` is an adjacent release plan. Rename/package artifact work should coordinate with it, but this umbrella should not absorb the portable distribution plan.
 - `Cubric Vision foundation - ecosystem-backend` has child plan `docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md`. It defines the TypeScript-first connector/backend track that blocks Cubric Prompt/future app implementation, not Cubric Vision v1.
+- `@cubric/connector` Stage 0 MVP has shipped in the future hub folder at `C:\AI\Mpi\Cubric-Studio\packages\connector\`. It contains TypeScript/Zod schemas, protocol types, error helpers, and a mock client only; no broker runtime or live Cubric Vision integration.
+- Project memory note `C:\Users\Fabio\.claude\projects\C--AI-Mpi-CubricStudio\memory\project_connector_sdk_mvp.md` records the shipped connector SDK state and deferred broker stages.
 - `docs/plans/2026-05-20-cubric-prompt-start-blockers.md` captures pre-repo blockers for starting Cubric Prompt after Vision release work.
+- `Cubric Vision foundation - shared-component-system` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md`.
+- `Cubric Vision foundation - connector-broker-stage-1-2` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md`.
+- `Cubric Vision foundation - website-ecosystem-landing` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md` but intentionally deferred until app-first work is further along.
+- `Cubric Vision foundation - release-readiness-copy-audit` is planned in `docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md`.
 
 ## Remaining Work
 
@@ -116,23 +125,23 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 ## Phase 3: Integration Foundation
 
-- [ ] Define a minimal action-based capability vocabulary for the first ecosystem release, without implementing the full provider runtime. Candidate names: `prompt.enhance`, `prompt.translate`, `prompt.format.model`, `asset.import`, `asset.export`, `project.context.read`. **Verify:** vocabulary is documented and avoids provider names like `cubric-prompt.enhance`.
+- [x] Define a minimal action-based capability vocabulary for the first ecosystem release, without implementing the full provider runtime. Candidate names: `prompt.enhance`, `prompt.translate`, `prompt.format.model`, `asset.import`, `asset.export`, `project.context.read`. **Done:** documented in `docs/specs/cubric-connector-sdk.md` and implemented in the Stage 0 `@cubric/connector` schemas/mock client shape.
 
-- [ ] Add or document a stable app identity concept for Cubric Vision, likely `cubric.vision`, distinct from product display name. **Verify:** there is one canonical app id and one canonical display name.
+- [x] Add or document a stable app identity concept for Cubric Vision, likely `cubric.vision`, distinct from product display name. **Done:** `cubric.vision` + `Cubric Vision` are documented in `docs/specs/cubric-connector-sdk.md` and shipped in `resources/cubric/connector-manifest.json`.
 
-- [ ] Identify where optional UI actions can attach later, especially prompt-box actions such as Enhance, Translate, and Format. **Verify:** the prompt UI can support future optional actions without rendering missing-app clutter in the first release.
+- [x] Identify where optional UI actions can attach later, especially prompt-box actions such as Enhance, Translate, and Format. **Done:** mapped in `docs/specs/cubric-vision-connector-integration-map.md`.
 
-- [ ] Define the first local integration contract as a future-facing stub, not a working runtime: discovery, capability request shape, artifact references, and error states. **Verify:** the contract can describe "Cubric Vision asks for `prompt.enhance`" without requiring Cubric Prompt to exist.
+- [x] Define the first local integration contract as a future-facing stub, not a working runtime: discovery, capability request shape, artifact references, and error states. **Done:** `docs/specs/cubric-connector-sdk.md` defines the contract; `C:\AI\Mpi\Cubric-Studio\packages\connector\` implements Stage 0 without broker runtime.
 
-- [ ] Keep absent integrations hidden from normal workflow UI and reserve discoverability for Help, Docs, Integrations, or release copy. **Verify:** no disabled/promotional buttons are added to core prompt workflows for unavailable apps.
+- [x] Keep absent integrations hidden from normal workflow UI and reserve discoverability for Help, Docs, Integrations, or release copy. **Done:** locked as a v1 non-goal in `docs/specs/cubric-vision-connector-integration-map.md`; no live Prompt buttons or broker startup are part of Vision v1.
 
 ## Phase 4: Artifact Handoff And Project Portability
 
 - [ ] Review sidecar schema for fields future apps need: prompt, negative prompt, seed, model id, operation, media type, dimensions, video metadata, source lineage, generation timings, trim, and preview assets. **Verify:** each future handoff use case maps to existing sidecar fields or a clearly named proposed field.
 
-- [ ] Define which identifiers are project-local and which, if any, are portable cross-app artifact identifiers. **Verify:** UUID usage rules explicitly prevent accidental global identity assumptions.
+- [x] Define which identifiers are project-local and which, if any, are portable cross-app artifact identifiers. **Done:** `docs/specs/cubric-connector-sdk.md` states `itemId` is project-local unless a future global artifact id is explicitly introduced.
 
-- [ ] Define a minimal portable artifact reference shape for app-to-app handoff. It should prefer project-relative paths and sidecar ids when inside a Cubric project, with absolute paths only when needed for external files. **Verify:** a sample handoff can reference one image and one video from a copied project folder on another machine.
+- [x] Define a minimal portable artifact reference shape for app-to-app handoff. It should prefer project-relative paths and sidecar ids when inside a Cubric project, with absolute paths only when needed for external files. **Done:** `CubricArtifactRef` is defined in `docs/specs/cubric-connector-sdk.md` and implemented in the Stage 0 connector schemas.
 
 - [ ] Preserve template project behavior: projects with settings and selected models but no assets must remain shareable. **Verify:** any proposed metadata additions do not require media files to exist for a template project to load.
 
@@ -140,9 +149,9 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 ## Phase 5: TypeScript Ecosystem Backend And Shared Component Direction
 
-- [ ] Define the TypeScript-first backend/connector system that lets Cubric apps discover and communicate with each other. **Verify:** the ecosystem connector is treated as the blocker for cross-app capability work, not as part of the app-rename child.
+- [x] Define the TypeScript-first backend/connector system that lets Cubric apps discover and communicate with each other. **Done:** `docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md` and `docs/specs/cubric-connector-sdk.md` define SDK + future broker ownership; Stage 0 SDK is shipped.
 
-- [ ] Define the TypeScript boundary for the ecosystem hub, connector backend, and future apps. **Verify:** hub/system and future app work are explicitly TypeScript-first, while Cubric Vision v1 remains shippable without a broad TypeScript migration.
+- [x] Define the TypeScript boundary for the ecosystem hub, connector backend, and future apps. **Done:** hub/system and future apps are TypeScript-first; Cubric Vision v1 remains JavaScript and standalone with only a manifest stub.
 
 - [ ] Decide whether Cubric Vision's current component system is Vision-local implementation detail, a future shared Cubric UI package, or the source for a TypeScript-compatible successor. **Verify:** the plan states that this decision blocks Cubric Prompt/future app implementation, but does not block Cubric Vision v1 release.
 
@@ -154,9 +163,9 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 ## Phase 6: Engines, Models, And Per-App Settings
 
-- [ ] Document the ecosystem resource principle: app settings remain independent; engines remain app-owned; stable assets such as ComfyUI models and LLaMA models may be shared deliberately. **Verify:** the principle is written in the plan family and does not imply Cubric Vision owns engines for other apps.
+- [x] Document the ecosystem resource principle: app settings remain independent; engines remain app-owned; stable assets such as ComfyUI models and LLaMA models may be shared deliberately. **Done:** recorded in this umbrella's Current State and Completed sections.
 
-- [ ] Preserve the existing `engine/`, `llama_engine/`, `llama_models/`, and `.engine-config.json` model-sharing patterns as Cubric Vision implementation details for this release. **Verify:** no first-release integration task requires a global settings store.
+- [x] Preserve the existing `engine/`, `llama_engine/`, `llama_models/`, and `.engine-config.json` model-sharing patterns as Cubric Vision implementation details for this release. **Done:** connector Stage 0 and app rename did not introduce a global settings store or engine ownership change.
 
 - [ ] Identify what a future shared model/resource registry would need to know, without building it now. **Verify:** the notes distinguish current Cubric Vision behavior from future Cubric ecosystem runtime behavior.
 
@@ -186,7 +195,10 @@ kanban entry "Cubric Vision foundation - app-rename" (now COMPLETED).
 
 ## Plan Drift
 
-- None yet.
+- 2026-05-21: Umbrella checkboxes were behind the actual work. Brand identity,
+  app rename, connector Stage 0, app id, manifest stub, integration map, and
+  artifact-ref contract have now been reconciled against the child plans,
+  specs, shipped connector package, and project memory.
 
 ## Verification
 

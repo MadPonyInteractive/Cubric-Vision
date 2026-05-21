@@ -113,27 +113,15 @@
   - defaultExpanded: false
     ```md
     Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Completed children: brand-identity + app-rename (see COMPLETED).
-    Gated children: integration-contract, artifact-handoff, ecosystem-backend,
-    shared-component-system, website, release-copy.
-    Umbrella now includes TypeScript-first connector backend direction and a
-    shared component-system compatibility phase. Component-system work blocks
-    Cubric Prompt/future apps, not Cubric Vision v1; keep separate from
-    app-rename unless explicitly promoted.
+    Completed children/work: brand-identity + app-rename (see COMPLETED),
+    Cubric Vision connector manifest stub, @cubric/connector Stage 0 MVP at
+    C:\AI\Mpi\Cubric-Studio\packages\connector\.
+    Memory note:
+    C:\Users\Fabio\.claude\projects\C--AI-Mpi-CubricStudio\memory\project_connector_sdk_mvp.md
+    Active child plans: ecosystem-backend, shared-component-system,
+    connector-broker-stage-1-2, website-ecosystem-landing,
+    release-readiness-copy-audit. Website remains app-last/deferred.
     Linked docs child: "Cubric Studio Docs subdomain + finish docs site" in BACKLOG.
-    ```
-
-### Cubric Vision foundation - ecosystem-backend
-
-  - tags: [PLAN, architecture, typescript, integration]
-  - priority: high
-  - defaultExpanded: false
-    ```md
-    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    Plan file: docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
-    Scope: plan the TypeScript-first backend/connector system that lets Cubric
-    apps discover each other and request action-based capabilities. This is the
-    ecosystem blocker, but it is separate from the app-rename implementation.
     ```
 
 ### Cubric Vision foundation - shared-component-system
@@ -143,6 +131,7 @@
   - defaultExpanded: false
     ```md
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md
     Scope: plan whether Cubric Vision's JS component system remains Vision-local,
     becomes a TypeScript-compatible shared Cubric UI package, or gets a typed
     adapter/wrapper path for the TypeScript-first hub and future apps.
@@ -151,6 +140,50 @@
     stay separate from release-blocking app-rename unless explicitly promoted.
     First outputs should be an inventory/classification of reusable component
     contracts and a recommendation for the lowest-risk TypeScript bridge.
+    ```
+
+### Cubric Vision foundation - connector-broker-stage-1-2
+
+  - tags: [PLAN, architecture, typescript, integration]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md
+    Implementation brief:
+    docs/plans/2026-05-21-connector-broker-stage-1-2-implementation-brief.md
+    Status: ready for implementation. Decisions are locked for broker package
+    ownership, SDK real-client adapter shape, local IPC endpoint formats,
+    4-byte length-prefixed JSON framing, HELLO/READY flow, connection metadata,
+    session token handling, error mapping, and Stage 1-2 tests.
+    Target repo for implementation is future hub repo
+    C:\AI\Mpi\Cubric-Studio\, not Cubric Vision, unless explicitly promoted.
+    ```
+
+### Cubric Vision foundation - website-ecosystem-landing
+
+  - tags: [PLAN, website, deferred]
+  - priority: low
+  - defaultExpanded: false
+    ```md
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-website-ecosystem-landing.md
+    Scope: reconcile the existing Website Stage redesign with the final
+    ecosystem/vision split. Explicitly app-last: do not implement or push until
+    Cubric Vision app/release work is ready enough to show.
+    ```
+
+### Cubric Vision foundation - release-readiness-copy-audit
+
+  - tags: [PLAN, release, audit]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-21-cubric-vision-foundation-release-readiness-copy-audit.md
+    Scope: define the final naming/copy/package metadata audit and verification
+    checklist for Cubric Vision release readiness after app-first implementation
+    work is further along.
     ```
 
 ### Cross-platform portable distribution
@@ -185,6 +218,33 @@
     ```
 
 ## COMPLETED
+
+### Cubric Vision foundation - ecosystem-backend
+
+  - tags: [PLAN, architecture, typescript, integration]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Completed (planning) 2026-05-21.
+
+    Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
+    Plan file: docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
+
+    All 5 phases locked. Final two opens closed today:
+    - Phase 2 capability vocabulary finalized — action-based dotted ids
+      (prompt.enhance, prompt.translate, prompt.format.model, asset.import,
+      asset.export, project.context.read); provider app id carried separately.
+    - Phase 3 UUID rules aligned — itemId is project-local (scoped by
+      projectId + sidecarRelativePath); cross-app identity requires a future
+      explicit globalArtifactId field.
+
+    Stage 0 SDK shipped at C:\AI\Mpi\Cubric-Studio\packages\connector
+    (memory: project_connector_sdk_mvp.md). Cubric Vision v1 unblocked —
+    manifest-only stub at resources/cubric/connector-manifest.json.
+
+    Broker/runtime implementation continues in
+    docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md.
+    ```
 
 ### Cubric Vision foundation - app-rename
 
