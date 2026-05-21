@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "appId": "cubric.vision",
+  "displayName": "Cubric Vision",
+  "version": "0.0.1",
+  "protocolVersion": "0.1.0",
+  "capabilities": [
+    {
+      "id": "project.context.read",
+      "providerAppId": "cubric.vision",
+      "kind": "read",
+      "label": "Read project context",
+      "mediaTypes": ["project", "image", "video"],
+      "requiresConsent": true,
+      "version": "0.1.0"
+    },
+    {
+      "id": "asset.import",
+      "providerAppId": "cubric.vision",
+      "kind": "import",
+      "label": "Import asset into project",
+      "mediaTypes": ["image", "video"],
+      "requiresConsent": true,
+      "version": "0.1.0"
+    }
+  ],
+  "metadata": {
+    "manifestOnly": true
+  }
+}

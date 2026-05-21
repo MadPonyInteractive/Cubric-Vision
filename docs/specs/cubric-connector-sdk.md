@@ -97,7 +97,9 @@ apps consume it.
 
 ## Validation Strategy
 
-The SDK should use runtime schemas from its first implementation.
+The SDK uses Zod runtime schemas from its first implementation. Zod schemas are
+the source of truth for validation; TypeScript types should be inferred from
+those schemas where practical.
 
 Requirements:
 - TypeScript interfaces and runtime schemas must describe the same contract.
@@ -109,8 +111,8 @@ Requirements:
 - Version mismatches must produce `VERSION_UNSUPPORTED`, not generic runtime
   errors.
 
-The specific schema library is still open. The important decision is that
-runtime validation is required, not optional.
+JSON Schema export can be added later if another runtime or language needs to
+consume the connector contract. It is not required for the MVP.
 
 ## Discovery And Transport Direction
 
@@ -134,8 +136,8 @@ Cubric Vision -> @cubric/connector -> Cubric Studio broker -> Cubric Prompt
 
 The SDK remains transport-agnostic at the public API layer. Apps call
 `discoverApps`, `listCapabilities`, and `requestCapability`; the broker/client
-adapter decides whether the local implementation uses named pipes, sockets,
-localhost HTTP, or another OS-appropriate channel.
+adapter uses the Stage 1 local IPC transport unless a later transport is added
+behind the same request shapes.
 
 ### Transport Requirements
 
@@ -149,20 +151,255 @@ The first real transport must:
 - Avoid unauthenticated write/delete actions over a public localhost surface.
 - Be replaceable behind the SDK without changing app-facing request shapes.
 
-### Current Recommendation
+### Implementation Stages
 
-Use the SDK contract first, then implement a broker adapter that prefers an
-OS-local private channel over public localhost HTTP.
+The remaining discovery, transport, auth, broker lifecycle, registration, and
+portable update questions are now staged implementation decisions rather than
+open architecture questions. Each stage must be implemented behind the
+transport-agnostic SDK API.
 
-Preference order for investigation:
+#### Stage 0: Contract-Only SDK
 
-1. Broker-owned named pipe / Unix domain socket style transport.
-2. Broker-owned localhost HTTP only if bound to loopback with an auth token or
-   equivalent handshake.
-3. Direct app-to-app transport only for development fixtures or tests.
+Ship `@cubric/connector` as schemas, TypeScript types, constants, error
+helpers, and in-memory/mock client fixtures.
 
-This keeps the security model centered on the broker and avoids every app
-inventing its own discovery server.
+Requirements:
+- No broker process is required.
+- Cubric Vision v1 may remain standalone and may skip runtime integration.
+- Cubric Prompt planning may target mock connector fixtures.
+- Zod runtime schemas validate manifests, requests, responses, artifact refs,
+  protocol messages, broker registry records, connection metadata, and error
+  envelopes.
+- The SDK package includes broker protocol types and a mock client, but no
+  broker runtime.
+
+MVP package layout:
+
+```text
+packages/connector/
+  src/
+    index.ts
+    types.ts
+    schemas.ts
+    protocol.ts
+    errors.ts
+    client.ts
+    mockClient.ts
+  tests/
+    schemas.test.ts
+    mockClient.test.ts
+```
+
+#### Stage 1: Transport Primitive
+
+First real transport is broker-owned local IPC:
+- Windows: named pipe.
+- macOS/Linux: Unix domain socket.
+
+Implementation direction:
+- Use a length-prefixed JSON message protocol over a single local stream.
+- Keep request/response correlation in the envelope through `requestId`.
+- Keep app-facing SDK shapes unchanged if the stream protocol is replaced.
+- Direct app-to-app transport is allowed only in tests and development
+  fixtures.
+- Localhost HTTP is a fallback only if a platform-specific IPC blocker appears;
+  if used, it must bind to loopback and use the same handshake/auth rules.
+
+This locks the first production primitive to private OS-local IPC and avoids a
+public unauthenticated localhost API.
+
+#### Stage 2: Auth And Handshake
+
+Authentication is per-user broker-session authentication plus broker-side app
+trust, not a claim that connector manifests are secret.
+
+Broker startup creates a random session token and writes connection metadata to
+a user-scoped runtime file. The metadata contains only the broker endpoint,
+protocol version, broker pid/start time, and a short-lived bearer token. File
+permissions must be owner-only where the platform allows it.
+
+Connection metadata path:
+- Windows: `%LOCALAPPDATA%\Cubric\broker\connection.json`
+- macOS: `~/Library/Application Support/Cubric/broker/connection.json`
+- Linux: `${XDG_RUNTIME_DIR}/cubric/broker/connection.json`, falling back to
+  `~/.cache/cubric/broker/connection.json` when `XDG_RUNTIME_DIR` is missing.
+
+Handshake flow:
+
+1. App opens the broker endpoint from the connection metadata or receives it
+   through `CUBRIC_BROKER_ENDPOINT` / `CUBRIC_BROKER_TOKEN` when the SDK starts
+   the broker.
+2. App sends `HELLO` with:
+   - `appId`
+   - `displayName`
+   - `version`
+   - `protocolVersion`
+   - `manifestPath`
+   - `manifestHash`
+   - bearer token
+   - SDK version
+3. Broker validates the token, manifest schema, protocol compatibility, and
+   app trust record.
+4. Broker returns `READY` with broker protocol version, granted permissions, and
+   a connection-scoped session id.
+
+Trust rules:
+- The session token authenticates that the caller can read the current user's
+  broker connection file or was spawned with broker environment variables.
+- The manifest identifies the app but is not treated as a secret.
+- First registration from a new app path creates an untrusted or pending record
+  unless the hub has imported/scanned that folder.
+- Re-registration for the same `appId` from a different path is a trust-change
+  event and must not silently inherit permissions.
+- Permission-denied and protocol mismatch failures use `PERMISSION_DENIED` and
+  `VERSION_UNSUPPORTED`, not generic runtime errors.
+
+#### Stage 2A: MVP Permission Model
+
+The v0 permission model is trust-app-once plus consent for project and media
+access.
+
+Trust states:
+- `pending`: app is known but not trusted.
+- `trusted`: app path and manifest identity have been accepted.
+- `blocked`: app is denied until the user or future hub UI changes it.
+
+Capability policy:
+- `prompt.enhance`, `prompt.translate`, and `prompt.format.model` are allowed
+  when both caller and provider apps are trusted.
+- `project.context.read` requires consent.
+- `asset.import` requires consent.
+- `asset.export` requires consent.
+- A changed app path for the same `appId` resets trust to `pending`.
+
+Consent UI is future hub/product UI scope. The SDK and broker contracts must
+represent the permission requirement and return `PERMISSION_DENIED` when a
+permission is missing or denied.
+
+#### Stage 3: Broker Startup Policy
+
+The SDK exposes an internal `ensureBroker()` path used by real connector
+clients. It follows this policy:
+
+1. Try the current user's broker connection metadata.
+2. If the broker is reachable, connect and handshake.
+3. If not reachable and connector services are enabled, start the hub-owned
+   broker from a known bundled or configured broker path.
+4. Wait for readiness with a bounded startup timeout.
+5. If startup fails or connector services are disabled, return normal connector
+   unavailable errors and let the product app degrade.
+
+Runtime policy:
+- The broker starts when any Cubric app needs connector services.
+- It stays alive for the user session or until idle timeout, explicit shutdown,
+  or explicit disable.
+- The broker must not be started separately for every capability request.
+- Product apps must work without the broker when no connector-dependent feature
+  is required.
+- User-visible controls are future hub UI scope, but the backend must already
+  support disable, shutdown, and status states.
+
+#### Stage 4: Manifest Registration
+
+Every portable app bundle includes a connector manifest at a stable relative
+path:
+
+```text
+resources/cubric/connector-manifest.json
+```
+
+The broker registry has two registration sources:
+- **Launch registration:** required. The running app sends its validated
+  manifest during handshake and is the authority for current live capabilities.
+- **Cached/pre-launch registration:** optional but supported. The broker can
+  remember or scan portable app folders so other apps can show installed but not
+  currently running apps.
+
+Registry record requirements:
+- `appId`
+- `displayName`
+- `version`
+- `protocolVersion`
+- `manifestPath`
+- `manifestHash`
+- `installRoot`
+- `lastSeenAt`
+- `registrationSource` (`launch`, `scan`, or `import`)
+- capability summary copied from the validated manifest
+- trust/permission state
+
+Registry path:
+- Windows: `%APPDATA%\Cubric\broker\registry.json`
+- macOS: `~/Library/Application Support/Cubric/broker/registry.json`
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/cubric/broker/registry.json`
+
+Refresh rules:
+- Launch registration always replaces the cached capability view for that
+  `appId` and trusted path.
+- A changed `version`, `protocolVersion`, `manifestHash`, or manifest modified
+  timestamp marks the registry entry stale until the manifest validates.
+- Stale manifest refresh is a normal update condition, not a runtime error.
+- A removed portable folder marks the app unavailable but keeps enough registry
+  history to explain why capability lookup failed.
+
+#### Stage 5: Portable Update Manifest
+
+Portable full releases and update bundles include a version/update manifest.
+For connector compatibility, the update manifest must include enough
+information for scripts and the broker registry to detect app, protocol, and
+capability changes.
+
+Recommended file:
+
+```text
+resources/cubric/update-manifest.json
+```
+
+Minimum shape:
+
+```ts
+export interface CubricPortableUpdateManifest {
+  schemaVersion: 1;
+  appId: CubricAppId;
+  displayName: string;
+  platform: 'windows' | 'macos' | 'linux';
+  arch: 'x64' | 'arm64';
+  fromVersion?: string;
+  toVersion: string;
+  protocolVersion: string;
+  connectorManifestPath: string;
+  connectorManifestHash: string;
+  files: CubricUpdateFileEntry[];
+  delete?: string[];
+  preserve?: string[];
+  createdAt: string;
+  packageSha256?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CubricUpdateFileEntry {
+  path: string;
+  sha256: string;
+  sizeBytes: number;
+  executable?: boolean;
+}
+```
+
+Update rules:
+- v1 update bundles are changed-file bundles, not binary deltas.
+- The app must be closed during script-driven updates.
+- Update scripts verify they are running from a Cubric portable root before
+  writing files.
+- `preserve` must cover engines, models, projects, generated media, user config,
+  and other app-owned runtime data.
+- Connector manifests are refreshed as part of the update, not as a later
+  migration.
+- After update, next launch registration must replace the broker's cached
+  capability view if `version`, `protocolVersion`, or
+  `connectorManifestHash` changed.
+- Future hub-owned updaters may use the same manifest and add process
+  coordination, but must not change the connector-facing fields without a schema
+  version bump.
 
 ### Portable App Constraint
 
@@ -171,7 +408,8 @@ download, extract, and run an app folder. There is no normal installer that can
 be trusted to register apps with the operating system or with the broker.
 
 Discovery must therefore work for portable folders:
-- Each app bundle should include a connector manifest file.
+- Each app bundle must include a connector manifest file at
+  `resources/cubric/connector-manifest.json`.
 - Apps should register with the broker on launch.
 - The broker may keep a cached registry of previously seen apps.
 - Registration should also be possible from a hub-side scan/import flow later,
@@ -211,14 +449,16 @@ Recommended lifecycle:
 - The broker should support an explicit shutdown/disable path for users who do
   not want background services.
 
-### Decisions Still Open
+### Remaining Broker Decisions
 
-- Exact transport primitive for Windows/macOS/Linux.
-- Exact broker startup policy and user-visible controls.
-- Auth token or handshake mechanism.
-- Manifest registration path.
+The backend implementation stages above lock the first transport primitive,
+auth/handshake mechanism, broker startup policy, manifest registration path,
+and portable update manifest shape.
+
+Still open:
 - Hub-side scan/import UX for portable app folders.
-- Portable app update mechanism and how broker registry refresh ties into it.
+- Exact permission prompt UI and persisted consent UI.
+- Idle timeout duration and user-facing broker status wording.
 
 ## TypeScript Types
 
@@ -369,6 +609,136 @@ export interface CubricConnectorError {
   message: string;
   details?: Record<string, unknown>;
 }
+
+export type CubricBrokerMessage =
+  | CubricBrokerHelloMessage
+  | CubricBrokerReadyMessage
+  | CubricBrokerErrorMessage
+  | CubricBrokerDiscoverAppsMessage
+  | CubricBrokerDiscoverAppsResultMessage
+  | CubricBrokerListCapabilitiesMessage
+  | CubricBrokerListCapabilitiesResultMessage
+  | CubricBrokerRequestCapabilityMessage
+  | CubricBrokerRequestCapabilityResultMessage;
+
+export interface CubricBrokerHelloMessage {
+  type: 'HELLO';
+  requestId: string;
+  payload: CubricHelloPayload;
+}
+
+export interface CubricBrokerReadyMessage {
+  type: 'READY';
+  requestId: string;
+  payload: CubricReadyPayload;
+}
+
+export interface CubricBrokerErrorMessage {
+  type: 'ERROR';
+  requestId: string;
+  payload: CubricConnectorError;
+}
+
+export interface CubricBrokerDiscoverAppsMessage {
+  type: 'DISCOVER_APPS';
+  requestId: string;
+  payload?: Record<string, never>;
+}
+
+export interface CubricBrokerDiscoverAppsResultMessage {
+  type: 'DISCOVER_APPS_RESULT';
+  requestId: string;
+  payload: CubricAppManifest[];
+}
+
+export interface CubricBrokerListCapabilitiesMessage {
+  type: 'LIST_CAPABILITIES';
+  requestId: string;
+  payload: {
+    appId?: CubricAppId;
+  };
+}
+
+export interface CubricBrokerListCapabilitiesResultMessage {
+  type: 'LIST_CAPABILITIES_RESULT';
+  requestId: string;
+  payload: CubricCapability[];
+}
+
+export interface CubricBrokerRequestCapabilityMessage {
+  type: 'REQUEST_CAPABILITY';
+  requestId: string;
+  payload: CubricCapabilityRequest;
+}
+
+export interface CubricBrokerRequestCapabilityResultMessage {
+  type: 'REQUEST_CAPABILITY_RESULT';
+  requestId: string;
+  payload: CubricCapabilityResponse;
+}
+
+export interface CubricHelloPayload {
+  appId: CubricAppId;
+  displayName: string;
+  version: string;
+  protocolVersion: string;
+  manifestPath: string;
+  manifestHash: string;
+  token: string;
+  sdkVersion: string;
+}
+
+export interface CubricReadyPayload {
+  protocolVersion: string;
+  sessionId: string;
+  permissions: CubricPermissionGrant[];
+}
+
+export type CubricTrustState = 'pending' | 'trusted' | 'blocked';
+
+export type CubricRegistrationSource = 'launch' | 'scan' | 'import';
+
+export type CubricPermissionId =
+  | 'prompt.transform'
+  | 'project.context.read'
+  | 'asset.import'
+  | 'asset.export'
+  | (string & {});
+
+export interface CubricPermissionGrant {
+  permission: CubricPermissionId;
+  granted: boolean;
+  requiresConsent?: boolean;
+}
+
+export interface CubricBrokerConnectionMetadata {
+  schemaVersion: 1;
+  endpoint: string;
+  token: string;
+  protocolVersion: string;
+  brokerPid: number;
+  startedAt: string;
+}
+
+export interface CubricBrokerRegistry {
+  schemaVersion: 1;
+  apps: CubricBrokerRegistryApp[];
+}
+
+export interface CubricBrokerRegistryApp {
+  appId: CubricAppId;
+  displayName: string;
+  version: string;
+  protocolVersion: string;
+  installRoot: string;
+  manifestPath: string;
+  manifestHash: string;
+  registrationSource: CubricRegistrationSource;
+  trustState: CubricTrustState;
+  permissions: CubricPermissionGrant[];
+  capabilities: CubricCapability[];
+  lastSeenAt: string;
+}
 ```
 
 ## SDK Interface Shape
@@ -389,6 +759,10 @@ export interface CubricConnectorClient {
 ## Manifest Examples
 
 ### Cubric Vision
+
+Cubric Vision v1 ships this manifest-only stub at
+`resources/cubric/connector-manifest.json`. It does not ship live connector
+runtime integration before v1.
 
 ```json
 {
@@ -654,21 +1028,22 @@ Unsupported capability:
 
 ## Open Decisions
 
-- Whether Cubric Vision should include a manifest-only SDK stub before v1 or
-  defer all SDK integration until after release.
-- First discovery mechanism for portable app folders.
-- First transport for broker-mediated requests.
-- Permission model for project context and asset import/export.
-- Which runtime schema library or JSON Schema tooling the SDK should use.
-- Portable app update strategy.
+- Hub-side scan/import UX for portable app folders.
+- Exact broker idle timeout and status/disable wording.
+- Exact permission prompt UI and persisted consent UI.
 
 ## Implementation Readiness Checklist
 
 - [x] Package/repo location chosen.
 - [x] Runtime schema/validation strategy chosen.
+- [x] MVP package shape chosen.
+- [x] Broker protocol message shape chosen.
+- [x] Broker connection metadata path chosen.
+- [x] Broker registry path/shape chosen.
+- [x] MVP permission model chosen.
 - [ ] Manifest examples accepted.
 - [ ] Request/response types accepted.
 - [ ] Error codes accepted.
 - [ ] Artifact reference shape accepted.
-- [ ] Discovery and transport strategy chosen.
-- [ ] Cubric Vision SDK integration timing decided.
+- [x] Discovery and transport strategy chosen.
+- [x] Cubric Vision SDK integration timing decided.

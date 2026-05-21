@@ -68,10 +68,10 @@ Out of scope:
    - Where do app ids, display names, versions, and capabilities live?
 
 3. **Transport**
-   - Candidate local transports: localhost HTTP, named pipe, Unix socket,
-     Electron IPC bridge, or broker-owned message channel.
-   - The choice must work on Windows/macOS/Linux and must not expose a broad
-     unauthenticated localhost API.
+   - Locked first transport: broker-mediated local IPC behind the SDK.
+     Windows uses a named pipe; macOS/Linux use a Unix domain socket.
+   - Localhost HTTP is fallback-only if platform IPC blocks implementation, and
+     it must still use the broker auth/handshake boundary.
 
 4. **Capability contract**
    - Request shape must name `from`, `to`, `capability`, `input`, and
@@ -99,16 +99,21 @@ Out of scope:
 - App identity: mostly locked by brand plan, but needs one canonical technical
   source (`cubric.vision`, future `cubric.prompt`, etc.).
 - Capability vocabulary: candidates exist, but no formal schema yet.
-- Transport choice: unresolved.
-- Runtime owner: unresolved.
+- Transport choice: locked to broker-mediated local IPC (Windows named pipe,
+  macOS/Linux Unix domain socket).
+- Runtime owner: locked to shared SDK plus future Cubric Studio hub broker.
 - Artifact reference shape: depends on Phase 4 handoff rules in the umbrella.
-- TypeScript package location/versioning: unresolved.
-- Install/discovery story: unresolved, especially cross-platform.
+- TypeScript package location is locked to future hub repo
+  `packages/connector`; package versioning mechanics remain part of Phase 5.
+- Install/discovery story: launch registration plus cached/scanned portable app
+  folders, with `resources/cubric/connector-manifest.json` as the stable bundle
+  manifest path.
 - Portable distribution means there is no installer-owned registration step.
   Apps are zip folders on Windows/macOS/Linux, so discovery must handle
   launch-time registration plus cached or hub-scanned app folders.
-- Update story is now related: portable app updates can change capabilities, so
-  broker registry refresh must notice app version/protocol/manifest changes.
+- Update story is now related and staged: portable app updates can change
+  capabilities, so broker registry refresh compares app version, protocol
+  version, and connector manifest hash.
 - Portable update direction: full release artifacts for new users plus
   ComfyUI-style `update/` scripts/bundles for existing portable folders. See
   `docs/plans/2026-04-30-cross-platform-portable-distribution.md` Phase 6.
@@ -125,6 +130,7 @@ system.
 - Validation: runtime schemas are required; TypeScript types alone are not
   enough at app/broker boundaries.
 - Draft contract spec: `docs/specs/cubric-connector-sdk.md`.
+- Implementation brief: `docs/plans/2026-05-20-connector-sdk-mvp-implementation-brief.md`.
 - Define schemas/types for:
   - `CubricAppManifest`
   - `CubricCapability`
@@ -188,8 +194,9 @@ Why this is the right first step:
   and timeout are distinct.
 
 - [x] Decide validation strategy. **Locked:** runtime validation is required
-  for manifests, requests, responses, artifact references, and error envelopes.
-  Specific schema tooling remains open.
+  and the SDK uses Zod as the source of truth for manifests, requests,
+  responses, artifact references, protocol messages, registry records,
+  connection metadata, and error envelopes.
 
 ## Phase 3: Artifact References
 
@@ -207,40 +214,56 @@ Why this is the right first step:
 
 ## Phase 4: Discovery And Transport
 
-- [ ] Decide local discovery mechanism.
-  **Direction:** broker-owned discovery for portable app folders. Apps register
-  on launch; the broker may cache or scan known app folders. **Verify:** app
-  manifests can be found/refreshed on Windows/macOS/Linux without installers.
+- [x] Decide local discovery mechanism. **Locked:** broker-owned discovery for
+  portable app folders. Apps register on launch from
+  `resources/cubric/connector-manifest.json`; the broker may cache, scan, or
+  import known app folders before launch. **Verify:** app manifests can be
+  found/refreshed on Windows/macOS/Linux without installers.
 
-- [ ] Decide first transport.
-  **Direction:** broker-mediated transport behind the SDK; prefer OS-local
-  private channel over public localhost HTTP. **Verify:** the transport supports
-  local request/response, app unavailable states, and basic
-  authentication/trust boundaries.
+- [x] Decide first transport. **Locked:** broker-mediated local IPC behind the
+  SDK: Windows named pipe, macOS/Linux Unix domain socket. Localhost HTTP is a
+  fallback only if platform IPC blocks implementation, and must still use the
+  same auth/handshake rules. **Verify:** the transport supports local
+  request/response, app unavailable states, and broker-side permission checks.
 
-- [ ] Decide startup/lifecycle behavior.
-  **Direction:** hub-owned broker should be available during a Cubric app work
-  session and may stay alive in the background, with user-visible disable/shutdown
-  controls. **Verify:** Cubric Vision can remain standalone when the connector
-  is absent.
+- [x] Decide auth/handshake boundary. **Locked:** per-user broker session token
+  plus validated manifest handshake and broker-side app trust record. **Verify:**
+  manifest identity is not treated as secret, path changes do not silently
+  inherit permissions, and mismatch failures map to `PERMISSION_DENIED` or
+  `VERSION_UNSUPPORTED`.
 
-- [ ] Decide portable app update relationship.
-  **Verify:** broker registry refresh compares app version, protocol version,
-  and manifest changes so newly added capabilities do not look missing after an
-  app update.
+- [x] Decide startup/lifecycle behavior. **Locked:** SDK `ensureBroker()` first
+  connects to an existing user broker, then starts the hub-owned broker only
+  when connector services are enabled and needed. The broker may stay alive for
+  the user session/idle timeout and must support disable/shutdown/status states.
+  **Verify:** Cubric Vision can remain standalone when the connector is absent.
+
+- [x] Decide portable app update relationship. **Locked:** full releases and
+  update bundles include `resources/cubric/update-manifest.json` with
+  `connectorManifestPath` and `connectorManifestHash`; broker registry refresh
+  compares app version, protocol version, and connector manifest hash. **Verify:**
+  newly added capabilities do not look missing after an app update.
 
 ## Phase 5: Implementation Readiness
 
-- [ ] Produce a small TypeScript contract package plan.
-  **Verify:** includes build, lint, test, versioning, and generated docs shape.
+- [x] Produce a small TypeScript contract package plan. **Locked:** implement
+  `packages/connector` with `src/index.ts`, `src/types.ts`, `src/schemas.ts`,
+  `src/protocol.ts`, `src/errors.ts`, `src/client.ts`, `src/mockClient.ts`,
+  plus schema and mock-client tests. No broker runtime in the MVP.
 
-- [ ] Identify Cubric Vision integration points, without implementing them.
-  **Verify:** PromptBox optional actions, Help/Integrations discoverability,
-  and project/artifact context are mapped.
+- [x] Identify Cubric Vision integration points, without implementing them.
+  **Mapped:** see
+  `docs/specs/cubric-vision-connector-integration-map.md` for PromptBox
+  Enhance/Translate/Format attachment points, Help/Integrations
+  discoverability, project context, selected artifact refs, draft Vision ->
+  Prompt request payloads, and v1 non-goals.
 
-- [ ] Decide what, if anything, must land in Cubric Vision before Cubric Prompt
-  begins.
-  **Verify:** the answer is explicit and does not accidentally block Vision v1.
+- [x] Decide what, if anything, must land in Cubric Vision before Cubric Prompt
+  begins. **Locked:** Cubric Vision v1 may ship a manifest-only stub at
+  `resources/cubric/connector-manifest.json`; live SDK/broker integration is
+  deferred until another app needs real connector services. This does not block
+  Vision v1. **Implemented in this repo:** the manifest-only stub exists at
+  `resources/cubric/connector-manifest.json`.
 
 ## Verification
 
