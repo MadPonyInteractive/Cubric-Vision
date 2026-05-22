@@ -17,7 +17,7 @@
 | `upscale` | `MpiToolOptionsUpscale` (tool panel, shared image+video) | `"Upscale_Factor"` (MpiFloat), `"Upscale_Model"` (UpscaleModelLoader), `"Upscale_Using_Model"` (MpiBoolean gate) | `{ Upscale_Factor: number, Upscale_Using_Model: boolean, Upscale_Model?: filename }` — `Upscale_Model` injected only when user picks a model. When dropdown is `None`, `Upscale_Using_Model:false` flips the workflow's MpiIfElse to the no-model branch (plain `ImageScaleBy` lanczos). Persisted per-kind under `toolSettings.imageUpscale` / `toolSettings.videoUpscale`. | `imageUpscale`, `videoUpscale` |
 | `useGrid` | `MpiButton` (size: sm, toggleable, icon: grid, label: 'Use Grid') | `"Auto_Grid"` (`MpiBoolean.inputs.boolean`) | `{ Auto_Grid: boolean }` | model-tied `upscale` |
 | `upscaleFactor` | `MpiRadioGroup` (size: sm, columns: 4) | `"Upscale_Factor"` (`MpiFloat.inputs.float`/`inputs.value`) | `{ Upscale_Factor: 1.5\|2\|3\|4 }` | model-tied `upscale` |
-| `denoise` | `MpiProgressBar` (interactive, wheel, handle) | `"Denoise"` (`MpiFloat.inputs.denoise`/`inputs.value`) | `{ Denoise: 0..1 }` (float, step 0.01) | model-tied `upscale` |
+| `denoise` | `MpiProgressBar` (interactive, wheel, handle) | `"Denoise"` (`MpiFloat.inputs.float`) | `{ Denoise: 0..1 }` (float, step 0.01) | model-tied `upscale` (default 0.20), `detail` (default 0.30) — defaults via `commands[op].defaults.denoise`; persisted under `operations[opName].denoise` so each op has independent state |
 
 > **Note:** `nodeTitle` for `ratio` is `null` in the registry because it injects into two separate nodes (`Width` and `Height`) rather than a single node. The `getInjectionParams()` return `{ Width: w, Height: h }` which `_buildParams()` maps to the standard node title table.
 
@@ -78,7 +78,7 @@
 > `gallery:item-updated` for the affected group. Click-time re-validation
 > closes the TOCTOU window between badge render and button press.
 
-> **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted per-model as `modelSettings[modelId].batch`.
+> **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted per-model under the shared bucket as `modelSettings[modelId].operations.shared.batch`.
 
 ---
 
@@ -122,15 +122,15 @@ MpiPromptBox 'run' event
 
 | ID             | Component         | nodeTitle      | defaultValue | `getInjectionParams()` return |
 |----------------|-------------------|----------------|--------------|-------------------------------|
-| `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }` |
-| `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }` |
-| `qualityTier` | `MpiOptionSelector` (variant: quality) | `null` | `'medium'` | does NOT contribute to `injectionParams` — quality picks a tier-specific ratio set, and the resolved Width/Height still come from the `ratio` control. Persisted per-model under `modelSettings[modelId].ratioSelector.qualityTier` (shared key with the `ratio` control). Emits `ratio:quality-change` so the sibling `ratio` control re-renders via its `el.setQualityTier(tier)` API. Renders nothing for orientation-mode models. |
-| `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (payload `operation` endsWith `_ms`) — single-stage workflows never receive the field, so a stale toggle from a prior `_ms` op cannot leak into them. Persisted per-model under `modelSettings[modelId].previewStage`. |
-| `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). Persisted per-model under `modelSettings[modelId].duration`. |
-| `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). Persisted per-model under `modelSettings[modelId].motionIntensity`. |
-| `useGrid` | `MpiButton` (toggleable, icon: grid, label: 'Use Grid') | `'Auto_Grid'` (`MpiBoolean.inputs.boolean`) | `false` | `{ Auto_Grid: boolean }`. Persisted per-model under `modelSettings[modelId].useGrid`. |
-| `upscaleFactor` | `MpiRadioGroup` (sm, 4 columns) under Stage-style label row (`UPSCALE` left) | `'Upscale_Factor'` (`MpiFloat.inputs.float`) | `2` | `{ Upscale_Factor: 1.5\|2\|3\|4 }`. Persisted per-model under `modelSettings[modelId].upscaleFactor`. |
-| `denoise` | `MpiProgressBar` under Stage-style label row (`DENOISE` left, live `X.XX` right) — own full-width row in popup | `'Denoise'` (`MpiFloat.inputs.denoise`) | `0.2` | `{ Denoise: 0..1 }` (float, step 0.01). Persisted per-model under `modelSettings[modelId].denoise`. |
+| `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }`. **scope: `shared`** — `operations.shared.ratioSelector`. |
+| `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }`. **scope: `shared`** — `operations.shared.batch`. |
+| `qualityTier` | `MpiOptionSelector` (variant: quality) | `null` | `'medium'` | does NOT contribute to `injectionParams` — quality picks a tier-specific ratio set, and the resolved Width/Height still come from the `ratio` control. **scope: `shared`** — `operations.shared.ratioSelector.qualityTier` (co-resides with `ratio` control). Emits `ratio:quality-change` so the sibling `ratio` control re-renders via its `el.setQualityTier(tier)` API. Renders nothing for orientation-mode models. |
+| `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (payload `operation` endsWith `_ms`) — single-stage workflows never receive the field, so a stale toggle from a prior `_ms` op cannot leak into them. **scope: `shared`** — `operations.shared.previewStage`. |
+| `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). **scope: `shared`** — `operations.shared.duration`. |
+| `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). **scope: `shared`** — `operations.shared.motionIntensity`. |
+| `useGrid` | `MpiButton` (toggleable, icon: grid, label: 'Use Grid') | `'Auto_Grid'` (`MpiBoolean.inputs.boolean`) | `false` | `{ Auto_Grid: boolean }`. **scope: `perOp`** — `operations[opName].useGrid`. |
+| `upscaleFactor` | `MpiRadioGroup` (sm, 4 columns) under Stage-style label row (`UPSCALE` left) | `'Upscale_Factor'` (`MpiFloat.inputs.float`) | `2` | `{ Upscale_Factor: 1.5\|2\|3\|4 }`. **scope: `perOp`** — `operations[opName].upscaleFactor`. |
+| `denoise` | `MpiProgressBar` under Stage-style label row (`DENOISE` left, live `X.XX` right) — own full-width row in popup | `'Denoise'` (`MpiFloat.inputs.float`) | `0.2` (override via `commands[op].defaults.denoise`: `upscale=0.20`, `detail=0.30`) | `{ Denoise: 0..1 }` (float, step 0.01). **scope: `perOp`** — `operations[opName].denoise`. |
 
 ---
 
@@ -145,27 +145,21 @@ Every new PromptBoxControl MUST follow this checklist. Skipping any step breaks 
 ```javascript
 controlId: {
     nodeTitle: 'Workflow_Node_Title',   // or null if no single node (e.g. ratio)
-    defaultValue: <primitive>,
+    scope: 'shared' | 'perOp',          // REQUIRED. See "Persistence scope" below.
+    defaultValue: <primitive>,           // Fallback; perOp controls can override per op via commands[op].defaults[controlId].
     mount(hostEl, opts = {}) {
-        const model = opts.model || {};
-        const modelId = model.id;
-        // Recall: read persisted value from project
-        const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
-        const initial = /* clamp + coerce saved.<controlId> */;
+        // Recall: read persisted value from the right bucket (shared vs per-op).
+        const saved = _readSaved(this, opts);
+        const fallback = _resolveDefault(this, 'controlId', opts);
+        const initial = /* clamp + coerce saved.<controlId> ?? fallback */;
         this.value = initial;
         // Mount UI primitive bound to initial
         this._instance = SomePrimitive.mount(hostEl, { value: initial, ... });
-        // Persist: emit settings:model:update on user change
+        // Persist: emit through helper — payload carries opName resolved from scope + opts.
         this._instance.on('change', ({ value }) => {
             const v = /* clamp + coerce */;
             this.value = v;
-            if (modelId) {
-                Events.emit('settings:model:update', {
-                    modelId,
-                    key: '<controlId>',
-                    value: v,
-                });
-            }
+            _emitUpdate(this, opts, 'controlId', v);
         });
     },
     getValue() { return this.value ?? this.defaultValue; },
@@ -175,9 +169,17 @@ controlId: {
 },
 ```
 
-**3. Register on operations.** Add `controlId` to `commandRegistry.js` `components[]` array for every operation that should expose it.
+`_readSaved`, `_resolveDefault`, `_emitUpdate` are top-of-file helpers in `PromptBoxControls.js`. Use them — do NOT call `getModelSettings` or emit `settings:model:update` directly from a control. The helpers resolve the storage bucket from the control's `scope` plus `opts.opName` (passed by `MpiPromptBox._refreshOpSlot`).
 
-**4. Workflow contract.** Ensure each registered operation's workflow JSON contains an `MpiInt` / `MpiFloat` / `MpiBoolean` / etc. node with `_meta.title === 'Workflow_Node_Title'`. Inject loop hits `inputs.int`, `inputs.float`, `inputs.boolean`, `inputs.value`, etc. — match field type to node class. **Agents must NOT edit workflow JSON** — document the contract here and ask the user.
+**Persistence scope:**
+- `scope: 'shared'` → reads/writes `modelSettings[modelId].operations.shared.<controlId>`. Use for controls whose value should be consistent across operations on the same model (ratio, batch, duration, motionIntensity, qualityTier, previewStage).
+- `scope: 'perOp'` → reads/writes `modelSettings[modelId].operations[opName].<controlId>`. Use when each op should hold an independent value (denoise — upscale vs detail; useGrid; upscaleFactor).
+
+**Per-op defaults:** A `perOp` control with different sensible defaults per op declares the override in `commandRegistry.commands[opName].defaults[controlId]` (e.g. `upscale.defaults.denoise = 0.20`, `detail.defaults.denoise = 0.30`). `_resolveDefault` reads this before falling back to the control's own `defaultValue`. Do NOT branch on op name inside the control mount.
+
+**3. Register on operations.** Add `controlId` to `commandRegistry.js` `components[]` array for every operation that should expose it. If the control is `perOp` and needs an op-specific default, add `defaults: { controlId: <value> }` to the same op entry.
+
+**4. Workflow contract.** Ensure each registered operation's workflow JSON contains an `MpiInt` / `MpiFloat` / `MpiBoolean` / etc. node with `_meta.title === 'Workflow_Node_Title'`. Inject loop hits `inputs.int`, `inputs.float`, `inputs.boolean`, `inputs.value`, etc. — match field type to node class. **Agents must NOT edit, add, rename, or rewire nodes in `comfy_workflows/*.json` under any circumstance** — see `.claude/rules/comfy_injection.md`. Document the contract here, then ask the user to author the node in the ComfyUI graph editor.
 
 **5. Update title map.** Add a row in `.claude/rules/comfy_injection.md` "Standard Node Title Map" with the new title + which `inputs.*` field it writes.
 
@@ -191,11 +193,12 @@ controlId: {
 - NEVER re-read live PromptBox state inside a replay handler. Snapshots are the source of truth.
 
 **Persistence invariants:**
-- Storage path: `project.modelSettings[modelId][controlId]` — flat per-model key.
-- Recall: `getModelSettings(state.currentProject, modelId)` on every `mount()`. Never cache across mounts.
-- Save: emit `Events.emit('settings:model:update', { modelId, key, value })` — `projectService` debounces + atomically writes `project.json` via `updateProjectJson()`.
-- Never call `setModelSettings()` directly from a control; never write `project.json` directly.
+- Storage path: `project.modelSettings[modelId].operations[scope].<controlId>` — `scope` resolves to `'shared'` or the op key.
+- Recall: `_readSaved(this, opts)` on every `mount()` (it wraps `getOpSettings`). Never cache across mounts.
+- Save: `_emitUpdate(this, opts, controlId, v)` — wraps `Events.emit('settings:model:update', { modelId, opName, key, value })`. `projectService` debounces + atomically writes `project.json` via `updateProjectJson()`.
+- Never call `setModelSettings` / `setOpSettings` directly from a control; never write `project.json` directly.
 - Clamp + coerce both on save (in `change` handler) AND on recall (in `mount`), since persisted values may be from older builds with different ranges.
+- Model-wide values (`loras`, `upscaleModel`) live at `modelSettings[modelId]` top level and bypass the `operations` bucket. Only `MpiModelSettings` writes them; emit `{ modelId, key, value }` (no `opName`) — projectService's back-compat guard routes those to the model bucket.
 
 **Operation-level vs payload-level signals:** most controls flow through `getInjectionParams()` → merged into `injectionParams` → `commandExecutor._buildParams()` → ComfyUI. Exception: `previewStage` exposes itself through `el.getRunPayload().previewOnly` because the executor needs the flag *before* params merge (to select capture-title filter). Default to the standard `getInjectionParams()` path unless executor needs out-of-band knowledge.
 
@@ -209,9 +212,9 @@ controlId: {
 |-------------------|--------------------|-----------|----------------|---------------|--------------|----------------|---------------------|-------------|
 | `t2i`             | Text to Image      | image     | 0              | —             | —            | yes            | `['ratio','batch']` | active      |
 | `i2i`             | Image to Image     | image     | 1              | —             | —            | yes            | `['ratio','batch']` | active      |
-| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | `['useGrid','upscaleFactor','denoise']`                      | active      |
+| `upscale`         | Upscale            | image     | 1              | —             | —            | no             | `['useGrid','upscaleFactor','denoise']` (denoise default 0.20 via `defaults`) | active      |
 | `edit`            | Edit               | image     | 1              | —             | —            | yes            | (none)              | active      |
-| `detail`          | Detail             | image     | 1              | —             | true         | yes            | (none)              | active      |
+| `detail`          | Detail             | image     | 1              | —             | true         | yes            | `['denoise']` (default 0.30 via `defaults`) | active      |
 | `change`          | Change             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `remove`          | Remove             | image     | 1              | —             | true         | yes            | (none)              | active      |
 | `t2v`             | Text to Video      | video     | 0              | —             | —            | yes            | `['ratio','duration']`                                       | active      |

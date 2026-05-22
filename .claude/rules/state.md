@@ -65,10 +65,26 @@ Server routes that modify `project.json` MUST use `updateProjectJson()` in `rout
 `projectService` is the **sole writer** to `modelSettings` and `toolSettings` in `project.json`. Components must **not** directly call `setModelSettings`, `setToolSettings`, or `saveProjectSettings` for these fields.
 
 **Instead, emit:**
-- `settings:model:update` `{ modelId, key, value }` — to queue a partial model setting write
+- `settings:model:update` `{ modelId, opName?, key, value }` — partial model setting write. `opName` selects the bucket under `modelSettings[modelId].operations` (`'shared'` for cross-op state, an op key like `'upscale'` or `'detail'` for per-op state). Omit `opName` ONLY for model-wide keys (`loras`, `upscaleModel`); projectService routes those to the model top level.
 - `settings:tool:update` `{ toolKey, key, value }` — to queue a partial tool setting write
 - `settings:model:select` `{ modelId }` — when a model is first selected (ensures key exists)
 - `settings:tool:select` `{ toolKey }` — when a tool is first opened (ensures key exists)
+
+**`modelSettings[modelId]` shape:**
+```
+{
+  loras: Array | { high: [], low: [] },  // model-wide
+  upscaleModel: string | null,            // model-wide
+  operations: {
+    shared:   { ratioSelector, batch, duration, motionIntensity, previewStage, qualityTier-via-ratioSelector },
+    upscale:  { denoise, useGrid, upscaleFactor },
+    detail:   { denoise },
+    // ... per-op buckets created on first write
+  }
+}
+```
+
+PromptBoxControls own the scope decision via their `scope: 'shared' | 'perOp'` field. See `.claude/rules/component-comfy.md` § "Persistence scope" + "PromptBoxControl Protocol" for the full pattern.
 
 ---
 

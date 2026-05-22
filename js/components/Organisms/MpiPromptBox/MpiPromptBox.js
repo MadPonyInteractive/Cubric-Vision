@@ -792,7 +792,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 opSlot.appendChild(ctrlEl);
 
                 try {
-                    ctrl.mount(ctrlEl, { model });
+                    ctrl.mount(ctrlEl, { model, opName: activeOperation });
                     _activeControls.set(componentId, ctrl);
                 } catch (err) {
                     clientLogger.error('PromptBox', `Control "${componentId}" mount failed`, err);

@@ -233,7 +233,7 @@ EMITS:   `saved` `{}`
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — emitted in `el.open()` when opened for a model
          `settings:tool:select`  `{ toolKey }`  — emitted in `el.open()` when opened for a tool
-         `settings:model:update` `{ modelId, key, value }` — loras + upscaleModel on _autoSave
+         `settings:model:update` `{ modelId, key, value }` — loras + upscaleModel on _autoSave (no `opName`: projectService routes to the model-wide bucket)
          `settings:tool:update`  `{ toolKey, key, value }` — upscaleModel on _autoSave
 LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
          `ui:error` emitted on save failure via `Events.emit`
@@ -278,7 +278,7 @@ EMITS:   `change`        `{ value: 1|2|3|4 }` — batch size pick
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `instance.el.getValue()` → `1|2|3|4`
 NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch']`.
-         Persists as `modelSettings[modelId].batch` via `settings:model:update`.
+         Persists as `modelSettings[modelId].operations.shared.batch` via `settings:model:update` with `opName: 'shared'`.
          Injects workflow param `Batch_Size` (ComfyUI node title "Batch_Size", MpiInt.inputs.int).
          N outputs → N cards in gallery; N placeholders shown from generation start.
 
@@ -440,7 +440,7 @@ EMITS:   `input`            `{ positive: string, negative: string, activeMode: '
          `settings`         `{ model: ModelDef }`
 GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:select` `{ modelId }` — on model dropdown change (ensures modelSettings key exists)
-         `settings:model:update` `{ modelId, key, value }` — from PromptBoxControls: ratio/orientation/quality, batch, previewStage, duration, motionIntensity (not generation mode)
+         `settings:model:update` `{ modelId, opName, key, value }` — from PromptBoxControls. `opName` resolved from each control's `scope`: `'shared'` (ratio/orientation/quality, batch, previewStage, duration, motionIntensity) or the active op key (denoise, useGrid, upscaleFactor). Never includes generation mode.
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
          `state:changed` — updates Cue button label on `generationQueueCount` change; re-renders Cue/Loop label on `loopArmed` change

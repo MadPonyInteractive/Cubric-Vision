@@ -40,6 +40,9 @@ export const MEDIA_TYPE = Object.freeze({
  *                                              into MpiPromptBox's operation slot.
  *                                              Each ID maps to a component in js/components/.
  *                                              e.g. ['upscale'] or ['maskStrength'] or [] (none)
+ * @property {Object}          [defaults]     - Per-control default override map, keyed by control id.
+ *                                              Controls with scope:'perOp' look here first, then fall
+ *                                              back to their own `defaultValue`. e.g. { denoise: 0.30 }
  */
 
 /**
@@ -84,6 +87,7 @@ export const commands = {
         ],
         promptRequired: false,
         components: ['useGrid', 'upscaleFactor', 'denoise'],
+        defaults: { denoise: 0.20 },
     },
     edit: {
         label: 'Edit',
@@ -104,7 +108,8 @@ export const commands = {
         ],
         requiresMask: true,
         promptRequired: true,
-        components: [],
+        components: ['denoise'],
+        defaults: { denoise: 0.30 },
     },
     change: {
         label: 'Change',
@@ -373,6 +378,19 @@ export function getCommandMediaInputs(key) {
  */
 export function getCommandComponents(key) {
     return commands[key]?.components ?? [];
+}
+
+/**
+ * Returns the per-control default-override value for an op. Used by controls
+ * with scope:'perOp' so the same control (e.g. denoise) can ship different
+ * defaults across ops (upscale=0.20, detail=0.30) without per-op control
+ * definitions.
+ * @param {string} key
+ * @param {string} controlId
+ * @returns {*|undefined}
+ */
+export function getCommandDefault(key, controlId) {
+    return commands[key]?.defaults?.[controlId];
 }
 
 /**

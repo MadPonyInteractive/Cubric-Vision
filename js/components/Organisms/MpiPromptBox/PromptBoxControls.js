@@ -16,9 +16,48 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../state.js';
-import { getModelSettings } from '../../../data/projectModel.js';
+import { getOpSettings } from '../../../data/projectModel.js';
+import { getCommandDefault } from '../../../data/commandRegistry.js';
 import { Events } from '../../../events.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
+
+// ── Scope helpers ─────────────────────────────────────────────────────────────
+//
+// Controls declare `scope: 'shared' | 'perOp'`. The resolver picks the bucket
+// under modelSettings[modelId].operations:
+//   'shared' → operations.shared
+//   'perOp'  → operations[opName]
+// `opName` is provided by MpiPromptBox via mount opts. If a perOp control mounts
+// without an opName (legacy/demo), it falls back to 'shared' so it still works.
+
+function _bucketFor(ctrl, opts) {
+    if (ctrl.scope === 'perOp' && opts.opName) return opts.opName;
+    return 'shared';
+}
+
+function _readSaved(ctrl, opts) {
+    if (!state.currentProject || !opts.model?.id) return {};
+    return getOpSettings(state.currentProject, opts.model.id, _bucketFor(ctrl, opts));
+}
+
+function _resolveDefault(ctrl, controlId, opts) {
+    if (ctrl.scope === 'perOp' && opts.opName) {
+        const opDefault = getCommandDefault(opts.opName, controlId);
+        if (opDefault !== undefined) return opDefault;
+    }
+    return ctrl.defaultValue;
+}
+
+function _emitUpdate(ctrl, opts, key, value) {
+    const modelId = opts.model?.id;
+    if (!modelId) return;
+    Events.emit('settings:model:update', {
+        modelId,
+        opName: _bucketFor(ctrl, opts),
+        key,
+        value,
+    });
+}
 
 /** @type {Record<string, ControlDef>} */
 export const PROMPT_BOX_CONTROLS = {
@@ -35,6 +74,7 @@ export const PROMPT_BOX_CONTROLS = {
      */
     qualityTier: {
         nodeTitle: null,
+        scope: 'shared',
         defaultValue: 'medium',
         mount(el, opts = {}) {
             const model = opts.model || {};
@@ -49,7 +89,7 @@ export const PROMPT_BOX_CONTROLS = {
                 return;
             }
 
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const initialTier = saved.ratioSelector?.qualityTier || this.defaultValue;
             const initialRatio = saved.ratioSelector?.selectedRatio || '1:1';
             this.value = initialTier;
@@ -63,13 +103,7 @@ export const PROMPT_BOX_CONTROLS = {
 
             this._instance.on('change', ({ qualityTier }) => {
                 this.value = qualityTier;
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'ratioSelector',
-                        value: { qualityTier },
-                    });
-                }
+                _emitUpdate(this, opts, 'ratioSelector', { qualityTier });
                 // Notify sibling ratio control to re-render its ratio set.
                 Events.emit('ratio:quality-change', { modelId, qualityTier });
             });
@@ -99,6 +133,7 @@ export const PROMPT_BOX_CONTROLS = {
      */
     ratio: {
         nodeTitle: null, // not a single node; Width+Height injected separately
+        scope: 'shared',
         defaultValue: '1:1',
         mount(el, opts = {}) {
             const model = opts.model || {};
@@ -106,7 +141,7 @@ export const PROMPT_BOX_CONTROLS = {
             const modelId = model.id;
 
             // Read persisted settings from project
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const savedRatioSettings = saved.ratioSelector || {};
             const initialOrientation = savedRatioSettings.orientation || 'portrait';
             const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
@@ -125,13 +160,7 @@ export const PROMPT_BOX_CONTROLS = {
             // Ratio selection: update displayed size + queue save via projectService
             this._instance.on('change', ({ value, w, h, orientation }) => {
                 this.value = { label: value, w, h };
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'ratioSelector',
-                        value: { selectedRatio: value, orientation },
-                    });
-                }
+                _emitUpdate(this, opts, 'ratioSelector', { selectedRatio: value, orientation });
                 // Notify sibling quality control so its per-tier resolution
                 // info reflects the newly selected ratio label.
                 Events.emit('ratio:selection-change', { modelId, selectedRatio: value });
@@ -139,12 +168,7 @@ export const PROMPT_BOX_CONTROLS = {
 
             // Orientation change: queue save via projectService
             this._instance.on('orientation_change', ({ orientation }) => {
-                if (!modelId) return;
-                Events.emit('settings:model:update', {
-                    modelId,
-                    key: 'ratioSelector',
-                    value: { orientation },
-                });
+                _emitUpdate(this, opts, 'ratioSelector', { orientation });
             });
 
             // External quality control (qualityTier entry) drives this ratio
@@ -201,12 +225,10 @@ export const PROMPT_BOX_CONTROLS = {
      */
     previewStage: {
         nodeTitle: null,
+        scope: 'shared',
         defaultValue: false,
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const initialActive = saved.previewStage === true;
             this.value = initialActive;
 
@@ -221,13 +243,7 @@ export const PROMPT_BOX_CONTROLS = {
 
             this._instance.on('click', ({ active }) => {
                 this.value = !!active;
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'previewStage',
-                        value: !!active,
-                    });
-                }
+                _emitUpdate(this, opts, 'previewStage', !!active);
             });
         },
         getValue() {
@@ -240,12 +256,10 @@ export const PROMPT_BOX_CONTROLS = {
 
     batch: {
         nodeTitle: 'Batch_Size',
+        scope: 'shared',
         defaultValue: '1',
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const savedNum = Number(saved.batch ?? 1);
             const initialValue = String(Number.isFinite(savedNum) ? Math.min(4, Math.max(1, savedNum)) : 1);
 
@@ -262,13 +276,7 @@ export const PROMPT_BOX_CONTROLS = {
 
             this._instance.on('change', ({ value }) => {
                 this.value = value;
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'batch',
-                        value: parseInt(value, 10),
-                    });
-                }
+                _emitUpdate(this, opts, 'batch', parseInt(value, 10));
             });
         },
         getValue() {
@@ -290,12 +298,10 @@ export const PROMPT_BOX_CONTROLS = {
      */
     duration: {
         nodeTitle: 'Duration',
+        scope: 'shared',
         defaultValue: 5,
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const savedNum = Number(saved.duration ?? this.defaultValue);
             const initial = Number.isFinite(savedNum) ? Math.min(30, Math.max(1, Math.round(savedNum))) : this.defaultValue;
             this.value = initial;
@@ -341,13 +347,7 @@ export const PROMPT_BOX_CONTROLS = {
                 const v = Math.min(30, Math.max(1, Math.round(value)));
                 this.value = v;
                 _renderLabel(v);
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'duration',
-                        value: v,
-                    });
-                }
+                _emitUpdate(this, opts, 'duration', v);
             });
         },
         getValue() {
@@ -367,12 +367,10 @@ export const PROMPT_BOX_CONTROLS = {
      */
     motionIntensity: {
         nodeTitle: 'Motion_Intensity',
+        scope: 'shared',
         defaultValue: 0,
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const savedNum = Number(saved.motionIntensity ?? this.defaultValue);
             const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
             this.value = initial;
@@ -420,13 +418,7 @@ export const PROMPT_BOX_CONTROLS = {
                 const v = Math.min(1, Math.max(0, Number(value) || 0));
                 this.value = v;
                 _renderLabel(v);
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'motionIntensity',
-                        value: v,
-                    });
-                }
+                _emitUpdate(this, opts, 'motionIntensity', v);
             });
         },
         getValue() {
@@ -445,12 +437,10 @@ export const PROMPT_BOX_CONTROLS = {
      */
     useGrid: {
         nodeTitle: 'Auto_Grid',
+        scope: 'perOp',
         defaultValue: false,
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
+            const saved = _readSaved(this, opts);
             const initialActive = saved.useGrid === true;
             this.value = initialActive;
 
@@ -467,13 +457,7 @@ export const PROMPT_BOX_CONTROLS = {
 
             this._instance.on('click', ({ active }) => {
                 this.value = !!active;
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'useGrid',
-                        value: !!active,
-                    });
-                }
+                _emitUpdate(this, opts, 'useGrid', !!active);
             });
         },
         getValue() {
@@ -491,15 +475,14 @@ export const PROMPT_BOX_CONTROLS = {
      */
     upscaleFactor: {
         nodeTitle: 'Upscale_Factor',
+        scope: 'perOp',
         defaultValue: 2,
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
-            const savedNum = Number(saved.upscaleFactor ?? this.defaultValue);
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'upscaleFactor', opts);
+            const savedNum = Number(saved.upscaleFactor ?? fallback);
             const allowed = [1.5, 2, 3, 4];
-            const initial = allowed.includes(savedNum) ? savedNum : this.defaultValue;
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
             this.value = initial;
 
             hostEl.className = 'mpi-prompt-box__slider-control';
@@ -534,13 +517,7 @@ export const PROMPT_BOX_CONTROLS = {
                 const v = Number(value);
                 if (!allowed.includes(v)) return;
                 this.value = v;
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'upscaleFactor',
-                        value: v,
-                    });
-                }
+                _emitUpdate(this, opts, 'upscaleFactor', v);
             });
         },
         getValue() {
@@ -553,20 +530,20 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
-     * denoise — Denoise strength slider (float, 0..1, step 0.01) for model-tied `upscale` op.
-     * Injects float into node titled "Denoise". Persists per-model under
-     * modelSettings[modelId].denoise.
+     * denoise — Denoise strength slider (float, 0..1, step 0.01) for per-op use.
+     * Currently driven by `upscale` (default 0.20) and `detail` (default 0.30).
+     * Injects float into node titled "Denoise". Persists per-op under
+     * modelSettings[modelId].operations[opName].denoise.
      */
     denoise: {
         nodeTitle: 'Denoise',
-        defaultValue: 0.2,
+        scope: 'perOp',
+        defaultValue: 0.2, // fallback only; per-op override via commandRegistry.commands[op].defaults
         mount(hostEl, opts = {}) {
-            const model = opts.model || {};
-            const modelId = model.id;
-
-            const saved = state.currentProject ? getModelSettings(state.currentProject, modelId) : {};
-            const savedNum = Number(saved.denoise ?? this.defaultValue);
-            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'denoise', opts);
+            const savedNum = Number(saved.denoise ?? fallback);
+            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : fallback;
             this.value = initial;
 
             hostEl.className = 'mpi-prompt-box__slider-control';
@@ -612,13 +589,7 @@ export const PROMPT_BOX_CONTROLS = {
                 const v = Math.min(1, Math.max(0, Number(value) || 0));
                 this.value = v;
                 _renderLabel(v);
-                if (modelId) {
-                    Events.emit('settings:model:update', {
-                        modelId,
-                        key: 'denoise',
-                        value: v,
-                    });
-                }
+                _emitUpdate(this, opts, 'denoise', v);
             });
         },
         getValue() {

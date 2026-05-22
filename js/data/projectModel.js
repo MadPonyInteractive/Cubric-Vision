@@ -321,24 +321,37 @@ export function createDefaultLoras(modelId) {
 /**
  * Returns the model settings for a given modelId on the project.
  * Returns a default if no entry exists yet (does not mutate the project).
+ *
+ * Shape:
+ *   { loras, upscaleModel, operations: { shared: {...}, [opName]: {...} } }
+ *
+ * `loras` and `upscaleModel` are model-wide. All operation-scoped values
+ * (denoise, ratioSelector, batch, etc.) live under `operations` — shared
+ * across-op state under `operations.shared`, op-specific state under
+ * `operations[opName]`. See PromptBoxControls.js `scope` field.
+ *
  * @param {Project} project
  * @param {string} modelId
- * @returns {{ loras: Array|Object, upscaleModel: string|null, ratioSelector: { selectedRatio?: string, orientation?: string, qualityTier?: string } }}
+ * @returns {{ loras: Array|Object, upscaleModel: string|null, operations: Object }}
  */
 export function getModelSettings(project, modelId) {
     return (project.modelSettings ?? {})[modelId] ?? {
         loras: createDefaultLoras(modelId),
         upscaleModel: null,
-        ratioSelector: {},
+        operations: {},
     };
 }
 
 /**
  * Returns a new project with updated model settings for the given modelId.
- * Does not mutate the original. Properly deep-merges nested objects like ratioSelector.
+ * Does not mutate the original.
+ *
+ * Intended for model-wide writes (loras, upscaleModel). For per-op or shared
+ * operation state, use `setOpSettings` instead.
+ *
  * @param {Project} project
  * @param {string} modelId
- * @param {{ loras?: Array|Object, upscaleModel?: string|null, ratioSelector?: Object }} updates
+ * @param {{ loras?: Array|Object, upscaleModel?: string|null, operations?: Object }} updates
  * @returns {Project}
  */
 export function setModelSettings(project, modelId, updates) {
@@ -351,7 +364,58 @@ export function setModelSettings(project, modelId, updates) {
             [modelId]: {
                 ...current,
                 ...updates,
-                ratioSelector: { ...current.ratioSelector, ...updates.ratioSelector },
+            },
+        },
+    };
+}
+
+/**
+ * Returns the per-op (or shared) settings bucket for a given model+op.
+ * @param {Project} project
+ * @param {string}  modelId
+ * @param {string}  opName  - Operation key from commandRegistry (e.g. 'upscale', 'detail') or 'shared'
+ * @returns {Object}
+ */
+export function getOpSettings(project, modelId, opName) {
+    const model = (project.modelSettings ?? {})[modelId];
+    return model?.operations?.[opName] ?? {};
+}
+
+/**
+ * Returns a new project with the per-op (or shared) settings bucket merged for
+ * a given model+op. Does not mutate the original. Deep-merges sub-objects one
+ * level (e.g. ratioSelector field merge).
+ * @param {Project} project
+ * @param {string}  modelId
+ * @param {string}  opName
+ * @param {Object}  updates
+ * @returns {Project}
+ */
+export function setOpSettings(project, modelId, opName, updates) {
+    const model = getModelSettings(project, modelId);
+    const operations = model.operations ?? {};
+    const currentOp = operations[opName] ?? {};
+
+    const mergedOp = { ...currentOp };
+    for (const [k, v] of Object.entries(updates)) {
+        if (v && typeof v === 'object' && !Array.isArray(v) && currentOp[k] && typeof currentOp[k] === 'object') {
+            mergedOp[k] = { ...currentOp[k], ...v };
+        } else {
+            mergedOp[k] = v;
+        }
+    }
+
+    return {
+        ...project,
+        updatedAt: new Date().toISOString(),
+        modelSettings: {
+            ...project.modelSettings,
+            [modelId]: {
+                ...model,
+                operations: {
+                    ...operations,
+                    [opName]: mergedOp,
+                },
             },
         },
     };

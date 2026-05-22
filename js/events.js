@@ -152,7 +152,11 @@ export const Events = new EventBus();
  * Settings events (emitted by UI components, consumed by projectService):
  * 'settings:model:select' { modelId: string }                      — model first selected, create key with defaults if missing
  * 'settings:tool:select'  { toolKey: string }                      — tool first selected, create key with defaults if missing
- * 'settings:model:update' { modelId: string, key: string, value: any } — partial model setting update (queued + debounced)
+ * 'settings:model:update' { modelId: string, opName?: string, key: string, value: any }
+ *                                                                  — partial setting update (queued + debounced).
+ *                                                                    `opName` selects the per-op or 'shared' bucket under
+ *                                                                    modelSettings[modelId].operations. Omit `opName` only
+ *                                                                    for model-wide keys (loras, upscaleModel).
  * 'settings:tool:update'  { toolKey: string,  key: string, value: any } — partial tool setting update (queued + debounced)
  *
  * Media events:

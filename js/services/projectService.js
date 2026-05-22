@@ -16,6 +16,7 @@ import {
     removeGroupFromProject,
     getModelSettings,
     setModelSettings,
+    setOpSettings,
     getToolSettings,
     setToolSettings,
 } from '../data/projectModel.js';
@@ -49,7 +50,9 @@ function _debouncedSaveProjectSettings() {
 
 // ── Settings event queue ───────────────────────────────────────────────────────
 
-// Per-model queues: Map<modelId, { timer: number|null, pending: Object }>
+// Per-model queues: Map<modelId, { timer, modelPending, opPending: Map<opName, Object> }>
+// `modelPending` accumulates model-wide writes (loras, upscaleModel).
+// `opPending` accumulates per-op / shared bucket writes.
 const _modelQueues = new Map();
 
 // Per-tool queues: Map<toolKey, { timer: number|null, pending: Object }>
@@ -57,14 +60,25 @@ const _toolQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
-function _enqueueModelUpdate(modelId, key, value) {
-    if (!_modelQueues.has(modelId)) _modelQueues.set(modelId, { timer: null, pending: {} });
+const _MODEL_WIDE_KEYS = new Set(['loras', 'upscaleModel']);
+
+function _enqueueModelUpdate(modelId, opName, key, value) {
+    if (!_modelQueues.has(modelId)) {
+        _modelQueues.set(modelId, { timer: null, modelPending: {}, opPending: new Map() });
+    }
     const q = _modelQueues.get(modelId);
 
-    // Deep-merge ratioSelector sub-keys; replace everything else
-    q.pending[key] = (key === 'ratioSelector')
-        ? { ...(q.pending[key] ?? {}), ...value }
-        : value;
+    if (opName) {
+        if (!q.opPending.has(opName)) q.opPending.set(opName, {});
+        const bucket = q.opPending.get(opName);
+        // Deep-merge object values one level (e.g. ratioSelector sub-keys);
+        // replace primitives/arrays.
+        bucket[key] = (value && typeof value === 'object' && !Array.isArray(value))
+            ? { ...(bucket[key] ?? {}), ...value }
+            : value;
+    } else {
+        q.modelPending[key] = value;
+    }
 
     clearTimeout(q.timer);
     q.timer = setTimeout(async () => {
@@ -78,10 +92,14 @@ function _enqueueModelUpdate(modelId, key, value) {
                     modelSettings: { ...state.currentProject.modelSettings, [modelId]: defaults },
                 };
             }
-            for (const [k, v] of Object.entries(q.pending)) {
+            for (const [k, v] of Object.entries(q.modelPending)) {
                 state.currentProject = setModelSettings(state.currentProject, modelId, { [k]: v });
             }
-            q.pending = {};
+            for (const [op, updates] of q.opPending) {
+                state.currentProject = setOpSettings(state.currentProject, modelId, op, updates);
+            }
+            q.modelPending = {};
+            q.opPending.clear();
             saveProjectSettings();
         } catch (err) {
             clientLogger.error('projectService', 'Failed to flush model queue', err);
@@ -143,8 +161,19 @@ const _settingsUnsubs = [
         };
         saveProjectSettings();
     }),
-    Events.on('settings:model:update', ({ modelId, key, value }) => {
-        _enqueueModelUpdate(modelId, key, value);
+    Events.on('settings:model:update', ({ modelId, opName, key, value }) => {
+        // Back-compat guard: legacy callers that omit `opName` and write a
+        // model-wide key (loras / upscaleModel) route to the model bucket;
+        // anything else without an explicit opName is a bug.
+        if (!opName) {
+            if (_MODEL_WIDE_KEYS.has(key)) {
+                _enqueueModelUpdate(modelId, null, key, value);
+            } else {
+                clientLogger.warn('projectService', `settings:model:update missing opName for non-model-wide key "${key}"`);
+            }
+            return;
+        }
+        _enqueueModelUpdate(modelId, opName, key, value);
     }),
     Events.on('settings:tool:update', ({ toolKey, key, value }) => {
         _enqueueToolUpdate(toolKey, key, value);

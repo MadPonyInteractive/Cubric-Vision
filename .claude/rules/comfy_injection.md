@@ -7,7 +7,7 @@
 
 **Title-based injection:** Target nodes exclusively by `_meta.title` (case-insensitive). Never hardcode node IDs. Use `filter` not `find` when locating nodes — multiple nodes can share a title.
 
-**Never edit workflow JSON.** Files under `comfy_workflows/` are owned by the user — read-only for agents. Do not add, rename, or rewire nodes there. If a new injection target is required, document the contract (title + expected `inputs.*` field) in this file and in `.claude/rules/component-comfy.md`, then ask the user to add the node. Agents only write injection params on the frontend side.
+**Never edit workflow JSON. EVER.** Files under `comfy_workflows/` are owned by the user — strict read-only for agents. Do not add, rename, rewire, or change baked default values in any node there. If a new injection target is required, document the contract (title + expected `inputs.*` field) in this file and in `.claude/rules/component-comfy.md`, then ask the user to author the node in the ComfyUI graph editor and re-export the API JSON. The same rule applies even when the change looks trivial (e.g. flipping a baked default value). Agents only write injection params on the frontend side.
 
 **Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
 
@@ -47,7 +47,7 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"Motion_Intensity"` | `inputs.float` | `MpiFloat` node — motion strength (0.0–1.0, step 0.01). Injected by PromptBox `motionIntensity` control on `i2v`, `i2v_ms`. |
 | `"Input_Image"` | `inputs.image` | Auto-uploaded by controller |
 | `"Input_Mask"` | `inputs.mask` | Auto-uploaded by controller |
-| `"Denoise"` | `inputs.denoise` / `inputs.value` | Denoising strength |
+| `"Denoise"` | `inputs.float` | Denoising strength. `MpiFloat` node injected by `denoise` PromptBoxControl on `upscale` (default 0.20) and `detail` (default 0.30). Per-op defaults declared via `commands[op].defaults.denoise` in `commandRegistry.js`; persisted under `modelSettings[modelId].operations[opName].denoise` so each op holds independent state. |
 | `"Steps"` | `inputs.steps` / `inputs.value` | Sampling steps |
 | `"Upscale_Model"` | `inputs.upscale_model` | Upscale model filename |
 | `"Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
