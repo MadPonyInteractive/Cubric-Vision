@@ -282,7 +282,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const _refreshPbGenerating = () => {
             let stage2Total = 0;
             _stage2BranchCounts.forEach(v => { stage2Total += v; });
-            const busy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0 || stage2Total > 0;
+            const galleryRunning = activeGenerations.listFor('gallery', null)
+                .some(e => e.status === 'running');
+            const busy = _continuingGroupIds.size > 0
+                || _queuedContinueGroupIds.size > 0
+                || stage2Total > 0
+                || galleryRunning;
             _pb?.el?.setGenerating?.(busy);
         };
 
@@ -976,6 +981,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
             _pb?.el?.show();
             _wirePromptBox(_pb);
+            // Restore Stop/Clear enabled state when remounting into a
+            // workspace that still has gallery-scoped jobs in flight (e.g.
+            // returning from history mid-video) or block-owned busy state
+            // (continue / queued-continue / stage2 branches).
+            _refreshPbGenerating();
         }
 
         // ── media:imported listener — registered unconditionally.

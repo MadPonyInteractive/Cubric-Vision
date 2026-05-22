@@ -14,6 +14,7 @@ import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
+import { activeGenerations } from '../../../services/activeGenerations.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -873,7 +874,13 @@ export const MpiPromptBox = ComponentFactory.create({
             clearBtn = null;
 
             // Idle reconcile — fresh mount must not show stale active flag.
-            if ((state.generationQueueCount || 0) === 0) isGenerating = false;
+            // Consult activeGenerations too: long-running jobs (e.g. video) can
+            // outlive the Cue queue depth, so depth=0 alone doesn't mean idle.
+            // Parent block may still re-assert setGenerating(true) post-mount
+            // for block-owned busy state (continue / stage2 branches).
+            const _anyRunning = activeGenerations.list().some(e => e.status === 'running');
+            if ((state.generationQueueCount || 0) === 0 && !_anyRunning) isGenerating = false;
+            else if (_anyRunning) isGenerating = true;
 
             const runHost   = document.createElement('div');
             const stopHost  = document.createElement('div');
