@@ -7,6 +7,7 @@
  *   POST /comfy/stop                — stop ComfyUI process
  *   POST /comfy/unload              — unload models / free memory
  *   POST /comfy/set-path            — set custom models root path
+ *   GET  /comfy/get-path            — read current custom models root path (from extra_model_paths.yaml)
  *   GET  /comfy/list-files          — list model files in a subdirectory
  *   POST /comfy/models/check        — check which models are installed on disk
  */
@@ -288,6 +289,21 @@ router.post('/comfy/set-path', async (req, res) => {
     } catch (err) {
         logger.error('comfy', 'set-path failed', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /comfy/get-path
+ * Returns: { success: true, path: string|null }
+ * Canonical custom models root, read from extra_model_paths.yaml.
+ */
+router.get('/comfy/get-path', async (_req, res) => {
+    try {
+        const customPath = await getCustomRoot();
+        res.json({ success: true, path: customPath || null });
+    } catch (err) {
+        logger.error('comfy', 'get-path failed', err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

@@ -122,12 +122,17 @@ export const MpiSettings = ComponentFactory.create({
                     if (value !== Storage.getComfyRootPath()) _setComfyPath(value);
                 });
 
+                // Hydrate from backend canonical store (extra_model_paths.yaml).
+                // localStorage can be empty when install ran in different session
+                // or got cleared; YAML on disk is source of truth.
+                _hydrateComfyPath(pathInst);
+
                 if (browseSlot) {
                     browseSlot.innerHTML = '';
                     const browseInst = MpiButton.mount(browseSlot, {
                         text: 'Browse',
                         variant: 'secondary',
-                        size: 'md',
+                        size: 'sm',
                         extraClasses: 'mpi-settings__browse-btn',
                     });
                     browseInst.on('click', async () => {
@@ -144,6 +149,24 @@ export const MpiSettings = ComponentFactory.create({
                         }
                     });
                 }
+            }
+        }
+
+        async function _hydrateComfyPath(pathInst) {
+            try {
+                const res = await fetch('/comfy/get-path');
+                const data = await res.json();
+                if (!data.success || !data.path) return;
+                const canonical = data.path;
+                const local = Storage.getComfyRootPath() || '';
+                if (canonical !== local) {
+                    Storage.setComfyRootPath(canonical);
+                    state.comfyRootPath = canonical;
+                    const field = qs('.mpi-input__field', pathInst.el);
+                    if (field) field.value = canonical;
+                }
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] hydrate comfy path failed', err);
             }
         }
 

@@ -184,3 +184,9 @@
     flex: 1;
 }
 
+/* Browse button — match MpiInput field height (0.6rem + t-sm + 0.6rem + 2px border). */
+.mpi-settings__browse-btn.mpi-btn {
+    padding: 0.6rem 1rem;
+    font-size: var(--t-sm);
+}
+
