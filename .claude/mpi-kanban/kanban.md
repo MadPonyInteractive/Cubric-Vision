@@ -182,15 +182,37 @@
 
 ## IMPLEMENTING
 
+### Add missing prompt box parameters for individual operations.
+
+  - tags: [feature]
+  - priority: high
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Ongoing task managed by the developer cooperating with agents
+
+    2026-05-22: Restructured `modelSettings[modelId]` to nest per-op state
+    under `operations.{shared, [opName]}`. PromptBoxControls now declare
+    `scope: 'shared' | 'perOp'`. Added `denoise` control to `detail` op
+    (default 0.30 via `commands[op].defaults`), independent from `upscale`
+    denoise (default 0.20). Adds a clean path for future per-op controls
+    without key collisions. Rule files updated (state, component-state,
+    component-events, component-comfy, comfy_injection). Memory entry
+    added enforcing the workflow-JSON read-only rule.
+    ```
+
+## COMPLETED
+
 ### Model Manager slide-over and zero-model gating
 
   - tags: [PLAN, models, ux, install]
   - priority: high
-  - defaultExpanded: true
+  - defaultExpanded: false
     ```md
     Plan file: docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md
 
-    Code complete 2026-05-22 (manual install test pending — see below).
+    Completed 2026-05-22 (code). Phase 6 manual install test deferred to the
+    cross-platform portable distribution session — see below.
 
     Shipped:
     - NEW MpiModelManager (Compound, slide-over content) at
@@ -228,27 +250,6 @@
     → PromptBox unlocks → generate one image → restart persistence. Distinguish
     download-path vs seeded-file-resync path in final notes.
     ```
-
-### Add missing prompt box parameters for individual operations.
-
-  - tags: [feature]
-  - priority: high
-  - workload: Normal
-  - defaultExpanded: false
-    ```md
-    Ongoing task managed by the developer cooperating with agents
-
-    2026-05-22: Restructured `modelSettings[modelId]` to nest per-op state
-    under `operations.{shared, [opName]}`. PromptBoxControls now declare
-    `scope: 'shared' | 'perOp'`. Added `denoise` control to `detail` op
-    (default 0.30 via `commands[op].defaults`), independent from `upscale`
-    denoise (default 0.20). Adds a clean path for future per-op controls
-    without key collisions. Rule files updated (state, component-state,
-    component-events, component-comfy, comfy_injection). Memory entry
-    added enforcing the workflow-JSON read-only rule.
-    ```
-
-## COMPLETED
 
 ### Remove local LLM / LLaMA runtime before release
 
