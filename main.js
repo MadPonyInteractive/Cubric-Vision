@@ -6,9 +6,26 @@ const { fork } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 
+const APP_CONFIG = loadAppConfig();
+
 // Mask layer TEMP store — session-scoped, cleared on quit, stale dirs pruned at boot.
 const SESSION_ID = randomUUID();
 const MASK_TEMP_ROOT = path.join(app.getPath('temp'), 'cubric-' + SESSION_ID);
+
+function loadAppConfig() {
+  const fallback = { dev_mode: false };
+  try {
+    const source = fs.readFileSync(path.join(__dirname, 'dev_configs', 'app_config.js'), 'utf8');
+    const devMode = source.match(/\bdev_mode\s*:\s*(true|false)\b/);
+    return {
+      ...fallback,
+      dev_mode: devMode ? devMode[1] === 'true' : fallback.dev_mode,
+    };
+  } catch (err) {
+    logger.warn('main', `Failed to read app_config.js; dev_mode=false (${err.message})`);
+    return fallback;
+  }
+}
 
 function pruneStaleMaskTemp() {
   try {
@@ -233,6 +250,10 @@ function createWindow() {
 
   // Native Right-Click Context Menu for Cut/Copy/Paste + Spellcheck
   mainWindow.webContents.on('context-menu', (event, params) => {
+    if (!APP_CONFIG.dev_mode) {
+      return;
+    }
+
     const menu = new Menu();
 
     // Add spellcheck suggestions

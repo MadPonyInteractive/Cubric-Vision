@@ -1,7 +1,5 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-05-19T11:53:52.3712749+01:00",
-  "active_handoffs": [
-    ".agents/mpi-kanban/state/handoffs/d6cd2bcd-cd6a-4310-b65b-870397be4a5b.json"
-  ]
+  "updated_at": "2026-05-22T02:25:00.0000000+01:00",
+  "active_handoffs": []
 }

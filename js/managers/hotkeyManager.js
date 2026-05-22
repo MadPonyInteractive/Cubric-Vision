@@ -44,6 +44,8 @@ class HotkeyManager {
         this._handlers = new Map();
         this._cleanupDown = null;
         this._cleanupUp   = null;
+        this._cleanupPointer = null;
+        this._lastPointer = null;
     }
 
     /**
@@ -52,6 +54,9 @@ class HotkeyManager {
     init() {
         this._cleanupDown = on(window, 'keydown', (e) => this._handle(e, KEY_TYPE.DOWN), { capture: true });
         this._cleanupUp   = on(window, 'keyup',   (e) => this._handle(e, KEY_TYPE.UP),   { capture: true });
+        this._cleanupPointer = on(window, 'pointermove', (e) => {
+            this._lastPointer = { x: e.clientX, y: e.clientY };
+        }, { capture: true });
 
         // Built-in: fullscreen
         this.bind('system.fullscreen', () => {
@@ -62,6 +67,11 @@ class HotkeyManager {
         this.bind('devtools.toggle', () => {
             if (ipcRenderer) ipcRenderer.send('toggle-dev-tools');
         });
+
+        // Built-in: keyboard context menu. Dev mode leaves this unhandled so
+        // Electron can show its native Inspect Element menu.
+        this.bind('system.contextMenu', () => this._openContextMenuAtPointer());
+        this.bind('system.contextMenu.shiftF10', () => this._openContextMenuAtPointer());
     }
 
     /**
@@ -174,15 +184,59 @@ class HotkeyManager {
      */
     _normalizeKey(e) {
         const rawKey = e.key === ' ' ? 'space' : e.key.toLowerCase();
-        const isBareModifier = ['control', 'shift', 'alt', 'meta'].includes(rawKey);
-        if (isBareModifier) return rawKey;
+        const normalizedKey = rawKey === 'apps' ? 'contextmenu' : rawKey;
+        const isBareModifier = ['control', 'shift', 'alt', 'meta'].includes(normalizedKey);
+        if (isBareModifier) return normalizedKey;
 
         const parts = [];
         if (e.ctrlKey || e.metaKey) parts.push('control');
-        if (e.shiftKey && rawKey !== 'shift') parts.push('shift');
+        if (e.shiftKey && normalizedKey !== 'shift') parts.push('shift');
         if (e.altKey) parts.push('alt');
-        parts.push(rawKey);
+        parts.push(normalizedKey);
         return parts.join('+');
+    }
+
+    _openContextMenuAtPointer() {
+        const point = this._resolveContextMenuPoint();
+        const target = document.elementFromPoint(point.x, point.y);
+        if (!target) return;
+
+        target.dispatchEvent(new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: point.x,
+            clientY: point.y,
+            button: 2,
+            buttons: 0,
+        }));
+    }
+
+    _resolveContextMenuPoint() {
+        const point = this._lastPointer;
+        if (
+            point &&
+            point.x >= 0 &&
+            point.y >= 0 &&
+            point.x <= window.innerWidth &&
+            point.y <= window.innerHeight
+        ) {
+            return point;
+        }
+
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl !== document.body && typeof activeEl.getBoundingClientRect === 'function') {
+            const rect = activeEl.getBoundingClientRect();
+            return {
+                x: Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2)),
+                y: Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2)),
+            };
+        }
+
+        return {
+            x: Math.max(0, Math.floor(window.innerWidth / 2)),
+            y: Math.max(0, Math.floor(window.innerHeight / 2)),
+        };
     }
 }
 

@@ -39,6 +39,7 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 - `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array (used by MpiHelp).
 - F11 toggles native Electron fullscreen. On `enter-full-screen` / `leave-full-screen`, `windowControls.js` syncs `body.window-fullscreen`; CSS hides the custom titlebar and collapses `--titlebar-h` so the app fills the viewport.
 - Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
+- Context Menu / Shift+F10 opens the app context menu at the last hovered point when dev mode is off. In dev mode, the key is left to Electron so the native Inspect Element menu can open.
 - Focus gating treats only text-entry controls as typing (`TEXTAREA`, contenteditable, and text-like `INPUT` types such as `text`, `number`, `search`, `email`, `password`, date/time types). Non-text controls such as `input[type="range"]`, checkboxes, radios, and buttons may keep focus without blocking global hotkeys.
 
 ### Adding a hotkey

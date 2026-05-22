@@ -56,10 +56,6 @@ export const MpiHistoryList = ComponentFactory.create({
         let _selectedIdx = props.selectedIndex ?? 0;
         const _isVideo = props.isVideo ?? false;
         let _selectMode = false;
-        let _devMode = false; // default: show custom menu; true = allow native (dev inspect-element)
-        import('../../../../dev_configs/app_config.js')
-            .then(({ APP_CONFIG }) => { _devMode = APP_CONFIG.dev_mode ?? false; })
-            .catch(() => {});
         /** @type {Set<number>} */
         const _selection = new Set();
         let _anchor = 0;
@@ -195,7 +191,6 @@ export const MpiHistoryList = ComponentFactory.create({
             });
 
             card.addEventListener('contextmenu', (e) => {
-                if (_devMode) return;
                 e.preventDefault();
 
                 // Use existing selection if right-clicked card is part of it;

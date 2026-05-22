@@ -422,6 +422,26 @@ export const HOTKEY_REGISTRY = [
         when:             () => APP_CONFIG.dev_mode,
         allowWhileTyping: true,
     },
+    {
+        id:               'system.contextMenu',
+        key:              'contextmenu',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Open context menu',
+        when:             ({ isTyping }) => !APP_CONFIG.dev_mode && !isTyping,
+        allowWhileTyping: false,
+    },
+    {
+        id:               'system.contextMenu.shiftF10',
+        key:              'shift+f10',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Open context menu',
+        when:             ({ isTyping }) => !APP_CONFIG.dev_mode && !isTyping,
+        allowWhileTyping: false,
+    },
 ];
 
 /**
