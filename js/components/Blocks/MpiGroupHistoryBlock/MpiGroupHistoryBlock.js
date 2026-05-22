@@ -202,6 +202,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
+        function _downloadMaskDataURL(dataUrl, item) {
+            if (!dataUrl) return;
+            const base = String(item?.displayName || item?.operation || item?.id || 'mask')
+                .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+                .replace(/\s+/g, '_')
+                .slice(0, 80) || 'mask';
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `${base}_mask.png`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
         // ── Mount sub-components ──────────────────────────────────────────────
 
         const historyTools = MpiHistoryTools.mount(qs('#left-slot', el), { mode: modeKind });
@@ -240,6 +254,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             history: _group.history,
             selectedIndex: _currentIdx,
             isVideo,
+            hasMaskForIndex: async (idx) => {
+                if (isVideo) return false;
+                const item = _group.history[idx];
+                return !!(await viewer.el.hasMaskForEntry?.(item));
+            },
         });
 
         // ── Load initial entry (inlined per-kind) ─────────────────────────────
@@ -1015,6 +1034,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!item?.filePath) { _showToast('No source media', 'error'); return; }
             historyList.el.exitSelectMode();
             await _addItemToGallery(item, isVideo ? 'video' : 'image');
+        });
+
+        historyList.on('download-selected', ({ indices }) => {
+            const items = indices
+                .map(i => _group.history[i])
+                .filter(item => item?.filePath);
+            downloadMediaFiles(state.currentProject, items);
+            historyList.el.exitSelectMode();
+        });
+
+        historyList.on('download-mask', async ({ index }) => {
+            if (isVideo || typeof index !== 'number') return;
+            const item = _group.history[index];
+            if (!item) return;
+            const maskDataUrl = await viewer.el.getMaskDataURLForEntry?.(item);
+            if (!maskDataUrl) {
+                _showToast('No mask for this entry', 'warning');
+                return;
+            }
+            _downloadMaskDataURL(maskDataUrl, item);
+            historyList.el.exitSelectMode();
         });
 
         async function _runCombine(itemIds) {

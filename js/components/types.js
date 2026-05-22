@@ -732,6 +732,7 @@
  * @property {import('./data/projectModel.js').HistoryItem[]} [history=[]] - Initial history array
  * @property {number} [selectedIndex=0] - Initially active entry index
  * @property {boolean} [isVideo=false] - Disables Compare in context menu for video groups
+ * @property {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Per-entry mask availability check
  *
  * Instance methods (on instance.el):
  *   setActiveIndex(idx)          — highlight active card (no events)
@@ -747,6 +748,8 @@
  *   'selection-exited'  {}                              — select mode ended
  *   'delete-selected'   { indices }                     — delete from context menu
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
+ *   'download-selected' { indices }                     — download selected entries
+ *   'download-mask'     { index }                       — download single entry mask
  */
 
 /**
@@ -762,6 +765,8 @@
  *   enterMode(mode)               — enter 'crop'|'mask'|'automask' (or 'none' to exit all)
  *   exitMode()                    — exit any active tool mode
  *   getCurrentMaskDataURL()        — returns current mask as data URL, or null
+ *   getMaskDataURLForEntry(item)   — returns one entry's mask data URL, or null
+ *   hasMaskForEntry(item)          — resolves true when one entry has a mask
  *   hasMask()                     — returns boolean
  *   setGenerating(bool)            — show/hide generating spinner
  *

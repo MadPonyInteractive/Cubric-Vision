@@ -6,6 +6,7 @@
  * @param {import('../../../data/projectModel.js').HistoryItem[]} [history=[]] - Initial history array
  * @param {number} [selectedIndex=0] - Initially active entry index
  * @param {boolean} [isVideo=false] - Whether the group is a video group (disables Compare)
+ * @param {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Optional per-entry mask availability check
  *
  * Instance API (on el):
  *   el.setActiveIndex(idx)      — highlight active card (no events)
@@ -22,6 +23,8 @@
  *   'compare-requested' { indices: [number, number] } — compare action from context menu
  *   'combine-requested' { indices }                  — combine selected videos (video group, ≥2)
  *   'add-to-gallery'    { index }                    — add single selected entry to gallery
+ *   'download-selected' { indices }                  — download selected entries
+ *   'download-mask'     { index }                    — download single entry mask
  *   'reuse'             { positive, negative }       — reuse prompt button clicked on a card
  */
 
@@ -190,7 +193,7 @@ export const MpiHistoryList = ComponentFactory.create({
                 }
             });
 
-            card.addEventListener('contextmenu', (e) => {
+            card.addEventListener('contextmenu', async (e) => {
                 e.preventDefault();
 
                 // Use existing selection if right-clicked card is part of it;
@@ -202,15 +205,25 @@ export const MpiHistoryList = ComponentFactory.create({
                 const compareDisabled = targetIdxs.length !== 2;
                 const combineDisabled = !_isVideo || targetIdxs.length < 2;
                 const addToGalleryDisabled = targetIdxs.length !== 1;
+                const downloadMaskDisabled = _isVideo
+                    || targetIdxs.length !== 1
+                    || !(await props.hasMaskForIndex?.(targetIdxs[0]));
+                const items = [
+                    { key: 'compare',        icon: 'compare',  label: 'Compare',        disabled: compareDisabled },
+                ];
+                if (_isVideo) {
+                    items.push({ key: 'combine', icon: 'merge', label: 'Combine', disabled: combineDisabled });
+                }
+                items.push(
+                    { key: 'download',       icon: 'download', label: 'Download' },
+                    ...(_isVideo ? [] : [{ key: 'download-mask', icon: 'download', label: 'Download mask', disabled: downloadMaskDisabled }]),
+                    { key: 'add-to-gallery', icon: 'plus',     label: 'Add to gallery', disabled: addToGalleryDisabled },
+                    { key: 'delete',         icon: 'trash',    label: 'Delete',         danger: true },
+                );
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
-                    items: [
-                        { key: 'compare',        icon: 'compare', label: 'Compare',        disabled: compareDisabled },
-                        { key: 'combine',        icon: 'merge',   label: 'Combine',        disabled: combineDisabled },
-                        { key: 'add-to-gallery', icon: 'plus',    label: 'Add to gallery', disabled: addToGalleryDisabled },
-                        { key: 'delete',         icon: 'trash',   label: 'Delete',         danger: true },
-                    ],
+                    items,
                     onSelect: (key) => {
                         if (key === 'delete') {
                             emit('delete-selected', { indices: targetIdxs });
@@ -218,6 +231,10 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('compare-requested', { indices: targetIdxs });
                         } else if (key === 'combine') {
                             emit('combine-requested', { indices: targetIdxs });
+                        } else if (key === 'download') {
+                            emit('download-selected', { indices: targetIdxs });
+                        } else if (key === 'download-mask') {
+                            emit('download-mask', { index: targetIdxs[0] });
                         } else if (key === 'add-to-gallery') {
                             emit('add-to-gallery', { index: targetIdxs[0] });
                         }

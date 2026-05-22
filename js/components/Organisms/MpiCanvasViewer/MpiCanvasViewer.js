@@ -700,6 +700,23 @@ export const MpiCanvasViewer = ComponentFactory.create({
             return null;
         };
 
+        function _isCurrentEntry(item) {
+            return !!(item?.id && _currentItem?.id && item.id === _currentItem.id);
+        }
+
+        el.getMaskDataURLForEntry = async (item) => {
+            if (!item) return null;
+            if (_isCurrentEntry(item)) {
+                const liveMask = el.getCurrentMaskDataURL();
+                if (liveMask) return liveMask;
+            }
+            return await _buildCompositeFromTemp(item);
+        };
+
+        el.hasMaskForEntry = async (item) => {
+            return !!(await el.getMaskDataURLForEntry(item));
+        };
+
         // Live check: paint strokes don't flip _hasMask flag (only commit/evaluate
         // does). Radial menu picks during active paint saw stale false. Compute
         // from canvas pixels when available; fall back to flag for preview mode.
