@@ -198,18 +198,15 @@ export const MpiHistoryList = ComponentFactory.create({
                 if (_devMode) return;
                 e.preventDefault();
 
-                if (!_selection.has(idx)) {
-                    _exitSelectMode();
-                    _selection.add(idx);
-                    _anchor = idx;
-                    _selectMode = true;
-                    _applyCardStates();
-                    emit('selection-changed', { indices: [..._selection], anchor: _anchor });
-                }
+                // Use existing selection if right-clicked card is part of it;
+                // otherwise act on the right-clicked card alone WITHOUT entering
+                // selection mode (no visual selection, no state mutation).
+                const useSelection = _selection.has(idx) && _selection.size > 0;
+                const targetIdxs = useSelection ? [..._selection] : [idx];
 
-                const compareDisabled = _selection.size !== 2;
-                const combineDisabled = !_isVideo || _selection.size < 2;
-                const addToGalleryDisabled = _selection.size !== 1;
+                const compareDisabled = targetIdxs.length !== 2;
+                const combineDisabled = !_isVideo || targetIdxs.length < 2;
+                const addToGalleryDisabled = targetIdxs.length !== 1;
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
@@ -221,14 +218,13 @@ export const MpiHistoryList = ComponentFactory.create({
                     ],
                     onSelect: (key) => {
                         if (key === 'delete') {
-                            emit('delete-selected', { indices: [..._selection] });
+                            emit('delete-selected', { indices: targetIdxs });
                         } else if (key === 'compare') {
-                            emit('compare-requested', { indices: [..._selection] });
+                            emit('compare-requested', { indices: targetIdxs });
                         } else if (key === 'combine') {
-                            emit('combine-requested', { indices: [..._selection] });
+                            emit('combine-requested', { indices: targetIdxs });
                         } else if (key === 'add-to-gallery') {
-                            const idxs = [..._selection];
-                            emit('add-to-gallery', { index: idxs[0] });
+                            emit('add-to-gallery', { index: targetIdxs[0] });
                         }
                     },
                 });

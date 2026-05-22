@@ -681,18 +681,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
             cardEl.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
 
-                if (!_selectedIds.has(group.id)) {
-                    _replaceSelectionWith(group.id);
-                }
+                // Use existing selection if right-clicked card is part of it;
+                // otherwise act on the right-clicked card alone WITHOUT entering
+                // selection mode (no visual selection, no state mutation).
+                const useSelection = _selectedIds.has(group.id) && _selectedIds.size > 0;
+                const targetIds = useSelection ? Array.from(_selectedIds) : [group.id];
 
-                const compareDisabled = _selectedIds.size !== 2;
-                // Combine: ≥2 selected AND every selected group is a video group.
-                // Selection order preserved via _selectedIds Set insertion order
-                // — passed through el.getSelectionOrder() at handler time.
-                const _selectedVideoCount = Array.from(_selectedIds)
+                const compareDisabled = targetIds.length !== 2;
+                const _selectedVideoCount = targetIds
                     .map(id => _groups.find(g => g.id === id))
                     .filter(g => g && g.type === 'video').length;
-                const combineDisabled = _selectedIds.size < 2 || _selectedVideoCount !== _selectedIds.size;
+                const combineDisabled = targetIds.length < 2 || _selectedVideoCount !== targetIds.length;
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
@@ -703,17 +702,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'delete',   icon: 'trash',    label: 'Delete',   danger: true },
                     ],
                     onSelect: (key) => {
-                        // Use insertion-order id list to preserve chronological
-                        // click sequence for Combine output. Map → group objects.
-                        const orderedIds = Array.from(_selectedIds);
-                        const selected = orderedIds
+                        const selected = targetIds
                             .map(id => _groups.find(g => g.id === id))
                             .filter(Boolean);
                         if (key === 'compare')  emit('compare',  { groups: selected });
                         if (key === 'combine')  emit('combine',  { groups: selected });
                         if (key === 'download') emit('download', { groups: selected });
                         if (key === 'delete')   emit('delete',   { groups: selected });
-                        _exitSelectionMode();
+                        if (useSelection) _exitSelectionMode();
                     },
                 });
             });

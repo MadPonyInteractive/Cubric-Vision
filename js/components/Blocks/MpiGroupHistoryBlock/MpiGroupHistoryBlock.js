@@ -937,6 +937,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _options?.el?.setCurrentItem?.(item);
         });
 
+        historyList.on('reuse', ({ positive, negative }) => {
+            Events.emit('workspace:inject-prompts', { positive, negative });
+        });
+
         historyList.on('selection-changed', ({ indices }) => {
             _currentSelectionIndices = indices;
             if (!isVideo) viewer.el.setCompareEnabled?.(indices.length === 2);

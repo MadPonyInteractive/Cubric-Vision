@@ -147,7 +147,7 @@ NOTE:    `items` shape: `[{ key, icon?, label, kbd?, separator?, disabled?, dang
 
 ### MpiHistoryList
 EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
-         `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift/right-click updated selection (`indices` chronological — see API note)
+         `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift-click updated selection (`indices` chronological — see API note)
          `selection-exited`  `{}` — selection mode ended (count → 0)
          `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu
          `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
@@ -157,7 +157,7 @@ EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
 LISTENS: (none)
 API:     `el.setActiveIndex(idx)` · `el.setGroups(history)` · `el.appendEntry(item)` · `el.removeEntries(indices)` · `el.exitSelectMode()`
          `el.getSelectionOrder()` → `number[]` in chronological click order. Set insertion order alone is fragile across shift-range rebuilds (direction-aware walk in `_rangeSelect` keeps anchor first, target last). First shift-click without prior selection anchors at `_selectedIdx` (the currently-active entry), not at the stale default `_anchor = 0`.
-NOTE:    Selection: plain-click single-selects; ctrl/cmd-click first-time seeds anchor+selection from current active entry then toggles clicked; shift-click range-selects. Right-click on unselected entry replaces selection. Dev-mode gate: if `APP_CONFIG.dev_mode` truthy, skips `e.preventDefault()` on contextmenu so Electron inspect-element works. Selection-order numeric badge (`#N`) renders on each selected card when `_selection.size >= 2`; hidden below.
+NOTE:    Selection: plain-click single-selects; ctrl/cmd-click first-time seeds anchor+selection from current active entry then toggles clicked; shift-click range-selects. Right-click NEVER enters selection mode — context menu acts on existing selection if right-clicked card is in it, otherwise acts on right-clicked card alone (ephemeral target; `compare-requested`/`combine-requested`/`delete-selected`/`add-to-gallery` indices reflect that single card). Dev-mode gate: if `APP_CONFIG.dev_mode` truthy, skips `e.preventDefault()` on contextmenu so Electron inspect-element works. Selection-order numeric badge (`#N`) renders on each selected card when `_selection.size >= 2`; hidden below.
 
 ### MpiHistoryTools
 EMITS:   `activate` `{ mode: string }` — any mode change (user click or `setMode`). No `deactivate` event.
@@ -419,7 +419,7 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
 
          **Preview-stage delete:** there is no dedicated Discard button. Preview cards are removed via the normal multi-select Delete flow. The backend `DELETE /project-media/:id/:filename?itemId=...` route reads the sidecar before unlinking and, when `stage === 'preview'`, also drops `<projectMedia>/.latents/<itemId>.latent` plus any `<projectMedia>/.preview-assets/<itemId>/` snapshot folder.
 
-         **Preview-stage selection:** Preview cards participate in normal selection (shift / ctrl / right-click) just like any other gallery card. Only the bare-click "open into history" action is suppressed because previews stay on the gallery surface.
+         **Preview-stage selection:** Preview cards participate in normal selection (shift / ctrl-click) just like any other gallery card. Right-click opens the context menu without entering selection mode. Only the bare-click "open into history" action is suppressed because previews stay on the gallery surface.
 LISTENS: (none — internal MpiButton tab events handled internally)
 API:     `el.setStage2Count(groupId, n)` — write the small `xN` badge on a preview card reflecting how many branching Continue jobs are queued/running.
          `el.setPreviewAssetsWarning(groupId, state)` — write the warning badge on a preview card. `state` is `null` for clear; `{ mode: 'fallback', missing? }` renders an amber "Cold" badge (latent missing, stage-1 will rerun); `{ mode: 'blocked', missing? }` renders a red "Missing" badge and hides the Continue/Finish action row via a card CSS modifier. State Map is re-applied inside `_rerenderJustified` so debounced rebuilds don't drop badges.
