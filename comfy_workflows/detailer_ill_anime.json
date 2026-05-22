@@ -38,7 +38,10 @@
   },
   "29": {
     "inputs": {
-      "text": "",
+      "text": [
+        "1638",
+        0
+      ],
       "clip": [
         "1632",
         1
@@ -51,7 +54,10 @@
   },
   "30": {
     "inputs": {
-      "text": "",
+      "text": [
+        "1639",
+        0
+      ],
       "clip": [
         "1632",
         1
@@ -281,6 +287,24 @@
     "class_type": "MpiLoraModelClip",
     "_meta": {
       "title": "Lora_6"
+    }
+  },
+  "1638": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Negative"
     }
   }
 }
