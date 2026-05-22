@@ -39,7 +39,7 @@ import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMe
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
-import { MpiModelsModal } from '../components/Blocks/MpiModelsModal/MpiModelsModal.js';
+import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
@@ -854,7 +854,7 @@ function mountAll() {
         });
     });
 
-    // ── MpiModelsModal (Block) ─────────────────────────────────────────────
+    // ── MpiModelManager (Compound — slide-over content) ────────────────────
     mount('preview-models-modal-default', () => {
         const slotEl = slot('preview-models-modal-default');
 
@@ -864,19 +864,10 @@ function mountAll() {
             icon: 'download',
             label: 'Open Models',
             variant: 'primary',
-            info: 'Click to show MpiModelsModal — replaces the main area'
+            info: 'Opens the Models slide-over hosting MpiModelManager'
         });
 
-        const modal = MpiModelsModal.mount(document.createElement('div'), {
-            icon: 'download',
-            title: 'Model Manager',
-            text: 'Select a model pack to install. Required files will be fetched automatically.',
-            footer: 'Models are stored locally and never shared.',
-            closable: true
-        });
-
-        btn.on('click', () => modal.el.show());
-        modal.on('close', () => console.log('[gallery] MpiModelsModal closed'));
+        btn.on('click', () => Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager }));
     });
 
     // ── MpiErrorDialog (Compound) ────────────────────────────────────────────────

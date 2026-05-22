@@ -711,13 +711,6 @@ export const MpiPromptBox = ComponentFactory.create({
             }
         }
 
-        // Download manager (always available)
-        const downloadManagerBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'download', variant: 'ghost', size: 'sm', info: 'Open Download Manager',
-        });
-        downloadManagerBtn.on('click', () => Events.emit('models:open', {}));
-        modelSlot.appendChild(downloadManagerBtn.el);
-
         function _pickTextOnlyOp() {
             if (!model) return null;
             const cmds = getAvailableCommands(model.mediaType, model, _context);

@@ -137,7 +137,7 @@ Round to nearest token. When between sizes, prefer the smaller (Stage is dense, 
 | `96px` | `--t-3xl` | 96px |
 | `144px` | `--t-display` | 144px |
 
-**Note:** `2rem` and `1rem` in `MpiModelsModal`, `MpiModelSettings`, `MpiButton`, `MpiRadialMenu` map to `--t-xl` and `--t-md` respectively.
+**Note:** `2rem` and `1rem` in `MpiModelManager`, `MpiModelSettings`, `MpiButton`, `MpiRadialMenu` map to `--t-xl` and `--t-md` respectively.
 
 ---
 

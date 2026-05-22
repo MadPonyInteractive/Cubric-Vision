@@ -150,6 +150,24 @@
     Sequencing lock 2026-05-21: start after current app implementation work and
     hub readiness. After portable distribution is ready and tested, handle
     website/Patreon/social/docs release surfaces before public release.
+
+    Install + model verification (run AFTER this implementation):
+    The "Model Manager slide-over and zero-model gating" plan defers its
+    Phase 6 manual install/model session here to avoid a duplicate
+    large-download test pass. Once portable distribution is implemented, run
+    one combined fresh-install session:
+      1. clean portable app/user-data/engine state
+      2. first launch + engine install/repair
+      3. project page → confirm Models discoverable
+      4. empty/new project zero-model → Models slide-over auto-opens;
+         existing-media project zero-model → read-only, no PromptBox
+      5. install one model (or seed model files + UI refresh/resync)
+      6. confirm first installed model unlocks PromptBox/generation
+      7. generate one image
+      8. restart → installed-model detection persists
+    Note in final results whether the real download path or the seeded-file
+    resync path was exercised.
+    Source: docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md Phase 6.
     ```
 
 ### Madpony Patreon Revamp (User Action)
@@ -163,6 +181,53 @@
     ```
 
 ## IMPLEMENTING
+
+### Model Manager slide-over and zero-model gating
+
+  - tags: [PLAN, models, ux, install]
+  - priority: high
+  - defaultExpanded: true
+    ```md
+    Plan file: docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md
+
+    Code complete 2026-05-22 (manual install test pending — see below).
+
+    Shipped:
+    - NEW MpiModelManager (Compound, slide-over content) at
+      js/components/Compounds/LandingPages/MpiModelManager/. Owns cards,
+      refresh, install, pause/resume/cancel, uninstall confirm, all download:*
+      subs. el.onOpen() re-syncs; el.destroy() tears down. No overlay.
+    - DELETED js/components/Blocks/MpiModelsModal/ (block, 3 files).
+    - shell.js: models:open now re-emits slide-over:open{title:'Models',
+      component:MpiModelManager}. Removed modal singleton, _modelsModalAutoOpened,
+      models:closed + models:all-installed listeners.
+    - projectUI.js: added "Models" project-page nav action (first, before
+      Settings/Help/About), all via slide-over:open.
+    - Phase 3: removed PromptBox global download/model-manager icon. No
+      in-workspace model-manager entry point (project-page slide-over only).
+    - Phase 5 (option A): dropped models:closed entirely. Gallery mounts
+      PromptBox off s_installedModelIds state, not modal close. Zero-model
+      gate: empty/new project (itemGroups.length===0) auto-opens Models
+      slide-over; project WITH media opens read-only, no PromptBox. History
+      always read-only when zero models (re-resolves activeModel on install
+      so PromptBox can mount post-install).
+    - Dead-event cleanup: removed models:closed + models:all-installed from
+      events.js registry; removed the orphaned models:all-installed emit +
+      allInstalled block in modelRegistry.js (only consumer was deleted modal).
+    - Docs/rules drift: component-events, component-mounts, component-state,
+      workspaces rules + docs/workspaces.md + redesign/MAPPING.md updated.
+
+    Verification: eslint 0 errors across all touched files; no `npm run build`
+    script exists (vanilla ESM — lint is the static gate). Residual
+    MpiModelsModal/models:closed/all-installed matches are intentional code
+    comments, doc tombstones, and historical docs/plans|archive.
+
+    PENDING — Phase 6 manual install session (deferred, coordinate with
+    cross-platform portable distribution plan): fresh engine install →
+    Models discoverable → zero-model gate/read-only → install/seed one model
+    → PromptBox unlocks → generate one image → restart persistence. Distinguish
+    download-path vs seeded-file-resync path in final notes.
+    ```
 
 ### Add missing prompt box parameters for individual operations.
 

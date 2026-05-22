@@ -19,7 +19,7 @@ import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProject
 import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
-import { MpiModelsModal } from './components/Blocks/MpiModelsModal/MpiModelsModal.js';
+import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { getModelsByType } from './data/modelRegistry.js';
 
 // Shell Sub-modules
@@ -41,13 +41,6 @@ let _projectNameInstance = null;
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
 const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
 const _engineInstall = MpiEngineInstall.mount(document.createElement('div'));
-const _modelsModal = MpiModelsModal.mount(document.createElement('div'), {
-    icon: 'download',
-    title: 'Model Manager',
-    text: 'Select a model pack to install. Required files will be fetched automatically.',
-    footer: 'Models are stored locally and never shared.',
-    closable: true,
-});
 
 /**
  * Show a user-facing error dialog with an optional log download button.
@@ -201,17 +194,9 @@ async function _bootApp() {
   Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
-  // Show model manager when zero image models are installed
-  let _modelsModalAutoOpened = false;
-  Events.on('models:open', ({ auto = false } = {}) => {
-    _modelsModalAutoOpened = auto;
-    _modelsModal.el.show();
-  });
-  // Only auto-close when modal was opened by the system (zero-install gate), not by the user
-  Events.on('models:all-installed', () => { if (_modelsModalAutoOpened) _modelsModal.el.hide(); });
-  Events.on('models:closed', () => {
-      _modelsModalAutoOpened = false;
-      _modelsModal.el.hide();
+  // Model manager opens in the right slide-over (user-initiated or zero-install gate).
+  Events.on('models:open', () => {
+    Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
   });
 
   // ComfyUI Auto-start (optional)

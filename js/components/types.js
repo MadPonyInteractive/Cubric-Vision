@@ -555,24 +555,17 @@
  */
 
 /**
- * @typedef {Object} MpiModelsModalProps (Block — js/components/Blocks/MpiModelsModal)
- * @property {string}   [icon='download']               - MpiIcon registry key shown at top centre
- * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='xl'] - Icon size
- * @property {string}   [title='Install Models']     - Large title text
- * @property {string}   [text='']                    - Descriptive text above the content slot
- * @property {string}   [footer='']                   - Small text below the content slot
- * @property {boolean}  [closable=true]              - Show the X close button
+ * @typedef {Object} MpiModelManagerProps (Compound — js/components/Compounds/LandingPages/MpiModelManager)
  *
- * Self-owns a scrollable list of uninstalled models as MpiInstalledDisplay cards.
- * Install button per card triggers download + reSyncInstalledModels().
- * Shows automatically when state.s_installedModelIds.length === 0.
+ * Takes no props. Model-manager content for the MpiSlideOver panel — renders
+ * installed + available models as MpiInstalledDisplay cards and owns refresh,
+ * install, pause/resume/cancel, uninstall confirmation, and download:* subs.
+ *
+ * Opened via: Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager }).
  *
  * Instance methods (on instance.el):
- *   show()  — delegates to MpiOverlay; shows the overlay
- *   hide()  — delegates to MpiOverlay; hides the overlay
- *
- * Emits:
- * 'close' {} — X button clicked (forwarded from MpiOverlay)
+ *   onOpen()  — called by MpiSlideOver each time the panel opens; re-syncs installed state.
+ *   destroy() — tears down all subscriptions, card instances, and the uninstall dialog.
  */
 
 /**

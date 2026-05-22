@@ -139,10 +139,8 @@ export const Events = new EventBus();
  * 'engine:complete'       —                                        — engine install/upgrade complete
  * 'engine:error'          { error: string }                        — engine install/upgrade failed
  * 'engine:ready'          —                                        — engine is ready for use (emitted by shell after all checks)
- * 'models:open'           —                                        — models modal opened
- * 'models:closed'         —                                        — models modal closed
+ * 'models:open'           —                                        — open the Models slide-over (shell re-emits as slide-over:open)
  * 'models:checked'        { installedModelIds: string[] }          — model install state synced
- * 'models:all-installed'  —                                        — all models (any mediaType) installed AND no active downloads. Emitted ONLY by `modelRegistry.syncModelInstalled()` — do not emit elsewhere.
  *
  * Project events (emitted by ProjectService):
  * 'project:group-added'   { group: Object }                        — new group added and persisted

@@ -217,8 +217,8 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
 LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
          `ui:error` emitted on save failure via `Events.emit`
 
-### MpiModelsModal
-EMITS:   `close` `{}`
+### MpiModelManager (Compound — js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js)
+EMITS:   (none — does NOT emit `models:closed`; slide-over host emits its own close signal)
 LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders card list when install state changes
          `download:progress` `{ modelId, progress, speed, downloadedBytes, totalBytes }` — patches single card in place
          `download:started` `{ modelId }` — sets card to 'downloading' state
@@ -228,7 +228,11 @@ LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders card li
          `download:cancelled` `{ modelId }` — sets card to 'cancelled' state
          `download:complete` `{ modelId }` — calls awaitReSync() to fetch new install state
          `download:failed` `{ modelId }` — calls `awaitReSync()` to re-render list (no `ui:error` emitted)
+API:     `el.onOpen()` — called by MpiSlideOver on every open; re-syncs installed state
+         `el.destroy()` — cleans up all subscriptions
 PATTERN: Cards stored in Map by modelId for in-place updates; state polling replaced with event-driven updates
+         Opened via `models:open` → shell re-emits `slide-over:open { title: 'Models', component: MpiModelManager }`
+         Also accessible from the project-page `Models` nav action (first in list before Settings · Help · About)
 
 ### MpiNewProject
 EMITS:   `create` `{ name: string, location: string|null }`
@@ -418,8 +422,7 @@ REMOUNT: On fresh mount, `_renderRunCluster` reconciles `isGenerating` against B
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
-         `models:closed` — remounts PromptBox if needed
-         `state:changed` (`s_installedModelIds`) — emits `models:open` if no image models
+         `state:changed` (`s_installedModelIds`) — mounts/unmounts PromptBox based on installed model count; emits `models:open` if no image models (zero-model gate)
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
          `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId }` — seeds `_myGenIds`; in Queue mode only the first running generation's placeholders are visible. Block uses `replaceItemId` to flip queued-Continue cards from "Queued…" → "Generating final…"
          `generation:preview` `{ id, url }` — updates preview only for the first running visible placeholder set

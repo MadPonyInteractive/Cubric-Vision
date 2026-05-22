@@ -1319,18 +1319,32 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncPromptToolDisabled();
         }));
 
-        // ── Zero-installed state — delegated to shell-owned models modal ──────
-        // Shell mounts a single MpiModelsModal at app boot. Mounting another here
-        // causes duplicate `download:uninstalled` listeners and double toasts.
-        const _hasInstalledImageModels = () => getModelsByType('image').some(m => m.installed === true);
-        const _onZeroInstalled = () => {
-            if (!_hasInstalledImageModels()) Events.emit('models:open', { auto: true });
-            _pb?.el?.setModelList?.(getModelsByType(modeKind).filter(m => m.installed !== false));
-        };
-
-        _unsubs.push(Events.onState('s_installedModelIds', _onZeroInstalled));
-
-        if (!_hasInstalledImageModels()) Events.emit('models:open', { auto: true });
+        // ── Zero-installed state ───────────────────────────────────────────────
+        // History workspace always has existing media (it is only ever opened by
+        // clicking a group card in Gallery). Per product decisions 2 & 3: when
+        // zero models are installed while viewing history, keep the workspace
+        // read-only — do NOT auto-open the Models slide-over and do NOT mount
+        // PromptBox. The user can still browse their media uninterrupted.
+        // PromptBox mounts via the s_installedModelIds watcher (option A) when
+        // models become available, not via the removed `models:closed` event.
+        _unsubs.push(Events.onState('s_installedModelIds', () => {
+            const currentModels = getModelsByType(modeKind).filter(m => m.installed !== false);
+            // If activeModel was null (zero-installed on entry) and models have now
+            // become available, re-resolve so PromptBox can mount. Without this,
+            // activeModel stays null for the lifetime of the block even after install.
+            if (!activeModel && currentModels.length > 0) {
+                const { model: resolvedModel, modelId: resolvedModelId } =
+                    resolveActiveModel(modeKind);
+                if (resolvedModel) {
+                    activeModel   = resolvedModel;
+                    activeModelId = resolvedModelId;
+                    _refreshOpOptions();
+                    const nowHas = _syncPromptToolDisabled();
+                    if (nowHas) _mountPromptBoxIfNeeded();
+                }
+            }
+            _pb?.el?.setModelList?.(currentModels);
+        }));
 
         // Seed radial with current op set on mount.
         refreshGroupHistoryRadial(_opOptions());

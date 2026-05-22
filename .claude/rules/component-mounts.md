@@ -39,7 +39,7 @@ Props: none
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 
-> **Note:** `MpiModelsModal` is NOT mounted here — it is a shell-level singleton in `shell.js`. `MpiGalleryBlock` emits `Events.emit('models:open')` to trigger it.
+> **Note:** `MpiModelManager` is NOT mounted here — it is a slide-over content component opened via `slide-over:open`. `MpiGalleryBlock` emits `Events.emit('models:open')` which shell re-emits as `slide-over:open { title: 'Models', component: MpiModelManager }`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.
 > **Selection:** No `MpiSelectionBar`. Ctrl/Cmd-click toggles card into selection; shift-click range-selects; right-click opens `MpiContextMenu`. `MpiCheckbox` is also removed from cards.
 
 ---
@@ -69,7 +69,7 @@ const TOOL_OPTIONS_REGISTRY = {
 - `MpiHistoryList`   props: `{ history, selectedIndex, isVideo }` — ctrl/shift/right-click selection   slot: `#right-bottom-slot`
 - `MpiMediaDropOverlay`   props: `{ onDrop({ files: [{ file, mediaType }, ...] }) }` callback   slot: `document.createElement('div')` appended to `el` — loops files: uploads each, calls `_pb.el.injectMedia()` per file (no history card created)
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- `MpiModelsModal`   props: `{ icon, title, text, footer, closable }`   slot: `document.createElement('div')` — local singleton; shown when zero models installed
+- *(no model manager here — MpiModelManager is a slide-over content component, not mounted by MpiGroupHistoryBlock)*
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
@@ -136,7 +136,7 @@ Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip.
 
 - `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
-- `MpiModelsModal`     props: `{ icon, title, text, footer, closable: true }`   slot: `document.createElement('div')` — shown on `models:open` event or when zero image models installed
+- *(MpiModelsModal removed — model manager is now `MpiModelManager`, a slide-over content component opened via `models:open` → `slide-over:open { title: 'Models', component: MpiModelManager }`. No shell-level singleton for models.)*
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.

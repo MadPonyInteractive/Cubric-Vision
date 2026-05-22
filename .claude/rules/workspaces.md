@@ -24,7 +24,7 @@ Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History 
 [projectUI.js handles UI]      [lazy import by navigation.js]   [lazy import by navigation.js]
 ```
 
-1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, Landing overlay pages (`MpiSettings`, `MpiHelp`, `MpiAbout`), and (under Electron only) `MpiProjectDropOverlay` for drag-and-drop project import — dropping a project folder or `project.json` registers the folder's parent in the extra project paths list and refreshes the grid (does not auto-open).
+1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, and (under Electron only) `MpiProjectDropOverlay` for drag-and-drop project import. Nav actions `Models · Settings · Help · About` each open via `slide-over:open { title, component }` where component is `MpiModelManager | MpiSettings | MpiHelp | MpiAbout`. `Models` is first in the list.
 
 2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid` + `MpiPromptBox` (Organism) directly into `#prompt-box-mount`. Navigate to group history on card open.
 
@@ -40,7 +40,7 @@ Mounted once in `js/shell.js` — never re-mount these in workspace code:
 |---|---|
 | `MpiErrorDialog` | `ui:error` event |
 | `MpiStartingComfy` | `comfy:starting` / `comfy:ready` events |
-| `MpiModelsModal` | `models:open` event / zero installed models |
+| `MpiSlideOver` | `slide-over:open { title, component }` — hosts `MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiModelManager` (one open at a time). `models:open` is re-emitted by shell as `slide-over:open { title: 'Models', component: MpiModelManager }` |
 | `#prompt-box-mount` slot | declared in `index.html`; Blocks mount `MpiPromptBox` Organism into it |
 
 ---

@@ -1,86 +1,47 @@
-import { ComponentFactory } from '../../factory.js';
-import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
-import { MpiInstalledDisplay } from '../../Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
-import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
-import { renderIcon } from '../../../utils/icons.js';
-import { Events } from '../../../events.js';
-import { state } from '../../../state.js';
-import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../data/modelRegistry.js';
-import { DEPS } from '../../../data/modelConstants/dependencies.js';
-import { downloadService } from '../../../services/downloadService.js';
-import { qs, qsa, ce, on } from '../../../utils/dom.js';
-import { formatBytes } from '../../../utils/formatBytes.js';
-import { clientLogger } from '../../../services/clientLogger.js';
+import { ComponentFactory } from '../../../factory.js';
+import { MpiInstalledDisplay } from '../../MpiInstalledDisplay/MpiInstalledDisplay.js';
+import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
+import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { Events } from '../../../../events.js';
+import { state } from '../../../../state.js';
+import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
+import { DEPS } from '../../../../data/modelConstants/dependencies.js';
+import { downloadService } from '../../../../services/downloadService.js';
+import { qs, qsa, ce, on } from '../../../../utils/dom.js';
+import { formatBytes } from '../../../../utils/formatBytes.js';
 
 /**
- * MpiModelsModal — Block: Zero-Installed State Overlay
+ * MpiModelManager — Model-manager content for the MpiSlideOver panel.
  *
- * Self-contained overlay that displays all available models as
- * MpiInstalledDisplay cards with Install/Remove buttons. Refreshes in place.
- * Owns all model-list logic internally — no external appendToContainer.
+ * Renders installed + available models as MpiInstalledDisplay cards and owns
+ * all model-list logic: refresh, install, pause/resume/cancel, uninstall
+ * confirmation, partial-progress, and download:* event subscriptions. Patches
+ * single cards in-place on download:progress.
  *
- * Props:
- * @param {string}   [icon='download']             - MpiIcon registry key
- * @param {string}   [title='Install Models']       - Modal title
- * @param {string}   [text]                         - Descriptive text below title
- * @param {string}   [footer]                       - Footer text
- * @param {boolean}  [closable=true]                - Show X close button
+ * No overlay chrome — drops into the MpiSlideOver body. MpiSlideOver calls
+ * el.onOpen() each time the panel opens so installed state is re-synced.
  *
- * Emits:
- * 'close' {} — X button clicked (overlay hide fires this)
+ * Usage (via slide-over event):
+ *   Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
  */
-export const MpiModelsModal = ComponentFactory.create({
-    name: 'MpiModelsModal',
-    css: ['js/components/Blocks/MpiModelsModal/MpiModelsModal.css'],
+export const MpiModelManager = ComponentFactory.create({
+    name: 'MpiModelManager',
+    css: ['js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css'],
 
-    template: (props) => {
-        const icon = props.icon || 'download';
-        const iconSize = props.iconSize || 'xl';
-        const title = props.title || 'Install Models';
-        const text = props.text || '';
-        const footer = props.footer || '';
+    template: () => `
+        <div class="mpi-model-manager">
+            <div class="mpi-model-manager__toolbar">
+                <p class="mpi-model-manager__text">Select a model pack to install. Required files will be fetched automatically.</p>
+                <div class="mpi-model-manager__refresh-btn" id="refresh-btn-slot"></div>
+            </div>
+            <div class="mpi-model-manager__separator"></div>
+            <div class="mpi-model-manager__slot" id="body-slot"></div>
+            <p class="mpi-model-manager__footer">Models are stored locally and never shared.</p>
+        </div>`,
 
-        const titleHtml = title ? `<h2 class="mpi-models-modal__title">${title}</h2>` : '';
-        const textHtml = text ? `<p class="mpi-models-modal__text">${text}</p>` : '';
-        const footerHtml = footer ? `<p class="mpi-models-modal__footer">${footer}</p>` : '';
-
-        return `
-            <div class="mpi-models-modal">
-                <div class="mpi-models-modal__header">
-                    <div class="mpi-models-modal__icon">${renderIcon(icon, iconSize)}</div>
-                    ${titleHtml}
-                    ${textHtml}
-                </div>
-                <div class="mpi-models-modal__refresh-btn" id="refresh-btn-slot"></div>
-                <div class="mpi-models-modal__separator"></div>
-                <div class="mpi-models-modal__slot" id="body-slot"></div>
-                ${footerHtml}
-            </div>`;
-    },
-
-    setup: (el, props, emit) => {
-        // ── Base overlay ─────────────────────────────────────────────────────
-        const overlay = MpiOverlay.mount(document.createElement('div'), {
-            closable: props.closable !== false,
-        });
-        overlay.on('close', () => emit('close', {}));
-        overlay.on('close', () => Events.emit('models:closed', {}));
-
-        // Mount el (the template root) INTO the overlay
-        overlay.el.appendToContainer(el);
-
-        el.show = () => {
-            overlay.el.show();
-        };
-        el.hide = () => {
-            overlay.el.hide();
-        };
-
-        // ── DOM refs ──────────────────────────────────────────────────────────
+    setup: (el) => {
         const bodySlot = qs('#body-slot', el);
-        const refreshSlot = qs('.mpi-models-modal__refresh-btn', el);
+        const refreshSlot = qs('.mpi-model-manager__refresh-btn', el);
 
         const _unsubs = [];
 
@@ -186,22 +147,22 @@ export const MpiModelsModal = ComponentFactory.create({
         // ── Render card list ───────────────────────────────────────────────
         function renderList() {
             _destroyAllCards();
-            qsa('.mpi-models-modal__card', bodySlot).forEach(c => c.remove());
-            qsa('.mpi-models-modal__section-header', bodySlot).forEach(h => h.remove());
-            qsa('.mpi-models-modal__empty', bodySlot).forEach(e => e.remove());
+            qsa('.mpi-model-manager__card', bodySlot).forEach(c => c.remove());
+            qsa('.mpi-model-manager__section-header', bodySlot).forEach(h => h.remove());
+            qsa('.mpi-model-manager__empty', bodySlot).forEach(e => e.remove());
 
             const installed = MODELS.filter(m => m.installed === true);
             const uninstalled = MODELS.filter(m => m.installed !== true);
 
             // Installed section
             if (installed.length > 0) {
-                const header = ce('div', { className: 'mpi-models-modal__section-header' },
+                const header = ce('div', { className: 'mpi-model-manager__section-header' },
                     [document.createTextNode('Installed Models')]);
                 bodySlot.appendChild(header);
 
                 installed.forEach(model => {
                     const stats = _computeModelStats(model);
-                    const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
+                    const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
                     bodySlot.appendChild(cardWrap);
 
                     const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
@@ -280,14 +241,14 @@ export const MpiModelsModal = ComponentFactory.create({
 
             // Available section
             if (uninstalled.length === 0 && installed.length > 0) {
-                const emptyEl = ce('div', { className: 'mpi-models-modal__empty' },
+                const emptyEl = ce('div', { className: 'mpi-model-manager__empty' },
                     [ce('span', { textContent: 'No models available to install' })]);
                 bodySlot.appendChild(emptyEl);
                 return;
             }
 
             if (uninstalled.length === 0 && installed.length === 0) {
-                const emptyEl = ce('div', { className: 'mpi-models-modal__empty' },
+                const emptyEl = ce('div', { className: 'mpi-model-manager__empty' },
                     [ce('span', { textContent: 'No models available' })]);
                 bodySlot.appendChild(emptyEl);
                 return;
@@ -295,7 +256,7 @@ export const MpiModelsModal = ComponentFactory.create({
 
             uninstalled.forEach(model => {
                 const stats = _computeModelStats(model);
-                const cardWrap = ce('div', { className: 'mpi-models-modal__card' });
+                const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
                 bodySlot.appendChild(cardWrap);
 
                 const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
@@ -478,6 +439,10 @@ export const MpiModelsModal = ComponentFactory.create({
         _unsubs.push(Events.on('download:failed', () => {
             awaitReSync();
         }));
+
+        // ── Open hook — MpiSlideOver calls this each time the panel opens ──────
+        // Re-sync installed state from disk so the list reflects external changes.
+        el.onOpen = () => { awaitReSync(); };
 
         // ── Initial render ─────────────────────────────────────────────────
         renderList();

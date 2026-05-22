@@ -111,15 +111,6 @@ export async function syncModelInstalled() {
             .map(([id]) => id);
         Events.emit('models:checked', { installedModelIds });
 
-        // Auto-close model manager when ALL models (any mediaType) are installed,
-        // and no download is mid-flight. Gating on `downloadQueueActive` prevents
-        // mid-install state churn from hiding the modal while the user is still
-        // installing other models.
-        const allInstalled = MODELS.every(m => m.installed === true);
-        if (allInstalled && !state.downloadQueueActive) {
-            Events.emit('models:all-installed');
-        }
-
         return true;
     } catch (err) {
         clientLogger.error('modelRegistry', 'syncModelInstalled failed:', err);
@@ -128,7 +119,7 @@ export async function syncModelInstalled() {
 }
 
 /**
- * Re-syncs installed model state on demand (e.g., when MpiModelsModal opens).
+ * Re-syncs installed model state on demand (e.g., when the Models slide-over opens).
  * Rebuilds the payload from current MODELS + DEPS, POSTs to /comfy/models/check,
  * patches MODELS[].installed in-place, and emits 'models:checked'.
  *

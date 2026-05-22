@@ -21,6 +21,7 @@ import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOv
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
+import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
@@ -51,6 +52,7 @@ export function initProjectUI() {
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
+      { label: 'Models',   handler: () => Events.emit('slide-over:open', { title: 'Models',   component: MpiModelManager }) },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Help',     handler: () => Events.emit('slide-over:open', { title: 'Help',     component: MpiHelp     }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },

@@ -1043,25 +1043,28 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _pb?.el?.setOperation(activeOperation);
         }));
 
-        // ── Zero-installed check — emit models:open (shell handles the modal) ───
-        if (installedAllModels.length === 0) Events.emit('models:open', { auto: true });
+        // ── Zero-installed check ───────────────────────────────────────────────
+        // Decision 1: empty/new project (groups.length === 0) + zero models → auto-open slide-over.
+        // Decision 2: project has existing media (groups.length > 0) + zero models → read-only,
+        //   no PromptBox mount, no auto-open. User can browse media without interruption.
+        // `groups` is resolved synchronously from state.currentProject?.itemGroups at mount time
+        // and is the reliable signal for "project has media" without waiting for loadAssets.
+        const _projectHasMedia = groups.length > 0;
+        if (installedAllModels.length === 0 && !_projectHasMedia) Events.emit('models:open');
 
+        // ── Install-state watcher — replaces both the old `s_installedModelIds` watcher
+        // and the deleted `models:closed` listener. `models:closed` no longer fires;
+        // PromptBox mount is triggered by install-state change instead (option A).
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             installedAllModels = MODELS.filter(m => m.installed !== false);
-            if (installedAllModels.length === 0) Events.emit('models:open', { auto: true });
-            _pb?.el?.setModelList?.(installedAllModels);
-        }));
-        // Note: `models:all-installed` is emitted by `modelRegistry.syncModelInstalled()`
-        // — the canonical source of truth for installed-model state. Listeners (shell,
-        // MpiGroupHistoryBlock) hide their modal on that event. Do NOT emit it here.
-
-        // ── Post-install PromptBox remount ─────────────────────────────────────
-        // If models are installed while the modal is open, promptBox will be null.
-        // When the modal closes (models:closed), check if PromptBox needs to be mounted.
-        _unsubs.push(Events.on('models:closed', () => {
-            const currentModels = MODELS.filter(m => m.installed !== false);
-            installedAllModels = currentModels;
-            if (!_pb?.el && currentModels.length > 0) {
+            if (installedAllModels.length === 0) {
+                // Zero models: if project is empty/new → re-open slide-over; otherwise read-only.
+                if (!_projectHasMedia) Events.emit('models:open');
+                _pb?.el?.setModelList?.(installedAllModels);
+                return;
+            }
+            // At least one model is now installed. If PromptBox is not yet mounted, mount it.
+            if (!_pb?.el) {
                 // Prefer last-touched mediaType's selection, then the other type,
                 // then first available. Mirrors mount-time logic above.
                 const lastType = state.s_lastSelectedMediaType === 'video' ? 'video' : 'image';
@@ -1069,26 +1072,29 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const persistedPrimary   = getSelectedModelId(lastType);
                 const persistedSecondary = getSelectedModelId(otherType);
                 const newModel =
-                    currentModels.find(m => m.id === persistedPrimary)
-                    || currentModels.find(m => m.id === persistedSecondary)
-                    || currentModels[0];
+                    installedAllModels.find(m => m.id === persistedPrimary)
+                    || installedAllModels.find(m => m.id === persistedSecondary)
+                    || installedAllModels[0];
                 activeModel = newModel;
                 activeModelId = newModel.id;
                 setSelectedModelId(newModel.mediaType, newModel.id);
                 activeOperation = newModel.supportedOps?.[0] ?? activeOperation;
                 _pb = _mountPb({
                     model: newModel,
-                    modelList: currentModels,
+                    modelList: installedAllModels,
                     operation: activeOperation,
                     includeNegative: true,
                 });
                 _wirePromptBox(_pb);
                 _pb?.el?.show();
                 refreshRadial({ imageCount, videoCount, modelId: newModel.id });
-            } else if (_pb?.el) {
-                _pb.el.setModelList?.(currentModels);
+            } else {
+                _pb.el.setModelList?.(installedAllModels);
             }
         }));
+        // Note: install-state is reconciled by `modelRegistry.syncModelInstalled()`,
+        // which emits `models:checked` (→ s_installedModelIds). React to that state,
+        // never re-run the sync from here.
 
         // ── Cleanup on destroy ────────────────────────────────────────────────────
         el.destroy = () => {
