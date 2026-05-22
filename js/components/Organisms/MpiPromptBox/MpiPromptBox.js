@@ -648,7 +648,7 @@ export const MpiPromptBox = ComponentFactory.create({
             `;
         }
 
-        _unsubs.push(Events.on('settings:model:update', ({ key }) => { if (key === 'batch') _renderBadge(); }));
+        _unsubs.push(Events.on('settings:shared:update', ({ key }) => { if (key === 'batch') _renderBadge(); }));
 
         badgeBtn.on('click', () => {
             if (popupActive) closePopup(); else openPopup();

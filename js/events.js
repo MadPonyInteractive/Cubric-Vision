@@ -154,9 +154,12 @@ export const Events = new EventBus();
  * 'settings:tool:select'  { toolKey: string }                      — tool first selected, create key with defaults if missing
  * 'settings:model:update' { modelId: string, opName?: string, key: string, value: any }
  *                                                                  — partial setting update (queued + debounced).
- *                                                                    `opName` selects the per-op or 'shared' bucket under
+ *                                                                    `opName` selects the per-op bucket under
  *                                                                    modelSettings[modelId].operations. Omit `opName` only
  *                                                                    for model-wide keys (loras, upscaleModel).
+ * 'settings:shared:update' { mediaType: 'image'|'video', key: string, value: any }
+ *                                                                  — cross-model shared setting update (queued + debounced).
+ *                                                                    Writes to project.shared[mediaType].
  * 'settings:tool:update'  { toolKey: string,  key: string, value: any } — partial tool setting update (queued + debounced)
  *
  * Media events:

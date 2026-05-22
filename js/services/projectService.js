@@ -17,6 +17,7 @@ import {
     getModelSettings,
     setModelSettings,
     setOpSettings,
+    setSharedSettings,
     getToolSettings,
     setToolSettings,
 } from '../data/projectModel.js';
@@ -39,10 +40,10 @@ function _debouncedSaveProjectSettings() {
     clearTimeout(_saveProjectSettingsTimer);
     _saveProjectSettingsTimer = setTimeout(async () => {
         if (!state.currentProject) return;
-        const { modelSettings, toolSettings } = state.currentProject;
+        const { modelSettings, toolSettings, shared } = state.currentProject;
         const result = await post('/update-project-settings', {
             folderPath: state.currentProject.folderPath,
-            updates: { modelSettings, toolSettings },
+            updates: { modelSettings, toolSettings, shared },
         });
         if (!result.success) throw new Error(result.error);
     }, 500);
@@ -57,6 +58,9 @@ const _modelQueues = new Map();
 
 // Per-tool queues: Map<toolKey, { timer: number|null, pending: Object }>
 const _toolQueues = new Map();
+
+// Per-mediaType shared queues: Map<'image'|'video', { timer, pending }>
+const _sharedQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
@@ -137,6 +141,40 @@ function _enqueueToolUpdate(toolKey, key, value) {
     }, _QUEUE_DEBOUNCE_MS);
 }
 
+function _enqueueSharedUpdate(mediaType, key, value) {
+    if (mediaType !== 'image' && mediaType !== 'video') return;
+    if (!_sharedQueues.has(mediaType)) _sharedQueues.set(mediaType, { timer: null, pending: {} });
+    const q = _sharedQueues.get(mediaType);
+
+    // Deep-merge object values one level (e.g. ratioSelector sub-keys);
+    // replace primitives/arrays.
+    q.pending[key] = (value && typeof value === 'object' && !Array.isArray(value))
+        ? { ...(q.pending[key] ?? {}), ...value }
+        : value;
+
+    clearTimeout(q.timer);
+    q.timer = setTimeout(async () => {
+        try {
+            if (!state.currentProject) return;
+            if (!state.currentProject.shared) {
+                state.currentProject = {
+                    ...state.currentProject,
+                    updatedAt: new Date().toISOString(),
+                    shared: { image: {}, video: {} },
+                };
+            }
+            for (const [k, v] of Object.entries(q.pending)) {
+                state.currentProject = setSharedSettings(state.currentProject, mediaType, { [k]: v });
+            }
+            q.pending = {};
+            saveProjectSettings();
+        } catch (err) {
+            clientLogger.error('projectService', 'Failed to flush shared queue', err);
+            Events.emit('ui:error', { title: 'Save failed', message: 'Failed to save shared settings.' });
+        }
+    }, _QUEUE_DEBOUNCE_MS);
+}
+
 // Store unsubs — service is a permanent singleton, but events.md rule requires it
 const _settingsUnsubs = [
     Events.on('settings:model:select', ({ modelId }) => {
@@ -177,6 +215,9 @@ const _settingsUnsubs = [
     }),
     Events.on('settings:tool:update', ({ toolKey, key, value }) => {
         _enqueueToolUpdate(toolKey, key, value);
+    }),
+    Events.on('settings:shared:update', ({ mediaType, key, value }) => {
+        _enqueueSharedUpdate(mediaType, key, value);
     }),
 ];
 // If service ever needs hot-teardown: _settingsUnsubs.forEach(u => u());

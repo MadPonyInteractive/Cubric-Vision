@@ -16,28 +16,29 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../state.js';
-import { getOpSettings } from '../../../data/projectModel.js';
+import { getOpSettings, getSharedSettings } from '../../../data/projectModel.js';
 import { getCommandDefault } from '../../../data/commandRegistry.js';
 import { Events } from '../../../events.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 // ── Scope helpers ─────────────────────────────────────────────────────────────
 //
-// Controls declare `scope: 'shared' | 'perOp'`. The resolver picks the bucket
-// under modelSettings[modelId].operations:
-//   'shared' → operations.shared
-//   'perOp'  → operations[opName]
+// Controls declare `scope: 'shared' | 'perOp'`.
+//   'shared' → project.shared[mediaType] (cross-model, partitioned by image|video)
+//   'perOp'  → project.modelSettings[modelId].operations[opName]
 // `opName` is provided by MpiPromptBox via mount opts. If a perOp control mounts
-// without an opName (legacy/demo), it falls back to 'shared' so it still works.
+// without an opName (legacy/demo), it falls back to the shared bucket.
 
-function _bucketFor(ctrl, opts) {
-    if (ctrl.scope === 'perOp' && opts.opName) return opts.opName;
-    return 'shared';
+function _mediaTypeOf(opts) {
+    return opts.model?.mediaType === 'video' ? 'video' : 'image';
 }
 
 function _readSaved(ctrl, opts) {
-    if (!state.currentProject || !opts.model?.id) return {};
-    return getOpSettings(state.currentProject, opts.model.id, _bucketFor(ctrl, opts));
+    if (!state.currentProject) return {};
+    if (ctrl.scope === 'perOp' && opts.opName && opts.model?.id) {
+        return getOpSettings(state.currentProject, opts.model.id, opts.opName);
+    }
+    return getSharedSettings(state.currentProject, _mediaTypeOf(opts));
 }
 
 function _resolveDefault(ctrl, controlId, opts) {
@@ -49,11 +50,19 @@ function _resolveDefault(ctrl, controlId, opts) {
 }
 
 function _emitUpdate(ctrl, opts, key, value) {
-    const modelId = opts.model?.id;
-    if (!modelId) return;
-    Events.emit('settings:model:update', {
-        modelId,
-        opName: _bucketFor(ctrl, opts),
+    if (ctrl.scope === 'perOp' && opts.opName) {
+        const modelId = opts.model?.id;
+        if (!modelId) return;
+        Events.emit('settings:model:update', {
+            modelId,
+            opName: opts.opName,
+            key,
+            value,
+        });
+        return;
+    }
+    Events.emit('settings:shared:update', {
+        mediaType: _mediaTypeOf(opts),
         key,
         value,
     });

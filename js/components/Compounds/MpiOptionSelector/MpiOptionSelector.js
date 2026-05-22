@@ -117,7 +117,7 @@ function _templateNumber(props) {
 // ── Quality variant ──────────────────────────────────────────────────────────
 //
 // Standalone quality-tier picker. Shares qualityTier state with the ratio
-// control via Events ('settings:model:update' key: 'ratioSelector'). The
+// control via Events ('settings:shared:update' key: 'ratioSelector'). The
 // ratio control listens for `ratio:quality-change` to re-render its set.
 //
 // Used for models with RATIO_MODES[modelType] === 'quality' (e.g. wan, ltx).

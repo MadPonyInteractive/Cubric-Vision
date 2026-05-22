@@ -78,7 +78,7 @@
 > `gallery:item-updated` for the affected group. Click-time re-validation
 > closes the TOCTOU window between badge render and button press.
 
-> **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted per-model under the shared bucket as `modelSettings[modelId].operations.shared.batch`.
+> **Batch semantics:** `Batch_Size = N` → workflow runs once, returns N images. Gallery creates N separate cards (one per output URL). N placeholder cards shown from generation start, broadcasting the single ComfyUI preview to all N. Persisted cross-model under `project.shared[mediaType].batch`.
 
 ---
 
@@ -122,12 +122,12 @@ MpiPromptBox 'run' event
 
 | ID             | Component         | nodeTitle      | defaultValue | `getInjectionParams()` return |
 |----------------|-------------------|----------------|--------------|-------------------------------|
-| `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }`. **scope: `shared`** — `operations.shared.ratioSelector`. |
-| `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }`. **scope: `shared`** — `operations.shared.batch`. |
-| `qualityTier` | `MpiOptionSelector` (variant: quality) | `null` | `'medium'` | does NOT contribute to `injectionParams` — quality picks a tier-specific ratio set, and the resolved Width/Height still come from the `ratio` control. **scope: `shared`** — `operations.shared.ratioSelector.qualityTier` (co-resides with `ratio` control). Emits `ratio:quality-change` so the sibling `ratio` control re-renders via its `el.setQualityTier(tier)` API. Renders nothing for orientation-mode models. |
-| `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (payload `operation` endsWith `_ms`) — single-stage workflows never receive the field, so a stale toggle from a prior `_ms` op cannot leak into them. **scope: `shared`** — `operations.shared.previewStage`. |
-| `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). **scope: `shared`** — `operations.shared.duration`. |
-| `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). **scope: `shared`** — `operations.shared.motionIntensity`. |
+| `ratio`        | `MpiOptionSelector` (variant: ratio) | `null` (Width + Height separate) | `'1:1'` | `{ Width: number, Height: number }` — defaults to `{ Width: 1024, Height: 1024 }`. **scope: `shared`** — `project.shared[mediaType].ratioSelector`. |
+| `batch`        | `MpiBatchSelector` | `'Batch'` (registry string; injection key is `Batch_Size` via `MpiInt.inputs.int`) | `1` | `{ Batch_Size: 1\|2\|3\|4 }`. **scope: `shared`** — `project.shared[mediaType].batch`. |
+| `qualityTier` | `MpiOptionSelector` (variant: quality) | `null` | `'medium'` | does NOT contribute to `injectionParams` — quality picks a tier-specific ratio set, and the resolved Width/Height still come from the `ratio` control. **scope: `shared`** — `project.shared[mediaType].ratioSelector.qualityTier` (co-resides with `ratio` control). Emits `ratio:quality-change` so the sibling `ratio` control re-renders via its `el.setQualityTier(tier)` API. Renders nothing for orientation-mode models. |
+| `previewStage` | `MpiButton` (toggleable) | `'Preview_Only'` (`MpiBoolean.inputs.boolean`) | `false` | does NOT contribute to `injectionParams`; instead `el.getRunPayload()` reads the toggle and sets payload `previewOnly: boolean`. `commandExecutor._buildParams` injects `Preview_Only: <boolean>` **only for `_ms` ops** (payload `operation` endsWith `_ms`) — single-stage workflows never receive the field, so a stale toggle from a prior `_ms` op cannot leak into them. **scope: `shared`** — `project.shared[mediaType].previewStage`. |
+| `duration` | `MpiProgressBar` under a Stage-style label row (`DURATION` left, live `N s` right) — own full-width row in popup | `'Duration'` (`MpiInt.inputs.int`) | `5` | `{ Duration: 1..30 }` (int, step 1). **scope: `shared`** — `project.shared.video.duration`. |
+| `motionIntensity` | `MpiProgressBar` under a Stage-style label row (`MOTION` left, live `X.XX` right) — own full-width row in popup | `'Motion_Intensity'` (`MpiFloat.inputs.float`) | `0` | `{ Motion_Intensity: 0..1 }` (float, step 0.01). **scope: `shared`** — `project.shared.video.motionIntensity`. |
 | `useGrid` | `MpiButton` (toggleable, icon: grid, label: 'Use Grid') | `'Auto_Grid'` (`MpiBoolean.inputs.boolean`) | `false` | `{ Auto_Grid: boolean }`. **scope: `perOp`** — `operations[opName].useGrid`. |
 | `upscaleFactor` | `MpiRadioGroup` (sm, 4 columns) under Stage-style label row (`UPSCALE` left) | `'Upscale_Factor'` (`MpiFloat.inputs.float`) | `2` | `{ Upscale_Factor: 1.5\|2\|3\|4 }`. **scope: `perOp`** — `operations[opName].upscaleFactor`. |
 | `denoise` | `MpiProgressBar` under Stage-style label row (`DENOISE` left, live `X.XX` right) — own full-width row in popup | `'Denoise'` (`MpiFloat.inputs.float`) | `0.2` (override via `commands[op].defaults.denoise`: `upscale=0.20`, `detail=0.30`) | `{ Denoise: 0..1 }` (float, step 0.01). **scope: `perOp`** — `operations[opName].denoise`. |
@@ -169,11 +169,11 @@ controlId: {
 },
 ```
 
-`_readSaved`, `_resolveDefault`, `_emitUpdate` are top-of-file helpers in `PromptBoxControls.js`. Use them — do NOT call `getModelSettings` or emit `settings:model:update` directly from a control. The helpers resolve the storage bucket from the control's `scope` plus `opts.opName` (passed by `MpiPromptBox._refreshOpSlot`).
+`_readSaved`, `_resolveDefault`, `_emitUpdate` are top-of-file helpers in `PromptBoxControls.js`. Use them — do NOT call `getModelSettings` / `getSharedSettings` or emit `settings:model:update` / `settings:shared:update` directly from a control. The helpers resolve the storage bucket from the control's `scope` plus `opts.opName` and `opts.model.mediaType` (passed by `MpiPromptBox._refreshOpSlot`).
 
 **Persistence scope:**
-- `scope: 'shared'` → reads/writes `modelSettings[modelId].operations.shared.<controlId>`. Use for controls whose value should be consistent across operations on the same model (ratio, batch, duration, motionIntensity, qualityTier, previewStage).
-- `scope: 'perOp'` → reads/writes `modelSettings[modelId].operations[opName].<controlId>`. Use when each op should hold an independent value (denoise — upscale vs detail; useGrid; upscaleFactor).
+- `scope: 'shared'` → reads/writes `project.shared[mediaType].<controlId>` (cross-model, partitioned by `mediaType` = `'image' | 'video'`). Use for controls whose value should persist across model switches within the same media type (ratio, batch, duration, motionIntensity, qualityTier, previewStage). All image models share one bucket; all video models share another.
+- `scope: 'perOp'` → reads/writes `modelSettings[modelId].operations[opName].<controlId>`. Use when each op should hold an independent value per model (denoise — upscale vs detail; useGrid; upscaleFactor).
 
 **Per-op defaults:** A `perOp` control with different sensible defaults per op declares the override in `commandRegistry.commands[opName].defaults[controlId]` (e.g. `upscale.defaults.denoise = 0.20`, `detail.defaults.denoise = 0.30`). `_resolveDefault` reads this before falling back to the control's own `defaultValue`. Do NOT branch on op name inside the control mount.
 

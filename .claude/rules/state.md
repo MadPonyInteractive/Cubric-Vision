@@ -62,27 +62,37 @@ setup: (el, props, emit) => {
 
 Server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js`. It serializes writes per project file and writes atomically via temp-file replace. Do not add direct `fs.writeJson(project.json, ...)` routes for project metadata/settings; concurrent `/update-project` and `/update-project-settings` calls can otherwise corrupt the file.
 
-`projectService` is the **sole writer** to `modelSettings` and `toolSettings` in `project.json`. Components must **not** directly call `setModelSettings`, `setToolSettings`, or `saveProjectSettings` for these fields.
+`projectService` is the **sole writer** to `modelSettings`, `toolSettings`, and `shared` in `project.json`. Components must **not** directly call `setModelSettings`, `setOpSettings`, `setSharedSettings`, `setToolSettings`, or `saveProjectSettings` for these fields.
 
 **Instead, emit:**
-- `settings:model:update` `{ modelId, opName?, key, value }` — partial model setting write. `opName` selects the bucket under `modelSettings[modelId].operations` (`'shared'` for cross-op state, an op key like `'upscale'` or `'detail'` for per-op state). Omit `opName` ONLY for model-wide keys (`loras`, `upscaleModel`); projectService routes those to the model top level.
+- `settings:model:update` `{ modelId, opName?, key, value }` — partial model setting write. `opName` selects the per-op bucket under `modelSettings[modelId].operations` (an op key like `'upscale'` or `'detail'`). Omit `opName` ONLY for model-wide keys (`loras`, `upscaleModel`); projectService routes those to the model top level. **Never use `opName: 'shared'`** — emit `settings:shared:update` instead.
+- `settings:shared:update` `{ mediaType, key, value }` — cross-model shared setting write. `mediaType` is `'image' | 'video'`. Writes to `project.shared[mediaType]`.
 - `settings:tool:update` `{ toolKey, key, value }` — to queue a partial tool setting write
 - `settings:model:select` `{ modelId }` — when a model is first selected (ensures key exists)
 - `settings:tool:select` `{ toolKey }` — when a tool is first opened (ensures key exists)
 
-**`modelSettings[modelId]` shape:**
+**`modelSettings[modelId]` shape (per-op only):**
 ```
 {
   loras: Array | { high: [], low: [] },  // model-wide
   upscaleModel: string | null,            // model-wide
   operations: {
-    shared:   { ratioSelector, batch, duration, motionIntensity, previewStage, qualityTier-via-ratioSelector },
     upscale:  { denoise, useGrid, upscaleFactor },
     detail:   { denoise },
     // ... per-op buckets created on first write
   }
 }
 ```
+
+**`project.shared` shape (cross-model, partitioned by mediaType):**
+```
+{
+  image: { ratioSelector, batch },
+  video: { ratioSelector, batch, duration, motionIntensity, previewStage, qualityTier-via-ratioSelector }
+}
+```
+
+All image models share `project.shared.image`; all video models share `project.shared.video`. Bucket key comes from `MODELS[i].mediaType` (NOT `model.type`, which is workflow family — sdxl/wan/ltx).
 
 PromptBoxControls own the scope decision via their `scope: 'shared' | 'perOp'` field. See `.claude/rules/component-comfy.md` § "Persistence scope" + "PromptBoxControl Protocol" for the full pattern.
 

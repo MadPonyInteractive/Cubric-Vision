@@ -16,4 +16,4 @@ export const APP_VERSION = '0.0.1';
  * Project schema version (integer). Increment whenever project.json structure changes
  * in a way that requires migration (field renames, additions, restructuring).
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;

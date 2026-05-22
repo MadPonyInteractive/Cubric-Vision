@@ -257,7 +257,7 @@ EMITS:   `change`        `{ value: 1|2|3|4 }` — batch size pick
 LISTENS: `ui:close-all-popups` — closes popup if open
 API:     `instance.el.getValue()` → `1|2|3|4`
 NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch']`.
-         Persists as `modelSettings[modelId].operations.shared.batch` via `settings:model:update` with `opName: 'shared'`.
+         Persists as `project.shared[mediaType].batch` via `settings:shared:update` with `mediaType: 'image' | 'video'`.
          Injects workflow param `Batch_Size` (ComfyUI node title "Batch_Size", MpiInt.inputs.int).
          N outputs → N cards in gallery; N placeholders shown from generation start.
 

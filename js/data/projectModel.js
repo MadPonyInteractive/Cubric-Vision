@@ -239,11 +239,12 @@ export function createProject(name, folderPath) {
         createdAt:     new Date().toISOString(),
         updatedAt:     new Date().toISOString(),
         thumbnail:     null,
-        schemaVersion: 1,
+        schemaVersion: 2,
         itemGroups:    [],
         tutorialSeen:  false,
         modelSettings: {},
         toolSettings:  {},
+        shared:        { image: {}, video: {} },
     };
 }
 
@@ -323,12 +324,13 @@ export function createDefaultLoras(modelId) {
  * Returns a default if no entry exists yet (does not mutate the project).
  *
  * Shape:
- *   { loras, upscaleModel, operations: { shared: {...}, [opName]: {...} } }
+ *   { loras, upscaleModel, operations: { [opName]: {...} } }
  *
- * `loras` and `upscaleModel` are model-wide. All operation-scoped values
- * (denoise, ratioSelector, batch, etc.) live under `operations` — shared
- * across-op state under `operations.shared`, op-specific state under
- * `operations[opName]`. See PromptBoxControls.js `scope` field.
+ * `loras` and `upscaleModel` are model-wide. Op-specific state
+ * (denoise, useGrid, upscaleFactor) lives under `operations[opName]`.
+ * Shared-across-models state (ratioSelector, batch, duration, motionIntensity,
+ * previewStage, qualityTier) lives at project.shared[mediaType] — see
+ * getSharedSettings/setSharedSettings.
  *
  * @param {Project} project
  * @param {string} modelId
@@ -370,10 +372,11 @@ export function setModelSettings(project, modelId, updates) {
 }
 
 /**
- * Returns the per-op (or shared) settings bucket for a given model+op.
+ * Returns the per-op settings bucket for a given model+op.
+ * For cross-model shared values, use getSharedSettings instead.
  * @param {Project} project
  * @param {string}  modelId
- * @param {string}  opName  - Operation key from commandRegistry (e.g. 'upscale', 'detail') or 'shared'
+ * @param {string}  opName  - Operation key from commandRegistry (e.g. 'upscale', 'detail')
  * @returns {Object}
  */
 export function getOpSettings(project, modelId, opName) {
@@ -382,9 +385,9 @@ export function getOpSettings(project, modelId, opName) {
 }
 
 /**
- * Returns a new project with the per-op (or shared) settings bucket merged for
- * a given model+op. Does not mutate the original. Deep-merges sub-objects one
- * level (e.g. ratioSelector field merge).
+ * Returns a new project with the per-op settings bucket merged for a given
+ * model+op. Does not mutate the original. Deep-merges sub-objects one level.
+ * For cross-model shared values, use setSharedSettings instead.
  * @param {Project} project
  * @param {string}  modelId
  * @param {string}  opName
@@ -417,6 +420,61 @@ export function setOpSettings(project, modelId, opName, updates) {
                     [opName]: mergedOp,
                 },
             },
+        },
+    };
+}
+
+// ── Shared (cross-model) settings, partitioned by mediaType ──────────────────
+//
+// project.shared shape:
+//   { image: { ratioSelector, batch, ... }, video: { ratioSelector, batch, duration, motionIntensity, previewStage, ... } }
+//
+// Use these instead of operations.shared. Bucket key is the model's mediaType
+// ('image' | 'video'), so all image models share one bucket and all video
+// models share another. Op-specific values stay under modelSettings[].operations[].
+
+const _SHARED_TYPES = new Set(['image', 'video']);
+
+/**
+ * Returns the shared bucket for a mediaType.
+ * @param {Project} project
+ * @param {'image'|'video'} mediaType
+ * @returns {Object}
+ */
+export function getSharedSettings(project, mediaType) {
+    if (!_SHARED_TYPES.has(mediaType)) return {};
+    return (project.shared ?? {})[mediaType] ?? {};
+}
+
+/**
+ * Returns a new project with the shared bucket merged for a mediaType.
+ * Deep-merges sub-objects one level (e.g. ratioSelector field merge).
+ * @param {Project} project
+ * @param {'image'|'video'} mediaType
+ * @param {Object} updates
+ * @returns {Project}
+ */
+export function setSharedSettings(project, mediaType, updates) {
+    if (!_SHARED_TYPES.has(mediaType)) return project;
+    const shared = project.shared ?? { image: {}, video: {} };
+    const current = shared[mediaType] ?? {};
+
+    const merged = { ...current };
+    for (const [k, v] of Object.entries(updates)) {
+        if (v && typeof v === 'object' && !Array.isArray(v) && current[k] && typeof current[k] === 'object') {
+            merged[k] = { ...current[k], ...v };
+        } else {
+            merged[k] = v;
+        }
+    }
+
+    return {
+        ...project,
+        updatedAt: new Date().toISOString(),
+        shared: {
+            image: shared.image ?? {},
+            video: shared.video ?? {},
+            [mediaType]: merged,
         },
     };
 }

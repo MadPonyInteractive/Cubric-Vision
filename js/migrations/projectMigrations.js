@@ -16,7 +16,7 @@ const fs   = require('fs-extra');
 const path = require('path');
 
 /** Current schema version — must match SCHEMA_VERSION in js/core/appVersion.js */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const MIGRATIONS = {
     /**
@@ -77,6 +77,46 @@ const MIGRATIONS = {
             ...project,
             itemGroups:   migratedGroups,
             schemaVersion: 1,
+        };
+    },
+
+    /**
+     * v1 → v2: Lift `modelSettings[*].operations.shared` to `project.shared[mediaType]`.
+     *
+     * Pre-v2 stored cross-model state (ratioSelector, batch, duration,
+     * motionIntensity, previewStage) under each model's `operations.shared`.
+     * v2 partitions by mediaType so image models share one bucket and video
+     * models share another. Last-write wins per mediaType; iteration order is
+     * Object.entries on modelSettings.
+     */
+    1: async (project) => {
+        const { MODELS } = require('../data/modelConstants/models.js');
+        const mediaTypeById = new Map(MODELS.map(m => [m.id, m.mediaType]));
+
+        const sharedOut = {
+            image: { ...(project.shared?.image ?? {}) },
+            video: { ...(project.shared?.video ?? {}) },
+        };
+
+        const nextModelSettings = {};
+        for (const [modelId, model] of Object.entries(project.modelSettings ?? {})) {
+            const mediaType = mediaTypeById.get(modelId) ?? 'image';
+            const ops = model?.operations ?? {};
+            const { shared: legacyShared, ...restOps } = ops;
+            if (legacyShared && sharedOut[mediaType]) {
+                Object.assign(sharedOut[mediaType], legacyShared);
+            }
+            nextModelSettings[modelId] = {
+                ...model,
+                operations: restOps,
+            };
+        }
+
+        return {
+            ...project,
+            modelSettings: nextModelSettings,
+            shared:        sharedOut,
+            schemaVersion: 2,
         };
     },
 };
