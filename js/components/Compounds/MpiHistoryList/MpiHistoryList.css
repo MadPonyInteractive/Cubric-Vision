@@ -14,7 +14,7 @@
 /* Layer row — grid: thumbnail | meta | status dot */
 .mpi-history-list__card {
     display: grid;
-    grid-template-columns: 64px 1fr auto;
+    grid-template-columns: 64px 1fr auto auto;
     gap: 12px;
     padding: 10px var(--s-3);
     border-bottom: 1px solid var(--line);
@@ -103,6 +103,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 2px;
+}
+
+/* Per-card action buttons (reuse, etc.) */
+.mpi-history-list__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    flex-shrink: 0;
+}
+
+.mpi-history-list__reuse-wrap {
+    display: inline-flex;
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
+}
+
+.mpi-history-list__card:hover .mpi-history-list__reuse-wrap,
+.mpi-history-list__card--active .mpi-history-list__reuse-wrap {
+    opacity: 1;
 }
 
 /* Status dot / kicker column */

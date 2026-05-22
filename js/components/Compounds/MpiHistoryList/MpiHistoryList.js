@@ -22,12 +22,14 @@
  *   'compare-requested' { indices: [number, number] } — compare action from context menu
  *   'combine-requested' { indices }                  — combine selected videos (video group, ≥2)
  *   'add-to-gallery'    { index }                    — add single selected entry to gallery
+ *   'reuse'             { positive, negative }       — reuse prompt button clicked on a card
  */
 
 import { ComponentFactory } from '../../factory.js';
 import { qs } from '../../../utils/dom.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -64,6 +66,8 @@ export const MpiHistoryList = ComponentFactory.create({
 
         /** @type {HTMLElement[]} */
         const _historyCards = [];
+        /** @type {Array<{el: HTMLElement, destroy: Function}>} */
+        const _reuseBtns = [];
 
         // ── Dims helper ───────────────────────────────────────────────────────
 
@@ -132,6 +136,13 @@ export const MpiHistoryList = ComponentFactory.create({
                 extended.style.display = 'none';
             }
 
+            const actions = document.createElement('div');
+            actions.className = 'mpi-history-list__actions';
+
+            const reuseWrap = document.createElement('span');
+            reuseWrap.className = 'mpi-history-list__reuse-wrap';
+            actions.append(reuseWrap);
+
             const status = document.createElement('span');
             status.className = 'mpi-history-list__status';
 
@@ -140,7 +151,21 @@ export const MpiHistoryList = ComponentFactory.create({
             badge.style.display = 'none';
 
             meta.append(label, dims, extended);
-            card.append(thumb, meta, status, badge);
+            card.append(thumb, meta, actions, status, badge);
+
+            const hasPrompt = !!(item.prompt || item.negativePrompt);
+            if (hasPrompt) {
+                const reuseBtn = MpiButton.mount(reuseWrap, {
+                    icon: 'refresh_stroke', size: 'sm', variant: 'ghost', info: 'Reuse Prompt',
+                });
+                reuseBtn.on('click', (e) => {
+                    e.originalEvent?.stopPropagation();
+                    emit('reuse', { positive: item.prompt || '', negative: item.negativePrompt || '' });
+                });
+                _reuseBtns.push(reuseBtn);
+            } else {
+                reuseWrap.style.display = 'none';
+            }
 
             card.addEventListener('mousedown', (e) => {
                 if (e.shiftKey) e.preventDefault();
@@ -215,6 +240,8 @@ export const MpiHistoryList = ComponentFactory.create({
         function _buildHistoryCards() {
             _dimsLogged = false;
             const container = qs('#cards-slot', el);
+            _reuseBtns.forEach((btn) => btn.destroy?.());
+            _reuseBtns.length = 0;
             container.innerHTML = '';
             _historyCards.length = 0;
 
@@ -353,6 +380,11 @@ export const MpiHistoryList = ComponentFactory.create({
          * @returns {number[]}
          */
         el.getSelectionOrder = () => [..._selection];
+
+        el.destroy = () => {
+            _reuseBtns.forEach((btn) => btn.destroy?.());
+            _reuseBtns.length = 0;
+        };
 
         // ── Init ──────────────────────────────────────────────────────────────
 

@@ -153,6 +153,7 @@ EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
          `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
          `combine-requested` `{ indices: number[] }` — Combine chosen from context menu (video group, ≥2 selected, chronological order)
          `add-to-gallery`    `{ index: number }` — Add to gallery chosen from context menu (exactly 1 selected)
+         `reuse`             `{ positive: string, negative: string }` — Reuse-prompt icon button on a card clicked. Parent emits `workspace:inject-prompts` so PromptBox restores text. Button hidden on cards without `item.prompt` or `item.negativePrompt`.
 LISTENS: (none)
 API:     `el.setActiveIndex(idx)` · `el.setGroups(history)` · `el.appendEntry(item)` · `el.removeEntries(indices)` · `el.exitSelectMode()`
          `el.getSelectionOrder()` → `number[]` in chronological click order. Set insertion order alone is fragile across shift-range rebuilds (direction-aware walk in `_rangeSelect` keeps anchor first, target last). First shift-click without prior selection anchors at `_selectedIdx` (the currently-active entry), not at the stale default `_anchor = 0`.
