@@ -1,0 +1,38 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "3a40a523-276c-4836-9aa5-45b684c50aa3",
+  "title": "Auto-mask session-temp persistence",
+  "kanban_entry": null,
+  "plan": null,
+  "handoff": ".agents/mpi-kanban/state/handoffs/34e26cb3-f41f-4215-939c-fae0af421b1d.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/7c626733-056c-4463-bd83-92d10d182347.json",
+  "status": "closed",
+  "heartbeat_at": "2026-05-22T07:38:38.3111061+01:00",
+  "allowed_actions": [
+    "read",
+    "implement scoped code changes",
+    "run focused verification"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-22T06:27:13.6330324+01:00",
+      "event": "task_started"
+    },
+    {
+      "at": "2026-05-22T07:03:29.9945548+01:00",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-05-22T07:08:11.1718173+01:00",
+      "event": "implementation_resumed"
+    },
+    {
+      "at": "2026-05-22T07:24:18.8726687+01:00",
+      "event": "active_history_remount_fix_ready_for_manual_verification"
+    },
+    {
+      "at": "2026-05-22T07:38:38.3111061+01:00",
+      "event": "manual_verification_passed_task_closed"
+    }
+  ]
+}

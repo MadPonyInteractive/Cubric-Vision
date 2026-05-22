@@ -89,7 +89,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const subtractUrl = _cv.el?.getSubtractURL?.() || null;
             if (manualUrl) await maskTempStore.writeManual(k.projectId, k.groupId, k.itemId, manualUrl);
             if (subtractUrl) await maskTempStore.writeSubtract(k.projectId, k.groupId, k.itemId, subtractUrl);
-            if (!manualUrl && !subtractUrl) await maskTempStore.delete(k.projectId, k.groupId, k.itemId);
         }
 
         async function _loadImg(dataUrl) {
@@ -101,24 +100,30 @@ export const MpiCanvasViewer = ComponentFactory.create({
             });
         }
 
-        // Build composite (manual MINUS subtract) B/W PNG from TEMP layers.
-        // Returns null when no manual layer is present. Used to seed preview-mode
+        // Build composite ((manual + auto) MINUS subtract) B/W PNG from TEMP layers.
+        // Returns null when no positive layer is present. Used to seed preview-mode
         // mask after history-entry switch (canvas torn down).
         async function _buildCompositeFromTemp(item) {
             const k = _maskKey(item);
             if (!k) return null;
-            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
-            if (!manual) return null;
+            const { manual, subtract, auto } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            const autoEntry = _normalizeAutoTempEntry(auto);
+            if (!manual && autoEntry.urls.length === 0) return null;
             try {
-                const manualImg = await _loadImg(manual);
-                const w = manualImg.naturalWidth;
-                const h = manualImg.naturalHeight;
+                const seedUrl = manual || autoEntry.urls[0];
+                const seedImg = await _loadImg(seedUrl);
+                const w = seedImg.naturalWidth;
+                const h = seedImg.naturalHeight;
                 if (!w || !h) return null;
                 const tmp = document.createElement('canvas');
                 tmp.width = w;
                 tmp.height = h;
                 const ctx = tmp.getContext('2d');
-                ctx.drawImage(manualImg, 0, 0);
+                if (manual) ctx.drawImage(seedImg, 0, 0);
+                for (const url of autoEntry.urls) {
+                    const autoImg = await _loadImg(url);
+                    ctx.drawImage(autoImg, 0, 0, w, h);
+                }
                 if (subtract) {
                     const subImg = await _loadImg(subtract);
                     ctx.globalCompositeOperation = 'destination-out';
@@ -269,6 +274,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         });
 
         async function _maskUrlToTransparentDataUrl(maskUrl) {
+            if (typeof maskUrl === 'string' && maskUrl.startsWith('data:')) return maskUrl;
             const res  = await fetch(maskUrl);
             const blob = await res.blob();
             const bmp  = await createImageBitmap(blob);
@@ -295,6 +301,30 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             tmpCtx.putImageData(imageData, 0, 0);
             return tmp.toDataURL('image/png');
+        }
+
+        async function _urlToDataUrl(url) {
+            if (typeof url === 'string' && url.startsWith('data:')) return url;
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function _normalizeAutoTempEntry(auto) {
+            if (!auto || typeof auto !== 'object') return { thumbs: [], urls: [], picks: [] };
+            const picks = Array.isArray(auto.picks)
+                ? auto.picks.filter(n => Number.isInteger(n) && n >= 0)
+                : [];
+            return {
+                thumbs: Array.isArray(auto.thumbs) ? auto.thumbs.filter(Boolean) : [],
+                urls: Array.isArray(auto.urls) ? auto.urls.filter(Boolean) : [],
+                picks,
+            };
         }
 
         function _runAutoMaskWorkflow(populateThumbs = false) {
@@ -363,61 +393,102 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     sortedPicks.forEach((pickIdx, i) => map.set(pickIdx, bitmaps[i]));
                     canvas.setAutoPickMasks(map);
                     canvas.setSelectedAutoPicks(runPicks);
-                    _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
+                    await _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
                     _hasMask = true;
                 } catch (err) {
-                    console.warn('[MpiCanvasViewer] Failed to apply auto-masks:', err);
+                    clientLogger.warn('automask', `Failed to apply auto-masks: ${err?.message || err}`);
                 }
             };
 
             exec.onError = (err) => {
                 if (_autoMaskExec !== exec) return;
                 _autoMaskExec = null;
-                console.error('[MpiCanvasViewer] Auto-mask error:', err);
+                clientLogger.error('automask', 'Auto-mask error', err);
             };
         }
 
         function _autoPickKey(item) { return item?.id || null; }
 
-        function _saveAutoPickEntry(item, urls, picks, thumbs) {
+        async function _saveAutoPickEntry(item, urls, picks, thumbs) {
             const key = _autoPickKey(item);
             if (!key) return;
             if (!urls?.length || !picks?.size) {
                 _autoPickStore.delete(key);
+                const k = _maskKey(item);
+                if (k) await maskTempStore.deleteAuto(k.projectId, k.groupId, k.itemId);
                 return;
             }
+            const selected = [...picks].sort((a, b) => a - b);
+            const selectedUrls = urls.length === selected.length
+                ? [...urls]
+                : selected.map(idx => urls[idx]).filter(Boolean);
+            if (selectedUrls.length !== selected.length) {
+                _autoPickStore.delete(key);
+                const k = _maskKey(item);
+                if (k) await maskTempStore.deleteAuto(k.projectId, k.groupId, k.itemId);
+                return;
+            }
+            const persistedUrls = await Promise.all(selectedUrls.map(_maskUrlToTransparentDataUrl));
+            const persistedThumbs = await Promise.all((thumbs ? [...thumbs] : [...urls]).map(_urlToDataUrl));
             _autoPickStore.set(key, {
-                thumbs: thumbs ? [...thumbs] : [...urls],
-                urls: [...urls],
-                picks: [...picks],
+                thumbs: persistedThumbs,
+                urls: persistedUrls,
+                picks: selected,
             });
+            const k = _maskKey(item);
+            if (k) {
+                await maskTempStore.writeAuto(k.projectId, k.groupId, k.itemId, {
+                    thumbs: persistedThumbs,
+                    urls: persistedUrls,
+                    picks: selected,
+                });
+            }
         }
 
-        function _clearAutoPickEntry(item) {
+        function _clearAutoPickEntry(item, persist = false) {
             const key = _autoPickKey(item);
             if (key) _autoPickStore.delete(key);
+            if (persist) {
+                const k = _maskKey(item);
+                if (k) maskTempStore.deleteAuto(k.projectId, k.groupId, k.itemId).catch(() => {});
+            }
         }
 
         // Persist current viewer auto-pick state to the store before tearing
         // down or switching items. Reads thumbs picks (DOM-truth across remount).
-        function _persistCurrentAutoPicks() {
+        async function _persistCurrentAutoPicks() {
             if (!_currentItem) return;
             const thumbPicks = autoMaskThumbs.el.getPicks?.() ?? new Set();
             const cached = _autoPickStore.get(_autoPickKey(_currentItem));
             const urls = cached?.urls ?? [];
             const thumbs = cached?.thumbs ?? _lastDetectThumbUrls;
             if (thumbPicks.size > 0 && urls.length > 0) {
-                _saveAutoPickEntry(_currentItem, urls, thumbPicks, thumbs);
-            } else {
-                _clearAutoPickEntry(_currentItem);
+                await _saveAutoPickEntry(_currentItem, urls, thumbPicks, thumbs);
+            } else if (cached || thumbPicks.size > 0) {
+                _clearAutoPickEntry(_currentItem, true);
             }
+        }
+
+        async function _loadAutoPickEntryFromTemp(item) {
+            const key = _autoPickKey(item);
+            const k = _maskKey(item);
+            if (!key || !k) return null;
+            const { auto } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            const entry = _normalizeAutoTempEntry(auto);
+            if (entry.urls.length === 0 || entry.picks.length === 0) {
+                _autoPickStore.delete(key);
+                return null;
+            }
+            _autoPickStore.set(key, entry);
+            _autoMaskPicks = new Set(entry.picks);
+            return entry;
         }
 
         // Rehydrate thumbs DOM + viewer state for the given item from store.
         // Does NOT trigger the bitmap fetch — call _restoreAutoPickMasks after
         // canvas is ready.
-        function _hydrateThumbsForItem(item) {
-            const entry = _autoPickStore.get(_autoPickKey(item));
+        async function _hydrateThumbsForItem(item) {
+            const entry = _autoPickStore.get(_autoPickKey(item)) || await _loadAutoPickEntryFromTemp(item);
             if (!entry) {
                 autoMaskThumbs.el.clear();
                 _autoMaskPicks.clear();
@@ -441,6 +512,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (thumbPicks.size > 0) _autoMaskPicks = thumbPicks;
             const entry = _autoPickStore.get(_autoPickKey(_currentItem));
             const urls = entry?.urls ?? [];
+            if (_autoMaskPicks.size === 0 && entry?.picks?.length) {
+                _autoMaskPicks = new Set(entry.picks);
+                autoMaskThumbs.el.setPicks?.(_autoMaskPicks);
+            }
             if (_autoMaskPicks.size === 0 || urls.length === 0) return;
             if (urls.length !== _autoMaskPicks.size) {
                 _resetAutoPickStateWithToast();
@@ -450,9 +525,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 const bitmaps = await Promise.all(
                     urls.map(async (u) => {
                         const dataUrl = await _maskUrlToTransparentDataUrl(u);
-                        const res = await fetch(dataUrl);
-                        const blob = await res.blob();
-                        return await createImageBitmap(blob);
+                        return await _loadImg(dataUrl);
                     })
                 );
                 const sortedPicks = [..._autoMaskPicks].sort((a, b) => a - b);
@@ -468,7 +541,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         }
 
         function _resetAutoPickStateWithToast() {
-            _clearAutoPickEntry(_currentItem);
+            _clearAutoPickEntry(_currentItem, true);
             _autoMaskPicks.clear();
             _lastDetectThumbUrls = [];
             autoMaskThumbs.el.clear();
@@ -485,6 +558,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 // Drop auto layer only; preserve manual + subtract.
                 canvas.clearAutoPicks();
                 canvas.setSelectedAutoPicks(new Set());
+                _clearAutoPickEntry(_currentItem, true);
             }
             // apply=true: keep auto picks composited.
 
@@ -492,10 +566,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _hasMask = hasContent;
             if (hasContent) emit('mask-ready', { hasMask: true });
             else            emit('mask-clear', {});
-
-            autoMaskThumbs.el.clear();
-            _autoMaskPicks.clear();
-            _clearAutoPickEntry(_currentItem);
         }
 
         // ── Tool mode state machine ───────────────────────────────────────────
@@ -606,11 +676,21 @@ export const MpiCanvasViewer = ComponentFactory.create({
         let _currentItem = initialItem;
 
         el.loadEntry = async (item, idx) => {
-            // Persist current item's layers before switching — only if canvas alive
-            if (!_previewInst && _currentItem) {
+            const sameEntry = !!(
+                item?.id
+                && _currentItem?.id
+                && item.id === _currentItem.id
+                && idx === _currentIdx
+            );
+
+            // Persist current item's layers before switching. On workspace
+            // remount the block may call loadEntry for the same initial item
+            // before restore has run; treating that as a switch would serialize
+            // the empty fresh canvas and delete the session-temp mask.
+            if (!_previewInst && _currentItem && !sameEntry) {
                 try { await _persistLayers(_currentItem); }
                 catch (err) { console.warn('[MpiCanvasViewer] persist layers failed:', err); }
-                _persistCurrentAutoPicks();
+                await _persistCurrentAutoPicks();
             }
 
             // Capture active tool mode so it can be restored after image swap.
@@ -643,7 +723,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 }
                 // Keep thumbs DOM in sync with new item's stored auto-pick state
                 // so swapping back to the canvas restores the right selection.
-                _hydrateThumbsForItem(item);
+                await _hydrateThumbsForItem(item);
                 _loadingEntry = false;
                 emit('entry-loaded', { idx, hasMask: _hasMask });
                 return;
@@ -654,7 +734,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             // Rehydrate per-item auto-pick state: thumbs DOM + viewer Set,
             // then paint cached mask bitmaps onto the live canvas.
-            _hydrateThumbsForItem(item);
+            await _hydrateThumbsForItem(item);
             await _restoreAutoPickMasks();
 
             if (_modeToRestore && _modeToRestore !== 'none') {
@@ -803,7 +883,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearMask = () => {
             canvas.clearMask();
             _hasMask = false;
-            _clearAutoPickEntry(_currentItem);
+            _clearAutoPickEntry(_currentItem, true);
             _autoMaskPicks.clear();
             autoMaskThumbs.el.clearPicks?.();
             const k = _maskKey(_currentItem);
@@ -844,11 +924,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
          * picks + painted mask to keep auto-mask state coherent.
          */
         el.setAutoMaskModel = (modelId) => {
+            if (_autoMaskModel === modelId) return;
             _autoMaskModel = modelId;
             autoMaskThumbs.el.clear();
             autoMaskThumbs.el.clearPicks?.();
             _autoMaskPicks.clear();
-            _clearAutoPickEntry(_currentItem);
+            _clearAutoPickEntry(_currentItem, true);
         };
 
         /**
@@ -856,10 +937,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
          * @param {boolean} useBox
          */
         el.setAutoMaskUseBox = (useBox) => {
-            _autoMaskUseBox = !!useBox;
+            const nextUseBox = !!useBox;
+            if (_autoMaskUseBox === nextUseBox) return;
+            _autoMaskUseBox = nextUseBox;
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
-            _clearAutoPickEntry(_currentItem);
+            _clearAutoPickEntry(_currentItem, true);
         };
 
         /** Kick off an auto-mask detect run and populate the thumbs strip. */
@@ -867,7 +950,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
             _lastDetectThumbUrls = [];
-            _clearAutoPickEntry(_currentItem);
+            _clearAutoPickEntry(_currentItem, true);
             _runAutoMaskWorkflow(true);
         };
 
@@ -906,7 +989,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.swapToPreview = async () => {
             if (_previewInst) return;
 
-            const maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
+            let maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
             const imageUrl    = _currentItem ? _resolveUrl(_currentItem.filePath) : null;
 
             // Persist manual + subtract layers to TEMP before tearing the canvas down.
@@ -914,7 +997,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (_currentItem) {
                 try { await _persistLayers(_currentItem); }
                 catch (err) { console.warn('[MpiCanvasViewer] persist on swapToPreview failed:', err); }
-                _persistCurrentAutoPicks();
+                await _persistCurrentAutoPicks();
+                if (!maskDataUrl) {
+                    maskDataUrl = await _buildCompositeFromTemp(_currentItem);
+                }
             }
 
             _previewMaskCache = maskDataUrl;
@@ -985,7 +1071,21 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // Block calls viewer.el.destroy?.() on workspace teardown. Without this
         // the inner MpiCanvas + its 3 image-px canvases leak GPU texture backing
         // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
-        el.destroy = () => {
+        el.destroy = async () => {
+            if (_currentItem) {
+                if (!_previewInst) {
+                    try {
+                        await _persistLayers(_currentItem);
+                    } catch (err) {
+                        clientLogger.warn('mask-temp', `persist on destroy failed: ${err?.message || err}`);
+                    }
+                }
+                try {
+                    await _persistCurrentAutoPicks();
+                } catch (err) {
+                    clientLogger.warn('automask', `persist auto on destroy failed: ${err?.message || err}`);
+                }
+            }
             _previewInst?.el?.destroy?.();
             _previewInst = null;
             _cv.inst?.el?.destroy?.();
@@ -1001,6 +1101,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 if (initialItem) {
                     try { await _restoreLayers(initialItem); }
                     catch (err) { console.warn('[MpiCanvasViewer] initial restore failed:', err); }
+                    try {
+                        await _hydrateThumbsForItem(initialItem);
+                        await _restoreAutoPickMasks();
+                    } catch (err) {
+                        clientLogger.warn('automask', `initial auto-mask restore failed: ${err?.message || err}`);
+                    }
                 }
                 emit('entry-loaded', { idx: initialIdx, hasMask: _hasMask });
             });

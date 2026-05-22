@@ -77,6 +77,34 @@ test('mask-temp IPC: write/read/delete + session lifecycle', async ({}, testInfo
     expect(read2.manual).toMatch(/^data:image\/png;base64,/);
     expect(read2.subtract).toMatch(/^data:image\/png;base64,/);
 
+    // Write/read auto state in the same session-temp item dir.
+    const autoState = {
+      thumbs: [PNG_DATA_URL],
+      urls: [PNG_DATA_URL],
+      picks: [2],
+    };
+    const writeAuto = await window.evaluate(async (state) => {
+      const { ipcRenderer } = window.require('electron');
+      return await ipcRenderer.invoke('mask-temp:write-auto', 'p1', 'g1', 'i1', state);
+    }, autoState);
+    expect(writeAuto).toEqual({ ok: true });
+
+    const autoPath = path.join(tempDir, 'p1', 'g1', 'i1', 'auto.json');
+    expect(fs.existsSync(autoPath)).toBe(true);
+
+    const readAuto = await window.evaluate(async () => {
+      const { ipcRenderer } = window.require('electron');
+      return await ipcRenderer.invoke('mask-temp:read', 'p1', 'g1', 'i1');
+    });
+    expect(readAuto.auto).toEqual(autoState);
+
+    const deleteAuto = await window.evaluate(async () => {
+      const { ipcRenderer } = window.require('electron');
+      return await ipcRenderer.invoke('mask-temp:delete-auto', 'p1', 'g1', 'i1');
+    });
+    expect(deleteAuto).toEqual({ ok: true });
+    expect(fs.existsSync(autoPath)).toBe(false);
+
     // Path traversal rejected.
     const traversal = await window.evaluate(async (px) => {
       const { ipcRenderer } = window.require('electron');

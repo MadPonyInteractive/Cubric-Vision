@@ -1,7 +1,7 @@
 /**
  * maskTempStore.js — Frontend wrapper for mask-temp:* IPC handlers.
  *
- * Persists per-(project, group, item) manual + subtract mask layers in a
+ * Persists per-(project, group, item) manual + subtract + auto mask layers in a
  * session-scoped Electron TEMP folder. Cleared on app quit, stale dirs
  * pruned at boot. See main.js mask-temp:* handlers and
  * docs/plans/2026-04-29-layered-mask-persistence.md.
@@ -35,7 +35,7 @@ function _warnBrowserOnce() {
   clientLogger.warn('mask-temp', 'Electron IPC unavailable — mask persistence disabled (browser dev mode).');
 }
 
-const NULL_READ = { manual: null, subtract: null };
+const NULL_READ = { manual: null, subtract: null, auto: null };
 
 export const maskTempStore = {
   async read(projectId, groupId, itemId) {
@@ -52,6 +52,7 @@ export const maskTempStore = {
       return {
         manual:   resp.manual   ?? null,
         subtract: resp.subtract ?? null,
+        auto:     resp.auto     ?? null,
       };
     } catch (err) {
       clientLogger.error('mask-temp', 'read invoke threw', err);
@@ -85,6 +86,36 @@ export const maskTempStore = {
       return { ok: true };
     } catch (err) {
       clientLogger.error('mask-temp', 'writeSubtract invoke threw', err);
+      return { ok: false, error: err.message };
+    }
+  },
+
+  async writeAuto(projectId, groupId, itemId, autoState) {
+    if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
+    try {
+      const resp = await ipcRenderer.invoke('mask-temp:write-auto', projectId, groupId, itemId, autoState);
+      if (!resp || resp.ok !== true) {
+        clientLogger.warn('mask-temp', `writeAuto failed: ${resp && resp.error}`);
+        return { ok: false, error: (resp && resp.error) || 'unknown' };
+      }
+      return { ok: true };
+    } catch (err) {
+      clientLogger.error('mask-temp', 'writeAuto invoke threw', err);
+      return { ok: false, error: err.message };
+    }
+  },
+
+  async deleteAuto(projectId, groupId, itemId) {
+    if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
+    try {
+      const resp = await ipcRenderer.invoke('mask-temp:delete-auto', projectId, groupId, itemId);
+      if (!resp || resp.ok !== true) {
+        clientLogger.warn('mask-temp', `deleteAuto failed: ${resp && resp.error}`);
+        return { ok: false, error: (resp && resp.error) || 'unknown' };
+      }
+      return { ok: true };
+    } catch (err) {
+      clientLogger.error('mask-temp', 'deleteAuto invoke threw', err);
       return { ok: false, error: err.message };
     }
   },

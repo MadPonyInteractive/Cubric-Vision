@@ -21,6 +21,7 @@ import { loadProjectGrid } from './projectUI.js';
 import { getAvailableCommands } from '../data/commandRegistry.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { Overlays } from '../managers/overlayManager.js';
+import { clientLogger } from '../services/clientLogger.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ let _currentPage      = null;
 let _currentGroupId   = null;
 let _pageLanding      = null;
 let _currentBlock     = null;   // track mounted view Block for teardown
+let _navSeq           = 0;      // guards async teardown/import ordering
 let _radialModelId    = null;   // active model id for radial item generation;
                                 // pushed by Blocks via refreshRadial({ modelId })
 
@@ -125,7 +127,9 @@ export function initNavigation(refs) {
  * @param {string} page
  * @param {Object} [params]
  */
-export function handleNavigation(page, params = {}) {
+export async function handleNavigation(page, params = {}) {
+    const navToken = ++_navSeq;
+
     if (page === PAGE_LANDING) {
         clearHistory();
         Overlays.reset();
@@ -136,10 +140,8 @@ export function handleNavigation(page, params = {}) {
             _radialInstance = null;
         }
         // Tear down mounted view block if it exists
-        if (_currentBlock) {
-            _currentBlock.destroy?.();
-            _currentBlock = null;
-        }
+        await _destroyCurrentBlock();
+        if (navToken !== _navSeq) return;
         _showLanding();
         loadProjectGrid();
         updateTitlebarProject();
@@ -149,14 +151,14 @@ export function handleNavigation(page, params = {}) {
     if (page === PAGE_GALLERY) {
         _showShell();
         updateTitlebarProject();
-        _loadView(PAGE_GALLERY, params);
+        await _loadView(PAGE_GALLERY, params, navToken);
         return;
     }
 
     if (page === PAGE_GROUP_HISTORY) {
         _showShell();
         updateTitlebarProject();
-        _loadView(PAGE_GROUP_HISTORY, params);
+        await _loadView(PAGE_GROUP_HISTORY, params, navToken);
     }
 }
 
@@ -168,6 +170,24 @@ export function updateTitlebarProject() {
     _projectNameInst.el.setProjectName(state.currentProject?.name || '');
 }
 
+async function _destroyCurrentBlock() {
+    if (!_currentBlock) return;
+
+    const block = _currentBlock;
+    _currentBlock = null;
+
+    try {
+        if (block.el && typeof block.el.destroy === 'function') {
+            await block.el.destroy();
+            block.el.remove?.();
+        } else {
+            await block.destroy?.();
+        }
+    } catch (err) {
+        clientLogger.error('navigation', 'destroy() threw for previous block', err);
+    }
+}
+
 // ── View loader ─────────────────────────────────────────────────────────────
 
 /**
@@ -175,7 +195,7 @@ export function updateTitlebarProject() {
  * @param {string} page   - PAGE_GALLERY | PAGE_GROUP_HISTORY
  * @param {Object} params - Route params (e.g. { groupId } for group-history)
  */
-async function _loadView(page, params = {}) {
+async function _loadView(page, params = {}, navToken = _navSeq) {
     // ── Radial menu ─────────────────────────────────────────────────────────
     _syncRadial(page);
 
@@ -183,12 +203,8 @@ async function _loadView(page, params = {}) {
     Overlays.reset();
 
     // Tear down previously mounted block before clearing DOM.
-    // Swallow destroy errors so a broken teardown can't block the next mount.
-    if (_currentBlock) {
-        try { _currentBlock.destroy?.(); }
-        catch (err) { console.error(`[navigation] destroy() threw for previous block:`, err); }
-        _currentBlock = null;
-    }
+    await _destroyCurrentBlock();
+    if (navToken !== _navSeq) return;
     _toolContainer.innerHTML = '';
     _toolContainer.style.position = 'relative';
 
@@ -199,6 +215,7 @@ async function _loadView(page, params = {}) {
 
     try {
         const mod = await _importView(page);
+        if (navToken !== _navSeq) return;
         if (mod?.mount) {
             _currentBlock = mod.mount(_toolContainer, params);
         }
@@ -206,7 +223,7 @@ async function _loadView(page, params = {}) {
         // breadcrumb + stale view" state when mount throws.
         _updateBreadcrumb(page, params);
     } catch (err) {
-        console.error(`[navigation] Failed to load view "${page}":`, err);
+        clientLogger.error('navigation', `Failed to load view "${page}"`, err);
     }
 }
 

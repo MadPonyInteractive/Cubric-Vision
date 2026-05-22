@@ -459,7 +459,7 @@ app.on('ready', () => {
     }
   });
 
-  // Mask layer TEMP store IPC — session-scoped persistence for manual+subtract layers.
+  // Mask layer TEMP store IPC — session-scoped persistence for mask layers.
   ipcMain.handle('mask-temp:get-session-id', async () => {
     return { ok: true, sessionId: SESSION_ID, tempDir: MASK_TEMP_ROOT };
   });
@@ -467,14 +467,22 @@ app.on('ready', () => {
   ipcMain.handle('mask-temp:read', async (_evt, projectId, groupId, itemId) => {
     try {
       const dir = resolveMaskItemDir(projectId, groupId, itemId);
-      const out = { manual: null, subtract: null };
+      const out = { manual: null, subtract: null, auto: null };
       const manualPath = path.join(dir, 'manual.png');
       const subtractPath = path.join(dir, 'subtract.png');
+      const autoPath = path.join(dir, 'auto.json');
       if (fs.existsSync(manualPath)) {
         out.manual = bufferToPngDataUrl(fs.readFileSync(manualPath));
       }
       if (fs.existsSync(subtractPath)) {
         out.subtract = bufferToPngDataUrl(fs.readFileSync(subtractPath));
+      }
+      if (fs.existsSync(autoPath)) {
+        try {
+          out.auto = JSON.parse(fs.readFileSync(autoPath, 'utf8'));
+        } catch (err) {
+          logger.warn('mask-temp', `auto read failed: ${err.message}`);
+        }
       }
       return { ok: true, ...out };
     } catch (err) {
@@ -501,6 +509,32 @@ app.on('ready', () => {
       return { ok: true };
     } catch (err) {
       logger.error('mask-temp', 'write-subtract failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:write-auto', async (_evt, projectId, groupId, itemId, autoState) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      fs.mkdirSync(dir, { recursive: true });
+      const filePath = path.join(dir, 'auto.json');
+      const tmpPath = filePath + '.tmp';
+      fs.writeFileSync(tmpPath, JSON.stringify(autoState || null), 'utf8');
+      fs.renameSync(tmpPath, filePath);
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'write-auto failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:delete-auto', async (_evt, projectId, groupId, itemId) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      fs.rmSync(path.join(dir, 'auto.json'), { force: true });
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'delete-auto failed', err);
       return { ok: false, error: err.message };
     }
   });

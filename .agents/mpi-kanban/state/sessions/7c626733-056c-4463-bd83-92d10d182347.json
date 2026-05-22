@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "7c626733-056c-4463-bd83-92d10d182347",
+  "agent": "codex",
+  "role": "implementer",
+  "name": "Auto-mask session persistence",
+  "status": "closed",
+  "heartbeat_at": "2026-05-22T07:38:38.3111061+01:00",
+  "task": ".agents/mpi-kanban/state/tasks/3a40a523-276c-4836-9aa5-45b684c50aa3.json",
+  "allowed_actions": [
+    "read",
+    "implement scoped code changes",
+    "run focused verification"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-22T06:27:13.6330324+01:00",
+      "event": "session_started"
+    },
+    {
+      "at": "2026-05-22T07:03:29.9945548+01:00",
+      "event": "handoff_ready"
+    },
+    {
+      "at": "2026-05-22T07:08:11.1718173+01:00",
+      "event": "handoff_accepted"
+    },
+    {
+      "at": "2026-05-22T07:38:38.3111061+01:00",
+      "event": "session_closed"
+    }
+  ]
+}

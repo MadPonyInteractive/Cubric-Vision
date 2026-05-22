@@ -1,0 +1,106 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "34e26cb3-f41f-4215-939c-fae0af421b1d",
+  "generated_at": "2026-05-22T06:15:50.0071920+01:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "History workspace masking investigation",
+    "branch": "unknown"
+  },
+  "goal": {
+    "original": "Investigate the history workspace masking system. Auto-detection masks disappear when masks are created in other entries. Check mask persistency and brief before coding.",
+    "status": "in_progress",
+    "summary": "Read-only investigation is complete. No code was changed. The next session should implement auto-mask session-temp persistence parity with manual masks, plus the small lifecycle guard that prevents mask-panel remount from clearing unchanged auto-mask settings."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Read CLAUDE.md, .claude/rules/dos_and_donts.md, docs/PROJECT.md, .claude/rules/workspaces.md, .claude/rules/state.md, .claude/rules/events.md, and docs/project-integrity.md.",
+      "Confirmed manual/subtract masks persist only in Electron session temp via maskTempStore and main.js mask-temp IPC.",
+      "Confirmed auto-detected masks are currently component-local RAM state plus Comfy /view URLs, not project sidecar data and not temp-store data.",
+      "Identified likely lifecycle bug: MpiToolOptionsMask setup calls setAutoMaskModel/setAutoMaskUseBox, whose current implementations clear auto-pick state even when values did not change."
+    ],
+    "pending": [
+      "Implement session-temp persistence parity for auto-detected masks without making masks durable project sidecar data.",
+      "Make auto-mask model/mode initialization non-destructive when values are unchanged.",
+      "Verify entry switching, prompt/canvas swaps, mask-panel remounts, and app-session behavior."
+    ]
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "implement scoped code changes",
+    "run focused verification",
+    "update docs or rules only if explicitly approved by the user"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Captured investigation findings and next implementation scope in this handoff."
+    ],
+    "pending": [
+      "If code is changed and component wiring or mask persistence behavior changes, ask the user whether .claude/rules/ should be updated, per CLAUDE.md documentation drift rule.",
+      "Do not expand scope to permanent project-sidecar mask persistence unless the user explicitly asks."
+    ]
+  },
+  "next_action": {
+    "description": "Read the listed files, then implement auto-detected mask persistence through the same session-temp mechanism used by manual masks, preserving the user's stated scope: auto masks should match manual masks for now, not become project-durable.",
+    "command": "$mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "User does not want durable project-sidecar mask persistence yet.",
+      "Auto-detected masks should have the same persistence level as manual masks: session-temp persistence in Electron, cleared on app quit/stale-session cleanup.",
+      "A narrow lifecycle fix should prevent mask option panel initialization from clearing existing auto-mask picks when the model/mode value is unchanged."
+    ],
+    "constraints": [
+      "No code was written in the investigation session.",
+      "Follow project rules before editing: use existing utilities, Events/state rules, ComponentFactory patterns, BEM, and clientLogger instead of bare console logging for new frontend logging.",
+      "Current manual mask temp store writes manual.png and subtract.png under a per project/group/item session-temp key.",
+      "Browser dev mode has no Electron IPC; mask temp persistence is disabled there by design.",
+      "Do not persist mask pixels into project.json or Media/.meta sidecars for this scope."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/state/handoffs/34e26cb3-f41f-4215-939c-fae0af421b1d.json",
+      ".agents/mpi-kanban/state/index.json",
+      "docs/handoffs/2026-05-22-06-15-mask-session-persistence.json"
+    ],
+    "files_to_read_first": [
+      "CLAUDE.md",
+      ".claude/rules/dos_and_donts.md",
+      ".claude/rules/workspaces.md",
+      ".claude/rules/state.md",
+      ".claude/rules/events.md",
+      "docs/PROJECT.md",
+      "docs/project-integrity.md",
+      "js/services/maskTempStore.js",
+      "main.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/services/commandExecutor.js",
+      "comfy_workflows/img_auto_mask.json"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/workspaces.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    "docs/project-integrity.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-22T06:15:50.0071920+01:00",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-05-22T07:38:38.3111061+01:00",
+      "event": "handoff_closed_by_completed_session"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/34e26cb3-f41f-4215-939c-fae0af421b1d.json and use $mpi-continue in Codex or /mpi-kanban:mpi-continue in Claude Code. You are implementing only session-temp persistence parity for auto-detected masks in the history workspace: auto masks should persist like manual masks within the same Electron session, not become project-durable sidecar data. Start by reading the rules and mask files listed in the handoff, then brief before coding."
+}

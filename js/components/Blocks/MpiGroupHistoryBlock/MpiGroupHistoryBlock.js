@@ -1497,8 +1497,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Cleanup ───────────────────────────────────────────────────────────
 
-        el.destroy = () => {
+        el.destroy = async () => {
             clearTimeout(_mascotLingerTimer);
+            _options?.destroy?.();
+            _options = null;
+
+            if (viewer?.el && typeof viewer.el.destroy === 'function') {
+                await viewer.el.destroy();
+                viewer.el.remove?.();
+            } else {
+                await viewer?.destroy?.();
+            }
+
             _unsubs.forEach(fn => fn?.());
             window.removeEventListener('dragenter', _onHistDragEnter);
             window.removeEventListener('dragleave', _onHistDragLeave);
@@ -1506,10 +1516,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             window.removeEventListener('drop',      _onHistDrop);
             _dropOverlay.el.destroy?.();
             _dropOverlay.el.remove();
-            _options?.destroy?.();
-            _options = null;
-            viewer.destroy?.();
-            viewer.el.destroy?.();
             historyList.destroy?.();
             historyTools.destroy?.();
             _settingsOverlay.destroy?.();

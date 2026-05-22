@@ -1,0 +1,117 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f4a4e3c7-ff38-479a-ae13-c74436380065",
+  "generated_at": "2026-05-22T07:03:29.9945548+01:00",
+  "from_session": ".agents/mpi-kanban/state/sessions/7c626733-056c-4463-bd83-92d10d182347.json",
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "Auto-mask session-temp persistence and active-entry remount bug",
+    "branch": "unknown"
+  },
+  "goal": {
+    "original": "Implement auto-detected mask persistence through the same session-temp mechanism used by manual masks, preserving the scope: auto masks should match manual masks for now, not become project-durable.",
+    "status": "in_progress",
+    "summary": "Auto mask temp persistence is implemented and verified for entry switching, preview/canvas swap, and destroy/remount when the auto state is already in temp. The remaining user-reported bug is that leaving the currently active History entry, going to Gallery, and returning to History still clears that active entry's combined mask in the real app."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Extended Electron mask-temp IPC and frontend maskTempStore to read/write/delete auto mask state as session-temp auto.json alongside manual.png and subtract.png.",
+      "Updated MpiCanvasViewer to persist/restore auto masks from session temp, include auto layers in preview composites, and avoid clearing auto picks when auto-mask model/mode initialization receives unchanged values.",
+      "Added desktop coverage for mask-temp auto IPC and a viewer destroy/remount combined manual+auto restore path.",
+      "Verified syntax, component lint, full JS lint, and desktop tests after the latest patch."
+    ],
+    "pending": [
+      "Investigate and fix the real-app active-entry navigation path: leave History with an active combined mask, go to Gallery, return to the same History entry, and confirm the mask remains.",
+      "Determine whether the issue is ordering/race in History block teardown/remount, active item load timing, selectedIndex/current item mismatch, or options/prompt lifecycle clearing the mask after restore.",
+      "After fixing, add or adjust a regression test that better models Gallery -> History navigation, not just direct viewer destroy/remount.",
+      "Ask the user whether .claude/rules/ should be updated after the behavior is finalized."
+    ]
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue scoped code changes",
+    "own and integrate the uncommitted files changed by the outgoing Codex session except dev_configs/app_config.js",
+    "run focused verification",
+    "update docs or rules only if explicitly approved by the user"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Captured the current remaining active-entry remount bug and the implementation/test state in this handoff.",
+      "Marked outgoing file claims as needs_integration so the next session can take ownership."
+    ],
+    "pending": [
+      "Do not commit or close the MPI session until the active-entry navigation bug is fixed and verified.",
+      "If rules/docs need updates for auto-mask session-temp behavior, ask the user first per CLAUDE.md documentation drift rule."
+    ]
+  },
+  "next_action": {
+    "description": "Investigate why the currently active History entry's combined AutoMask + manual mask is cleared after navigating to Gallery and back to History, then fix that real-app navigation/remount path while preserving the session-temp-only scope.",
+    "command": "$mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Auto masks remain session-temp only, matching manual/subtract masks for now; do not persist auto masks to project.json or .meta sidecars.",
+      "Auto mask temp state is stored per project/group/item under the same mask-temp key as manual/subtract as auto.json.",
+      "The next agent has ownership of the uncommitted files changed by this Codex session. dev_configs/app_config.js is explicitly user-owned and must not be touched unless the user asks."
+    ],
+    "constraints": [
+      "Browser dev mode has no Electron IPC; mask temp persistence remains disabled there by design.",
+      "There is no active plan file attached; this handoff is the active plan.",
+      "Existing full npm lint has 28 warnings outside the touched code; do not treat those as introduced failures.",
+      "A direct viewer destroy/remount desktop test now passes, so the remaining bug likely involves the real Group History/Gallery navigation lifecycle or active item restore order."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/state/index.json",
+      ".agents/mpi-kanban/state/files/172ee815-b87b-4316-af84-71634d613281.json",
+      ".agents/mpi-kanban/state/files/4264aa9b-1316-4b24-89a8-a12021f5ac9a.json",
+      ".agents/mpi-kanban/state/files/5fc3e8b6-2a45-4964-8df2-9089d63d3c1e.json",
+      ".agents/mpi-kanban/state/files/94a4edf5-2205-481a-9199-849bfef79aaf.json",
+      ".agents/mpi-kanban/state/files/a479b151-77ad-4664-bb68-c963cf09f638.json",
+      ".agents/mpi-kanban/state/files/c814c841-421c-4141-993a-67cf297f52ab.json",
+      ".agents/mpi-kanban/state/sessions/7c626733-056c-4463-bd83-92d10d182347.json",
+      ".agents/mpi-kanban/state/tasks/3a40a523-276c-4836-9aa5-45b684c50aa3.json",
+      "main.js",
+      "js/services/maskTempStore.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "tests/desktop/mask-temp-ipc.spec.js",
+      "tests/desktop/mask-persist-roundtrip.spec.js"
+    ],
+    "files_to_read_first": [
+      "CLAUDE.md",
+      ".claude/rules/dos_and_donts.md",
+      ".claude/rules/workspaces.md",
+      ".claude/rules/state.md",
+      ".claude/rules/events.md",
+      "docs/PROJECT.md",
+      "docs/project-integrity.md",
+      "main.js",
+      "js/services/maskTempStore.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "tests/desktop/mask-persist-roundtrip.spec.js",
+      "tests/desktop/mask-temp-ipc.spec.js"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/workspaces.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    "docs/project-integrity.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-22T07:03:29.9945548+01:00",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-05-22T07:38:38.3111061+01:00",
+      "event": "handoff_closed_by_completed_session"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/f4a4e3c7-ff38-479a-ae13-c74436380065.json and use $mpi-continue in Codex or /mpi-kanban:mpi-continue in Claude Code. You are continuing auto-mask session-temp persistence work. The next action is to investigate why the currently active History entry's combined AutoMask + manual mask is cleared after navigating to Gallery and back to History, then fix that real-app navigation/remount path while preserving the session-temp-only scope. You have ownership of the uncommitted files changed by the previous Codex session except dev_configs/app_config.js, which is user-owned."
+}

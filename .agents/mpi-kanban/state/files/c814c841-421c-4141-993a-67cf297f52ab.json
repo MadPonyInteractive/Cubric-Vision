@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "c814c841-421c-4141-993a-67cf297f52ab",
+  "path": "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+  "status": "closed",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/7c626733-056c-4463-bd83-92d10d182347.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3a40a523-276c-4836-9aa5-45b684c50aa3.json",
+  "heartbeat_at": "2026-05-22T07:38:38.3111061+01:00",
+  "recent_events": [
+    {
+      "at": "2026-05-22T06:27:13.6330324+01:00",
+      "event": "file_claimed"
+    },
+    {
+      "at": "2026-05-22T07:03:29.9945548+01:00",
+      "event": "handoff_ready_needs_integration"
+    },
+    {
+      "at": "2026-05-22T07:38:38.3111061+01:00",
+      "event": "manual_verification_passed_file_closed"
+    }
+  ]
+}
