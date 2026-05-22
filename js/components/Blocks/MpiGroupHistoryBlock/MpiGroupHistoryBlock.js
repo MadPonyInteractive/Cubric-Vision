@@ -180,6 +180,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         let activeOperation = _hasPromptOps()
             ? (_firstAvailable?.value ?? 'upscale')
             : (_firstFrameOp || (isVideo ? 't2v' : 'generate'));
+        let _preferredOperation = activeOperation;
+        let _isProgrammaticOperationSync = false;
         let _currentIdx = _group.selectedIndex ?? 0;
         let _currentSelectionIndices = [];
         let _compareOverlay = null;
@@ -558,6 +560,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
         let _pb = null;
 
+        function _setPromptOperation(operation, { remember = false } = {}) {
+            activeOperation = operation;
+            if (remember) _preferredOperation = operation;
+            if (!_pb?.el) return;
+            _isProgrammaticOperationSync = true;
+            try {
+                _pb.el.setOperation(activeOperation);
+            } finally {
+                _isProgrammaticOperationSync = false;
+            }
+        }
+
         /** Sync PromptBox operation list + preserve current choice when available. */
         function _refreshOpOptions() {
             const opts = _opOptions();
@@ -567,12 +581,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 filterNoInputOps: true,
                 historyMode: true,
             });
+            const preferredAvailable = opts.find(o => o.value === _preferredOperation && !o.disabled);
+            if (preferredAvailable && _preferredOperation !== activeOperation) {
+                _setPromptOperation(_preferredOperation);
+                refreshGroupHistoryRadial(opts);
+                return;
+            }
             const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
             if (!currentStillOk) {
                 const fallback = opts.find(o => !o.disabled);
                 if (fallback) {
-                    activeOperation = fallback.value;
-                    _pb?.el?.setOperation(activeOperation);
+                    _setPromptOperation(fallback.value);
                 }
             }
             // Single source of truth: ship the same op list to the radial that
@@ -634,7 +653,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
-            _unsubs.push(_pb.on('operation-change', ({ operation }) => { activeOperation = operation; }));
+            _unsubs.push(_pb.on('operation-change', ({ operation }) => {
+                activeOperation = operation;
+                if (!_isProgrammaticOperationSync) _preferredOperation = operation;
+            }));
             _unsubs.push(_pb.on('media-change', () => {
                 // PromptBox media count drives op availability in history
                 // workspace (frame-grab inject must unlock i2v immediately).
@@ -1159,6 +1181,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     filterNoInputOps: true,
                     historyMode: true,
                 });
+                _refreshOpOptions();
             });
 
             viewer.on('mask-ready', () => {
@@ -1213,8 +1236,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const opts = _opOptions();
             const match = opts.find(o => o.value === operation && !o.disabled);
             if (!match) return;
-            activeOperation = operation;
-            _pb.el.setOperation(activeOperation);
+            _setPromptOperation(operation, { remember: true });
             if (historyTools.el.getActiveMode?.() !== 'prompt') {
                 historyTools.el.setMode('prompt');
             } else {
