@@ -18,8 +18,9 @@ export const MpiAbout = ComponentFactory.create({
                 <img src="assets/mascot/logo.png" alt="Cubric Vision" class="mpi-about__logo">
                 <span class="mpi-wordmark mpi-about__name" aria-label="Cubric Vision">Cubric<span class="mpi-wordmark__suffix">Vision</span></span>
                 <p class="mpi-about__desc">
-                    A local AI workstation for image, video and audio generation, prompt engineering,
-                    and creative workflows.
+                    Create images and video through local inference, with projects, prompts, models,
+                    and workflows kept on your machine. Cubric Vision is built for open-ended creation
+                    with mostly uncensored models, and is the first part of a wider Cubric creative ecosystem.
                 </p>
                 <span class="mpi-about__version">Alpha v0.0.1</span>
             </div>
