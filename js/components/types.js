@@ -323,33 +323,6 @@
  */
 
 /**
- * @typedef {Object} MpiDragListProps (Primitive — js/components/Primitives/MpiDragList)
- * @property {MpiDragListItem[]} items - Array of items to be displayed and reordered
- * @property {string|number} [maxHeight='250px'] - Max list height before scrolling
- * @property {string} [placeholder='Empty list'] - Text shown when there are no items
- */
-
-/**
- * @typedef {Object} MpiDragListItem
- * @property {string} label - Display text for the item
- * @property {string|number} [id] - Unique identifier
- * @property {any} [data] - Optional metadata associated with the item
- */
-
-/**
- * @typedef {Object} MpiMediaDropzoneProps (Primitive — js/components/Primitives/MpiMediaDropzone)
- * @property {string}   [icon='media']  - Key from MpiIcon registry
- * @property {string}   title           - Primary title text
- * @property {string}   text            - Description text
- * @property {string}   [footer]        - Optional dimensions/footer info
- * @property {string[]} [mediaType]     - Array of accepted types: 'image', 'video', 'audio'
- * @property {string}   [width='250px'] - Fixed width override
- * @property {string}   [value]         - URL of displayed media (sets display mode)
- * @property {'image'|'video'|'audio'} [type='image'] - Media type for display rendering
- */
-
-
-/**
  * @typedef {Object} MpiPromptBoxProps (Organism — js/components/Organisms/MpiPromptBox)
  * @property {import('./data/modelRegistry.js').ModelDef|null} [model=null]
  * @property {import('./data/modelRegistry.js').ModelDef[]} [modelList=[]]
@@ -387,13 +360,6 @@
  *   'settings'          { model }
  */
 
-
-/**
- * @typedef {Object} MpiVolumeControlProps (Compound — js/components/Compounds/MpiVolumeControl)
- * @property {number} [volume=1.0] - Initial volume 0–1
- * @property {boolean} [muted=false] - Initial muted state
- * Emits: 'change' { volume: number, muted: boolean }
- */
 
 /**
  * @typedef {Object} MpiMemoryMonitorProps (Compound — js/components/Compounds/MpiMemoryMonitor)
@@ -517,17 +483,6 @@
 */
 
 /**
- * @typedef {Object} MpiScrollableBoxProps (Primitive — js/components/Primitives/MpiScrollableBox)
- * @property {string[]} titles - Options to display in the list
- * @property {string|number} [maxHeight] - Optional max height for the scrollable area
- * @property {'single'|'multiple'} [selectionMode='single'] - Selection behavior
- * @property {string[]} [selected=[]] - Initially selected items
- *
- * Emits:
- * 'select' { value: string, selection: string[] }
- */
-
-/**
  * @typedef {Object} MpiSpinnerProps
  * @property {'sm'|'md'|'lg'} [size='md'] - Spinner size
  * @property {'primary'|'secondary'|'light'|'dark'} [variant='primary'] - Color variant
@@ -538,67 +493,6 @@
  * @property {string} message - Notification message
  * @property {'info'|'success'|'warning'|'danger'} [variant='info'] - Visual variant
  * @property {number} [duration=3000] - Auto-hide duration in ms
- */
-
-/**
- * @typedef {Object} MpiToolbarProps (Compound — js/components/Compounds/MpiToolbar)
- * @property {Array<string|{label:string,value:string}>} [presets=[]] - Saved preset list
- * @property {string} [value=''] - Currently selected preset value
- * @property {string} [placeholder='Select preset...'] - Dropdown placeholder
- *
- * Emits:
- * 'select' { value: string } — preset selected
- * 'save'   {}               — save button clicked
- * 'delete' {}               — delete button clicked
- */
-
-/**
- * @typedef {Object} MpiCameraConfigProps (Compound — js/components/Compounds/MpiCameraConfig)
- * @property {Object} [value={}] - Initial values. Keys: cam_type, cam_lens, cam_focal,
- *   cam_aperture, cam_shutter, cam_iso, shot_angle, shot_size, shot_dof, shot_comp
- *
- * Emits:
- * 'change' { values: Object } — full values object on any field change
- */
-
-/**
- * @typedef {Object} MpiLightingConfigProps (Compound — js/components/Compounds/MpiLightingConfig)
- * @property {Object} [value={}] - Initial values. Keys: light_type, light_color,
- *   light_intensity, light_dir
- *
- * Emits:
- * 'change' { values: Object } — full values object on any field change
- */
-
-/**
- * @typedef {Object} MpiStyleConfigProps (Compound — js/components/Compounds/MpiStyleConfig)
- * @property {Object} [value={}] - Initial values. Keys: color_grade, color_contrast,
- *   color_sat, color_sharp
- *
- * Emits:
- * 'change' { values: Object } — full values object on any field change
- */
-
-/**
- * @typedef {Object} MpiVideoSceneProps (Compound — js/components/Compounds/MpiVideoScene)
- * @property {MpiVideoSceneItem[]} [scenes=[]] - Initial scene list
- * @property {string[]} [angles]               - Override angle options
- * @property {string[]} [sizes]                - Override size options
- * @property {string[]} [movements]            - Override movement options
- * @property {string[]} [speeds]               - Override speed options
- *
- * Emits:
- * 'change' { scenes: MpiVideoSceneItem[] } — emitted on any field change or add/remove
- */
-
-/**
- * @typedef {Object} MpiVideoSceneItem
- * @property {string} [description=''] - Brief shot description
- * @property {string} [angle='']       - Camera angle
- * @property {string} [size='']        - Shot size
- * @property {string} [movement='']    - Camera movement
- * @property {string} [speed='']       - Playback speed modifier
- * @property {number} [duration=5]     - Shot duration in seconds (1–30)
  */
 
 /**
@@ -1143,24 +1037,6 @@
  * Auto-hides on global `ui:close-all-popups` event (Escape key).
  *
  * Does NOT emit component-level events and does NOT call the backend — callers own side effects.
- */
-
-/**
- * @typedef {Object} MpiGalleryDropOverlayProps (Primitive — js/components/Primitives/MpiGalleryDropOverlay)
- * @property {function({ file: File, mediaType: 'image'|'video' }): void} [onDrop]
- *   Called when a valid OS file is dropped. Upload, Events.emit, etc. are the
- *   caller's responsibility — this primitive is dumb.
- *
- * Full-area OS-file drop target. Shown by gallery block while OS files are dragged
- * over the window. Ignores internal `application/mpi-media` drags.
- *
- * Instance methods (on instance.el):
- *   show() — add `--visible` modifier, making overlay interactive
- *   hide() — remove `--visible` modifier
- *
- * Auto-hides on global `ui:close-all-popups` event (Escape key).
- *
- * Does NOT emit component-level events and does NOT upload — callers own side effects.
  */
 
 /**

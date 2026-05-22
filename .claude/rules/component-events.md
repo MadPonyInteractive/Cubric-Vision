@@ -28,10 +28,6 @@ LISTENS: `ui:close-all-popups` — closes the portaled picker popup
 API:     `el.getRGB()` · `el.setRGB(r, g, b)` · `el.setHex(hex)` · `el.getHex()`
 NOTE:    Primitive HSV visual picker with saturation/value square, hue slider, RGB/hex precision inputs, lightweight portaled floating popup, pointer/keyboard support, and MutationObserver cleanup.
 
-### MpiDragList
-EMITS:   `reorder` `{ items: any[], indices: number[] }`
-LISTENS: (none)
-
 ### MpiDropdown
 EMITS:   `change` `{ value: string, label: string }`
 LISTENS: (none — uses document click + MutationObserver for cleanup)
@@ -39,12 +35,6 @@ LISTENS: (none — uses document click + MutationObserver for cleanup)
 ### MpiInput
 EMITS:   `input`  `{ value: string|number, originalEvent: Event }`
          `change` `{ value: string|number, originalEvent: Event }`
-LISTENS: (none)
-
-### MpiMediaDropzone
-EMITS:   `click`  `{ title: string }`
-         `remove` `{ title: string }`
-         `drop`   `{ url: string, file: File, title: string, mediaType: string }`
 LISTENS: (none)
 
 ### MpiModal
@@ -67,7 +57,7 @@ LISTENS: `ui:close-all-popups` — removes `is-active`, emits `close`
 ### MpiMediaDropOverlay
 EMITS:   (none — dumb primitive; calls `props.onDrop({ files: [{ file, mediaType }, ...] })` once per drop with all valid image/video files; all side effects in caller)
 LISTENS: `ui:close-all-popups` — hides overlay (Escape during drag)
-NOTE:    Accepts any image/video OS file drag (multi-file supported). Ignores internal `application/mpi-media` drags. Replaced `MpiGalleryDropOverlay`.
+NOTE:    Accepts any image/video OS file drag (multi-file supported). Ignores internal `application/mpi-media` drags.
 
 ### MpiProjectDropOverlay
 EMITS:   (none — dumb primitive; calls `props.onDrop({ folderPath, source })` on valid drop; all side effects in caller)
@@ -92,10 +82,6 @@ EMITS:   `select` `{ value: string, option: object|string }`
 LISTENS: (none)
 NOTE:    Options accept `string` or `{ label, value, icon?, info?, disabled? }`. Props: `iconOnly` (bool) hides labels and renders icon-only buttons; per-option `info` overrides group `info` for status-bar text.
 
-### MpiScrollableBox
-EMITS:   `select` `{ value: string, selection: string[] }`
-LISTENS: (none)
-
 ### MpiToast
 EMITS:   `close` `{}`
 LISTENS: (none)
@@ -107,10 +93,6 @@ LISTENS: (none)
 ### MpiAutoMaskThumbs
 EMITS:   `change` `{ picks: Set<number> }`
 LISTENS: (none)
-
-### MpiCameraConfig
-EMITS:   `change` `{ values: Object }` — keys: cam_type, cam_lens, cam_focal, cam_aperture, cam_shutter, cam_iso, shot_angle, shot_size, shot_dof, shot_comp
-LISTENS: (none — internal MpiDropdown instances handle their own events)
 
 ### MpiCompareOverlay
 EMITS:   `close` `{}`
@@ -219,10 +201,6 @@ EMITS:   `delete`      `{}`     — Action button clicked (Install when idle)
          `uninstall`   `{}`     — Uninstall button clicked (when installed)
 LISTENS: (none)
 
-### MpiLightingConfig
-EMITS:   `change` `{ values: Object }` — keys: light_type, light_color, light_intensity, light_dir
-LISTENS: (none)
-
 ### MpiMemoryMonitor
 EMITS:   `release` `{ deep: boolean }`
 LISTENS: (none — uses raw `window.addEventListener('keydown/keyup')` for Ctrl detection)
@@ -286,26 +264,6 @@ NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch
 ### MpiStartingComfy
 EMITS:   (none)
 LISTENS: (none — direct portal, bypasses Overlays queue intentionally)
-
-### MpiStyleConfig
-EMITS:   `change` `{ values: Object }` — keys: color_grade, color_contrast, color_sat, color_sharp
-LISTENS: (none)
-
-### MpiToolbar
-EMITS:   `select`      `{ value: string }`
-         `save`        `{}` — only when `props.comps` is falsy
-         `delete`      `{}` — only when `props.comps` is falsy
-         `modelChange` `{ value: number }`
-         `clipChange`  `{ value: number }`
-LISTENS: (none)
-
-### MpiVideoScene
-EMITS:   `change` `{ scenes: MpiVideoSceneItem[] }`
-LISTENS: (none)
-
-### MpiVolumeControl
-EMITS:   `change` `{ volume: number, muted: boolean }`
-LISTENS: (none)
 
 ---
 

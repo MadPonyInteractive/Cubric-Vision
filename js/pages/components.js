@@ -23,24 +23,15 @@ import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiCheckbox } from '../components/Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiBadge } from '../components/Primitives/MpiBadge/MpiBadge.js';
-import { MpiMediaDropzone } from '../components/Primitives/MpiMediaDropzone/MpiMediaDropzone.js';
 import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
-import { MpiScrollableBox } from '../components/Primitives/MpiScrollableBox/MpiScrollableBox.js';
-import { MpiDragList } from '../components/Primitives/MpiDragList/MpiDragList.js';
 import { MpiOverlay } from '../components/Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { StatusBar } from '../shell/statusBar.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Organisms/MpiPromptBox/MpiPromptBox.js';
-import { MpiVolumeControl } from '../components/Compounds/MpiVolumeControl/MpiVolumeControl.js';
 import { MpiOptionSelector } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
-import { MpiToolbar } from '../components/Compounds/MpiToolbar/MpiToolbar.js';
-import { MpiCameraConfig } from '../components/Compounds/MpiCameraConfig/MpiCameraConfig.js';
-import { MpiLightingConfig } from '../components/Compounds/MpiLightingConfig/MpiLightingConfig.js';
-import { MpiStyleConfig } from '../components/Compounds/MpiStyleConfig/MpiStyleConfig.js';
-import { MpiVideoScene } from '../components/Compounds/MpiVideoScene/MpiVideoScene.js';
 import { MpiModal } from '../components/Primitives/MpiModal/MpiModal.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
@@ -208,36 +199,6 @@ function mountAll() {
         });
     });
 
-    // ── MpiScrollableBox (Primitive) ──────────────────────────────────────────
-    mount('preview-scrollable-box', () => {
-        const titles = ['Single A', 'Single B', 'Single C', 'Single D', 'Single E', 'Single F'];
-        const box = MpiScrollableBox.mount(slot('preview-scrollable-box'), {
-            titles,
-            maxHeight: '120px',
-            selectionMode: 'single'
-        });
-        box.on('select', ({ value }) => {
-            const infoBar = gid('shell-info-text');
-            if (infoBar) infoBar.textContent = `ScrollableBox (Single): ${value}`;
-            console.log('[gallery] scrollable box select:', value);
-        });
-    });
-
-    mount('preview-scrollable-box-multiple', () => {
-        const titles = ['Multi 1', 'Multi 2', 'Multi 3', 'Multi 4', 'Multi 5', 'Multi 6'];
-        const box = MpiScrollableBox.mount(slot('preview-scrollable-box-multiple'), {
-            titles,
-            maxHeight: '120px',
-            selectionMode: 'multiple',
-            selected: ['Multi 1', 'Multi 3']
-        });
-        box.on('select', ({ value, selection }) => {
-            const infoBar = gid('shell-info-text');
-            if (infoBar) infoBar.textContent = `ScrollableBox (Multi): ${selection.join(', ')}`;
-            console.log('[gallery] scrollable box select:', value, selection);
-        });
-    });
-
     mount('preview-popupbtn-bottom', () => {
         const triggerSlot = slot('preview-popupbtn-bottom');
         triggerSlot.style.position = 'relative';
@@ -289,12 +250,6 @@ function mountAll() {
         });
     });
 
-    // ── MpiVolumeControl ─────────────────────────────────────────────────────
-    mount('preview-vol-control', () => {
-        const vc = MpiVolumeControl.mount(slot('preview-vol-control'), { volume: 0.5 });
-        vc.on('change', ({ volume, muted }) => console.log('[gallery] volume control change:', { volume, muted }));
-    });
-
     // ── MpiMemoryMonitor (Compound) ──────────────────────────────────
     mount('preview-mem-monitor', () => {
         const mm = MpiMemoryMonitor.mount(slot('preview-mem-monitor'), { pollInterval: 2000 });
@@ -340,26 +295,6 @@ function mountAll() {
         overlay.on('close', () => console.log('[gallery] overlay closed'));
     });
 
-    // ── MpiDragList (Primitive) ─────────────────────────────────────────────────
-    mount('preview-drag-list', () => {
-        const items = [
-            { label: 'Item 1: Primary Task', id: 1 },
-            { label: 'Item 2: Secondary Priority', id: 2 },
-            { label: 'Item 3: Low Importance', id: 3 },
-            { label: 'Item 4: Optional Extra', id: 4 },
-            { label: 'Item 5: Background Process', id: 5 }
-        ];
-        const dl = MpiDragList.mount(slot('preview-drag-list'), {
-            items,
-            maxHeight: '180px'
-        });
-        dl.on('reorder', ({ items }) => {
-            const infoBar = gid('shell-info-text');
-            if (infoBar) infoBar.textContent = `List Reordered: ${items[0].label} is now first`;
-            console.log('[gallery] drag list reorder:', items);
-        });
-    });
-
     // ── MpiRadialMenu (Primitive) ─────────────────────────────────────────────
     mount('preview-radial-menu', () => {
         const slotEl = slot('preview-radial-menu');
@@ -376,79 +311,6 @@ function mountAll() {
             radial.el.setContext(CONTEXTS[ctxIndex]);
             radial.el.show();
         });
-    });
-
-    // ── MpiMediaDropzone (Primitive) ──────────────────────────────────────────
-    mount('preview-dropzone-image', () => {
-        const baseProps = {
-            title: 'Source Image',
-            icon: 'image',
-            text: 'Drag & Drop or click to upload',
-            mediaType: ['image']
-        };
-
-        const setupDz = (p) => {
-            const dz = MpiMediaDropzone.mount(slot('preview-dropzone-image'), p);
-
-            dz.on('drop', ({ url, file }) => {
-                setupDz({ ...baseProps, value: url, type: 'image' });
-
-                // Dimensions
-                const img = new Image();
-                img.onload = () => {
-                    const badgeSlot = gid('preview-dropzone-image-badge');
-                    if (badgeSlot) {
-                        badgeSlot.innerHTML = '';
-                        MpiBadge.mount(badgeSlot, { label: `${img.width}×${img.height}`, variant: 'info', pill: true });
-                    }
-                };
-                img.src = url;
-            });
-
-            dz.on('remove', () => {
-                setupDz(baseProps);
-                const badgeSlot = gid('preview-dropzone-image-badge');
-                if (badgeSlot) badgeSlot.innerHTML = '';
-            });
-        };
-
-        setupDz(baseProps);
-    });
-
-    mount('preview-dropzone-video', () => {
-        const baseProps = {
-            title: 'Training Video',
-            icon: 'video',
-            text: 'MPEG, MP4 or MOV accepted',
-            footer: 'Max 100MB',
-            mediaType: ['video']
-        };
-
-        const setupDz = (p) => {
-            const dz = MpiMediaDropzone.mount(slot('preview-dropzone-video'), p);
-            dz.on('drop', ({ url }) => setupDz({ ...baseProps, value: url, type: 'video' }));
-            dz.on('remove', () => setupDz(baseProps));
-        };
-
-        setupDz(baseProps);
-    });
-
-    mount('preview-dropzone-audio', () => {
-        const baseProps = {
-            title: 'Audio Track',
-            icon: 'audio',
-            text: 'WAV, MP3 or OGG',
-            footer: '44.1kHz / 16-bit',
-            mediaType: ['audio']
-        };
-
-        const setupDz = (p) => {
-            const dz = MpiMediaDropzone.mount(slot('preview-dropzone-audio'), p);
-            dz.on('drop', ({ url }) => setupDz({ ...baseProps, value: url, type: 'audio' }));
-            dz.on('remove', () => setupDz(baseProps));
-        };
-
-        setupDz(baseProps);
     });
 
     // ── MpiVideoSurface + MpiVideoControlBar (split player) ──────────────────────
@@ -788,106 +650,6 @@ function mountAll() {
             includeNegative: true
         });
         pb.on('toggle-negative', ({ active }) => console.log('[gallery] negative toggle:', active));
-    });
-
-    mount('preview-toolbar-default', () => {
-        // Correct pattern: Mount first, then attach listeners, then pass to parent
-        const save = MpiButton.mount(document.createElement('div'), { icon: 'download', info: 'Save current settings as a preset', size: 'sm', variant: 'ghost' });
-        save.on('click', () => {
-            console.log('[gallery] toolbar save clicked');
-            Events.emit('media:updated', { msg: 'Preset saved to library', type: 'success' });
-        });
-
-        const trash = MpiButton.mount(document.createElement('div'), { icon: 'edit', info: 'Delete selected preset', size: 'sm', variant: 'ghost' });
-        trash.on('click', () => console.log('[gallery] toolbar delete'));
-
-        const tb = MpiToolbar.mount(slot('preview-toolbar-default'), {
-            presets: ['Wokflow A', 'Workflow B'],
-            value: 'Wokflow A',
-            comps: [save, trash]
-        });
-
-        // System-level reaction
-        Events.on('media:updated', ({ msg, type }) => {
-            const toastWrapper = document.createElement('div');
-            document.body.appendChild(toastWrapper);
-            MpiToast.mount(toastWrapper, { message: msg, variant: type || 'info', duration: 3000 });
-        });
-
-        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
-    });
-
-    mount('preview-toolbar-empty', () => {
-        const tb = MpiToolbar.mount(slot('preview-toolbar-empty'), {
-            presets: [],
-            placeholder: 'No presets saved yet...'
-        });
-        tb.on('save', () => console.log('[gallery] toolbar save (default)'));
-        tb.on('delete', () => console.log('[gallery] toolbar delete (default)'));
-    });
-
-    mount('preview-toolbar-left-area', () => {
-        const tb = MpiToolbar.mount(slot('preview-toolbar-left-area'), {
-            title: 'Generation',
-            model: { value: 0.75 },
-            clip: { value: 0.50 },
-            presets: ['None', 'Model A', 'Model B'],
-            value: 'None',
-            placeholder: 'None',
-            comps: []
-        });
-
-        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
-        tb.on('modelChange', ({ value }) => console.log('[gallery] model strength changed:', value));
-        tb.on('clipChange', ({ value }) => console.log('[gallery] clip strength changed:', value));
-    });
-
-    mount('preview-toolbar-strengths-only', () => {
-        const tb = MpiToolbar.mount(slot('preview-toolbar-strengths-only'), {
-            model: { value: 1.00 },
-            clip: { value: 0.00 },
-            presets: ['Model A', 'Model B'],
-            placeholder: 'None'
-        });
-
-        tb.on('modelChange', ({ value }) => console.log('[gallery] model strength:', value));
-        tb.on('clipChange', ({ value }) => console.log('[gallery] clip strength:', value));
-        tb.on('select', ({ value }) => console.log('[gallery] toolbar select:', value));
-    });
-
-    // ── MpiCameraConfig (Compound) ────────────────────────────────────────────
-    mount('preview-camera-config', () => {
-        const cc = MpiCameraConfig.mount(slot('preview-camera-config'), {
-            value: { cam_type: '35mm Film', shot_angle: 'Low Angle (LA)', shot_size: 'Medium Shot (MS)' }
-        });
-        cc.on('change', ({ values }) => console.log('[gallery] camera config change:', values));
-    });
-
-    // ── MpiLightingConfig (Compound) ──────────────────────────────────────────
-    mount('preview-lighting-config', () => {
-        const lc = MpiLightingConfig.mount(slot('preview-lighting-config'), {
-            value: { light_type: 'Cinematic Lighting', light_color: 'Teal and Orange' }
-        });
-        lc.on('change', ({ values }) => console.log('[gallery] lighting config change:', values));
-    });
-
-    // ── MpiStyleConfig (Compound) ─────────────────────────────────────────────
-    mount('preview-style-config', () => {
-        const sc = MpiStyleConfig.mount(slot('preview-style-config'), {
-            value: { color_grade: 'Cinematic Teal & Orange', color_contrast: 'High Contrast' }
-        });
-        sc.on('change', ({ values }) => console.log('[gallery] style config change:', values));
-    });
-
-    // ── MpiVideoScene (Compound) ──────────────────────────────────────────────
-    mount('preview-video-scene', () => {
-        const vs = MpiVideoScene.mount(slot('preview-video-scene'), {
-            scenes: [
-                { description: 'Hero walks through door', angle: 'Low Angle (LA)', size: 'Wide Shot (WS)', movement: 'Dolly In', speed: 'Normal Time', duration: 8 },
-                { description: 'Close-up on face', angle: 'Front Angle (FA)', size: 'Close-Up (CU)', movement: 'Static', speed: 'Slow Motion 60fps', duration: 4 }
-            ]
-        });
-        vs.on('change', ({ scenes }) => console.log('[gallery] video scene change:', scenes));
     });
 
     // ── MpiOkCancel (Compound) ────────────────────────────────────────────────

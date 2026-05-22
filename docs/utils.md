@@ -47,4 +47,3 @@
 | `images.js` | Image processing helpers |
 | `video.js` | Video processing helpers |
 | `string.js` | String manipulation helpers |
-| `promptOptions.js` | Prompt template and option helpers |
