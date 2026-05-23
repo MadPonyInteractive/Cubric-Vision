@@ -115,31 +115,6 @@
 
 ## PLANNING
 
-### Cubric hub readiness before portable distribution
-
-  - tags: [PLAN, hub, integration, release]
-  - priority: high
-  - defaultExpanded: false
-    ```md
-    Sequencing lock 2026-05-21: this comes after the current Cubric Vision app
-    implementation work, and before cross-platform portable distribution.
-
-    Goal: make sure the hub/connector foundation is ready enough that portable
-    packaging will not have to be reworked around app identity, connector
-    manifests, broker startup assumptions, bundled hub artifacts, or update
-    manifest expectations.
-
-    Inputs:
-    - docs/specs/cubric-connector-sdk.md
-    - docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
-    - docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md
-    - resources/cubric/connector-manifest.json
-
-    Expected output: a concrete implementation/readiness checklist or child
-    plan. Do not expand into Cubric Prompt work. Prompt starts only after
-    Cubric Vision is mature enough to move from alpha toward v1.
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -182,6 +157,34 @@
 
 ## IMPLEMENTING
 
+## COMPLETED
+
+### Cubric hub readiness before portable distribution
+
+  - tags: [PLAN, hub, integration, release]
+  - priority: high
+  - defaultExpanded: false
+    ```md
+    Completed planning 2026-05-23.
+
+    Plan file: docs/plans/2026-05-23-cubric-hub-readiness-before-portable-distribution.md
+
+    Outcome: Cubric Vision portable distribution can proceed without live
+    connector runtime integration, as long as the portable build preserves
+    `resources/cubric/connector-manifest.json` and defines/verifies the future
+    `resources/cubric/update-manifest.json` connector fields. Hub/broker
+    packages do not need to be bundled into the first Vision portable artifact
+    unless a connector-dependent feature is promoted.
+
+    Pre-portable gates now live in the child plan:
+    - preserve connector manifest in staged artifacts
+    - rename portable artifacts/launchers from CubricStudio_* to CubricVision_*
+    - generate update-manifest connector fields from the staged manifest
+    - add a build smoke assertion for connector metadata
+    - defer hub repo git/workspace/tooling to Stage 3+ unless live connector
+      features are promoted
+    ```
+
 ### Add missing prompt box parameters for individual operations.
 
   - tags: [feature]
@@ -189,7 +192,8 @@
   - workload: Normal
   - defaultExpanded: false
     ```md
-    Ongoing task managed by the developer cooperating with agents
+    Completed 2026-05-23. Developer dogfooding covered the remaining checks;
+    any later findings will be tracked separately.
 
     2026-05-22: Restructured `modelSettings[modelId]` to nest per-op state
     under `operations.{shared, [opName]}`. PromptBoxControls now declare
@@ -200,8 +204,6 @@
     component-events, component-comfy, comfy_injection). Memory entry
     added enforcing the workflow-JSON read-only rule.
     ```
-
-## COMPLETED
 
 ### Model Manager slide-over and zero-model gating
 
