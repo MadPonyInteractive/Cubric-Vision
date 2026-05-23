@@ -28,6 +28,11 @@ For MPI workflow planning, handoff, session-end, or kanban-related requests, use
 
 Do not pin this project to a specific Claude plugin cache path. If a bridge file is ever needed for troubleshooting, resolve the current `mpi-kanban@mad-pony-interactive` install from Claude's `installed_plugins.json` instead of hardcoding a versioned path here.
 
+## Project Knowledge
+
+- `.agents/mpi-kanban/project-profile.md` — mode, architecture summary, conventions, commands
+- `.agents/mpi-kanban/project-knowledge-index.md` — topic → files map
+
 ## Project-Local Codex Skills
 
 For Cubric Studio user-facing documentation work, use the project-local skill:

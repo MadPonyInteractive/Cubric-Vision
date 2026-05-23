@@ -3,8 +3,8 @@
 **Plan family:** `cubric-vision-foundation`
 **Parent plan:** `docs/plans/2026-05-19-cubric-vision-foundation.md`
 **Kanban entry:** `Cubric Vision foundation - website-ecosystem-landing`
-**Priority:** low until app-first release work is further along
-**Status:** deferred planning track
+**Priority:** active prep, with install/distribution docs gated on portable release
+**Status:** planning and placeholder implementation track
 
 ## Purpose
 
@@ -12,8 +12,10 @@ Define how the public website evolves from a single-app Cubric Studio landing
 page into the Cubric ecosystem landing, while moving Cubric Vision-specific
 content to a Vision product page or subdomain.
 
-This is intentionally last behind app work. It should not interrupt Cubric
-Vision app implementation, portable distribution, or prompt-box work.
+This work can now begin in parallel with final app release prep. Installation
+and distribution-specific documentation remains gated on the cross-platform
+portable distribution work, but social, Patreon, website structure, and docs IA
+prep can proceed before that final stage.
 
 ## Scope
 
@@ -26,7 +28,7 @@ In scope:
 - Define what waits for public downloadable app artifacts.
 
 Out of scope:
-- Immediate website implementation.
+- Final release/download copy that depends on built portable artifacts.
 - Patreon landing image refresh.
 - New screenshots/videos unless release work already produced them.
 - Pushing Website repo changes before the existing push gate is cleared.
@@ -42,16 +44,25 @@ Out of scope:
 
 ### Phase 1: Defer Gate
 
-- [ ] State the app-first gate clearly: do not implement or push ecosystem
-  website work until Cubric Vision app release work is ready enough to show.
+- [x] State the app-first gate clearly: website/docs/social/Patreon prep may
+  begin now because app release is close; do not publish or finalize
+  installation/distribution promises until cross-platform portable
+  distribution is done and verified.
 
 ### Phase 2: Ownership And Map
 
-- [ ] Decide whether `vision.cubric.studio` is a separate site, a product page,
-  or both over time.
-- [ ] Confirm subdomains:
+- [x] Decide whether `vision.cubric.studio` is a separate site, a product page,
+  or both over time. **Decision 2026-05-23:** app subdomains are single product
+  pages/folders inside the existing display Website repo, not separate GitHub
+  Pages repos. Initial folders: `/vision/`, `/prompt/`, `/audio/`, `/video/`.
+- [x] Confirm subdomains:
   `cubric.studio`, `vision.cubric.studio`, `prompt.cubric.studio`,
   `audio.cubric.studio`, `video.cubric.studio`, `docs.cubric.studio`.
+
+Routing note: DNS alone cannot map `vision.cubric.studio` to the `/vision/`
+path. If GitHub Pages remains the host, use Namecheap URL Redirect records for
+the app subdomains to `https://cubric.studio/<app>/`, or introduce an edge/proxy
+layer later if the subdomain must remain in the address bar.
 
 ### Phase 3: Existing Plan Reconciliation
 
