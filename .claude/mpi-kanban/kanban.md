@@ -1,24 +1,5 @@
 ## BACKLOG
 
-### Server log capture broken
-
-  - tags: [bug, infra, deferred]
-  - priority: low
-  - defaultExpanded: false
-    ```md
-    logs/server.log frozen since 2026-04-17. The forked server.js process'
-    stdout/stderr are not captured by the main process logger, so today's
-    EADDRINUSE port-bind failure never made it into any log file (we only
-    found it via netstat).
-
-    Fix sketch: in main.js `startServer()`, fork with `silent: true` and
-    pipe child stdout/stderr into routes/logger via `serverProcess.stdout/
-    .stderr.on('data', chunk => logger.info/error('server-stdout|stderr',
-    chunk.toString()))`. Also surface non-zero exit codes loudly.
-
-    Deferred 2026-05-20 — not release-blocking.
-    ```
-
 ### Vision subdomain content (vision.cubric.studio)
 
   - tags: [website, content, deferred]

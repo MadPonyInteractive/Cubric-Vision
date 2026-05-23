@@ -313,6 +313,7 @@ function startServer() {
   console.log('[main] APP_USER_DATA set to:', userDataPath);
   console.log('[main] APP_DOCUMENTS set to:', documentsPath);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
+    silent: true,
     env: {
       ...process.env,
       APP_USER_DATA: userDataPath,
@@ -321,12 +322,36 @@ function startServer() {
     }
   });
 
+  const pipeChildStream = (stream, level) => {
+    if (!stream) return;
+    let buffer = '';
+    stream.setEncoding('utf8');
+    stream.on('data', (chunk) => {
+      buffer += chunk;
+      let nl;
+      while ((nl = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nl).replace(/\r$/, '');
+        buffer = buffer.slice(nl + 1);
+        if (line.length) logger[level]('server', line);
+      }
+    });
+    stream.on('end', () => {
+      if (buffer.length) logger[level]('server', buffer);
+    });
+  };
+  pipeChildStream(serverProcess.stdout, 'info');
+  pipeChildStream(serverProcess.stderr, 'error');
+
   serverProcess.on('error', (err) => {
-    console.error('Failed to start server:', err);
+    logger.error('server', 'Failed to start server', err);
   });
 
   serverProcess.on('exit', (code, signal) => {
-    console.log(`Server process exited with code ${code} and signal ${signal}`);
+    if (code !== 0 && code !== null) {
+      logger.error('server', `Server process exited with code ${code} signal ${signal}`);
+    } else {
+      logger.info('server', `Server process exited with code ${code} signal ${signal}`);
+    }
   });
 }
 
