@@ -62,6 +62,24 @@
     - Use Patreon users images for the landing page on each version.
     ```
 
+### Website final media swap pass (placeholders -> release assets)
+
+  - tags: [website, content, media]
+  - priority: medium
+  - defaultExpanded: false
+    ```md
+    Current status (2026-05-23):
+    - Cubric Studio website + Vision page copy/layout refresh is implemented.
+    - FAQ section added and moved to page bottom.
+    - Local-library + features sections updated to reflect real behavior.
+    - Hero and app-brand accents/mascots updated.
+
+    Remaining website work for next session:
+    - Replace placeholder images/videos on `c:\AI\Mpi\Cubric Studio (Website)\vision\index.html`
+      with final campaign media assets.
+    - Final visual QA pass on crop/aspect fit and playback thumbnails after media swap.
+    ```
+
 ### Additive model folders in settings
 
   - tags: [Idea]
@@ -612,4 +630,13 @@
     Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
     index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
     asymmetric strips, no gradient-text outside wordmark, no card-grid features.
+    
+    2026-05-23 follow-up pass (implemented):
+    - Main landing Vision-link accent pass (all Vision destinations in rose accent).
+    - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
+    - Vision page: local-library cards corrected to match actual app behavior.
+    - Vision features expanded/reordered (10 items) and hardware requirements corrected.
+    - FAQ added, expanded, redesigned, and moved to bottom section.
+    - Hero/header spacing adjusted on Vision page.
+    - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
     ```
