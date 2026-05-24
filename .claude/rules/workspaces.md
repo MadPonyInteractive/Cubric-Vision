@@ -1,53 +1,16 @@
 # Workspace Architecture
 
-> **AI INSTRUCTION:** This file maps out the high-level routing and workspace areas of the application.
+> **AI INSTRUCTION:** Pages, workflow states, and routing. Full narrative + Landing/Gallery/History layout details live in `docs/workspaces.md`.
 
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves routing, navigation, or workspace layout.
 
-**Three workspaces:** Landing (project select/create) → Gallery (default project view) → Group History (single card detail). See `docs/workspaces.md` for details.
+**Three workspaces:** Landing (project select/create) → Gallery (default project view) → Group History (single card detail). See `docs/workspaces.md` for full layout details.
 
-**Routing:** Use `js/router.js` (`navigate()` / `back()`) — never `window.location`.
-**Gallery Block:** `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` — lazy-loaded by `navigation.js`.
-**Group History Block:** `js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js` — lazy-loaded by `navigation.js`.
+**Routing:** Use `js/router.js` (`navigate()` / `back()`) — never `window.location`. Pages: `PAGE_LANDING`, `PAGE_GALLERY`, `PAGE_GROUP_HISTORY`. `js/shell/navigation.js` lazy-loads each workspace Block on transition.
 
-**PromptBox:** Mount the `MpiPromptBox` Organism directly into `#prompt-box-mount` (`gid('prompt-box-mount')`). Block keeps the handle in `_pb`; call `_pb?.destroy?.()` before remount AND in Block `el.destroy`. Slot is shell-owned (declared in `index.html`), persists across workspace switches.
+**PromptBox mount:** Mount `MpiPromptBox` Organism directly into `#prompt-box-mount` (`gid('prompt-box-mount')`). Block keeps the handle in `_pb`; call `_pb?.destroy?.()` before remount AND in Block `el.destroy`. Slot is shell-owned (declared in `index.html`), persists across workspace switches. No `PromptBoxService` — Block mounts direct.
+
+**Zero-model gate:** Empty/new project auto-opens Models slide-over via `models:open`. PromptBox mounts only when `s_installedModelIds.length > 0` (keyed off `state:changed`, NOT a `models:closed` event). `resolveActiveModel(mediaType)` returns `null` at zero-install — workspace must re-resolve in the `s_installedModelIds` watcher.
 
 **Dev Components Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.
-
----
-
-## 🗺️ Application Flow
-
-```
-Landing (#page-landing)   →   Gallery (MpiGalleryBlock)   →   Group History (MpiGroupHistoryBlock)
-[projectUI.js handles UI]      [lazy import by navigation.js]   [lazy import by navigation.js]
-```
-
-1. **Landing Page** — DOM element `#page-landing`. UI logic in `js/shell/projectUI.js`. No workspace class. Mounts `MpiProjectCard`, `MpiNewProject`, and (under Electron only) `MpiProjectDropOverlay` for drag-and-drop project import. Nav actions `Models · Settings · Help · About` each open via `slide-over:open { title, component }` where component is `MpiModelManager | MpiSettings | MpiHelp | MpiAbout`. `Models` is first in the list.
-
-2. **Gallery Workspace** — `MpiGalleryBlock`. Mounts `MpiGalleryGrid` + `MpiPromptBox` (Organism) directly into `#prompt-box-mount`. Navigate to group history on card open.
-
-3. **Group History Workspace** — `MpiGroupHistoryBlock`. Photoshop-style layout: left toolbar (`#left-slot`), centre viewer (`#centre-slot`), right panel split into props bar (`#right-top-slot`) + history list (`#right-bottom-slot`). PromptBox (Organism) mounted by Block directly into `#prompt-box-mount` (centre-bottom, CSS class `--prompt-active` shows/hides it). Active tool controlled by block-local mediator `mountOptions(mode)` — NOT a `state` key.
-
----
-
-## 🛠️ Shell-Level Singletons (Always Active)
-
-Mounted once in `js/shell.js` — never re-mount these in workspace code:
-
-| Singleton | Trigger |
-|---|---|
-| `MpiErrorDialog` | `ui:error` event |
-| `MpiStartingComfy` | `comfy:starting` / `comfy:ready` events |
-| `MpiSlideOver` | `slide-over:open { title, component }` — hosts `MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiModelManager` (one open at a time). `models:open` is re-emitted by shell as `slide-over:open { title: 'Models', component: MpiModelManager }` |
-| `#prompt-box-mount` slot | declared in `index.html`; Blocks mount `MpiPromptBox` Organism into it |
-
----
-
-## 🛠️ The Dev Components Page (Hidden)
-
-A dedicated testing gallery for UI components.
-- **Access Rule:** Gated by `test_styles: true` in `dev_configs/app_config.js`.
-- **Location:** `js/pages/components.js`.
-- **Constraint:** If you build a new `MpiCompound` or UI element, ask the user if they want it added to this test page.

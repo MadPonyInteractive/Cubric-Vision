@@ -58,7 +58,7 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
    - **Spacing:** `--s-1`…`--s-8`
    - **Radius:** `--r-1` (0px, sharp default), `--r-2` (4px), `--r-3` (12px), `--r-pill` (999px)
    - **Motion:** `--ease`, `--t-fast`, `--t-base`, `--t-slow`
-   - **Fonts:** body = `'JetBrains Mono', monospace`. `--font-wordmark` = `'VT323'` (self-hosted at `assets/fonts/VT323.woff2`) — used ONLY for the brand wordmark.
+   - **Fonts:** body = `'JetBrains Mono', monospace`. `--font-wordmark` = `'Russo One'` (self-hosted at `assets/fonts/RussoOne-Regular.woff2`) — used ONLY for the brand wordmark (titlebar + landing hero). See `.claude/rules/components.md` § Stage design baseline.
 3. **Template UI Adherence:** The active design system is **Stage** (see `docs/redesign/`). Stage = OKLCH mauve surfaces, heat/frost accents, sharp corners by default, **no neon glow, no glass blur, no `backdrop-filter`**. Legacy tokens `--bg`, `--bg-light`, `--bg-dark`, `--bg-elevated`, `--bg-recessed`, `--bg-modal`, `--surface`, `--surface-glass`, `--neon-electric`, `--neon-glow*`, `--neon-accent`, `--neon-border`, `--primary`, `--primary-dim`, `--text*`, `--border*`, `--radius*`, `--font-main`, `--font-display`, `--transition`, `--bounce` have been **removed** — do not reintroduce them. The only place `background-clip: text` (gradient text) is allowed is the wordmark.
 
 ### 🔴 Class Naming Convention

@@ -26,8 +26,8 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 | Project Integrity | [project-integrity.md](project-integrity.md) | .meta/ sidecars, UUID history, migration, reconciliation, hydration |
 | ComfyUI Integration | [comfy.md](comfy.md) | comfyController, commandExecutor, download manager, workflow injection |
 | Downloads | [comfy.md#download-manager](comfy.md#download-manager) | Resumable downloads, IPC/SSE, resume/pause/cancel, SHA256 verification |
-| Components | [components.md](components.md) | ComponentFactory, 4-tier hierarchy (Primitives/Compounds/Organisms/Blocks), overlay/hotkey rules |
-| Projects | [projects.md](projects.md) | Project JSON shape, media folder, portability |
+| Components | [.claude/rules/components.md](../.claude/rules/components.md) | ComponentFactory, 4-tier hierarchy (Primitives/Compounds/Organisms/Blocks), overlay/hotkey rules (canonical lives in rules) |
+| Projects | [project-integrity.md](project-integrity.md) | Project JSON shape, media folder, portability (folded into project-integrity) |
 | Shell | [shell.md](shell.md) | navigation, overlayManager, hotkeyManager, shell.js |
 | Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, seed.js, and all js/utils/ |
 | Events | [events.md](events.md) | EventBus, canonical event names, cross-component communication |

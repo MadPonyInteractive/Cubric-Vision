@@ -15,8 +15,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Components & UI
 
-- **Read first:** `docs/components.md`
-- **Rules:** `.claude/rules/components.md`, `.claude/rules/dos_and_donts.md`, `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, `.claude/rules/component-state.md`
+- **Read first:** `.claude/rules/components.md`
+- **Rules:** `.claude/rules/dos_and_donts.md`, `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, `.claude/rules/component-state.md`
 - **Memory:** none
 
 ### Events & cross-component communication
@@ -57,7 +57,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Project data & integrity
 
-- **Read first:** `docs/project-integrity.md`, `docs/projects.md`, `docs/data.md`
+- **Read first:** `docs/project-integrity.md`, `docs/data.md`
 - **Rules:** none
 - **Memory:** none
 

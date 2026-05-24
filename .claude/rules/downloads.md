@@ -17,7 +17,7 @@
 
 **State keys:** `state.downloadJobs[]` and `state.downloadQueueActive`. Components should read these, not duplicate them.
 
-**Events:** All download state transitions are broadcast via SSE to `downloadService._connectSSE()` and then re-emitted as `Events` (`download:started`, `download:progress`, `download:complete`, `download:failed`, `download:paused`, `download:resumed`, `download:cancelled`, `download:uninstalled`, `download:installing`). Components subscribe via `Events.on()`.
+**Events:** All download state transitions are broadcast via SSE to `downloadService._connectSSE()` and re-emitted on the Events bus. Components subscribe via `Events.on()`. Full event list in `docs/events.md`.
 
 **Shutdown:** `cancelAllDownloads()` is exported from `routes/downloadManager.js` and called on app shutdown to abort active downloads gracefully.
 

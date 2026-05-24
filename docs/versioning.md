@@ -130,82 +130,15 @@ Use the `/mpi-version-bump` slash command to guide the bump process interactivel
 
 ---
 
-## Release Workflow
+## Release Workflow & Adding Operations
 
-When you're ready to cut a release:
-
-1. Run `/mpi-version-bump` (the slash command).
-2. Answer the interactive questions: bump type, new operations, ComfyUI version change, schema change, changelog notes.
-3. The skill will:
-  - Update `appVersion.js`
-  - Update `operationRegistry.js` (add new ops with current version as `appVersionIntroduced`)
-  - Update `commandRegistry.js` (add UI metadata for new ops)
-  - Update `models.js` (add operation to model support lists)
-  - Update `universal_workflows.js` (add universal operation definitions)
-  - Sync `operation_registry.json`
-  - Generate `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with changelog and platform checklist
-  - Offer to run pre-release tests
-4. Review the generated release notes.
-5. Push the changes and tag the release.
-
----
-
-## Adding a New Operation (from the Developer's Perspective)
-
-1. **Define the operation in \****`commandRegistry.js`**\*\*:**
-```javascript
-   myNewOp: {
-     label: 'My New Operation',
-     mediaType: 'image',
-     requiresImages: 1,
-     promptRequired: true,
-     components: [],
-   }
-```
-
-2. **Create the workflow JSON file(s)** in `comfy_workflows/`:
-  - For model-tied ops: `myNewOp_<modelId>.json` per model
-  - For universal ops: add to `universal_workflows.js` with a single filename
-
-3. **Run \****`/mpi-version-bump`**\*\* and select "Add new operation":**
-  - The skill will ask for all the fields above, plus workflow filenames
-  - It automatically adds entries to `operationRegistry.js`, `models.js`, and syncs `operation_registry.json`
-
-That's it — no manual edits needed.
+Both flows are owned by the `/mpi-version-bump` slash command — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, syncs `operation_registry.json`, generates release notes under `docs/releases/`, and offers pre-release tests. Do NOT edit `appVersion.js` / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump.md`.
 
 ---
 
 ## Migration System
 
-If `SCHEMA_VERSION` must be bumped (because `project.json` structure changes):
-
-1. **Increment \****`SCHEMA_VERSION`***\* in \****`js/core/appVersion.js`** (e.g., `1` → `2`).
-
-2. **Add a migration function in \****`js/migrations/projectMigrations.js`**\*\*:**
-```javascript
-   function migrateV1toV2(projectJson) {
-     // Transform the v1 structure to v2
-     // Return the modified object
-   }
-
-   export const MIGRATIONS = {
-     1: migrateV1toV2,  // key is the target schema version
-     // ...
-   };
-```
-
-3. **Verify both constants match:**
-```javascript
-   // appVersion.js
-   export const SCHEMA_VERSION = 2;
-
-   // projectMigrations.js — must have entry for key 2
-   export const SCHEMA_VERSION = 2;  // this must match
-```
-
-4. **Run the version-bump skill** with "schema version changing? yes" — it will create a migration stub for you (you fill in the logic).
-
-On project open, `openProject()` in `projectService.js` (or related initialization logic) runs all pending migrations (e.g., if project has `schemaVersion: 1` and app has `SCHEMA_VERSION: 2`, it runs `migrateV1toV2`). After migration completes, reconciliation and hydration proceed normally.
+When `project.json` structure changes, bump `SCHEMA_VERSION` in `js/core/appVersion.js` AND add a `migrateV<n>toV<n+1>` entry to `MIGRATIONS` map in `js/migrations/projectMigrations.js`. The `SCHEMA_VERSION` constant must match in both files. `/mpi-version-bump` with "schema changing? yes" creates the stub. On project open, `openProject()` runs all pending migrations sequentially before reconciliation/hydration. See `docs/project-integrity.md` § "The `openProject()` Flow" for the load sequence.
 
 ---
 

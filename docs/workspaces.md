@@ -19,10 +19,9 @@ Handles project selection and creation. Entry point when no project is open.
 ## Gallery (`js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js`)
 Default view when a project opens. Lazy-loaded by `js/shell/navigation.js` on `PAGE_GALLERY`.
 - Mounts `MpiGalleryGrid` into the tool container.
-- Drives the **shell-level PromptBox** via `PromptBoxService.mount()` — does NOT mount `MpiPromptBox` directly.
+- Mounts `MpiPromptBox` Organism directly into `#prompt-box-mount` (`gid('prompt-box-mount')`); keeps handle in `_pb` and destroys before remount / in `el.destroy`.
 - `MpiCompareOverlay` and `MpiOkCancel` (delete dialog) are workspace-owned singletons.
 - Selection: ctrl/cmd-click toggles card, shift-click range-selects, right-click opens `MpiContextMenu`. No `MpiSelectionBar`.
-- Select mode uses `grid.on('selection-start/end')` to show/hide shell PromptBox.
 - Navigates to Group History on card open: `navigate(PAGE_GROUP_HISTORY, { groupId })`.
 
 ## Group History (`js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js`)
@@ -35,7 +34,7 @@ Opened when user clicks a card from gallery. Lazy-loaded by `js/shell/navigation
 - `#right-bottom-slot` — `MpiHistoryList` (ctrl/shift/right-click selection, dimensions, context menu)
 - `#prompt-box-mount` — shell-level PromptBox (centre-bottom floating); shown/hidden via `mpi-group-history-block--prompt-active` CSS class
 
-**Mediator:** `mountOptions(mode)` destroys the previous `MpiToolOptions*` instance and mounts the new one. `prompt` is special — no compound; toggles CSS class + calls `PromptBoxService.show/hide`. Tool options compounds: `MpiToolOptionsCrop`, `MpiToolOptionsManualMask`, `MpiToolOptionsAutoMask`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`.
+**Mediator:** `mountOptions(mode)` destroys the previous `MpiToolOptions*` instance and mounts the new one. `prompt` is special — no compound; toggles `mpi-group-history-block--prompt-active` CSS class (shows PromptBox, hides `#right-top-slot`). Tool options compounds: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsResize`, `MpiToolOptionsPrompt`.
 
 **PromptBox gating:** `_hasPromptOps()` — true iff active model exposes ≥1 enabled prompt op. Recomputed on model/install-state changes. Video groups with prompt-capable models get PromptBox too.
 
@@ -44,7 +43,7 @@ Mounted once in `js/shell.js`, independent of active workspace:
 - `MpiErrorDialog` — shown on `ui:error` event
 - `MpiStartingComfy` — shown on `comfy:starting` / `comfy:ready` events
 - `MpiSlideOver` — hosts slide-over content components (`MpiSettings`, `MpiHelp`, `MpiAbout`, `MpiModelManager`); opened via `slide-over:open { title, component }`. `models:open` is re-emitted by shell as `slide-over:open { title: 'Models', component: MpiModelManager }`.
-- `MpiPromptBox` container — at `#prompt-box-mount`, managed by `PromptBoxService`
+- `#prompt-box-mount` slot — declared in `index.html`; Blocks (Gallery, History) mount `MpiPromptBox` Organism directly into it. Slot persists across workspace switches; each Block destroys its prior `_pb` handle before remount and in `el.destroy`.
 
 **Zero-model gate:** When a new/empty project opens with no installed models, Gallery auto-emits `models:open`, opening the Models slide-over. A project that already has media opens read-only with no PromptBox until ≥1 model is installed. PromptBox mounts once `s_installedModelIds` is non-empty (keyed off `state:changed`, not a `models:closed` event).
 

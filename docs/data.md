@@ -24,7 +24,7 @@ Three core data files. All are plain JS objects — no ORM, no database.
 - `getAvailableCommands(mediaType, model, ctx)`: Filters commands by model's `supportedOps` and input availability. Returns `{ key, available, ...CommandDef }` including `components[]` for each command.
 - `getToolCommands(mediaType)`: Returns universal-only commands — these do not require a model and use their own layouts.
 - `getCommandComponents(key)`: Returns the `components[]` array for a given command key.
-- Commands: t2i, i2i, upscale, edit, detail, change, remove, t2v, i2v, extend, interpolate, videoUpscale, autoMaskImg, createGroupFromSelection (stub), promoteToNewGroup (stub).
+- For the current list of operations, their `components[]`, media requirements, and status, see `.claude/rules/component-comfy.md` § "Operations and their controls[]" (authoritative table — sourced from `commandRegistry.js`).
 
 ## projectModel (`js/data/projectModel.js`)
 

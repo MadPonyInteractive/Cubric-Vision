@@ -26,37 +26,7 @@ This document explains the project data model, how items are stored, how reconci
 
 ### `project.json`
 
-Located at `<projectFolder>/project.json`. Example structure:
-
-```json
-{
-  "id": "proj-12345abc",
-  "name": "My Project",
-  "folderPath": "C:\\Users\\Fabio\\Documents\\CubricStudio\\projects\\my-project",
-  "createdAt": "2026-04-15T10:30:00Z",
-  "updatedAt": "2026-04-17T14:22:15Z",
-  "thumbnail": null,
-  "schemaVersion": 1,
-  "itemGroups": [
-    {
-      "id": "group-abc123",
-      "type": "image",
-      "name": "Portrait session",
-      "createdAt": "2026-04-15T...",
-      "selectedIndex": 2,
-      "open": true,
-      "favourite": false,
-      "history": [
-        "6e409682-8b95-4ff7-aa77-e24e7656cbf8",
-        "a1b2c3d4-e5f6-4c7b-8d9e-f0g1h2i3j4k5",
-        "x7y8z9a0-b1c2-4d3e-4f5g-6h7i8j9k0l1m"
-      ]
-    }
-  ],
-  "modelSettings": { /* ... */ },
-  "toolSettings": { /* ... */ }
-}
-```
+Located at `<projectFolder>/project.json`. Shape: `{ id, name, folderPath, createdAt, updatedAt, thumbnail, schemaVersion, itemGroups[], modelSettings, toolSettings }`. Each `itemGroups[i]` is `{ id, type, name, createdAt, selectedIndex, open, favourite, history: string[] }` — `history` contains UUID strings ONLY (full data lives in `.meta/<uuid>.json` sidecars).
 
 **Key field: \****`schemaVersion`** — Identifies which data schema this project was saved in. On project open, if this doesn't match `SCHEMA_VERSION` from `appVersion.js`, migrations are run first.
 
@@ -141,13 +111,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
 - **`previewAssets`** — Project-owned support assets for reusable preview cards. Preview T2V stores a stage-1 latent under `Media/.latents/<uuid>.latent`; preview I2V also stores durable start/end image snapshots under `Media/.preview-assets/<uuid>/`. These assets are distinct from the repo-owned `comfy_workflows/input/ComfyUI_00001_.latent` default used only to satisfy `LoadLatent` workflow validation. Shape: `{ latent: { filename, relativePath, filePath, engineInputName, status: 'available'|'missing' }, snapshots: [{ role, mediaType, filename, relativePath, filePath, status }] }`.
 
-  **Preview asset validation:** the gallery hits `GET /project-media/:projectId/validate-preview-assets?folderPath=...&itemId=...` to stat the latent + each snapshot. The response carries `canFastPath`, `canColdFallback`, `blocked`, plus the per-asset status and a `missing` list.
-
-  - `canFastPath` — latent on disk. Continue branches stage-2; Finish replaces via stage-2.
-  - `canColdFallback` — latent missing, `frozenParams` complete, all declared snapshots present. Continue reruns stage-1 in place (`previewOnly: true`, `replaceItemId: previewId`) to rebuild the latent, then auto-fires stage-2 on `gallery:item-updated`. Finish runs the full `_ms` workflow with `previewOnly: false` + `replaceItemId` as a single submission. T2V has no snapshot array, so snapshot status is a no-op for it.
-  - `blocked` — neither path possible. Card shows a red "Missing" badge and the Continue/Finish action row is hidden; user recovers by deleting the preview.
-
-  **Delete cleanup** (single source of truth): `DELETE /project-media/:projectId/:filename?itemId=...` reads the sidecar before unlinking. When `stage === 'preview'`, the route also removes `Media/.latents/<itemId>.latent` and `Media/.preview-assets/<itemId>/`. Both multi-select Delete and any single-item delete that goes through this route get this cleanup for free.
+  **Preview asset validation + cold fallback + delete cleanup:** Full contract (validation route, `canFastPath`/`canColdFallback`/`blocked` states, Continue/Finish behavior per state, sidecar-driven cleanup) lives in `.claude/rules/comfy_injection.md` § "Preview support-asset validation + cold fallback".
 
 **Video-specific sidecar fields** (present when `type === 'video'`):
 - **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` for upload/crop/generated video saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
@@ -168,28 +132,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
 ## In-Memory State
 
-After loading, `state.currentProject.itemGroups[n].history[m]` is a full object like:
-
-```javascript
-{
-  id: '6e409682-8b95-4ff7-aa77-e24e7656cbf8',
-  type: 'image',
-  filePath: '/project-file?path=C%3A%5CUsers%5CFabio%5C...',
-  operation: 't2i',
-  displayName: 't2i_001',
-  prompt: 'a hamster in the snow',
-  negativePrompt: '',
-  seed: 42,
-  modelId: 'sdxl-realistic',
-  createdAt: '2026-04-15T10:35:22.340Z',
-  name: null,
-  uploaded: false,
-  pixelDimensions: { w: 1024, h: 1024 },
-  generationMs: 15087
-}
-```
-
-**Components never change.** They read `.operation`, `.filePath`, `.prompt`, etc. from the history item exactly as they do today. No component knows about UUIDs or `.meta/` files.
+After loading, `state.currentProject.itemGroups[n].history[m]` is the full sidecar object (same shape as the `.meta/<uuid>.json` example above) — NOT a UUID string. Components read `.operation`, `.filePath`, `.prompt`, etc. directly. No component knows about UUIDs or `.meta/` files.
 
 **Sidecar / in-memory parity is mandatory.** `projectReconciler.reconcileAndHydrate()` injects the sidecar JSON directly as the in-memory item. Any client-side flow that builds a fresh item (e.g. `generationService.js`, `MpiCanvasViewer` crop) must emit the same fields with the same semantics, otherwise the same item displays differently before vs after a project reload. When adding a sidecar field, update in equal measure: (a) `createImageItem`/`createVideoItem` defaults in `projectModel.js`, (b) every fresh-item construction site, (c) every server route that writes a sidecar (`save-generation`, `crop-media`, `upload`), and (d) `projectReconciler._constructSyntheticItem`.
 
@@ -314,22 +257,6 @@ const normalized = path.normalize(folderPath);  // always "C:\\Users\\..." on Wi
 - If a project references an operation (in the `operation` field of a history item) that was introduced in a later app version, the app should warn the user — they may not be able to regenerate that item with the current app.
 
 See `docs/versioning.md` for the full versioning system.
-
----
-
-## Troubleshooting
-
-**Problem:** Project won't open; reconciliation removes all items.
-**Cause:** `.meta/` files are missing or media files were deleted.
-**Solution:** Check `Media/.meta/` directory; restore missing files if available. Projects without media are safe to open; items are simply removed.
-
-**Problem:** `selectedIndex` is out of bounds after opening a project.
-**Cause:** Items were removed during reconciliation; history length changed.
-**Solution:** Reconciliation automatically clamps `selectedIndex` to the new history length. No manual fix needed.
-
-**Problem:** History item shows file not found, but file exists in Media/.
-**Cause:** Path normalization bug; backslashes vs forward slashes.
-**Solution:** Check server logs for the path comparison. Use `path.normalize()` on all incoming paths.
 
 ---
 

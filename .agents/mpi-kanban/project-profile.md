@@ -5,7 +5,7 @@ mode_rationale: user-confirmed at setup; strong repo evidence (12 .claude/rules,
 mode_source: user
 setup_date: 2026-05-23
 last_refresh: 2026-05-24
-last_refresh_notes: legacy .claude/mpi-kanban/ removed (board fully under .agents/); index topics added for dev_configs/engine internals + MAPPING.md
+last_refresh_notes: audit pass — collapsed § Conventions to single pointer (CLAUDE.md is canonical); cleared rule duplication
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -29,16 +29,7 @@ Detail: see `docs/PROJECT.md`.
 
 ## Conventions
 
-- Architecture rules live in `.claude/rules/*.md` — treat as source of truth.
-- BEM mandatory: `.mpi-block__element--modifier`. See `.claude/rules/components.md`.
-- All components via `ComponentFactory.create()`. `js/components/factory.js` is locked.
-- No hardcoded colors — CSS variables from `styles/01_base.css` only.
-- No raw `document.querySelector` / `addEventListener` / `window.addEventListener('keydown')` — use `js/utils/dom.js`, `Events`, `Hotkeys`.
-- State: mutate `state` proxy in `js/state.js`; replace top-level keys, never mutate sub-objects in place.
-- Project JSON writes go through `updateProjectJson()` in `routes/projects.js`.
-- Logging: `js/services/clientLogger.js` (frontend), `routes/logger.js` (backend). No bare `console.log`.
-- Kanban writes pre-authorized — edit `.agents/mpi-kanban/kanban.md` freely.
-- Never commit to git unless explicitly asked.
+See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, ComponentFactory, no hardcoded colors, state proxy, project JSON writes, logging, kanban auth, no git commits without ask). Architecture rules live in `.claude/rules/*.md`.
 
 ## Important Commands
 
