@@ -5,6 +5,7 @@ mode_rationale: user-confirmed at setup; strong repo evidence (12 .claude/rules,
 mode_source: user
 setup_date: 2026-05-23
 last_refresh: 2026-05-24
+last_refresh_notes: legacy .claude/mpi-kanban/ removed (board fully under .agents/); index topics added for dev_configs/engine internals + MAPPING.md
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 

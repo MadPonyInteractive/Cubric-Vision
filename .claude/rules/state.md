@@ -108,3 +108,13 @@ PromptBoxControls own the scope decision via their `scope: 'shared' | 'perOp'` f
 - Auto mode: `MpiCanvas._applyTransform` + `MpiMaskedImagePreview._applyTransform` set `dataset.zoomMode = 'pixel' | 'smooth'` on the stack el from `view.scale` vs the exported `AUTO_PIXEL_THRESHOLD` constant (3.0 = 300%). CSS only consumes `data-zoom-mode` under `html.pixel-mode-auto`.
 - Video: in auto mode, video is always smooth (no zoom in viewer today). Static smooth/pixel modes apply uniformly.
 - New viewer surfaces that need to honor the toggle: add their selector to the four CSS rule blocks in `styles/01_base.css` (smooth / pixel / auto-base / auto-zoom).
+
+---
+
+## PromptBox Expansion
+
+`state.promptExpanded` (boolean, default `true`) controls whether `MpiPromptBox`'s textarea grows with content or stays collapsed to one line.
+
+- Persisted to `localStorage` via `Storage.getPromptExpanded` / `setPromptExpanded` (key `mpi_prompt_expanded`). Hydrated into `state.promptExpanded` at module init in `js/state.js`.
+- `state:changed` subscriber in `state.js` mirrors writes to Storage. Source of truth is the proxy field; localStorage is the cold-start mirror.
+- `MpiPromptBox` reads the field on mount to seed its `isExpansionLocked` local, and writes `state.promptExpanded = !isExpansionLocked` from the chevron lock button's click handler — never poke `Storage` directly from the component.

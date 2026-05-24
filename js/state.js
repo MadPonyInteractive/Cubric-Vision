@@ -78,6 +78,11 @@ const _state = {
                                      // Applied as `html.pixel-mode-{value}` class by shell + state listener.
                                      // MpiCanvas + MpiMaskedImagePreview set per-stack `data-zoom-mode`
                                      // which CSS reads only under `html.pixel-mode-auto`.
+
+    // ── PromptBox UI (cross-session, localStorage-mirrored) ───────────────────
+    promptExpanded: Storage.getPromptExpanded(),
+                                     // bool — default true. Toggled by chevron lock button in
+                                     // MpiPromptBox. Mirrored to localStorage by subscriber below.
 };
 
 // Effective image-px → screen-px scale above which auto mode switches to nearest-neighbor.
@@ -137,4 +142,5 @@ Events.on('state:changed', ({ key, value }) => {
         root.classList.remove('pixel-mode-auto', 'pixel-mode-smooth', 'pixel-mode-pixel');
         root.classList.add(`pixel-mode-${mode}`);
     }
+    else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
 });

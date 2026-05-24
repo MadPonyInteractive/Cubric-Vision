@@ -522,7 +522,7 @@ export const PROMPT_BOX_CONTROLS = {
                 info: 'Upscale factor multiplier',
             });
 
-            this._instance.on('change', ({ value }) => {
+            this._instance.on('select', ({ value }) => {
                 const v = Number(value);
                 if (!allowed.includes(v)) return;
                 this.value = v;

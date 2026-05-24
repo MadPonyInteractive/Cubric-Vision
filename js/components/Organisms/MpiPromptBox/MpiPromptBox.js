@@ -72,7 +72,7 @@ export const MpiPromptBox = ComponentFactory.create({
     `,
 
     setup: (el, props, emit) => {
-        let isExpansionLocked = true;
+        let isExpansionLocked = state.promptExpanded === false;
         let isNegativeMode    = false;
         let positiveValue     = props.value || '';
         let negativeValue     = props.negativeValue || '';
@@ -544,9 +544,10 @@ export const MpiPromptBox = ComponentFactory.create({
         const textareaEl = qs('textarea', mainInput.el);
 
         const updateHeight = () => {
-            if (isExpansionLocked) { textareaEl.style.height = '2rem'; return; }
-            textareaEl.style.height = 'auto';
-            textareaEl.style.height = Math.min(Math.max(textareaEl.scrollHeight, 32), 224) + 'px';
+            if (isExpansionLocked) { textareaEl.style.height = '32px'; return; }
+            textareaEl.style.height = '32px';
+            const sh = textareaEl.scrollHeight;
+            textareaEl.style.height = Math.min(Math.max(sh, 32), 224) + 'px';
         };
 
         _unsubs.push(on(textareaEl, 'input', () => {
@@ -563,7 +564,11 @@ export const MpiPromptBox = ComponentFactory.create({
             icon: 'chevronDown', iconActive: 'chevronUp',
             info: 'Toggle Expanding Height',
             size: 'sm', variant: 'ghost', toggleable: true, active: !isExpansionLocked
-        }).on('click', (data) => { isExpansionLocked = !data.active; updateHeight(); });
+        }).on('click', (data) => {
+            isExpansionLocked = !data.active;
+            state.promptExpanded = !isExpansionLocked;
+            updateHeight();
+        });
 
         // ── Settings popup (portaled) ──────────────────────────────────────────
         const popupEl = document.createElement('div');

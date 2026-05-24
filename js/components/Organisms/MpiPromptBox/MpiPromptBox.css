@@ -80,9 +80,11 @@
 /* Textarea styling overrides */
 .mpi-prompt-box .mpi-input__field--textarea {
     resize: none;
-    min-height: 2rem;
+    min-height: 32px;
     max-height: 14rem;
-    padding: 0 0.5rem 0 0;
+    padding: 5px 0.5rem 5px 0;
+    box-sizing: border-box;
+    vertical-align: top;
     overflow-y: auto;
     background: transparent;
     border: none !important;
@@ -90,7 +92,7 @@
     color: var(--ink-1) !important;
     font-family: inherit;
     font-size: var(--t-md);
-    line-height: 1.5;
+    line-height: 22px;
     scrollbar-color: var(--surface-3) var(--surface-bar);
 }
 

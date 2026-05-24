@@ -51,6 +51,9 @@ export const Storage = {
 
   getPixelMode:        () => get(STORAGE_KEYS.PIXEL_MODE, 'auto'),
   setPixelMode:        (v) => set(STORAGE_KEYS.PIXEL_MODE, v),
+
+  getPromptExpanded:   () => get(STORAGE_KEYS.PROMPT_EXPANDED, true),
+  setPromptExpanded:   (v) => set(STORAGE_KEYS.PROMPT_EXPANDED, !!v),
 };
 
 export const Session = {

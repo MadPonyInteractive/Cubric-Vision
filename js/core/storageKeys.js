@@ -26,6 +26,9 @@ export const STORAGE_KEYS = {
 
   // Viewer rendering
   PIXEL_MODE:          'mpi_pixel_mode',
+
+  // PromptBox UI
+  PROMPT_EXPANDED:     'mpi_prompt_expanded',
 };
 
 // --- sessionStorage keys ---

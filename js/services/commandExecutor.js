@@ -627,7 +627,7 @@ export function runCommand(payload) {
             _modelInitializing = false;
             _samplingStartFired = true;
             if (!_suppressLifecycleEvents) {
-                Events.emit('tool:sampling-start', { tool: 'groupHistory' });
+                Events.emit('tool:sampling-start', { tool: 'groupHistory', operation: payload.operation });
             }
             exec.onSamplingStart?.();
         };

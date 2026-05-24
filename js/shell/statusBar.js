@@ -26,6 +26,7 @@ import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { Events } from '../events.js';
 import { gid, qs } from '../utils/dom.js';
 import { state } from '../state.js';
+import { getCommandProgressLabel } from '../data/commandRegistry.js';
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 let _job       = null;  // #shell-info-job
@@ -340,9 +341,9 @@ export const StatusBar = {
             if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
         }));
         // tool:sampling-start — KSampler firing. NOW start the timer + update label.
-        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool }) => {
+        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, operation }) => {
             if (tool === 'groupHistory') {
-                StatusBar.progress.updateLabel('Generating');
+                StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
                 StatusBar.progress.startTimer();
             }
         }));

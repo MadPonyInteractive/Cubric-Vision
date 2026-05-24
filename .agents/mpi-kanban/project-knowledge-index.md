@@ -2,6 +2,7 @@
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
 last_refresh: 2026-05-24
+last_refresh_notes: added topic block "Dev configs & engine internals"; added MAPPING.md supplemental pointer to Stage UI baseline; closed dev_configs/engine topic gap
 ---
 
 # Project Knowledge Index
@@ -81,6 +82,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Stage UI baseline (Redesign)
 
 - **Read first:** `docs/redesign/PORTING.md` (only for new surfaces or phases >10.2)
+- **Supplemental:** `docs/redesign/MAPPING.md` (legacy-to-Stage file/class mapping)
 - **Rules:** `.claude/rules/components.md` § "Stage design baseline", `styles/01_base.css`
 - **Notes:** Stage redesign merged at `e9b5eb6`; routine work uses live tokens, not spec.
 
@@ -110,6 +112,11 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `.agents/skills/cubric-user-docs/SKILL.md`
 
+### Dev configs & engine internals
+
+- **Read first:** `dev_configs/app_config.js`, `dev_configs/system_dependencies.json`
+- **Notes:** `engine/ComfyUI_windows_portable/` is the portable runtime; `engine/mpi_models/` holds MPI-bundled model assets. Treat both as runtime artifacts — do not commit engine binaries.
+
 ## Cross-cutting
 
 - `CLAUDE.md`, `AGENTS.md`
@@ -118,4 +125,4 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ## Topic Gaps
 
-- No topic for `dev_configs/` or `engine/` python internals.
+- None tracked.

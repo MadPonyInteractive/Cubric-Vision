@@ -43,6 +43,10 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {Object}          [defaults]     - Per-control default override map, keyed by control id.
  *                                              Controls with scope:'perOp' look here first, then fall
  *                                              back to their own `defaultValue`. e.g. { denoise: 0.30 }
+ * @property {string}          [progressLabel] - Present-participle verb shown in the status bar while
+ *                                              this op is running (e.g. 'Upscaling', 'Detailing').
+ *                                              Defaults to 'Generating' when omitted. NEW OPS should
+ *                                              set this if the default verb doesn't fit.
  */
 
 /**
@@ -80,6 +84,7 @@ export const commands = {
     },
     upscale: {
         label: 'Upscale',
+        progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -91,6 +96,7 @@ export const commands = {
     },
     edit: {
         label: 'Edit',
+        progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -101,6 +107,7 @@ export const commands = {
     },
     detail: {
         label: 'Detail',
+        progressLabel: 'Detailing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -113,6 +120,7 @@ export const commands = {
     },
     change: {
         label: 'Change',
+        progressLabel: 'Changing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -124,6 +132,7 @@ export const commands = {
     },
     remove: {
         label: 'Remove',
+        progressLabel: 'Removing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -181,6 +190,7 @@ export const commands = {
     },
     extend: {
         label: 'Extend',
+        progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         requiresVideo: 1,
@@ -196,6 +206,7 @@ export const commands = {
 
     interpolate: {
         label: 'Interpolate',
+        progressLabel: 'Interpolating',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         requiresVideo: 1,
@@ -207,6 +218,7 @@ export const commands = {
     },
     videoUpscale: {
         label: 'Video Upscale',
+        progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         requiresVideo: 1,
@@ -218,6 +230,7 @@ export const commands = {
     },
     imageUpscale: {
         label: 'Image Upscale',
+        progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -228,6 +241,7 @@ export const commands = {
     },
     autoMaskImg: {
         label: 'Auto Masking',
+        progressLabel: 'Masking',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -238,6 +252,7 @@ export const commands = {
     },
     resize: {
         label: 'Resize',
+        progressLabel: 'Resizing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -249,6 +264,7 @@ export const commands = {
     },
     resizeVideo: {
         label: 'Resize Video',
+        progressLabel: 'Resizing',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresVideo: 1,
         mediaInputs: [
@@ -404,4 +420,15 @@ export function getCommandDefault(key, controlId) {
  */
 export function commandAllowsBranchingContinue(key) {
     return commands[key]?.allowsBranchingContinue === true;
+}
+
+/**
+ * Present-participle verb for the status bar while this op runs.
+ * Falls back to 'Generating' when the command omits `progressLabel`
+ * or when the key is unknown.
+ * @param {string} key
+ * @returns {string}
+ */
+export function getCommandProgressLabel(key) {
+    return commands[key]?.progressLabel || 'Generating';
 }

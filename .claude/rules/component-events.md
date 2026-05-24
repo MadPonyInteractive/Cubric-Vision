@@ -481,12 +481,12 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Emits `tool:loading-model` when a loader node starts executing (VRAM load phase)
 - Emits `tool:sampling-start` only when sampling/generation actually begins. Do not treat node execution alone as sampling; some sampler/upscale nodes report a model-initialization phase first.
 - For ComfyUI terminal phases, `/comfy/events/stream` bridges `Model Initializing ...` to `tool:loading-model` and `Model Initialization complete!` to `tool:sampling-start`.
-- Both events carry `{ tool: 'groupHistory' }` payload
+- `tool:loading-model` carries `{ tool: 'groupHistory' }`. `tool:sampling-start` carries `{ tool: 'groupHistory', operation: string }` — `operation` is the commandRegistry key (e.g. `upscale`, `detail`, `t2v_ms`) so StatusBar can resolve a per-op verb via `getCommandProgressLabel(operation)`.
 
 **StatusBar (js/shell/statusBar.js)**
 - Listens to `tool:running` → prepares active state without starting elapsed timer
 - Listens to `tool:loading-model` → calls `updateLabel('Loading model...')`
-- Listens to `tool:sampling-start` → calls `updateLabel('Generating...')` and starts elapsed timer
+- Listens to `tool:sampling-start` → calls `updateLabel(getCommandProgressLabel(operation))` (e.g. `Generating`, `Upscaling`, `Detailing`) and starts elapsed timer. New ops add a `progressLabel` field in `commandRegistry.js` if the default `'Generating'` does not fit.
 - Listens to `tool:cancelled` → calls `cancel()`
 - Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast) for all groupHistory ops, including `resize` / `resizeVideo`. The earlier resize-specific silent gate was removed; the block emits no bespoke toast and StatusBar owns the only completion signal.
 - Listens to `state.generationQueueCount` → appends pending Cue depth to the active label only, e.g. `GENERATING (2 queued)`
