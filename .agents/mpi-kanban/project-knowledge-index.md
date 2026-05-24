@@ -1,7 +1,7 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-05-23
+last_refresh: 2026-05-24
 ---
 
 # Project Knowledge Index
@@ -89,6 +89,12 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Read first:** `docs/worktrees.md`
 - **Notes:** `.engine-config.json` shares ComfyUI engine across worktrees.
 
+### Desktop and browser testing
+
+- **Read first:** `playwright.desktop.config.js`, `tests/desktop/`
+- **Rules:** `CLAUDE.md` desktop automation section
+- **Notes:** `npm run test:desktop` launches Electron through Playwright with isolated `CUBRIC_E2E_USER_DATA`; keep tests focused unless downloads/generation are explicitly required.
+
 ### Debugging runtime issues
 
 - **Read first:** `logs/app.log` (last 50–100 lines via `Read` offset only — never full)
@@ -112,5 +118,4 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ## Topic Gaps
 
-- No topic for Playwright desktop testing patterns yet (only command in profile).
 - No topic for `dev_configs/` or `engine/` python internals.

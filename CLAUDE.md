@@ -30,7 +30,7 @@
 - **Never mutate \****`state`**\*\* sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
 - **Project JSON writes:** server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js` for per-file queued atomic writes. Do not add direct `fs.writeJson(project.json, ...)` routes.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
-- **Kanban writes are pre-authorized.** Edit `.claude/mpi-kanban/kanban.md` freely — never ask permission to add, move, or update entries.
+- **Kanban writes are pre-authorized.** Edit `.agents/mpi-kanban/kanban.md` freely — never ask permission to add, move, or update entries.
 
 ---
 
@@ -247,7 +247,7 @@ VS Code workspace contains 4 root folders. Cubric-Vision is **master** (this fol
 
 ### Rules when working across roots
 
-1. **Master kanban lives here only.** All cross-folder work tracked in `.claude/mpi-kanban/kanban.md`. Entries pointing at sibling folders MUST include absolute path in body.
+1. **Master kanban lives here only.** All cross-folder work tracked in `.agents/mpi-kanban/kanban.md`. Entries pointing at sibling folders MUST include absolute path in body.
 2. **CLAUDE.md and `.claude/rules/` apply to Cubric-Vision only.** Sibling roots don't auto-load this file. When working in a sibling folder, brief sub-agents manually with relevant rules.
 3. **Use absolute paths** in tool calls (`Read`, `Glob`, `Grep`, `Edit`) when targeting sibling folders. Relative paths resolve against Cubric-Vision.
 4. **Sibling git repos are separate.** Never run `git` from Cubric-Vision against sibling paths — `cd` into the sibling first or use `-C <path>`.

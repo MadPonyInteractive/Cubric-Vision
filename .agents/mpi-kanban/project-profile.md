@@ -4,7 +4,7 @@ mode: scalable-foundation
 mode_rationale: user-confirmed at setup; strong repo evidence (12 .claude/rules, 12 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-05-23
+last_refresh: 2026-05-24
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -36,7 +36,7 @@ Detail: see `docs/PROJECT.md`.
 - State: mutate `state` proxy in `js/state.js`; replace top-level keys, never mutate sub-objects in place.
 - Project JSON writes go through `updateProjectJson()` in `routes/projects.js`.
 - Logging: `js/services/clientLogger.js` (frontend), `routes/logger.js` (backend). No bare `console.log`.
-- Kanban writes pre-authorized — edit `.claude/mpi-kanban/kanban.md` freely.
+- Kanban writes pre-authorized — edit `.agents/mpi-kanban/kanban.md` freely.
 - Never commit to git unless explicitly asked.
 
 ## Important Commands
