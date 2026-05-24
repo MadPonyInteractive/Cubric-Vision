@@ -470,6 +470,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
         }
 
+        function _restoreCurrentEntryAfterCancel() {
+            if (isVideo) return;
+            const item = _group?.history?.[_currentIdx];
+            if (!item?.filePath) return;
+            const load = viewer.el.loadEntry?.(item, _currentIdx);
+            if (load?.then) {
+                load.then(() => viewer.el.setMaskHidden?.(false))
+                    .catch(err => clientLogger.warn('MpiGroupHistoryBlock', 'cancel restore failed', err));
+            } else {
+                viewer.el.setMaskHidden?.(false);
+            }
+        }
+
         _unsubs.push(Events.on('generation:started', ({ id, scope, groupId, operation }) => {
             if (scope !== 'groupHistory' || groupId !== _group.id) return;
             _myGenIds.add(id);
@@ -533,8 +546,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }));
 
-        _unsubs.push(Events.on('generation:error',     ({ id }) => { if (_myGenIds.delete(id)) { viewer.el.setGenerating?.(false); _mascotHide(0); } }));
-        _unsubs.push(Events.on('generation:cancelled', ({ id }) => { if (_myGenIds.delete(id)) { viewer.el.setGenerating?.(false); _mascotHide(0); } }));
+        _unsubs.push(Events.on('generation:error',     ({ id }) => {
+            if (_myGenIds.delete(id)) {
+                viewer.el.setGenerating?.(false);
+                _mascotHide(0);
+                _restoreCurrentEntryAfterCancel();
+            }
+        }));
+        _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
+            if (_myGenIds.delete(id)) {
+                viewer.el.setGenerating?.(false);
+                _mascotHide(0);
+                _restoreCurrentEntryAfterCancel();
+            }
+        }));
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
 
@@ -935,6 +960,53 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
+        async function _handleReverseVideo() {
+            const project = state.currentProject;
+            if (!project?.folderPath || !project?.id) return;
+            const currentItem = _group.history[_currentIdx];
+            const sourcePath = currentItem?.filePath;
+            if (!sourcePath) { _showToast('No source video', 'error'); return; }
+
+            _showToast('Reversing video…', 'info');
+            try {
+                const body = {
+                    folderPath: project.folderPath,
+                    sourcePath,
+                    groupId: _group.id,
+                    itemId:  currentItem?.id,
+                };
+                const trim = currentItem?.trim;
+                if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
+                    body.trimIn  = +trim.in;
+                    body.trimOut = +trim.out;
+                }
+                const res = await fetch('/api/video/reverse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+
+                _group = appendToHistory(_group, data.item);
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.appendEntry(data.item);
+
+                viewer.el.loadVideo(resolveMediaUrl(data.item.filePath), {
+                    fps:        data.item.fps || _group.fps || 24,
+                    duration:   data.item.duration,
+                    frameCount: data.item.frameCount,
+                    hasAudio:   data.item.hasAudio,
+                    trim:       data.item.trim,
+                });
+                _showToast('Reversed video saved', 'success');
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'video reverse failed', err);
+                _showToast('Video reverse failed: ' + err.message, 'error');
+            }
+        }
+
         // ── History list wiring ──────────────────────────────────────────────
 
         historyList.on('entry-selected', async ({ idx, item }) => {
@@ -1176,36 +1248,52 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const sorted = [...indices].sort((a, b) => b - a);
 
             const project = state.currentProject;
+            let deletedIndices = sorted;
             if (project?.folderPath) {
+                deletedIndices = [];
                 for (const idx of sorted) {
                     const item = _group.history[idx];
                     if (!item) continue;
                     const filename = extractFilenameFromPath(item.filePath);
                     if (filename) {
-                        fetch(
-                            `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
-                            { method: 'DELETE' }
-                        ).catch(err => clientLogger.warn('MpiGroupHistoryBlock', 'delete media failed:', err));
+                        try {
+                            const res = await fetch(
+                                `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
+                                { method: 'DELETE' }
+                            );
+                            if (!res.ok) {
+                                clientLogger.warn('MpiGroupHistoryBlock', 'delete media returned non-ok status', {
+                                    status: res.status,
+                                    itemId: item.id,
+                                    filename,
+                                });
+                                continue;
+                            }
+                            deletedIndices.push(idx);
+                        } catch (err) {
+                            clientLogger.warn('MpiGroupHistoryBlock', 'delete media failed:', err);
+                        }
                     }
                 }
             }
+            if (!deletedIndices.length) return;
 
             // If user is deleting every remaining entry, drop the whole group
             // and return to gallery. `removeHistoryEntry` refuses to leave a
             // group empty, so this case must short-circuit.
-            const willEmptyGroup = indices.length >= _group.history.length;
+            const willEmptyGroup = deletedIndices.length >= _group.history.length;
             if (willEmptyGroup) {
-                Events.emit('media:deleted', { count: indices.length });
+                Events.emit('media:deleted', { count: deletedIndices.length });
                 await removeGroup(_group.id);
                 navigate(PAGE_GALLERY);
                 return;
             }
 
-            for (const idx of sorted) _group = removeHistoryEntry(_group, idx);
+            for (const idx of deletedIndices) _group = removeHistoryEntry(_group, idx);
 
             _currentIdx = _group.selectedIndex ?? 0;
             _persistGroup();
-            historyList.el.removeEntries(indices, _currentIdx);
+            historyList.el.removeEntries(deletedIndices, _currentIdx);
             _currentSelectionIndices = [];
 
             // Load new active entry.
@@ -1223,7 +1311,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _pb?.el?.show();
             }
 
-            Events.emit('media:deleted', { count: indices.length });
+            Events.emit('media:deleted', { count: deletedIndices.length });
             Events.emit('history:stats-dirty', { group: _group });
         });
 
@@ -1531,10 +1619,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     items: [
                         { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
                         { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
+                        { key: 'reverse',   icon: 'reverse',      label: 'Reverse video' },
                     ],
                     onSelect: (key) => {
                         if (key === 'set-start') _setFrameFromVideo('startFrame');
                         else if (key === 'set-end') _setFrameFromVideo('endFrame');
+                        else if (key === 'reverse') _handleReverseVideo();
                     },
                 });
             }));

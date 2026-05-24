@@ -78,6 +78,7 @@ export const ICONS = {
     'fullscreen': '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>',
     'frameBack': '<path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>',
     'frameForward': '<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>',
+    'reverse': '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>',
     'swap': '<path d="M7.5 3L3 7.5l4.5 4.5V9H21V6H7.5V3zm9 9v3H3v3h13.5v3L21 16.5 16.5 12z"/>',
     'frames': '<path d="M4 4h16v16H4V4zm2 2v3h3V6H6zm5 0v3h2V6h-2zm4 0v3h3V6h-3zM6 11v2h3v-2H6zm5 0v2h2v-2h-2zm4 0v2h3v-2h-3zM6 15v3h3v-3H6zm5 0v3h2v-3h-2zm4 0v3h3v-3h-3z"/>',
     'interpolate_stroke': '<rect x="2" y="5" width="5" height="5" rx="1"/><rect x="17" y="5" width="5" height="5" rx="1"/><path d="M9 7.5L12 7.5M15 7.5L18 7.5"/><circle cx="10.5" cy="7.5" r="0.8"/><circle cx="13.5" cy="7.5" r="0.8"/><rect x="2" y="14" width="5" height="5" rx="1"/><rect x="17" y="14" width="5" height="5" rx="1"/><path d="M9 16.5L12 16.5M15 16.5L18 16.5"/><circle cx="10.5" cy="16.5" r="0.8"/><circle cx="13.5" cy="16.5" r="0.8"/>',

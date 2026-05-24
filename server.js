@@ -40,6 +40,7 @@ const engineRoutes  = require('./routes/engine');
 const comfyRoutes   = require('./routes/comfy');
 const videoCropRoutes = require('./routes/videoCrop');
 const videoConcatRoutes = require('./routes/videoConcat');
+const videoReverseRoutes = require('./routes/videoReverse');
 const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
 const { cleanComfyUITempFiles } = require('./routes/shared');
 
@@ -52,6 +53,7 @@ app.use(engineRoutes);
 app.use(comfyRoutes);
 app.use(videoCropRoutes);
 app.use(videoConcatRoutes);
+app.use(videoReverseRoutes);
 app.use(downloadManagerRoutes);
 
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
