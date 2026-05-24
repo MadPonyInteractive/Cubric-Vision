@@ -1,6 +1,11 @@
 /**
  * MpiToolOptionsResize — Organism: resize / flip / rotate tool options.
  *
+ * Size source:
+ *   - SDXL/FLUX: ratio radio (orientation + label) × multiplier (x1 | x2).
+ *     Width/Height inputs hidden; derived from preset × multiplier.
+ *   - FREE: manual Width/Height inputs.
+ *
  * Live preview runs the image resize workflow on a small thumbnail of the
  * source (image first frame for video) with proportionally-scaled width and
  * height. Result paints into the inline preview slot, NOT into the viewer
@@ -25,15 +30,24 @@ import { runCommand } from '../../../services/commandExecutor.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs } from '../../../utils/dom.js';
 import { extractThumbnail, waitForVideoFrame } from '../../../utils/thumbnail.js';
+import { getModelRatios } from '../../../utils/ratios.js';
 
 const UPSCALE_METHODS = ['nearest', 'exact', 'bilinear', 'area', 'bicubic', 'lanczos', 'nvidia_rtx_vsr'];
 const KEEP_PROPORTIONS = ['stretch', 'resize', 'pad', 'pad_edge', 'pad_edge_pixel', 'crop', 'pillarbox_blur', 'total_pixels'];
 const CROP_POSITIONS = ['center', 'top', 'bottom', 'left', 'right'];
 const PAD_COLOR_MODES = new Set(['pad', 'pad_edge', 'pad_edge_pixel', 'pillarbox_blur']);
 
+const FAMILY_VALUES = new Set(['sdxl', 'flux', 'free']);
+const ORIENTATION_VALUES = new Set(['portrait', 'landscape']);
+const MULTIPLIER_VALUES = new Set(['1', '2']);
+
 const THUMB_MAX_EDGE = 512;
 
 const DEFAULTS = Object.freeze({
+    family: 'free',
+    orientation: 'portrait',
+    ratioLabel: '1:1',
+    multiplier: '1',
     width: 1024,
     height: 1024,
     upscale_method: 'lanczos',
@@ -44,6 +58,22 @@ const DEFAULTS = Object.freeze({
     flip: 'none',
     rotation: 'none',
 });
+
+const FAMILIES = [
+    { label: 'SDXL', value: 'sdxl' },
+    { label: 'FLUX', value: 'flux' },
+    { label: 'FREE', value: 'free' },
+];
+
+const ORIENTATIONS = [
+    { label: 'Portrait',  value: 'portrait',  icon: 'ratio_9_16', info: 'Portrait orientation' },
+    { label: 'Landscape', value: 'landscape', icon: 'ratio_16_9', info: 'Landscape orientation' },
+];
+
+const MULTIPLIERS = [
+    { label: 'x1', value: '1', info: 'Use ratio resolution as-is' },
+    { label: 'x2', value: '2', info: 'Double the ratio resolution' },
+];
 
 const labelize = (value) => String(value).replace(/_/g, ' ');
 
@@ -59,10 +89,38 @@ const normalizeColor = (value = {}) => ({
     b: Math.max(0, Math.min(255, Math.round(Number(value.b) || 0))),
 });
 
+function _ratioListFor(family, orientation) {
+    return getModelRatios(family, orientation);
+}
+
+function _resolveRatioDims(family, orientation, label, multiplier) {
+    const list = _ratioListFor(family, orientation);
+    const r = list.find(x => x.label === label) || list[0];
+    const mult = Number(multiplier) || 1;
+    return { width: r.w * mult, height: r.h * mult };
+}
+
 function coerceSettings(settings) {
+    const family = FAMILY_VALUES.has(settings.family) ? settings.family : DEFAULTS.family;
+    const orientation = ORIENTATION_VALUES.has(settings.orientation) ? settings.orientation : DEFAULTS.orientation;
+    const multiplier = MULTIPLIER_VALUES.has(String(settings.multiplier)) ? String(settings.multiplier) : DEFAULTS.multiplier;
+    let ratioLabel = String(settings.ratioLabel ?? DEFAULTS.ratioLabel);
+    if (family !== 'free') {
+        const list = _ratioListFor(family, orientation);
+        if (!list.some(r => r.label === ratioLabel)) ratioLabel = list[0]?.label ?? DEFAULTS.ratioLabel;
+    }
+
+    let width = clampInt(settings.width, DEFAULTS.width);
+    let height = clampInt(settings.height, DEFAULTS.height);
+    if (family !== 'free') {
+        const dims = _resolveRatioDims(family, orientation, ratioLabel, multiplier);
+        width = dims.width;
+        height = dims.height;
+    }
+
     return {
-        width: clampInt(settings.width, DEFAULTS.width),
-        height: clampInt(settings.height, DEFAULTS.height),
+        family, orientation, ratioLabel, multiplier,
+        width, height,
         upscale_method: UPSCALE_METHODS.includes(settings.upscale_method) ? settings.upscale_method : DEFAULTS.upscale_method,
         keep_proportion: KEEP_PROPORTIONS.includes(settings.keep_proportion) ? settings.keep_proportion : DEFAULTS.keep_proportion,
         pad_color: normalizeColor(settings.pad_color || DEFAULTS.pad_color),
@@ -98,8 +156,12 @@ export const MpiToolOptionsResize = ComponentFactory.create({
     template: () => `
         <div class="mpi-tool-options-resize">
             <div class="mpi-tool-options-resize__section">
-                <div class="mpi-tool-options-resize__section-label">Size</div>
-                <div class="mpi-tool-options-resize__pair">
+                <div class="mpi-tool-options-resize__section-label">Resolution Type</div>
+                <div class="mpi-tool-options-resize__row" id="resize-family-slot"></div>
+                <div class="mpi-tool-options-resize__row" id="resize-orientation-slot"></div>
+                <div class="mpi-tool-options-resize__row" id="resize-ratio-slot"></div>
+                <div class="mpi-tool-options-resize__row" id="resize-multiplier-slot"></div>
+                <div class="mpi-tool-options-resize__pair" id="resize-free-pair">
                     <div id="resize-width-slot"></div>
                     <div id="resize-height-slot"></div>
                 </div>
@@ -149,8 +211,6 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         let _previewSerial = 0;
         let _destroyed = false;
 
-        // Thumbnail cache for preview round-trips. Re-extracted whenever
-        // currentItem changes.
         let _thumbDataUrl = null;
         let _thumbW = 0;
         let _thumbH = 0;
@@ -159,6 +219,9 @@ export const MpiToolOptionsResize = ComponentFactory.create({
 
         let widthInput = null;
         let heightInput = null;
+        let ratioRadio = null;
+        let orientRadio = null;
+        let multRadio = null;
         let _previewImg = null;
         let _previewSpinner = null;
 
@@ -190,6 +253,115 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             return inst;
         };
 
+        // ── Resolution Type controls ─────────────────────────────────────────
+        const familyRadio = mount('#resize-family-slot', MpiRadioGroup, {
+            name: 'resize-family', value: settings.family, options: FAMILIES,
+            info: 'Resolution preset family',
+        });
+        _unsubs.push(familyRadio.on('select', ({ value }) => {
+            settings = { ...settings, family: value };
+            if (value !== 'free') {
+                const list = _ratioListFor(value, settings.orientation);
+                if (!list.some(r => r.label === settings.ratioLabel)) {
+                    settings = { ...settings, ratioLabel: list[0]?.label ?? DEFAULTS.ratioLabel };
+                    persist('ratioLabel', settings.ratioLabel);
+                }
+                _applyPresetDims();
+            }
+            persist('family', value);
+            rebuildResolutionControls();
+            syncConditionalRows();
+            schedulePreview();
+        }));
+
+        function rebuildResolutionControls() {
+            // Tear down preset-only controls
+            if (orientRadio) { orientRadio.destroy?.(); orientRadio = null; }
+            if (ratioRadio)  { ratioRadio.destroy?.();  ratioRadio  = null; }
+            if (multRadio)   { multRadio.destroy?.();   multRadio   = null; }
+            qs('#resize-orientation-slot', el).innerHTML = '';
+            qs('#resize-ratio-slot', el).innerHTML = '';
+            qs('#resize-multiplier-slot', el).innerHTML = '';
+
+            const isPreset = settings.family === 'sdxl' || settings.family === 'flux';
+
+            qs('#resize-orientation-slot', el).hidden = !isPreset;
+            qs('#resize-ratio-slot', el).hidden = !isPreset;
+            qs('#resize-multiplier-slot', el).hidden = !isPreset;
+            qs('#resize-free-pair', el).hidden = isPreset;
+
+            if (isPreset) {
+                orientRadio = MpiRadioGroup.mount(document.createElement('div'), {
+                    name: 'resize-orientation', value: settings.orientation,
+                    options: ORIENTATIONS, iconOnly: true,
+                });
+                qs('#resize-orientation-slot', el).appendChild(orientRadio.el);
+                _children.push(orientRadio);
+                orientRadio.on('select', ({ value }) => {
+                    const prevList = _ratioListFor(settings.family, settings.orientation);
+                    const newList  = _ratioListFor(settings.family, value);
+                    const idx = prevList.findIndex(r => r.label === settings.ratioLabel);
+                    let nextLabel = settings.ratioLabel;
+                    if (idx >= 0 && newList[idx]) nextLabel = newList[idx].label;
+                    else if (!newList.some(r => r.label === nextLabel)) nextLabel = newList[0]?.label ?? nextLabel;
+                    settings = { ...settings, orientation: value, ratioLabel: nextLabel };
+                    persist('orientation', value);
+                    persist('ratioLabel', nextLabel);
+                    rebuildRatioRadio();
+                    _applyPresetDims();
+                    schedulePreview();
+                });
+
+                rebuildRatioRadio();
+
+                multRadio = MpiRadioGroup.mount(document.createElement('div'), {
+                    name: 'resize-multiplier', value: settings.multiplier,
+                    options: MULTIPLIERS,
+                });
+                qs('#resize-multiplier-slot', el).appendChild(multRadio.el);
+                _children.push(multRadio);
+                multRadio.on('select', ({ value }) => {
+                    settings = { ...settings, multiplier: value };
+                    persist('multiplier', value);
+                    _applyPresetDims();
+                    schedulePreview();
+                });
+            }
+        }
+
+        function rebuildRatioRadio() {
+            if (ratioRadio) { ratioRadio.destroy?.(); ratioRadio = null; }
+            qs('#resize-ratio-slot', el).innerHTML = '';
+            const opts = _ratioListFor(settings.family, settings.orientation).map(r => ({
+                label: r.label, value: r.label,
+                icon: r.icon.replace('rect_', 'ratio_'),
+                info: `${r.w}×${r.h}`,
+            }));
+            ratioRadio = MpiRadioGroup.mount(document.createElement('div'), {
+                name: 'resize-ratio', value: settings.ratioLabel, options: opts,
+                labelPosition: 'top', size: 'lg', columns: 5,
+            });
+            qs('#resize-ratio-slot', el).appendChild(ratioRadio.el);
+            _children.push(ratioRadio);
+            ratioRadio.on('select', ({ value }) => {
+                settings = { ...settings, ratioLabel: value };
+                persist('ratioLabel', value);
+                _applyPresetDims();
+                schedulePreview();
+            });
+        }
+
+        function _applyPresetDims() {
+            if (settings.family === 'free') return;
+            const { width, height } = _resolveRatioDims(
+                settings.family, settings.orientation, settings.ratioLabel, settings.multiplier
+            );
+            settings = { ...settings, width, height };
+            persist('width', width);
+            persist('height', height);
+        }
+
+        // ── Free Width/Height inputs ─────────────────────────────────────────
         widthInput = mount('#resize-width-slot', MpiInput, {
             type: 'number', label: 'Width', value: settings.width,
             min: 1, step: 1, info: 'Output width',
@@ -204,6 +376,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         _unsubs.push(heightInput.on('input',  ({ value }) => setValue('height', clampInt(value, settings.height))));
         _unsubs.push(heightInput.on('change', ({ value }) => setValue('height', clampInt(value, settings.height))));
 
+        // ── Method controls ──────────────────────────────────────────────────
         const methodDd = mount('#resize-method-slot', MpiDropdown, {
             options: UPSCALE_METHODS.map(value => ({ value, label: labelize(value) })),
             value: settings.upscale_method, direction: 'up',
@@ -258,7 +431,6 @@ export const MpiToolOptionsResize = ComponentFactory.create({
         });
         _unsubs.push(rotationRadio.on('select', ({ value }) => setValue('rotation', value)));
 
-        // Inline preview img + spinner refs.
         _previewImg = qs('.mpi-tool-options-resize__preview-img', el);
         const spinnerHost = qs('#resize-preview-spinner', el);
         _previewSpinner = MpiSpinner.mount(spinnerHost, { size: 'sm' });
@@ -314,11 +486,11 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             _thumbH = thumb.height;
             _sourceW = thumb.sourceWidth;
             _sourceH = thumb.sourceHeight;
-            if (syncDims && _sourceW > 0 && _sourceH > 0) {
+            // Only seed dim inputs from source when in FREE mode — preset
+            // families compute dims from ratio × multiplier.
+            if (syncDims && settings.family === 'free' && _sourceW > 0 && _sourceH > 0) {
                 _syncDimInputsToSource();
             }
-            // Seed preview img with the unmodified thumbnail so the user sees
-            // something immediately, before the first preview round-trip.
             if (_previewImg) _previewImg.src = _thumbDataUrl;
         }
 
@@ -409,17 +581,13 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             if (!item || item.id === currentItem?.id) return;
             currentItem = item;
             cancelPreview();
-            // Caller (Block) just kicked off loadVideo / loadEntry — wait for
-            // the next loadeddata so we don't sample a stale frame from the
-            // previous source.
             await _refreshThumbnail({ awaitNextLoad: kind === 'video', syncDims: true });
             schedulePreview();
         };
 
+        rebuildResolutionControls();
         syncConditionalRows();
 
-        // Kick off thumbnail extraction + initial preview so the user sees
-        // the tool's effect on the active entry without touching a control.
         (async () => {
             await _refreshThumbnail({ syncDims: true });
             schedulePreview();

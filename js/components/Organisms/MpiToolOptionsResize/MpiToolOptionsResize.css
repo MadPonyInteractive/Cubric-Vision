@@ -33,7 +33,8 @@
     width: 100%;
 }
 
-.mpi-tool-options-resize__row[hidden] {
+.mpi-tool-options-resize__row[hidden],
+.mpi-tool-options-resize__pair[hidden] {
     display: none;
 }
 
