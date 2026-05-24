@@ -49,6 +49,9 @@ export const MpiSlideOver = ComponentFactory.create({
         const bodyEl = qs('.mpi-slide-over__body', el);
 
         titleEl.textContent = props.title || '';
+        if (props.extraClasses) {
+            el.classList.add(...String(props.extraClasses).split(/\s+/).filter(Boolean));
+        }
 
         // Mount the content component into the body slot
         let _contentInstance = null;
@@ -84,6 +87,7 @@ export const MpiSlideOver = ComponentFactory.create({
         };
 
         el.close = _doClose;
+        _contentInstance?.on?.('close-request', _doClose);
 
         // Close button
         _unsubs.push(on(closeBtn, 'click', _doClose));
@@ -104,14 +108,41 @@ export const MpiSlideOver = ComponentFactory.create({
 // Listen for slide-over:open events and manage one active instance.
 
 let _active = null;
+let _activePanelId = null;
 
-// Module-level singleton; lifetime = app lifetime. Unsubscribe captured but never called.
-const _slideOverOpenUnsub = Events.on('slide-over:open', ({ title, component }) => {
+function _normalisePanelId({ panelId, title, component } = {}) {
+    return panelId || component?.name || title || '';
+}
+
+function _openSlideOver({ title, component, extraClasses, panelId } = {}) {
     if (_active) {
         _active.el.close();
         _active = null;
+        _activePanelId = null;
     }
-    _active = MpiSlideOver.mount(document.createElement('div'), { title, component });
+    _activePanelId = _normalisePanelId({ panelId, title, component });
+    _active = MpiSlideOver.mount(document.createElement('div'), { title, component, extraClasses });
     _active.el.open();
-    _active.on('close', () => { _active = null; });
+    const instance = _active;
+    _active.on('close', () => {
+        if (_active === instance) {
+            _active = null;
+            _activePanelId = null;
+        }
+    });
+}
+
+// Module-level singleton; lifetime = app lifetime. Unsubscribe captured but never called.
+const _slideOverOpenUnsub = Events.on('slide-over:open', ({ title, component, extraClasses, panelId }) => {
+    _openSlideOver({ title, component, extraClasses, panelId });
+});
+
+// Module-level singleton; lifetime = app lifetime. Unsubscribe captured but never called.
+const _slideOverToggleUnsub = Events.on('slide-over:toggle', ({ title, component, extraClasses, panelId }) => {
+    const nextPanelId = _normalisePanelId({ panelId, title, component });
+    if (_active && _activePanelId === nextPanelId) {
+        _active.el.close();
+        return;
+    }
+    _openSlideOver({ title, component, extraClasses, panelId });
 });

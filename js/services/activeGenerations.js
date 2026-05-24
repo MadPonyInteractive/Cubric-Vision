@@ -23,6 +23,8 @@ import { Events } from '../events.js';
  * @property {string}      status            — 'running' | 'complete' | 'error' | 'cancelled'
  * @property {string|null} latestPreviewUrl
  * @property {Object|null} placeholderGroup  — gallery only
+ * @property {string|null} queueJobId
+ * @property {Object|null} queueDisplay
  * @property {Object}      exec
  */
 
@@ -35,11 +37,11 @@ const _registry = new Map();
  * @param {{ scope, groupId, tempId, operation, modelId, placeholderGroup, exec }} opts
  * @returns {{ id: string }}
  */
-function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null }) {
+function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null, queueJobId = null, queueDisplay = null, queueSource = null, isLoop = false }) {
     const id = crypto.randomUUID();
-    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId, sourceGroupId };
+    const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop };
     _registry.set(id, entry);
-    Events.emit('generation:started', { id, scope, groupId, tempId, operation, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId, sourceGroupId });
+    Events.emit('generation:started', { id, scope, groupId, tempId, operation, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop });
     return { id };
 }
 

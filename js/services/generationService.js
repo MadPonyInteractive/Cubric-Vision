@@ -31,15 +31,114 @@ import { extractFilenameFromPath } from '../utils/mediaActions.js';
 // state.loopArmed = false halts re-fire.
 /** @type {Array<{ config: Object, callbacks: Object, opts: Object }>} */
 const _cueQueue = [];
+let _activeCueJob = null;
 let _cueDispatchInFlight = false;
 /** Most-recent dispatched job — used by loop re-fire to fetch fresh payloads. */
 let _lastJobForLoop = null;
+
+const PROMPT_EXCERPT_MAX = 140;
+
+function _promptExcerpt(text = '') {
+    return String(text || '').replace(/\s+/g, ' ').trim().slice(0, PROMPT_EXCERPT_MAX);
+}
+
+function _cloneMediaItems(mediaItems = []) {
+    return (Array.isArray(mediaItems) ? mediaItems : [])
+        .filter(item => item && (item.url || item.filePath))
+        .map(item => ({
+            id:        item.id ?? null,
+            url:       item.url ?? item.filePath ?? '',
+            filePath:  item.filePath ?? item.url ?? '',
+            mediaType: item.mediaType ?? item.type ?? null,
+            source:    item.source ?? null,
+            role:      item.role ?? null,
+            thumbPath:  item.thumbPath ?? null,
+        }));
+}
+
+function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = false) {
+    const injectionParams = config.injectionParams || {};
+    const width = Number(injectionParams.Width || injectionParams.width || opts.placeholderGroup?.width || 0) || 0;
+    const height = Number(injectionParams.Height || injectionParams.height || opts.placeholderGroup?.height || 0) || 0;
+    const batchCount = Math.max(
+        1,
+        Number(injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
+    );
+    const model = config.model || {};
+    const ratio = injectionParams.Ratio_Label || injectionParams.ratioLabel || config.ratioLabel || '';
+    return {
+        promptExcerpt: _promptExcerpt(config.positive),
+        negativeExcerpt: _promptExcerpt(config.negative),
+        modelId: model.id ?? null,
+        modelName: model.displayName || model.name || model.label || model.id || 'Unknown model',
+        operation: config.operation || '',
+        ratio,
+        width,
+        height,
+        batchCount,
+        mediaItems: _cloneMediaItems(config.mediaItems),
+        previewKind: config.previewOnly === true ? 'preview' : (config.isStage2 === true ? 'final' : ''),
+        source,
+        isLoop,
+        scope: opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
+        replaceItemId: config.replaceItemId ?? null,
+        sourceGroupId: opts.sourceGroupId ?? null,
+    };
+}
+
+function _queueSnapshotItem(job, status) {
+    const activeEntry = status === 'running' && job.queueJobId
+        ? activeGenerations.list().find(entry => entry.queueJobId === job.queueJobId)
+        : null;
+    const batchCount = Math.max(
+        1,
+        Number(
+            job.display?.batchCount
+            || job.config?.injectionParams?.Batch_Size
+            || job.config?.injectionParams?.batchSize
+            || ((job.opts?.extraTempIds?.length || 0) + 1)
+        ) || 1
+    );
+    return {
+        queueJobId: job.queueJobId,
+        status,
+        isLoop: !!job.isLoop,
+        source: job.source || 'manual',
+        promptExcerpt: job.display?.promptExcerpt || '',
+        negativeExcerpt: job.display?.negativeExcerpt || '',
+        modelId: job.display?.modelId ?? job.config?.model?.id ?? null,
+        modelName: job.display?.modelName || job.config?.model?.name || job.config?.model?.id || 'Unknown model',
+        operation: job.display?.operation || job.config?.operation || '',
+        ratio: job.display?.ratio
+            || job.config?.injectionParams?.Ratio_Label
+            || job.config?.injectionParams?.ratioLabel
+            || job.config?.ratioLabel
+            || '',
+        width: job.display?.width || 0,
+        height: job.display?.height || 0,
+        batchCount,
+        mediaItems: job.display?.mediaItems || [],
+        previewKind: job.display?.previewKind || '',
+        previewUrl: activeEntry?.latestPreviewUrl || null,
+        activeGenerationId: activeEntry?.id || null,
+        canCancel: status === 'pending',
+        canStop: status === 'running',
+        scope: job.display?.scope || job.opts?.scope || 'gallery',
+        replaceItemId: job.display?.replaceItemId ?? job.config?.replaceItemId ?? null,
+        sourceGroupId: job.display?.sourceGroupId ?? job.opts?.sourceGroupId ?? null,
+    };
+}
+
+function _emitQueueChanged() {
+    Events.emit('generation-queue:changed', getGenerationQueueSnapshot());
+}
 
 function _updateQueueDepth() {
     const depth = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0);
     if (state.generationQueueCount !== depth) {
         state.generationQueueCount = depth;
     }
+    _emitQueueChanged();
 }
 
 function _dispatchNextCue() {
@@ -53,7 +152,11 @@ function _dispatchNextCue() {
         if (state.loopArmed && _lastJobForLoop) {
             const fresh = _lastJobForLoop.callbacks?.getNextGeneration?.();
             if (fresh && fresh.config) {
-                enqueueGeneration(fresh.config, _lastJobForLoop.callbacks, fresh.opts || _lastJobForLoop.opts);
+                enqueueGeneration(fresh.config, _lastJobForLoop.callbacks, {
+                    ...(fresh.opts || _lastJobForLoop.opts),
+                    source: 'loop',
+                    isLoop: true,
+                });
                 return;
             }
         }
@@ -61,11 +164,13 @@ function _dispatchNextCue() {
         return;
     }
     _cueDispatchInFlight = true;
+    _activeCueJob = next;
     _lastJobForLoop = next;
     _updateQueueDepth();
 
     const finishCueDispatch = () => {
         _cueDispatchInFlight = false;
+        _activeCueJob = null;
         _updateQueueDepth();
         setTimeout(() => _dispatchNextCue(), 0);
     };
@@ -85,7 +190,13 @@ function _dispatchNextCue() {
             finally { finishCueDispatch(); }
         },
     };
-    startGeneration(next.config, wrappedCallbacks, next.opts);
+    startGeneration(next.config, wrappedCallbacks, {
+        ...next.opts,
+        queueJobId: next.queueJobId,
+        queueDisplay: next.display,
+        queueSource: next.source,
+        isLoop: next.isLoop,
+    });
 }
 
 /**
@@ -93,9 +204,14 @@ function _dispatchNextCue() {
  * Returns nothing — callers track via `activeGenerations` events.
  */
 export function enqueueGeneration(config, callbacks = {}, opts = {}) {
-    _cueQueue.push({ config, callbacks, opts });
+    const queueJobId = opts.queueJobId || crypto.randomUUID();
+    const source = opts.source || (state.loopArmed ? 'loop' : 'manual');
+    const isLoop = opts.isLoop === true || source === 'loop';
+    const display = opts.queueDisplay || _buildQueueDisplay(config, opts, source, isLoop);
+    _cueQueue.push({ queueJobId, config, callbacks, opts: { ...opts, queueJobId, queueDisplay: display, source, isLoop }, display, source, isLoop });
     _updateQueueDepth();
     _dispatchNextCue();
+    return { queueJobId };
 }
 
 /** Clears all pending Cue jobs (does not interrupt the running one). */
@@ -130,6 +246,22 @@ export function removeCueJob(predicate) {
     return removed;
 }
 
+/** Removes one pending Cue job by stable queue id. Does not stop the running job. */
+export function cancelPendingCueJob(queueJobId) {
+    if (!queueJobId) return [];
+    return removeCueJob(job => job.queueJobId === queueJobId);
+}
+
+/** Stops a running Cue job by stable queue id. */
+export function cancelRunningCueJob(queueJobId) {
+    if (!queueJobId) return false;
+    const entry = activeGenerations.list().find(e => e.queueJobId === queueJobId && e.status === 'running');
+    if (!entry) return false;
+    activeGenerations.cancel(entry.id);
+    _emitQueueChanged();
+    return true;
+}
+
 /** Force a state.generationQueueCount refresh (no-op for own-queue model). */
 export function refreshQueueDepth() {
     _updateQueueDepth();
@@ -143,6 +275,21 @@ export function refreshQueueDepth() {
  */
 export function peekCueQueue() {
     return _cueQueue.slice();
+}
+
+/** Read-only snapshot for user-facing queue panels. */
+export function getGenerationQueueSnapshot() {
+    const running = _activeCueJob ? _queueSnapshotItem(_activeCueJob, 'running') : null;
+    const pending = _cueQueue.map(job => _queueSnapshotItem(job, 'pending'));
+    return {
+        running,
+        pending,
+        items: [...(running ? [running] : []), ...pending],
+        depth: pending.length + (running ? 1 : 0),
+        pendingCount: pending.length,
+        runningCount: running ? 1 : 0,
+        loopArmed: !!state.loopArmed,
+    };
 }
 
 function _emitPromptBoxGenerationEndIfIdle() {
@@ -253,6 +400,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         exec,
         replaceItemId:     config.replaceItemId ?? null,
         sourceGroupId:     opts.sourceGroupId ?? null,
+        queueJobId:        opts.queueJobId ?? null,
+        queueDisplay:      opts.queueDisplay ?? null,
+        queueSource:       opts.queueSource ?? null,
+        isLoop:            opts.isLoop === true,
     });
 
     exec.onPromptAck = (promptId) => {
@@ -261,6 +412,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
     exec.onPreview = (url) => {
         activeGenerations.setPreview(_regId, url);
+        _emitQueueChanged();
         callbacks.onPreview?.(url);
     };
 
@@ -287,6 +439,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
         const width  = injectionParams.Width  || injectionParams.width  || 0;
         const height = injectionParams.Height || injectionParams.height || 0;
+        const ratioLabel = injectionParams.Ratio_Label || injectionParams.ratioLabel || null;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,
@@ -378,7 +531,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         comfyViewUrl: url,
                         itemId: thisItemId,
                         operation,
-                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1 },
+                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, ratioLabel },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -411,6 +564,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 negativePrompt: negative,
                 modelId: model.id,
                 seed: exec.seed ?? -1,
+                ratioLabel,
                 pixelDimensions: resolvedDims,
                 // Server returns aggregated generationMs on preview→final replace
                 // (prev stage + this stage). Prefer it over the local timer.

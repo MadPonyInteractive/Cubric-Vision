@@ -142,6 +142,14 @@ export const Events = new EventBus();
  * 'models:open'           —                                        — open the Models slide-over (shell re-emits as slide-over:open)
  * 'models:checked'        { installedModelIds: string[] }          — model install state synced
  *
+ * Slide-over events:
+ * 'slide-over:open'       { title, component, extraClasses?, panelId? }  - open a right slide-over panel
+ * 'slide-over:toggle'     { title, component, extraClasses?, panelId? }  - toggle a right slide-over panel
+ *
+ * Queue panel events:
+ * 'generation-queue:open'     â€”                                  â€” open the Cue queue slide-over
+ * 'generation-queue:changed'  { running, pending, items, depth }  â€” in-app Cue queue snapshot changed
+ *
  * Project events (emitted by ProjectService):
  * 'project:group-added'   { group: Object }                        — new group added and persisted
  * 'project:group-updated' { group: Object }                        — existing group updated and persisted

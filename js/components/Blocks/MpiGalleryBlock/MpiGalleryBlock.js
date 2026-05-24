@@ -16,9 +16,11 @@ import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMed
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
@@ -66,6 +68,21 @@ export const MpiGalleryBlock = ComponentFactory.create({
         if (crumbEl) crumbEl.textContent = state.currentProject?.name || '';
 
         let groups = state.currentProject?.itemGroups || [];
+
+        const _queuePanelPayload = {
+            title: 'Cue',
+            component: MpiQueuePanel,
+            extraClasses: 'mpi-slide-over--queue',
+            panelId: 'generation-queue',
+        };
+        const _toggleQueuePanel = () => {
+            Events.emit('slide-over:toggle', _queuePanelPayload);
+        };
+        const _openQueuePanel = () => {
+            Events.emit('slide-over:open', _queuePanelPayload);
+        };
+        _unsubs.push(Hotkeys.bind('gallery.queue.toggle', _toggleQueuePanel));
+        _unsubs.push(Events.on('generation-queue:open', _openQueuePanel));
 
         // ── Rehydrate any in-flight gallery generations ───────────────────────
         const _myGenIds = new Set();
@@ -672,16 +689,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // the xN badge instead and never enters these overlays.
         _unsubs.push(Events.on('generation:started', ({ scope, replaceItemId }) => {
             if (scope !== 'gallery' || !replaceItemId) return;
-            for (const [groupId, itemId] of _queuedContinueGroupIds) {
-                if (itemId === replaceItemId) {
-                    _queuedContinueGroupIds.delete(groupId);
-                    grid.el.markQueuedContinue(groupId, false);
-                    _continuingGroupIds.add(groupId);
-                    grid.el.markContinuing(groupId, true);
-                    _refreshPbGenerating();
-                    break;
-                }
-            }
+            const groupId = _findGroupIdByItemId(replaceItemId);
+            if (!groupId) return;
+            _queuedContinueGroupIds.delete(groupId);
+            grid.el.markQueuedContinue(groupId, false);
+            _continuingGroupIds.add(groupId);
+            grid.el.markContinuing(groupId, true);
+            _refreshPbGenerating();
         }));
 
         // Pop button on a queued Finish card → remove its job from the cue queue.
@@ -709,8 +723,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // arrive via _validatePreviewForGroup → setPreviewAssetsWarning.
         _validateAllPreviews();
 
-        // Rehydrate "Queued…" + "Generating final…" overlays from the
-        // module-scoped cue queue and active-generations registry. Block
+        // Rehydrate/reconcile "Queued…" + "Generating final…" overlays from
+        // the module-scoped cue queue and active-generations registry. Block
         // instance Maps are reset on workspace nav; sources of truth survive.
         const _findGroupIdByItemId = (itemId) => {
             const groups = state.currentProject?.itemGroups || [];
@@ -719,34 +733,54 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
             return null;
         };
-        for (const job of peekCueQueue()) {
-            if (job.opts?.scope !== 'gallery') continue;
-            const itemId = job.config?.replaceItemId;
-            if (!itemId) continue;
-            const gid = _findGroupIdByItemId(itemId);
-            if (!gid) continue;
-            _queuedContinueGroupIds.set(gid, itemId);
-            grid.el.markQueuedContinue(gid, true);
-        }
-        for (const entry of activeGenerations.listFor('gallery', null)) {
-            if (entry.status !== 'running') continue;
-            const itemId = entry.replaceItemId;
-            if (!itemId) continue;
-            const gid = _findGroupIdByItemId(itemId);
-            if (!gid) continue;
-            _continuingGroupIds.add(gid);
-            grid.el.markContinuing(gid, true);
-        }
-        _recomputeStage2Counts();
-        _refreshPbGenerating();
 
-        // Stage-2 counts are derived; recompute on every gallery lifecycle
-        // event so completion/cancel/error decrements arrive even when the
-        // dispatching block instance is gone (workspace nav).
-        _unsubs.push(Events.on('generation:complete',  () => _recomputeStage2Counts()));
-        _unsubs.push(Events.on('generation:cancelled', () => _recomputeStage2Counts()));
-        _unsubs.push(Events.on('generation:error',     () => _recomputeStage2Counts()));
-        _unsubs.push(Events.on('generation:started',   () => _recomputeStage2Counts()));
+        const _syncPreviewQueueState = () => {
+            const nextQueued = new Map();
+            for (const job of peekCueQueue()) {
+                if (job.opts?.scope !== 'gallery') continue;
+                const itemId = job.config?.replaceItemId;
+                if (!itemId) continue;
+                const gid = _findGroupIdByItemId(itemId);
+                if (gid) nextQueued.set(gid, itemId);
+            }
+
+            const queuedTouched = new Set([..._queuedContinueGroupIds.keys(), ...nextQueued.keys()]);
+            _queuedContinueGroupIds.clear();
+            for (const [gid, itemId] of nextQueued) _queuedContinueGroupIds.set(gid, itemId);
+            for (const gid of queuedTouched) {
+                grid.el.markQueuedContinue(gid, _queuedContinueGroupIds.has(gid));
+            }
+
+            const nextContinuing = new Set();
+            for (const entry of activeGenerations.listFor('gallery', null)) {
+                if (entry.status !== 'running') continue;
+                const itemId = entry.replaceItemId;
+                if (!itemId) continue;
+                const gid = _findGroupIdByItemId(itemId);
+                if (gid) nextContinuing.add(gid);
+            }
+
+            const continuingTouched = new Set([..._continuingGroupIds, ...nextContinuing]);
+            _continuingGroupIds.clear();
+            for (const gid of nextContinuing) _continuingGroupIds.add(gid);
+            for (const gid of continuingTouched) {
+                grid.el.markContinuing(gid, _continuingGroupIds.has(gid));
+            }
+
+            _recomputeStage2Counts();
+            _refreshPbGenerating();
+        };
+
+        _syncPreviewQueueState();
+
+        // Preview queue state is derived; resync on queue and generation
+        // lifecycle so cancel/complete/error updates cards immediately even
+        // when the action came from the queue panel instead of the card itself.
+        _unsubs.push(Events.on('generation:complete',  () => _syncPreviewQueueState()));
+        _unsubs.push(Events.on('generation:cancelled', () => _syncPreviewQueueState()));
+        _unsubs.push(Events.on('generation:error',     () => _syncPreviewQueueState()));
+        _unsubs.push(Events.on('generation:started',   () => _syncPreviewQueueState()));
+        _unsubs.push(Events.on('generation-queue:changed', () => _syncPreviewQueueState()));
 
         // ── Media missing (garbage collection) ───────────────────────────────────
         grid.on('media-missing', ({ group: g, itemId }) => {

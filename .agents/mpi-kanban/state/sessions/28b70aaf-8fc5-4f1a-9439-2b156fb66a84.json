@@ -1,0 +1,37 @@
+{
+    "schema":  "mpi-kanban/session/v1",
+    "status":  "closed",
+    "agent":  "codex",
+    "role":  "implementer",
+    "name":  "Codex queue panel scaffold",
+    "task":  ".agents/mpi-kanban/state/tasks/739a7fd5-4e78-48ce-be3f-d9fca139770b.json",
+    "heartbeat_at":  "2026-05-25T00:51:15.0815075+01:00",
+    "allowed_actions":  [
+                            "read",
+                            "edit",
+                            "verify",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-05-24T22:53:49.6932312+01:00",
+                              "event":  "session_started",
+                              "note":  "Started implementation session for Queue panel scaffold."
+                          },
+                          {
+                              "at":  "2026-05-25T00:20:58.7749656+01:00",
+                              "event":  "progress",
+                              "note":  "Fixed queue-panel preview cancellation not updating Gallery preview cards."
+                          },
+                          {
+                              "at":  "2026-05-25T00:33:04.1607936+01:00",
+                              "event":  "progress",
+                              "note":  "Polished Cue ratio label source, placeholder contrast, and metadata line wrapping."
+                          },
+                          {
+                              "at":  "2026-05-25T00:51:15.0815075+01:00",
+                              "event":  "closed",
+                              "note":  "Queue panel scaffold completed, verified, committed by end-session flow."
+                          }
+                      ]
+}

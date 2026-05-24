@@ -1,11 +1,21 @@
 {
-  "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-05-22T07:38:38.3111061+01:00",
-  "board": ".agents/mpi-kanban/kanban.md",
-  "heartbeat_timeout_minutes": 120,
-  "active_sessions": [],
-  "active_tasks": [],
-  "active_file_claims": [],
-  "pending_file_states": [],
-  "active_handoffs": []
+    "schema":  "mpi-kanban/state-index/v1",
+    "updated_at":  "2026-05-25T00:51:15.0815075+01:00",
+    "board":  ".agents/mpi-kanban/kanban.md",
+    "heartbeat_timeout_minutes":  120,
+    "active_sessions":  [
+
+                        ],
+    "active_tasks":  [
+
+                     ],
+    "active_file_claims":  [
+
+                           ],
+    "pending_file_states":  [
+
+                            ],
+    "active_handoffs":  [
+
+                        ]
 }

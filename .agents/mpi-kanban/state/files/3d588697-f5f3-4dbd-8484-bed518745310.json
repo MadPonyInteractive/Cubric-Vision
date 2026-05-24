@@ -1,0 +1,27 @@
+{
+    "schema":  "mpi-kanban/file/v1",
+    "status":  "verified",
+    "claim_kind":  "write",
+    "path":  "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/28b70aaf-8fc5-4f1a-9439-2b156fb66a84.json",
+    "owner_role":  "implementer",
+    "task":  ".agents/mpi-kanban/state/tasks/739a7fd5-4e78-48ce-be3f-d9fca139770b.json",
+    "heartbeat_at":  "2026-05-25T00:51:15.0815075+01:00",
+    "recent_events":  [
+                          {
+                              "at":  "2026-05-24T22:56:38.0461566+01:00",
+                              "event":  "claimed",
+                              "note":  "Bind Gallery queue panel hotkey and open slide-over."
+                          },
+                          {
+                              "at":  "2026-05-24T23:10:00+01:00",
+                              "event":  "needs_integration",
+                              "note":  "Scaffold implemented; awaiting selected UI mockup integration."
+                          },
+                          {
+                              "at":  "2026-05-25T00:51:15.0815075+01:00",
+                              "event":  "verified",
+                              "note":  "Integrated and verified in completed queue panel scaffold session."
+                          }
+                      ]
+}

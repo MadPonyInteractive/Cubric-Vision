@@ -69,7 +69,10 @@ class OverlayManager {
      * @returns {boolean}
      */
     closeTopOverlay() {
-        if (!this._stack.length) return false;
+        if (!this._stack.length) {
+            Events.emit('ui:close-all-popups');
+            return false;
+        }
         const top = this._stack[this._stack.length - 1];
         if (typeof top.hide === 'function') {
             top.hide();

@@ -207,10 +207,10 @@ export const PROMPT_BOX_CONTROLS = {
             // Prefer live dimensions from the mounted selector; fall back to cache.
             if (this._instance?.el?.getValue) {
                 const live = this._instance.el.getValue();
-                if (live.w && live.h) return { Width: live.w, Height: live.h };
+                if (live.w && live.h) return { Width: live.w, Height: live.h, Ratio_Label: live.label || live.value || this.value?.label || '' };
             }
             const v = this.value ?? { w: 1024, h: 1024 };
-            return { Width: v.w, Height: v.h };
+            return { Width: v.w, Height: v.h, Ratio_Label: v.label || '' };
         },
         destroy() {
             this._qualityUnsub?.();

@@ -59,6 +59,8 @@
 > **Model LoRA settings shape:** most models, including LTX, use the flat shape `modelSettings[modelId].loras: Array<6>`. Models that declare `model.loraStages` (WAN) use a staged object, e.g. `loras: { high: Array<6>, low: Array<6> }`. `MpiModelSettings`, `commandExecutor`, and preview `loraSnapshot` handling must support both shapes.
 
 > **Cue queue depth is local:** `state.generationQueueCount` includes the active Cue dispatch plus pending jobs. StatusBar subtracts the active dispatch and only displays pending depth, e.g. `GENERATING (2 queued)`. Do not poll ComfyUI queue depth for Cue mode.
+> **Cue queue visibility comes from generationService:** user-facing queue surfaces must call `getGenerationQueueSnapshot()` or subscribe to `generation-queue:changed`. The snapshot owns stable `queueJobId`, running/pending status, model/operation, prompt excerpt, ratio/dimensions, batch count, loop source, stage label, media thumbnails, and cancel/stop affordances.
+> **PromptBox ratio injection includes `Ratio_Label`:** the ratio control injects `Width`, `Height`, and selected `Ratio_Label`. Cue cards and sidecar metadata use the selected label, not a ratio inferred from pixel dimensions.
 
 > **MpiCanvas pan/zoom is NOT in `state`:** `scale`, `offsetX`, `offsetY` live inside `ViewManager` (instance-local). Pan/zoom is applied as a CSS `transform` on `.mpi-canvas__stack` — not via `ctx.translate/scale`. Never reach into `state` for canvas view parameters.
 

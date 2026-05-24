@@ -146,7 +146,9 @@ Centralized generation lifecycle manager. Wraps `runCommand()` with project pers
 
 - `enqueueGeneration(config, callbacks, opts)` - Cue-mode entry point. Adds to the in-app queue and dispatches one generation at a time.
 - `clearPendingQueue()` - Clears pending Cue jobs without interrupting the running job.
+- `getGenerationQueueSnapshot()` - Returns the visible Cue snapshot for queue panels.
+- `cancelPendingCueJob(queueJobId)` / `cancelRunningCueJob(queueJobId)` - Cancel a pending Cue item or stop the current Cue item by stable queue id.
 
 **Callbacks:** `onPreview`, `onComplete`, `onCancel`, `onError`
 
-**Key pattern:** Blocks call `startGeneration()` directly for Single/Auto-loop and `enqueueGeneration()` for Cue mode. The service handles backend lifecycle, file save, project mutation, and Cue dispatch sequencing.
+**Key pattern:** Blocks enqueue through `enqueueGeneration()` for Cue mode. The service handles backend lifecycle, file save, project mutation, visible queue snapshots, loop re-fire, and Cue dispatch sequencing. Queue UI subscribes to `generation-queue:changed`; do not poll ComfyUI queue depth for Cue.

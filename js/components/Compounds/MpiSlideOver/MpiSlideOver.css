@@ -7,7 +7,7 @@
     top: var(--titlebar-h, 36px);
     left: 58.33vw;
     right: 0;
-    bottom: 0;
+    bottom: var(--statusbar-h, 32px);
     background: var(--surface-1);
     border-left: 1px solid var(--line);
     box-shadow: -24px 0 60px -30px oklch(0.16 0.02 350 / 0.55);
@@ -81,5 +81,20 @@
 
 .mpi-slide-over__footer:empty {
     display: none;
+}
+
+.mpi-slide-over--queue {
+    left: auto;
+    width: min(460px, calc(100vw - 48px));
+}
+
+.mpi-slide-over--queue .mpi-slide-over__header,
+.mpi-slide-over--queue .mpi-slide-over__footer {
+    display: none;
+}
+
+.mpi-slide-over--queue .mpi-slide-over__body {
+    padding: 0;
+    overflow: hidden;
 }
 

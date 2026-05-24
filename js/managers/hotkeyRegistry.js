@@ -162,6 +162,15 @@ export const HOTKEY_REGISTRY = [
         description:      'Decrease thumbnail size',
         allowWhileTyping: false,
     },
+    {
+        id:               'gallery.queue.toggle',
+        key:              'q',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Toggle Cue panel',
+        allowWhileTyping: false,
+    },
 
     // ── History ───────────────────────────────────────────────────────────────
     {

@@ -526,16 +526,47 @@
  * @property {Object} component   - ComponentFactory blueprint to mount in the body slot
  *                                  (MpiSettings | MpiHelp | MpiAbout).
  *                                  If component.el.onOpen exists, it is called on open.
+ * @property {string} [extraClasses] - Optional classes added to the slide-over root.
+ *                                     Queue uses this to provide its own chrome.
+ * @property {string} [panelId] - Stable identity used by `slide-over:toggle`.
  *
  * Opened via event (do not mount directly):
- *   Events.emit('slide-over:open', { title, component })
+ *   Events.emit('slide-over:open', { title, component, extraClasses?, panelId? })
+ *   Events.emit('slide-over:toggle', { title, component, extraClasses?, panelId? })
  *
  * Instance methods (on instance.el):
  *   open()  — slide in, append to body
  *   close() — slide out, remove from DOM
  *
  * Emits:
- * 'close' {} — panel dismissed (close button, outside click, ui:close-all-popups)
+ * 'close' {} — panel dismissed (close button, outside click, ui:close-all-popups,
+ *              or content component emitting 'close-request')
+ */
+
+/**
+ * @typedef {Object} MpiQueuePanelProps (Compound - js/components/Compounds/MpiQueuePanel)
+ *
+ * Takes no props. Queue slide-over content for the in-app Cue queue. Reads the
+ * snapshot from `generationService.getGenerationQueueSnapshot()`, subscribes to
+ * `generation-queue:changed`, and calls cancel helpers by stable queue job id.
+ * Owns its header controls: trash clears pending Cue jobs, X emits close-request.
+ *
+ * Opened via:
+ *   Events.emit('slide-over:open', {
+ *     title: 'Cue',
+ *     component: MpiQueuePanel,
+ *     extraClasses: 'mpi-slide-over--queue',
+ *     panelId: 'generation-queue',
+ *   }).
+ *
+ * Gallery `Q` uses `slide-over:toggle` with the same payload.
+ *
+ * Instance methods (on instance.el):
+ *   onOpen()  - refreshes from the latest queue snapshot.
+ *   destroy() - tears down queue subscriptions and listeners.
+ *
+ * Emits:
+ *   'close-request' {} - asks MpiSlideOver to close the panel.
  */
 
 /**

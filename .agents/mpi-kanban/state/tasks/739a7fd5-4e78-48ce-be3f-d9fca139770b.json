@@ -1,0 +1,37 @@
+{
+    "schema":  "mpi-kanban/task/v1",
+    "status":  "closed",
+    "title":  "Queue panel scaffold",
+    "kanban_entry":  "Queue panel scaffold",
+    "plan":  "docs/plans/2026-05-24-queue-panel-scaffold.md",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/28b70aaf-8fc5-4f1a-9439-2b156fb66a84.json",
+    "heartbeat_at":  "2026-05-25T00:51:15.0815075+01:00",
+    "allowed_actions":  [
+                            "read",
+                            "edit",
+                            "verify",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-05-24T22:53:49.6932312+01:00",
+                              "event":  "task_started",
+                              "note":  "Attached task to compact plan and IMPLEMENTING kanban entry."
+                          },
+                          {
+                              "at":  "2026-05-25T00:20:58.7749656+01:00",
+                              "event":  "verification",
+                              "note":  "Implemented Gallery preview queue-state reconciliation and verified MpiGalleryBlock syntax plus lint."
+                          },
+                          {
+                              "at":  "2026-05-25T00:33:04.1607936+01:00",
+                              "event":  "verification",
+                              "note":  "Implemented selected ratio label propagation plus Cue metadata wrapping and verified syntax plus lint."
+                          },
+                          {
+                              "at":  "2026-05-25T00:51:15.0815075+01:00",
+                              "event":  "closed",
+                              "note":  "All queue panel scaffold steps completed and kanban entry moved to COMPLETED."
+                          }
+                      ]
+}

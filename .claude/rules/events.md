@@ -64,9 +64,11 @@ myToolBus.emit('result', { imgUrl });
 ## 📋 Common Canonical Events
 *(Always verify in `js/events.js` if unsure)*
 * `ui:error` - Request the shell to show an error dialog
-* `ui:close-all-popups` - Signal to close floating UIs
+* `ui:close-all-popups` - Signal to close floating UIs and non-modal slide-overs
 * `state:changed` - Global reactive state mutation
 * `project:changed` - User switched active project
 * `comfy:ready` / `comfy:error` - Engine status updates
+* `slide-over:open` / `slide-over:toggle` - Shell-owned right panel open/toggle requests
+* `generation-queue:changed` - Cue queue snapshot changed; subscribers derive visible queue state from this event payload
 
 > Full canonical event map (incl. `download:*`, `generation:*`, `tool:*`) lives in `docs/events.md`. `js/events.js` `MpiEventMap` is the runtime source of truth.

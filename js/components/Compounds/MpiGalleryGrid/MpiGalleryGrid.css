@@ -355,13 +355,20 @@
     position: absolute;
     top: 0.6rem;
     left: 0.7rem;
+    max-width: calc(100% - 1.4rem);
+    padding: 2px 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-2xs);
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-1);
+    background: color-mix(in oklch, var(--surface-bar) 58%, transparent);
+    border: 1px solid color-mix(in oklch, var(--line-soft) 72%, transparent);
     pointer-events: none;
     z-index: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 

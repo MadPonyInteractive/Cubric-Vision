@@ -47,7 +47,11 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `workspace:set-operation` | Radial menu operation change `{ operation }` |
 | `radial:will-open` | Radial menu pre-render hook `{ page }` — workspace Block can refresh radial items synchronously before render |
 | `workspace:inject-prompts` | Reuse button injects prompt into PromptBox `{ positive, negative }` |
-| `generation:started` | Generation registered in activeGenerations `{ id, scope, groupId, tempId, placeholderGroup }` |
+| `slide-over:open` | Open a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
+| `slide-over:toggle` | Toggle a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
+| `generation-queue:open` | Open the Cue queue panel |
+| `generation-queue:changed` | Cue queue snapshot changed `{ running, pending, items, depth, pendingCount, runningCount, loopArmed }` |
+| `generation:started` | Generation registered in activeGenerations `{ id, scope, groupId, tempId, placeholderGroup, queueJobId?, queueDisplay? }` |
 | `generation:preview` | New latent preview blob URL available `{ id, url }`; gallery cards keep the generating spinner visible until the preview image has loaded |
 | `generation:complete` | Generation finished, item persisted `{ id, item, group, tempId? }` |
 | `generation:error` | Generation failed `{ id, tempId? }` |

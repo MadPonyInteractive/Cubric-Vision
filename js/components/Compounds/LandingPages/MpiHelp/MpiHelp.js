@@ -87,6 +87,7 @@ export const MpiHelp = ComponentFactory.create({
                             <h4>Gallery</h4>
                             <ul>
                                 <li><span>+/-</span><span>Grid size</span></li>
+                                <li><span>Q</span><span>Toggle Cue panel</span></li>
                                 <p>Item interaction</p>
                                 <li><span>Shift+Click</span><span>Multi-Select</span></li>
                                 <li><span>Ctrl+Click</span><span>Single Select</span></li>

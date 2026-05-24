@@ -1241,6 +1241,7 @@ router.post('/project/save-generation', async (req, res) => {
             negativePrompt: meta.negativePrompt || '',
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
+            ratioLabel:     meta.ratioLabel    || null,
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,

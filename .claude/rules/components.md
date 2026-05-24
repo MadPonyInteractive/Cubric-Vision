@@ -13,7 +13,7 @@ Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type s
 - **Wordmark** — `--font-wordmark` = `'Russo One', 'JetBrains Mono', sans-serif` at `assets/fonts/RussoOne-Regular.woff2`. Body = `'JetBrains Mono'`. Lockup: `.mpi-wordmark` + `.mpi-wordmark__suffix` ("Cubric" stays `--ink-1`, suffix takes `--accent-heat`). Live text only — never `assets/lettering.png`.
 - **Mascot** — canonical 4-file set in `assets/mascot/`: `logo.png`, `idle.png`, `greet.png`, `happy.png`. Block-owned peek uses `idle`/`happy`; landing empty uses `greet`.
 - **App accent (`--accent-heat`)** = rose lift. Drive via token only, never hardcode oklch values.
-- **Slide-over canonical for Settings/Help/About/Models** — trigger `Events.emit('slide-over:open', { title, component })`. Never mount content components directly; `MpiSlideOver` owns chrome.
+- **Slide-over canonical for Settings/Help/About/Models/Cue** — trigger `Events.emit('slide-over:open', { title, component })` or `slide-over:toggle` for toggleable panels. Never mount content components directly. Content may own chrome only through an explicit slide-over variant such as Cue's `mpi-slide-over--queue`.
 - **`MpiButton` imperative sync** — callers use `el.setActive(bool)` / `el.setDisabled(bool)`; DOM-only mutation leaves stale props.
 - **`MpiOptionSelector` ratio variant** — raw-template children inside portaled popup must be handled by `MpiOptionSelector`'s delegated popup listeners (no child `setup()` runs for raw HTML).
 - **`MpiContextMenu` items** — support `kbd` (right-aligned hint) and `separator: true`.
