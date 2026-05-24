@@ -16,6 +16,7 @@ import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
+import { extractFilenameFromPath } from '../utils/mediaActions.js';
 
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
@@ -134,11 +135,45 @@ export function refreshQueueDepth() {
     _updateQueueDepth();
 }
 
+/**
+ * Read-only snapshot of pending Cue jobs (does NOT include the in-flight one).
+ * Used by blocks to rehydrate per-card "queued" UI state after navigation,
+ * since block-instance Maps are destroyed on workspace switch but the cue
+ * queue lives at module scope.
+ */
+export function peekCueQueue() {
+    return _cueQueue.slice();
+}
+
 function _emitPromptBoxGenerationEndIfIdle() {
     if (activeGenerations.list().some(entry => entry.status === 'running')) return;
     if (_cueDispatchInFlight || _cueQueue.length > 0) return;
     if (state.loopArmed) return;
     Events.emit('promptbox:generation-end');
+}
+
+async function _deleteSavedItems(items) {
+    const project = state.currentProject;
+    if (!project?.id || !project?.folderPath) return;
+    for (const item of items || []) {
+        const filename = extractFilenameFromPath(item?.filePath);
+        if (!filename || !item?.id) continue;
+        try {
+            const res = await fetch(
+                `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
+                { method: 'DELETE' }
+            );
+            if (!res.ok) {
+                clientLogger.warn('generationService', 'orphan output cleanup returned non-ok status', {
+                    status: res.status,
+                    itemId: item.id,
+                    filename,
+                });
+            }
+        } catch (err) {
+            clientLogger.warn('generationService', 'orphan output cleanup failed', err);
+        }
+    }
 }
 
 /**
@@ -217,6 +252,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         extraPlaceholders: opts.extraPlaceholders ?? [],
         exec,
         replaceItemId:     config.replaceItemId ?? null,
+        sourceGroupId:     opts.sourceGroupId ?? null,
     });
 
     exec.onPromptAck = (promptId) => {
@@ -520,20 +556,41 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 callbacks.onComplete?.({ item: newItem, group: updatedGroup });
             } else {
                 clientLogger.warn('generationService', 'replaceItemId set but no matching group/item found', { _replaceItemId });
+                if (newItem) await _deleteSavedItems([newItem]);
                 activeGenerations.end(_regId, { revokePreview: false });
-                Events.emit('generation:complete', { id: _regId, item: newItem, group: null });
-                callbacks.onComplete?.({ item: newItem, group: null });
+                Events.emit('tool:cancelled', { tool: 'groupHistory' });
+                Events.emit('generation:cancelled', { id: _regId });
+                callbacks.onCancel?.();
+                _emitPromptBoxGenerationEndIfIdle();
+                return;
             }
         } else if (opts.existingGroup) {
-            // GroupHistory mode — append all items to existing group (history view).
-            let working = opts.existingGroup;
+            // GroupHistory mode: use the latest state snapshot; deletes can land
+            // while this job runs.
+            const latestGroup = (state.currentProject?.itemGroups || [])
+                .find(g => g.id === opts.existingGroup.id);
+            if (!latestGroup) {
+                clientLogger.warn('generationService', 'groupHistory completion ignored because group no longer exists', {
+                    groupId: opts.existingGroup.id,
+                    operation,
+                });
+                await _deleteSavedItems(builtItems);
+                activeGenerations.end(_regId, { revokePreview: false });
+                Events.emit('tool:cancelled', { tool: 'groupHistory' });
+                Events.emit('generation:cancelled', { id: _regId });
+                callbacks.onCancel?.();
+                _emitPromptBoxGenerationEndIfIdle();
+                return;
+            }
+
+            let working = latestGroup;
             for (const it of builtItems) {
                 working = appendToHistory(working, it);
             }
             const updatedGroup = {
                 ...working,
-                width:  opts.existingGroup.width  || width,
-                height: opts.existingGroup.height || height,
+                width:  latestGroup.width  || width,
+                height: latestGroup.height || height,
             };
             await updateGroup(updatedGroup);
             activeGenerations.end(_regId, { revokePreview: false });

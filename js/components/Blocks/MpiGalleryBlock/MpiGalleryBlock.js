@@ -27,7 +27,7 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -81,6 +81,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
             : [];
 
         const grid   = MpiGalleryGrid.mount(el, { groups: [..._placeholderGroups, ...groups] });
+        const _deletingGroupIds = new Set();
+        const _visibleProjectGroups = () =>
+            (state.currentProject?.itemGroups || []).filter(group => !_deletingGroupIds.has(group.id));
 
         for (const entry of _runningGallery) {
             _myGenIds.add(entry.id);
@@ -260,6 +263,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // .preview-assets/<itemId>/ snapshot folder. No dedicated Discard
         // button is needed on preview cards.
 
+        // PromptBox reference. Hoisted because _refreshPbGenerating closes over
+        // it and runs during setup (rehydrate path) before _pb is mounted.
+        let _pb = null;
+
         // Finish path (preview → final replace): _queuedContinueGroupIds /
         // _continuingGroupIds drive the "Queued…" / "Generating final…" overlays
         // and force the card into a busy state.
@@ -271,11 +278,30 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Multiple clicks bump the count; no whole-card overlay.
         const _stage2BranchCounts = new Map(); // groupId → number
 
-        const _bumpStage2 = (groupId, delta) => {
-            const next = Math.max(0, (_stage2BranchCounts.get(groupId) || 0) + delta);
-            if (next <= 0) _stage2BranchCounts.delete(groupId);
-            else           _stage2BranchCounts.set(groupId, next);
-            grid.el.setStage2Count(groupId, next);
+        // Derived from cue queue (pending stage2 branches) + activeGenerations
+        // (running stage2 branches). Recomputed on enqueue + lifecycle events
+        // so block-instance state is always rebuildable from module-scoped
+        // sources after workspace nav.
+        const _recomputeStage2Counts = () => {
+            const next = new Map();
+            for (const job of peekCueQueue()) {
+                if (job.opts?.scope !== 'gallery') continue;
+                if (job.config?.replaceItemId) continue; // Finish/Queued, not branching
+                const srcGid = job.opts?.sourceGroupId;
+                if (srcGid) next.set(srcGid, (next.get(srcGid) || 0) + 1);
+            }
+            for (const entry of activeGenerations.listFor('gallery', null)) {
+                if (entry.status !== 'running') continue;
+                if (entry.replaceItemId) continue;
+                const srcGid = entry.sourceGroupId;
+                if (srcGid) next.set(srcGid, (next.get(srcGid) || 0) + 1);
+            }
+            const touched = new Set([..._stage2BranchCounts.keys(), ...next.keys()]);
+            _stage2BranchCounts.clear();
+            for (const [gid, n] of next) _stage2BranchCounts.set(gid, n);
+            for (const gid of touched) {
+                grid.el.setStage2Count(gid, _stage2BranchCounts.get(gid) || 0);
+            }
             _refreshPbGenerating();
         };
 
@@ -422,8 +448,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // Used either directly (fast path) or as a follow-up after the
             // stage-1 rerun completes (cold fallback).
             const _bumpAndDispatchStage2 = (latentName, latentFilePath) => {
-                _bumpStage2(g.id, +1);
-
                 const _tempId = crypto.randomUUID();
                 const _previewThumbUrl = item.thumbPath
                     ? resolveMediaUrl(item.thumbPath)
@@ -448,9 +472,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     isGenerating: true,
                 };
 
-                let _settled = false;
-                const _dec = () => { if (_settled) return; _settled = true; _bumpStage2(g.id, -1); };
-
                 const stage2Config = {
                     operation:        item.operation,
                     model,
@@ -465,15 +486,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     loadLatentName:        latentName,
                     previewLatentFilePath: latentFilePath,
                 };
-                enqueueGeneration(stage2Config, {
-                    onCancel:   _dec,
-                    onError:    _dec,
-                    onComplete: _dec,
-                }, {
+                enqueueGeneration(stage2Config, {}, {
                     scope: 'gallery',
                     tempId: _tempId,
                     placeholderGroup: _placeholderGroup,
+                    sourceGroupId: g.id,
                 });
+                _recomputeStage2Counts();
             };
 
             if (!isColdFallback) {
@@ -673,6 +692,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         _unsubs.push(Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
             if (!updatedGroup) return;
+            if (_deletingGroupIds.has(groupId)) return;
             grid.el.refreshGroup(updatedGroup);
             if (_continuingGroupIds.has(groupId)) {
                 _continuingGroupIds.delete(groupId);
@@ -688,6 +708,45 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // in the gallery when this block mounts. Fire-and-forget; results
         // arrive via _validatePreviewForGroup → setPreviewAssetsWarning.
         _validateAllPreviews();
+
+        // Rehydrate "Queued…" + "Generating final…" overlays from the
+        // module-scoped cue queue and active-generations registry. Block
+        // instance Maps are reset on workspace nav; sources of truth survive.
+        const _findGroupIdByItemId = (itemId) => {
+            const groups = state.currentProject?.itemGroups || [];
+            for (const grp of groups) {
+                if (grp.history?.some(it => it.id === itemId)) return grp.id;
+            }
+            return null;
+        };
+        for (const job of peekCueQueue()) {
+            if (job.opts?.scope !== 'gallery') continue;
+            const itemId = job.config?.replaceItemId;
+            if (!itemId) continue;
+            const gid = _findGroupIdByItemId(itemId);
+            if (!gid) continue;
+            _queuedContinueGroupIds.set(gid, itemId);
+            grid.el.markQueuedContinue(gid, true);
+        }
+        for (const entry of activeGenerations.listFor('gallery', null)) {
+            if (entry.status !== 'running') continue;
+            const itemId = entry.replaceItemId;
+            if (!itemId) continue;
+            const gid = _findGroupIdByItemId(itemId);
+            if (!gid) continue;
+            _continuingGroupIds.add(gid);
+            grid.el.markContinuing(gid, true);
+        }
+        _recomputeStage2Counts();
+        _refreshPbGenerating();
+
+        // Stage-2 counts are derived; recompute on every gallery lifecycle
+        // event so completion/cancel/error decrements arrive even when the
+        // dispatching block instance is gone (workspace nav).
+        _unsubs.push(Events.on('generation:complete',  () => _recomputeStage2Counts()));
+        _unsubs.push(Events.on('generation:cancelled', () => _recomputeStage2Counts()));
+        _unsubs.push(Events.on('generation:error',     () => _recomputeStage2Counts()));
+        _unsubs.push(Events.on('generation:started',   () => _recomputeStage2Counts()));
 
         // ── Media missing (garbage collection) ───────────────────────────────────
         grid.on('media-missing', ({ group: g, itemId }) => {
@@ -727,28 +786,48 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!project || !_pendingDeleteGroups.length) return;
             const g = _pendingDeleteGroups;
             _pendingDeleteGroups = [];
-
             for (const group of g) {
+                if (group?.id) _deletingGroupIds.add(group.id);
+            }
+            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+
+            const deletedGroups = [];
+            for (const group of g) {
+                let groupDeleted = true;
                 for (const item of group.history) {
                     const fp = item.filePath;
                     if (!fp) continue;
                     const filename = extractFilenameFromPath(fp);
                     if (!filename) continue;
-                    // Delete media file (including itemId for sidecar cleanup in backend)
-                    fetch(`/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`, {
-                        method: 'DELETE',
-                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'delete file failed:', err));
-                    // Explicitly delete sidecar as backup
-                    const sidecar = `${item.id}.json`;
-                    fetch(`/project-media/${project.id}/${encodeURIComponent(sidecar)}?folderPath=${encodeURIComponent(project.folderPath)}`, {
-                        method: 'DELETE',
-                    }).catch(err => clientLogger.warn('MpiGalleryBlock', 'delete sidecar failed:', err));
+                    try {
+                        const res = await fetch(
+                            `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}&itemId=${encodeURIComponent(item.id)}`,
+                            { method: 'DELETE' }
+                        );
+                        if (!res.ok) {
+                            groupDeleted = false;
+                            clientLogger.warn('MpiGalleryBlock', 'delete file returned non-ok status', {
+                                status: res.status,
+                                itemId: item.id,
+                                filename,
+                            });
+                        }
+                    } catch (err) {
+                        groupDeleted = false;
+                        clientLogger.warn('MpiGalleryBlock', 'delete file failed:', err);
+                    }
                 }
+                if (groupDeleted) deletedGroups.push(group);
+                else if (group?.id) _deletingGroupIds.delete(group.id);
             }
 
-            for (const group of g) removeGroup(group.id);
-            for (const group of g) grid.el.removeCard(group.id);
-            Events.emit('media:deleted', { count: g.length });
+            for (const group of deletedGroups) {
+                grid.el.removeCard(group.id);
+                await removeGroup(group.id);
+                _deletingGroupIds.delete(group.id);
+            }
+            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+            if (deletedGroups.length) Events.emit('media:deleted', { count: deletedGroups.length });
         });
 
         grid.on('delete', ({ groups: g }) => {
@@ -782,8 +861,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Seed radial with current model so its items render correctly before
         // any PromptBox media-/model-change events fire.
         refreshRadial({ imageCount, videoCount, modelId: activeModelId });
-
-        let _pb = null;
 
         function _wirePromptBox(pb) {
             if (!pb) return;
@@ -889,7 +966,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
                 const target = active[0];
                 if (target) activeGenerations.cancel(target.id);
-                const currentGroups = state.currentProject?.itemGroups || [];
+                const currentGroups = _visibleProjectGroups();
                 grid.el.setGroups(currentGroups);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
@@ -929,7 +1006,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation:started', ({ id, scope }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
-            const currentGroups = state.currentProject?.itemGroups || [];
+            const currentGroups = _visibleProjectGroups();
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         }));
 
@@ -950,7 +1027,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.delete(id);
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
-            const currentGroups = state.currentProject?.itemGroups || [];
+            const currentGroups = _visibleProjectGroups();
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         };
 

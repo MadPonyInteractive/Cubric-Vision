@@ -807,13 +807,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (!state || (!state.mode)) {
                     assetsBadge.hidden = true;
                     assetsBadge.textContent = '';
-                    assetsBadge.removeAttribute('title');
+                    assetsBadge.removeAttribute('data-info');
                     return;
                 }
                 if (state.mode === 'fallback') {
                     assetsBadge.hidden = false;
                     assetsBadge.textContent = 'Cold';
-                    assetsBadge.title = 'Latent missing — stage 1 will rerun (slower).';
+                    assetsBadge.setAttribute('data-info', 'Latent missing — stage 1 will rerun (slower).');
                     cardEl.classList.add('mpi-group-card--assets-fallback');
                 } else if (state.mode === 'blocked') {
                     assetsBadge.hidden = false;
@@ -821,7 +821,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     const list = Array.isArray(state.missing) && state.missing.length
                         ? state.missing.map(m => m.kind === 'snapshot' ? `${m.role} image` : m.kind).join(', ')
                         : 'support assets';
-                    assetsBadge.title = `Cannot continue/finish — missing ${list}. Delete this preview.`;
+                    assetsBadge.setAttribute('data-info', `Cannot continue/finish — missing ${list}. Delete this preview.`);
                     cardEl.classList.add('mpi-group-card--assets-blocked');
                 }
             };
