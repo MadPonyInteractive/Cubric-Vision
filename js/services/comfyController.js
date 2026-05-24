@@ -403,6 +403,7 @@ export const ComfyUIController = {
                     }
                 } catch (e) {
                     clientLogger.error('comfy', `Asset upload failed for ${paramKey}`, e);
+                    throw e;
                 }
             }
         }
@@ -533,7 +534,13 @@ export const ComfyUIController = {
         let blob;
         try {
             const res = await fetch(dataUrlOrPath);
+            if (!res.ok) {
+                throw new Error(`source returned HTTP ${res.status}`);
+            }
             blob = await res.blob();
+            if (!blob.type.startsWith('image/')) {
+                throw new Error(`source is not an image (${blob.type || 'unknown content type'})`);
+            }
         } catch (e) {
             throw new Error(`[ComfyUIController] Failed to prepare blob for ${filename}: ${e.message}`);
         }
@@ -546,6 +553,9 @@ export const ComfyUIController = {
             method: 'POST',
             body: formData
         });
+        if (!uploadRes.ok) {
+            throw new Error(`[ComfyUIController] Comfy upload failed for ${filename}: HTTP ${uploadRes.status}`);
+        }
         return await uploadRes.json();
     },
 
