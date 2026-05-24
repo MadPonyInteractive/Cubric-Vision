@@ -601,6 +601,50 @@ app.on('ready', () => {
       return { cancelled: true, path: null, error: err.message };
     }
   });
+
+  // Bulk download: pick a destination folder once, copy N files into it.
+  // sources = array of absolute file paths. Collisions get " (n)" suffix.
+  ipcMain.handle('save-files-to-folder', async (_event, sources) => {
+    try {
+      if (!Array.isArray(sources) || sources.length === 0) {
+        return { cancelled: false, copied: 0, skipped: 0, destination: null };
+      }
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: `Choose folder to save ${sources.length} file${sources.length === 1 ? '' : 's'}`,
+        buttonLabel: 'Save here',
+      });
+      if (result.canceled || !result.filePaths[0]) {
+        return { cancelled: true, copied: 0, skipped: 0, destination: null };
+      }
+      const destDir = result.filePaths[0];
+      let copied = 0;
+      let skipped = 0;
+      for (const src of sources) {
+        try {
+          if (!src || !fs.existsSync(src)) { skipped++; continue; }
+          const base = path.basename(src);
+          const ext = path.extname(base);
+          const stem = base.slice(0, base.length - ext.length);
+          let target = path.join(destDir, base);
+          let n = 1;
+          while (fs.existsSync(target)) {
+            target = path.join(destDir, `${stem} (${n})${ext}`);
+            n++;
+          }
+          fs.copyFileSync(src, target);
+          copied++;
+        } catch (err) {
+          skipped++;
+          logger.warn('system', `save-files-to-folder copy failed: ${src} — ${err.message}`);
+        }
+      }
+      return { cancelled: false, copied, skipped, destination: destDir };
+    } catch (err) {
+      logger.error('system', 'save-files-to-folder error', err);
+      return { cancelled: true, copied: 0, skipped: 0, destination: null, error: err.message };
+    }
+  });
 });
 
 app.on('window-all-closed', () => {

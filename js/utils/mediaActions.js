@@ -46,18 +46,44 @@ export function resolveMediaUrl(filePath) {
 }
 
 /**
- * Download media files by creating temporary <a> elements.
+ * Download media files.
+ *  - Single file: browser <a download> (default Downloads folder / browser dialog).
+ *  - Multiple files in Electron: one folder picker via IPC, then bulk copy.
+ *  - Multiple files in browser dev mode: fall back to per-file <a> clicks.
  * @param {Object} project — state.currentProject (needs .folderPath)
  * @param {Array<{filePath: string}>} items — array of history items to download
  */
-export function downloadMediaFiles(project, items) {
-    if (!project?.folderPath) return;
-    for (const item of items) {
-        const filename = extractFilenameFromPath(item.filePath);
-        if (!filename) continue;
-        const url = `/project-file?path=${encodeURIComponent(
-            `${project.folderPath}/Media/${filename}`.replace(/\\/g, '/')
-        )}`;
+export async function downloadMediaFiles(project, items) {
+    if (!project?.folderPath || !items?.length) return;
+
+    const mediaDir = `${project.folderPath}/Media`.replace(/\\/g, '/');
+    const entries = items
+        .map((item) => {
+            const filename = extractFilenameFromPath(item.filePath);
+            if (!filename) return null;
+            const absPath = `${mediaDir}/${filename}`;
+            return { filename, absPath };
+        })
+        .filter(Boolean);
+    if (!entries.length) return;
+
+    const isElectron = typeof window !== 'undefined' && typeof window.require === 'function';
+
+    if (entries.length > 1 && isElectron) {
+        try {
+            const { ipcRenderer } = window.require('electron');
+            const sources = entries.map((e) => e.absPath);
+            const res = await ipcRenderer.invoke('save-files-to-folder', sources);
+            if (res && !res.cancelled) return;
+            // cancelled or IPC missing — fall through to per-file
+        } catch (err) {
+            clientLogger.warn('mediaActions', 'bulk save IPC failed, falling back:', err);
+        }
+        return;
+    }
+
+    for (const { filename, absPath } of entries) {
+        const url = `/project-file?path=${encodeURIComponent(absPath)}`;
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
