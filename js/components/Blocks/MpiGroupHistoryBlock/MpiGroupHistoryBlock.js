@@ -32,9 +32,9 @@ import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
-import { extractFilenameFromPath, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
-import { updateGroup, addGroup } from '../../../services/projectService.js';
+import { updateGroup, addGroup, removeGroup } from '../../../services/projectService.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -52,6 +52,7 @@ import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
+import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
@@ -1159,7 +1160,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        historyList.on('delete-selected', ({ indices }) => {
+        const _historyDeleteDialog = MpiOkCancel.mount(document.createElement('div'), {
+            title:       'Delete',
+            text:        'Permanently delete the selected entries and their media files?',
+            okLabel:     'Delete',
+            cancelLabel: 'Cancel',
+        });
+        let _pendingDeleteIndices = [];
+
+        _historyDeleteDialog.on('ok', async () => {
+            const indices = _pendingDeleteIndices;
+            _pendingDeleteIndices = [];
             if (!indices.length) return;
             historyList.el.exitSelectMode();
             const sorted = [...indices].sort((a, b) => b - a);
@@ -1179,13 +1190,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 }
             }
 
+            // If user is deleting every remaining entry, drop the whole group
+            // and return to gallery. `removeHistoryEntry` refuses to leave a
+            // group empty, so this case must short-circuit.
+            const willEmptyGroup = indices.length >= _group.history.length;
+            if (willEmptyGroup) {
+                Events.emit('media:deleted', { count: indices.length });
+                await removeGroup(_group.id);
+                navigate(PAGE_GALLERY);
+                return;
+            }
+
             for (const idx of sorted) _group = removeHistoryEntry(_group, idx);
+
             _currentIdx = _group.selectedIndex ?? 0;
             _persistGroup();
             historyList.el.removeEntries(indices, _currentIdx);
             _currentSelectionIndices = [];
 
-            // Load the new current entry (if any).
+            // Load new active entry.
             const cur = _group.history[_currentIdx];
             if (cur) {
                 if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24, trim: cur.trim });
@@ -1202,6 +1225,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             Events.emit('media:deleted', { count: indices.length });
             Events.emit('history:stats-dirty', { group: _group });
+        });
+
+        _historyDeleteDialog.on('cancel', () => { _pendingDeleteIndices = []; });
+
+        historyList.on('delete-selected', ({ indices }) => {
+            if (!indices.length) return;
+            _pendingDeleteIndices = [...indices];
+            _historyDeleteDialog.el.show();
         });
 
         // ── Canvas-viewer-only events (image groups) ─────────────────────────
@@ -1532,6 +1563,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _dropOverlay.el.remove();
             historyList.destroy?.();
             historyTools.destroy?.();
+            _historyDeleteDialog.destroy?.();
             _settingsOverlay.destroy?.();
             _pb?.el?.destroy?.();
             _pb = null;

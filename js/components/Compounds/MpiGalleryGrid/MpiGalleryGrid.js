@@ -119,6 +119,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         let _selectionMode = false;
         let _anchorId = null;   // ID of anchor card for shift-click range
         let _escUnsub = null;   // hotkey cleanup for Escape
+        let _delUnsub = null;   // hotkey cleanup for Delete
 
         // The currently rendered ordered group list (rebuilt each justified render)
         let _renderedOrder = [];
@@ -133,6 +134,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
             el.classList.add('mpi-gallery-grid--selecting');
             emit('selection-start', {});
             _escUnsub = Hotkeys.bind('gallery.selection.exit', _exitSelectionMode);
+            _delUnsub = Hotkeys.bind('gallery.selection.delete', _deleteSelection);
+        }
+
+        function _deleteSelection() {
+            if (!_selectionMode || _selectedIds.size === 0) return;
+            const selected = Array.from(_selectedIds)
+                .map(id => _groups.find(g => g.id === id))
+                .filter(Boolean);
+            if (!selected.length) return;
+            emit('delete', { groups: selected });
+            _exitSelectionMode();
         }
 
         function _exitSelectionMode() {
@@ -143,6 +155,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             el.classList.remove('mpi-gallery-grid--selecting');
             emit('selection-end', {});
             if (_escUnsub) { _escUnsub(); _escUnsub = null; }
+            if (_delUnsub) { _delUnsub(); _delUnsub = null; }
             // Re-render to clear selected CSS on all cards
             _rerenderJustified();
         }

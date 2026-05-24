@@ -145,6 +145,14 @@ class HotkeyManager {
         const isSingleLetter = e.key.length === 1 && !e.ctrlKey && !e.metaKey;
         const isBareModifier = ['Shift', 'Alt', 'Control', 'Meta'].includes(e.key);
         const isFKey = /^F\d+$/.test(e.key);
+        // Named editing/navigation keys the browser uses inside text fields.
+        // When focus is in a text input these must stay native so the user
+        // can delete characters, move the caret, etc.
+        const isTextEditKey = [
+            'Delete', 'Backspace',
+            'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+            'Home', 'End', 'PageUp', 'PageDown',
+        ].includes(e.key);
 
         // Determine if ANY bound handler should fire by checking at least one
         // registry entry allows it under current conditions.
@@ -152,7 +160,7 @@ class HotkeyManager {
         for (const entry of entries) {
             // isTyping gate
             if (isTyping && !entry.allowWhileTyping) {
-                if (isSingleLetter || (isBareModifier && !isFKey)) {
+                if (isSingleLetter || (isBareModifier && !isFKey) || isTextEditKey) {
                     continue; // blocked
                 }
             }

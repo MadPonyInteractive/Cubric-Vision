@@ -33,6 +33,7 @@ import { qs } from '../../../utils/dom.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -62,6 +63,15 @@ export const MpiHistoryList = ComponentFactory.create({
         /** @type {Set<number>} */
         const _selection = new Set();
         let _anchor = 0;
+        const _delUnsub = Hotkeys.bind('history.selection.delete', () => {
+            if (_selectMode && _selection.size > 0) {
+                emit('delete-selected', { indices: [..._selection] });
+                return;
+            }
+            if (_history[_selectedIdx]) {
+                emit('delete-selected', { indices: [_selectedIdx] });
+            }
+        });
 
         /** @type {HTMLElement[]} */
         const _historyCards = [];
@@ -178,7 +188,7 @@ export const MpiHistoryList = ComponentFactory.create({
                     if (!_selectMode && _selection.size === 0) _anchor = _selectedIdx;
                     _rangeSelect(idx);
                 } else if (e.ctrlKey || e.metaKey) {
-                    if (!_selectMode && _selection.size === 0) {
+                    if (!_selectMode && _selection.size === 0 && idx !== _selectedIdx) {
                         _selection.add(_selectedIdx);
                         _anchor = _selectedIdx;
                         _selectMode = true;
@@ -390,6 +400,7 @@ export const MpiHistoryList = ComponentFactory.create({
         el.getSelectionOrder = () => [..._selection];
 
         el.destroy = () => {
+            _delUnsub?.();
             _reuseBtns.forEach((btn) => btn.destroy?.());
             _reuseBtns.length = 0;
         };

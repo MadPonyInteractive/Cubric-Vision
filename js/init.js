@@ -27,6 +27,25 @@ document.addEventListener('wheel', (e) => {
     }
 }, { passive: false });
 
+// Ctrl+wheel — global UI zoom (Electron webFrame).
+const _webFrame = (() => {
+    try { return window.require?.('electron')?.webFrame ?? null; } catch { return null; }
+})();
+if (_webFrame) {
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 3.0;
+    const ZOOM_STEP = 0.1;
+    document.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const current = _webFrame.getZoomFactor();
+        const next = e.deltaY < 0
+            ? Math.min(ZOOM_MAX, current + ZOOM_STEP)
+            : Math.max(ZOOM_MIN, current - ZOOM_STEP);
+        _webFrame.setZoomFactor(Number(next.toFixed(2)));
+    }, { passive: false });
+}
+
 async function init() {
     await initPaths();
     await initShell();

@@ -92,8 +92,21 @@ export const MpiHelp = ComponentFactory.create({
                                 <li><span>Ctrl+Click</span><span>Single Select</span></li>
                                 <li><span>Right Click</span><span>Item context menu</span></li>
                                 <li><span>ESCAPE</span><span>Deselect all</span></li>
+                                <li><span>DELETE</span><span>Delete selected cards</span></li>
                                 <li><span>Click+Drag</span><span>Drag to Prompt Box</span></li>
                                 <p><span>Note: When only 2 items are selected you have access to the compare overlay.</span></p>
+                            </ul>
+                        </div>
+
+                        <!-- History -->
+                        <div class="mpi-help__shortcut-group">
+                            <h4>History</h4>
+                            <ul>
+                                <p>Item interaction</p>
+                                <li><span>Shift+Click</span><span>Multi-Select</span></li>
+                                <li><span>Ctrl+Click</span><span>Single Select</span></li>
+                                <li><span>Right Click</span><span>Item context menu</span></li>
+                                <li><span>DELETE</span><span>Delete selected entries (or active entry)</span></li>
                             </ul>
                         </div>
 

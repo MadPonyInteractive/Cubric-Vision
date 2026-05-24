@@ -136,6 +136,15 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: true,
     },
     {
+        id:               'gallery.selection.delete',
+        key:              'delete',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Delete selected cards',
+        allowWhileTyping: false,
+    },
+    {
         id:               'gallery.size.inc',
         key:              '+',
         type:             KEY_TYPE.DOWN,
@@ -151,6 +160,17 @@ export const HOTKEY_REGISTRY = [
         category:         'gallery',
         scopeLabel:       'Gallery',
         description:      'Decrease thumbnail size',
+        allowWhileTyping: false,
+    },
+
+    // ── History ───────────────────────────────────────────────────────────────
+    {
+        id:               'history.selection.delete',
+        key:              'delete',
+        type:             KEY_TYPE.DOWN,
+        category:         'history',
+        scopeLabel:       'History',
+        description:      'Delete selected entries',
         allowWhileTyping: false,
     },
 
