@@ -131,7 +131,7 @@ NOTE:    `items` shape: `[{ key, icon?, label, kbd?, separator?, disabled?, dang
 EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
          `selection-changed` `{ indices: number[], anchor: number }` — ctrl/shift-click updated selection (`indices` chronological — see API note)
          `selection-exited`  `{}` — selection mode ended (count → 0)
-         `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu
+         `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu OR `Delete` hotkey (selection → indices; no selection → `[_selectedIdx]` so active entry is targeted)
          `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
          `combine-requested` `{ indices: number[] }` — Combine chosen from context menu (video group, ≥2 selected, chronological order)
          `add-to-gallery`    `{ index: number }` — Add to gallery chosen from context menu (exactly 1 selected)
@@ -364,7 +364,7 @@ API:     `trackConcatJob({ jobId, label })` → Promise. Bridges to `StatusBar.p
 ### MpiGalleryGrid
 EMITS:   `open-group`      `{ group: ItemGroup }`
          `compare`         `{ groups: [ItemGroup, ItemGroup] }`
-         `delete`          `{ groups: ItemGroup[] }`
+         `delete`          `{ groups: ItemGroup[] }` — context menu OR `Delete` hotkey while in selection mode (grid auto-exits selection after emit)
          `download`        `{ groups: ItemGroup[] }`
          `gc-group`        `{ group: ItemGroup }`
          `gc-remove`       `{ groupId: string }`
