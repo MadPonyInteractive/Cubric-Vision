@@ -1,0 +1,382 @@
+{
+  "28": {
+    "inputs": {
+      "ckpt_name": "SDXL_NSFW.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
+  "29": {
+    "inputs": {
+      "text": [
+        "1659",
+        0
+      ],
+      "clip": [
+        "1601",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "30": {
+    "inputs": {
+      "text": [
+        "1658",
+        0
+      ],
+      "clip": [
+        "1601",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "1556": {
+    "inputs": {
+      "images": [
+        "1615",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1557": {
+    "inputs": {
+      "image": "Woman_seated_rooftop_edge_dangling_60a001b9ff.jpeg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "float": 0.15
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Denoise"
+    }
+  },
+  "1595": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "28",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1597": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1595",
+        0
+      ],
+      "clip": [
+        "1595",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1598": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1597",
+        0
+      ],
+      "clip": [
+        "1597",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1598",
+        0
+      ],
+      "clip": [
+        "1598",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1600": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1599",
+        0
+      ],
+      "clip": [
+        "1599",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1601": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1600",
+        0
+      ],
+      "clip": [
+        "1600",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "int": 2
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Seed"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "1605": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Auto_Grid"
+    }
+  },
+  "1615": {
+    "inputs": {
+      "upscale_by": [
+        "1657",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "steps": 8,
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": [
+        "1640",
+        0
+      ],
+      "mode_type": "Linear",
+      "tile_width": [
+        "1639",
+        0
+      ],
+      "tile_height": [
+        "1639",
+        1
+      ],
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 1,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": true,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "1655",
+        0
+      ],
+      "model": [
+        "1601",
+        0
+      ],
+      "positive": [
+        "29",
+        0
+      ],
+      "negative": [
+        "30",
+        0
+      ],
+      "vae": [
+        "28",
+        2
+      ],
+      "upscale_model": [
+        "1656",
+        0
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Ultimate SD Upscale"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "horizontal_split": [
+        "1604",
+        0
+      ],
+      "vertical_split": [
+        "1605",
+        0
+      ],
+      "upscale_factor": [
+        "1657",
+        0
+      ],
+      "auto": [
+        "1613",
+        0
+      ],
+      "image": [
+        "1655",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "value": [
+        "1594",
+        0
+      ],
+      "exponent": 1.8
+    },
+    "class_type": "MpiExpoFloat",
+    "_meta": {
+      "title": "Mpi Expo Float"
+    }
+  },
+  "1655": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1656": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Upscale_Model"
+    }
+  },
+  "1657": {
+    "inputs": {
+      "float": 2
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Upscale_Factor"
+    }
+  },
+  "1658": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "1659": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Positive"
+    }
+  }
+}

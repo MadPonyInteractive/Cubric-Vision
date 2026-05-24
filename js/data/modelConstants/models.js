@@ -24,7 +24,7 @@ export const MODELS = [
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
-        description: 'SDXL workflows for realism using the famous Lustify model by Coyotte.',
+        description: 'SDXL workflows for realism using the famous Juggernaut XL model.',
         workflows: {
             t2i: 't2i_sdxl_realistic.json',
             upscale: 'upscaler_sdxl_realistic.json',
@@ -32,6 +32,29 @@ export const MODELS = [
         },
         dependencies: [
             'sdxl-realistic',
+            '4x-NMKD-Siax',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        id: 'sdxl-nsfw',
+        name: 'SDXL NSFW',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        defaultUpscale: '4x-NMKD-Siax',
+        image: 'Lustify7.png',
+        type: 'sdxl',
+        supportedOps: ['t2i', 'upscale', 'detail'],
+        gen_speed: 'fast',
+        description: 'SDXL workflows for nsfw content using the famous Lustify model by Coyotte.',
+        workflows: {
+            t2i: 't2i_sdxl_nsfw.json',
+            upscale: 'upscaler_sdxl_nsfw.json',
+            detail: 'detailer_sdxl_nsfw.json',
+        },
+        dependencies: [
+            'sdxl-nsfw',
             '4x-NMKD-Siax',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',

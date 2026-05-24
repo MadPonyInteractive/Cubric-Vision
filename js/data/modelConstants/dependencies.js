@@ -12,10 +12,20 @@ export const DEPS = {
     'sdxl-realistic': {
         id: 'sdxl-realistic',
         name: 'SDXL Realistic',
-        origin: 'lustify_7',
+        origin: 'Juggernaut_XL',
         filename: 'checkpoints/SDXL_Realistic.safetensors',
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
+        vram: '8GB',
+        sha256: null
+    },
+    'sdxl-nsfw': {
+        id: 'sdxl-nsfw',
+        name: 'SDXL NSFW',
+        origin: 'lustify_7',
+        filename: 'checkpoints/SDXL_NSFW.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_NSFW.safetensors',
+        size: '6.78GB',
         vram: '8GB',
         sha256: null
     },

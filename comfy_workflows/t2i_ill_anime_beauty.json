@@ -42,7 +42,7 @@
   },
   "1472": {
     "inputs": {
-      "value": "A woman is laying on a bed, wearing a green top and a long red skirt covering her legs all the way down to her feet. Emphasis on her long skirt covering her whole legs. Sunlight from blinds paints heart-shaped shadows on our body. specks of dust shot on a polaroid camera "
+      "value": "lifestyle photography, a stylish contemporary creator\u2019s image library displayed as a massive full-bleed gallery wall, curated digital artworks and photography prints covering the entire wall surface, modern creative studio aesthetic, immersive visual storytelling atmosphere, softly glowing display panels and framed prints, subtle texture and layered composition, standing in quiet admiration of the gallery wall, wide interior composition, inside a modern creative studio filled with artistic displays and ambient decor, warm mauve studio lighting with cyan and pink accent lights, eye level, shot on Sony A7 III with voigtlander nocturn 50mm lens, in the style of Tim Walker\n"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -152,7 +152,7 @@
   },
   "1534": {
     "inputs": {
-      "int": 1056
+      "int": 1058
     },
     "class_type": "MpiInt",
     "_meta": {
