@@ -15,8 +15,7 @@
     "context-mode@context-mode": false,
     "codex@openai-codex": false,
     "skill-creator@claude-plugins-official": false,
-    "shopify-plugin@shopify-ai-toolkit": false,
-    "mpi-kanban@mad-pony-interactive": true
+    "shopify-plugin@shopify-ai-toolkit": false
   },
   "extraKnownMarketplaces": {},
   "mcpServers": {},
