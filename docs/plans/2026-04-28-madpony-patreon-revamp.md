@@ -70,7 +70,7 @@ Want to keep an independent open source project alive? This tier is for people w
 
 **You get:**
 - **Supporter** Discord role with custom colour and badge
-- Your name credited in Cubric Studio's About panel and all free tools
+- Your name credited in Cubric apps About panel and all free tools
 - Behind-the-scenes dev posts before they hit YouTube
 
 *Best for: viewers and casual users who want to support the work.*
@@ -100,8 +100,7 @@ Bleeding-edge tier. Day-1 builds. Exclusive project templates. Direct line to me
 - **Day-1 access** to every Cubric Studio portable build — compiled and in your hands immediately (two weeks ahead of Early Access, one month ahead of public GitHub release)
 - **Pro Project Templates** — drag-and-drop onto the app, everything pre-configured and ready to generate. Built to pair with tutorials. Templates are Pro-exclusive; no equivalent at lower tiers
 - **All paid tools free** — every paid Mad Pony tool (Gumroad / ArtStation / FlippedNormals) included while your subscription is active
-- **Commercial-use license** for Cubric Studio output and all included tools
-- Your name **prominently credited** in Cubric Studio's About panel as a Pro sponsor (limited slots — your name actually stands out)
+- Your name **prominently credited** in Cubric apps About panel as a Pro sponsor (limited slots — your name actually stands out)
 - **Pro** Discord role + 1-on-1 feedback channel with direct responses from me
 - Priority on bug reports and feature requests
 - Everything in Early Access

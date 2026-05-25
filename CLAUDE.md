@@ -252,5 +252,6 @@ VS Code workspace contains 4 root folders. Cubric-Vision is **master** (this fol
 3. **Use absolute paths** in tool calls (`Read`, `Glob`, `Grep`, `Edit`) when targeting sibling folders. Relative paths resolve against Cubric-Vision.
 4. **Sibling git repos are separate.** Never run `git` from Cubric-Vision against sibling paths — `cd` into the sibling first or use `-C <path>`.
 5. **Design source of truth for sibling websites:** `c:\AI\Mpi\CubricStudio_Redesign\` (no git, edit freely as design playground). Apply final design to Website/Docs repos.
+6. **DOCS WEBSITE PUSH BLOCK (hard rule):** Never run `git push` (or any equivalent) in `c:\AI\Mpi\Cubric Studio (Docs)`. Production GitHub Pages currently serves the coming-soon `index.html` from a previous deploy; the local working tree has the full docs shell as `index.html` and the coming-soon page parked as `index-soon.html`. Pushing local `main` would replace the live coming-soon page with the unfinished docs shell. If the user asks to push the docs repo, refuse and explain: the docs site is not ready, work is local-only, and the swap (`index.html` ↔ `index-soon.html`) must happen first. Local dev/test only. This block is lifted only when the user explicitly says the docs site is ready to ship.
 
 ---
