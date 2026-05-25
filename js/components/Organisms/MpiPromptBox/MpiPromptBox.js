@@ -543,12 +543,41 @@ export const MpiPromptBox = ComponentFactory.create({
 
         const textareaEl = qs('textarea', mainInput.el);
 
+        // Hidden mirror textarea — measures content height without fighting
+        // the live textarea's CSS min-height/layout cache. scrollHeight on the
+        // live element refused to shrink after deletes (layout box vs intrinsic
+        // content mismatch). Mirror is offscreen, gets the same width + text
+        // styling at measure time, then we read its scrollHeight as ground
+        // truth for current value.
+        const _heightProbe = document.createElement('textarea');
+        _heightProbe.setAttribute('aria-hidden', 'true');
+        _heightProbe.tabIndex = -1;
+        _heightProbe.style.cssText =
+            'position:absolute;left:-9999px;top:-9999px;visibility:hidden;' +
+            'height:0;min-height:0;max-height:none;overflow:hidden;' +
+            'border:0;padding:0;margin:0;resize:none;';
+        document.body.appendChild(_heightProbe);
+
         const updateHeight = () => {
             if (isExpansionLocked) { textareaEl.style.height = '32px'; return; }
-            textareaEl.style.height = '32px';
-            const sh = textareaEl.scrollHeight;
+            // Copy text + width-relevant styles into the probe and read its
+            // scrollHeight. This sidesteps the live textarea's min-height /
+            // layout-cache trap where scrollHeight returns the previous
+            // expanded height instead of the current content height.
+            const cs = getComputedStyle(textareaEl);
+            _heightProbe.style.width      = textareaEl.clientWidth + 'px';
+            _heightProbe.style.font       = cs.font;
+            _heightProbe.style.lineHeight = cs.lineHeight;
+            _heightProbe.style.padding    = cs.padding;
+            _heightProbe.style.boxSizing  = cs.boxSizing;
+            _heightProbe.style.letterSpacing = cs.letterSpacing;
+            _heightProbe.value = textareaEl.value;
+            const sh = _heightProbe.scrollHeight;
+            const prevScroll = textareaEl.scrollTop;
             textareaEl.style.height = Math.min(Math.max(sh, 32), 224) + 'px';
+            textareaEl.scrollTop = prevScroll;
         };
+        _unsubs.push(() => _heightProbe.remove());
 
         _unsubs.push(on(textareaEl, 'input', () => {
             updateHeight();
