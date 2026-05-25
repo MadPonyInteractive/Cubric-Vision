@@ -163,13 +163,6 @@
     The Gallery slider to change gallery card size in five steps. I notice that sometimes two of those steps display exactly the same size in different app window sizes. Perhaps this can be fixed by adding more steps or less steps to the slider. What are your suggestions?
     ```
 
-### Gallery Cards Model Display
-
-  - defaultExpanded: false
-    ```md
-    When the current history entry changes from the original entry, in the Gallery workspace the card displays only the last operation on the top-left text. Would be nice to, on the top left text, display the model that originally created the video or image, and underneath it, display the last operation, which would be the operation for the selected card in the history workspace.
-    ```
-
 ### Help page UI improvement
 
   - defaultExpanded: false
@@ -194,6 +187,22 @@
     ```
 
 ## COMPLETED
+
+### Gallery Cards Model Display
+
+  - defaultExpanded: false
+    ```md
+    Completed 2026-05-25 by Codex.
+
+    Gallery card top-left badges now show the original source/model on the
+    first row and the selected history entry operation on the second row.
+    Imported originals remain labeled IMPORTED; video duration remains visible
+    on the operation row.
+
+    Files: js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js,
+    js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css.
+    Verification: node --check MpiGalleryGrid.js; targeted component lint clean.
+    ```
 
 ### ComfyUI cache dedupe for seedless workflows
 

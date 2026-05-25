@@ -387,7 +387,7 @@
     top: 0.6rem;
     left: 0.7rem;
     max-width: calc(100% - 1.4rem);
-    padding: 2px 6px;
+    padding: 3px 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-2xs);
     font-weight: 700;
@@ -399,8 +399,23 @@
     pointer-events: none;
     z-index: 3;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mpi-group-card__top-badge-row {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.mpi-group-card__top-badge-row--operation {
+    color: var(--ink-2);
+    font-weight: 600;
+    letter-spacing: 0.1em;
 }
 
 .mpi-group-card__top-badge--hidden {

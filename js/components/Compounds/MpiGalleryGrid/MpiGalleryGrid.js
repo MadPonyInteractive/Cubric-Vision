@@ -579,7 +579,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     const s = group?.history?.[group.selectedIndex];
                     emit('media-missing', { group, itemId: s?.id });
                 });
-                cardEl.querySelector('.mpi-group-card__media')?.appendChild(v);
+                qs('.mpi-group-card__media', cardEl)?.appendChild(v);
                 v.src = _videoSrc;
                 _videoThumb = v;
 
@@ -653,6 +653,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             function _render() {
                 if (!group) return;
                 const selected = group.history?.[group.selectedIndex];
+                const original = group.history?.[0];
                 const src = selected?.filePath || '';
 
                 if (src) {
@@ -676,32 +677,31 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 nameEl.textContent = selected?.name || group.name || '';
 
-                // Top-left badge: SDXL · UPSCALE / IMPORTED / WAN 2.2 SMOOTH · 5S / INTERPOLATE · 12S
-                const model = getModelById(selected?.modelId);
+                // Top-left badge: original source/model on row 1, current selected operation on row 2.
+                const originalModel = getModelById(original?.modelId);
                 const command = getCommand(selected?.operation);
-                let badgeText = '';
-                if (selected?.uploaded) {
-                    badgeText = 'IMPORTED';
-                } else if (group.type === 'video') {
-                    const duration = Number(selected?.duration);
-                    const dur = Number.isFinite(duration) && duration > 0
-                        ? `${Math.max(1, Math.round(duration))}S`
-                        : '';
-                    const sourceLabel = command?.universal
-                        ? command.label
-                        : (model?.name || selected?.modelId || command?.label || selected?.operation);
-                    badgeText = [sourceLabel, dur]
-                        .filter(Boolean)
-                        .map(s => String(s).toUpperCase())
-                        .join(' · ');
-                } else {
-                    badgeText = [model?.name, selected?.operation]
-                        .filter(Boolean)
-                        .map(s => String(s).toUpperCase())
-                        .join(' · ');
-                }
-                topBadgeEl.textContent = badgeText;
-                topBadgeEl.classList.toggle('mpi-group-card__top-badge--hidden', !badgeText);
+                const modelLabel = original?.uploaded
+                    ? 'IMPORTED'
+                    : (originalModel?.name || original?.modelId || '');
+                const operationLabel = selected?.uploaded
+                    ? ''
+                    : (command?.label || selected?.operation || '');
+                const duration = Number(selected?.duration);
+                const dur = group.type === 'video' && Number.isFinite(duration) && duration > 0
+                    ? `${Math.max(1, Math.round(duration))}S`
+                    : '';
+                const operationLine = [operationLabel, dur].filter(Boolean).join(' · ');
+                const badgeRows = [modelLabel, operationLine]
+                    .filter(Boolean)
+                    .map((text, idx) => {
+                        const row = ce('span', {
+                            className: `mpi-group-card__top-badge-row mpi-group-card__top-badge-row--${idx === 0 ? 'model' : 'operation'}`,
+                        });
+                        row.textContent = String(text).toUpperCase();
+                        return row;
+                    });
+                topBadgeEl.replaceChildren(...badgeRows);
+                topBadgeEl.classList.toggle('mpi-group-card__top-badge--hidden', badgeRows.length === 0);
 
                 // Bottom-left sub-line: dims · time · "prompt snippet"
                 const dims = selected?.pixelDimensions;
@@ -989,6 +989,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         function _getGroupRenderKey(group) {
             const sel = group?.history?.[group.selectedIndex];
+            const original = group?.history?.[0];
             const dims = sel?.pixelDimensions;
             return [
                 group?.id || '',
@@ -1005,6 +1006,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 sel?.operation || '',
                 sel?.modelId || '',
                 sel?.uploaded ? 'uploaded' : '',
+                original?.operation || '',
+                original?.modelId || '',
+                original?.uploaded ? 'original-uploaded' : '',
                 dims?.w || '',
                 dims?.h || '',
                 sel?.duration || '',
