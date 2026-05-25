@@ -469,7 +469,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     imageThumb.alt = '';
                     imageThumb.draggable = true;
                     _replaceThumb(imageThumb);
-                    _videoThumb = null;
+                    // Only nuke _videoThumb if it was the base thumb (preload=metadata
+                    // fallback), not the floating hover overlay.
+                    if (_videoThumb && !_videoThumb.classList.contains('mpi-group-card__thumb--hover-video')) {
+                        _videoThumb = null;
+                    }
                 }
                 imageThumb.style.visibility = '';
                 imageThumb.onload = () => {
@@ -502,7 +506,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const emptyThumb = document.createElement('div');
                 emptyThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--empty';
                 _replaceThumb(emptyThumb);
+                _removeHoverVideo();
                 _videoThumb = null;
+                _videoSrc = null;
                 cardEl.classList.remove('mpi-group-card--missing');
             }
 
@@ -511,7 +517,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 bgThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--bg';
                 bgThumb.style.backgroundImage = `url("${String(src).replaceAll('"', '\\"')}")`;
                 _replaceThumb(bgThumb);
+                _removeHoverVideo();
                 _videoThumb = null;
+                _videoSrc = null;
                 cardEl.classList.remove('mpi-group-card--missing');
 
                 // CSS background-image has no naturalWidth/onload — measure via
@@ -522,41 +530,124 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 probe.src = src;
             }
 
-            function _swapThumbToVideo(src) {
-                if (_videoThumb && _videoThumb.src.endsWith(src)) return;
-                if (!_videoThumb) {
-                    _videoThumb = document.createElement('video');
-                    _videoThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--video';
-                    _videoThumb.muted = true;
-                    _videoThumb.loop = true;
-                    _videoThumb.playsInline = true;
-                    _videoThumb.preload = 'metadata';
-                    _videoThumb.draggable = true;
-                    _videoThumb.addEventListener('loadeddata', () => {
+            let _videoSrc = null;
+            let _videoHoverBound = false;
+            let _videoPromoted = false;
+
+            function _ensureVideoHoverBindings() {
+                if (_videoHoverBound) return;
+                _videoHoverBound = true;
+                cardEl.addEventListener('mouseenter', _onCardEnter);
+                cardEl.addEventListener('mouseleave', _onCardLeave);
+            }
+
+            function _onCardEnter() {
+                if (!_videoThumb) return;
+                _videoThumb.play().catch(() => {});
+            }
+
+            function _onCardLeave() {
+                if (!_videoThumb) return;
+                _videoThumb.pause();
+                try { _videoThumb.currentTime = 0; } catch (_) {}
+            }
+
+            // Promote the card from poster <img> to a paused <video> showing frame 0.
+            // Called by the grid IntersectionObserver when the card scrolls into view.
+            function _promoteVideo() {
+                if (_videoPromoted || !_videoSrc) return;
+                const sel = group?.history?.[group.selectedIndex];
+                const isVideo = sel?.type === 'video'
+                    || (group?.type === 'video' && sel?.type !== 'image');
+                if (!isVideo) return;
+                _videoPromoted = true;
+
+                const v = document.createElement('video');
+                v.className = 'mpi-group-card__thumb mpi-group-card__thumb--video mpi-group-card__thumb--hover-video';
+                v.muted = true;
+                v.loop = true;
+                v.playsInline = true;
+                v.preload = 'auto';
+                v.draggable = false;
+                v.addEventListener('loadeddata', () => {
+                    cardEl.classList.remove('mpi-group-card--missing');
+                    try { v.currentTime = 0; } catch (_) {}
+                    v.classList.add('mpi-group-card__thumb--hover-video-ready');
+                });
+                v.addEventListener('error', () => {
+                    cardEl.classList.add('mpi-group-card--missing');
+                    const s = group?.history?.[group.selectedIndex];
+                    emit('media-missing', { group, itemId: s?.id });
+                });
+                cardEl.querySelector('.mpi-group-card__media')?.appendChild(v);
+                v.src = _videoSrc;
+                _videoThumb = v;
+
+                // If user is already hovering at the moment of promotion, start
+                // playback as soon as data lands.
+                if (cardEl.matches(':hover')) {
+                    v.addEventListener('loadeddata', () => v.play().catch(() => {}), { once: true });
+                }
+            }
+
+            // Expose for grid-level IntersectionObserver.
+            cardEl.promoteVideo = _promoteVideo;
+
+            function _removeHoverVideo() {
+                if (!_videoThumb) return;
+                if (_videoThumb.classList.contains('mpi-group-card__thumb--hover-video')) {
+                    _videoThumb.pause();
+                    _videoThumb.remove();
+                    _videoThumb = null;
+                    _videoPromoted = false;
+                }
+            }
+
+            function _swapThumbToVideo(src, selected) {
+                // src change = new video; demote any prior promoted overlay so
+                // _promoteVideo can recreate against the new src.
+                if (_videoSrc !== src) {
+                    _removeHoverVideo();
+                    _videoSrc = src;
+                }
+                _ensureVideoHoverBindings();
+
+                const thumbPath = selected?.thumbPath;
+                if (thumbPath) {
+                    _swapThumbToImage(thumbPath, selected);
+                } else {
+                    // No poster — fall back to <video preload=metadata> as the base
+                    // thumb. Hover handlers still work because _videoThumb is set.
+                    if (_videoThumb && !_videoThumb.classList.contains('mpi-group-card__thumb--hover-video') && _videoThumb.src.endsWith(src)) return;
+                    const v = document.createElement('video');
+                    v.className = 'mpi-group-card__thumb mpi-group-card__thumb--video';
+                    v.muted = true;
+                    v.loop = true;
+                    v.playsInline = true;
+                    v.preload = 'metadata';
+                    v.draggable = true;
+                    v.addEventListener('loadeddata', () => {
                         cardEl.classList.remove('mpi-group-card--missing');
-                        _requestStabilizingRender(_videoThumb);
+                        _requestStabilizingRender(v);
                     });
-                    _videoThumb.addEventListener('error', () => {
+                    v.addEventListener('error', () => {
                         cardEl.classList.add('mpi-group-card--missing');
-                        const sel = group?.history?.[group.selectedIndex];
-                        emit('media-missing', { group, itemId: sel?.id });
+                        const s = group?.history?.[group.selectedIndex];
+                        emit('media-missing', { group, itemId: s?.id });
                     });
-                    cardEl.addEventListener('mouseenter', () => _videoThumb.play().catch(() => {}));
-                    cardEl.addEventListener('mouseleave', () => {
-                        _videoThumb.pause();
-                        _videoThumb.currentTime = 0;
-                    });
-                    _videoThumb.dataset.mpiDragBound = '1';
-                    _videoThumb.addEventListener('dragstart', (e) => {
-                        const sel = group?.history?.[group.selectedIndex];
+                    v.dataset.mpiDragBound = '1';
+                    v.addEventListener('dragstart', (e) => {
+                        const s = group?.history?.[group.selectedIndex];
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
-                            groupId: group.id, itemId: sel?.id,
-                            filePath: sel?.filePath, type: group.type,
+                            groupId: group.id, itemId: s?.id,
+                            filePath: s?.filePath, type: group.type,
                         }));
                     });
-                    _replaceThumb(_videoThumb);
+                    _replaceThumb(v);
+                    _videoThumb = v;
+                    _videoPromoted = true; // no separate promotion needed
+                    v.src = src;
                 }
-                _videoThumb.src = src;
             }
 
             function _render() {
@@ -566,10 +657,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 if (src) {
                     const isVideo = selected?.type === 'video' || (group.type === 'video' && selected?.type !== 'image');
+                    if (!isVideo) {
+                        // Reaching non-video render path — drop any video state
+                        // from a prior selection so hover doesn't replay it.
+                        _removeHoverVideo();
+                        _videoSrc = null;
+                    }
                     if (selected?.inputPreview) {
                         _swapThumbToBackgroundImage(src);
                     } else if (isVideo) {
-                        _swapThumbToVideo(src);
+                        _swapThumbToVideo(src, selected);
                     } else {
                         _swapThumbToImage(src, selected);
                     }
@@ -1020,8 +1117,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         wrapper.className = 'mpi-gallery-grid__row-wrap';
                         wrapper.style.width  = `${width}px`;
                         wrapper.style.height = `${height}px`;
+                        wrapper.dataset.groupId = id;
 
                         rowEl.appendChild(wrapper);
+
+                        // Observe for lazy video promotion (no-op for image cards).
+                        if (group.type === 'video' && !_ioPromoted.has(wrapper)) {
+                            promoteObserver.observe(wrapper);
+                        }
 
                         if (group.isGenerating) {
                             card.el.setGenerating(group.latestPreviewUrl ?? null);
@@ -1056,6 +1159,30 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         // ── ResizeObserver ───────────────────────────────────────────────────
+
+        // ── Viewport promotion: lazy load videos only when visible ───────────
+        // Cards initially render with a 256px JPG poster (instant paint). When
+        // the wrapper scrolls into view (or starts in view), promote to a
+        // paused <video> showing frame 0 — high-res still without decode storm.
+        const _ioPromoted = new WeakSet();
+        const promoteObserver = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                if (_ioPromoted.has(entry.target)) continue;
+                const groupId = entry.target.dataset.groupId;
+                const cardElForGroup = _cardMap.get(groupId)?.card?.el;
+                if (cardElForGroup?.promoteVideo) {
+                    cardElForGroup.promoteVideo();
+                    _ioPromoted.add(entry.target);
+                    promoteObserver.unobserve(entry.target);
+                }
+            }
+        }, {
+            root: grid,
+            rootMargin: '200px 0px',
+            threshold: 0.01,
+        });
+        _unsubs.push(() => promoteObserver.disconnect());
 
         const resizeObserver = new ResizeObserver((entries) => {
             const width = Math.round(entries[0]?.contentRect?.width || grid.clientWidth || 0);

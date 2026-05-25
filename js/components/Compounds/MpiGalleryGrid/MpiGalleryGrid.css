@@ -256,7 +256,38 @@
 }
 
 .mpi-group-card__thumb--empty {
-    background: transparent;
+    background: linear-gradient(
+        100deg,
+        var(--surface-3) 30%,
+        color-mix(in oklch, var(--surface-3) 70%, var(--ink-1) 6%) 50%,
+        var(--surface-3) 70%
+    );
+    background-size: 200% 100%;
+    animation: mpi-card-shimmer 1.4s linear infinite;
+}
+
+@keyframes mpi-card-shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Hover-video overlay — sits on top of poster <img> while user hovers a video
+ * card. Fades in only when the video has buffered enough to render frames so
+ * the poster doesn't blink to black. */
+.mpi-group-card__thumb--hover-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.mpi-group-card__thumb--hover-video.mpi-group-card__thumb--hover-video-ready {
+    opacity: 1;
 }
 
 .mpi-group-card__thumb--bg {
