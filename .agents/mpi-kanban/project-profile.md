@@ -39,6 +39,7 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 - `npm run lint` / `npm run lint:components` — ESLint
 - `Start.bat` — Windows quick launch
 - Read `logs/app.log` tail (offset, never full) for runtime debugging
+- `node scripts/convert-images.cjs --prefix=<name> --out=<name>` — batch PNG/JPG → WebP for sibling website carousels (defaults: brand-assets marketing-media → website vision-media, quality 85). See [[tool-website-image-converter]] memory.
 
 ## Read First
 
