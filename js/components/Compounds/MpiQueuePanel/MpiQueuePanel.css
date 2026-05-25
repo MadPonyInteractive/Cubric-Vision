@@ -98,7 +98,7 @@
     min-height: 172px;
     padding: 16px 20px 16px 8px;
     border-bottom: 1px solid var(--line-soft);
-    background: var(--surface-1);
+    background: var(--surface-2);
 }
 
 .mpi-queue-panel__item--running {
@@ -107,6 +107,10 @@
 
 .mpi-queue-panel__item--loop {
     background: color-mix(in oklch, var(--accent-warn) 12%, var(--surface-1));
+}
+
+.mpi-queue-panel__item:hover {
+    background: var(--surface-1);
 }
 
 .mpi-queue-panel__index {

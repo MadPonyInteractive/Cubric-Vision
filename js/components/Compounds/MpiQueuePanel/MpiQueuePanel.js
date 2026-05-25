@@ -295,6 +295,25 @@ export const MpiQueuePanel = ComponentFactory.create({
             return card;
         };
 
+        let _lastSig = '';
+        const _cardByJobId = new Map();
+
+        const _signature = (items) => items
+            .map(j => `${j.queueJobId || ''}|${j.status}|${j.isLoop ? 1 : 0}|${j.previewKind || ''}|${j.previewUrl ? 1 : 0}|${j.promptExcerpt || ''}|${j.width}x${j.height}|${j.modelName || ''}|${j.operation || ''}`)
+            .join('\n');
+
+        const _patchPreview = (items) => {
+            items.forEach((job) => {
+                if (!job.previewUrl) return;
+                const card = _cardByJobId.get(job.queueJobId);
+                if (!card) return;
+                const img = qs('.mpi-queue-panel__thumb-img', card);
+                if (img && img.getAttribute('src') !== job.previewUrl) {
+                    img.setAttribute('src', job.previewUrl);
+                }
+            });
+        };
+
         const _render = (snapshot = getGenerationQueueSnapshot()) => {
             const items = snapshot.items || [];
             const pendingCount = snapshot.pendingCount || 0;
@@ -304,7 +323,16 @@ export const MpiQueuePanel = ComponentFactory.create({
                 ? `${snapshot.runningCount || 0} running / ${pendingCount} queued`
                 : 'Idle';
             nextEl.textContent = pendingCount ? `Next up · ${String((snapshot.running ? 2 : 1)).padStart(2, '0')}` : '';
+
+            const sig = _signature(items);
+            if (sig === _lastSig && _cardByJobId.size === items.length) {
+                _patchPreview(items);
+                return;
+            }
+            _lastSig = sig;
+
             listEl.replaceChildren();
+            _cardByJobId.clear();
 
             if (!items.length) {
                 listEl.appendChild(ce('div', {
@@ -315,7 +343,9 @@ export const MpiQueuePanel = ComponentFactory.create({
             }
 
             items.forEach((job, index) => {
-                listEl.appendChild(_renderJob(job, index));
+                const card = _renderJob(job, index);
+                if (job.queueJobId) _cardByJobId.set(job.queueJobId, card);
+                listEl.appendChild(card);
             });
         };
 
