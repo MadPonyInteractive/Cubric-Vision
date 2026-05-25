@@ -154,7 +154,7 @@ Order is mechanical (Windows is the only platform locally testable), not a prior
 
 ## Phase 0 — Runtime portability fixes (Windows-locally testable)
 
-Five fixes block ALL three portable zips. Most are independently testable on the current Windows dev machine; ZIP extraction import safety still needs a Mac/Linux require smoke.
+Six fixes block ALL three portable zips. Most are independently testable on the current Windows dev machine; ZIP extraction import safety still needs a Mac/Linux require smoke. Phase 0.6 (icon assets + AUMID) is an early gate that unblocks per-platform branding phases (2.4 / 3.4 / 4.4).
 
 - [ ] **0.1. Replace bare `ffmpeg`/`ffprobe` in `routes/projects.js`**
   - File: [routes/projects.js:1057,1080](../../routes/projects.js)
@@ -195,6 +195,22 @@ Five fixes block ALL three portable zips. Most are independently testable on the
     - Or lazy-load `node-7z` only for Windows `.7z` engine extraction and use a different extractor for `.zip`.
   - Do NOT strip `7zip-bin` from Mac until this is fixed; otherwise the server can crash during module import.
   - **Verify:** custom node ZIP extract works on Windows after the change, and `require('./routes/downloadManager')` succeeds on a Mac host without a Mac `7zip-bin` binary.
+
+- [ ] **0.6. Icon assets + AppUserModelID (branding gate)**
+  - **AppUserModelID (AUMID):** `cubric.studio.vision`. Permanent — never change post-release (changing it orphans pinned shortcuts on user machines). Future sibling apps slot under same prefix (`cubric.studio.audio`, `cubric.studio.prompt`).
+  - Set in `main.js` before window creation:
+    ```js
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('cubric.studio.vision')
+    }
+    ```
+  - **Icon source:** `assets/mascot/logo.png` (existing, 1472KB). Verify it matches current Stage palette per `docs/redesign/RECOLOR.md`; recolor first if not.
+  - **Generate platform icon artifacts** into `media/icons/` (create folder):
+    - `media/icons/cubric-vision.ico` — Windows multi-res (16/24/32/48/64/128/256). Tool: ImageMagick `magick logo.png -define icon:auto-resize=256,128,64,48,32,24,16 cubric-vision.ico`.
+    - `media/icons/cubric-vision.icns` — macOS icon set. Tool: `iconutil` (Mac) or `png2icns` (cross-platform Node lib).
+    - `media/icons/cubric-vision.png` — Linux desktop entry (512x512 PNG minimum).
+  - Commit generated artifacts; do not regenerate at build time (deterministic releases).
+  - **Verify:** all three icon files present in `media/icons/`, AUMID line lands in `main.js`, dev run still works.
 
 ---
 
@@ -258,17 +274,17 @@ The current `_runEngineDownload()` in `routes/engine.js` is Windows-only: downlo
 
 First fully shippable deliverable.
 
-- [ ] **2.1. Windows silent launcher (`CubricStudio.vbs`)**
-  - Hides the terminal window on launch. Sample:
-    ```vbs
-    Set sh = CreateObject("WScript.Shell")
-    sh.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName) & "\app"
-    sh.Run """..\node\node.exe"" node_modules\electron\cli.js .", 0, False
-    ```
-  - Path-relative to zip root. Targets `node_modules/electron/cli.js` (NOT `node_modules/.bin/electron` — that bin shim assumes `npm` is on PATH).
-  - Launcher must set the Phase 0.4 portable env vars before starting Node/Electron.
-  - Keep `start-debug.bat` for dev/debug with visible terminal.
-  - **Verify:** double-click `CubricStudio.vbs` from an unzipped folder → Electron window opens, no console flash.
+- [ ] **2.1. Windows primary launcher (`CubricVision.lnk`)**
+  - `.lnk` (Windows shortcut) chosen over `.vbs` — `.lnk` is pinnable to taskbar, embeds icon natively, no SmartScreen script warning. `.vbs` cannot be pinned by Windows.
+  - Shortcut properties:
+    - Target: `app\CubricVision.exe` (rebranded electron binary — see Phase 2.4)
+    - Working directory: `%~dp0app` (relative to zip root via shortcut "Start in")
+    - Window style: Normal
+    - Icon: embedded from target `.exe` PE resource (set by Phase 2.4)
+  - Build script generates the `.lnk` via PowerShell `WScript.Shell` COM (no extra deps) and writes it at zip root.
+  - Portable env vars (Phase 0.4) are set inside `main.js` from `process.resourcesPath` / `app.getAppPath()` resolution — `.lnk` cannot set env vars. If env vars MUST come from launcher, fall back to a tiny `.bat` wrapper invoked by the `.lnk` target instead.
+  - Keep `start-debug.bat` for dev/debug with visible terminal (raw `electron.exe` invocation, no rebranding required for debug).
+  - **Verify:** double-click `CubricVision.lnk` from an unzipped folder → Electron window opens with Cubric icon in taskbar, no console flash. Right-click `.lnk` → "Pin to taskbar" → icon stable across unpin/repin cycle.
 
 - [ ] **2.2. Build script `scripts/build-portable.js`**
   - Invocation: `node scripts/build-portable.js --platform=win`
@@ -308,7 +324,52 @@ First fully shippable deliverable.
   - Video crop ✓
   - Quit + relaunch, project list preserved ✓
   - Move unzipped folder, relaunch — still works (no absolute paths baked in) ✓
+  - Taskbar icon = Cubric logo (not Electron default) ✓
+  - Pin `.lnk` to taskbar → icon persists across unpin/repin ✓
   - **Verify:** all green on the same artifact intended for public release.
+
+- [ ] **2.4. Windows Electron binary rebrand (icon + metadata)**
+  - **Goal:** taskbar shows Cubric icon, not Electron icon. Pin-to-taskbar works with stable icon.
+  - **Why needed:** Windows reads taskbar icon from the process binary's PE resource, not from `BrowserWindow({ icon })`. Default `electron.exe` ships with Electron icon embedded. AUMID alone does not fix the icon — only the rebranded binary does.
+  - Build script step (`scripts/build-portable.js`, Windows branch):
+    1. Copy `node_modules/electron/dist/electron.exe` → `app/CubricVision.exe` in staging.
+    2. Use `rcedit-js` (npm, MIT — `npm install --save-dev rcedit`) to swap PE resources on the copy:
+       - Icon → `media/icons/cubric-vision.ico` (from Phase 0.6)
+       - `FileDescription` → `Cubric Studio Vision`
+       - `ProductName` → `Cubric Studio Vision`
+       - `CompanyName` → `MadPony Interactive`
+       - `InternalName` → `CubricVision`
+       - `OriginalFilename` → `CubricVision.exe`
+       - `LegalCopyright` → `© MadPony Interactive`
+       - `ProductVersion` / `FileVersion` → from `package.json` version
+    3. Do NOT modify the original `node_modules/electron/dist/electron.exe` — the copy is what ships.
+    4. Phase 2.1 `.lnk` targets the rebranded `app/CubricVision.exe`.
+  - AUMID (`cubric.studio.vision`) is already set by `main.js` (Phase 0.6). The rebranded binary + AUMID + pinnable `.lnk` together give stable taskbar identity.
+  - **Verify:** right-click `app/CubricVision.exe` → Properties → Details tab shows Cubric metadata, icon visible in Explorer. Launch via `.lnk` → taskbar shows Cubric icon. Pin → icon persists. Quit → relaunch → still Cubric.
+
+- [ ] **2.5. Dev-mode rebrand for tutorial recording**
+  - **Why:** YouTube tutorials are recorded in dev mode (`npm run dev`). Default dev mode shows Electron icon in taskbar — looks unprofessional in video tutorials.
+  - Add script `scripts/rebrand-dev-electron.js`:
+    - Runs `rcedit` on `node_modules/electron/dist/electron.exe` (the file used by `npm run dev`, not a copy).
+    - Same PE resource swap as Phase 2.4 (icon + metadata).
+    - Idempotent — safe to re-run.
+    - Detects non-Windows host and exits with friendly message (Mac/Linux dev rebrand is platform-specific; Windows tutorials are the target use case).
+  - Add to `package.json`:
+    ```json
+    "scripts": {
+      "dev:rebrand": "node scripts/rebrand-dev-electron.js"
+    }
+    ```
+  - Add `rebrand-dev-logo.bat` at repo root (double-click wrapper, no terminal typing needed):
+    ```bat
+    @echo off
+    cd /d "%~dp0"
+    call npm run dev:rebrand
+    pause
+    ```
+  - **Workflow:** after `npm install` (which restores Electron's default icon to `node_modules/`), double-click `rebrand-dev-logo.bat` once → icon applied → next `npm run dev` shows Cubric icon in taskbar for tutorial recording.
+  - Document in `docs/PROJECT.md` (dev setup section) and in tutorial recording notes.
+  - **Verify:** double-click `rebrand-dev-logo.bat` → script reports success → `npm run dev` shows Cubric icon in taskbar.
 
 ---
 
@@ -361,6 +422,31 @@ Equal-priority deliverable. Needs Linux host or CI runner to build native deps +
 
 - [ ] **3.3. Linux smoke checklist**
   - Same as Phase 2.3 but on Linux host. ANY of: real Linux desktop, Linux VM with GPU passthrough, rented GPU Linux box. WSL is acceptable for backend-only checks but NOT for the desktop/Electron launch part of the gate.
+  - Taskbar/dock icon = Cubric logo (not Electron default) ✓
+  - Add-to-favorites / pin (DE-dependent) → icon stable ✓
+
+- [ ] **3.4. Linux Electron binary rebrand + `.desktop` entry**
+  - **Goal:** taskbar/dock shows Cubric icon, app identifies as "Cubric Studio Vision" in process lists and DE switchers.
+  - **Why needed:** Linux taskbar identity is read from `WM_CLASS` and the `.desktop` file's `Icon=`/`Name=` fields. Renaming the binary changes `WM_CLASS` to match. Without rebrand, app appears as "electron" in switchers.
+  - Build script step (`scripts/build-portable.js`, Linux branch):
+    1. Rename `node_modules/electron/dist/electron` → `app/cubric-vision` in staging.
+    2. Copy `media/icons/cubric-vision.png` (from Phase 0.6) → zip root as `cubric-vision.png`.
+    3. Generate `cubric-vision.desktop` at zip root:
+       ```ini
+       [Desktop Entry]
+       Type=Application
+       Name=Cubric Studio Vision
+       Comment=Generative AI image and video studio
+       Exec=sh -c '"$(dirname "$(readlink -f %k)")/start.sh"'
+       Icon=cubric-vision
+       Terminal=false
+       Categories=Graphics;AudioVideo;
+       StartupWMClass=cubric-vision
+       ```
+       `StartupWMClass=cubric-vision` matches the renamed binary so the DE associates the running window with the `.desktop` entry → icon shows correctly in taskbar/switcher.
+    4. `start.sh` (Phase 3.1) execs `"$DIR/app/cubric-vision"` instead of `node electron/cli.js`.
+  - AUMID is Windows-only — no equivalent set on Linux.
+  - **Verify:** on Linux host, run `./start.sh` → window opens, `wmctrl -l -x` shows window class `cubric-vision`, DE taskbar shows Cubric icon. Right-click `.desktop` file in file manager → "Add to Favorites" (or DE equivalent) → icon stable.
 
 ---
 
@@ -415,6 +501,25 @@ Equal-priority deliverable. macOS final validation requires real Mac (no Windows
 
 - [ ] **4.3. macOS smoke checklist**
   - Same as Phase 2.3 on a real Mac. arm64 + x86_64 ideally both tested. CI option: GitHub Actions `macos-latest` runner.
+  - Dock icon = Cubric logo (not Electron default) ✓
+  - Right-click Dock icon → "Options" → "Keep in Dock" → icon stable across quit/relaunch ✓
+
+- [ ] **4.4. macOS Electron app bundle rebrand**
+  - **Goal:** Dock icon, Cmd-Tab switcher, About menu, and `Info.plist` all identify as Cubric Studio Vision. Pin-to-Dock works with stable icon.
+  - **Why needed:** macOS reads Dock identity from `CFBundleIdentifier` + `CFBundleIconFile` in the `.app` bundle's `Info.plist`. Without rebrand, app shows as "Electron" with Electron icon. Pin-to-Dock with default Electron bundle = identity collision if user has other Electron apps.
+  - Build script step (`scripts/build-portable.js`, macOS branch):
+    1. Rename `node_modules/electron/dist/Electron.app` → `app/CubricVision.app` in staging.
+    2. Replace `app/CubricVision.app/Contents/Resources/electron.icns` with `media/icons/cubric-vision.icns` (from Phase 0.6). Also delete `electron.icns` if `CFBundleIconFile` still points at the old name.
+    3. Edit `app/CubricVision.app/Contents/Info.plist` (use `plutil` or `defaults write`):
+       - `CFBundleName` → `Cubric Studio Vision`
+       - `CFBundleDisplayName` → `Cubric Studio Vision`
+       - `CFBundleIdentifier` → `studio.cubric.vision` (Mac convention = reverse-DNS, matches Windows AUMID semantically; note macOS does NOT use AUMID, this is the Mac equivalent identifier)
+       - `CFBundleIconFile` → `cubric-vision` (no extension, points at `cubric-vision.icns` in Resources)
+       - `CFBundleExecutable` → leave as `Electron` initially; only rename if Electron's launcher script inside the bundle is updated to match (rename can break launch — test before committing).
+       - `CFBundleShortVersionString` / `CFBundleVersion` → from `package.json` version
+    4. `start.command` (Phase 4.1) execs `"$DIR/app/CubricVision.app/Contents/MacOS/Electron"` (or renamed executable).
+  - **Gatekeeper note:** unsigned rebranded `.app` still triggers "developer cannot be verified" — same workaround documented in Phase 4.1 (right-click → Open first time).
+  - **Verify:** on Mac host, launch via `start.command` → Dock shows Cubric icon. Cmd-Tab shows "Cubric Studio Vision". About menu shows correct name. Right-click Dock → Keep in Dock → icon stable. Move bundle to /Applications → still works.
 
 ---
 
@@ -573,6 +678,10 @@ For this distribution project specifically, PRs touching installer/build code sh
 - Do not mutate `process.platform` inside a long-running process and call Mac/Linux "tested." Use fresh process loads for path tests; require a real host for release confidence.
 - Do not mark a platform as supported because the code path compiles. Smoke checklist (2.3 / 3.4 / 4.4) must pass on a real host.
 - Do not download Node/Electron binaries from random mirrors. nodejs.org for Node, `@electron/get` for Electron.
+- Do not change the AUMID (`cubric.studio.vision`) after the first public release. Changing it orphans every pinned shortcut on every user's machine. Pick once, keep forever. Same applies to macOS `CFBundleIdentifier` (`studio.cubric.vision`).
+- Do not skip Phase 0.6 (AUMID + icon assets) before Phase 2.4 / 3.4 / 4.4 — the per-platform rebrand phases depend on the icon files and on `app.setAppUserModelId` being live.
+- Do not use `.vbs` as a Windows launcher. `.vbs` is not pinnable to taskbar and shows generic script icon. Use `.lnk` pointing at the rebranded `CubricVision.exe`.
+- Do not modify the original `node_modules/electron/dist/electron.exe` during portable build (use a copy). Modify the original ONLY for dev-mode tutorial rebrand (Phase 2.5), which is an opt-in local action via `rebrand-dev-logo.bat`.
 
 ---
 
