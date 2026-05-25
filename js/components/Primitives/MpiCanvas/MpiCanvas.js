@@ -749,7 +749,23 @@ class _CanvasCore {
         // 2. Mask
         if (!this._maskHidden) {
             ctx.globalAlpha = this.mask.maskOpacity;
-            ctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
+            if (this.mask.displayInverted) {
+                // Render to a scratch buffer so source-atop recolor doesn't touch
+                // the comparison layer already painted above.
+                const buf = this._maskInvertBuf || (this._maskInvertBuf = document.createElement('canvas'));
+                if (buf.width !== W || buf.height !== H) { buf.width = W; buf.height = H; }
+                const bctx = buf.getContext('2d');
+                bctx.clearRect(0, 0, W, H);
+                bctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
+                bctx.globalCompositeOperation = 'source-atop';
+                // eslint-disable-next-line mpi/no-hardcoded-hex-color -- mask invert recolors overlay pixels to pure black
+                bctx.fillStyle = '#000';
+                bctx.fillRect(0, 0, W, H);
+                bctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(buf, 0, 0);
+            } else {
+                ctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
+            }
             ctx.globalAlpha = 1;
         }
 
@@ -901,6 +917,8 @@ class _CanvasCore {
     setBrushSize(size)      { this.mask.brushSize = Math.max(1, size); this.draw(); }
     setBrushType(type)      { this.mask.brushType = type; }
     flipMaskColor()         { const c = this.mask.flipColor(); this.draw(); return c; }
+    setMaskInverted(v)      { this.mask.displayInverted = !!v; this.draw(); }
+    isMaskInverted()        { return !!this.mask.displayInverted; }
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
     clearMask()             { this.mask.clear(); this.draw(); }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
@@ -963,6 +981,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setCompareLoop','getCompareLoop','isCompareVideoPair',
             'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
+            'setMaskInverted','isMaskInverted',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks',

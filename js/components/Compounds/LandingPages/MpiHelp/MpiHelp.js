@@ -139,6 +139,14 @@ export const MpiHelp = ComponentFactory.create({
                             </ul>
                         </div>
 
+                        <!-- Prompt Box -->
+                        <div class="mpi-help__shortcut-group">
+                            <h4>Prompt Box</h4>
+                            <ul>
+                                <li><span>ESCAPE</span><span>Blur text field (restore app hotkeys)</span></li>
+                            </ul>
+                        </div>
+
                         <!-- Video Player -->
                         <div class="mpi-help__shortcut-group">
                             <h4>Video Player</h4>

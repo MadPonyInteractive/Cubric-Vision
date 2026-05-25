@@ -31,6 +31,9 @@ export class MaskManager {
         this.brushType = 'brush';
         this.maskOpacity = 0.7;
         this.maskColor = 'rgba(255, 255, 255, 1)';
+        // Display-only inversion: swaps the visible overlay color without
+        // touching the underlying mask data. Used by viewer.draw() / getURL().
+        this.displayInverted = false;
     }
 
     init(width, height) {
@@ -119,25 +122,15 @@ export class MaskManager {
         this.maskCtx.restore();
     }
 
+    /**
+     * Display-only invert toggle. Does NOT touch underlying mask data.
+     * Render layer (MpiCanvas._drawOverlay) reads `displayInverted` to flip
+     * the overlay between white-on-masked and black-on-masked.
+     * Returns the new display state for callers that need a label.
+     */
     flipColor() {
-        this.maskColor = this.maskColor === 'rgba(255, 255, 255, 1)'
-            ? 'rgba(0, 0, 0, 1)'
-            : 'rgba(255, 255, 255, 1)';
-
-        const imageData = this.manualCtx.getImageData(0, 0, this.manualCanvas.width, this.manualCanvas.height);
-        const data = imageData.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-            if (data[i + 3] > 0) {
-                data[i] = 255 - data[i];
-                data[i + 1] = 255 - data[i + 1];
-                data[i + 2] = 255 - data[i + 2];
-            }
-        }
-
-        this.manualCtx.putImageData(imageData, 0, 0);
-        this._recomposite();
-        return this.maskColor === 'rgba(255, 255, 255, 1)' ? 'white' : 'black';
+        this.displayInverted = !this.displayInverted;
+        return this.displayInverted ? 'black' : 'white';
     }
 
     /**

@@ -586,6 +586,12 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
         }));
 
+        // Escape blurs the textarea so app-level hotkeys regain focus.
+        // Registered via Hotkeys (allowWhileTyping + when-gate scoped to this
+        // textarea) so it composes with other escape handlers instead of
+        // bypassing the registry. See hotkeyRegistry.js 'promptBox.blur'.
+        _unsubs.push(Hotkeys.bind('promptBox.blur', () => textareaEl.blur()));
+
         setTimeout(updateHeight, 0);
 
         // ── Expansion lock ─────────────────────────────────────────────────────

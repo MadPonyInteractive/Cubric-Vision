@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/file/v1",
+  "id": "86586bf5-730c-4775-9b22-a1ebdaecfe5d",
+  "status": "verified",
+  "claim_kind": "write",
+  "path": "main.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/c3da0360-04d6-4989-996f-8c0249cd02c1.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/bc6a502f-5267-49a5-a6bf-b85aed57e521.json",
+  "heartbeat_at": "2026-05-25T08:41:36.5730394+01:00",
+  "allowed_actions": ["edit", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-05-25T08:06:48.1731875+01:00",
+      "event": "claimed",
+      "note": "Preserve child server log severity when piping Electron child process output."
+    },
+    {
+      "at": "2026-05-25T08:32:36.3160976+01:00",
+      "event": "needs_verification",
+      "note": "Updated Electron child log pipe to preserve structured child severity/category and continuation lines."
+    },
+    {
+      "at": "2026-05-25T08:41:36.5730394+01:00",
+      "event": "verified",
+      "note": "User verified ComfyUI log output is cleaner and more accurate."
+    }
+  ]
+}

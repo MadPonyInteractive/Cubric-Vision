@@ -9,16 +9,16 @@
     Cubric Studio website (cubric.studio) is becoming the ecosystem landing.
     Current single-app landing copy (hero, features, screenshots, CTAs) belongs
     on a Vision-specific page at vision.cubric.studio.
-    
+
     Scope: move the current "Cubric Studio" landing content to a new Vision
     subdomain site (or section), and rewrite cubric.studio as ecosystem landing
     listing all apps (Vision, future Prompt/Audio/Video).
-    
+
     Sequencing lock 2026-05-21: do not start website/subdomain/social work
     until current app implementation work is finished, hub readiness is solid,
     and cross-platform portable distribution is ready and tested. Public-site
     work happens before release, not before portable distribution.
-    
+
     Coordinate with existing website plan
     `docs\plans\2026-05-16-port-stage-to-website.md` and the docs-IA work.
     ```
@@ -32,7 +32,7 @@
     Sequencing lock 2026-05-21: post-release only. Do not start before
     current app work, hub readiness, cross-platform portable distribution,
     website/Patreon/social release surfaces, and the first public release.
-    
+
     Deferred from WAN dual-model + 12 LoRAs plan until LTX workflows are ready.
     Scope:
     - Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
@@ -73,7 +73,7 @@
     - FAQ section added and moved to page bottom.
     - Local-library + features sections updated to reflect real behavior.
     - Hero and app-brand accents/mascots updated.
-    
+
     Remaining website work for next session:
     - Replace placeholder images/videos on `c:\AI\Mpi\Cubric Studio (Website)\vision\index.html`
     with final campaign media assets.
@@ -106,7 +106,7 @@
     (replace VIDEO/SCREENSHOT placeholders), expand thin pages
     (gallery, history, workflows), add search wiring (Algolia DocSearch
     or static Lunr), add new pages as features land.
-    
+
     Target repo: c:\AI\Mpi\Cubric Studio (Docs)\
     Reference: docs\plans\2026-05-16-port-stage-to-docs.md (archived spec).
     Linked umbrella: docs\plans\2026-05-19-cubric-vision-foundation.md (docs child track).
@@ -124,7 +124,7 @@
     Sequencing lock 2026-05-21: start after current app implementation work and
     hub readiness. After portable distribution is ready and tested, handle
     website/Patreon/social/docs release surfaces before public release.
-    
+
     Install + model verification (run AFTER this implementation):
     The "Model Manager slide-over and zero-model gating" plan defers its
     Phase 6 manual install/model session here to avoid a duplicate
@@ -155,6 +155,20 @@
     ```
 
 ## IMPLEMENTING
+
+### ConfYUI Cache
+
+  - defaultExpanded: false
+    ```md
+    the way comfyui uses cache creates a few issues for our app. Basically, if we try to run a workflow with the same settings, comfyui uses the cache and just returns the same result, especially if there are no new seeds, which is expected. I thought about forcing different seeds into the workflows to refresh the cache, but that is likely to raise a few issues. Is there the issue that this is causing? For example, the user runs a workflow in our app, and it doesn't change any settings. The workflow is not seed-dependent, so we're not injecting new seeds. In this type of workflow, what happens is the user runs it again without changing any parameters, and it produces a new entry with the exact same result. Instead of producing new entries in the history workspace or new cards in the gallery workspace, could we check ConfYUI cache and not allow a new entry to be created? Either that, or have our own system to check if the workflow hasn't changed at all. Of course, this would have to be filtered for workflows that do NOT inject seeds and such. Please do not code. Just come back to me with briefing, suggestions, and concerns.
+    ```
+
+### StartFrame and EndFrame placeholders
+
+  - defaultExpanded: false
+    ```md
+    In the Video Workspace, the Start Framing and End Frame for the Prompt Box in the Tool Controls is an empty container with a light gray background. For both start frame and end frame containers. The Dev Gallery in components.js has a beautiful implementation of how this should look for drop areas. Let's carry that through. I believe it also accommodates for different ratios for dropped media. So let's try and make these two inputs work the same way that the inputs in the drop area inputs in the dev gallery work.
+    ```
 
 ## COMPLETED
 
@@ -199,40 +213,6 @@
   - tags: [queue, universal-workflows, comfy]
   - priority: high
   - workload: Normal
-  - assignee: codex (completed 2026-05-25)
-  - defaultExpanded: false
-  - steps:
-      - [x] Audit universal workflow execution paths.
-      - [x] Make universal workflows appear as visible queue jobs when they use ComfyUI.
-      - [x] Verify video upscale/interpolate and at least one additional universal workflow.
-    ```md
-    Completed 2026-05-25.
-
-    Shipped:
-    - History-tool universal apply paths now enqueue through Cue instead of
-      calling `startGeneration()` directly: video upscale, video interpolate,
-      image upscale, image resize, and video resize.
-    - Queue display metadata labels model-less universal jobs as
-      "Universal workflow" instead of "Unknown model".
-    - Follow-up UX decision implemented: Comfy-backed config UI is blocked by
-      Cue depth rather than parallelized.
-    - Resize / Resize Video rail buttons are disabled while Cue has running or
-      queued jobs, with a status-bar hover reason. If Cue starts while Resize
-      is active, the workspace switches back to Crop and destroys the resize
-      preview panel.
-    - Mask auto-detect controls are disabled while Cue has running or queued
-      jobs. The mask panel shows a compact unavailable note, manual masking
-      remains available, and `MpiCanvasViewer` guards auto-mask workflow starts
-      before any existing auto-mask exec can be canceled.
-
-    Verification:
-    - `node --check` for changed JS.
-    - `npm run lint` passed with 0 errors and 26 existing warnings.
-    - Focused browser smoke confirmed queued universal jobs appear in Cue.
-    - Focused browser smoke confirmed mask auto-detect disables/re-enables from
-      `state.generationQueueCount`.
-    - User verified the implementation in-app.
-    ```
 
 ### PromptBox text field should auto-contract as text is deleted
 
@@ -280,31 +260,31 @@
 
     Shipped:
     - MaskManager.flipColor now toggles `displayInverted` flag only — no pixel
-      data mutation. Manual + subtract + autoPick layers untouched.
+    data mutation. Manual + subtract + autoPick layers untouched.
     - MpiCanvas overlay paint branch renders mask to a scratch buffer and
-      recolors with source-atop to pure black when `displayInverted=true`.
-      Comparison layer unaffected.
+    recolors with source-atop to pure black when `displayInverted=true`.
+    Comparison layer unaffected.
     - MpiCanvas API additions: `setMaskInverted(v)`, `isMaskInverted()`.
     - MpiCanvasViewer caches `_isMaskInverted` on the viewer scope so the flag
-      survives swapToPreview → swapToCanvas teardown. Re-applied to the fresh
-      MpiCanvas after every remount. New API: `setMaskInverted`,
-      `isMaskInverted`, `setMaskOpacity`, `getMaskOpacity`.
+    survives swapToPreview → swapToCanvas teardown. Re-applied to the fresh
+    MpiCanvas after every remount. New API: `setMaskInverted`,
+    `isMaskInverted`, `setMaskOpacity`, `getMaskOpacity`.
     - MpiToolOptionsMask layout: brush selector + invert + clear share one row;
-      opacity slider sits below the divider. Invert + clear use variant
-      `secondary` for matching borders. Invert button gains `--on` modifier
-      (180° icon rotation + accent border) when active.
+    opacity slider sits below the divider. Invert + clear use variant
+    `secondary` for matching borders. Invert button gains `--on` modifier
+    (180° icon rotation + accent border) when active.
     - Persistence: `project.toolSettings.mask` now includes `opacity` and
-      `inverted` (alongside existing `model` + `useBox`). All four route
-      through the existing `settings:tool:update` projectService queue, same
-      pattern as crop/resize/upscale.
+    `inverted` (alongside existing `model` + `useBox`). All four route
+    through the existing `settings:tool:update` projectService queue, same
+    pattern as crop/resize/upscale.
     - CSS hardcoded oklch track color replaced with `var(--line)`.
 
     Out of scope (deferred — not a blocker for first launch):
     - Prompt-mode preview (MpiMaskedImagePreview) still renders mask via CSS
-      luminance overlay; invert flag is not honored there. Painted area in
-      prompt preview shows image-through-mask regardless of invert state.
-      Would require a preview render-mode branch + invert flag plumbing
-      through swapToPreview.
+    luminance overlay; invert flag is not honored there. Painted area in
+    prompt preview shows image-through-mask regardless of invert state.
+    Would require a preview render-mode branch + invert flag plumbing
+    through swapToPreview.
 
     Verification: lint 0 errors. User confirmed working in mask mode
     (toggle/persist/opacity all behave). Auto-detection path untouched
@@ -326,14 +306,14 @@
 
     Implementation:
     - New hotkey registry entry `promptBox.blur` (escape, allowWhileTyping:true,
-      when-gated to textarea inside `.mpi-prompt-box`) so blur composes with
-      existing escape handlers (overlay.close, focusMode.exit,
-      gallery.selection.exit) instead of bypassing the registry / text-input
-      gate.
+    when-gated to textarea inside `.mpi-prompt-box`) so blur composes with
+    existing escape handlers (overlay.close, focusMode.exit,
+    gallery.selection.exit) instead of bypassing the registry / text-input
+    gate.
     - MpiPromptBox binds `Hotkeys.bind('promptBox.blur', () => textareaEl.blur())`
-      with unsub via `_unsubs`. Text value untouched.
+    with unsub via `_unsubs`. Text value untouched.
     - MpiHelp.js: new "Prompt Box" group with ESCAPE row (registry comment
-      requires hand-authored help to mirror new bindings).
+    requires hand-authored help to mirror new bindings).
 
     Files:
     - js/managers/hotkeyRegistry.js
@@ -422,16 +402,16 @@
   - defaultExpanded: false
     ```md
     Completed planning 2026-05-23.
-    
+
     Plan file: docs/plans/2026-05-23-cubric-hub-readiness-before-portable-distribution.md
-    
+
     Outcome: Cubric Vision portable distribution can proceed without live
     connector runtime integration, as long as the portable build preserves
     `resources/cubric/connector-manifest.json` and defines/verifies the future
     `resources/cubric/update-manifest.json` connector fields. Hub/broker
     packages do not need to be bundled into the first Vision portable artifact
     unless a connector-dependent feature is promoted.
-    
+
     Pre-portable gates now live in the child plan:
     - preserve connector manifest in staged artifacts
     - rename portable artifacts/launchers from CubricStudio_* to CubricVision_*
@@ -450,7 +430,7 @@
     ```md
     Completed 2026-05-23. Developer dogfooding covered the remaining checks;
     any later findings will be tracked separately.
-    
+
     2026-05-22: Restructured `modelSettings[modelId]` to nest per-op state
     under `operations.{shared, [opName]}`. PromptBoxControls now declare
     `scope: 'shared' | 'perOp'`. Added `denoise` control to `detail` op
@@ -468,10 +448,10 @@
   - defaultExpanded: false
     ```md
     Plan file: docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md
-    
+
     Completed 2026-05-22 (code). Phase 6 manual install test deferred to the
     cross-platform portable distribution session — see below.
-    
+
     Shipped:
     - NEW MpiModelManager (Compound, slide-over content) at
     js/components/Compounds/LandingPages/MpiModelManager/. Owns cards,
@@ -496,12 +476,12 @@
     allInstalled block in modelRegistry.js (only consumer was deleted modal).
     - Docs/rules drift: component-events, component-mounts, component-state,
     workspaces rules + docs/workspaces.md + redesign/MAPPING.md updated.
-    
+
     Verification: eslint 0 errors across all touched files; no `npm run build`
     script exists (vanilla ESM — lint is the static gate). Residual
     MpiModelsModal/models:closed/all-installed matches are intentional code
     comments, doc tombstones, and historical docs/plans|archive.
-    
+
     PENDING — Phase 6 manual install session (deferred, coordinate with
     cross-platform portable distribution plan): fresh engine install →
     Models discoverable → zero-model gate/read-only → install/seed one model
@@ -516,9 +496,9 @@
   - defaultExpanded: false
     ```md
     Completed 2026-05-21.
-    
+
     Plan file: docs/plans/2026-05-21-remove-local-llm-llama-runtime.md
-    
+
     Shipped via 3 parallel workers (backend/frontend/packaging-docs) + main-agent
     sweep + Phase 2 cleanup + Phase 3 audit:
     - Backend: deleted routes/llm.js + dev_configs/llm_models.json. Stripped
@@ -543,12 +523,12 @@
     .gitignore defensive entries kept.
     - Dependency hygiene: npm audit fix resolved 4 vulns (1 high axios,
     3 moderate brace-expansion/follow-redirects/uuid). 0 vulnerabilities now.
-    
+
     Verification: lint 0 errors (29 pre-existing warnings unchanged), server
     boots clean on :3000, /engine/status + /comfy/status return Comfy-only
     responses, /llm/* returns 404 (route gone). UI run + smoke:app deferred
     to user discretion.
-    
+
     Residual references are intentional: packaging exclusions, .gitignore
     defensive entries, historical docs/plans/**, false-positive substrings
     (installedAllModels, MpiModelsModal, fullMessage, shellMarginTop).
@@ -561,15 +541,15 @@
   - defaultExpanded: false
     ```md
     Completed/closed 2026-05-21.
-    
+
     Plan file: docs/plans/2026-05-19-cubric-vision-foundation.md
-    
+
     Outcome: foundation decisions are closed. Completed children/work:
     brand-identity, app-rename, ecosystem-backend, connector-broker-stage-1-2,
     shared-component-system, artifact-handoff-project-portability,
     model-resource-registry, Cubric Vision connector manifest stub, and
     @cubric/connector Stage 0 MVP at C:\AI\Mpi\Cubric-Studio\packages\connector\.
-    
+
     Deferred out of this umbrella:
     - Website/subdomain/docs/social work waits until app implementation, hub
     readiness, and cross-platform portable distribution are ready/tested.
@@ -586,10 +566,10 @@
   - defaultExpanded: false
     ```md
     Completed (decision) 2026-05-21.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Plan file: docs/plans/2026-05-21-cubric-vision-foundation-artifact-handoff-project-portability.md
-    
+
     Outcome: selected media handoff uses CubricArtifactRef; broader
     context/templates use CubricProjectRef plus the portable project folder.
     Sidecars already cover the needed future-app metadata. Artifact ids remain
@@ -604,10 +584,10 @@
   - defaultExpanded: false
     ```md
     Completed (decision) 2026-05-21.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Plan file: docs/plans/2026-05-21-cubric-vision-foundation-model-resource-registry.md
-    
+
     Outcome: no Cubric Vision v1 implementation. Future shared model/resource
     registry, if needed, is hub-owned and descriptive only: local resource roots,
     model/resource files, compatibility, hash/version/status. It is not a shared
@@ -622,10 +602,10 @@
   - defaultExpanded: false
     ```md
     Completed (decision) 2026-05-21.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Plan file: docs/plans/2026-05-21-cubric-vision-foundation-shared-component-system.md
-    
+
     Outcome: share the Stage visual contract, not Cubric Vision's JavaScript
     component runtime. Vision's ComponentFactory system stays Vision-local.
     Future TypeScript apps should build native UI using the Stage tokens/design
@@ -640,21 +620,21 @@
   - defaultExpanded: false
     ```md
     Shipped 2026-05-21.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Plan file: docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md
     Brief: docs/plans/2026-05-21-connector-broker-stage-1-2-implementation-brief.md
-    
+
     Target repo: C:\AI\Mpi\Cubric-Studio\ (NOT a git repo yet — flag for
     later git init follow-up).
-    
+
     Delivered:
     - packages/connector transport layer: src/transport/{frame,
     localEndpoint, localConnection}.ts + src/brokerClient.ts +
     public exports in src/index.ts.
     - packages/broker (new): token, connectionMetadata, handshake,
     router, brokerServer, endpoint, cli, index. Bin: `cubric-broker`.
-    
+
     Tests: 56/56 green.
     - connector: 36 (frame 8, brokerClient 2, schemas 16, mockClient 10)
     - broker: 20 (metadata 9, handshake 7, integration 4)
@@ -663,11 +643,11 @@
     DISCOVER_APPS, LIST_CAPABILITIES, REQUEST_CAPABILITY →
     CAPABILITY_UNSUPPORTED, shutdown metadata cleanup, untrusted-app
     PERMISSION_DENIED.
-    
+
     Acceptance: all criteria met. No Electron, no Cubric Vision runtime
     changes, Stage 3+ (ensureBroker, registry persistence, perm UI, scan
     /import) deferred as scoped.
-    
+
     Follow-ups (NEW kanban entries as work surfaces):
     - git init the hub repo + workspace tooling.
     - True spawn-based integration test (cli.ts is ready; current
@@ -682,10 +662,10 @@
   - defaultExpanded: false
     ```md
     Completed (planning) 2026-05-21.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Plan file: docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md
-    
+
     All 5 phases locked. Final two opens closed today:
     - Phase 2 capability vocabulary finalized — action-based dotted ids
     (prompt.enhance, prompt.translate, prompt.format.model, asset.import,
@@ -693,11 +673,11 @@
     - Phase 3 UUID rules aligned — itemId is project-local (scoped by
     projectId + sidecarRelativePath); cross-app identity requires a future
     explicit globalArtifactId field.
-    
+
     Stage 0 SDK shipped at C:\AI\Mpi\Cubric-Studio\packages\connector
     (memory: project_connector_sdk_mvp.md). Cubric Vision v1 unblocked —
     manifest-only stub at resources/cubric/connector-manifest.json.
-    
+
     Broker/runtime implementation continues in
     docs/plans/2026-05-21-cubric-vision-foundation-connector-broker-stage-1-2.md.
     ```
@@ -709,12 +689,12 @@
   - defaultExpanded: false
     ```md
     Completed 2026-05-20.
-    
+
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
     Consumed: docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md
     (sign-off in its Phase 5; full inventory in Phase 3 sections 3.A–3.G;
     release-blocking set in Phase 4).
-    
+
     Shipped:
     - App repo: package.json name/description, electron-builder productName/
     appId, Start.bat, index.html title/meta/alt/hero, APP_NAME constants
@@ -750,7 +730,7 @@
     - Memory: feedback_dual_asset_tree updated to RETIRED; new
     feedback_lettering_wordmark + feedback_mascot_state_set +
     project_app_rename_complete.
-    
+
     Out of scope (deferred):
     - HuggingFace org (locked keep).
     - Website ecosystem-landing rewrite (separate plan + new "Vision
@@ -759,7 +739,7 @@
     - Future hub repo creation.
     - External brand-assets folder migration.
     - Server log capture bug (new BACKLOG entry).
-    
+
     Lint clean (0 errors). User-verified visually: titlebar wordmark,
     About panel, accent rose lift, mascot. Project create + generate
     confirmed working after restart.
@@ -772,10 +752,10 @@
   - defaultExpanded: false
     ```md
     Completed 2026-05-19.
-    
+
     Plan file: docs/plans/2026-05-19-cubric-vision-foundation-brand-identity.md
     Parent: docs/plans/2026-05-19-cubric-vision-foundation.md
-    
+
     Outcome: planning + decisions + inventory only — no code rename was done
     in this entry. All five phases of the child plan are checked off:
     1. Naming Lock — ecosystem term "Cubric ecosystem"; hub = Cubric Studio
@@ -790,7 +770,7 @@
     + explicitly deferred items enumerated.
     5. Sign-Off Artifact — one-page authoritative decision summary; parent
     plan Phase 1 checkboxes updated.
-    
+
     Lettering lock: Russo One 400 replaces lettering.png; "Cubric" in ink-1
     + app suffix in accent color; UI font stack unchanged.
     Patreon: -> patreon.com/madponyinteractive.
@@ -799,7 +779,7 @@
     HuggingFace: cubric-studio org stays (ecosystem hub).
     Asset tree: dual-tree retired for Vision repo; flat assets/mascot/ with
     logo.png + idle.png + greet.png + happy.png.
-    
+
     Execution follow-up: "Cubric Vision foundation - app-rename" in BACKLOG
     consumes this inventory and executes the rename + asset swap + URL fixes
     across app + Website + Docs.
@@ -813,7 +793,7 @@
     ```md
     Recolored PNGs (Photoshop pass per docs/redesign/RECOLOR.md) landed in app
     media/assets/ and synced to siblings. App is canonical source.
-    
+
     Synced files (hash-verified):
     - CubricStudio_Redesign/assets/: 6 files (Lettering, comfy_robot_engine*, logo)
     + CubricStudio_Redesign/logo.png (root copy).
@@ -823,9 +803,9 @@
     comfy_robot_engine_arms -> mascot_success
     comfy_robot_engine_hi   -> mascot_happy
     comfy_robot_engine_ho   -> mascot_surprised
-    
+
     Lettering.png not referenced by Website/Docs HTML — skipped there.
-    
+
     Follow-up: Website + Docs are separate git repos; commit + push from each.
     Website push still gated on app-downloadable per project_website_push_gate.md.
     ```
@@ -887,7 +867,7 @@
     Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
     index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
     asymmetric strips, no gradient-text outside wordmark, no card-grid features.
-    
+
     2026-05-23 follow-up pass (implemented):
     - Main landing Vision-link accent pass (all Vision destinations in rose accent).
     - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
@@ -897,10 +877,6 @@
     - Hero/header spacing adjusted on Vision page.
     - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
     ```
-
-  - tags: [feature, video]
-  - priority: high
-  - defaultExpanded: false
 
 ### Port Stage redesign → Cubric Studio Website
 
@@ -916,62 +892,13 @@
     Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
     index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
     asymmetric strips, no gradient-text outside wordmark, no card-grid features.
-    
+
     2026-05-23 follow-up pass (implemented):
     - Main landing Vision-link accent pass (all Vision destinations in rose accent).
     - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
     - Vision page: local-library cards corrected to match actual app behavior.
     - Vision features expanded/reordered (10 items) and hardware requirements corrected.
     - FAQ added, expanded, redesigned, and moved to bottom section.
-    - Hero/header spacing adjusted on Vision page.
-    - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
-    ```
-
-  - priority: medium
-  - defaultExpanded: false
-    ```md
-    Plan file: docs\plans\2026-05-16-port-stage-to-website.md
-    Target repo: c:\AI\Mpi\Cubric Studio (Website)\ (separate git)
-    Register: brand · Color strategy: Drenched mauve
-    Spec: docs\redesign\PRODUCT.md, DESIGN.md, c-stage\landing.html
-    Driver: $impeccable shape (gate passed)
-    Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
-    index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
-    asymmetric strips, no gradient-text outside wordmark, no card-grid features.
-    
-    2026-05-23 follow-up pass (implemented):
-    - Main landing Vision-link accent pass (all Vision destinations in rose accent).
-    - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
-    - Vision page: local-library cards corrected to match actual app behavior.
-    - Vision features expanded/reordered (10 items) and hardware requirements corrected.
-    - FAQ added, expanded, redesigned, and moved to bottom section.
-    - Hero/header spacing adjusted on Vision page.
-    - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
-    ```
-
-    Driver: $impeccable shape (gate passed)
-    Scope: single-page marketing site rewrite — tokens.css NEW, landing.css rewrite,
-    index.html rewrite, shaderBackground.js DELETE. Sharp corners, OKLCH tokens,
-    asymmetric strips, no gradient-text outside wordmark, no card-grid features.
-    
-    2026-05-23 follow-up pass (implemented):
-    - Main landing Vision-link accent pass (all Vision destinations in rose accent).
-    - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
-    - Vision page: local-library cards corrected to match actual app behavior.
-    - Vision features expanded/reordered (10 items) and hardware requirements corrected.
-    - FAQ added, expanded, redesigned, and moved to bottom section.
-    - Hero/header spacing adjusted on Vision page.
-    - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
-    ```
-
-    - Cubric apps row: per-app mascots + app-specific accent titles/preview links.
-    - Vision page: local-library cards corrected to match actual app behavior.
-    - Vision features expanded/reordered (10 items) and hardware requirements corrected.
-    - FAQ added, expanded, redesigned, and moved to bottom section.
-    - Hero/header spacing adjusted on Vision page.
-    - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
-    ```
-
     - Hero/header spacing adjusted on Vision page.
     - Remaining follow-up moved to BACKLOG: "Website final media swap pass".
     ```

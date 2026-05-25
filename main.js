@@ -325,6 +325,30 @@ function startServer() {
   const pipeChildStream = (stream, level) => {
     if (!stream) return;
     let buffer = '';
+    let structuredContinuation = null;
+    const structuredLogPattern = /^\[(?<timestamp>[^\]]+)\]\s+\[(?<level>INFO|WARN|ERROR)\]\s+\[(?<category>[^\]]+)\]\s*(?<message>[\s\S]*)$/;
+    const writeStructuredLine = (levelName, category, message) => {
+      if (levelName === 'error') logger.error(category, message);
+      else if (levelName === 'warn') logger.warn(category, message);
+      else logger.info(category, message);
+    };
+    const writeChildLine = (line) => {
+      const match = line.match(structuredLogPattern);
+      if (match?.groups) {
+        const childLevel = match.groups.level.toLowerCase();
+        const category = match.groups.category || 'server';
+        const message = match.groups.message || '';
+        structuredContinuation = { level: childLevel, category };
+        writeStructuredLine(childLevel, category, message);
+        return;
+      }
+      if (structuredContinuation) {
+        writeStructuredLine(structuredContinuation.level, structuredContinuation.category, line);
+        return;
+      }
+      logger[level]('server', line);
+    };
+
     stream.setEncoding('utf8');
     stream.on('data', (chunk) => {
       buffer += chunk;
@@ -332,11 +356,11 @@ function startServer() {
       while ((nl = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, nl).replace(/\r$/, '');
         buffer = buffer.slice(nl + 1);
-        if (line.length) logger[level]('server', line);
+        if (line.length) writeChildLine(line);
       }
     });
     stream.on('end', () => {
-      if (buffer.length) logger[level]('server', buffer);
+      if (buffer.length) writeChildLine(buffer);
     });
   };
   pipeChildStream(serverProcess.stdout, 'info');

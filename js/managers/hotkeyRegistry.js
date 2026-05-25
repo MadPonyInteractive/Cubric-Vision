@@ -34,6 +34,20 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: true,
     },
 
+    // ── PromptBox ─────────────────────────────────────────────────────────────
+    {
+        id:               'promptBox.blur',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'promptBox',
+        scopeLabel:       'PromptBox',
+        description:      'Blur PromptBox text field (restore app hotkeys)',
+        allowWhileTyping: true,
+        when: ({ activeElement }) =>
+            activeElement instanceof HTMLTextAreaElement &&
+            !!activeElement.closest?.('.mpi-prompt-box'),
+    },
+
     // ── Focus Mode ────────────────────────────────────────────────────────────
     {
         id:               'focusMode.toggle',

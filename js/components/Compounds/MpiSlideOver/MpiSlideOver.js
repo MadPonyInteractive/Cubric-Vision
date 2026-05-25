@@ -95,8 +95,11 @@ export const MpiSlideOver = ComponentFactory.create({
         // ui:close-all-popups → close
         _unsubs.push(Events.on('ui:close-all-popups', _doClose));
 
-        // Outside click — deferred so triggering click doesn't immediately close
+        // Outside click — deferred so triggering click doesn't immediately close.
+        // Skip detached targets (rerenders that remove the clicked node before bubble)
+        // so in-panel actions that swap the list don't trigger a false outside-close.
         const _onDocClick = (e) => {
+            if (!e.target?.isConnected) return;
             if (!el.contains(e.target)) _doClose();
         };
         setTimeout(() => document.addEventListener('click', _onDocClick), 0);

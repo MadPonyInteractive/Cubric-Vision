@@ -1,0 +1,37 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "bc6a502f-5267-49a5-a6bf-b85aed57e521",
+  "title": "Clean up ComfyUI terminal output classification",
+  "status": "closed",
+  "kanban_entry": "Clean up ComfyUI terminal output classification",
+  "plan": ".agents/mpi-kanban/kanban.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/c3da0360-04d6-4989-996f-8c0249cd02c1.json",
+  "heartbeat_at": "2026-05-25T08:41:36.5730394+01:00",
+  "file_claims": [
+    ".agents/mpi-kanban/state/files/86586bf5-730c-4775-9b22-a1ebdaecfe5d.json",
+    ".agents/mpi-kanban/state/files/fdb76d13-aed8-48e6-a486-066ed32beb32.json"
+  ],
+  "allowed_actions": ["coordinate", "claim_files", "edit_owned_files", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-05-25T08:06:48.1731875+01:00",
+      "event": "task_started",
+      "note": "Attached task to IMPLEMENTING kanban entry and claimed main.js log pipe."
+    },
+    {
+      "at": "2026-05-25T08:30:22.5654991+01:00",
+      "event": "claim_added",
+      "note": "Added routes/comfy.js claim to normalize ComfyUI stderr severity before it reaches the parent process."
+    },
+    {
+      "at": "2026-05-25T08:32:36.3160976+01:00",
+      "event": "needs_verification",
+      "note": "Implemented severity/category preservation and ComfyUI output classification; syntax, lint, and focused sample smoke passed."
+    },
+    {
+      "at": "2026-05-25T08:41:36.5730394+01:00",
+      "event": "closed",
+      "note": "User verified behavior; kanban entry moved to COMPLETED."
+    }
+  ]
+}

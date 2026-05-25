@@ -44,11 +44,23 @@ function _broadcastComfyEvent(event, data) {
     }
 }
 
+function _classifyComfyOutput(defaultLevel, text) {
+    if (defaultLevel === 'info') return 'info';
+
+    if (/(^|\n)\s*(Traceback\b|Error\b|Exception\b|Fatal\b|Failed\b)/i.test(text)) {
+        return 'error';
+    }
+    if (/(^|\n)\s*Warning\b/i.test(text)) {
+        return 'warn';
+    }
+    return 'info';
+}
+
 function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
 
-    logger[level]('comfy', text);
+    logger[_classifyComfyOutput(level, text)]('comfy', text);
 
     if (/Model Initialization complete!/i.test(text)) {
         _broadcastComfyEvent('comfy:model-init-complete', { message: text });

@@ -60,11 +60,17 @@ API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canv
          `setAutoMaskModel/setAutoMaskUseBox` — reset thumbs+picks only; do NOT clear existing paint.
          `runAutoMaskDetect` — reset thumbs+picks, run detection; do NOT clear existing paint.
          `getSourceElement()` — returns the underlying `HTMLImageElement` so external tools (e.g. resize) can sample the source for thumbnail extraction. Read-only, never reassign.
+         `invertMask()` — toggle display-only invert; returns new bool. Updates viewer-scope `_isMaskInverted` cache + current canvas. Cache survives swapToPreview→swapToCanvas remount; re-applied to fresh MpiCanvas inside swapToCanvas. NOT a data mutation — underlying mask layers unchanged.
+         `setMaskInverted(bool)` / `isMaskInverted()` — explicit setter/getter for the cached invert flag. Used by MpiToolOptionsMask on mount to restore the persisted invert state.
+         `setMaskOpacity(v)` / `getMaskOpacity()` — overlay opacity 0–1. Live-driven by the opacity slider in MpiToolOptionsMask.
+NOTE:    Display-invert is honored only in mask-mode (MpiCanvas overlay paint). Prompt-mode preview (MpiMaskedImagePreview) uses CSS-luminance mask and does NOT currently honor `displayInverted`.
 
 ### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
 EMITS:   (none)
+GLOBAL EMITS (via Events.emit, consumed by projectService):
+         `settings:tool:update` `{ toolKey: 'mask', key, value }` — debounced per-control persistence to `project.toolSettings.mask`. Keys: `model` (detector path), `useBox` (bool), `opacity` (0–1), `inverted` (bool).
 LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while mounted; unbound in destroy)
-NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`.
+NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`. Mount-time restore: reads `getToolSettings(state.currentProject, 'mask', DEFAULTS)`, applies `useBox`/`model` to viewer auto APIs, applies `opacity` via `viewer.el.setMaskOpacity`, applies `inverted` via `viewer.el.setMaskInverted` (which writes the viewer-scope cache, surviving canvas remount). Invert button shows active state via `.mpi-tool-options-mask__invert--on` modifier (accent border + 180° icon rotation).
 
 ### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
 EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation } }` — full-resolution params; payload is intentionally minimal. The block always re-runs the workflow at full resolution via `startGeneration`; there is no fast-path / preview-URL reuse.

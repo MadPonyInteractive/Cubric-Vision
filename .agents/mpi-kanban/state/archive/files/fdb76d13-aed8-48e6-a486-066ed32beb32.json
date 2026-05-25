@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/file/v1",
+  "id": "fdb76d13-aed8-48e6-a486-066ed32beb32",
+  "status": "verified",
+  "claim_kind": "write",
+  "path": "routes/comfy.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/c3da0360-04d6-4989-996f-8c0249cd02c1.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/bc6a502f-5267-49a5-a6bf-b85aed57e521.json",
+  "heartbeat_at": "2026-05-25T08:41:36.5730394+01:00",
+  "allowed_actions": ["edit", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-05-25T08:30:22.5654991+01:00",
+      "event": "claimed",
+      "note": "Classify routine ComfyUI stderr/status output as info while preserving real warnings/errors."
+    },
+    {
+      "at": "2026-05-25T08:32:36.3160976+01:00",
+      "event": "needs_verification",
+      "note": "Routine ComfyUI stderr/status output is classified as info; explicit warnings/errors remain warn/error."
+    },
+    {
+      "at": "2026-05-25T08:41:36.5730394+01:00",
+      "event": "verified",
+      "note": "User verified ComfyUI log output is cleaner and more accurate."
+    }
+  ]
+}
