@@ -1,16 +1,5 @@
 ## BACKLOG
 
-### Gallery Card Modes
-
-  - tags: [feature]
-  - priority: high
-  - defaultExpanded: true
-    ```md
-    Redesign gallery card chrome around an inverse info-toggle model: info-on shows metadata until hover hides it for media/action focus; info-off shows clean media until hover reveals metadata/actions.
-    Remove card-wide radial scrims, use local backgrounds for bottom metadata and per-button contrast, keep state badges and active favorites persistent, and remove prompt excerpts from gallery cards.
-    Use fast opacity/transform ease-out motion from card corners only if it remains visually stable.
-    ```
-
 ### Vision subdomain content (vision.cubric.studio)
 
   - tags: [website, content, deferred]
@@ -168,6 +157,18 @@
 ## IMPLEMENTING
 
 ## COMPLETED
+
+### Gallery Card Modes
+
+  - tags: [feature]
+  - priority: high
+  - defaultExpanded: true
+    ```md
+    Completed 2026-05-25 by Codex.
+
+    Gallery card chrome now uses an inverse info-toggle model: info-on shows metadata until hover hides it for media/action focus; info-off shows clean media until hover reveals metadata/actions.
+    Removed card-wide radial scrims, added local backgrounds for bottom metadata and per-button contrast, kept state/favorite/selection badges persistent, removed prompt excerpts from gallery cards, and added gallery-only I hotkey for card info mode.
+    ```
 
 ### Electron JS logo question.
 

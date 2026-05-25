@@ -206,9 +206,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         function _syncCardSelectedState() {
             const order = [..._selectedIds];
-            const showBadges = order.length >= 2;
             const numberById = new Map();
-            if (showBadges) order.forEach((id, i) => numberById.set(id, i + 1));
+            order.forEach((id, i) => numberById.set(id, i + 1));
             _cardMap.forEach(({ card }, id) => {
                 card.el.setSelected(_selectedIds.has(id));
                 card.el.setSelectionBadge?.(numberById.get(id) || 0);
@@ -741,7 +740,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 topBadgeEl.replaceChildren(...badgeRows);
                 topBadgeEl.classList.toggle('mpi-group-card__top-badge--hidden', badgeRows.length === 0);
 
-                // Bottom-left sub-line: dims · time · "prompt snippet"
+                // Bottom-left sub-line: compact metadata only. Prompt text stays out of gallery cards.
                 const dims = selected?.pixelDimensions;
                 const dimStr = (dims?.w && dims?.h) ? `${dims.w} × ${dims.h}` : '';
                 let timeStr = '';
@@ -756,14 +755,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         timeStr = `${totalSec}s`;
                     }
                 }
-                let snippet = '';
-                if (selected?.prompt) {
-                    const trimmed = selected.prompt.trim();
-                    if (trimmed) {
-                        snippet = trimmed.length > 30 ? `"${trimmed.slice(0, 30)}…"` : `"${trimmed}"`;
-                    }
-                }
-                subEl.textContent = [dimStr, timeStr, snippet].filter(Boolean).join(' · ');
+                subEl.textContent = [dimStr, timeStr].filter(Boolean).join(' · ');
 
                 if (!thumb.dataset.mpiDragBound) {
                     thumb.dataset.mpiDragBound = '1';
@@ -865,10 +857,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // Apply initial selection state
             if (_selectedIds.has(group.id)) {
                 cardEl.setSelected(true);
-                if (_selectedIds.size >= 2) {
-                    const idx = [..._selectedIds].indexOf(group.id);
-                    if (idx >= 0) cardEl.setSelectionBadge(idx + 1);
-                }
+                const idx = [..._selectedIds].indexOf(group.id);
+                if (idx >= 0) cardEl.setSelectionBadge(idx + 1);
             }
 
             // ── Public methods ───────────────────────────────────────────────
@@ -1050,7 +1040,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 dims?.h || '',
                 sel?.duration || '',
                 sel?.generationMs || '',
-                sel?.prompt || '',
             ].join('|');
         }
 
@@ -1252,10 +1241,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
             active: state.galleryShowInfo, info: 'Show card info',
         });
-        infoBtn.on('click', () => { state.galleryShowInfo = !state.galleryShowInfo; });
+        const _toggleInfoMode = () => {
+            state.galleryShowInfo = !state.galleryShowInfo;
+        };
+        infoBtn.on('click', _toggleInfoMode);
+        _unsubs.push(Hotkeys.bind('gallery.info.toggle', _toggleInfoMode));
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 'galleryShowInfo') {
-                infoBtn.el.classList.toggle('mpi-btn--active', state.galleryShowInfo);
+                infoBtn.el.setActive?.(state.galleryShowInfo);
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
             }
         }));

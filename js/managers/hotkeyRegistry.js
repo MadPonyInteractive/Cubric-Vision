@@ -185,6 +185,15 @@ export const HOTKEY_REGISTRY = [
         description:      'Toggle Cue panel',
         allowWhileTyping: false,
     },
+    {
+        id:               'gallery.info.toggle',
+        key:              'i',
+        type:             KEY_TYPE.DOWN,
+        category:         'gallery',
+        scopeLabel:       'Gallery',
+        description:      'Toggle card info mode',
+        allowWhileTyping: false,
+    },
 
     // ── History ───────────────────────────────────────────────────────────────
     {

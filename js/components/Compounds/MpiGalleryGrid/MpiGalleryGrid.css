@@ -371,13 +371,39 @@
     top: 0.5rem;
     right: 0.5rem;
     opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 4;
+    transform: translate(6px, -4px);
+    transition:
+        opacity var(--t-fast) var(--ease),
+        transform var(--t-fast) var(--ease);
+    z-index: 6;
 }
 
 .mpi-group-card:hover .mpi-group-card__fav-wrap,
 .mpi-group-card--favourited .mpi-group-card__fav-wrap {
     opacity: 1;
+    transform: translate(0, 0);
+}
+
+.mpi-group-card:not(.mpi-group-card--favourited) .mpi-group-card__fav-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost,
+.mpi-group-card__reuse-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost {
+    padding-left: 12px;
+    padding-right: 12px;
+    background: color-mix(in oklch, var(--surface-bar) 72%, transparent);
+    border-color: color-mix(in oklch, var(--line-soft) 86%, transparent);
+    color: var(--ink-1);
+}
+
+.mpi-group-card:not(.mpi-group-card--favourited) .mpi-group-card__fav-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled),
+.mpi-group-card__reuse-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--surface-canvas) 80%, transparent);
+    border-color: color-mix(in oklch, var(--line) 90%, transparent);
+    color: var(--ink-1);
+}
+
+.mpi-group-card--favourited .mpi-group-card__fav-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost,
+.mpi-group-card--favourited .mpi-group-card__fav-wrap .mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled) {
+    background: transparent;
+    border-color: transparent;
 }
 
 /* ── Top-left badge (model · operation / IMPORTED / video source · 5S) ─────── */
@@ -386,7 +412,7 @@
     position: absolute;
     top: 0.6rem;
     left: 0.7rem;
-    max-width: calc(100% - 1.4rem);
+    max-width: calc(100% - 4.2rem);
     padding: 3px 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--t-2xs);
@@ -397,11 +423,16 @@
     background: color-mix(in oklch, var(--surface-bar) 58%, transparent);
     border: 1px solid color-mix(in oklch, var(--line-soft) 72%, transparent);
     pointer-events: none;
-    z-index: 3;
+    z-index: 4;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 1px;
+    opacity: 0;
+    transform: translate(-6px, -4px);
+    transition:
+        opacity var(--t-fast) var(--ease),
+        transform var(--t-fast) var(--ease);
 }
 
 .mpi-group-card__top-badge-row {
@@ -422,11 +453,6 @@
     display: none;
 }
 
-.mpi-group-card--selecting .mpi-group-card__top-badge,
-.mpi-group-card--selected .mpi-group-card__top-badge {
-    opacity: 0.4;
-}
-
 /* Selection-order badge — top-center, above thumb, below queued-preview indicator */
 .mpi-group-card__order-badge.mpi-selection-order-badge {
     position: absolute;
@@ -436,32 +462,43 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 26px;
-    padding: 3px 8px;
+    min-width: 34px;
+    min-height: 24px;
+    padding: 5px 10px;
     background: var(--accent-heat);
-    color: var(--surface-base);
-    font-size: var(--t-2xs);
+    color: var(--surface-canvas);
+    font-size: var(--t-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     border-radius: var(--r-2);
     line-height: 1;
     pointer-events: none;
     z-index: 5;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--surface-canvas) 45%, transparent);
 }
 
-/* ── Bottom-left overlay: name + sub (dims · time · "prompt") ────────────── */
+/* ── Bottom-left overlay: name + sub (dims · time) ───────────────────────── */
 
 .mpi-group-card__overlay {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 0.6rem;
+    left: 0.7rem;
+    right: auto;
+    max-width: calc(100% - 1.4rem);
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    padding: 0.6rem 0.8rem;
+    gap: 0.1rem;
+    padding: 5px 7px;
+    background: color-mix(in oklch, var(--surface-bar) 58%, transparent);
+    border: 1px solid color-mix(in oklch, var(--line-soft) 72%, transparent);
     pointer-events: none;
-    z-index: 2;
+    z-index: 4;
+    overflow: hidden;
+    opacity: 0;
+    transform: translate(-6px, 6px);
+    transition:
+        opacity var(--t-fast) var(--ease),
+        transform var(--t-fast) var(--ease);
 }
 
 .mpi-group-card__name {
@@ -486,61 +523,68 @@
     opacity: 0.92;
 }
 
-/* Hover-only scrims — fade in to give legibility behind top badges, side icon
- * column, and bottom overlay text without permanently darkening clean image.
- * `::before` = full-card radial vignette (corners + edges).
- * `::after`  = bottom linear boost for overlay text on busy images. */
+/* State-only media overlays. Card information uses local chip backgrounds, not
+ * a card-wide radial or bottom scrim. */
 .mpi-group-card__media::before,
 .mpi-group-card__media::after {
     content: '';
     position: absolute;
+    inset: 0;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 1;
-}
-
-.mpi-group-card__media::before {
-    inset: 0;
-    background: radial-gradient(ellipse 75% 70% at 50% 50%,
-        transparent 0%,
-        oklch(0 0 0 / 0.35) 55%,
-        oklch(0 0 0 / 0.75) 100%);
-}
-
-.mpi-group-card__media::after {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 45%;
-    background: linear-gradient(to top,
-        oklch(0 0 0 / 0.75) 0%,
-        oklch(0 0 0 / 0.35) 60%,
-        transparent 100%);
-}
-
-.mpi-group-card:hover .mpi-group-card__media::before,
-.mpi-group-card:hover .mpi-group-card__media::after,
-.mpi-group-card--selected .mpi-group-card__media::before,
-.mpi-group-card--selected .mpi-group-card__media::after,
-.mpi-group-card--show-info .mpi-group-card__media::before,
-.mpi-group-card--show-info .mpi-group-card__media::after {
-    opacity: 1;
+    transition: opacity var(--t-fast) var(--ease);
+    z-index: 2;
 }
 
 /* ── Reuse button ───────────────────────────────────────────────────────── */
 
 .mpi-group-card__reuse-wrap {
     position: absolute;
-    top: calc(0.5rem + 1.9rem);
+    top: calc(0.5rem + 2.15rem);
     right: 0.5rem;
     opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 4;
+    transform: translate(6px, -4px);
+    transition:
+        opacity var(--t-fast) var(--ease),
+        transform var(--t-fast) var(--ease);
+    z-index: 6;
 }
 
 .mpi-group-card:hover .mpi-group-card__reuse-wrap {
     opacity: 1;
+    transform: translate(0, 0);
+}
+
+.mpi-group-card:hover .mpi-group-card__top-badge,
+.mpi-group-card:hover .mpi-group-card__overlay,
+.mpi-group-card--show-info .mpi-group-card__top-badge,
+.mpi-group-card--show-info .mpi-group-card__overlay {
+    opacity: 1;
+    transform: translate(0, 0);
+}
+
+.mpi-group-card--show-info:hover .mpi-group-card__top-badge {
+    opacity: 0;
+    transform: translate(-6px, -4px);
+}
+
+.mpi-group-card--show-info:hover .mpi-group-card__overlay {
+    opacity: 0;
+    transform: translate(-6px, 6px);
+}
+
+.mpi-group-card--selected .mpi-group-card__top-badge,
+.mpi-group-card--selected .mpi-group-card__overlay {
+    color: var(--accent-heat);
+}
+
+.mpi-group-card--selected .mpi-group-card__fav-wrap,
+.mpi-group-card--selected .mpi-group-card__reuse-wrap,
+.mpi-gallery-grid.mpi-gallery-grid--selecting .mpi-group-card .mpi-group-card__fav-wrap,
+.mpi-gallery-grid.mpi-gallery-grid--selecting .mpi-group-card .mpi-group-card__reuse-wrap {
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
 }
 
 /* ── Missing media state ─────────────────────────────────────────────────── */
