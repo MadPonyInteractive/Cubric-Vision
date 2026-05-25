@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/file/v1",
+  "id": "3e5c86ae-eb68-4787-bca5-1a8354cb3eeb",
+  "status": "released",
+  "claim_kind": "write",
+  "path": ".claude/rules/component-events-organisms.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/a3da88a7-d400-4c2e-b6ab-1e9cad3d86e2.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/f700b0b1-8a7f-4638-a66d-891b75bb9627.json",
+  "heartbeat_at": "2026-05-25T09:59:13.9301519+01:00",
+  "allowed_actions": ["edit", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-05-25T09:50:12.6742796+01:00",
+      "event": "claimed",
+      "note": "Document mask auto-detect queue-depth listener and resize preview gate."
+    },
+    {
+      "at": "2026-05-25T09:59:13.9301519+01:00",
+      "event": "released",
+      "note": "No edits made; rule file was already dirty from another agent and was left untouched."
+    }
+  ]
+}

@@ -17,7 +17,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton }      from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup }  from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
-import { qs }             from '../../../utils/dom.js';
+import { qs, on }         from '../../../utils/dom.js';
 import { Hotkeys }        from '../../../managers/hotkeyManager.js';
 import { Events }         from '../../../events.js';
 import { state }          from '../../../state.js';
@@ -29,7 +29,8 @@ const DETECTION_MODELS_FALLBACK = [
     { label: 'Person', value: 'bbox/person_yolov8n-seg.pt' },
 ];
 
-const DEFAULTS = { model: null, useBox: true };
+const DEFAULTS = { model: null, useBox: true, opacity: 0.7, inverted: false };
+const AUTO_DETECT_QUEUE_DISABLED_REASON = 'Auto detection is unavailable while Cue has running or queued jobs';
 
 export const MpiToolOptionsMask = ComponentFactory.create({
     name: 'MpiToolOptionsMask',
@@ -38,19 +39,35 @@ export const MpiToolOptionsMask = ComponentFactory.create({
     template: () => `
         <div class="mpi-tool-options-mask">
             <div class="mpi-tool-options-mask__section-label">Auto masking</div>
-            <div class="mpi-tool-options-mask__section" id="auto-model-slot"></div>
-            <div class="mpi-tool-options-mask__section" id="auto-mode-slot"></div>
-            <div class="mpi-tool-options-mask__thumbs"  id="thumbs-slot"></div>
-            <div class="mpi-tool-options-mask__row"     id="detect-slot"></div>
+            <div class="mpi-tool-options-mask__queue-note" id="auto-queue-note" hidden>
+                Auto detection unavailable while Cue is active
+            </div>
+            <div class="mpi-tool-options-mask__auto" id="auto-detect-controls">
+                <div class="mpi-tool-options-mask__section" id="auto-model-slot"></div>
+                <div class="mpi-tool-options-mask__section" id="auto-mode-slot"></div>
+                <div class="mpi-tool-options-mask__thumbs"  id="thumbs-slot"></div>
+                <div class="mpi-tool-options-mask__row"     id="detect-slot"></div>
+            </div>
             <div class="mpi-tool-options-mask__divider"></div>
-            <div class="mpi-tool-options-mask__section" id="brush-slot"></div>
-            <div class="mpi-tool-options-mask__row"     id="shared-slot"></div>
+            <div class="mpi-tool-options-mask__brush-row" id="brush-row-slot"></div>
+            <div class="mpi-tool-options-mask__slider-row">
+                <div class="mpi-tool-options-mask__slider-label">
+                    <span>Opacity</span>
+                    <span id="opacity-val"></span>
+                </div>
+                <div class="mpi-tool-options-mask__slider">
+                    <input type="range" id="opacity-input" min="0" max="100" step="1" />
+                </div>
+            </div>
         </div>
     `,
 
     setup: (el, props) => {
         const { viewer } = props;
         const _children = [];
+        const autoControls = qs('#auto-detect-controls', el);
+        const autoQueueNote = qs('#auto-queue-note', el);
+        let _autoDetectBlocked = false;
 
         viewer.el.enterMode?.('mask');
 
@@ -97,12 +114,32 @@ export const MpiToolOptionsMask = ComponentFactory.create({
             icon: 'search', label: 'Detect', size: 'sm', variant: 'primary',
             info: 'Run detection',
         });
-        detectBtn.on('click', () => viewer.el.runAutoMaskDetect?.());
+        detectBtn.on('click', () => {
+            if (_autoDetectBlocked) return;
+            viewer.el.runAutoMaskDetect?.();
+        });
         _children.push(detectBtn);
 
-        // ── Manual section ───────────────────────────────────────────────────
+        function _syncAutoDetectionGate() {
+            const blocked = (state.generationQueueCount || 0) > 0;
+            _autoDetectBlocked = blocked;
+            autoControls.classList.toggle('mpi-tool-options-mask__auto--disabled', blocked);
+            autoControls.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+            if (blocked) autoControls.setAttribute('inert', '');
+            else autoControls.removeAttribute('inert');
+            autoQueueNote.hidden = !blocked;
+            detectBtn.el.setDisabled?.(blocked);
+            detectBtn.el.setAttribute('data-info', blocked ? AUTO_DETECT_QUEUE_DISABLED_REASON : 'Run detection');
+        }
 
-        const brushRadio = MpiRadioGroup.mount(qs('#brush-slot', el), {
+        const _offQueueGate = Events.onState('generationQueueCount', _syncAutoDetectionGate);
+        _syncAutoDetectionGate();
+
+        // ── Manual section — brush selector + invert/clear in same row ───────
+
+        const brushRowSlot = qs('#brush-row-slot', el);
+
+        const brushRadio = MpiRadioGroup.mount(document.createElement('div'), {
             options: [
                 { label: 'Paint', value: 'brush',  icon: 'brush',  info: 'Paint mask (B)' },
                 { label: 'Erase', value: 'eraser', icon: 'eraser', info: 'Erase mask (E)' },
@@ -112,7 +149,34 @@ export const MpiToolOptionsMask = ComponentFactory.create({
             iconOnly: true,
         });
         brushRadio.on('select', ({ value }) => viewer.el.setMaskBrushMode?.(value));
+        brushRowSlot.appendChild(brushRadio.el);
         _children.push(brushRadio);
+
+        const invertBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'invert', size: 'sm', variant: 'secondary', info: 'Invert mask display',
+        });
+        const clearBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'trash', size: 'sm', variant: 'secondary', info: 'Clear mask',
+        });
+        invertBtn.el.classList.add('mpi-tool-options-mask__invert');
+        brushRowSlot.appendChild(invertBtn.el);
+        brushRowSlot.appendChild(clearBtn.el);
+
+        const initialInverted = !!settings.inverted;
+        const _applyInvert = (v) => {
+            viewer.el.setMaskInverted?.(v);
+            invertBtn.el.classList.toggle('is-active', v);
+            invertBtn.el.classList.toggle('mpi-tool-options-mask__invert--on', v);
+        };
+        _applyInvert(initialInverted);
+
+        invertBtn.on('click', () => {
+            const next = !viewer.el.isMaskInverted?.();
+            _applyInvert(next);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'inverted', value: next });
+        });
+        clearBtn.on('click',  () => viewer.el.clearMask?.());
+        _children.push(invertBtn, clearBtn);
 
         const _setBrush  = () => brushRadio.el.setValue('brush');
         const _setEraser = () => brushRadio.el.setValue('eraser');
@@ -120,28 +184,31 @@ export const MpiToolOptionsMask = ComponentFactory.create({
         const _unsubB = Hotkeys.bind('mask.brush.toolbar', _setBrush);
         const _unsubE = Hotkeys.bind('mask.eraser.toolbar', _setEraser);
 
-        // ── Shared row ───────────────────────────────────────────────────────
+        // ── Opacity slider ───────────────────────────────────────────────────
 
-        const sharedSlot = qs('#shared-slot', el);
-
-        const invertBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'invert', size: 'sm', variant: 'ghost', info: 'Invert mask',
+        const opacityInput = qs('#opacity-input', el);
+        const opacityVal   = qs('#opacity-val', el);
+        const initialOpacity = typeof settings.opacity === 'number' ? settings.opacity : DEFAULTS.opacity;
+        const _applyOpacity = (pct) => {
+            const v = Math.max(0, Math.min(1, pct / 100));
+            viewer.el.setMaskOpacity?.(v);
+            opacityVal.textContent = `${Math.round(pct)}%`;
+        };
+        opacityInput.value = String(Math.round(initialOpacity * 100));
+        _applyOpacity(Number(opacityInput.value));
+        const _offOpacity = on(opacityInput, 'input', () => {
+            const pct = Number(opacityInput.value);
+            _applyOpacity(pct);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'opacity', value: pct / 100 });
         });
-        const clearBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'trash', size: 'sm', variant: 'ghost', info: 'Clear mask',
-        });
-        sharedSlot.appendChild(invertBtn.el);
-        sharedSlot.appendChild(clearBtn.el);
-
-        invertBtn.on('click', () => viewer.el.invertMask?.());
-        clearBtn.on('click',  () => viewer.el.clearMask?.());
-        _children.push(invertBtn, clearBtn);
 
         // ── Lifecycle ────────────────────────────────────────────────────────
 
         el.destroy = () => {
             _unsubB();
             _unsubE();
+            _offQueueGate();
+            _offOpacity();
             viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _children.forEach(c => c.destroy?.());

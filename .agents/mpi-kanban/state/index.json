@@ -1,19 +1,15 @@
 {
     "schema":  "mpi-kanban/state-index/v1",
-    "updated_at":  "2026-05-25T00:51:15.0815075+01:00",
+    "updated_at":  "2026-05-25T09:59:13.9301519+01:00",
     "board":  ".agents/mpi-kanban/kanban.md",
     "heartbeat_timeout_minutes":  120,
     "active_sessions":  [
-
                         ],
     "active_tasks":  [
-
                      ],
     "active_file_claims":  [
-
                            ],
     "pending_file_states":  [
-
                             ],
     "active_handoffs":  [
 

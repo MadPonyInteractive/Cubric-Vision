@@ -17,6 +17,7 @@ import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
+import { getCommand } from '../data/commandRegistry.js';
 
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
@@ -65,12 +66,13 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
         Number(injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
     );
     const model = config.model || {};
+    const command = getCommand(config.operation);
     const ratio = injectionParams.Ratio_Label || injectionParams.ratioLabel || config.ratioLabel || '';
     return {
         promptExcerpt: _promptExcerpt(config.positive),
         negativeExcerpt: _promptExcerpt(config.negative),
         modelId: model.id ?? null,
-        modelName: model.displayName || model.name || model.label || model.id || 'Unknown model',
+        modelName: model.displayName || model.name || model.label || model.id || (command?.universal ? 'Universal workflow' : 'Unknown model'),
         operation: config.operation || '',
         ratio,
         width,

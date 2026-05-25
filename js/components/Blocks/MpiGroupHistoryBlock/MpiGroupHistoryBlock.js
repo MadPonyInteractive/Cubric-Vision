@@ -27,7 +27,7 @@ import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
-import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
+import { enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -233,6 +233,30 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Video control bar — full-block-width row below the viewer ─────
         let videoControlBar = null;
+        const RESIZE_QUEUE_DISABLED_REASON = 'Resize is disabled while Cue has running or queued jobs';
+
+        function _syncQueueBlockedTools() {
+            const cueBusy = (state.generationQueueCount || 0) > 0;
+            historyTools.el.setDisabled?.({
+                resize: {
+                    disabled: cueBusy,
+                    reason: cueBusy ? RESIZE_QUEUE_DISABLED_REASON : '',
+                },
+                resizeVideo: {
+                    disabled: cueBusy,
+                    reason: cueBusy ? RESIZE_QUEUE_DISABLED_REASON : '',
+                },
+            });
+
+            const activeTool = historyTools.el.getActiveMode?.();
+            if (cueBusy && (activeTool === 'resize' || activeTool === 'resizeVideo')) {
+                historyTools.el.setMode('crop');
+            }
+        }
+
+        _unsubs.push(Events.onState('generationQueueCount', _syncQueueBlockedTools));
+        _syncQueueBlockedTools();
+
         if (isVideo) {
             const controlsSlot = qs('#controls-slot', el);
             videoControlBar = MpiVideoControlBar.mount(controlsSlot, { fps: 24, showTrim: true });
@@ -806,11 +830,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'video', source: 'history' }];
             const videoModel = { id: null, mediaType: 'video' };
             _setGenerating(true);
-            _activeExec = startGeneration(
+            enqueueGeneration(
                 { operation, model: videoModel, positive: '', negative: '', mediaItems, injectionParams },
-                { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
+                {
+                    onCancel: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                    },
+                    onError: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                    },
+                    onComplete: () => {
+                        _activeExec = null;
+                    },
+                },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
+            _activeExec = null; // Cue dispatcher manages exec lifecycle.
         }
 
         function _runImageTool(operation, injectionParams = {}) {
@@ -819,11 +856,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }];
             const imageModel = { id: null, mediaType: 'image' };
             _setGenerating(true);
-            _activeExec = startGeneration(
+            enqueueGeneration(
                 { operation, model: imageModel, positive: '', negative: '', mediaItems, injectionParams },
-                { onCancel: () => { _activeExec = null; }, onError: () => { _setGenerating(false); } },
+                {
+                    onCancel: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                    },
+                    onError: () => {
+                        _activeExec = null;
+                        _setGenerating(false);
+                    },
+                    onComplete: () => {
+                        _activeExec = null;
+                    },
+                },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
+            _activeExec = null; // Cue dispatcher manages exec lifecycle.
         }
 
         // ── Video snapshot / crop helpers ────────────────────────────────────
@@ -847,7 +897,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const opModel = { id: null, mediaType };
 
             _setBusy(true);
-            _activeExec = startGeneration(
+            enqueueGeneration(
                 {
                     operation: wantVideo ? 'resizeVideo' : 'resize',
                     model: opModel,
@@ -872,6 +922,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 },
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
+            _activeExec = null; // Cue dispatcher manages exec lifecycle.
         }
 
         async function _handleCropSnapshot() {

@@ -156,68 +156,6 @@
 
 ## IMPLEMENTING
 
-### Universal workflows should enqueue visible Cue jobs
-
-  - tags: [queue, universal-workflows, comfy, deferred-verification, agent-active, claimed]
-  - priority: high
-  - workload: Normal
-  - assignee: codex (claimed 2026-05-25)
-  - claimedFiles: js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js , js/services/generationService.js
-  - defaultExpanded: false
-  - steps:
-      - [x] Audit universal workflow execution paths.
-      - [ ] Make universal workflows appear as visible queue jobs when they use ComfyUI.
-      - [ ] Verify video upscale/interpolate and at least one additional universal workflow.
-    ```md
-    Implementation update 2026-05-25:
-    - Partial implementation: history-tool universal apply paths now enqueue through Cue instead of
-      calling `startGeneration()` directly: video upscale, video interpolate,
-      image upscale, image resize, and video resize.
-    - Queue display metadata now labels model-less universal jobs as
-      "Universal workflow" instead of "Unknown model".
-    - Focused browser smoke stubbed ComfyUI execution and confirmed a running
-      `videoUpscale` plus pending `interpolate` appear in the Cue snapshot.
-    - Manual app verification with real ComfyUI remains pending, especially
-      video upscale/interpolate plus one image universal workflow.
-    - Auto-mask detection still uses its direct `runAutoMask()` path and needs
-      a separate utility-queue pass if the project wants it represented in Cue.
-
-    Deferred verification:
-    This should be tackled after the current video generation session is free,
-    because it needs manual app verification.
-    
-    Problem:
-    Universal workflows that call the ComfyUI backend do not appear in the app's
-    queue. Confirmed examples: Video Workspace video upscale and video
-    interpolate. Mask detection likely has the same issue. Resize and mask
-    workflows still need confirmation.
-    
-    Current behavior:
-    If the app already has queued/running work, these universal workflows are
-    blocked by the queue but are not added to the visual Queue panel as jobs.
-    
-    Expected behavior:
-    - Any universal workflow that submits work to ComfyUI should have a visible
-      app queue representation if it cannot safely run in parallel.
-    - Video upscale and video interpolate should be represented in Cue/Queue
-      instead of silently waiting behind existing ComfyUI work.
-    - Resize and mask/detection workflows should be checked and brought into
-      the same behavior if they use the same backend path.
-    - Low-VRAM utility workflows such as mask detection may be evaluated for
-      future parallel execution, but default behavior for this task is visible
-      queue representation unless the codebase already has a safe parallel path.
-    
-    Verification:
-    1. Start a normal generation so the queue is busy.
-    2. Trigger Video Workspace video interpolate.
-    3. Confirm a visible queue job is added and waits/runs in order.
-    4. Repeat with Video Workspace video upscale.
-    5. Test at least one image universal workflow such as resize, if available.
-    6. Test mask detection or another mask universal workflow, if available.
-    7. Confirm no universal workflow is silently blocked without queue UI
-       feedback.
-    ```
-
 ### Video upscale should finish cleanly instead of sticking at 100%
 
   - tags: [video, universal-workflows, status, deferred-verification]
@@ -265,6 +203,46 @@
     ```
 
 ## COMPLETED
+
+### Universal workflows should enqueue visible Cue jobs
+
+  - tags: [queue, universal-workflows, comfy]
+  - priority: high
+  - workload: Normal
+  - assignee: codex (completed 2026-05-25)
+  - defaultExpanded: false
+  - steps:
+      - [x] Audit universal workflow execution paths.
+      - [x] Make universal workflows appear as visible queue jobs when they use ComfyUI.
+      - [x] Verify video upscale/interpolate and at least one additional universal workflow.
+    ```md
+    Completed 2026-05-25.
+
+    Shipped:
+    - History-tool universal apply paths now enqueue through Cue instead of
+      calling `startGeneration()` directly: video upscale, video interpolate,
+      image upscale, image resize, and video resize.
+    - Queue display metadata labels model-less universal jobs as
+      "Universal workflow" instead of "Unknown model".
+    - Follow-up UX decision implemented: Comfy-backed config UI is blocked by
+      Cue depth rather than parallelized.
+    - Resize / Resize Video rail buttons are disabled while Cue has running or
+      queued jobs, with a status-bar hover reason. If Cue starts while Resize
+      is active, the workspace switches back to Crop and destroys the resize
+      preview panel.
+    - Mask auto-detect controls are disabled while Cue has running or queued
+      jobs. The mask panel shows a compact unavailable note, manual masking
+      remains available, and `MpiCanvasViewer` guards auto-mask workflow starts
+      before any existing auto-mask exec can be canceled.
+
+    Verification:
+    - `node --check` for changed JS.
+    - `npm run lint` passed with 0 errors and 26 existing warnings.
+    - Focused browser smoke confirmed queued universal jobs appear in Cue.
+    - Focused browser smoke confirmed mask auto-detect disables/re-enables from
+      `state.generationQueueCount`.
+    - User verified the implementation in-app.
+    ```
 
 ### PromptBox text field should auto-contract as text is deleted
 

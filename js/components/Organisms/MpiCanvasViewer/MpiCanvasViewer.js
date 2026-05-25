@@ -48,6 +48,8 @@ function _resolveUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(p.replace(/\\/g, '/'))}`;
 }
 
+const AUTO_MASK_QUEUE_DISABLED_REASON = 'Auto detection is unavailable while Cue has running or queued jobs';
+
 export const MpiCanvasViewer = ComponentFactory.create({
     name: 'MpiCanvasViewer',
     css: ['js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css'],
@@ -248,6 +250,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         ];
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
+        // Display-only invert state. Held on the viewer (not just the canvas)
+        // so it survives the canvas teardown/remount that swapToPreview/swapToCanvas
+        // performs. Re-applied to the fresh MpiCanvas after every remount.
+        let _isMaskInverted = false;
         // Per-item auto-mask state.
         //   Map<itemId, { thumbs: string[], urls: string[], picks: number[] }>
         //   thumbs — detect-node preview images (visual)
@@ -256,6 +262,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // swapToCanvas + on history-entry switch.
         const _autoPickStore = new Map();
         let _lastDetectThumbUrls = [];
+
+        function _isCueBusy() {
+            return (state.generationQueueCount || 0) > 0;
+        }
+
+        function _notifyAutoMaskBlocked() {
+            StatusBar.notify(AUTO_MASK_QUEUE_DISABLED_REASON, 'warning');
+        }
 
         // Viewer retains ownership of the thumbs instance; MpiToolOptionsMask
         // re-parents the DOM node via getAutoMaskThumbsEl(). DO NOT destroy it
@@ -328,6 +342,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
         }
 
         function _runAutoMaskWorkflow(populateThumbs = false) {
+            if (_isCueBusy()) {
+                _notifyAutoMaskBlocked();
+                return;
+            }
+
             _autoMaskExec?.cancel();
 
             const imageUrl = _currentItem?.filePath
@@ -891,8 +910,19 @@ export const MpiCanvasViewer = ComponentFactory.create({
             emit('mask-clear', {});
         };
 
-        /** Invert the mask colours in-place (no exit, no emit). */
-        el.invertMask = () => canvas.flipMaskColor();
+        /** Toggle mask invert display state. Returns new state. */
+        el.invertMask        = () => {
+            _isMaskInverted = !_isMaskInverted;
+            canvas.setMaskInverted(_isMaskInverted);
+            return _isMaskInverted;
+        };
+        el.setMaskInverted   = (v) => {
+            _isMaskInverted = !!v;
+            canvas.setMaskInverted(_isMaskInverted);
+        };
+        el.isMaskInverted    = () => _isMaskInverted;
+        el.setMaskOpacity    = (v) => canvas.setMaskOpacity(v);
+        el.getMaskOpacity    = () => canvas.maskOpacity;
 
         /**
          * Commit the manual mask: exits mask mode, emits 'mask-ready' if paint
@@ -947,6 +977,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Kick off an auto-mask detect run and populate the thumbs strip. */
         el.runAutoMaskDetect = () => {
+            if (_isCueBusy()) {
+                _notifyAutoMaskBlocked();
+                return;
+            }
+
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
             _lastDetectThumbUrls = [];
@@ -1063,6 +1098,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             // Rehydrate auto-pick bitmaps from cached ComfyUI URLs.
             await _restoreAutoPickMasks();
+
+            // Re-apply display-only invert flag onto the fresh MpiCanvas.
+            _cv.el.setMaskInverted?.(_isMaskInverted);
 
             _previewMaskCache = null;
         };

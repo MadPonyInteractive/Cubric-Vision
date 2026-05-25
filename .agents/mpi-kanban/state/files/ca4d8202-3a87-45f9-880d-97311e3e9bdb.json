@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/file/v1",
+  "id": "ca4d8202-3a87-45f9-880d-97311e3e9bdb",
+  "status": "verified",
+  "claim_kind": "write",
+  "path": "js/services/generationService.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/a3da88a7-d400-4c2e-b6ab-1e9cad3d86e2.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/f700b0b1-8a7f-4638-a66d-891b75bb9627.json",
+  "heartbeat_at": "2026-05-25T09:59:13.9301519+01:00",
+  "allowed_actions": ["edit", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-05-25T08:47:17.4657842+01:00",
+      "event": "claimed",
+      "note": "Improve Cue snapshot display metadata for model-less universal workflows if needed."
+    },
+    {
+      "at": "2026-05-25T08:56:10.0000000+01:00",
+      "event": "needs_verification",
+      "note": "Cue snapshot display now labels model-less universal jobs as Universal workflow."
+    },
+    {
+      "at": "2026-05-25T09:59:13.9301519+01:00",
+      "event": "verified",
+      "note": "User verified universal workflow queue behavior in-app."
+    }
+  ]
+}

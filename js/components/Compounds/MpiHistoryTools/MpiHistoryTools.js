@@ -149,6 +149,7 @@ export const MpiHistoryTools = ComponentFactory.create({
 
             const wrap = document.createElement('div');
             wrap.className = 'mpi-history-tools__btn';
+            wrap.setAttribute('data-info', tooltip);
             slot.appendChild(wrap);
 
             const btn = MpiButton.mount(wrap, {
