@@ -216,28 +216,66 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
+        // GAP also used by justified layout below; declared up here so the
+        // slider's _computeCardWidth can use it before the layout section runs.
+        const GAP = 8;
+
+        // Clamp any persisted level above the new max (was 5 → now 4).
+        if (state.gallerySizeLevel > 4) state.gallerySizeLevel = 4;
 
         const slider = MpiProgressBar.mount(sliderWrap, {
-            min: 1, max: 5, step: 1, value: state.gallerySizeLevel,
+            min: 1, max: 4, step: 1, value: state.gallerySizeLevel,
             interactive: true,
             wheel: true,
             handle: true,
             info: 'Size: {value}',
         });
 
-        const SIZE_MAP = { 1: 160, 2: 224, 3: 288, 4: 384, 5: 512 };
-        let _cardWidth = SIZE_MAP[state.gallerySizeLevel] || 288;
+        // Slider level → target items-per-row, converted to the targetRowHeight
+        // seed the justified packer wants.
+        //
+        // Why this shape (after two failed attempts):
+        //   1. Fixed pixel targets (old SIZE_MAP) collided because the packer
+        //      rescales each row to fill the container — two adjacent seeds
+        //      often packed the same N items/row and ended visually identical.
+        //   2. container/cols (col-count seed) underfeeds the packer because
+        //      `itemWidth = targetRowHeight * aspectRatio` — for 16:9 media
+        //      a "width" seed becomes a too-large height seed, forcing 1/row.
+        //   3. Distinct visual sizes only happen when adjacent steps land in
+        //      DIFFERENT items-per-row bands. So solve directly for that:
+        //      `target = (containerWidth - (N-1)*gap) / (N * aspectRef)`.
+        //
+        // Aspect reference 1.6 — a touch below 16:9 — leaves headroom so portrait
+        // and square cards don't over-pack at low levels, while still placing
+        // 16:9 video clusters at the requested N per row at typical widths.
+        const ITEMS_PER_ROW_TARGET = { 1: 6, 2: 4, 3: 3, 4: 2 };
+        const ASPECT_REF = 1.6;
+
+        function _computeCardWidth(level) {
+            const cols = ITEMS_PER_ROW_TARGET[level] || ITEMS_PER_ROW_TARGET[3];
+            const gridStyle = getComputedStyle(grid);
+            const paddingX = (parseFloat(gridStyle.paddingLeft) || 0) + (parseFloat(gridStyle.paddingRight) || 0);
+            const containerWidth = Math.max(1, grid.clientWidth - paddingX);
+            const usable = containerWidth - GAP * (cols - 1);
+            // Slight pull (0.92) keeps the seed inside the cols band — at exactly
+            // the boundary the packer can flip up or down due to per-card aspect
+            // variance. 8% inset gives stable packing without changing scale much.
+            const targetRowHeight = (usable / (cols * ASPECT_REF)) * 0.92;
+            return Math.max(80, Math.floor(targetRowHeight));
+        }
+
+        let _cardWidth = _computeCardWidth(state.gallerySizeLevel);
 
         slider.on('input', ({ value }) => {
             state.gallerySizeLevel = value;
-            _cardWidth = SIZE_MAP[value] || 288;
+            _cardWidth = _computeCardWidth(value);
             _rerenderJustified('size');
         });
 
         const incrementSlider = () => {
             const input = qs('.mpi-progress__input', sliderWrap);
             const currentValue = parseFloat(input.value);
-            const nextValue = Math.min(5, currentValue + 1);
+            const nextValue = Math.min(4, currentValue + 1);
             input.value = nextValue;
             input.dispatchEvent(new Event('input'));
         };
@@ -944,8 +982,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // cycle, but justified layout retained — slider/+- hotkeys are a core UX
         // feature users rely on. Strip layout makes card size non-interactive.
         // Gap bumped 2px→8px for visual breathing room per Stage intent.
-
-        const GAP = 8;
+        // GAP declared above (slider section) — used here too.
 
         function _ratioCacheKey(group) {
             const sel = group?.history?.[group.selectedIndex];
@@ -1192,6 +1229,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const width = Math.round(entries[0]?.contentRect?.width || grid.clientWidth || 0);
             if (width === _lastObservedGridWidth) return;
             _lastObservedGridWidth = width;
+            _cardWidth = _computeCardWidth(state.gallerySizeLevel);
             _rerenderJustified('resize');
         });
         resizeObserver.observe(grid);

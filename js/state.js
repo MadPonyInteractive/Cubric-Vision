@@ -47,7 +47,7 @@ const _state = {
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'previews'|'favorites'
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
-    gallerySizeLevel: 3,             // 1–5; survives gallery navigation within session
+    gallerySizeLevel: 3,             // 1–4; survives gallery navigation within session
 
     // ── Project stats (asset count + bytes on disk) ────────────────────────────
     projectStats: { count: 0, bytes: 0 },   // Whole-project totals; refreshed on media add/delete
