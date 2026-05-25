@@ -24,41 +24,86 @@
 .mpi-tool-options-prompt__label {
     font-size: var(--t-2xs);
     color: var(--ink-2);
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
     text-transform: uppercase;
 }
 
 .mpi-tool-options-prompt__thumb {
     position: relative;
     width: 100%;
-    min-height: 5rem;
-    max-height: 10rem;
-    background: var(--surface-3);
-    border: 1px dashed var(--line);
+    height: 7.5rem;
+    min-height: 6.5rem;
+    max-height: 10.5rem;
+    border: 2px dashed var(--line);
     border-radius: 0;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
-}
-
-.mpi-tool-options-prompt__thumb--filled {
-    border-style: solid;
-    border-color: var(--accent-heat);
-    background: var(--surface-2);
+    transition:
+        border-color var(--t-fast) var(--ease),
+        background var(--t-fast) var(--ease),
+        color var(--t-fast) var(--ease);
 }
 
 .mpi-tool-options-prompt__slot--drag-over .mpi-tool-options-prompt__thumb {
     border-color: var(--accent-heat);
-    background: var(--surface-2);
+    background: color-mix(in oklch, var(--accent-heat) 12%, var(--surface-2));
+    color: var(--ink-1);
+}
+
+.mpi-tool-options-prompt__empty {
+    display: grid;
+    justify-items: center;
+    gap: var(--s-1);
+    padding: var(--s-2);
+    color: var(--ink-3);
+    text-align: center;
+    pointer-events: none;
+}
+
+.mpi-tool-options-prompt__empty-icon {
+    color: var(--accent-heat);
+}
+
+.mpi-tool-options-prompt__empty-title,
+.mpi-tool-options-prompt__empty-hint {
+    max-width: 100%;
+    line-height: 1.2;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.mpi-tool-options-prompt__empty-title {
+    color: var(--ink-1);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.mpi-tool-options-prompt__empty-hint {
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+}
+
+.mpi-tool-options-prompt__thumb-frame {
+    position: relative;
+    width: var(--frame-thumb-w, 100%);
+    height: var(--frame-thumb-h, 100%);
+    max-width: 100%;
+    max-height: 100%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: color-mix(in oklch, var(--surface-3) 88%, var(--surface-1));
+    border: 0;
 }
 
 .mpi-tool-options-prompt__thumb-img {
-    max-width: 100%;
-    max-height: 10rem;
     width: auto;
     height: auto;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
     display: block;
     pointer-events: none;
@@ -66,14 +111,14 @@
 
 .mpi-tool-options-prompt__thumb-clear {
     position: absolute;
-    top: 0.25rem;
-    right: 0.25rem;
+    top: 0;
+    right: 0;
     width: 1.25rem;
     height: 1.25rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--surface-1);
+    background: color-mix(in oklch, var(--surface-bar) 72%, var(--surface-1));
     color: var(--ink-1);
     border: 1px solid var(--line);
     border-radius: 0;
@@ -92,7 +137,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: var(--surface-1);
     color: var(--ink-2);
     border: 1px solid var(--line);
     border-radius: 0;

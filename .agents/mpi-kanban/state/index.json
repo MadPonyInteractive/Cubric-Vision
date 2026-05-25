@@ -1,6 +1,6 @@
 {
     "schema":  "mpi-kanban/state-index/v1",
-    "updated_at":  "2026-05-25T09:59:13.9301519+01:00",
+    "updated_at":  "2026-05-25T12:13:56.0617984+01:00",
     "board":  ".agents/mpi-kanban/kanban.md",
     "heartbeat_timeout_minutes":  120,
     "active_sessions":  [

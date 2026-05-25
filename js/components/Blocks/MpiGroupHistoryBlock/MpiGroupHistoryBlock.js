@@ -606,18 +606,28 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _isFileDrag = (e) =>
             e.dataTransfer?.types?.includes('Files') &&
             !e.dataTransfer.types.includes('application/mpi-media');
+        const _isVideoPromptToolActive = () =>
+            isVideo && historyTools?.el?.getActiveMode?.() === 'prompt';
 
         const _onHistDragEnter = (e) => {
+            if (_isVideoPromptToolActive()) return;
             if (!_isFileDrag(e) || !state.currentProject) return;
             _histDragCounter++;
             _dropOverlay.el.show();
         };
         const _onHistDragLeave = (e) => {
+            if (_isVideoPromptToolActive()) return;
             if (!_isFileDrag(e)) return;
             if (_histDragCounter > 0 && --_histDragCounter === 0) _dropOverlay.el.hide();
         };
-        const _onHistDrop = () => { _histDragCounter = 0; _dropOverlay.el.hide(); };
-        const _onHistDragOver = (e) => { if (_isFileDrag(e)) e.preventDefault(); };
+        const _onHistDrop = () => {
+            _histDragCounter = 0;
+            _dropOverlay.el.hide();
+        };
+        const _onHistDragOver = (e) => {
+            if (_isVideoPromptToolActive()) return;
+            if (_isFileDrag(e)) e.preventDefault();
+        };
 
         window.addEventListener('dragenter', _onHistDragEnter);
         window.addEventListener('dragleave', _onHistDragLeave);

@@ -32,6 +32,8 @@ const { extractVideoThumb } = require('../services/ffmpegThumb');
 
 const projectJsonQueues = new Map();
 const itemMetaQueues = new Map();
+const RECENT_THUMBNAIL_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'mp4', 'webm']);
+const RECENT_THUMBNAIL_EXCLUDED_OPERATIONS = new Set(['frame-drop', 'frame-capture']);
 
 async function writeJsonAtomic(filePath, data) {
     const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
@@ -64,6 +66,72 @@ function updateProjectJson(jsonPath, updater) {
 
     projectJsonQueues.set(key, next);
     return next;
+}
+
+function pathFromProjectFileUrl(value) {
+    const raw = String(value || '');
+    if (!raw) return null;
+    const match = raw.match(/[?&]path=([^&]+)/);
+    if (match) return decodeURIComponent(match[1]);
+    return path.isAbsolute(raw) ? raw : null;
+}
+
+function mediaTypeFromExt(ext) {
+    return ['mp4', 'webm'].includes(ext) ? 'video' : 'image';
+}
+
+async function findRecentProjectThumbnail(mediaDir) {
+    if (!(await fs.pathExists(mediaDir))) {
+        return { recentThumbnail: null, recentThumbnailType: null };
+    }
+
+    const candidates = [];
+    const metaDir = path.join(mediaDir, '.meta');
+    let sawMetaSidecar = false;
+    if (await fs.pathExists(metaDir)) {
+        const metaFiles = await fs.readdir(metaDir);
+        for (const metaFile of metaFiles) {
+            if (!metaFile.endsWith('.json')) continue;
+            sawMetaSidecar = true;
+            try {
+                const meta = await fs.readJson(path.join(metaDir, metaFile));
+                if (RECENT_THUMBNAIL_EXCLUDED_OPERATIONS.has(String(meta.operation || ''))) continue;
+                const absPath = pathFromProjectFileUrl(meta.filePath);
+                if (!absPath || !(await fs.pathExists(absPath))) continue;
+                const ext = path.extname(absPath).toLowerCase().slice(1);
+                if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) continue;
+                const stats = await fs.stat(absPath);
+                candidates.push({
+                    path: absPath,
+                    ext,
+                    timestamp: Date.parse(meta.createdAt || '') || stats.mtimeMs,
+                });
+            } catch (_) { /* skip malformed sidecars */ }
+        }
+    }
+
+    if (!candidates.length && !sawMetaSidecar) {
+        const mediaFiles = await fs.readdir(mediaDir);
+        const filesToScan = mediaFiles.slice(0, 100);
+        for (const f of filesToScan) {
+            const ext = path.extname(f).toLowerCase().slice(1);
+            if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) continue;
+            const absPath = path.join(mediaDir, f);
+            const stats = await fs.stat(absPath);
+            candidates.push({ path: absPath, ext, timestamp: stats.mtimeMs });
+        }
+    }
+
+    if (!candidates.length) {
+        return { recentThumbnail: null, recentThumbnailType: null };
+    }
+
+    candidates.sort((a, b) => b.timestamp - a.timestamp);
+    const top = candidates[0];
+    return {
+        recentThumbnail: projectFileUrl(top.path),
+        recentThumbnailType: mediaTypeFromExt(top.ext),
+    };
 }
 
 /**
@@ -373,24 +441,7 @@ router.post('/list-projects', async (req, res) => {
                         let recentThumbnailType = null;
                         try {
                             const mediaDir = path.join(root, entry, 'Media');
-                            if (await fs.pathExists(mediaDir)) {
-                                const mediaFiles = await fs.readdir(mediaDir);
-                                const candidates = [];
-                                const filesToScan = mediaFiles.slice(0, 100);
-                                for (const f of filesToScan) {
-                                    const ext = path.extname(f).toLowerCase().slice(1);
-                                    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'mp4', 'webm'].includes(ext)) {
-                                        const stats = await fs.stat(path.join(mediaDir, f));
-                                        candidates.push({ name: f, mtime: stats.mtime, ext });
-                                    }
-                                }
-                                if (candidates.length) {
-                                    candidates.sort((a, b) => b.mtime - a.mtime);
-                                    const top = candidates[0];
-                                    recentThumbnail = `/project-file?path=${encodeURIComponent(path.join(mediaDir, top.name))}`;
-                                    recentThumbnailType = ['mp4', 'webm'].includes(top.ext) ? 'video' : 'image';
-                                }
-                            }
+                            ({ recentThumbnail, recentThumbnailType } = await findRecentProjectThumbnail(mediaDir));
                         } catch (e) { /* silent fail for media scan */ }
                         projects.push({ ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault });
                     } catch (_) { /* skip corrupt entries */ }

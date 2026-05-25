@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "status": "closed",
+  "claim_kind": "write",
+  "path": "routes/projects.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/28619159-40e1-4734-9a9a-a5b69862abb2.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/bf1dfaeb-1241-485c-9223-ac7efd01e980.json",
+  "heartbeat_at": "2026-05-25T12:13:56.0617984+01:00",
+  "recent_events": [
+    {
+      "at": "2026-05-25T11:58:18.2000829+01:00",
+      "event": "claimed",
+      "note": "Claimed to exclude start/end frame staging uploads from landing recent thumbnails."
+    },
+    {
+      "at": "2026-05-25T12:00:29.0464733+01:00",
+      "event": "needs_verification",
+      "note": "Backend recent-thumbnail sidecar filter implemented; awaiting visual verification on landing."
+    }
+  ]
+}

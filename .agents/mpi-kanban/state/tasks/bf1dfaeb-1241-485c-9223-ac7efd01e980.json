@@ -1,0 +1,52 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "bf1dfaeb-1241-485c-9223-ac7efd01e980",
+  "title": "StartFrame and EndFrame placeholders",
+  "kanban_entry": "StartFrame and EndFrame placeholders",
+  "plan": null,
+  "owner_session": ".agents/mpi-kanban/state/sessions/28619159-40e1-4734-9a9a-a5b69862abb2.json",
+  "status": "closed",
+  "heartbeat_at": "2026-05-25T12:13:56.0617984+01:00",
+  "allowed_actions": [
+    "read",
+    "implement scoped code changes",
+    "run focused verification"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-25T11:29:52.3383930+01:00",
+      "event": "task_started",
+      "note": "Attached task to IMPLEMENTING kanban entry without a plan file."
+    },
+    {
+      "at": "2026-05-25T11:33:53.3825302+01:00",
+      "event": "implementation_ready_for_visual_verification",
+      "note": "Polished start/end frame drop placeholders and fitted filled previews."
+    },
+    {
+      "at": "2026-05-25T11:43:55.0859592+01:00",
+      "event": "visual_feedback_addressed",
+      "note": "Suppressed full-window drop overlay in video prompt mode; removed striped placeholder background; moved clear button inside image frame."
+    },
+    {
+      "at": "2026-05-25T11:51:08.6490585+01:00",
+      "event": "inspector_css_feedback_applied",
+      "note": "Matched inspector result: thumb border is 2px dashed, base thumb background removed, filled-state border/background overrides removed."
+    },
+    {
+      "at": "2026-05-25T11:54:16.1503759+01:00",
+      "event": "portrait_crop_fix_applied",
+      "note": "Changed frame image sizing from forced 100%x100% to intrinsic auto dimensions capped by max width/height."
+    },
+    {
+      "at": "2026-05-25T12:00:29.0464733+01:00",
+      "event": "landing_recent_thumbnail_filter_applied",
+      "note": "List-projects recent thumbnail now ignores sidecars with frame-drop/frame-capture operations."
+    },
+    {
+      "at": "2026-05-25T12:13:56.0617984+01:00",
+      "event": "task_closed",
+      "note": "Automated checks passed and kanban entry moved to COMPLETED."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "status": "closed",
+  "agent": "codex",
+  "role": "implementer",
+  "name": "Codex start/end frame placeholders",
+  "task": ".agents/mpi-kanban/state/tasks/bf1dfaeb-1241-485c-9223-ac7efd01e980.json",
+  "heartbeat_at": "2026-05-25T12:13:56.0617984+01:00",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-05-25T11:29:52.3383930+01:00",
+      "event": "session_started",
+      "note": "Started implementation session for StartFrame and EndFrame placeholders."
+    },
+    {
+      "at": "2026-05-25T12:13:56.0617984+01:00",
+      "event": "closed",
+      "note": "Task completed, verified, documented, and moved to COMPLETED."
+    }
+  ]
+}

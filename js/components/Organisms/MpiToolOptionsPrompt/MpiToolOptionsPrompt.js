@@ -25,7 +25,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../events.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
-import { qs, on } from '../../../utils/dom.js';
+import { ce, qs, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
 
 export const MpiToolOptionsPrompt = ComponentFactory.create({
@@ -65,26 +65,68 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
         const swapBtn    = qs('#swap-btn',    el);
         const actionsEl  = qs('#actions-slot', el);
 
+        function _fitThumbFrame(frameEl, width, height) {
+            const w = Number(width) || 0;
+            const h = Number(height) || 0;
+            if (w <= 0 || h <= 0) return;
+
+            frameEl.style.aspectRatio = `${w} / ${h}`;
+            if (w >= h) {
+                frameEl.style.setProperty('--frame-thumb-w', '100%');
+                frameEl.style.setProperty('--frame-thumb-h', `${Math.max(1, Math.min(100, (h / w) * 100))}%`);
+            } else {
+                frameEl.style.setProperty('--frame-thumb-w', `${Math.max(1, Math.min(100, (w / h) * 100))}%`);
+                frameEl.style.setProperty('--frame-thumb-h', '100%');
+            }
+        }
+
         // ── Render a thumb slot from a role-mapped item (or empty) ───────────
         function _renderThumb(slotEl, item) {
-            slotEl.innerHTML = '';
+            slotEl.replaceChildren();
             slotEl.classList.toggle('mpi-tool-options-prompt__thumb--filled', !!item);
-            if (!item) return;
+            if (!item) {
+                slotEl.appendChild(ce('div', { className: 'mpi-tool-options-prompt__empty' }, [
+                    ce('span', {
+                        className: 'mpi-tool-options-prompt__empty-icon',
+                        innerHTML: renderIcon('image', 'md'),
+                    }),
+                    ce('span', {
+                        className: 'mpi-tool-options-prompt__empty-title',
+                        textContent: 'Drop image',
+                    }),
+                    ce('span', {
+                        className: 'mpi-tool-options-prompt__empty-hint',
+                        textContent: 'or set from video',
+                    }),
+                ]));
+                return;
+            }
             const role = slotEl.id === 'thumb-start' ? 'startFrame' : 'endFrame';
-            slotEl.innerHTML = `
-                <img class="mpi-tool-options-prompt__thumb-img" src="${item.url}" alt="" draggable="false">
-                <button type="button" class="mpi-tool-options-prompt__thumb-clear" title="Remove">
-                    ${renderIcon('close', 'xs')}
-                </button>
-            `;
-            const clearBtn = qs('.mpi-tool-options-prompt__thumb-clear', slotEl);
+            const frame = ce('span', { className: 'mpi-tool-options-prompt__thumb-frame' });
+            const img = ce('img', {
+                className: 'mpi-tool-options-prompt__thumb-img',
+                src: item.url,
+                alt: '',
+                draggable: false,
+            });
+            const dims = item.pixelDimensions || {};
+            _fitThumbFrame(frame, dims.w, dims.h);
+            const offLoad = on(img, 'load', () => _fitThumbFrame(frame, img.naturalWidth, img.naturalHeight));
+            if (img.complete && img.naturalWidth > 0) _fitThumbFrame(frame, img.naturalWidth, img.naturalHeight);
+            _unsubs.push(offLoad);
+            const clearBtn = ce('button', {
+                type: 'button',
+                className: 'mpi-tool-options-prompt__thumb-clear',
+                title: 'Remove',
+                innerHTML: renderIcon('close', 'xs'),
+            });
+            frame.appendChild(img);
+            frame.appendChild(clearBtn);
+            slotEl.appendChild(frame);
             const off = on(clearBtn, 'click', (e) => {
                 e.stopPropagation();
                 promptBox?.el?.removeMediaByRole?.(role);
             });
-            // Track per-render listener; replaced on next _renderThumb call
-            // because innerHTML wipe drops the node anyway. Pushing into
-            // _unsubs is safe (off() becomes a no-op on dropped node).
             _unsubs.push(off);
         }
 
@@ -105,8 +147,14 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
 
         // ── Drop handlers per slot ───────────────────────────────────────────
         function _attachDrop(slotEl, role) {
+            const offEnter = on(slotEl, 'dragenter', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                slotEl.classList.add('mpi-tool-options-prompt__slot--drag-over');
+            });
             const offOver = on(slotEl, 'dragover', (e) => {
                 e.preventDefault();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
                 slotEl.classList.add('mpi-tool-options-prompt__slot--drag-over');
             });
             const offLeave = on(slotEl, 'dragleave', () => {
@@ -131,9 +179,14 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
                     operation: 'frame-drop',
                 });
                 if (!uploaded) return;
-                promptBox?.el?.injectMedia?.({ url: uploaded.filePath, mediaType: 'image', role });
+                promptBox?.el?.injectMedia?.({
+                    url: uploaded.filePath,
+                    mediaType: 'image',
+                    role,
+                    pixelDimensions: uploaded.pixelDimensions,
+                });
             });
-            _unsubs.push(offOver, offLeave, offDrop);
+            _unsubs.push(offEnter, offOver, offLeave, offDrop);
         }
         _attachDrop(thumbStart, 'startFrame');
         _attachDrop(thumbEnd,   'endFrame');
