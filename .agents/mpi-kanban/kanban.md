@@ -1,5 +1,16 @@
 ## BACKLOG
 
+### Gallery Card Modes
+
+  - tags: [feature]
+  - priority: high
+  - defaultExpanded: true
+    ```md
+    Redesign gallery card chrome around an inverse info-toggle model: info-on shows metadata until hover hides it for media/action focus; info-off shows clean media until hover reveals metadata/actions.
+    Remove card-wide radial scrims, use local backgrounds for bottom metadata and per-button contrast, keep state badges and active favorites persistent, and remove prompt excerpts from gallery cards.
+    Use fast opacity/transform ease-out motion from card corners only if it remains visually stable.
+    ```
+
 ### Vision subdomain content (vision.cubric.studio)
 
   - tags: [website, content, deferred]
@@ -165,14 +176,38 @@
     It's important that the logo is always displayed because later on, when we have other apps, users can reference the task bar to see what app they're working on, and as well for a visual aspect of it. Is there any way we can treat the bat file the same way that exe files work when it comes to logo display and saving it to the taskbar as a quick item, or are we constrained? Remember, this app is going to be distributed as a portable version only, ok?
     ```
 
+## COMPLETED
+
 ### History Workspace Load Time
 
   - defaultExpanded: false
     ```md
-    When opening the history workspace, particularly on images, if the selected entry is a large image (4K or 8K), we are presented with an empty page for a few seconds. This looks bad. It would be good to at least have a spinner or something while it's loading.
-    ```
+    Completed 2026-05-25 by claude-opus-4.7. User-verified.
 
-## COMPLETED
+    Root cause: opening a 4K/8K image group required Image() decode +
+    canvas buffer allocation + resetView. Centre slot stayed blank for
+    seconds. Spinner element already mounted on MpiCanvasViewer but was
+    only toggled by `setGenerating` (generation flow). Same stall on
+    history-entry switches and tool swaps (prompt ↔ crop/mask
+    canvas remount).
+
+    Fix: split spinner control into two independent flags OR'd onto the
+    same `.mpi-canvas-viewer__spinner--visible` class:
+      • `_isGenerating` — driven by existing `el.setGenerating`
+      • `_isLoading`    — new, driven by internal `_setLoadingSpinner`
+
+    Wrapped `loadEntry`, `swapToPreview`, `swapToCanvas` with
+    `_setLoadingSpinner(true/false)` via try/finally. Initial load,
+    history-entry click, and tool swap now show spinner during decode/
+    remount. Subsequent swaps to already-decoded entries paint instantly
+    (no spinner needed — browser caches the image).
+
+    Video viewer skipped — no spinner mount exists; revisit if 4K video
+    stall is confirmed.
+
+    Files: js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js
+    Memory: project_canvas_viewer_spinner_flags.md
+    ```
 
 ### Help page UI improvement
 

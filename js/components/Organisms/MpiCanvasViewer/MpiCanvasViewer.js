@@ -190,8 +190,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
             set(_, k, v) { _cv.el[k] = v; return true; },
         });
 
+        let _isGenerating = false;
+        let _isLoading = false;
+        function _syncSpinner() {
+            spinnerWrap.classList.toggle('mpi-canvas-viewer__spinner--visible', _isGenerating || _isLoading);
+        }
         function _setGeneratingSpinner(on) {
-            spinnerWrap.classList.toggle('mpi-canvas-viewer__spinner--visible', on);
+            _isGenerating = !!on;
+            _syncSpinner();
+        }
+        function _setLoadingSpinner(on) {
+            _isLoading = !!on;
+            _syncSpinner();
         }
 
         let _comparingActive = false;
@@ -719,49 +729,45 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _currentIdx = idx;
             _currentItem = item;
             _exitMode();
+            _setLoadingSpinner(true);
 
-            // Preview mode: route through MpiMaskedImagePreview. Build composite
-            // from TEMP layers if any, else clear preview mask.
-            if (_previewInst) {
-                if (item?.filePath) {
-                    try {
-                        await _previewInst.el.loadImage(_resolveUrl(item.filePath));
-                    } catch (err) {
-                        console.warn('[MpiCanvasViewer] Failed to load image into preview:', err);
+            try {
+                if (_previewInst) {
+                    if (item?.filePath) {
+                        try {
+                            await _previewInst.el.loadImage(_resolveUrl(item.filePath));
+                        } catch (err) {
+                            console.warn('[MpiCanvasViewer] Failed to load image into preview:', err);
+                        }
                     }
+                    const composite = await _buildCompositeFromTemp(item);
+                    if (composite) {
+                        _previewInst.el.setMaskDataURL(composite);
+                        _previewMaskCache = composite;
+                        _hasMask = true;
+                    } else {
+                        _previewInst.el.clearMask();
+                        _previewMaskCache = null;
+                        _hasMask = false;
+                    }
+                    await _hydrateThumbsForItem(item);
+                    return;
                 }
-                const composite = await _buildCompositeFromTemp(item);
-                if (composite) {
-                    _previewInst.el.setMaskDataURL(composite);
-                    _previewMaskCache = composite;
-                    _hasMask = true;
-                } else {
-                    _previewInst.el.clearMask();
-                    _previewMaskCache = null;
-                    _hasMask = false;
-                }
-                // Keep thumbs DOM in sync with new item's stored auto-pick state
-                // so swapping back to the canvas restores the right selection.
+
+                await _showEntry(item);
+                await _restoreLayers(item);
+
                 await _hydrateThumbsForItem(item);
+                await _restoreAutoPickMasks();
+
+                if (_modeToRestore && _modeToRestore !== 'none') {
+                    _enterMode(_modeToRestore);
+                }
+            } finally {
                 _loadingEntry = false;
+                _setLoadingSpinner(false);
                 emit('entry-loaded', { idx, hasMask: _hasMask });
-                return;
             }
-
-            await _showEntry(item);
-            await _restoreLayers(item);
-
-            // Rehydrate per-item auto-pick state: thumbs DOM + viewer Set,
-            // then paint cached mask bitmaps onto the live canvas.
-            await _hydrateThumbsForItem(item);
-            await _restoreAutoPickMasks();
-
-            if (_modeToRestore && _modeToRestore !== 'none') {
-                _enterMode(_modeToRestore);
-            }
-            _loadingEntry = false;
-
-            emit('entry-loaded', { idx, hasMask: _hasMask });
         };
 
         el.loadCompare = async (itemA, itemB) => {
@@ -1023,35 +1029,35 @@ export const MpiCanvasViewer = ComponentFactory.create({
          */
         el.swapToPreview = async () => {
             if (_previewInst) return;
+            _setLoadingSpinner(true);
+            try {
+                let maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
+                const imageUrl    = _currentItem ? _resolveUrl(_currentItem.filePath) : null;
 
-            let maskDataUrl = _hasMask ? _cv.el.getMaskDataURL('black', 'white') : null;
-            const imageUrl    = _currentItem ? _resolveUrl(_currentItem.filePath) : null;
-
-            // Persist manual + subtract layers to TEMP before tearing the canvas down.
-            // Required so swapToCanvas can restore exactly what the user painted.
-            if (_currentItem) {
-                try { await _persistLayers(_currentItem); }
-                catch (err) { console.warn('[MpiCanvasViewer] persist on swapToPreview failed:', err); }
-                await _persistCurrentAutoPicks();
-                if (!maskDataUrl) {
-                    maskDataUrl = await _buildCompositeFromTemp(_currentItem);
+                if (_currentItem) {
+                    try { await _persistLayers(_currentItem); }
+                    catch (err) { console.warn('[MpiCanvasViewer] persist on swapToPreview failed:', err); }
+                    await _persistCurrentAutoPicks();
+                    if (!maskDataUrl) {
+                        maskDataUrl = await _buildCompositeFromTemp(_currentItem);
+                    }
                 }
+
+                _previewMaskCache = maskDataUrl;
+
+                _cv.inst.el.destroy?.();
+                const wrap = qs('#canvas-wrap', el);
+                wrap.innerHTML = '';
+                wrap.style.display = 'none';
+                _previewWrap.style.display = '';
+
+                _previewInst = MpiMaskedImagePreview.mount(_previewWrap);
+
+                if (imageUrl) await _previewInst.el.loadImage(imageUrl);
+                if (maskDataUrl) _previewInst.el.setMaskDataURL(maskDataUrl);
+            } finally {
+                _setLoadingSpinner(false);
             }
-
-            _previewMaskCache = maskDataUrl;
-
-            // Destroy canvas — zeros canvas dims, removes from DOM, releases GPU textures
-            _cv.inst.el.destroy?.();
-            const wrap = qs('#canvas-wrap', el);
-            wrap.innerHTML = '';
-            wrap.style.display = 'none';
-            _previewWrap.style.display = '';
-
-            _previewInst = MpiMaskedImagePreview.mount(_previewWrap);
-
-            if (imageUrl) await _previewInst.el.loadImage(imageUrl);
-            if (maskDataUrl) _previewInst.el.setMaskDataURL(maskDataUrl);
-
         };
 
         /**
@@ -1060,49 +1066,49 @@ export const MpiCanvasViewer = ComponentFactory.create({
          */
         el.swapToCanvas = async () => {
             if (!_previewInst) return;
+            _setLoadingSpinner(true);
+            try {
+                _previewInst.el.destroy?.();
+                _previewInst = null;
+                _previewWrap.innerHTML = '';
+                _previewWrap.style.display = 'none';
 
-            _previewInst.el.destroy?.();
-            _previewInst = null;
-            _previewWrap.innerHTML = '';
-            _previewWrap.style.display = 'none';
+                const wrap = qs('#canvas-wrap', el);
+                wrap.innerHTML = '';
+                wrap.style.display = '';
 
-            const wrap = qs('#canvas-wrap', el);
-            wrap.innerHTML = '';
-            wrap.style.display = '';
+                _cv.inst = MpiCanvas.mount(wrap, {
+                    onBrushTypeChange: (type) => {
+                        emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
+                    },
+                });
+                _cv.inst.on('modechange', ({ mode }) => {
+                    if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
+                    if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
+                    if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
+                    if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
+                        _comparingActive = false;
+                        _compareNameA = '';
+                        _compareNameB = '';
+                        _renderCorners();
+                    }
+                    if (_loadingComparison) return;
+                    emit('mode-changed', { mode: _currentMode });
+                });
 
-            // Remount fresh canvas, update mutable ref
-            _cv.inst = MpiCanvas.mount(wrap, {
-                onBrushTypeChange: (type) => {
-                    emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
-                },
-            });
-            _cv.inst.on('modechange', ({ mode }) => {
-                if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
-                if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
-                if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
-                if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
-                    _comparingActive = false;
-                    _compareNameA = '';
-                    _compareNameB = '';
-                    _renderCorners();
+                if (_currentItem?.filePath) {
+                    await _cv.el.loadImage(_resolveUrl(_currentItem.filePath));
+                    await _restoreLayers(_currentItem);
                 }
-                if (_loadingComparison) return;
-                emit('mode-changed', { mode: _currentMode });
-            });
 
-            // Reload image + restore manual+subtract layers from TEMP
-            if (_currentItem?.filePath) {
-                await _cv.el.loadImage(_resolveUrl(_currentItem.filePath));
-                await _restoreLayers(_currentItem);
+                await _restoreAutoPickMasks();
+
+                _cv.el.setMaskInverted?.(_isMaskInverted);
+
+                _previewMaskCache = null;
+            } finally {
+                _setLoadingSpinner(false);
             }
-
-            // Rehydrate auto-pick bitmaps from cached ComfyUI URLs.
-            await _restoreAutoPickMasks();
-
-            // Re-apply display-only invert flag onto the fresh MpiCanvas.
-            _cv.el.setMaskInverted?.(_isMaskInverted);
-
-            _previewMaskCache = null;
         };
 
         // ── Lifecycle: destroy ───────────────────────────────────────────────
