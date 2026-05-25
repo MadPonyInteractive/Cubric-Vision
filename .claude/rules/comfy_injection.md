@@ -13,6 +13,8 @@
 
 **Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node. Video Helper Suite nodes may emit final videos under `output.gifs`; inspect the filename/format because that payload can still be an MP4.
 
+**Cache-hit dedupe (seedless workflows only):** `commandExecutor` watches ComfyUI's `execution_cached` WS event. If every node in `outputNodeIds` was served from cache AND the workflow has **no node titled `"Seed"`**, `exec.cacheHit` is set and `generationService.onComplete` skips creating a new history entry / gallery card and shows a toast `"No changes, skipping..."`. Replace mode (`config.replaceItemId`) bypasses dedupe. **Convention:** every seeded workflow must include a node titled exactly `"Seed"` (case-insensitive) — its presence disables the dedupe path, so seeded re-runs always produce a new entry. Universal/utility workflows (e.g. Upscale) lack a `"Seed"` node, which is what allows their idempotent re-runs to dedupe.
+
 **Upload images/masks:** Pass Data URIs, blob URLs, http URLs, or local paths to `Input_Image` / `Input_Mask` — the controller uploads automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
 
 **Selected history entry:** In Group History, `Input_Image` must come from the currently selected history item at execution time, not from mount-time props or the last history entry. Auto-mask detection in `MpiCanvasViewer` resolves `_currentItem.filePath` immediately before `runAutoMask(...)`; prompt-driven image ops in `MpiGroupHistoryBlock` use `_group.history[_currentIdx]`.

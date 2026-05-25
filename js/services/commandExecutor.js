@@ -576,6 +576,7 @@ export function runCommand(payload) {
     const exec = {
         promptId:        null,
         seed:            null,
+        cacheHit:        false,
         onPreview:       null,
         onProgress:      null,
         onSamplingStart: null,
@@ -679,6 +680,14 @@ export function runCommand(payload) {
             )
         );
 
+        // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
+        // seed. Convention: every seeded workflow has a node titled exactly
+        // "Seed" (case-insensitive). Universal workflows like Upscale have no
+        // such node and benefit from dedupe.
+        const _hasSeedNode = Object.values(workflow).some(node =>
+            node?._meta?.title?.toLowerCase() === 'seed'
+        );
+
         // Map nodeId → class_type for loader detection
         const saveLatentNodeIds = new Set(
             Object.keys(workflow).filter(id =>
@@ -758,6 +767,25 @@ export function runCommand(payload) {
             if (msg.type === 'prompt_ack') {
                 exec.promptId = msg.prompt_id;
                 exec.onPromptAck?.(msg.prompt_id);
+                return;
+            }
+
+            if (msg.type === 'execution_cached') {
+                // ComfyUI lists nodes served from cache. Pure cache hit =
+                // every output-titled node appears in the cached set. Skip
+                // entirely for seeded workflows — a fresh seed invalidates
+                // the cache by design, so a "cache hit" there would be a
+                // false positive.
+                if (_hasSeedNode) return;
+                const cachedNodes = msg.data?.nodes;
+                if (Array.isArray(cachedNodes) && cachedNodes.length && outputNodeIds.size) {
+                    const cachedSet = new Set(cachedNodes.map(String));
+                    let allCached = true;
+                    for (const id of outputNodeIds) {
+                        if (!cachedSet.has(String(id))) { allCached = false; break; }
+                    }
+                    if (allCached) exec.cacheHit = true;
+                }
                 return;
             }
 

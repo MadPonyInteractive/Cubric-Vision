@@ -18,6 +18,8 @@ import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand } from '../data/commandRegistry.js';
+import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
+import { ce } from '../utils/dom.js';
 
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
@@ -437,6 +439,31 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const _cancelExtraTempIds = _cancelEntry?.extraTempIds ?? [];
             activeGenerations.end(_regId, { revokePreview: true });
             Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId, extraTempIds: _cancelExtraTempIds });
+            _emitPromptBoxGenerationEndIfIdle();
+            callbacks.onCancel?.();
+            return;
+        }
+
+        // ComfyUI cache hit: every output node was served from cache, so the
+        // result is byte-identical to a prior run. Skip creating a duplicate
+        // history entry / gallery card. Replace mode (preview → final) is
+        // explicit user intent and bypasses this guard.
+        if (exec.cacheHit === true && !config.replaceItemId) {
+            const _cacheEntry = activeGenerations.get(_regId);
+            const _cacheTempId = _cacheEntry?.tempId ?? null;
+            const _cacheExtraTempIds = _cacheEntry?.extraTempIds ?? [];
+            activeGenerations.end(_regId, { revokePreview: true });
+            const _toastWrap = ce('div');
+            document.body.appendChild(_toastWrap);
+            const _toast = MpiToast.mount(_toastWrap, {
+                message: 'No changes, skipping...',
+                variant: 'info',
+                duration: 3000,
+            });
+            _toast.on('close', () => _toastWrap.remove());
+            Events.emit('tool:cancelled', { tool: 'groupHistory' });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _cacheTempId, extraTempIds: _cacheExtraTempIds });
+            Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
             _emitPromptBoxGenerationEndIfIdle();
             callbacks.onCancel?.();
             return;

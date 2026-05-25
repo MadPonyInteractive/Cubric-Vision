@@ -156,13 +156,6 @@
 
 ## IMPLEMENTING
 
-### ConfYUI Cache
-
-  - defaultExpanded: false
-    ```md
-    the way comfyui uses cache creates a few issues for our app. Basically, if we try to run a workflow with the same settings, comfyui uses the cache and just returns the same result, especially if there are no new seeds, which is expected. I thought about forcing different seeds into the workflows to refresh the cache, but that is likely to raise a few issues. Is there the issue that this is causing? For example, the user runs a workflow in our app, and it doesn't change any settings. The workflow is not seed-dependent, so we're not injecting new seeds. In this type of workflow, what happens is the user runs it again without changing any parameters, and it produces a new entry with the exact same result. Instead of producing new entries in the history workspace or new cards in the gallery workspace, could we check ConfYUI cache and not allow a new entry to be created? Either that, or have our own system to check if the workflow hasn't changed at all. Of course, this would have to be filtered for workflows that do NOT inject seeds and such. Please do not code. Just come back to me with briefing, suggestions, and concerns.
-    ```
-
 ### Gallery slider
 
   - defaultExpanded: false
@@ -170,7 +163,74 @@
     The Gallery slider to change gallery card size in five steps. I notice that sometimes two of those steps display exactly the same size in different app window sizes. Perhaps this can be fixed by adding more steps or less steps to the slider. What are your suggestions?
     ```
 
+### Gallery Cards Model Display
+
+  - defaultExpanded: false
+    ```md
+    When the current history entry changes from the original entry, in the Gallery workspace the card displays only the last operation on the top-left text. Would be nice to, on the top left text, display the model that originally created the video or image, and underneath it, display the last operation, which would be the operation for the selected card in the history workspace.
+    ```
+
+### Help page UI improvement
+
+  - defaultExpanded: false
+    ```md
+    The help page in the projects page displays the hotkeys in a way that it's hard to read. I'd like to have for each section a different colored background, a bit darker, so that each section of hotkeys is easier to identify.
+    ```
+
+### Electron JS logo question.
+
+  - defaultExpanded: false
+    ```md
+    I'd like it that the ElectronJS logo never shows up in the task bar. Always our logo should show up. Sometimes I ask these two agents, and the logo shows up for a while and then it goes away, and the ElectronJS comes back due to something. I think the last thing I did is I tried to add it to the taskbar quick items, and it defaulted back to the ElectronJS logo.
+    
+    It's important that the logo is always displayed because later on, when we have other apps, users can reference the task bar to see what app they're working on, and as well for a visual aspect of it. Is there any way we can treat the bat file the same way that exe files work when it comes to logo display and saving it to the taskbar as a quick item, or are we constrained? Remember, this app is going to be distributed as a portable version only, ok?
+    ```
+
+### History Workspace Load Time
+
+  - defaultExpanded: false
+    ```md
+    When opening the history workspace, particularly on images, if the selected entry is a large image (4K or 8K), we are presented with an empty page for a few seconds. This looks bad. It would be good to at least have a spinner or something while it's loading.
+    ```
+
 ## COMPLETED
+
+### ComfyUI cache dedupe for seedless workflows
+
+  - tags: [comfy, universal-workflows, dedupe]
+  - priority: normal
+  - workload: Normal
+  - defaultExpanded: false
+    ```md
+    Completed 2026-05-25 by claude-opus-4.7. Pending user verification.
+
+    Problem: universal seedless workflows (Upscale) produced duplicate
+    history/gallery entries when re-run with identical settings, because
+    ComfyUI returned the cached image but the app still created a new
+    entry.
+
+    Approach: handle ComfyUI's `execution_cached` WS event. Cache-hit
+    dedupe fires only when every `outputNodeIds` member is in the cached
+    set AND the workflow contains NO node titled `"Seed"`. Seeded
+    workflows (txt2img, i2v, t2v, all PromptBox flows) bypass the guard
+    entirely — their fresh seed invalidates cache by design.
+
+    Files:
+      - js/services/commandExecutor.js: `_hasSeedNode` scan + new
+        `execution_cached` branch in `onMessage`; added
+        `exec.cacheHit` field.
+      - js/services/generationService.js: early-return guard at top of
+        `exec.onComplete` — mounts toast "No changes, skipping..." and
+        emits cancellation/idle events instead of saving. Replace mode
+        (`config.replaceItemId`) bypasses dedupe.
+      - .claude/rules/comfy_injection.md: documented the convention.
+
+    Verification asks:
+      - Upscale same image twice w/ same model/settings → toast, no dupe.
+      - Upscale same image with different model → new card normally.
+      - txt2img twice → still produces new card (seed always fresh).
+      - Video upscale: confirm VHS nodes hit cache (acceptable if not).
+    ```
 
 ### StartFrame and EndFrame placeholders
 
