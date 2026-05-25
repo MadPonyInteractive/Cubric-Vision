@@ -156,13 +156,6 @@
 
 ## IMPLEMENTING
 
-### Help page UI improvement
-
-  - defaultExpanded: false
-    ```md
-    The help page in the projects page displays the hotkeys in a way that it's hard to read. I'd like to have for each section a different colored background, a bit darker, so that each section of hotkeys is easier to identify.
-    ```
-
 ### Electron JS logo question.
 
   - defaultExpanded: false
@@ -180,6 +173,22 @@
     ```
 
 ## COMPLETED
+
+### Help page UI improvement
+
+  - defaultExpanded: false
+    ```md
+    Completed 2026-05-25 by claude-opus-4.7. User-verified.
+
+    Each `.mpi-help__shortcut-group` now renders as its own darker card
+    (`--surface-2` bg, `--line` border, `--r-2` radius, 0.85rem/1rem padding)
+    so hotkey sections are visually separated. Grid gap tightened
+    1.5rem → 0.75rem since each section now has its own visible frame.
+    Hotkey chip bg switched `--surface-2` → `--surface-1` so chips contrast
+    against the new darker group bg.
+
+    Files: js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css
+    ```
 
 ### Gallery slider
 
