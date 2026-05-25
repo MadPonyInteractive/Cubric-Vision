@@ -54,6 +54,9 @@ function _cloneMediaItems(mediaItems = []) {
             source:    item.source ?? null,
             role:      item.role ?? null,
             thumbPath:  item.thumbPath ?? null,
+            trim:      item.trim && Number.isFinite(+item.trim.in) && Number.isFinite(+item.trim.out)
+                ? { in: +item.trim.in, out: +item.trim.out }
+                : null,
         }));
 }
 

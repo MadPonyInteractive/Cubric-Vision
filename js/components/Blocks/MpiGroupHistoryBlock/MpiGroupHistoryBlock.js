@@ -776,6 +776,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         let _activeExec = null;
 
+        function _activeVideoTrim(currentItem) {
+            if (!isVideo) return null;
+            const range = viewer.el.getRange?.() || currentItem?.trim || null;
+            const rangeIn = Number(range?.in);
+            const rangeOut = Number(range?.out);
+            if (!Number.isFinite(rangeIn) || !Number.isFinite(rangeOut) || rangeOut <= rangeIn) return null;
+            const duration = Number(currentItem?.duration) || Number(_group.duration) || 0;
+            if (duration > 0 && rangeIn <= 1e-3 && Math.abs(rangeOut - duration) <= 1e-3) return null;
+            return { in: rangeIn, out: rangeOut };
+        }
+
         function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null }) {
             if (!activeModel) return;
 
@@ -827,7 +838,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         function _runVideoTool(operation, injectionParams = {}) {
             const currentItem = _group.history[_currentIdx];
             if (!currentItem?.filePath) { _showToast('No source video', 'error'); return; }
-            const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'video', source: 'history' }];
+            const trim = _activeVideoTrim(currentItem);
+            const mediaItems = [{
+                id: currentItem.id,
+                url: resolveMediaUrl(currentItem.filePath),
+                mediaType: 'video',
+                source: 'history',
+                ...(trim ? { trim } : {}),
+            }];
             const videoModel = { id: null, mediaType: 'video' };
             _setGenerating(true);
             enqueueGeneration(
@@ -888,11 +906,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 return;
             }
 
+            const trim = wantVideo ? _activeVideoTrim(currentItem) : null;
             const mediaItems = [{
                 id:        currentItem.id,
                 url:       resolveMediaUrl(currentItem.filePath),
                 mediaType,
                 source:    'history',
+                ...(trim ? { trim } : {}),
             }];
             const opModel = { id: null, mediaType };
 

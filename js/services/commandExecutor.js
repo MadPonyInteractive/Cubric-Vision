@@ -106,6 +106,84 @@ async function _stagePreviewLatent(payload) {
     }
 }
 
+function _validTrimRange(trim) {
+    const rangeIn = Number(trim?.in);
+    const rangeOut = Number(trim?.out);
+    if (!Number.isFinite(rangeIn) || !Number.isFinite(rangeOut)) return null;
+    if (rangeIn < 0 || rangeOut <= rangeIn) return null;
+    return { in: rangeIn, out: rangeOut };
+}
+
+async function _prepareTrimmedVideoInputs(payload) {
+    const project = state.currentProject;
+    const mediaItems = Array.isArray(payload?.mediaItems) ? payload.mediaItems : [];
+    const tempPaths = [];
+    let changed = false;
+
+    try {
+        const nextMediaItems = [];
+        for (const item of mediaItems) {
+            const trim = item?.mediaType === 'video' ? _validTrimRange(item.trim) : null;
+            if (!trim) {
+                nextMediaItems.push(item);
+                continue;
+            }
+            if (!project?.folderPath) {
+                throw new Error('Project folder is required to prepare a trimmed video input.');
+            }
+
+            const res = await fetch('/api/video/trim-input', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    folderPath: project.folderPath,
+                    sourcePath: item.url || item.filePath,
+                    trimIn: trim.in,
+                    trimOut: trim.out,
+                }),
+            });
+
+            let data = null;
+            try { data = await res.json(); } catch (_) { /* keep status fallback */ }
+            if (!res.ok || !data?.success || !data?.url) {
+                throw new Error(data?.error || `trim-input returned ${res.status}`);
+            }
+
+            tempPaths.push(data.filePath || data.url);
+            nextMediaItems.push({
+                ...item,
+                url: data.url,
+                filePath: data.url,
+                source: item.source || 'history-trim',
+                trimSourceUrl: item.url || item.filePath || null,
+                trim,
+            });
+            changed = true;
+        }
+
+        return {
+            payload: changed ? { ...payload, mediaItems: nextMediaItems } : payload,
+            tempPaths,
+        };
+    } catch (err) {
+        await _cleanupTrimmedVideoInputs(tempPaths);
+        throw err;
+    }
+}
+
+async function _cleanupTrimmedVideoInputs(paths = []) {
+    if (!paths.length) return;
+    try {
+        await fetch('/api/video/trim-input/cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths }),
+        });
+    } catch (err) {
+        clientLogger.warn('commandExecutor', 'Failed to clean temporary trimmed video inputs', err);
+    }
+}
+
 /**
  * @typedef {Object} RunPayload
  * @property {string}   operation    - Command key (e.g. 't2i', 'upscale')
@@ -519,7 +597,19 @@ export function runCommand(payload) {
             return;
         }
 
-        const params = _buildParams(payload);
+        let workingPayload = payload;
+        let tempTrimInputPaths = [];
+        try {
+            const prepared = await _prepareTrimmedVideoInputs(payload);
+            workingPayload = prepared.payload;
+            tempTrimInputPaths = prepared.tempPaths;
+        } catch (err) {
+            clientLogger.error('commandExecutor', 'Failed to prepare trimmed video input', err);
+            exec.onError?.(err);
+            return;
+        }
+
+        const params = _buildParams(workingPayload);
         exec.seed = params.Seed ?? null;
 
         // Load the workflow JSON so we can identify "Output" node ids before
@@ -530,26 +620,28 @@ export function runCommand(payload) {
             if (!res.ok) throw new Error(`Failed to load workflow: ${workflowFile}`);
             workflow = await res.json();
         } catch (err) {
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
             exec.onError?.(err);
             return;
         }
 
-        const opDef = COMMANDS[payload.operation];
+        const opDef = COMMANDS[workingPayload.operation];
         if (opDef?.injector) {
             const injector = INJECTORS[opDef.injector];
             if (!injector) {
-                clientLogger.error('commandExecutor', `Missing injector "${opDef.injector}" for op ${payload.operation}`);
+                clientLogger.error('commandExecutor', `Missing injector "${opDef.injector}" for op ${workingPayload.operation}`);
             } else {
                 try {
-                    injector(workflow, payload.injectionParams || {});
+                    injector(workflow, workingPayload.injectionParams || {});
                     // Standalone injector params are already written into the
                     // workflow. Remove them so the generic title injector below
                     // cannot re-match names like `flip` against a `Flip` node.
-                    Object.keys(payload.injectionParams || {}).forEach(key => {
+                    Object.keys(workingPayload.injectionParams || {}).forEach(key => {
                         delete params[key];
                     });
                     clientLogger.info('commandExecutor', `Applied injector "${opDef.injector}"`);
                 } catch (err) {
+                    await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
                     exec.onError?.(err);
                     return;
                 }
@@ -557,18 +649,20 @@ export function runCommand(payload) {
         }
 
         try {
-            await _prepareWorkflowInputs(payload);
+            await _prepareWorkflowInputs(workingPayload);
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
             exec.onError?.(err);
             return;
         }
 
         try {
-            await _stagePreviewLatent(payload);
+            await _stagePreviewLatent(workingPayload);
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to stage preview latent', err);
             Events.emit('ui:error', { title: 'Stage-2 setup failed', message: err.message });
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
             exec.onError?.(err);
             return;
         }
@@ -576,7 +670,7 @@ export function runCommand(payload) {
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
         // — or "preview" when this is a preview-only run on a multi-stage workflow.
         // Only images/gifs from these nodes are treated as final results.
-        const _captureTitle = payload.previewOnly === true && String(payload.operation || '').endsWith('_ms')
+        const _captureTitle = workingPayload.previewOnly === true && String(workingPayload.operation || '').endsWith('_ms')
             ? 'preview'
             : 'output';
         const outputNodeIds = new Set(
@@ -620,14 +714,14 @@ export function runCommand(payload) {
         // NOTE: do NOT gate on `previewOnly` alone — multi-stage `_ms`
         // previews flow through generationService and DO want lifecycle
         // events.
-        const _suppressLifecycleEvents = payload.suppressLifecycleEvents === true;
+        const _suppressLifecycleEvents = workingPayload.suppressLifecycleEvents === true;
         const emitSamplingStart = () => {
             if (_samplingStartFired) return;
             if (_modelInitializing) return;
             _modelInitializing = false;
             _samplingStartFired = true;
             if (!_suppressLifecycleEvents) {
-                Events.emit('tool:sampling-start', { tool: 'groupHistory', operation: payload.operation });
+                Events.emit('tool:sampling-start', { tool: 'groupHistory', operation: workingPayload.operation });
             }
             exec.onSamplingStart?.();
         };
@@ -746,10 +840,12 @@ export function runCommand(payload) {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
         } catch (err) {
             closeComfyEventSource();
-            clientLogger.error('comfy', `Workflow failed: ${payload.operation} / ${payload.modelId}`, err);
-            const { title, message } = _formatWorkflowError(err.message, payload.modelId);
+            clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
+            const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });
             exec.onError?.(err);
+        } finally {
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
         }
     })();
 

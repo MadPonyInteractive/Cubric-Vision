@@ -24,6 +24,8 @@ Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type s
 - **Video latent previews suppressed** — `_applyPreview` short-circuits in video workspace (latent PNGs would crash `<video>.loadVideo`). Mascot + StatusBar still drive feedback.
 - **`MpiVideoViewer` pan/zoom** — wheel-zoom 1×–10× cursor-anchored, left-drag pan when zoomed, dblclick → fit. Transform on `.mpi-video-viewer__player`. Disabled when `data-mode != idle`. View resets on every `loadVideo()`; `el.resetView()` exposed. Click-to-play preserved on stationary clicks (>3px drag swallows toggle via capture-phase handler).
 
+- **Video trim/frame semantics** — `MpiVideoControlBar` treats trim out as the last included frame. Frame stepping and frame display use probed stream fps plus `frameCount` bounds (`0..frameCount-1`) instead of deriving fps from browser `duration`, because Chromium can report a few ms of tail after the final decoded frame.
+
 ---
 
 ## Sub-Agent Briefing

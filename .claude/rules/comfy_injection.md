@@ -19,6 +19,8 @@
 
 **Media slot completeness:** Model operations declare media slots through `commandRegistry.mediaInputs` and `commandExecutor._buildParams()` owns slot-to-title mapping. Every declared image/video/audio slot that has any compatible current media available MUST receive a current asset URL. Do not leave optional Comfy input nodes pointing at filenames saved inside the workflow JSON. If a workflow has multiple image inputs and the user supplies fewer images than slots, fill unassigned image slots with the first compatible image (for example, single-image `Start_Frame`/`End_Frame` image-to-video runs inject the start frame into both titles and use the boolean gate to control behavior). This rule applies to future multi-image, multi-video, and audio-capable workflows too.
 
+**Trimmed video media inputs:** When a video `mediaItem` has `trim: { in, out }`, `commandExecutor` prepares a temporary trimmed MP4 through `/api/video/trim-input` before title-based injection. Comfy still receives the normal `"Input_Video"` path, but it points at the temporary clip, not the full source. The route treats `out` as the last included frame, resets timestamps to zero, and the executor cleans the temp file after completion/error.
+
 **Standard title map:** `"Positive"`/`"Negative"` → `inputs.value`, `"Seed"` → `inputs.int`, `"Checkpoint"` → `inputs.ckpt_name`, `"Lora_1"`…`"Lora_6"` → `{ lora_name, strength_model, strength_clip }`, `"Input_Image"`/`"Input_Mask"` → auto-uploaded. Full table in `docs/comfy.md`.
 
 See `docs/comfy.md` for the full injection pattern and example.
@@ -83,6 +85,9 @@ standard title map.
   `keep_proportion`, `pad_color`, `crop_position`, `divisible_by`, `device`;
   `"ImageFlip"` input `flip_method`; `"Image Rotate"` input `rotation`; and
   `"Flip"` input `boolean`.
+- Universal video tool trim prep is not a workflow injector; it happens before
+  `_buildParams()` so all video operations with declared media slots can receive
+  the temporary clipped input path.
 
 ## Multi-stage video workflows
 

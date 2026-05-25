@@ -90,11 +90,89 @@ export const MpiVideoControlBar = ComponentFactory.create({
         let _loopIntent = false;
 
         const _isFullRange = () => _in <= 1e-3 && _out >= _duration - 1e-3;
+        const _isSubRange = () => _out > _in && !_isFullRange();
 
         const _syncNativeLoop = () => {
             if (!_surface) return;
             const v = _surface.getVideoElement();
             v.loop = _loopIntent && _isFullRange();
+        };
+
+        let _frameWatchId = 0;
+
+        const _effectiveFps = () => {
+            return _fps;
+        };
+
+        const _frameBounds = () => {
+            const eff = _effectiveFps();
+            const loFrame = Math.max(0, Math.round(_in * eff));
+            const lastFrame = _isFullRange() && Number.isFinite(_frameCount) && _frameCount > 0
+                ? _frameCount - 1
+                : Math.max(loFrame, Math.round(_out * eff));
+            return { eff, loFrame, lastFrame };
+        };
+
+        const _seekFrame = (frameIndex) => {
+            if (!_surface) return;
+            const { eff } = _frameBounds();
+            const fs = eff > 0 ? 1 / eff : 0;
+            _surface.seek((frameIndex / eff) + fs * 0.25);
+        };
+
+        const _stopFrameWatch = () => {
+            if (!_frameWatchId || !_surface) return;
+            const v = _surface.getVideoElement();
+            v.cancelVideoFrameCallback?.(_frameWatchId);
+            _frameWatchId = 0;
+        };
+
+        const _handleRangeBoundary = (time) => {
+            if (!_surface || !_isSubRange()) return;
+            const v = _surface.getVideoElement();
+            if (!v || v.paused) return;
+            const { eff, loFrame, lastFrame } = _frameBounds();
+            const curFrame = Math.round((Number(time) || 0) * eff);
+            if (curFrame < loFrame) {
+                _surface.seek(_in);
+                return;
+            }
+            if (curFrame >= lastFrame) {
+                if (_loopIntent) _surface.seek(_in);
+                else             _surface._pause();
+            }
+        };
+
+        const _startFrameWatch = () => {
+            if (!_surface) return;
+            const v = _surface.getVideoElement();
+            if (typeof v.requestVideoFrameCallback !== 'function') return;
+            _stopFrameWatch();
+            const tick = (_now, metadata = {}) => {
+                _frameWatchId = 0;
+                _handleRangeBoundary(metadata.mediaTime ?? v.currentTime ?? 0);
+                if (!v.paused) _frameWatchId = v.requestVideoFrameCallback(tick);
+            };
+            _frameWatchId = v.requestVideoFrameCallback(tick);
+        };
+
+        const _seekRangeStartIfNeeded = () => {
+            if (!_surface || !_isSubRange()) return;
+            const v = _surface.getVideoElement();
+            const { eff, loFrame, lastFrame } = _frameBounds();
+            const curFrame = Math.round((v.currentTime || 0) * eff);
+            if (curFrame < loFrame || curFrame >= lastFrame) _surface.seek(_in);
+        };
+
+        const _togglePlay = () => {
+            if (!_surface) return;
+            const v = _surface.getVideoElement();
+            if (!v.paused) {
+                _surface._pause();
+                return;
+            }
+            _seekRangeStartIfNeeded();
+            _surface._play();
         };
 
         // One-shot pending trim applied after the next loadedmetadata.
@@ -129,8 +207,6 @@ export const MpiVideoControlBar = ComponentFactory.create({
         const durationEl    = qs('.mpi-video-control-bar__duration', el);
 
         // ── Helpers ───────────────────────────────────────────────────────
-        const _frameStep = () => 1 / _fps;
-
         const _formatFrame = (s, isDuration = false) => {
             if (isDuration && Number.isFinite(_frameCount) && _frameCount > 0) {
                 return String(_frameCount).padStart(4, '0');
@@ -138,12 +214,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
             // Prefer effective fps from frameCount/duration when known, so the
             // current-frame readout stays in lockstep with the trim bar at
             // boundary frames on NTSC-style clips.
-            let effFps = _fps;
-            if (Number.isFinite(_frameCount) && _frameCount > 1
-                && Number.isFinite(_duration) && _duration > 0) {
-                effFps = _frameCount / _duration;
+            const effFps = _effectiveFps();
+            let frame = Math.max(0, Math.round(s * effFps));
+            if (Number.isFinite(_frameCount) && _frameCount > 0) {
+                frame = Math.min(frame, _frameCount - 1);
             }
-            return String(Math.max(0, Math.round(s * effFps))).padStart(4, '0');
+            return String(frame).padStart(4, '0');
         };
 
         const _renderTime = (cur, dur) => {
@@ -199,9 +275,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
         // ── Button wiring ─────────────────────────────────────────────────
         playBtn.on('click', () => {
-            if (!_surface) return;
-            const v = _surface.getVideoElement();
-            v.paused ? _surface._play() : _surface._pause();
+            _togglePlay();
         });
 
         const _activeRange = () => ({ rangeIn: _in, rangeOut: _out, loop: _loopIntent });
@@ -288,8 +362,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
             // Subscribe to surface component events
             _surfaceUnsubs.push(
-                addCb(surfaceInstance, 'play',          () => _syncPlayBtn()),
-                addCb(surfaceInstance, 'pause',         () => _syncPlayBtn()),
+                addCb(surfaceInstance, 'play',          () => { _seekRangeStartIfNeeded(); _syncPlayBtn(); _startFrameWatch(); }),
+                addCb(surfaceInstance, 'pause',         () => { _syncPlayBtn(); _stopFrameWatch(); }),
                 addCb(surfaceInstance, 'timeupdate',    ({ time, duration }) => {
                     _renderTime(time, duration);
                     if (duration > 0) trim?.el.setValueQuiet(_displayTime(time));
@@ -297,13 +371,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
                     // Frame-step + manual seeks set currentTime directly and
                     // must NOT be re-routed back into the range (the surface's
                     // frameStep already handles range-aware wrapping).
-                    if (_isFullRange() || _out <= _in) return;
-                    const v = _surface?.getVideoElement();
-                    if (!v || v.paused) return;
-                    if (time >= _out - 1e-3) {
-                        if (_loopIntent) _surface.seek(_in);
-                        else             _surface._pause();
-                    }
+                    _handleRangeBoundary(time);
                 }),
                 addCb(surfaceInstance, 'loadedmetadata', ({ duration }) => {
                     _duration = duration || 0;
@@ -330,7 +398,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             );
 
             // Bind hotkeys (unbind on detach)
-            _hotkeyUnsubs.push(Hotkeys.bind('video.playPause',     () => { video.paused ? _surface._play() : _surface._pause(); }));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.playPause',     () => _togglePlay()));
             _hotkeyUnsubs.push(Hotkeys.bind('video.frame.back',    () => _surface.frameStep(-1, _activeRange())));
             _hotkeyUnsubs.push(Hotkeys.bind('video.frame.forward', () => _surface.frameStep(+1, _activeRange())));
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.up',     () => _adjustVolume(+10)));
@@ -345,19 +413,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 if (!_surface) return;
                 const v = _surface.getVideoElement();
                 v.pause();
-                // Prefer measured fps from frameCount/duration over declared
-                // _fps — declared 30 often masks an actual 29.97 timebase
-                // and integer frame math then lands one frame short.
-                const frameCount = _surface.getFrameCount?.();
-                const dur = v.duration;
-                const effFps = (frameCount && Number.isFinite(dur) && dur > 0)
-                    ? frameCount / dur
-                    : _fps;
-                const fs = effFps > 0 ? (1 / effFps) : 0;
-                // Seek just past the last frame's PTS so Chromium lands on
-                // it; surface.seek() clamps to a safe maxSeek inside duration.
-                const lastFrameTime = Math.max(_in, _out - fs * 0.5);
-                _surface.seek(lastFrameTime);
+                const { lastFrame } = _frameBounds();
+                _seekFrame(lastFrame);
             }));
 
             if (trim) {
@@ -378,6 +435,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
         };
 
         el.detachSurface = () => {
+            _stopFrameWatch();
             while (_surfaceUnsubs.length) {
                 const fn = _surfaceUnsubs.pop();
                 try { fn(); } catch (_) { /* noop */ }

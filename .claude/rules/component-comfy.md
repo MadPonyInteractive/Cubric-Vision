@@ -105,6 +105,8 @@ MpiPromptBox 'run' event
 
 **Standalone workflow injectors:** Universal tool-panel operations can declare `injector: '<name>'` in `commandRegistry.js`. `commandExecutor.runCommand()` loads workflow JSON, applies `INJECTORS[name](workflow, payload.injectionParams || {})`, removes those consumed `injectionParams` from the generic title-keyed params map, then submits the mutated workflow object to `ComfyUIController.runWorkflow()`. Injectors must use `_meta.title` lookups, not numeric node IDs. Current injector: `resize` in `js/services/workflowInjectors/resizeInjector.js`, shared by `resize` and `resizeVideo`. The consume step prevents collisions such as `flip` matching the Boolean node titled `Flip` and overwriting the injector's boolean value.
 
+**Trim-aware universal video tools:** `MpiGroupHistoryBlock` attaches the live trim range to video `mediaItems` for `interpolate`, `videoUpscale`, and `resizeVideo`. `commandExecutor` must prepare those inputs through `POST /api/video/trim-input` before Comfy submission, replacing the media URL with a temporary project-data MP4 and cleaning it via `/api/video/trim-input/cleanup` after the run. Trim out is frame-inclusive: exporting frames `in..out` adds one frame duration to the ffmpeg slice and resets PTS with `setpts=PTS-STARTPTS` / `asetpts=PTS-STARTPTS`.
+
 ## Model Settings Injection
 
 - `_buildParams()` merges model settings for LoRAs and upscale models. Checkpoints are app/workflow-owned and are not user-selectable in Model Settings.

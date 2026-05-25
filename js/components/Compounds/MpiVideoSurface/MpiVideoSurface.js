@@ -131,10 +131,6 @@ export const MpiVideoSurface = ComponentFactory.create({
         // indexing to collide on repeated frames or fall short of the last
         // frame. Falls back to declared _fps until duration is loaded.
         const _effectiveFps = () => {
-            const dur = video.duration;
-            if (_frameCount && Number.isFinite(dur) && dur > 0) {
-                return _frameCount / dur;
-            }
             return _fps;
         };
 
@@ -190,12 +186,16 @@ export const MpiVideoSurface = ComponentFactory.create({
                 ? range.loop
                 : video.loop;
 
-            const loFrame   = Math.round(loSec * eff);
-            // Out timestamp is inclusive: range covers frames
-            // `loFrame … round(hiSec*eff)`. For a full-clip range with
-            // `hi = duration`, this lands on the final decodable frame index.
-            const lastFrame = Math.max(loFrame, Math.round(hiSec * eff));
-            const curFrame  = Math.round(video.currentTime * eff);
+            const loFrame = Math.round(loSec * eff);
+            // The trim out timestamp is inclusive: sub-ranges cover
+            // `loFrame ... round(hiSec*eff)`. For the full clip only, prefer
+            // probed frameCount so `duration * fps` does not create a
+            // synthetic one-past-last frame on very short clips.
+            const fullRange = loSec <= 1e-6 && Math.abs(hiSec - dur) <= 1e-6;
+            const lastFrame = fullRange && _frameCount
+                ? Math.max(loFrame, _frameCount - 1)
+                : Math.max(loFrame, Math.round(hiSec * eff));
+            const curFrame = Math.max(loFrame, Math.min(lastFrame, Math.round(video.currentTime * eff)));
 
             let nextFrame;
             if (dir < 0) {
