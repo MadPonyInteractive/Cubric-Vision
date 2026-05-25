@@ -31,6 +31,7 @@ import { enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../.
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
@@ -1126,6 +1127,36 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _pb?.el?.hide();
         });
 
+        const _onHistorySelectionExited = () => {
+            _currentSelectionIndices = [];
+            if (!isVideo) {
+                viewer.el.clearCompare?.();
+                viewer.el.setCompareEnabled?.(false);
+            }
+            if (_shouldShowPromptBox()) _pb?.el?.show();
+        };
+
+        _unsubs.push(Hotkeys.bind('history.return.gallery', (event) => {
+            const escapeCtx = event?.mpiEscapeContext || {};
+            if (
+                event?.mpiEscapeOverlayClosed ||
+                escapeCtx.activeDismissableUi ||
+                escapeCtx.focusModeActive ||
+                escapeCtx.textEntryFocused ||
+                escapeCtx.promptBoxFocused
+            ) {
+                return;
+            }
+
+            if (_currentSelectionIndices.length > 0) {
+                historyList.el.exitSelectMode();
+                _onHistorySelectionExited();
+                return;
+            }
+
+            navigate(PAGE_GALLERY);
+        }));
+
         if (!isVideo) {
             viewer.on('compare-clicked', async () => {
                 const indices = _currentSelectionIndices;
@@ -1139,13 +1170,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             });
         }
 
-        historyList.on('selection-exited', () => {
-            if (!isVideo) {
-                viewer.el.clearCompare?.();
-                viewer.el.setCompareEnabled?.(false);
-            }
-            if (_shouldShowPromptBox()) _pb?.el?.show();
-        });
+        historyList.on('selection-exited', _onHistorySelectionExited);
 
         historyList.on('compare-requested', async ({ indices }) => {
             if (indices.length !== 2) return;

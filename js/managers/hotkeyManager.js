@@ -2,7 +2,7 @@
 
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { HOTKEY_REGISTRY, KEY_TYPE } from './hotkeyRegistry.js';
-import { on } from '../utils/dom.js';
+import { on, qsa } from '../utils/dom.js';
 import { state } from '../state.js';
 
 let ipcRenderer = null;
@@ -27,6 +27,19 @@ const TEXT_INPUT_TYPES = new Set([
     'time',
     'week',
 ]);
+
+const ESCAPE_DISMISSABLE_SELECTORS = [
+    '.mpi-popup.is-active',
+    '.mpi-dropdown__list.is-open',
+    '.mpi-ctx-menu',
+    '.mpi-slide-over[aria-expanded="true"]',
+    '.mpi-media-drop-overlay--visible',
+    '.mpi-project-drop-overlay--visible',
+    '.mpi-overlay',
+    '.mpi-overlay-backdrop',
+    '.mpi-modal-wrapper',
+    '.mpi-modal-backdrop',
+];
 
 function isTextEntryElement(el) {
     if (!el) return false;
@@ -176,6 +189,10 @@ class HotkeyManager {
 
         if (!shouldFire) return;
 
+        if (key === 'escape') {
+            e.mpiEscapeContext = this._buildEscapeContext(activeEl);
+        }
+
         e.preventDefault();
         e.stopPropagation();
 
@@ -245,6 +262,27 @@ class HotkeyManager {
             x: Math.max(0, Math.floor(window.innerWidth / 2)),
             y: Math.max(0, Math.floor(window.innerHeight / 2)),
         };
+    }
+
+    _buildEscapeContext(activeEl) {
+        const activeDismissableUi = qsa(ESCAPE_DISMISSABLE_SELECTORS.join(','))
+            .some(el => this._isVisible(el));
+
+        return {
+            activeDismissableUi,
+            focusModeActive: !!state.focusMode,
+            promptBoxFocused: activeEl instanceof HTMLTextAreaElement &&
+                !!activeEl.closest?.('.mpi-prompt-box'),
+            textEntryFocused: isTextEntryElement(activeEl),
+        };
+    }
+
+    _isVisible(el) {
+        if (!el || !document.contains(el)) return false;
+        const style = getComputedStyle(el);
+        return style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            el.getClientRects().length > 0;
     }
 }
 

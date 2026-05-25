@@ -205,6 +205,15 @@ export const HOTKEY_REGISTRY = [
         description:      'Delete selected entries',
         allowWhileTyping: false,
     },
+    {
+        id:               'history.return.gallery',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'history',
+        scopeLabel:       'History',
+        description:      'Return to gallery',
+        allowWhileTyping: true,
+    },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────
     {

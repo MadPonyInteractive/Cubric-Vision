@@ -108,6 +108,7 @@ export const MpiHelp = ComponentFactory.create({
                                 <li><span>Shift+Click</span><span>Multi-Select</span></li>
                                 <li><span>Ctrl+Click</span><span>Single Select</span></li>
                                 <li><span>Right Click</span><span>Item context menu</span></li>
+                                <li><span>ESCAPE</span><span>Deselect all or return to Gallery</span></li>
                                 <li><span>DELETE</span><span>Delete selected entries (or active entry)</span></li>
                             </ul>
                         </div>

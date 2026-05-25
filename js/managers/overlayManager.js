@@ -21,7 +21,10 @@ class OverlayManager {
         /** @type {Array<function(): void>} Depth-change subscribers */
         this._depthSubs = [];
 
-        Hotkeys.bind('overlay.close', () => this.closeTopOverlay());
+        Hotkeys.bind('overlay.close', (event) => {
+            if (event) event.mpiEscapeOverlayClosed = this.closeTopOverlay();
+            else this.closeTopOverlay();
+        });
     }
 
     /**
