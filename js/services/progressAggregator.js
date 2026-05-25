@@ -161,21 +161,20 @@ export function create(weightMap) {
             }
         }
 
-        // Nodes absent from this message that were active (started or zero-progress single-pass)
-        // are finished if any other node is now running. ComfyUI drops finished nodes.
-        const anyRunning = Object.values(nodeData).some(i => i.state === 'running');
-        if (anyRunning) {
-            const runningIds = new Set(Object.keys(nodeData).filter(id => nodeData[id].state === 'running'));
-            for (const [id, ns] of Object.entries(nodeState)) {
-                if (!ns.finished && !runningIds.has(id)) {
-                    // Mark finished only if this node has non-trivial weight (i.e. it matters)
-                    // and either had progress or is a single-pass node (imageUpscale, vhs)
-                    const kind = nodes[id]?.kind;
-                    if (kind === 'imageUpscale' || kind === 'vhs' || ns.fraction > 0) {
-                        ns.finished = true;
-                        ns.fraction = 1.0;
-                    }
-                }
+        // Nodes that previously reported progress but are now absent from the
+        // snapshot are inferred finished (older ComfyUI builds drop finished
+        // nodes from progress_state). Do NOT blanket-finish by `kind` — that
+        // marks not-yet-run single-pass nodes (ImageUpscaleWithModel,
+        // VHS_VideoCombine) as done the moment any upstream node starts, which
+        // pinned the bar at 100% for video_upscale.
+        const runningIds = new Set(Object.keys(nodeData).filter(id => nodeData[id].state === 'running'));
+        for (const [id, ns] of Object.entries(nodeState)) {
+            if (ns.finished) continue;
+            if (runningIds.has(id)) continue;
+            if (id in nodeData) continue; // explicit pending/finished state already handled above
+            if (ns.fraction > 0) {
+                ns.finished = true;
+                ns.fraction = 1.0;
             }
         }
 

@@ -156,53 +156,43 @@
 
 ## IMPLEMENTING
 
+## COMPLETED
+
 ### Video upscale should finish cleanly instead of sticking at 100%
 
-  - tags: [video, universal-workflows, status, deferred-verification]
+  - tags: [video, universal-workflows, status]
   - priority: high
   - workload: Normal
   - defaultExpanded: false
   - steps:
-      - [ ] Verify whether video upscale completes in ComfyUI outside the app flow.
-      - [ ] Fix app-side completion/import/status cleanup for video upscale.
-      - [ ] Verify Video Workspace upscale completes through the app.
+      - [x] Verify whether video upscale completes in ComfyUI outside the app flow.
+      - [x] Fix app-side completion/import/status cleanup for video upscale.
+      - [x] Verify Video Workspace upscale completes through the app.
     ```md
-    Deferred verification:
-    This should be tackled after the current video generation session is free,
-    because it needs manual app and possibly ComfyUI-browser verification.
-    
-    Problem:
-    Video upscaling in the Video Workspace gets stuck. The app status bar reaches
-    100%, then nothing happens. The job does not appear in the Queue panel,
-    because video upscale is currently one of the universal workflows not shown
-    as a queue job.
-    
-    Known scope:
-    - There is only one video upscale path: the Universal workflow in the Video
-      Workspace.
-    - The issue may be connected to missing universal workflow queue
-      representation, but completion/import/status cleanup should be verified
-      separately.
-    - User has not yet tested this workflow directly in the ComfyUI browser.
-    
-    Expected behavior:
-    - Video upscale should either complete and import the resulting video into
-      the app, or fail with a visible error.
-    - Status bar should not remain stuck at 100%.
-    - Queue/status UI should reach a completed or failed terminal state.
-    
-    Verification:
-    1. First, test the underlying video upscale workflow in the ComfyUI browser
-       or another direct ComfyUI path, and note whether ComfyUI itself completes.
-    2. In the app, trigger Video Workspace video upscale with no other queued
-       work and confirm it completes/imports or reports a real error.
-    3. Trigger Video Workspace video upscale while another job is queued/running
-       and confirm it appears in the Queue panel if the universal queue card has
-       already been implemented.
-    4. Confirm the status bar clears from 100% after completion or failure.
-    ```
+    Completed 2026-05-25 by claude-opus-4.7. User-verified.
 
-## COMPLETED
+    Root cause: `progressAggregator.onProgressState` blanket-marked every
+    node of kind `imageUpscale` or `vhs` as finished as soon as ANY other
+    node entered the `running` state. For `video_upscale.json` this hit all
+    three weighted nodes (`VHS_LoadVideoPath`, `ImageUpscaleWithModel`,
+    `VHS_VideoCombine`) on the first `progress_state` snapshot, flipping
+    aggregate percent to 1.0 before the upscale actually ran. Monotonic
+    `_advance` then locked the status bar at 100%, while ComfyUI was still
+    executing — making the workflow look stuck.
+
+    Fix: removed the kind-based blanket auto-finish. Now only nodes that
+    previously reported `fraction > 0` AND are absent from the current
+    snapshot get auto-finished (preserves the legacy-Comfy fallback where
+    finished nodes drop from progress_state). Explicit
+    pending/running/finished states from ComfyUI take precedence.
+
+    File: js/services/progressAggregator.js (~lines 164-179).
+
+    Original problem framing assumed completion/import was broken; actual
+    bug was purely progress reporting. App was waiting correctly, but the
+    100% display caused the user to manually cancel runs they thought were
+    stuck.
+    ```
 
 ### Universal workflows should enqueue visible Cue jobs
 
