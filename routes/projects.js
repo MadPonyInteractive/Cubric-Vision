@@ -368,6 +368,86 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     return { frozenParams: nextFrozenParams, previewAssets: result };
 }
 
+function _isI2VOperation(operation) {
+    return String(operation || '').startsWith('i2v');
+}
+
+function _snapshotRoleForMediaItem(item, index, usedRoles) {
+    if (item?.role === 'startFrame' || item?.role === 'endFrame') return item.role;
+    if (index === 0 && !usedRoles.has('startFrame')) return 'startFrame';
+    if (index === 1 && !usedRoles.has('endFrame')) return 'endFrame';
+    return null;
+}
+
+async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, itemId, operation, generationSettings }) {
+    if (!_isI2VOperation(operation) || !generationSettings || typeof generationSettings !== 'object') {
+        return { generationSettings, previewAssets: null };
+    }
+
+    const mediaItems = Array.isArray(generationSettings.mediaItems)
+        ? generationSettings.mediaItems.map(item => ({ ...item }))
+        : [];
+    const imageItems = mediaItems
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item?.mediaType === 'image' && (item.url || item.filePath));
+    if (!imageItems.length) return { generationSettings, previewAssets: null };
+
+    const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
+    await fs.ensureDir(snapshotDir);
+
+    const snapshots = [];
+    const usedRoles = new Set();
+    for (const { item, index } of imageItems) {
+        const role = _snapshotRoleForMediaItem(item, index, usedRoles);
+        if (!role || usedRoles.has(role)) continue;
+        usedRoles.add(role);
+
+        const sourceUrl = item.url || item.filePath;
+        const ext = snapshotExt(sourceUrl);
+        const filename = `${role}${ext}`;
+        const targetPath = path.join(snapshotDir, filename);
+        const meta = {
+            role,
+            mediaType: 'image',
+            originalUrl: sourceUrl,
+            filename,
+            relativePath: relativeProjectPath(projectRoot, targetPath),
+            filePath: projectFileUrl(targetPath),
+            status: 'available',
+        };
+
+        try {
+            await copySnapshotSource(sourceUrl, targetPath);
+            mediaItems[index] = {
+                ...mediaItems[index],
+                role,
+                originalUrl: mediaItems[index].originalUrl || sourceUrl,
+                url: meta.filePath,
+                filePath: meta.filePath,
+                source: 'previewAsset',
+            };
+        } catch (err) {
+            logger.warn('project', 'generation frame snapshot materialization failed', err.message);
+            meta.status = 'missing';
+            meta.error = err.message;
+        }
+        snapshots.push(meta);
+    }
+
+    const available = snapshots.filter(snap => snap.status === 'available');
+    if (!available.length) return { generationSettings, previewAssets: null };
+
+    return {
+        generationSettings: {
+            ...generationSettings,
+            mediaItems,
+        },
+        previewAssets: {
+            snapshots,
+        },
+    };
+}
+
 // ── Project CRUD ──────────────────────────────────────────────────────────────
 
 router.post('/create-project', async (req, res) => {
@@ -646,7 +726,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             const metaDir = path.join(mediaDir, '.meta');
             const uuidMetaPath = path.join(metaDir, `${itemId}.json`);
             let thumbAbsPath = null;
-            let isPreviewStage = false;
+            let hasSupportAssets = false;
             if (await fs.pathExists(uuidMetaPath)) {
                 try {
                     const sidecar = await fs.readJson(uuidMetaPath);
@@ -654,7 +734,9 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                         const m = sidecar.thumbPath.match(/path=(.+)$/);
                         if (m) thumbAbsPath = decodeURIComponent(m[1]);
                     }
-                    isPreviewStage = sidecar?.stage === 'preview';
+                    hasSupportAssets = sidecar?.stage === 'preview'
+                        || Array.isArray(sidecar?.previewAssets?.snapshots)
+                        || Array.isArray(sidecar?.generationSettings?.mediaItems);
                 } catch (_) { /* non-fatal */ }
                 await fs.remove(uuidMetaPath);
             }
@@ -667,21 +749,18 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                 catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
             }
 
-            // Preview-stage cleanup: drop the saved stage-1 latent and any
-            // start/end-frame snapshots that materializePreviewAssets created.
-            // Multi-select Delete on the gallery and the Discard button both
-            // route through this endpoint, so cleanup happens for either path.
-            if (isPreviewStage) {
-                const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
-                if (await fs.pathExists(latentPath)) {
-                    try { await fs.remove(latentPath); }
-                    catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
-                }
-                const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-                if (await fs.pathExists(snapshotDir)) {
-                    try { await fs.remove(snapshotDir); }
-                    catch (e) { logger.warn('project', 'preview snapshot dir remove failed', e.message); }
-                }
+            // Support-asset cleanup: drop any saved stage-1 latent and durable
+            // start/end-frame snapshots owned by this item. Preview and final
+            // I2V cards can both own `.preview-assets/<itemId>/` folders.
+            const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
+            if (hasSupportAssets && await fs.pathExists(latentPath)) {
+                try { await fs.remove(latentPath); }
+                catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+            }
+            const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
+            if (await fs.pathExists(snapshotDir)) {
+                try { await fs.remove(snapshotDir); }
+                catch (e) { logger.warn('project', 'preview snapshot dir remove failed', e.message); }
             }
         }
 
@@ -1240,6 +1319,9 @@ router.post('/project/save-generation', async (req, res) => {
 
         let materializedFrozenParams = frozenParams;
         let materializedPreviewAssets = null;
+        let materializedGenerationSettings = (meta.generationSettings && typeof meta.generationSettings === 'object')
+            ? meta.generationSettings
+            : null;
         if (!replaceItemId) {
             const materialized = await materializePreviewAssets({
                 projectRoot: normalizedFolderPath,
@@ -1251,6 +1333,18 @@ router.post('/project/save-generation', async (req, res) => {
             });
             materializedFrozenParams = materialized.frozenParams;
             materializedPreviewAssets = materialized.previewAssets;
+
+            const generationSnapshots = await materializeGenerationFrameSnapshots({
+                projectRoot: normalizedFolderPath,
+                mediaDir,
+                itemId: id,
+                operation,
+                generationSettings: materializedGenerationSettings,
+            });
+            materializedGenerationSettings = generationSnapshots.generationSettings;
+            if (!materializedPreviewAssets && generationSnapshots.previewAssets) {
+                materializedPreviewAssets = generationSnapshots.previewAssets;
+            }
         }
 
         // Determine pixel dimensions: prefer client-supplied (from ratio control),
@@ -1293,9 +1387,7 @@ router.post('/project/save-generation', async (req, res) => {
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
             ratioLabel:     meta.ratioLabel    || null,
-            generationSettings: (meta.generationSettings && typeof meta.generationSettings === 'object')
-                ? meta.generationSettings
-                : null,
+            generationSettings: materializedGenerationSettings,
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,

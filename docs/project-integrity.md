@@ -114,6 +114,8 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
   Finalized multi-stage items may have `stage: 'final'` and omit `previewAssets` / `frozenParams`, but their `Media/.preview-assets/<uuid>/` folder can still exist. Reuse Prompt should look for materialized snapshots by item id before relying on saved media references.
 
+  Direct/non-preview I2V saves also materialize input frames into `Media/.preview-assets/<uuid>/` and rewrite `generationSettings.mediaItems` to those project-owned URLs. This keeps Reuse Prompt independent of the source cards/images used for generation.
+
   **Preview asset validation + cold fallback + delete cleanup:** Full contract (validation route, `canFastPath`/`canColdFallback`/`blocked` states, Continue/Finish behavior per state, sidecar-driven cleanup) lives in `.claude/rules/comfy_injection.md` § "Preview support-asset validation + cold fallback".
 
 **Video-specific sidecar fields** (present when `type === 'video'`):

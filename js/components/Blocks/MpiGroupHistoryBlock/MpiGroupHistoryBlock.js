@@ -841,6 +841,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (use.images) {
                 _pb.el.clearMedia?.();
                 const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
+                if (!mediaItems.length && String(payload.operation || '').startsWith('i2v')) {
+                    _showToast('No saved frame images were found for this older I2V entry.', 'warning');
+                }
                 for (const item of mediaItems) {
                     _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
                 }

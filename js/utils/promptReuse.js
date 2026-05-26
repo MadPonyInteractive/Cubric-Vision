@@ -63,10 +63,12 @@ function _projectFileUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(filePath)}`;
 }
 
-async function _urlExists(url) {
+async function _fileExists(filePath) {
     try {
-        const res = await fetch(url, { method: 'HEAD' });
-        return res.ok;
+        const res = await fetch(`/file-exists?path=${encodeURIComponent(filePath)}`);
+        if (!res.ok) return false;
+        const data = await res.json();
+        return data?.exists === true;
     } catch (_) {
         return false;
     }
@@ -83,11 +85,11 @@ async function _materializedPreviewAssetMediaItems(item = {}, project = {}) {
     ];
     const mediaItems = [];
     for (const candidate of candidates) {
-        const url = _projectFileUrl(`${base}\\${candidate.filename}`);
-        if (await _urlExists(url)) {
+        const filePath = `${base}\\${candidate.filename}`;
+        if (await _fileExists(filePath)) {
             mediaItems.push({
                 id: `reuse-${item.id}-${candidate.role}`,
-                url,
+                url: _projectFileUrl(filePath),
                 mediaType: 'image',
                 source: 'previewAsset',
                 role: candidate.role,
