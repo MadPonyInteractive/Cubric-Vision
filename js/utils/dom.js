@@ -11,6 +11,7 @@
  * @param {Element|Document} [root=document]
  * @returns {Element|null}
  */
+// eslint-disable-next-line mpi/no-raw-dom-query -- this file defines the qs wrapper
 export const qs = (sel, root = document) => root.querySelector(sel);
 
 /**
@@ -19,6 +20,7 @@ export const qs = (sel, root = document) => root.querySelector(sel);
  * @param {Element|Document} [root=document]
  * @returns {Element[]}
  */
+// eslint-disable-next-line mpi/no-raw-dom-query -- this file defines the qsa wrapper
 export const qsa = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /**
@@ -26,6 +28,7 @@ export const qsa = (sel, root = document) => [...root.querySelectorAll(sel)];
  * @param {string} id
  * @returns {HTMLElement|null}
  */
+// eslint-disable-next-line mpi/no-raw-dom-query -- this file defines the gid wrapper
 export const gid = (id) => document.getElementById(id);
 
 /**

@@ -251,6 +251,7 @@ function _updateBreadcrumb(page, params) {
 }
 
 // React to stats updates pushed by the stats service.
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
 Events.on('state:changed', ({ key, value }) => {
     if (!_projectNameInst) return;
     if (key === 'projectStats' && _currentPage === PAGE_GALLERY) {

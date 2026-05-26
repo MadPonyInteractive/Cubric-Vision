@@ -189,12 +189,17 @@ async function _bootApp() {
 
   // Wire startup modal to comfy engine events.
   // comfyController emits these events; shell owns the component reference.
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('comfy:starting', () => _startingComfy.el.show());
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('comfy:ready',    () => { _startingComfy.el.hide(); loadAssets(); });
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
   // Model manager opens in the right slide-over (user-initiated or zero-install gate).
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('models:open', () => {
     Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
   });
@@ -208,12 +213,14 @@ async function _bootApp() {
 
 async function _initDataRegistries() {
   // Subscribe to models:checked event to update state
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('models:checked', ({ installedModelIds: ids }) => {
     state.s_installedModelIds = ids;
   });
 
   // Subscribe to engine:ready event — check models only after engine is set up
   // This ensures extra_model_paths.yaml exists before we try to read it
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('engine:ready', async () => {
     try {
       await syncModelInstalled();

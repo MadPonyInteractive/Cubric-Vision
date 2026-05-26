@@ -102,6 +102,7 @@ export function start() {
     _started = true;
 
     // Refetch project stats whenever media changes.
+    /* eslint-disable mpi/require-destroy-on-events -- app-lifetime listeners; service starts once at boot */
     Events.on('project:stats-dirty', () => refreshProject());
     Events.on('media:imported', () => refreshProject());
     Events.on('generation:complete', () => refreshProject());
@@ -118,4 +119,5 @@ export function start() {
         state.historyStats = { groupId: null, count: 0, bytes: 0 };
         refreshProject();
     });
+    /* eslint-enable mpi/require-destroy-on-events */
 }
