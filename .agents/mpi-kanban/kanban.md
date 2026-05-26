@@ -96,15 +96,6 @@
 
 ## PLANNING
 
-### Madpony Discord Revamp
-
-  - tags: [PLAN]
-  - priority: low
-  - defaultExpanded: false
-    ```md
-    Plan File: docs\plans\2026-05-26-madpony-discord-revamp.md
-    ```
-
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
@@ -133,16 +124,6 @@
     Note in final results whether the real download path or the seeded-file
     resync path was exercised.
     Source: docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md Phase 6.
-    ```
-
-### Madpony Patreon Revamp (User Action)
-
-  - tags: [PLAN]
-  - priority: low
-  - workload: Easy
-  - defaultExpanded: false
-    ```md
-    Plan File: docs\plans\2026-04-28-madpony-patreon-revamp.md
     ```
 
 ## IMPLEMENTING
