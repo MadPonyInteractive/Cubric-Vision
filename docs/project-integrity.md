@@ -101,6 +101,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`displayName`** — Human-readable label derived from the saved filename stem (e.g., `'t2i_001'`, `'upscale_002'`, `'crop_001'`). Source of truth for `MpiHistoryList` card labels and gallery group names. Distinct from `operation` so the same item displays identically before and after project reload.
 - **`pixelDimensions`** — `{w, h}` of the actual saved media. Images use client-supplied Width/Height when present, else `sharp.metadata()` in `/project/save-generation`; generated videos use `ffprobe` in `/project/save-generation`. Crop writes the crop rect dims directly.
 - **`generationMs`** — Elapsed sampling time in milliseconds (from `tool:sampling-start` to completion). `null` for crop and uploaded items. Rendered as rounded seconds (`Ns`) on history cards. **Multi-stage replace (preview → final):** the route `/project/save-generation` sums the previous sidecar's `generationMs` with the incoming final-stage elapsed time and writes the aggregate, so finalized items show total generation time across stages.
+- **`generationSettings`** — Reuse Prompt snapshot for newly generated items: `{ operation, modelId, injectionParams, mediaItems, previewOnly, modelSettings? }`. It is convenience metadata for prompt/model/settings replay; materialized I2V snapshots in `Media/.preview-assets/<uuid>/` remain the preferred source for frame media when present.
 - **`uploaded`** — True if this item was imported by the user (not generated). Uploaded items don't have operation metadata.
 - All other fields are copied from the generation request or ComfyUI output.
 
@@ -110,6 +111,8 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 - **`loraSnapshot`** — `[{ name, strengthModel, strengthClip }, ...]` from `modelSettings[modelId].loras` at preview time. Informational only (NOT used by Continue — Continue uses the user's current LoRA selection). Removed alongside `frozenParams` on finalize.
 
 - **`previewAssets`** — Project-owned support assets for reusable preview cards. Preview T2V stores a stage-1 latent under `Media/.latents/<uuid>.latent`; preview I2V also stores durable start/end image snapshots under `Media/.preview-assets/<uuid>/`. These assets are distinct from the repo-owned `comfy_workflows/input/ComfyUI_00001_.latent` default used only to satisfy `LoadLatent` workflow validation. Shape: `{ latent: { filename, relativePath, filePath, engineInputName, status: 'available'|'missing' }, snapshots: [{ role, mediaType, filename, relativePath, filePath, status }] }`.
+
+  Finalized multi-stage items may have `stage: 'final'` and omit `previewAssets` / `frozenParams`, but their `Media/.preview-assets/<uuid>/` folder can still exist. Reuse Prompt should look for materialized snapshots by item id before relying on saved media references.
 
   **Preview asset validation + cold fallback + delete cleanup:** Full contract (validation route, `canFastPath`/`canColdFallback`/`blocked` states, Continue/Finish behavior per state, sidecar-driven cleanup) lives in `.claude/rules/comfy_injection.md` § "Preview support-asset validation + cold fallback".
 

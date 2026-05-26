@@ -17,6 +17,7 @@ import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareO
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
+import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -34,8 +35,9 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets } from '../../../services/projectService.js';
+import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
 import {
     createImageItem,
     createVideoItem,
@@ -268,8 +270,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
 
         // ── Reuse prompt ────────────────────────────────────────────────────────
-        grid.on('reuse', ({ positive, negative }) => {
-            Events.emit('workspace:inject-prompts', { positive, negative });
+        grid.on('reuse', (payload) => {
+            _handlePromptReuse(payload);
         });
 
         // Preview-stage cards are deleted through the normal multi-select
@@ -815,11 +817,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
         });
         let _pendingDeleteGroups = [];
 
-        _deleteDialog.on('ok', async () => {
+        async function _runGalleryDelete(g) {
             const project = state.currentProject;
-            if (!project || !_pendingDeleteGroups.length) return;
-            const g = _pendingDeleteGroups;
-            _pendingDeleteGroups = [];
+            if (!project || !g?.length) return;
             for (const group of g) {
                 if (group?.id) _deletingGroupIds.add(group.id);
             }
@@ -862,9 +862,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
             grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
             if (deletedGroups.length) Events.emit('media:deleted', { count: deletedGroups.length });
+        }
+
+        _deleteDialog.on('ok', async () => {
+            const g = _pendingDeleteGroups;
+            _pendingDeleteGroups = [];
+            await _runGalleryDelete(g);
         });
 
-        grid.on('delete', ({ groups: g }) => {
+        grid.on('delete', ({ groups: g, source }) => {
+            if (source === 'context') {
+                _runGalleryDelete(g);
+                return;
+            }
             _pendingDeleteGroups = g;
             _deleteDialog.el.show();
         });
@@ -891,6 +901,102 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }
         let imageCount      = 0;
         let videoCount      = 0;
+
+        function _reuseIncludes(value = {}) {
+            return {
+                prompt: value.prompt === true,
+                settings: value.settings === true,
+                model: value.model === true,
+                images: value.images === true,
+            };
+        }
+
+        function _resolveReusePayload(bundle = {}, source = 'original') {
+            const original = bundle.original || null;
+            const current = bundle.current || null;
+            if (source === 'current') return current;
+            return original || current;
+        }
+
+        function _handlePromptReuse(bundle = {}) {
+            const options = state.promptReuseOptions || {};
+            if (options.ask === true) {
+                const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
+                    includes: options,
+                    source: state.promptReuseSource,
+                    showSource: true,
+                });
+                dialog.on('apply', async ({ includes, source }) => {
+                    const payload = _resolveReusePayload(bundle, source);
+                    if (payload) await _applyPromptReuse(payload, _reuseIncludes(includes));
+                    dialog.destroy?.();
+                });
+                dialog.on('cancel', () => dialog.destroy?.());
+                dialog.el.show?.();
+                return;
+            }
+
+            const payload = _resolveReusePayload(bundle, state.promptReuseSource);
+            if (payload) _applyPromptReuse(payload, _reuseIncludes(options));
+        }
+
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+            if (!_pb?.el) return;
+            const use = _reuseIncludes(includes);
+            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+
+            let targetModel = activeModel;
+            if (use.model && payload.modelId) {
+                targetModel = installedAllModels.find(m => m.id === payload.modelId) || null;
+            }
+            if (!targetModel) {
+                const label = payload.modelId || 'Unknown model';
+                StatusBar.notify(`Model "${label}" is not installed — cannot reuse full prompt.`, 'warning');
+                use.model = false;
+                use.settings = false;
+                targetModel = activeModel;
+                if (!targetModel && use.prompt) _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+                if (!targetModel) return;
+            }
+
+            if (use.model) {
+                activeModel = targetModel;
+                activeModelId = targetModel.id;
+                setSelectedModelId(targetModel.mediaType, targetModel.id);
+                Events.emit('settings:model:select', { modelId: targetModel.id });
+                _pb.el.setModel?.(targetModel);
+            }
+
+            if (use.prompt) {
+                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+            }
+            if (use.images) {
+                _pb.el.clearMedia?.();
+                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
+                for (const item of mediaItems) {
+                    _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
+                }
+            }
+
+            if (use.settings) {
+                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                    ? payload.operation
+                    : activeOperation;
+                const settings = buildPromptReuseSettings(payload, targetModel);
+                applyPromptReuseSettings({
+                    modelId: targetModel.id,
+                    mediaType: targetModel.mediaType,
+                    operation: targetOperation,
+                    ...settings,
+                });
+                activeOperation = targetOperation;
+                _pb.el.setOperation?.(targetOperation);
+            }
+            imageCount = Number(_pb.el.imageCount) || 0;
+            videoCount = Number(_pb.el.videoCount) || 0;
+            _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
+            refreshRadial({ imageCount, videoCount, modelId: activeModelId });
+        }
 
         // Seed radial with current model so its items render correctly before
         // any PromptBox media-/model-change events fire.

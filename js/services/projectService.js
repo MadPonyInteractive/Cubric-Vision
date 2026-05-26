@@ -330,6 +330,26 @@ export function saveProjectSettings() {
     _debouncedSaveProjectSettings();
 }
 
+export function applyPromptReuseSettings({ modelId, mediaType, operation, sharedUpdates = {}, opUpdates = {}, modelUpdates = {} } = {}) {
+    if (!state.currentProject || !modelId) return;
+
+    let nextProject = state.currentProject;
+    if (Object.keys(modelUpdates).length) {
+        nextProject = setModelSettings(nextProject, modelId, modelUpdates);
+    }
+    if ((mediaType === 'image' || mediaType === 'video') && Object.keys(sharedUpdates).length) {
+        nextProject = setSharedSettings(nextProject, mediaType, sharedUpdates);
+    }
+    if (operation && Object.keys(opUpdates).length) {
+        nextProject = setOpSettings(nextProject, modelId, operation, opUpdates);
+    }
+
+    if (nextProject !== state.currentProject) {
+        state.currentProject = nextProject;
+        saveProjectSettings();
+    }
+}
+
 export async function deleteProject(project, { deleteFiles = true } = {}) {
     const folderPath = project.folderPath;
 

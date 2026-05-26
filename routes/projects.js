@@ -1293,6 +1293,9 @@ router.post('/project/save-generation', async (req, res) => {
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
             ratioLabel:     meta.ratioLabel    || null,
+            generationSettings: (meta.generationSettings && typeof meta.generationSettings === 'object')
+                ? meta.generationSettings
+                : null,
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,
@@ -1435,6 +1438,7 @@ router.post('/project/save-generation', async (req, res) => {
             frozenParams:  metaContent.frozenParams  ?? null,
             loraSnapshot:  metaContent.loraSnapshot  ?? null,
             previewAssets: metaContent.previewAssets ?? null,
+            generationSettings: metaContent.generationSettings ?? null,
             generationMs:  metaContent.generationMs  ?? null,
         });
     } catch (err) {

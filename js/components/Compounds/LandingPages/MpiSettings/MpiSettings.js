@@ -4,9 +4,17 @@ import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../../state.js';
+import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
 import { qs } from '../../../../utils/dom.js';
+
+const REUSE_PARTS = [
+    { key: 'prompt', label: 'Use Prompt' },
+    { key: 'settings', label: 'Use Settings' },
+    { key: 'model', label: 'Use Model' },
+    { key: 'images', label: 'Use Images' },
+];
 
 /**
  * MpiSettings — Settings content for the MpiSlideOver panel.
@@ -36,6 +44,17 @@ export const MpiSettings = ComponentFactory.create({
                         <div id="mpiSettingsPixelModeSlot"></div>
                         <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
                     </div>
+                    <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Reuse Prompt</label>
+                        <div class="mpi-settings__reuse-grid" id="mpiSettingsReusePartsSlot"></div>
+                        <div id="mpiSettingsReuseAskSlot"></div>
+                        <span class="mpi-settings__hint">Choose what gets copied when Reuse Prompt is clicked.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Gallery Reuse Source</label>
+                        <div id="mpiSettingsReuseSourceSlot"></div>
+                        <span class="mpi-settings__hint">Original uses the first reusable generation in a card. Current uses the selected gallery entry.</span>
+                    </div>
                 </div>
 
                 <div class="mpi-settings__section">
@@ -55,6 +74,10 @@ export const MpiSettings = ComponentFactory.create({
         </div>`,
 
     setup: (el, props, emit) => {
+        const _unsubs = [];
+        let _syncReuseControls = null;
+        let _syncReuseSource = null;
+
         // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
         el.onOpen = () => _initFields(el);
 
@@ -86,6 +109,89 @@ export const MpiSettings = ComponentFactory.create({
                     ],
                 });
                 pixelInst.on('select', ({ value }) => { state.pixelMode = value; });
+            }
+
+            // ── Reuse Prompt behavior ───────────────────────────────────────
+            const reusePartsSlot = qs('#mpiSettingsReusePartsSlot', root);
+            const reuseAskSlot = qs('#mpiSettingsReuseAskSlot', root);
+            const reuseSourceSlot = qs('#mpiSettingsReuseSourceSlot', root);
+            if (reusePartsSlot && reuseAskSlot) {
+                reusePartsSlot.innerHTML = '';
+                reuseAskSlot.innerHTML = '';
+                const options = {
+                    ask: state.promptReuseOptions?.ask === true,
+                    prompt: state.promptReuseOptions?.prompt !== false,
+                    settings: state.promptReuseOptions?.settings !== false,
+                    model: state.promptReuseOptions?.model !== false,
+                    images: state.promptReuseOptions?.images !== false,
+                };
+                const partChecks = new Map();
+                let askCheck = null;
+                const syncChecks = () => {
+                    for (const { key } of REUSE_PARTS) {
+                        partChecks.get(key)?.el?.setChecked?.(options[key] === true);
+                        partChecks.get(key)?.el?.setDisabled?.(options.ask === true);
+                    }
+                    askCheck?.el?.setChecked?.(options.ask === true);
+                };
+                _syncReuseControls = (next = {}) => {
+                    options.ask = next.ask === true;
+                    options.prompt = next.prompt !== false;
+                    options.settings = next.settings !== false;
+                    options.model = next.model !== false;
+                    options.images = next.images !== false;
+                    syncChecks();
+                };
+                const saveOptions = () => {
+                    state.promptReuseOptions = { ...options };
+                    syncChecks();
+                };
+
+                for (const { key, label } of REUSE_PARTS) {
+                    const mount = document.createElement('div');
+                    const inst = MpiCheckbox.mount(mount, {
+                        checked: options[key] === true,
+                        label,
+                        name: `reuse-setting-${key}`,
+                    });
+                    inst.on('change', ({ checked }) => {
+                        options.ask = false;
+                        options[key] = checked === true;
+                        saveOptions();
+                    });
+                    partChecks.set(key, inst);
+                    reusePartsSlot.appendChild(inst.el);
+                }
+
+                askCheck = MpiCheckbox.mount(reuseAskSlot, {
+                    checked: options.ask === true,
+                    label: 'Ask each time',
+                    name: 'reuse-setting-ask',
+                });
+                askCheck.on('change', ({ checked }) => {
+                    options.ask = checked === true;
+                    saveOptions();
+                });
+                syncChecks();
+            }
+
+            if (reuseSourceSlot) {
+                reuseSourceSlot.innerHTML = '';
+                const sourceInst = MpiRadioGroup.mount(reuseSourceSlot, {
+                    name: 'reuse-source-setting',
+                    value: state.promptReuseSource === 'current' ? 'current' : 'original',
+                    size: 'sm',
+                    options: [
+                        { label: 'Original', value: 'original' },
+                        { label: 'Current', value: 'current' },
+                    ],
+                });
+                sourceInst.on('select', ({ value }) => {
+                    state.promptReuseSource = value === 'current' ? 'current' : 'original';
+                });
+                _syncReuseSource = (value) => {
+                    sourceInst.el.setValue?.(value === 'current' ? 'current' : 'original');
+                };
             }
 
             // ── ComfyUI URL ──────────────────────────────────────────────────
@@ -151,6 +257,17 @@ export const MpiSettings = ComponentFactory.create({
                 }
             }
         }
+
+        _unsubs.push(Events.onState('promptReuseOptions', (value) => {
+            _syncReuseControls?.(value);
+        }));
+        _unsubs.push(Events.onState('promptReuseSource', (value) => {
+            _syncReuseSource?.(value);
+        }));
+
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn?.());
+        };
 
         async function _hydrateComfyPath(pathInst) {
             try {

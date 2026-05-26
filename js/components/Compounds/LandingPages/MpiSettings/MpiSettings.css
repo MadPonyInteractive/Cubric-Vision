@@ -91,6 +91,12 @@
     margin-bottom: 6px;
 }
 
+.mpi-settings__reuse-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-2);
+}
+
 .mpi-settings__error {
     font-size: var(--t-sm);
     color: var(--accent-heat);

@@ -29,6 +29,10 @@ export const STORAGE_KEYS = {
 
   // PromptBox UI
   PROMPT_EXPANDED:     'mpi_prompt_expanded',
+
+  // Reuse Prompt behavior
+  PROMPT_REUSE_OPTIONS:'mpi_prompt_reuse_options',
+  PROMPT_REUSE_SOURCE: 'mpi_prompt_reuse_source',
 };
 
 // --- sessionStorage keys ---

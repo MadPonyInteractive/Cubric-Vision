@@ -29,7 +29,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `js/state.js`
 - **Rules:** `.claude/rules/state.md`, `.claude/rules/component-state.md`
-- **Memory:** `project_zero_model_promptbox_gate.md`
+- **Memory:** `project_zero_model_promptbox_gate.md`, `project_reuse_prompt_recall.md`
 
 ### Workspaces & routing
 
@@ -41,7 +41,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_injection.md`, `.claude/rules/component-comfy.md`
-- **Memory:** `feedback_comfy_workflows_readonly.md`
+- **Memory:** `feedback_comfy_workflows_readonly.md`, `project_reuse_prompt_recall.md`
 
 ### ComfyUI engine / backend / models
 
@@ -59,7 +59,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/project-integrity.md`, `docs/data.md`
 - **Rules:** none
-- **Memory:** none
+- **Memory:** `project_reuse_prompt_recall.md`
 
 ### Versioning & migrations
 

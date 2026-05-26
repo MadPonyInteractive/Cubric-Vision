@@ -26,6 +26,12 @@ Three core data files. All are plain JS objects — no ORM, no database.
 - `getCommandComponents(key)`: Returns the `components[]` array for a given command key.
 - For the current list of operations, their `components[]`, media requirements, and status, see `.claude/rules/component-comfy.md` § "Operations and their controls[]" (authoritative table — sourced from `commandRegistry.js`).
 
+## promptControlDefaults (`js/data/promptControlDefaults.js`)
+
+**Single source for PromptBox control default values.**
+
+`PROMPT_CONTROL_DEFAULTS` is imported by both `PromptBoxControls.js` and Reuse Prompt replay. Use `commandRegistry.commands[op].defaults` for per-operation overrides. Do not duplicate PromptBox default literals in recall/replay code, otherwise old sidecars and new UI defaults can drift.
+
 ## projectModel (`js/data/projectModel.js`)
 
 **Plain serializable objects — the project file shape on disk.**

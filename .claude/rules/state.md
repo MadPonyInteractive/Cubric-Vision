@@ -111,6 +111,23 @@ PromptBoxControls own the scope decision via their `scope: 'shared' | 'perOp'` f
 
 ---
 
+## Reuse Prompt Preferences
+
+`state.promptReuseOptions` controls what the Reuse Prompt action applies: `{ ask, prompt, settings, model, images }`.
+
+- Persisted to `localStorage` via `Storage.getPromptReuseOptions` / `setPromptReuseOptions` (key `mpi_prompt_reuse_options`). Hydrated into `state.promptReuseOptions` at module init in `js/state.js`.
+- `ask` is a behavior flag only. It must not clear `prompt`, `settings`, `model`, or `images`; Settings disables those part controls while preserving their values.
+- The Ask dialog and Settings page write the same state key. Dialog changes persist immediately, so both surfaces recall the same choices.
+
+`state.promptReuseSource` controls the Gallery-only source for Reuse Prompt: `'original' | 'current'`.
+
+- Persisted to `localStorage` via `Storage.getPromptReuseSource` / `setPromptReuseSource` (key `mpi_prompt_reuse_source`). Hydrated into `state.promptReuseSource` at module init in `js/state.js`.
+- Applies only in Gallery. History reuses the clicked history entry.
+- Default is `'original'`, meaning the first reusable, non-uploaded generated entry in the card history.
+- `'current'` is strict: it reuses the card's active `selectedIndex` entry. Do not silently fall back to Original when Current is promptless; promptless generated actions may still carry model/settings/media recall.
+
+---
+
 ## PromptBox Expansion
 
 `state.promptExpanded` (boolean, default `true`) controls whether `MpiPromptBox`'s textarea grows with content or stays collapsed to one line.

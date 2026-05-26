@@ -2,6 +2,29 @@
 
 import { STORAGE_KEYS, SESSION_KEYS } from './storageKeys.js';
 
+export const DEFAULT_PROMPT_REUSE_OPTIONS = Object.freeze({
+  ask: false,
+  prompt: true,
+  settings: true,
+  model: true,
+  images: true,
+});
+
+function normalizePromptReuseOptions(value = {}) {
+  const ask = value?.ask === true;
+  return {
+    ask,
+    prompt: value?.prompt !== false,
+    settings: value?.settings !== false,
+    model: value?.model !== false,
+    images: value?.images !== false,
+  };
+}
+
+function normalizePromptReuseSource(value) {
+  return value === 'current' ? 'current' : 'original';
+}
+
 /** Wrap localStorage.getItem with JSON.parse + default fallback */
 function get(key, defaultValue = null) {
   try {
@@ -54,6 +77,12 @@ export const Storage = {
 
   getPromptExpanded:   () => get(STORAGE_KEYS.PROMPT_EXPANDED, true),
   setPromptExpanded:   (v) => set(STORAGE_KEYS.PROMPT_EXPANDED, !!v),
+
+  getPromptReuseOptions: () => normalizePromptReuseOptions(get(STORAGE_KEYS.PROMPT_REUSE_OPTIONS, DEFAULT_PROMPT_REUSE_OPTIONS)),
+  setPromptReuseOptions: (v) => set(STORAGE_KEYS.PROMPT_REUSE_OPTIONS, normalizePromptReuseOptions(v)),
+
+  getPromptReuseSource: () => normalizePromptReuseSource(get(STORAGE_KEYS.PROMPT_REUSE_SOURCE, 'original')),
+  setPromptReuseSource: (v) => set(STORAGE_KEYS.PROMPT_REUSE_SOURCE, normalizePromptReuseSource(v)),
 };
 
 export const Session = {

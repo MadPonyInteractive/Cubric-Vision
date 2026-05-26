@@ -37,6 +37,7 @@ const generateId = () => crypto.randomUUID();
  * @property {string}   prompt       - Positive prompt text at generation time
  * @property {string}   negativePrompt
  * @property {number}   seed
+ * @property {Object|null} [generationSettings] - Snapshot used by Reuse Prompt
  * @property {string}   [name]       - Optional user-assigned name
  * @property {boolean}  uploaded     - True if user-imported rather than generated
  */
@@ -75,6 +76,7 @@ export function createImageItem(overrides = {}) {
         prompt:           '',
         negativePrompt:   '',
         seed:             -1,
+        generationSettings: null,
         name:             null,
         uploaded:         false,
         pixelDimensions:  { w: 0, h: 0 },
@@ -100,6 +102,7 @@ export function createVideoItem(overrides = {}) {
         prompt:           '',
         negativePrompt:   '',
         seed:             -1,
+        generationSettings: null,
         name:             null,
         uploaded:         false,
         pixelDimensions:  { w: 0, h: 0 },

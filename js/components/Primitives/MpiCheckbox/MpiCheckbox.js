@@ -33,5 +33,9 @@ export const MpiCheckbox = ComponentFactory.create({
 
         el.isChecked  = () => input.checked;
         el.setChecked = (v) => { input.checked = !!v; };
+        el.setDisabled = (v) => {
+            input.disabled = !!v;
+            el.classList.toggle('mpi-checkbox--disabled', !!v);
+        };
     }
 });

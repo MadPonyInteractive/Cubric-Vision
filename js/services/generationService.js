@@ -62,6 +62,15 @@ function _cloneMediaItems(mediaItems = []) {
         }));
 }
 
+function _clonePlain(value) {
+    if (value == null) return value;
+    try {
+        return structuredClone(value);
+    } catch (_) {
+        return JSON.parse(JSON.stringify(value));
+    }
+}
+
 function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = false) {
     const injectionParams = config.injectionParams || {};
     const width = Number(injectionParams.Width || injectionParams.width || opts.placeholderGroup?.width || 0) || 0;
@@ -473,6 +482,17 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         const height = injectionParams.Height || injectionParams.height || 0;
         const ratioLabel = injectionParams.Ratio_Label || injectionParams.ratioLabel || null;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
+        const generationMediaItems = _cloneMediaItems(mediaItems);
+        const generationSettings = {
+            operation,
+            modelId: model.id,
+            injectionParams: _clonePlain(injectionParams || {}),
+            mediaItems: generationMediaItems,
+            previewOnly: config.previewOnly === true,
+        };
+        if (state.currentProject && model.id) {
+            generationSettings.modelSettings = _clonePlain(getModelSettings(state.currentProject, model.id));
+        }
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,
         // tag the saved sidecar with stage='preview' + frozenParams (so a later
@@ -563,7 +583,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         comfyViewUrl: url,
                         itemId: thisItemId,
                         operation,
-                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, ratioLabel },
+                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, ratioLabel, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -597,6 +617,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 modelId: model.id,
                 seed: exec.seed ?? -1,
                 ratioLabel,
+                generationSettings: savedData?.generationSettings ?? generationSettings,
                 pixelDimensions: resolvedDims,
                 // Server returns aggregated generationMs on preview→final replace
                 // (prev stage + this stage). Prefer it over the local timer.

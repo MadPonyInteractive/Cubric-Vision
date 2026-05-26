@@ -83,6 +83,11 @@ const _state = {
     promptExpanded: Storage.getPromptExpanded(),
                                      // bool — default true. Toggled by chevron lock button in
                                      // MpiPromptBox. Mirrored to localStorage by subscriber below.
+    promptReuseOptions: Storage.getPromptReuseOptions(),
+                                     // { ask, prompt, settings, model, images }.
+                                     // Default: all reuse parts enabled, ask disabled.
+    promptReuseSource: Storage.getPromptReuseSource(),
+                                     // Gallery-only source preference: 'original' | 'current'.
 };
 
 // Effective image-px → screen-px scale above which auto mode switches to nearest-neighbor.
@@ -132,6 +137,7 @@ export function batchState(fn) {
 // Persist selected-model map to localStorage on every change. Source of truth
 // is state.s_selectedModelIdByType; localStorage is a mirror for cold-start
 // hydration only.
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
 Events.on('state:changed', ({ key, value }) => {
     if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
     else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
@@ -143,4 +149,6 @@ Events.on('state:changed', ({ key, value }) => {
         root.classList.add(`pixel-mode-${mode}`);
     }
     else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
+    else if (key === 'promptReuseOptions') Storage.setPromptReuseOptions(value);
+    else if (key === 'promptReuseSource') Storage.setPromptReuseSource(value);
 });

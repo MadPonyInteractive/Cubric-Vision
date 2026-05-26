@@ -35,7 +35,8 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
-import { updateGroup, addGroup, removeGroup } from '../../../services/projectService.js';
+import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -54,6 +55,7 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
@@ -774,6 +776,94 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return true;
         }
 
+        function _reuseIncludes(value = {}) {
+            return {
+                prompt: value.prompt === true,
+                settings: value.settings === true,
+                model: value.model === true,
+                images: value.images === true,
+            };
+        }
+
+        function _handlePromptReuse(payload = {}) {
+            const options = state.promptReuseOptions || {};
+            if (options.ask === true) {
+                const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
+                    includes: options,
+                    showSource: false,
+                });
+                dialog.on('apply', async ({ includes }) => {
+                    await _applyPromptReuse(payload, _reuseIncludes(includes));
+                    dialog.destroy?.();
+                });
+                dialog.on('cancel', () => dialog.destroy?.());
+                dialog.el.show?.();
+                return;
+            }
+            _applyPromptReuse(payload, _reuseIncludes(options));
+        }
+
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+            const use = _reuseIncludes(includes);
+            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+
+            let targetModel = activeModel;
+            if (use.model && payload.modelId) {
+                targetModel = installedModels.find(m => m.id === payload.modelId) || null;
+            }
+            if (!targetModel) {
+                const label = payload.modelId || 'Unknown model';
+                _showToast(`Model "${label}" is not installed for this workspace`, 'warning');
+                use.model = false;
+                use.settings = false;
+                targetModel = activeModel;
+                if (!targetModel && use.prompt) _pb?.el?.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+                if (!targetModel) return;
+            }
+            if (use.model && targetModel.mediaType !== modeKind) {
+                _showToast('That prompt uses a different media type', 'warning');
+                return;
+            }
+
+            if (use.model) {
+                activeModel = targetModel;
+                activeModelId = targetModel.id;
+                setSelectedModelId(targetModel.mediaType, targetModel.id, { markAsLast: false });
+                _syncPromptToolDisabled();
+            }
+            _mountPromptBoxIfNeeded({ force: true });
+            if (!_pb?.el) return;
+
+            if (use.model) _pb.el.setModel?.(targetModel);
+            if (use.prompt) {
+                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+            }
+            if (use.images) {
+                _pb.el.clearMedia?.();
+                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
+                for (const item of mediaItems) {
+                    _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
+                }
+            }
+            _syncBaseCtxFromPromptBox();
+
+            if (use.settings) {
+                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                    ? payload.operation
+                    : activeOperation;
+                const settings = buildPromptReuseSettings(payload, targetModel);
+                applyPromptReuseSettings({
+                    modelId: targetModel.id,
+                    mediaType: targetModel.mediaType,
+                    operation: targetOperation,
+                    ...settings,
+                });
+                _setPromptOperation(targetOperation, { remember: true });
+            }
+            _refreshOpOptions();
+            historyTools.el.setMode?.('prompt');
+        }
+
         // ── Initial mode resolution ───────────────────────────────────────────
 
         _syncPromptToolDisabled();
@@ -1111,8 +1201,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _options?.el?.setCurrentItem?.(item);
         });
 
-        historyList.on('reuse', ({ positive, negative }) => {
-            Events.emit('workspace:inject-prompts', { positive, negative });
+        historyList.on('reuse', (payload) => {
+            _handlePromptReuse(payload);
         });
 
         historyList.on('selection-changed', ({ indices }) => {
@@ -1338,17 +1428,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        const _historyDeleteDialog = MpiOkCancel.mount(document.createElement('div'), {
-            title:       'Delete',
-            text:        'Permanently delete the selected entries and their media files?',
-            okLabel:     'Delete',
-            cancelLabel: 'Cancel',
-        });
-        let _pendingDeleteIndices = [];
-
-        _historyDeleteDialog.on('ok', async () => {
-            const indices = _pendingDeleteIndices;
-            _pendingDeleteIndices = [];
+        async function _performHistoryDelete(indices) {
             if (!indices.length) return;
             historyList.el.exitSelectMode();
             const sorted = [...indices].sort((a, b) => b - a);
@@ -1419,12 +1499,49 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             Events.emit('media:deleted', { count: deletedIndices.length });
             Events.emit('history:stats-dirty', { group: _group });
+        }
+
+        const _historyDeleteDialog = MpiOkCancel.mount(document.createElement('div'), {
+            title:       'Delete',
+            text:        'Permanently delete the selected entries and their media files?',
+            okLabel:     'Delete',
+            cancelLabel: 'Cancel',
+        });
+        let _pendingDeleteIndices = [];
+
+        _historyDeleteDialog.on('ok', async () => {
+            const indices = _pendingDeleteIndices;
+            _pendingDeleteIndices = [];
+            await _performHistoryDelete(indices);
         });
 
         _historyDeleteDialog.on('cancel', () => { _pendingDeleteIndices = []; });
 
-        historyList.on('delete-selected', ({ indices }) => {
+        historyList.on('delete-selected', ({ indices, source }) => {
             if (!indices.length) return;
+            if (indices.includes(0)) {
+                // Deleting the original entry cascades to the whole card.
+                // Single warning pop-up regardless of source — user must
+                // confirm before the entire group is removed.
+                const cascadeDialog = MpiOkCancel.mount(document.createElement('div'), {
+                    title:       'Delete entire card?',
+                    text:        'The first entry is the original — deleting it removes the card and every entry inside it. This cannot be undone.',
+                    okLabel:     'Delete card',
+                    cancelLabel: 'Cancel',
+                });
+                cascadeDialog.on('ok', async () => {
+                    const all = _group.history.map((_, i) => i);
+                    cascadeDialog.destroy?.();
+                    await _performHistoryDelete(all);
+                });
+                cascadeDialog.on('cancel', () => cascadeDialog.destroy?.());
+                cascadeDialog.el.show();
+                return;
+            }
+            if (source === 'context') {
+                _performHistoryDelete(indices);
+                return;
+            }
             _pendingDeleteIndices = [...indices];
             _historyDeleteDialog.el.show();
         });

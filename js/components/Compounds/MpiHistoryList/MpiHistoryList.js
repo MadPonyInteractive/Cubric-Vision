@@ -34,6 +34,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
+import { buildPromptReusePayload, itemHasReusablePrompt } from '../../../utils/promptReuse.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -65,11 +66,11 @@ export const MpiHistoryList = ComponentFactory.create({
         let _anchor = 0;
         const _delUnsub = Hotkeys.bind('history.selection.delete', () => {
             if (_selectMode && _selection.size > 0) {
-                emit('delete-selected', { indices: [..._selection] });
+                emit('delete-selected', { indices: [..._selection], source: 'hotkey' });
                 return;
             }
             if (_history[_selectedIdx]) {
-                emit('delete-selected', { indices: [_selectedIdx] });
+                emit('delete-selected', { indices: [_selectedIdx], source: 'hotkey' });
             }
         });
 
@@ -162,14 +163,13 @@ export const MpiHistoryList = ComponentFactory.create({
             meta.append(label, dims, extended);
             card.append(thumb, meta, actions, status, badge);
 
-            const hasPrompt = !!(item.prompt || item.negativePrompt);
-            if (hasPrompt) {
+            if (itemHasReusablePrompt(item)) {
                 const reuseBtn = MpiButton.mount(reuseWrap, {
                     icon: 'refresh_stroke', size: 'sm', variant: 'ghost', info: 'Reuse Prompt',
                 });
                 reuseBtn.on('click', (e) => {
                     e.originalEvent?.stopPropagation();
-                    emit('reuse', { positive: item.prompt || '', negative: item.negativePrompt || '' });
+                    emit('reuse', buildPromptReusePayload(item));
                 });
                 _reuseBtns.push(reuseBtn);
             } else {
@@ -236,7 +236,7 @@ export const MpiHistoryList = ComponentFactory.create({
                     items,
                     onSelect: (key) => {
                         if (key === 'delete') {
-                            emit('delete-selected', { indices: targetIdxs });
+                            emit('delete-selected', { indices: targetIdxs, source: 'context' });
                         } else if (key === 'compare') {
                             emit('compare-requested', { indices: targetIdxs });
                         } else if (key === 'combine') {

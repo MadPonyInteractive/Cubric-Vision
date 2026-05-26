@@ -11,6 +11,7 @@ import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
 
 /**
  * MpiGalleryGrid — Compound: adaptive grid of ItemGroup cards with size slider
@@ -143,7 +144,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 .map(id => _groups.find(g => g.id === id))
                 .filter(Boolean);
             if (!selected.length) return;
-            emit('delete', { groups: selected });
+            emit('delete', { groups: selected, source: 'hotkey' });
             _exitSelectionMode();
         }
 
@@ -366,9 +367,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             _reuseBtn.on('click', (e) => {
                 e.originalEvent?.stopPropagation();
-                const selected = group?.history?.[group.selectedIndex];
-                if (!selected) return;
-                emit('reuse', { positive: selected.prompt || '', negative: selected.negativePrompt || '' });
+                const payloads = buildGalleryPromptReusePayloads(group);
+                if (!payloads.current && !payloads.original) return;
+                emit('reuse', payloads);
             });
 
             const _continueBtn = MpiButton.mount(continueWrap, {
@@ -771,6 +772,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _favourite = group?.favourite || false;
                 _favBtn.el.setActive(_favourite);
                 cardEl.classList.toggle('mpi-group-card--favourited', _favourite);
+                reuseWrap.style.display = (itemHasReusablePrompt(selected) || !!findOriginalReusableItem(group)) ? '' : 'none';
 
                 const _isPreview = selected?.stage === 'preview';
                 cardEl.classList.toggle('mpi-group-card--preview', _isPreview);
@@ -848,7 +850,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         if (key === 'compare')  emit('compare',  { groups: selected });
                         if (key === 'combine')  emit('combine',  { groups: selected });
                         if (key === 'download') emit('download', { groups: selected });
-                        if (key === 'delete')   emit('delete',   { groups: selected });
+                        if (key === 'delete')   emit('delete',   { groups: selected, source: 'context' });
                         if (useSelection) _exitSelectionMode();
                     },
                 });
@@ -1237,10 +1239,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // ── Info toggle button ───────────────────────────────────────────────
 
         const infoBtnSlot = qs('.mpi-gallery-grid__info-btn-slot', el);
+        const _infoTip = (on) => on
+            ? 'Hide card info — mouse over shows it'
+            : 'Show card info always — mouse over hides it';
         const infoBtn = MpiButton.mount(infoBtnSlot, {
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
-            active: state.galleryShowInfo, info: 'Show card info',
+            active: state.galleryShowInfo, info: _infoTip(state.galleryShowInfo),
         });
+        const _syncInfoTip = () => {
+            infoBtn.el.setAttribute('data-info', _infoTip(state.galleryShowInfo));
+        };
         const _toggleInfoMode = () => {
             state.galleryShowInfo = !state.galleryShowInfo;
         };
@@ -1249,6 +1257,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 'galleryShowInfo') {
                 infoBtn.el.setActive?.(state.galleryShowInfo);
+                _syncInfoTip();
                 _cardMap.forEach(({ card }) => card.el.setShowInfo?.(state.galleryShowInfo));
             }
         }));

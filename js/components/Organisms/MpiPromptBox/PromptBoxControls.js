@@ -18,6 +18,7 @@ import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { state } from '../../../state.js';
 import { getOpSettings, getSharedSettings } from '../../../data/projectModel.js';
 import { getCommandDefault } from '../../../data/commandRegistry.js';
+import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
 import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
@@ -84,7 +85,7 @@ export const PROMPT_BOX_CONTROLS = {
     qualityTier: {
         nodeTitle: null,
         scope: 'shared',
-        defaultValue: 'medium',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.qualityTier,
         mount(el, opts = {}) {
             const model = opts.model || {};
             const modelType = model.type ?? 'flux';
@@ -143,7 +144,7 @@ export const PROMPT_BOX_CONTROLS = {
     ratio: {
         nodeTitle: null, // not a single node; Width+Height injected separately
         scope: 'shared',
-        defaultValue: '1:1',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.ratio,
         mount(el, opts = {}) {
             const model = opts.model || {};
             const modelType = model.type ?? 'flux';
@@ -152,9 +153,9 @@ export const PROMPT_BOX_CONTROLS = {
             // Read persisted settings from project
             const saved = _readSaved(this, opts);
             const savedRatioSettings = saved.ratioSelector || {};
-            const initialOrientation = savedRatioSettings.orientation || 'portrait';
+            const initialOrientation = savedRatioSettings.orientation || PROMPT_CONTROL_DEFAULTS.orientation;
             const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
-            const initialQualityTier = savedRatioSettings.qualityTier || 'medium';
+            const initialQualityTier = savedRatioSettings.qualityTier || PROMPT_CONTROL_DEFAULTS.qualityTier;
 
             // Mount selector with saved state
             this._instance = MpiOptionSelector.mount(el, {
@@ -235,7 +236,7 @@ export const PROMPT_BOX_CONTROLS = {
     previewStage: {
         nodeTitle: null,
         scope: 'shared',
-        defaultValue: false,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.previewStage,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const initialActive = saved.previewStage === true;
@@ -266,7 +267,7 @@ export const PROMPT_BOX_CONTROLS = {
     batch: {
         nodeTitle: 'Batch_Size',
         scope: 'shared',
-        defaultValue: '1',
+        defaultValue: String(PROMPT_CONTROL_DEFAULTS.batch),
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const savedNum = Number(saved.batch ?? 1);
@@ -308,7 +309,7 @@ export const PROMPT_BOX_CONTROLS = {
     duration: {
         nodeTitle: 'Duration',
         scope: 'shared',
-        defaultValue: 5,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.duration,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const savedNum = Number(saved.duration ?? this.defaultValue);
@@ -377,7 +378,7 @@ export const PROMPT_BOX_CONTROLS = {
     motionIntensity: {
         nodeTitle: 'Motion_Intensity',
         scope: 'shared',
-        defaultValue: 0,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.motionIntensity,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const savedNum = Number(saved.motionIntensity ?? this.defaultValue);
@@ -447,7 +448,7 @@ export const PROMPT_BOX_CONTROLS = {
     useGrid: {
         nodeTitle: 'Auto_Grid',
         scope: 'perOp',
-        defaultValue: false,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.useGrid,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const initialActive = saved.useGrid === true;
@@ -485,7 +486,7 @@ export const PROMPT_BOX_CONTROLS = {
     upscaleFactor: {
         nodeTitle: 'Upscale_Factor',
         scope: 'perOp',
-        defaultValue: 2,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.upscaleFactor,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const fallback = _resolveDefault(this, 'upscaleFactor', opts);
@@ -547,7 +548,7 @@ export const PROMPT_BOX_CONTROLS = {
     denoise: {
         nodeTitle: 'Denoise',
         scope: 'perOp',
-        defaultValue: 0.2, // fallback only; per-op override via commandRegistry.commands[op].defaults
+        defaultValue: PROMPT_CONTROL_DEFAULTS.denoise, // fallback only; per-op override via commandRegistry.commands[op].defaults
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
             const fallback = _resolveDefault(this, 'denoise', opts);

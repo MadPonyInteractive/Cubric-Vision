@@ -120,6 +120,8 @@ MpiPromptBox 'run' event
 
 **Location:** `js/components/Organisms/MpiPromptBox/PromptBoxControls.js`
 
+**Default source:** shared PromptBox control defaults live in `js/data/promptControlDefaults.js` (`PROMPT_CONTROL_DEFAULTS`). `PromptBoxControls.js` and Reuse Prompt replay both import this module. Do not duplicate default literals in recall/replay code. Per-operation overrides remain in `commandRegistry.commands[op].defaults`.
+
 **Current controls:**
 
 | ID             | Component         | nodeTitle      | defaultValue | `getInjectionParams()` return |
@@ -193,6 +195,8 @@ controlId: {
 - If the control flows through the standard `getInjectionParams()` path → automatic, no code change needed.
 - If the control flows through an out-of-band path (like `previewStage` → `el.getRunPayload().previewOnly`) → you MUST extend `frozenParams` in `js/services/generationService.js` and the replay in `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js` ("preview:continue" handler) to carry the signal. Same rule applies to any future snapshot/replay surface (recall-from-history, retry-with-same-params, etc.) — audit those sites when adding any out-of-band control.
 - NEVER re-read live PromptBox state inside a replay handler. Snapshots are the source of truth.
+
+**Reuse Prompt replay:** `js/utils/promptReuse.js` builds reusable prompt payloads for Gallery and History. Gallery source `'current'` is strict and must use the card's active `selectedIndex` entry, even when that entry is a promptless generated action; do not fall back to Original for Current. Reuse must apply recovered values when present and otherwise apply defaults from `PROMPT_CONTROL_DEFAULTS` plus `commandRegistry` per-op overrides for controls in the recalled operation. For I2V frame media, materialized snapshots under `Media/.preview-assets/<itemId>/startFrame.png` and `endFrame.png` are the primary source; saved `generationSettings.mediaItems` / `frozenParams.mediaItems` are fallback only. Do not depend on source gallery cards for frame recall, because users can delete cards.
 
 **Persistence invariants:**
 - Storage path: `project.modelSettings[modelId].operations[scope].<controlId>` — `scope` resolves to `'shared'` or the op key.
