@@ -96,6 +96,15 @@
 
 ## PLANNING
 
+### Madpony Discord Revamp
+
+  - tags: [PLAN]
+  - priority: low
+  - defaultExpanded: false
+    ```md
+    Plan File: docs\plans\2026-05-26-madpony-discord-revamp.md
+    ```
+
 ### Cross-platform portable distribution
 
   - tags: [PLAN]
