@@ -170,6 +170,7 @@ export async function loadProjectGrid() {
   projectGrid.innerHTML = '<div class="mpi-landing__loading"><div class="spinner"></div></div>';
   try {
     const projects = await listProjects();
+    Events.emit('projects:listed', { projects });
     const countEl = gid('pickerCount');
     if (countEl) countEl.textContent = projects.length > 0 ? `Recent · ${String(projects.length).padStart(2, '0')}` : '';
     if (projects.length === 0) {

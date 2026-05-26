@@ -26,6 +26,7 @@ import { getModelsByType } from './data/modelRegistry.js';
 import { preloadComponentStyles } from './shell/preloadStyles.js';
 import { bindWindowControls } from './shell/windowControls.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
+import { initHeroStats } from './shell/heroStats.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
 import { StatusBar } from './shell/statusBar.js';
@@ -86,6 +87,7 @@ export async function initShell() {
 
   // 4. Bind Interactions
   initProjectUI();
+  initHeroStats();
   startProjectStats();
   StatusBar.init();
   StatusBar.listen();

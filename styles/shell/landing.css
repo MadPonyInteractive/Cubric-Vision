@@ -166,6 +166,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mpi-landing__stat-accent {
+  color: var(--accent-heat);
+}
+
 /* ── Picker (right) ────────────────────────────────────────────────────────── */
 .mpi-landing__picker {
   display: flex;

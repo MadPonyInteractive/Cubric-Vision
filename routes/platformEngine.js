@@ -85,7 +85,7 @@ async function detectNvidiaGPU() {
             const hasGPU = gpuName.length > 0;
 
             logger.info('gpu-detect', `NVIDIA GPU detected: ${hasGPU ? gpuName : 'none'}, CUDA: ${cudaVersion || 'unknown'}`);
-            resolve({ hasGPU, cudaVersion });
+            resolve({ hasGPU, cudaVersion, gpuName: hasGPU ? gpuName : null });
         });
     });
 }
@@ -179,6 +179,11 @@ async function resolveDownloadConfig() {
         comfy: {
             url: `${COMFY_BASE}/${comfyFilename}`,
             filename: 'ComfyUI_windows_portable.7z',
+        },
+        gpu: {
+            name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : null),
+            vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : null,
+            cudaVersion: nvidiaResult.cudaVersion || null,
         },
     };
 

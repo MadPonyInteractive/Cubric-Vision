@@ -70,5 +70,6 @@ myToolBus.emit('result', { imgUrl });
 * `comfy:ready` / `comfy:error` - Engine status updates
 * `slide-over:open` / `slide-over:toggle` - Shell-owned right panel open/toggle requests
 * `generation-queue:changed` - Cue queue snapshot changed; subscribers derive visible queue state from this event payload
+* `projects:listed` - Emitted from `loadProjectGrid()` after `listProjects()` resolves; payload `{ projects }`. Used by landing hero stats to show last-session timestamp.
 
 > Full canonical event map (incl. `download:*`, `generation:*`, `tool:*`) lives in `docs/events.md`. `js/events.js` `MpiEventMap` is the runtime source of truth.

@@ -7,7 +7,7 @@
 
 **Platform paths:** All engine paths (Python binary, ComfyUI folder, models, custom nodes) are centralized in `routes/platformEngine.js`. Use `getPythonBin()`, `getComfyPath()`, `COMFY_DIR` — never hardcode `'ComfyUI_windows_portable'`.
 
-**GPU detection:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and CUDA version to automatically select correct engine build (`_nvidia.7z`, `_nvidia_cu126.7z`, `_amd.7z`, `_intel.7z`). Called once per engine install/upgrade; result cached for session.
+**GPU detection:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and CUDA version to automatically select correct engine build (`_nvidia.7z`, `_nvidia_cu126.7z`, `_amd.7z`, `_intel.7z`). Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
 
 **Model registry source of truth:** `js/data/modelRegistry.js` — all generative models (checkpoints, LoRAs, custom nodes) are defined here. Add new models to `MODELS` or `DEPS` here only.
 

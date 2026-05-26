@@ -17,7 +17,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const axios = require('axios');
 const logger = require('./logger');
-const { COMFY_DIR } = require('./platformEngine');
+const { COMFY_DIR, resolveDownloadConfig } = require('./platformEngine');
 
 // ── VRAM Helper ───────────────────────────────────────────────────────────────
 
@@ -52,6 +52,26 @@ router.get('/system/stats', async (req, res) => {
                 used: vram.used * 1024 * 1024,
                 percent: vram.total > 0 ? ((vram.used / vram.total) * 100).toFixed(1) : 0
             }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/system/gpu-info', async (req, res) => {
+    try {
+        const [downloadConfig, vram] = await Promise.all([
+            resolveDownloadConfig(),
+            getVramStats(),
+        ]);
+        res.json({
+            success: true,
+            gpu: {
+                name: downloadConfig.gpu?.name || null,
+                vendor: downloadConfig.gpu?.vendor || null,
+            },
+            vramTotal: vram.total * 1024 * 1024,
+            ramTotal: os.totalmem(),
         });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
