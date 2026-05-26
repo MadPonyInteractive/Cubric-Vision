@@ -43,6 +43,25 @@
     z-index: 3;
 }
 
+/* ── Load/generation spinner — centred over the stage ───────────────────── */
+
+.mpi-video-viewer__spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 5;
+}
+
+.mpi-video-viewer__spinner--visible {
+    opacity: 1;
+    pointer-events: none;
+}
+
 /* Corner chip strip host — fills stage for absolute placement */
 .mpi-video-viewer__corners {
     position: absolute;

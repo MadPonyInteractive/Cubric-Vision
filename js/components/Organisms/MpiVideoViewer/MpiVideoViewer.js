@@ -37,6 +37,11 @@
  *   enterInterpolateMode() / exitInterpolateMode()
  *   setTopRight(items)                      — corner chip strip
  *   resetView()                             — fit video back to stage (zoom=1, no pan)
+ *   setGenerating(bool)                     — show/hide spinner (generation flag);
+ *                                             OR'd with internal load flag
+ *   setLoading(bool)                        — external load flag (rare; loadVideo
+ *                                             toggles it automatically off the first
+ *                                             loadeddata/error)
  *   getSurfaceInstance()                    — MpiVideoSurface instance (for
  *                                             external attach via factories)
  *   getSourceElement()                      — raw <video> element
@@ -52,6 +57,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiVideoSurface } from '../../Compounds/MpiVideoSurface/MpiVideoSurface.js';
 import { MpiViewerCorners } from '../../Compounds/MpiViewerCorners/MpiViewerCorners.js';
+import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
 import { captureFrameBlob } from '../../../utils/Video.js';
@@ -67,6 +73,7 @@ export const MpiVideoViewer = ComponentFactory.create({
             <div class="mpi-video-viewer__stage">
                 <div data-mount="surface" class="mpi-video-viewer__player"></div>
                 <canvas class="mpi-video-viewer__overlay"></canvas>
+                <div class="mpi-video-viewer__spinner" id="spinner-wrap"></div>
                 <div class="mpi-video-viewer__corners" id="corners-mount"></div>
             </div>
         </div>
@@ -100,6 +107,30 @@ export const MpiVideoViewer = ComponentFactory.create({
         _surfaceInstance.on('loadedmetadata', (p) => emit('loadedmetadata', p));
 
         _videoElement = _surfaceInstance.el.getVideoElement();
+
+        // ── Spinner ──────────────────────────────────────────────────────
+        // Mirrors MpiCanvasViewer: visibility = _isGenerating || _isLoading.
+        // _isLoading is internal — flipped on by loadVideo, off by the first
+        // loadeddata / error fired by the underlying <video>.
+        const spinnerWrap = qs('#spinner-wrap', el);
+        MpiSpinner.mount(spinnerWrap, { size: 'lg', variant: 'primary' });
+
+        let _isGenerating = false;
+        let _isLoading = false;
+        const _syncSpinner = () => {
+            spinnerWrap.classList.toggle('mpi-video-viewer__spinner--visible', _isGenerating || _isLoading);
+        };
+        const _setGeneratingSpinner = (on) => {
+            _isGenerating = !!on;
+            _syncSpinner();
+        };
+        const _setLoadingSpinner = (on) => {
+            _isLoading = !!on;
+            _syncSpinner();
+        };
+
+        _unsubs.push(on(_videoElement, 'loadeddata', () => _setLoadingSpinner(false)));
+        _unsubs.push(on(_videoElement, 'error',      () => _setLoadingSpinner(false)));
 
         // ── Top-right chip strip ─────────────────────────────────────────
         _cornersInstance = MpiViewerCorners.mount(qs('#corners-mount', el));
@@ -291,9 +322,13 @@ export const MpiVideoViewer = ComponentFactory.create({
             } else {
                 _controlBarInstance?.el.setPendingTrim?.(null);
             }
+            _setLoadingSpinner(true);
             _surfaceInstance.el._setSrc(url);
             _resetView();
         };
+
+        el.setGenerating = (on) => _setGeneratingSpinner(on);
+        el.setLoading    = (on) => _setLoadingSpinner(on);
 
         el.resetView = () => _resetView();
 

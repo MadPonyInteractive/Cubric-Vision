@@ -289,6 +289,9 @@
  *   captureSnapshot({ time }?)        — returns { blob, dataUrl } of current frame, respecting active crop
  *   setTopRight(items)                — top-right chip strip passthrough
  *   resetView()                       — fit video back to stage (zoom=1, no pan)
+ *   setGenerating(bool)               — show/hide spinner (generation flag); OR'd with internal load flag
+ *   setLoading(bool)                  — external load flag; loadVideo toggles it
+ *                                       automatically off the first loadeddata/error
  *   destroy()                         — clean up surface, cropTool, observers, listeners
  *
  * Emits:
@@ -355,7 +358,7 @@
  *   'model-change'      { model }
  *   'operation-change'  { operation }
  *   'media-change'      { imageCount, videoCount, items }
- *   'run'               { operation, positive, negative, mediaItems, injectionParams }
+ *   'run'               { operation, positive, negative, mediaItems, injectionParams, previewOnly, historyMode }
  *   'cancel'            {}
  *   'settings'          { model }
  */
@@ -733,7 +736,7 @@
  * Emits:
  *   'open-group'  { group }       — user clicked a card (navigate to group history)
  *   'select'      { group, selected }  — checkbox toggled; selection mode managed by parent
- *   'reuse'       { positive, negative } — reuse prompt button clicked
+ *   'reuse'       { current, original, group } — reuse prompt button clicked; payloads include prompt/model/settings/media
  *   'favourite'   { group, favourite } — favourite button toggled
  *   'media-missing' { group, itemId } — image file missing (404); parent handles GC
  *   'compare'     { groups }      — compare 2 selected groups
@@ -774,6 +777,23 @@
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
+ *   'reuse'             { item, positive, negative, modelId, operation, injectionParams, mediaItems } - reuse prompt button clicked
+ */
+
+/**
+ * @typedef {Object} MpiReusePromptDialogProps (Compound - js/components/Compounds/MpiReusePromptDialog)
+ * @property {{prompt?:boolean,settings?:boolean,model?:boolean,images?:boolean}} [includes] - Initial checked reuse parts
+ * @property {'original'|'current'} [source='original'] - Initial Gallery source option
+ * @property {boolean} [showSource=true] - Whether to show Gallery source radio controls
+ *
+ * Instance methods (on instance.el):
+ *   show()    - open the modal
+ *   hide()    - close the modal
+ *   destroy() - release modal listeners
+ *
+ * Emits:
+ *   'apply'  { includes, source } - user confirmed reuse choices
+ *   'cancel' {}                   - user cancelled
  */
 
 /**
