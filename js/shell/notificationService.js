@@ -22,6 +22,18 @@ try {
 
 let _unsub = null;
 
+function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
+    if (!ipcRenderer) return false;
+    if (minimizeFirst) {
+        ipcRenderer.send('window-minimize');
+    }
+    const delay = minimizeFirst ? 180 : 0;
+    window.setTimeout(() => {
+        ipcRenderer.send('notify-generation-complete', payload);
+    }, delay);
+    return true;
+}
+
 /**
  * Initialize the notification bridge. Idempotent.
  */
@@ -33,6 +45,7 @@ export function initNotificationService() {
             const op = group?.operation || item?.operation || 'Generation';
             ipcRenderer.send('notify-generation-complete', {
                 title: 'Generation complete',
+                subtitle: 'Cubric Studio',
                 body: `${op} finished.`,
             });
         } catch (err) {
@@ -46,4 +59,12 @@ export function initNotificationService() {
  */
 export function destroyNotificationService() {
     if (_unsub) { _unsub(); _unsub = null; }
+}
+
+export function triggerGenerationCompleteNotification({ minimizeFirst = false } = {}) {
+    return sendNotificationPayload({
+        title: 'Generation complete',
+        subtitle: 'Cubric Studio',
+        body: 'Dev gallery test finished.',
+    }, { minimizeFirst });
 }

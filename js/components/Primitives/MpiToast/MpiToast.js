@@ -11,6 +11,7 @@ import { qs } from '../../../utils/dom.js';
  */
 
 // Module-level stack — tracks visible toasts (max 3) and a pending queue
+const MAX_VISIBLE_TOASTS = 2;
 const _toastStack = [];   // { el, hidden }
 const _toastQueue = [];    // { el } — waiting for a slot
 
@@ -48,7 +49,7 @@ function _showToast(item) {
 
 function _drainQueue() {
     if (_toastQueue.length === 0) return;
-    if (_toastStack.length >= 3) return;
+    if (_toastStack.length >= MAX_VISIBLE_TOASTS) return;
     const next = _toastQueue.shift();
     next.hidden = false;
     _toastStack.push(next);
@@ -71,25 +72,35 @@ export const MpiToast = ComponentFactory.create({
         const variant = props.variant || 'info';
         const message = props.message || '';
 
-        const icons = {
-            info: 'info-circle',
-            success: 'check-circle',
-            warning: 'exclamation-triangle',
-            danger: 'exclamation-circle'
+        const mascotByVariant = {
+            info: 'idle',
+            success: 'happy',
+            warning: 'greet',
+            danger: 'idle'
         };
+        const labelByVariant = {
+            info: 'Info',
+            success: 'Done',
+            warning: 'Heads up',
+            danger: 'Failed'
+        };
+        const mascot = mascotByVariant[variant] || mascotByVariant.info;
+        const label = labelByVariant[variant] || labelByVariant.info;
 
         return `<div class="mpi-toast mpi-toast--${variant}">
-            <div class="mpi-toast__icon"></div>
+            <img class="mpi-toast__mascot" src="assets/mascot/${mascot}.png" alt="" aria-hidden="true">
             <div class="mpi-toast__content">
+                <div class="mpi-toast__meta">
+                    <span class="mpi-toast__dot"></span>
+                    <span class="mpi-toast__label">${label}</span>
+                </div>
                 <p class="mpi-toast__msg">${message}</p>
             </div>
-            <button class="mpi-toast__close" aria-label="Close">&times;</button>
             <div class="mpi-toast__progress"></div>
         </div>`;
     },
 
     setup: (el, props, emit) => {
-        const closeBtn = qs('.mpi-toast__close', el);
         const progress = qs('.mpi-toast__progress', el);
         const duration = props.duration !== undefined ? props.duration : 3000;
 
@@ -106,9 +117,7 @@ export const MpiToast = ComponentFactory.create({
             }, { once: true });
         };
 
-        closeBtn.onclick = dismiss;
-
-        if (_toastStack.length < 3) {
+        if (_toastStack.length < MAX_VISIBLE_TOASTS) {
             // Assign a visible slot
             const stackIndex = _toastStack.length;
             item = { el, hidden: false };

@@ -1,33 +1,29 @@
-/* ═══════════════════════════════════════════════════════════════
-   MpiToast — Scoped BEM Styles
-   ═══════════════════════════════════════════════════════════════ */
-
 .mpi-toast {
     position: fixed;
     --toast-bottom: var(--s-4);
-    --toast-stack-offset: 70px;
+    --toast-stack-offset: 104px;
     --toast-stack-index: 0;
     bottom: calc(var(--toast-bottom) + var(--toast-stack-index) * var(--toast-stack-offset));
     left: var(--s-4);
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    align-items: flex-start;
+    gap: var(--s-3);
+    width: max-content;
+    max-width: min(520px, calc(100vw - var(--s-5)));
+    min-width: min(260px, calc(100vw - var(--s-5)));
+    min-height: 74px;
+    padding: var(--s-3) var(--s-5) var(--s-3) var(--s-4);
     background: var(--surface-bar);
     border: 1px solid var(--line);
     border-radius: var(--r-2);
-    box-shadow: 0 10px 30px oklch(0.16 0.02 350 / 0.4);
+    box-shadow: 0 10px 30px color-mix(in oklch, var(--surface-canvas) 72%, transparent);
     color: var(--ink-1);
     z-index: 20000;
-    max-width: 600px;
-    min-width: 280px;
     pointer-events: auto;
-    overflow: hidden;
+    overflow: visible;
     user-select: none;
-
-    /* Animation state */
     opacity: 0;
-    transform: translateY(20px) scale(0.9);
+    transform: translateY(18px);
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease), bottom var(--t-base) var(--ease);
 }
 
@@ -37,61 +33,88 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
 
 .mpi-toast--open {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
 }
 
 .mpi-toast--closing {
     opacity: 0;
-    transform: translateY(20px) scale(0.9);
+    transform: translateY(18px);
     pointer-events: none;
 }
 
+.mpi-toast__mascot {
+    position: absolute;
+    top: calc(var(--s-3) * -1);
+    right: var(--s-4);
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    pointer-events: none;
+    animation: mpi-toast-mascot-float 4s ease-in-out infinite;
+}
+
 .mpi-toast__content {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 420px;
+    padding-top: var(--s-1);
+}
+
+.mpi-toast__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    margin-bottom: var(--s-1);
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.mpi-toast__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--r-pill);
+    background: var(--accent-frost);
+    flex: 0 0 auto;
+}
+
+.mpi-toast--success .mpi-toast__dot {
+    background: var(--accent-ok);
+}
+
+.mpi-toast--warning .mpi-toast__dot {
+    background: var(--accent-warn);
+}
+
+.mpi-toast--danger .mpi-toast__dot {
+    background: var(--accent-heat);
 }
 
 .mpi-toast__msg {
-    font-size: var(--t-xs);
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mpi-toast__close {
-    background: none;
-    border: none;
-    color: var(--ink-2);
-    font-size: var(--t-xl);
-    cursor: pointer;
-    line-height: 1;
-    padding: 4px;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-    transition: var(--t-fast) var(--ease);
-}
-
-.mpi-toast__close:hover {
-    background: var(--surface-2);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    margin: 0;
     color: var(--ink-1);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    line-height: 1.45;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
-/* Progress bar at the bottom */
 .mpi-toast__progress {
     position: absolute;
     bottom: 0;
     left: 0;
     height: 3px;
     width: 100%;
-    background: var(--accent-heat);
-    border-radius: var(--r-pill) 0 0 var(--r-pill);
-}
-
-.mpi-toast--info .mpi-toast__progress {
     background: var(--accent-frost);
+    border-radius: 0 0 0 var(--r-2);
+    overflow: hidden;
 }
 
 .mpi-toast--success .mpi-toast__progress {
@@ -106,34 +129,13 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
     background: var(--accent-heat);
 }
 
-/* Simple Icon Placeholder */
-.mpi-toast__icon {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: var(--surface-2);
-    font-weight: bold;
-    flex-shrink: 0;
-}
+@keyframes mpi-toast-mascot-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
 
-.mpi-toast--info .mpi-toast__icon::before {
-    content: 'i';
-    color: var(--accent-frost);
-}
-
-.mpi-toast--success .mpi-toast__icon::before {
-    content: '✓';
-    color: var(--accent-ok);
-}
-
-.mpi-toast--warning .mpi-toast__icon::before {
-    content: '!';
-    color: var(--accent-warn);
-}
-
-.mpi-toast--danger .mpi-toast__icon::before {
-    content: '✕';
-    color: var(--accent-heat);
+    50% {
+        transform: translateY(-3px);
+    }
 }

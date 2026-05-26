@@ -37,6 +37,20 @@
                         <div class="comp-card-preview" id="preview-statusbar-progress"></div>
                     </div>
 
+                    <!-- OS notification test -->
+                    <div class="comp-card comp-card--wide" data-name="os notification mascot" data-label="happy mascot">
+                        <div class="comp-card-header"><span class="comp-card-name">OS Notification</span><span
+                                class="comp-card-badge">happy mascot</span></div>
+                        <div class="comp-card-preview comp-card-preview--notification" id="preview-os-notification">
+                            <img class="comp-notification-test__mascot" src="assets/mascot/happy.png" alt="">
+                            <div class="comp-notification-test__body">
+                                <div class="comp-notification-test__title">Generation complete</div>
+                                <div class="comp-notification-test__meta">Minimizes the app and sends the desktop notification path.</div>
+                                <div id="preview-os-notification-trigger"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- MpiButton -->
                     <div class="comp-card" data-name="mpibutton" data-label="primary">
                         <div class="comp-card-header"><span class="comp-card-name">MpiButton</span><span
@@ -613,6 +627,10 @@
             transform: translateY(-1px);
         }
 
+        .comp-card--wide {
+            grid-column: 1 / -1;
+        }
+
         /* Card header — mirrors .tool-header bottom border */
         .comp-card-header {
             padding: 0.5rem 0.85rem;
@@ -654,6 +672,41 @@
             flex-wrap: wrap;
             gap: 0.5rem;
             /* background: var(--surface-2); */
+        }
+
+        .comp-card-preview--notification {
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            gap: var(--s-4);
+            background: var(--surface-2);
+        }
+
+        .comp-notification-test__mascot {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            flex: 0 0 auto;
+        }
+
+        .comp-notification-test__body {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--s-2);
+        }
+
+        .comp-notification-test__title {
+            color: var(--ink-1);
+            font-size: var(--t-md);
+            font-weight: 700;
+        }
+
+        .comp-notification-test__meta {
+            max-width: 62ch;
+            color: var(--ink-3);
+            font-size: var(--t-xs);
+            line-height: 1.45;
         }
 
         /* Debug outline mode */

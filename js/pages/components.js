@@ -27,6 +27,7 @@ import { MpiPopup } from '../components/Primitives/MpiPopup/MpiPopup.js';
 import { MpiOverlay } from '../components/Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { StatusBar } from '../shell/statusBar.js';
+import { triggerGenerationCompleteNotification } from '../shell/notificationService.js';
 
 // Compounds
 import { MpiPromptBox } from '../components/Organisms/MpiPromptBox/MpiPromptBox.js';
@@ -515,6 +516,21 @@ function mountAll() {
         btnStart.on('click', () => StatusBar.progress.start('Generating image...'));
         btnComplete.on('click', () => StatusBar.progress.complete('Image generated successfully!'));
         btnCancel.on('click', () => StatusBar.progress.cancel());
+    });
+
+    mount('preview-os-notification-trigger', () => {
+        const btn = MpiButton.mount(slot('preview-os-notification-trigger'), {
+            icon: 'bell',
+            label: 'Minimize + Notify',
+            variant: 'primary',
+            info: 'Minimizes the app and sends the generation-complete desktop notification'
+        });
+        btn.on('click', () => {
+            const sent = triggerGenerationCompleteNotification({ minimizeFirst: true });
+            if (!sent) {
+                Events.emit('ui:warning', { message: 'Desktop notifications require Electron.' });
+            }
+        });
     });
 
     // ── MpiToast ──────────────────────────────────────────────────────────────

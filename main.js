@@ -102,10 +102,12 @@ if (process.env.CUBRIC_E2E_USER_DATA) {
 }
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
+const NOTIFICATION_ICON_PATH = path.join(__dirname, 'assets', 'mascot', 'happy.png');
 
 let mainWindow;
 let serverProcess;
 let windowState = {};
+const activeNotifications = new Set();
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -458,10 +460,25 @@ app.on('ready', () => {
   ipcMain.on('notify-generation-complete', (event, payload = {}) => {
     if (!mainWindow || !mainWindow.isMinimized()) return;
     if (!Notification.isSupported()) return;
-    const notif = new Notification({
+
+    const options = {
       title: payload.title || 'Generation complete',
+      subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
       silent: false,
+      urgency: payload.urgency || 'normal',
+      timeoutType: payload.timeoutType || 'default',
+    };
+    if (fs.existsSync(NOTIFICATION_ICON_PATH)) {
+      options.icon = NOTIFICATION_ICON_PATH;
+    }
+
+    const notif = new Notification(options);
+    activeNotifications.add(notif);
+    notif.on('close', () => activeNotifications.delete(notif));
+    notif.on('failed', (_event, error) => {
+      activeNotifications.delete(notif);
+      logger.warn('notification', `Generation complete notification failed: ${error}`);
     });
     notif.on('click', () => {
       if (mainWindow) {
