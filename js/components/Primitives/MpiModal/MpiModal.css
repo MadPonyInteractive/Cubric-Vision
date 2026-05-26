@@ -21,6 +21,6 @@
 /* Shell — content is rendered inside by the consuming compound */
 .mpi-modal {
     background: var(--surface-canvas);
-    border-radius: var(--r-2);
+    border-radius: var(--r-1);
     overflow: hidden;
 }

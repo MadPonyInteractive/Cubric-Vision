@@ -7,7 +7,7 @@
     text-align: center;
     padding: 24px;
     gap: 20px;
-    border-radius: var(--r-3);
+    border-radius: var(--r-1);
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
     box-shadow: 0 0 20px oklch(0.16 0.02 350 / 0.4);
