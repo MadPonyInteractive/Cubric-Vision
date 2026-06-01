@@ -1,0 +1,25 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-44",
+    "title": "Vision connector scaffold — unblock from Cubric Studio hub",
+    "description": "Ship the minimum connector scaffold in Cubric Vision so v1 is not blocked by the future Cubric Studio hub/broker. Manifest-only stub already exists but is an orphan (no code/build references). Live integration is post-v1 / when Cubric Prompt starts.",
+    "column": "todo",
+    "maturity": "planned",
+    "status": "active",
+    "created_at": "2026-06-01T00:00:00Z",
+    "updated_at": "2026-06-01T00:00:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": ["connector", "hub", "deferred"],
+    "priority": "medium",
+    "defaultExpanded": false,
+    "legacy_plan_reference": "docs\\plans\\2026-05-23-cubric-hub-readiness-before-portable-distribution.md"
+}
