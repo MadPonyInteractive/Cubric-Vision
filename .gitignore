@@ -16,7 +16,6 @@ resources/*
 !resources/enhancer_prompts.md
 !resources/cubric/
 !resources/cubric/connector-manifest.json
-comfy_workflows/scripts/
 
 # Worktrees
 .worktrees/

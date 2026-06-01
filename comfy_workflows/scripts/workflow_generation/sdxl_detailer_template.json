@@ -1,0 +1,310 @@
+{
+  "27": {
+    "inputs": {
+      "model": [
+        "1632",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ],
+      "vae": [
+        "28",
+        2
+      ],
+      "positive": [
+        "29",
+        0
+      ],
+      "negative": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "28": {
+    "inputs": {
+      "ckpt_name": "SDXL_Realistic.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
+  "29": {
+    "inputs": {
+      "text": [
+        "1638",
+        0
+      ],
+      "clip": [
+        "1632",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "30": {
+    "inputs": {
+      "text": [
+        "1639",
+        0
+      ],
+      "clip": [
+        "1632",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "502": {
+    "inputs": {
+      "image": "t2i_007.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1534": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "seed": [
+        "1582",
+        0
+      ],
+      "steps": [
+        "1562",
+        0
+      ],
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": [
+        "1561",
+        0
+      ],
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "502",
+        0
+      ],
+      "mask": [
+        "1626",
+        0
+      ],
+      "basic_pipe": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer (SDXL)"
+    }
+  },
+  "1559": {
+    "inputs": {
+      "images": [
+        "1534",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output"
+    }
+  },
+  "1561": {
+    "inputs": {
+      "float": 0.3
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Denoise"
+    }
+  },
+  "1562": {
+    "inputs": {
+      "int": 8
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Steps"
+    }
+  },
+  "1582": {
+    "inputs": {
+      "int": 30
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Seed"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "image": "MAsk_00001_.png",
+      "channel": "red"
+    },
+    "class_type": "LoadImageMask",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1627": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "28",
+        0
+      ],
+      "clip": [
+        "28",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_1"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1627",
+        0
+      ],
+      "clip": [
+        "1627",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_2"
+    }
+  },
+  "1629": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1628",
+        0
+      ],
+      "clip": [
+        "1628",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_3"
+    }
+  },
+  "1630": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1629",
+        0
+      ],
+      "clip": [
+        "1629",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_4"
+    }
+  },
+  "1631": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1630",
+        0
+      ],
+      "clip": [
+        "1630",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_5"
+    }
+  },
+  "1632": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1631",
+        0
+      ],
+      "clip": [
+        "1631",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Lora_6"
+    }
+  },
+  "1638": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Negative"
+    }
+  }
+}
