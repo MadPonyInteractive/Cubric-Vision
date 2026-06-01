@@ -1,5 +1,7 @@
 [
   "js/components/Compounds/MpiErrorDialog/MpiErrorDialog.js",
   "routes/system.js",
-  "js/core/appVersion.js"
+  "js/core/appVersion.js",
+  "routes/logger.js",
+  "docs/versioning.md"
 ]
