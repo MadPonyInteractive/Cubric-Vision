@@ -2,12 +2,17 @@
     "schema":  "mpi-kanban/task-card/v1",
     "id":  "MPI-7",
     "title":  "Cubric Studio Docs subdomain + finish docs site",
-    "description":  "Stage redesign port shipped + pushed to GitHub (Cubric-Studio-Docs main @ a2647b8).",
+    "description":  "Implementable docs.cubric.studio launch and docs-site completion plan. Phase 0 is a cooperation gate: user/dev handles Namecheap and GitHub Pages settings; agent handles repo, content, search shell, assets, and verification.",
     "column":  "todo",
-    "maturity":  "idea",
+    "maturity":  "planned",
     "status":  "active",
+    "attention":  {
+                      "state":  "required",
+                      "reason":  "Implementation needs a live cooperation checkpoint for DNS and GitHub Pages settings that cannot be completed from the local workspace alone.",
+                      "updated_at":  "2026-06-01T10:33:19Z"
+                  },
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T10:33:19Z",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
