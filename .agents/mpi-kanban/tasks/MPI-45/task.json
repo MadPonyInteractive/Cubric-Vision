@@ -1,0 +1,29 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-45",
+    "title": "Audit and fix Website hero responsiveness",
+    "description": "Audit the Cubric Vision marketing website across desktop, tablet, and mobile, then fix the hero layout issues. Focus on the new Coming soon pill, which is not displaying well across resolutions, and the currently poor mobile presentation.",
+    "column": "todo",
+    "maturity": "planned",
+    "status": "active",
+    "created_at": "2026-06-01T11:19:15Z",
+    "updated_at": "2026-06-01T11:19:15Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "website",
+        "responsive",
+        "mobile",
+        "audit"
+    ],
+    "priority": "high",
+    "defaultExpanded": true
+}

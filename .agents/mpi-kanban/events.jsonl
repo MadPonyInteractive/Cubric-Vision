@@ -76,3 +76,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-38","at":"2026-06-01T07:18:29Z","actor":"claude","summary":"Archived MPI-38 from done to tasks/_archived/MPI-38."}
 {"summary":"Removed MPI-1 from Cubric-Vision board; community/GitHub Discussions workflow belongs to Identity operations.","to":"MadPony-Identity MPI-24","id":"MPI-1","schema":"mpi-kanban/event/v1","type":"task.moved","from":"todo","at":"2026-06-01T08:01:39Z","actor":"codex"}
 {"id":"MPI-2","actor":"codex","schema":"mpi-kanban/event/v1","at":"2026-06-01T08:01:39Z","type":"task.updated","summary":"Split MPI-2: Cubric-Vision retains app-side stage/build GitHub labels; Discord workflow moved to MadPony-Identity MPI-23."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.created","at":"2026-06-01T11:19:15Z","actor":"codex","summary":"Created task: Audit and fix Website hero responsiveness."}
