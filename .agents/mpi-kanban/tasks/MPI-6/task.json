@@ -4,10 +4,10 @@
     "title":  "Additive model folders in settings",
     "description":  "- Explore adding to settings additive folders for models.",
     "column":  "todo",
-    "maturity":  "idea",
+    "maturity":  "planned",
     "status":  "active",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T12:00:00Z",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
@@ -19,7 +19,7 @@
                   "research":  "research/"
               },
     "tags":  [
-                 "Idea"
+                 "Planned"
              ],
     "priority":  "low",
     "defaultExpanded":  false,
