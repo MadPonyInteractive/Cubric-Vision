@@ -1,7 +1,11 @@
 [
   {
     "path": "C:\\AI\\Mpi\\Cubric Studio (Docs)\\index.html",
-    "role": "docs shell, search input, route frame"
+    "role": "future full docs shell to complete locally before publishing"
+  },
+  {
+    "path": "C:\\AI\\Mpi\\Cubric Studio (Docs)\\index-soon.html",
+    "role": "local snapshot of the live coming-soon placeholder currently served at docs.cubric.studio"
   },
   {
     "path": "C:\\AI\\Mpi\\Cubric Studio (Docs)\\scripts\\router.js",

@@ -11,6 +11,11 @@ Required validation before this task can move to done:
   gaps.
 - Content claims are source-grounded against Cubric Vision app files.
 - `CNAME` contains `docs.cubric.studio`.
-- User/dev confirms DNS and GitHub Pages settings.
-- HTTPS is verified after DNS propagation.
-- User explicitly approves any Docs repo push/publish step.
+- `https://docs.cubric.studio` continues to serve the coming-soon placeholder
+  until publication approval.
+- Local `index-soon.html` remains the snapshot of the current production
+  placeholder.
+- User explicitly approves replacing the live placeholder with the completed
+  local `index.html`.
+- After push, `https://docs.cubric.studio` serves the completed docs shell over
+  HTTPS.

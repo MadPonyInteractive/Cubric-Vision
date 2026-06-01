@@ -11,13 +11,24 @@ sibling docs repo:
 
 `C:\AI\Mpi\Cubric Studio (Docs)\`
 
-Important observed facts:
+Current production/local split:
+
+- `https://docs.cubric.studio` is already live.
+- The live site currently shows the phony coming-soon/placeholder page.
+- The page currently live in production is represented locally as
+  `index-soon.html`. It was the `index.html` that got pushed to production.
+- The local `index.html` is the real full docs shell that will eventually
+  replace the placeholder.
+- Work must happen locally through a static server from
+  `C:\AI\Mpi\Cubric Studio (Docs)\`.
+- Do not push during implementation. Push only after the full docs site is
+  complete and the user explicitly approves publishing local `index.html`.
+
+Other observed facts:
 
 - `CNAME` already contains `docs.cubric.studio`.
 - The docs repo reports `main...origin/main [ahead 1]` when Git is run with
   `-c safe.directory="C:/AI/Mpi/Cubric Studio (Docs)"`.
-- The current full docs shell is `index.html`; `index-soon.html` is the parked
-  coming-soon page.
 - `pages/` contains the eight registered routes: home, getting-started,
   projects, gallery, history, models, workflows, and hotkeys.
 - The search input in `index.html` is currently a placeholder.
@@ -25,33 +36,32 @@ Important observed facts:
 - The old `docs/plans/2026-05-16-port-stage-to-docs.md` plan describes the
   Stage port and is now context, not an active implementation plan.
 
-## Cooperation Gate
+## Publish Gate
 
-This task is implementable, but not fully autonomous.
+This task is implementable locally. The gate is publication, not DNS setup.
 
-The user/dev must be present for Phase 0 because it requires actions in
-external systems:
+The local implementation may proceed without changing production:
 
-1. Confirm the chosen domain is `docs.cubric.studio`.
-2. In Namecheap, create or verify the DNS record for `docs.cubric.studio`
-   pointing at GitHub Pages.
-3. In GitHub Pages settings for the Docs repo, verify source is `main` / root
-   and custom domain is `docs.cubric.studio`.
-4. Wait for DNS propagation and enable/enforce HTTPS when available.
-5. Explicitly approve publishing the full docs shell. Project rules currently
-   block pushing the Docs repo until this approval is given.
+1. Serve the Docs repo locally.
+2. Edit and verify local `index.html`, `pages/*.html`, scripts, styles, and
+   assets.
+3. Keep `index-soon.html` as the snapshot of the current live coming-soon page.
+4. Do not push the Docs repo.
+5. When complete, ask the user/dev to review the local site.
+6. Only after explicit approval, push the completed local `index.html` to
+   replace the live placeholder.
 
-Agent-owned work can proceed locally before or after Phase 0, but final publish
-requires the user/dev approval above.
+Project rules still block pushing the Docs repo until the user explicitly says
+the docs site is ready to ship.
 
 ## Implementation
 
-- [ ] Phase 0 - Cooperation and publish gate.
-  - Confirm `docs.cubric.studio` remains the target domain.
-  - Prepare exact DNS/GitHub Pages instructions for the user/dev.
-  - Do not push. Do not change the production gate without explicit approval.
-  - After the user/dev updates DNS/Pages, verify the domain with DNS lookup and
-    HTTPS checks.
+- [ ] Phase 0 - Local server and publish guard.
+  - Confirm the live site remains the coming-soon placeholder.
+  - Start a local static server from `C:\AI\Mpi\Cubric Studio (Docs)\`.
+  - Verify local `index.html` loads the full docs shell.
+  - Verify local `index-soon.html` remains the production placeholder snapshot.
+  - Do not push. Do not change the live site during implementation.
 
 - [ ] Phase 1 - Docs site audit and route smoke.
   - Run a local static server from `C:\AI\Mpi\Cubric Studio (Docs)\`.
@@ -98,8 +108,8 @@ requires the user/dev approval above.
   - Summarize changed files, unresolved content gaps, and any source
     uncertainties.
   - Run local route/search/a11y smoke.
-  - Prepare final user/dev approval checklist for push and public DNS/HTTPS
-    verification.
+  - Prepare final user/dev approval checklist for replacing the live
+    coming-soon placeholder with local `index.html`.
   - Only push after the user explicitly says the docs site is ready to ship.
 
 ## Completed
@@ -109,9 +119,9 @@ requires the user/dev approval above.
 
 ## Remaining Work
 
-All implementation phases are pending. Start with Phase 0 if the goal is to
-make the public subdomain live. Start with Phase 1 if the goal is to finish the
-local docs content before publication.
+All implementation phases are pending. Start with Phase 0 to establish the
+local server and publish guard, then continue through local docs content before
+publication.
 
 ## Plan Drift
 
@@ -123,6 +133,11 @@ local docs content before publication.
   publishing the full docs site.
 - 2026-06-01: DNS/GitHub Pages setup is not an autonomous agent task. The plan
   now treats it as a cooperation gate with the user/dev.
+- 2026-06-01: User corrected current production state: `docs.cubric.studio` is
+  already live with the coming-soon placeholder. The local `index-soon.html`
+  represents the currently published placeholder, while local `index.html` is
+  the future full docs shell. Work must proceed locally and only push
+  `index.html` after the docs site is complete and explicitly approved.
 
 ## Verification
 
@@ -137,13 +152,16 @@ Local verification before publish approval:
 - Mobile menu opens/closes via hamburger, overlay click, link click, and Esc.
 - TOC links and active route highlighting work after content edits.
 - `CNAME` still contains `docs.cubric.studio`.
+- Local `index-soon.html` still preserves the current production placeholder
+  until publication.
 
-External verification with user/dev:
+Publication verification with user/dev:
 
-- DNS for `docs.cubric.studio` resolves to GitHub Pages as configured.
-- GitHub Pages custom domain shows no blocking errors.
-- HTTPS is available and enforced.
-- The user explicitly approves any push/publish step for the Docs repo.
+- The user reviews the completed local docs site.
+- The user explicitly approves replacing the live coming-soon page with local
+  `index.html`.
+- After push, `https://docs.cubric.studio` serves the completed docs shell over
+  HTTPS.
 
 ## Preservation Notes
 
@@ -152,5 +170,9 @@ External verification with user/dev:
   under the sandbox user.
 - Never run `git push` in the Docs repo unless the user explicitly lifts the
   docs push block for this task.
+- Related memory:
+  `C:\Users\Fabio\.claude\projects\C--AI-Mpi-CubricStudio\memory\project_docs_stage_port.md`.
+  It still records the original Stage port and now has a stale subdomain-pending
+  detail; update it only after confirming the memory change with the user.
 - If content work changes app behavior claims, update docs content from app
   source, not from memory or marketing copy.
