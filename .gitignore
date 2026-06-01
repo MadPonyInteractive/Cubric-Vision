@@ -17,6 +17,9 @@ resources/*
 !resources/cubric/
 !resources/cubric/connector-manifest.json
 
+# Contains a hardcoded HF token — keep local only, do not track
+comfy_workflows/scripts/upload-models/upload.py
+
 # Worktrees
 .worktrees/
 
