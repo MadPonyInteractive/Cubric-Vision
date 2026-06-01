@@ -1,23 +1,24 @@
 {
-  "schema": "mpi-kanban/board/v1",
-  "next_id": 44,
-  "columns": {
-    "todo": [
-      "MPI-1",
-      "MPI-2",
-      "MPI-3",
-      "MPI-4",
-      "MPI-6",
-      "MPI-7",
-      "MPI-8"
-    ],
-    "doing": [],
-    "done": [
-      "MPI-39",
-      "MPI-40",
-      "MPI-41",
-      "MPI-42",
-      "MPI-43"
-    ]
-  }
+    "schema":  "mpi-kanban/board/v1",
+    "next_id":  44,
+    "columns":  {
+                    "todo":  [
+                                 "MPI-2",
+                                 "MPI-3",
+                                 "MPI-4",
+                                 "MPI-6",
+                                 "MPI-7",
+                                 "MPI-8"
+                             ],
+                    "doing":  [
+
+                              ],
+                    "done":  [
+                                 "MPI-39",
+                                 "MPI-40",
+                                 "MPI-41",
+                                 "MPI-42",
+                                 "MPI-43"
+                             ]
+                }
 }

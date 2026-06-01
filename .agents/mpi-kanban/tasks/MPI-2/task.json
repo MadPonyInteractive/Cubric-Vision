@@ -1,13 +1,13 @@
 {
     "schema":  "mpi-kanban/task-card/v1",
     "id":  "MPI-2",
-    "title":  "In-app error reporter — stage-aware GitHub Issues routing",
-    "description":  "Cross-repo work from MPI Discord revamp session (2026-05-29).",
+    "title":  "In-app error reporter - add stage/build GitHub labels",
+    "description":  "Cubric-Vision implementation slice split from the cross-repo Discord/GitHub bug-report workflow card.",
     "column":  "todo",
     "maturity":  "idea",
     "status":  "active",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T08:01:39Z",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
@@ -21,7 +21,8 @@
     "tags":  [
                  "feature",
                  "telemetry",
-                 "bug-tracking"
+                 "bug-tracking",
+                 "github"
              ],
     "priority":  "high",
     "defaultExpanded":  false,

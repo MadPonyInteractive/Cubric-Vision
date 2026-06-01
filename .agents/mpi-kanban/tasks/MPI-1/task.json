@@ -1,13 +1,13 @@
 {
     "schema":  "mpi-kanban/task-card/v1",
     "id":  "MPI-1",
-    "title":  "GitHub Discussions — feature request canonical surface",
-    "description":  "Cross-repo work from MPI Discord revamp session (2026-05-29).",
+    "title":  "GitHub Discussions â€” feature request canonical surface",
+    "description":  "Moved to MadPony-Identity MPI-24; retained here only as provenance from the migrated Cubric-Vision backlog.",
     "column":  "todo",
     "maturity":  "idea",
-    "status":  "active",
+    "status":  "moved",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T08:01:39Z",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",

@@ -1,3 +1,3 @@
-# Validation
+﻿# Validation
 
-No validation has been recorded for this migrated task yet.
+Moved out of the Cubric-Vision active board. Canonical task is MadPony-Identity MPI-24.
