@@ -1,0 +1,29 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-3",
+    "title":  "Vision subdomain content (vision.cubric.studio)",
+    "description":  "Cubric Studio website (cubric.studio) is becoming the ecosystem landing.",
+    "column":  "todo",
+    "maturity":  "idea",
+    "status":  "active",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "tags":  [
+                 "website",
+                 "content",
+                 "deferred"
+             ],
+    "priority":  "medium",
+    "defaultExpanded":  false,
+    "legacy_column":  "BACKLOG"
+}

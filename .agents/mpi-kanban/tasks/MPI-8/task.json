@@ -1,0 +1,28 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-8",
+    "title":  "Cross-platform portable distribution",
+    "description":  "Sequencing lock 2026-05-21: start after current app implementation work and",
+    "column":  "todo",
+    "maturity":  "planned",
+    "status":  "active",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "tags":  [
+                 "PLAN"
+             ],
+    "priority":  "medium",
+    "defaultExpanded":  false,
+    "legacy_plan_reference":  "docs\\plans\\2026-04-30-cross-platform-portable-distribution.md",
+    "legacy_column":  "PLANNING"
+}

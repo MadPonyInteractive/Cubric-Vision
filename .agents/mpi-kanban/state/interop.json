@@ -1,0 +1,17 @@
+{
+    "schema":  "mpi-kanban/interop/v1",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "source_of_truth":  "file",
+    "last_detected_environment":  {
+                                      "kind":  "generic",
+                                      "detected_at":  "2026-06-01T06:30:12Z",
+                                      "signals":  [
+
+                                                  ]
+                                  },
+    "last_sync_at":  null,
+    "last_export_at":  null,
+    "id_mappings":  [
+
+                    ]
+}

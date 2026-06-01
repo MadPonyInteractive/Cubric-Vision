@@ -1,0 +1,30 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-1",
+    "title":  "GitHub Discussions — feature request canonical surface",
+    "description":  "Cross-repo work from MPI Discord revamp session (2026-05-29).",
+    "column":  "todo",
+    "maturity":  "idea",
+    "status":  "active",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "tags":  [
+                 "feature",
+                 "github",
+                 "community",
+                 "workflow"
+             ],
+    "priority":  "high",
+    "defaultExpanded":  false,
+    "legacy_column":  "BACKLOG"
+}

@@ -1,11 +1,11 @@
 ---
 schema: mpi-kanban/project-profile/v1
 mode: scalable-foundation
-mode_rationale: user-confirmed at setup; strong repo evidence (12 .claude/rules, 12 docs/, schema versioning, husky CI, kanban archives)
+mode_rationale: user-confirmed at setup; strong repo evidence (16 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-05-24
-last_refresh_notes: audit pass — collapsed § Conventions to single pointer (CLAUDE.md is canonical); cleared rule duplication
+last_refresh: 2026-06-01
+last_refresh_notes: refresh pass - migrated 43 legacy kanban.md entries into board.json/task workspaces; state now points at JSON board; legacy kanban.md tombstoned with snapshot preserved.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 

@@ -1,0 +1,22 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-15",
+    "title":  "Gallery Cards Model Display",
+    "description":  "Completed 2026-05-25 by Codex.",
+    "column":  "done",
+    "maturity":  "complete",
+    "status":  "accepted",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "defaultExpanded":  false
+}

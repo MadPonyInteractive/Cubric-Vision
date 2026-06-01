@@ -1,0 +1,30 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-35",
+    "title":  "Cubric Vision foundation - ecosystem-backend",
+    "description":  "Completed (planning) 2026-05-21.",
+    "column":  "done",
+    "maturity":  "complete",
+    "status":  "accepted",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "tags":  [
+                 "PLAN",
+                 "architecture",
+                 "typescript",
+                 "integration"
+             ],
+    "priority":  "high",
+    "defaultExpanded":  false,
+    "legacy_plan_reference":  "docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md"
+}

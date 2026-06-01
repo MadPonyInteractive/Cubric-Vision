@@ -1,0 +1,22 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-11",
+    "title":  "Electron JS logo question.",
+    "description":  "Resolved 2026-05-25 by claude-opus-4.7 as planning chat — folded into the",
+    "column":  "done",
+    "maturity":  "complete",
+    "status":  "accepted",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T06:30:12Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "defaultExpanded":  false
+}
