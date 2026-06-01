@@ -1,8 +1,8 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-05-24
-last_refresh_notes: added topic block "Dev configs & engine internals"; added MAPPING.md supplemental pointer to Stage UI baseline; closed dev_configs/engine topic gap
+last_refresh: 2026-06-01
+last_refresh_notes: refresh pass — removed 3 dead memory pointers (zero_model_promptbox_gate, comfy_workflows_readonly, model_type_vs_mediatype); wired 11 existing memory files into matching topics
 ---
 
 # Project Knowledge Index
@@ -17,7 +17,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `.claude/rules/components.md`
 - **Rules:** `.claude/rules/dos_and_donts.md`, `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, `.claude/rules/component-state.md`
-- **Memory:** none
+- **Memory:** `project_canvas_viewer_spinner_flags.md`, `project_queue_panel_render_diff.md`, `project_gallery_card_chrome.md`, `project_gallery_slider_sizing.md`, `project_gallery_video_thumb_pattern.md`, `project_mpi_radio_emits_select.md`
 
 ### Events & cross-component communication
 
@@ -29,7 +29,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `js/state.js`
 - **Rules:** `.claude/rules/state.md`, `.claude/rules/component-state.md`
-- **Memory:** `project_zero_model_promptbox_gate.md`, `project_reuse_prompt_recall.md`
+- **Memory:** `project_reuse_prompt_recall.md`
 
 ### Workspaces & routing
 
@@ -41,13 +41,13 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_injection.md`, `.claude/rules/component-comfy.md`
-- **Memory:** `feedback_comfy_workflows_readonly.md`, `project_reuse_prompt_recall.md`
+- **Memory:** `project_reuse_prompt_recall.md`, `project_cue_queue_contract.md`
 
 ### ComfyUI engine / backend / models
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_engine.md`
-- **Memory:** `project_comfy_models_path_source.md`, `project_model_type_vs_mediatype.md`
+- **Memory:** `project_comfy_models_path_source.md`, `project_comfy_cache_dedupe.md`
 
 ### Downloads
 
@@ -59,7 +59,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/project-integrity.md`, `docs/data.md`
 - **Rules:** none
-- **Memory:** `project_reuse_prompt_recall.md`
+- **Memory:** `project_reuse_prompt_recall.md`, `project_remove_history_entry_guard.md`, `project_video_trim_frame_semantics.md`
 
 ### Versioning & migrations
 
@@ -122,6 +122,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - `CLAUDE.md`, `AGENTS.md`
 - `docs/PROJECT.md` — orientation hub
 - `.claude/rules/dos_and_donts.md` — universal baseline
+- **Memory:** `project_product_scope.md` (Vision = image/video only; audio + prompt-gen are sibling apps)
 
 ## Topic Gaps
 
