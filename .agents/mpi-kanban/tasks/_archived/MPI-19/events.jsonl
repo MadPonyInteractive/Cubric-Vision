@@ -1,0 +1,2 @@
+{"source":".agents/mpi-kanban/legacy/kanban-2026-06-01-072015.md","summary":"Imported legacy Markdown entry \u0027Universal workflows should enqueue visible Cue jobs\u0027.","id":"MPI-19","type":"migration.task_imported","legacy_column":"COMPLETED","at":"2026-06-01T06:30:12Z","actor":"codex","schema":"mpi-kanban/event/v1","to":"done"}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-19","at":"2026-06-01T07:18:29Z","actor":"claude","summary":"Archived MPI-19 from done to tasks/_archived/MPI-19."}

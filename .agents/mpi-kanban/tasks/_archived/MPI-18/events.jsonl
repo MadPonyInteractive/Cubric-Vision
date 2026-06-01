@@ -1,0 +1,2 @@
+{"source":".agents/mpi-kanban/legacy/kanban-2026-06-01-072015.md","summary":"Imported legacy Markdown entry \u0027Video upscale should finish cleanly instead of sticking at 100%\u0027.","id":"MPI-18","type":"migration.task_imported","legacy_column":"COMPLETED","at":"2026-06-01T06:30:12Z","actor":"codex","schema":"mpi-kanban/event/v1","to":"done"}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-18","at":"2026-06-01T07:18:29Z","actor":"claude","summary":"Archived MPI-18 from done to tasks/_archived/MPI-18."}
