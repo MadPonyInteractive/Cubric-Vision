@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "b4a174ce-ce0c-4119-90ac-00d844611024",
+  "status": "verified",
+  "claim_kind": "write",
+  "file_path": "C:\\AI\\Mpi\\Cubric Studio (Website)\\styles\\product.css",
+  "owner_session": "sessions/a0a109fa-4610-4ff9-96b5-f6682a52c9bf.json",
+  "owner_role": "implementer",
+  "task": "tasks/b69166d7-3f97-4abc-b4b5-fdeea197348a.json",
+  "task_card": "MPI-45",
+  "heartbeat_at": "2026-06-02T13:54:42Z",
+  "recent_events": [
+    {
+      "at": "2026-06-02T13:39:41Z",
+      "type": "file_claimed",
+      "summary": "Claimed Vision hero responsive stylesheet."
+    },
+    {
+      "at": "2026-06-02T13:54:42Z",
+      "type": "file_verified",
+      "summary": "Responsive stylesheet changes verified by user."
+    }
+  ]
+}

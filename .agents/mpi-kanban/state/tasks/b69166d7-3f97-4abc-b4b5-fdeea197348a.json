@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/coordination-task/v1",
+  "id": "b69166d7-3f97-4abc-b4b5-fdeea197348a",
+  "status": "closed",
+  "title": "Audit and fix Website hero responsiveness",
+  "task_card": "MPI-45",
+  "plan": ".agents/mpi-kanban/tasks/MPI-45/plan.md",
+  "owner_session": "sessions/a0a109fa-4610-4ff9-96b5-f6682a52c9bf.json",
+  "heartbeat_at": "2026-06-02T13:54:42Z",
+  "allowed_actions": [
+    "read",
+    "write",
+    "verify",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-02T13:39:41Z",
+      "type": "task_attached",
+      "summary": "Attached implementation session to MPI-45."
+    },
+    {
+      "at": "2026-06-02T13:54:42Z",
+      "type": "task_closed",
+      "summary": "Closed after viewport checks and user verification."
+    }
+  ]
+}
