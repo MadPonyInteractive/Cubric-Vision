@@ -3,7 +3,6 @@
     "next_id":  46,
     "columns":  {
                     "todo":  [
-                                 "MPI-2",
                                  "MPI-4",
                                  "MPI-6",
                                  "MPI-7",
@@ -14,6 +13,7 @@
 
                               ],
                     "done":  [
+                                 "MPI-2",
                                  "MPI-45",
                                  "MPI-39",
                                  "MPI-40",

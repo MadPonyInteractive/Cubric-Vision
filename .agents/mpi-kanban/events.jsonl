@@ -81,3 +81,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.updated","at":"2026-06-02T13:39:41Z","actor":"codex","summary":"Set maturity to in-progress for responsive hero implementation."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"validation.updated","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Recorded viewport verification and user approval."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.moved","from":"doing","to":"done","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Moved verified responsive hero fix to done."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-2","from":"todo","to":"done","at":"2026-06-02T14:10:00Z","actor":"claude","summary":"MPI-2 done — error-reporter stage/version labels."}
