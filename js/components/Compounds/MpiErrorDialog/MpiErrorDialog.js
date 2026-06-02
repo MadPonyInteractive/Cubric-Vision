@@ -5,6 +5,8 @@ import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { qs } from '../../../utils/dom.js';
 import { clientLogger } from '../../../services/clientLogger.js';
+import { APP_VERSION } from '../../../core/appVersion.js';
+import { APP_STAGE } from '../../../core/appStage.js';
 
 /**
  * MpiErrorDialog — Global Error Notification Dialog (Compound)
@@ -109,11 +111,19 @@ export const MpiErrorDialog = ComponentFactory.create({
                 const message = messageSlot.textContent;
                 const summary = summaryField.value.trim();
 
-                // Send to backend to create GitHub issue
+                // Send to backend to create GitHub issue. Build metadata is
+                // advisory — the backend re-derives stage from appVersion and
+                // never trusts the client-sent stage.
                 const createRes = await fetch('/github/create-issue', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, message, summary, log })
+                    body: JSON.stringify({
+                        title,
+                        message,
+                        summary,
+                        log,
+                        build: { appVersion: APP_VERSION, stage: APP_STAGE }
+                    })
                 });
 
                 const createData = await createRes.json();

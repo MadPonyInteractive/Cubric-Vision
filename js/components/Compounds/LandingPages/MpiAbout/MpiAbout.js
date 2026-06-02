@@ -1,4 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
+import { APP_VERSION } from '../../../core/appVersion.js';
+import { APP_STAGE_LABEL } from '../../../core/appStage.js';
 
 /**
  * MpiAbout — About content for the MpiSlideOver panel.
@@ -22,7 +24,7 @@ export const MpiAbout = ComponentFactory.create({
                     and workflows kept on your machine. Cubric Vision is built for open-ended creation
                     with mostly uncensored models, and is the first part of a wider Cubric creative ecosystem.
                 </p>
-                <span class="mpi-about__version">Alpha v0.0.1</span>
+                <span class="mpi-about__version">${APP_STAGE_LABEL} v${APP_VERSION}</span>
             </div>
         </div>`,
 

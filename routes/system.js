@@ -177,9 +177,29 @@ router.get('/logs/read', async (req, res) => {
 // ── GitHub Issue Creation ─────────────────────────────────────────────────────
 
 /**
+ * Derive the release stage from a semantic version string.
+ * Mirrors js/core/appStage.js deriveStage() (frontend ESM cannot be required here).
+ * Falls back to 'alpha' for unparseable input — never claims 'release'.
+ * @param {string} version
+ * @returns {'alpha'|'beta'|'release'}
+ */
+function deriveStage(version) {
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(version || '').trim());
+    if (!m) return 'alpha';
+    const major = Number(m[1]);
+    const minor = Number(m[2]);
+    const patch = Number(m[3]);
+    if (major < 1) return 'alpha';
+    if (minor === 0 && patch === 0) return 'release';
+    if (patch === 0) return 'beta';
+    return 'alpha';
+}
+
+/**
  * POST /github/create-issue
  * Creates a GitHub issue with error report.
- * Body: { title, message, summary, log }
+ * Body: { title, message, summary, log, build?: { appVersion, stage } }
+ * Stage label is re-derived server-side from build.appVersion; client stage is ignored.
  */
 router.post('/github/create-issue', async (req, res) => {
     const token = process.env.GITHUB_TOKEN;
@@ -189,13 +209,19 @@ router.post('/github/create-issue', async (req, res) => {
         return res.status(500).json({ success: false, error: 'GitHub credentials not configured' });
     }
 
-    const { title, message, summary, log } = req.body;
+    const { title, message, summary, log, build } = req.body;
 
     if (!title || !message) {
         return res.status(400).json({ success: false, error: 'title and message required' });
     }
 
     try {
+        // Build metadata. Stage is ALWAYS re-derived server-side from the
+        // reported app version — the client-sent stage is advisory only and
+        // never trusted. Mirrors js/core/appStage.js deriveStage().
+        const appVersion = (build && typeof build.appVersion === 'string') ? build.appVersion : 'unknown';
+        const stage = deriveStage(appVersion);
+
         // Trim log to last 2000 chars to stay within GitHub's 65k limit
         let trimmedLog = log || '(no log available)';
         if (trimmedLog.length > 2000) {
@@ -206,22 +232,31 @@ router.post('/github/create-issue', async (req, res) => {
         if (summary) {
             body += `\n\n**What I was doing:**\n${summary}`;
         }
+        body += `\n\n**App version:** ${appVersion}\n**Stage:** ${stage}`;
         body += `\n\n<details>\n<summary>App Log</summary>\n\n\`\`\`\n${trimmedLog}\n\`\`\`\n\n</details>`;
 
-        const response = await axios.post(
-            `https://api.github.com/repos/${repo}/issues`,
-            {
-                title,
-                body,
-                labels: ['bug']
-            },
-            {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
+        const labels = ['bug', 'auto-report', `stage:${stage}`];
+
+        const ghHeaders = {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        };
+        const issueUrl = `https://api.github.com/repos/${repo}/issues`;
+
+        let response;
+        try {
+            response = await axios.post(issueUrl, { title, body, labels }, { headers: ghHeaders });
+        } catch (labelErr) {
+            // A 422 here is usually a label problem (malformed/invalid label).
+            // Degrade gracefully: report the bug anyway with only the base
+            // 'bug' label rather than dropping the whole report. Log the cause.
+            if (labelErr.response?.status === 422) {
+                logger.warn('system', `GitHub issue label apply failed; retrying with base label only. labels=${JSON.stringify(labels)} detail=${JSON.stringify(labelErr.response?.data)}`);
+                response = await axios.post(issueUrl, { title, body, labels: ['bug'] }, { headers: ghHeaders });
+            } else {
+                throw labelErr;
             }
-        );
+        }
 
         res.json({
             success: true,
