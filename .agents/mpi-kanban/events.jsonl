@@ -82,6 +82,7 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"validation.updated","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Recorded viewport verification and user approval."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.moved","from":"doing","to":"done","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Moved verified responsive hero fix to done."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-2","from":"todo","to":"done","at":"2026-06-02T14:10:00Z","actor":"claude","summary":"MPI-2 done — error-reporter stage/version labels."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-46","at":"2026-06-03T03:58:36.419Z","actor":"vscode","summary":"Created MPI-46."}
 {"id":"MPI-6","type":"task.moved","summary":"Moved MPI-6 from todo to doing: Implementation started.","from":"todo","to":"doing","at":"2026-06-03T04:08:57Z","actor":"codex","schema":"mpi-kanban/event/v1"}
 {"id":"MPI-6","type":"task.updated","summary":"Implementation started for additive model folders.","at":"2026-06-03T04:08:57Z","actor":"codex","schema":"mpi-kanban/event/v1"}
 {"id":"MPI-6","type":"validation.updated","summary":"Recorded automated checks and user verification for additive model folders.","at":"2026-06-03T04:39:03Z","actor":"codex","schema":"mpi-kanban/event/v1"}

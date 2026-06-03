@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-46","at":"2026-06-03T03:58:36.419Z","actor":"vscode","summary":"Created MPI-46."}
+{"schema":"mpi-kanban/event/v1","type":"task.planned","id":"MPI-46","at":"2026-06-03T04:24:30.693Z","actor":"codex","summary":"Created implementable large plan for changelog overlay."}

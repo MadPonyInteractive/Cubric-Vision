@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-46",
+  "title": "Changelog Overlay",
+  "description": "Add a changelog overlay on startup for version bumps/updates.\nUse existing components, possibly MPI overlay.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-06-03T03:58:36.419Z",
+  "updated_at": "2026-06-03T04:24:30.693Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
