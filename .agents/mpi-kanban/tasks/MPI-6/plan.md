@@ -99,12 +99,20 @@ Frontend log via `clientLogger`, backend via `routes/logger.js`.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] Implemented separate persisted extras config for `loras` and `upscale_models`.
+- [x] Refactored YAML generation to merge extras only into `loras` and `upscale_models`.
+- [x] Added `GET/POST /comfy/extra-folders` and preserved extras across primary path changes/clears.
+- [x] Unioned primary and extra bucket scans while preserving the `files: string[]` response shape.
+- [x] Preserved raw filenames for user-selected upscalers outside the registry.
+- [x] Refreshed LoRA/upscaler asset state after extra-folder edits.
+- [x] Added uninstall guards for model roots and custom-node roots.
+- [x] Added Settings UI controls for additive LoRA/upscaler folders, including per-row Browse replacement.
+- [x] Added focused backend smoke coverage.
+- [x] User verified implementation.
 
 ## Remaining Work
 
-- Implement the 8 sub-parts above as one coherent flow (backend persistence + YAML merge + routes +
-  union scan + upscaler filename persistence + asset refresh + safety assert + settings UI).
+- None for MPI-6. Suggested follow-up: update docs/rules for the new Comfy extra-folder routes and Settings UI wiring if the user approves documentation changes.
 
 ## Plan Drift
 

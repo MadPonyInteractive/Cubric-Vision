@@ -1,0 +1,35 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "44e1f0c4-d820-41fd-8188-d3daa8fd5e3a",
+  "status": "verified",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f65a1b13-8244-4d3e-8a6f-c96b674f7815.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/333bcc7a-c603-4131-9ce6-b8a8084e3f52.json",
+  "heartbeat_at": "2026-06-03T04:39:03Z",
+  "paths": [
+    "routes/shared.js",
+    "routes/yamlHelper.js",
+    "routes/comfy.js",
+    "routes/downloadManager.js",
+    "routes/engine.js",
+    "js/services/assetService.js",
+    "js/services/commandExecutor.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
+    "js/components/Compounds/MpiModelSettings/MpiModelSettings.js",
+    "tests/"
+  ],
+  "recent_events": [
+    {
+      "type": "files_claimed",
+      "at": "2026-06-03T04:08:57Z",
+      "summary": "Claimed expected MPI-6 backend, settings UI, asset refresh, and test files."
+    },
+    {
+      "type": "files_verified",
+      "at": "2026-06-03T04:39:03Z",
+      "summary": "MPI-6 file changes verified by checks and user approval."
+    }
+  ]
+}

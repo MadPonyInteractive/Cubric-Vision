@@ -132,12 +132,13 @@ export const MpiModelSettings = ComponentFactory.create({
         function _autoSave() {
             if (!_context) return;
             try {
-                const depId = _filenameToDep(_upscaleValue) || null;
+                const modelUpscaleValue = _filenameToDep(_upscaleValue) || _upscaleValue || null;
+                const toolUpscaleValue = _upscaleValue || null;
                 if (_context.modelId) {
                     Events.emit('settings:model:update', { modelId: _context.modelId, key: 'loras', value: _loraSlots });
-                    Events.emit('settings:model:update', { modelId: _context.modelId, key: 'upscaleModel', value: depId });
+                    Events.emit('settings:model:update', { modelId: _context.modelId, key: 'upscaleModel', value: modelUpscaleValue });
                 } else if (_context.toolKey) {
-                    Events.emit('settings:tool:update', { toolKey: _context.toolKey, key: 'upscaleModel', value: depId });
+                    Events.emit('settings:tool:update', { toolKey: _context.toolKey, key: 'upscaleModel', value: toolUpscaleValue });
                 }
                 emit('saved', {});
             } catch (err) {
@@ -399,7 +400,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 const modelType = model?.type ?? null;
                 const loraStages = model?.loraStages ?? null;
                 // Resolve saved dep ID → filename; fallback to model default → filename → SIAX
-                const savedFile = _depToFilename(settings.upscaleModel);
+                const savedFile = _depToFilename(settings.upscaleModel) || settings.upscaleModel;
                 const modelDefaultFile = _depToFilename(model?.defaultUpscale);
                 const siaxFile = _depToFilename('4x-NMKD-Siax');
                 const defaultUpscale = savedFile || modelDefaultFile || siaxFile;
@@ -414,7 +415,7 @@ export const MpiModelSettings = ComponentFactory.create({
             } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
                 // Tool context has no model type → no filter, show all upscalers.
-                _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || _depToFilename('4x-NMKD-Siax'), null);
+                _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || settings.upscaleModel || _depToFilename('4x-NMKD-Siax'), null);
                 el.classList.remove('mpi-model-settings--staged-lora');
                 lorasSection.style.display = 'none';
             }

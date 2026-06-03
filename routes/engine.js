@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, getEngineRoot } = require('./platformEngine');
@@ -229,7 +229,7 @@ async function _runEngineDownload() {
         if (!(await fs.pathExists(extraConfigPath))) {
             const mpiModelsDir = path.join(targetDir, 'mpi_models');
             await fs.ensureDir(mpiModelsDir);
-            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir), 'utf8');
+            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir, await getExtraModelFolders()), 'utf8');
             logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
         } else {
             logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);

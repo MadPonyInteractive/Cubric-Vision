@@ -232,6 +232,11 @@ function _depFilename(depId) {
     return dep.filename.split('/').pop();
 }
 
+function _resolveUpscaleFilename(value) {
+    if (!value || typeof value !== 'string') return null;
+    return _depFilename(value) || value;
+}
+
 /**
  * Resolves the workflow filename for a given operation + model.
  * Universal workflows (not model-tied) are checked first.
@@ -397,14 +402,15 @@ function _buildParams(payload) {
             }
 
             // Upscale model — user selection takes priority, else model default
-            const upscaleFilename = settings.upscaleModel
+            const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel)
                 || _depFilename(modelDef?.defaultUpscale);
             if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
 
         } else if (payload.operation) {
             // Tool/universal context: inject upscale model only
             const settings = getToolSettings(project, payload.operation);
-            if (settings.upscaleModel) params['Upscale_Model'] = settings.upscaleModel;
+            const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
+            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
         }
     }
 

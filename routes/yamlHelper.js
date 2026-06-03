@@ -17,13 +17,19 @@ const _require = createRequire(__filename);
  * When a new dep with a new folder type is added to dependencies.js, the YAML
  * auto-includes it on the next engine install or path set — no manual edits needed.
  *
- * @param {string} basePath - Absolute path to the models root directory.
+ * @param {string} basePath - Absolute path to the primary models root directory.
+ * @param {{ loras?: string[], upscale_models?: string[] }} [extras] - Absolute bucket folders to add.
  * @returns {string} YAML file content.
  */
-function buildExtraModelPathsYaml(basePath) {
+function buildExtraModelPathsYaml(basePath, extras = {}) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
 
     const normalizedBase = basePath.replace(/\\/g, '/');
+    const additiveKeys = new Set(['loras', 'upscale_models']);
+    const normalizedExtras = {
+        loras: _normalizeExtraPaths(extras.loras),
+        upscale_models: _normalizeExtraPaths(extras.upscale_models),
+    };
 
     // Derive unique folder keys from dep filenames (non-custom-node deps only).
     // First segment of filename = ComfyUI folder type = subfolder name.
@@ -56,7 +62,16 @@ function buildExtraModelPathsYaml(basePath) {
     let yaml = `\ncomfyui:\n    base_path: ${normalizedBase}\n`;
 
     for (const key of [...folderKeys].sort()) {
-        yaml += `    ${key}: ${key}/\n`;
+        const extraPaths = additiveKeys.has(key) ? normalizedExtras[key] : [];
+        if (extraPaths?.length) {
+            yaml += `    ${key}: |\n`;
+            yaml += `        ${key}/\n`;
+            for (const extraPath of extraPaths) {
+                yaml += `        ${extraPath}\n`;
+            }
+        } else {
+            yaml += `    ${key}: ${key}/\n`;
+        }
     }
 
     for (const [key, subpath] of Object.entries(staticExtras)) {
@@ -64,6 +79,22 @@ function buildExtraModelPathsYaml(basePath) {
     }
 
     return yaml;
+}
+
+function _normalizeExtraPaths(paths) {
+    if (!Array.isArray(paths)) return [];
+    const seen = new Set();
+    const result = [];
+    for (const item of paths) {
+        if (typeof item !== 'string') continue;
+        const normalized = item.trim().replace(/\\/g, '/');
+        if (!normalized) continue;
+        const key = normalized.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(normalized);
+    }
+    return result;
 }
 
 module.exports = { buildExtraModelPathsYaml };

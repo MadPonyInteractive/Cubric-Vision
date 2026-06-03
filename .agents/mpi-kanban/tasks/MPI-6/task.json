@@ -3,11 +3,12 @@
     "id":  "MPI-6",
     "title":  "Additive model folders in settings",
     "description":  "- Explore adding to settings additive folders for models.",
-    "column":  "todo",
-    "maturity":  "planned",
-    "status":  "active",
+    "column":  "done",
+    "maturity":  "complete",
+    "status":  "verified",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-01T12:30:00Z",
+    "updated_at":  "2026-06-03T04:39:03Z",
+    "activeSessionTitle":  "Implement MPI-6 additive model folders",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
@@ -21,6 +22,11 @@
     "tags":  [
                  "Planned"
              ],
+    "attention":  {
+                      "state":  "cleared",
+                      "reason":  "User verified implementation.",
+                      "updated_at":  "2026-06-03T04:39:03Z"
+                  },
     "priority":  "low",
     "defaultExpanded":  false,
     "legacy_column":  "BACKLOG"

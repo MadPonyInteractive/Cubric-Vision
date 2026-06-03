@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/coordination-task/v1",
+  "id": "333bcc7a-c603-4131-9ce6-b8a8084e3f52",
+  "title": "Additive model folders in settings",
+  "status": "closed",
+  "task_card": "MPI-6",
+  "plan": ".agents/mpi-kanban/tasks/MPI-6/plan.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f65a1b13-8244-4d3e-8a6f-c96b674f7815.json",
+  "heartbeat_at": "2026-06-03T04:39:03Z",
+  "allowed_actions": ["read", "write", "test", "coordinate"],
+  "recent_events": [
+    {
+      "type": "task_attached",
+      "at": "2026-06-03T04:08:57Z",
+      "summary": "Attached implementer session to MPI-6."
+    },
+    {
+      "type": "task_closed",
+      "at": "2026-06-03T04:39:03Z",
+      "summary": "MPI-6 moved to done after user verification."
+    }
+  ]
+}

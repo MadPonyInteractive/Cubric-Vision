@@ -28,7 +28,7 @@ async function _trash(p) {
 const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
 const { extractFull } = require('node-7z');
@@ -45,6 +45,11 @@ function _findOtherModelsUsingDep(depId, excludeModelId) {
     return MODELS
         .filter(m => m.id !== excludeModelId && m.installed === true && Array.isArray(m.dependencies) && m.dependencies.includes(depId))
         .map(m => ({ modelId: m.id, modelName: m.name }));
+}
+
+function _isInsidePath(root, target) {
+    const relative = path.relative(path.resolve(root), path.resolve(target));
+    return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
@@ -650,8 +655,8 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     }
 
     const customRoot = await getCustomRoot();
-    const modelsRoot = customRoot || path.join(ENGINE_ROOT, 'mpi_models');
-    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultModelsRoot = getDefaultModelsRoot();
+    const managedModelsRoot = customRoot || defaultModelsRoot;
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     const removed = [];
@@ -691,7 +696,27 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             continue;
         }
 
-        const isInModelsFolder = path.resolve(localPath).startsWith(path.resolve(modelsRoot) + path.sep);
+        if (dep.type !== 'custom_nodes' && !_isInsidePath(managedModelsRoot, localPath)) {
+            keptModelFiles.push({
+                depId: dep.id,
+                depName: dep.name || dep.id,
+                reason: 'outside-managed-models-root',
+            });
+            logger.warn('download', `uninstall: refused to trash outside managed models root: ${localPath}`);
+            continue;
+        }
+
+        if (dep.type === 'custom_nodes' && !_isInsidePath(defaultCustomNodesRoot, localPath)) {
+            keptModelFiles.push({
+                depId: dep.id,
+                depName: dep.name || dep.id,
+                reason: 'outside-custom-nodes-root',
+            });
+            logger.warn('download', `uninstall: refused to trash outside custom nodes root: ${localPath}`);
+            continue;
+        }
+
+        const isInModelsFolder = dep.type !== 'custom_nodes' && _isInsidePath(managedModelsRoot, localPath);
         if (!deleteFiles && isInModelsFolder) {
             keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id });
             continue;
@@ -700,7 +725,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         try {
             if (await fs.pathExists(localPath)) {
                 await _trash(localPath);
-                await cleanEmptyDirs(localPath, modelsRoot);
+                await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
                 logger.info('download', `uninstall: moved to trash ${localPath}`);
             }
             removed.push({ depId: dep.id, depName: dep.name || dep.id });

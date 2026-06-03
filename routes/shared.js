@@ -18,10 +18,12 @@ const http = require('http');
 const { pipeline } = require('stream/promises');
 const { exec, spawn } = require('child_process');
 const { COMFY_DIR, getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine');
+const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 const _require = createRequire(__filename);
 
 const ENGINE_ROOT = getEngineRoot();
+const EXTRA_MODEL_FOLDER_KEYS = Object.freeze(['loras', 'upscale_models']);
 
 /**
  * Resolve the default projects root.
@@ -293,6 +295,80 @@ async function getCustomRoot() {
     return null;
 }
 
+function getDefaultModelsRoot() {
+    return getComfyPath(ENGINE_ROOT, 'models');
+}
+
+function getExtraModelFoldersPath() {
+    return getComfyPath(ENGINE_ROOT, 'extra_model_folders.json');
+}
+
+function _emptyExtraModelFolders() {
+    return { loras: [], upscale_models: [] };
+}
+
+function hasExtraModelFolders(extras) {
+    return EXTRA_MODEL_FOLDER_KEYS.some(key => Array.isArray(extras?.[key]) && extras[key].length > 0);
+}
+
+async function _normalizeExtraFolderPath(folderPath, validateExists) {
+    if (typeof folderPath !== 'string' || !folderPath.trim()) return null;
+    const resolved = path.resolve(folderPath.trim());
+    if (validateExists) {
+        const stat = await fs.stat(resolved).catch(() => null);
+        if (!stat || !stat.isDirectory()) {
+            throw new Error(`Extra model folder does not exist: ${folderPath}`);
+        }
+    }
+    return fs.realpath(resolved).catch(() => resolved);
+}
+
+async function normalizeExtraModelFolders(input = {}, { validateExists = false } = {}) {
+    const normalized = _emptyExtraModelFolders();
+    for (const key of EXTRA_MODEL_FOLDER_KEYS) {
+        const seen = new Set();
+        const values = Array.isArray(input[key]) ? input[key] : [];
+        for (const value of values) {
+            const resolved = await _normalizeExtraFolderPath(value, validateExists);
+            if (!resolved) continue;
+            const dedupeKey = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            normalized[key].push(resolved);
+        }
+    }
+    return normalized;
+}
+
+async function getExtraModelFolders() {
+    const configPath = getExtraModelFoldersPath();
+    if (!(await fs.pathExists(configPath))) return _emptyExtraModelFolders();
+    try {
+        const raw = await fs.readJson(configPath);
+        return normalizeExtraModelFolders(raw, { validateExists: false });
+    } catch (err) {
+        logger.warn('comfy', `Failed to read extra model folders config: ${err.message}`);
+        return _emptyExtraModelFolders();
+    }
+}
+
+async function setExtraModelFolders(input = {}) {
+    const normalized = await normalizeExtraModelFolders(input, { validateExists: true });
+    const configPath = getExtraModelFoldersPath();
+    await fs.ensureDir(path.dirname(configPath));
+    await fs.writeJson(configPath, normalized, { spaces: 2 });
+    return normalized;
+}
+
+async function writeExtraModelPathsYaml(primaryRoot, extras = null) {
+    const root = primaryRoot || getDefaultModelsRoot();
+    const normalizedExtras = extras || await getExtraModelFolders();
+    const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
+    await fs.ensureDir(path.dirname(extraConfigPath));
+    await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(root, normalizedExtras), 'utf8');
+    return extraConfigPath;
+}
+
 /**
  * Returns all DEPS ids marked for installation with the engine (installOnEngine: true).
  * These cover all universal workflow dependencies — no need to track them per-workflow.
@@ -410,6 +486,12 @@ module.exports = {
     resolveComfyPath,
     cleanEmptyDirs,
     getCustomRoot,
+    getDefaultModelsRoot,
+    normalizeExtraModelFolders,
+    getExtraModelFolders,
+    setExtraModelFolders,
+    hasExtraModelFolders,
+    writeExtraModelPathsYaml,
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,
     checkUniversalWorkflowDepsStatus,

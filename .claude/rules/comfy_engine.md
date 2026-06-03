@@ -17,6 +17,8 @@
 
 **New model checklist:** (1) Add to `MODELS` in modelRegistry, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries, (4) **checkpoint filenames must match the actual on-disk path** — do not include subfolder prefixes (e.g. `SDXL/`, `ILL/`, `PONY/`) unless that subfolder actually exists in the models folder. The backend searches using the exact path in `dep.filename` against `customRoot` (or engine default); mismatches cause the model to show as "not installed" despite files being present.
 
+**Extra model folders:** Additive user folders exist only for `loras` and `upscale_models`. They are stored in `extra_model_folders.json` and re-merged into `extra_model_paths.yaml`; do not parse multiline YAML entries as the source of truth. The configured paths are bucket folders, not parent model roots.
+
 See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for the registry structure.
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES
@@ -25,6 +27,7 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 3. **Never Hardcode Install Status:** Never hardcode `installed: true` in the registry. Model presence is dynamically resolved at runtime by the backend `GET /comfy/models/check`.
 4. **No Direct Python Exec:** Do not attempt to spawn Python or run `pip` manually from arbitrary files. All engine management is strictly handled by `routes/comfy.js` and `routes/shared.js`.
 5. **GPU Detection at Download Time:** Engine download URLs are resolved at runtime via `resolveDownloadConfig()` in `_runEngineDownload()`. GPU detection happens once per install/upgrade; never hardcode specific builds in `system_dependencies.json`.
+6. **Extra Folder Contract:** Only `loras` and `upscale_models` support additive external folders. Keep extras outside dependency registry, install, uninstall, and garbage-collection flows.
 
 ---
 
@@ -103,5 +106,20 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 - This ensures `extra_model_paths.yaml` exists and has been parsed by the time model detection runs
 - Without this timing fix, models would show "0 MB / total MB" on first boot, then correct themselves after app restart
 
-### 5. Download Manager Router
+### 5. Extra LoRA and Upscale Model Folders
+
+Users may add read-only additive folders for only `loras` and `upscale_models`.
+The primary models root still comes from `extra_model_paths.yaml` `base_path:`
+via `getCustomRoot()` or falls back to the engine models root. Extra folders
+are stored separately in `extra_model_folders.json` and written back into
+`extra_model_paths.yaml` as multiline values for only those two keys.
+
+Backend contract:
+- `GET /comfy/extra-folders` returns `{ loras: string[], upscale_models: string[] }`.
+- `POST /comfy/extra-folders` validates that each path exists and is a directory, persists the separate config, and rewrites YAML.
+- `POST /comfy/set-path` must always re-merge stored extras when rewriting YAML; clearing the primary path removes YAML only when no extras are configured.
+- `GET /comfy/list-files` unions the primary bucket folder with matching extras and preserves `{ success: true, files: string[] }`.
+- `POST /comfy/models/uninstall` must only trash non-custom-node model files inside the managed primary models root; custom nodes stay guarded by the default custom-nodes root.
+
+### 6. Download Manager Router
 See `.claude/rules/downloads.md` for full download system rules (IPC/SSE, ResumableDownloader, job shapes, event lifecycle, engine pause/resume).

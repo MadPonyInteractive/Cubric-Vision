@@ -117,6 +117,29 @@ Loads available LoRA and upscale model filenames from `GET /comfy/list-files` in
 
 Recursively walks the requested `subDir` under the resolved models root (custom root from `extra_model_paths.yaml` when set, else engine default). Returns relative paths from `subDir` for files with extensions `.safetensors | .ckpt | .pt | .bin | .pth`. Only scans the requested bucket — does NOT return siblings from other top-level folders (checkpoints, sams, ultralytics, etc).
 
+For `loras` and `upscale_models`, the route also scans user-configured additive
+folders from `extra_model_folders.json`. Those extras are bucket folders (for
+example, a folder directly containing LoRAs), not parent models roots. Results
+from the primary bucket win on same relative filename collisions, and the
+response shape stays `{ success: true, files: string[] }`.
+
+### `/comfy/extra-folders`
+
+`GET /comfy/extra-folders` returns the persisted additive folders:
+
+```json
+{ "success": true, "folders": { "loras": [], "upscale_models": [] } }
+```
+
+`POST /comfy/extra-folders` accepts the same shape without the wrapper,
+validates that every path exists, writes `extra_model_folders.json`, and
+rewrites `extra_model_paths.yaml`.
+
+Extras are re-merged whenever `/comfy/set-path` rewrites YAML. Clearing the
+primary models path removes `extra_model_paths.yaml` only when no extras are
+configured; with extras present, YAML is regenerated against the default engine
+models root so ComfyUI still sees the additive folders on restart.
+
 ### LoRA and upscaler visibility
 
 LoRA dropdowns show every file returned from the active models root `loras/`
@@ -125,6 +148,11 @@ own LoRA folder names and conventions.
 
 Upscale model dropdowns still use model-type filtering where appropriate, with
 root-level files treated as universal.
+
+`MpiModelSettings` accepts both legacy registry dependency IDs and raw filenames
+for `upscaleModel`. Registry defaults still resolve through `DEPS`; user-picked
+extra-folder upscalers persist as raw filenames and inject that filename into
+the `Upscale_Model` workflow node.
 
 ## Download Manager
 

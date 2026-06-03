@@ -196,3 +196,60 @@
     font-size: var(--t-sm);
 }
 
+.mpi-settings__extra-folders {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+}
+
+.mpi-settings__extra-folder-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-settings__extra-folder-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+}
+
+.mpi-settings__extra-folder-title {
+    color: var(--ink-2);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.mpi-settings__extra-folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-settings__extra-folder-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-2);
+}
+
+.mpi-settings__extra-folder-row .mpi-settings__folder-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.mpi-settings__extra-folder-add.mpi-btn,
+.mpi-settings__extra-folder-browse.mpi-btn,
+.mpi-settings__extra-folder-remove.mpi-btn {
+    min-height: 2.35rem;
+}
+
+.mpi-settings__empty-row {
+    border: 1px dashed var(--line);
+    color: var(--ink-3);
+    font-size: var(--t-xs);
+    padding: var(--s-2) var(--s-3);
+}
+

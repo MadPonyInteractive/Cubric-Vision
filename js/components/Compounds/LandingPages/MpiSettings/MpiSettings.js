@@ -7,7 +7,8 @@ import { state } from '../../../../state.js';
 import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
-import { qs } from '../../../../utils/dom.js';
+import { loadAll as loadAssets } from '../../../../services/assetService.js';
+import { ce, qs } from '../../../../utils/dom.js';
 
 const REUSE_PARTS = [
     { key: 'prompt', label: 'Use Prompt' },
@@ -69,6 +70,28 @@ export const MpiSettings = ComponentFactory.create({
                         </div>
                         <span class="mpi-settings__hint">Optional: path to an external ComfyUI models folder.</span>
                     </div>
+                    <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Additional Model Folders</label>
+                        <div class="mpi-settings__extra-folders">
+                            <div class="mpi-settings__extra-folder-group">
+                                <div class="mpi-settings__extra-folder-head">
+                                    <span class="mpi-settings__extra-folder-title">LoRAs</span>
+                                    <div id="mpiSettingsAddLoraFolderSlot"></div>
+                                </div>
+                                <div id="mpiSettingsLoraPrimarySlot"></div>
+                                <div class="mpi-settings__extra-folder-list" id="mpiSettingsLoraFoldersSlot"></div>
+                            </div>
+                            <div class="mpi-settings__extra-folder-group">
+                                <div class="mpi-settings__extra-folder-head">
+                                    <span class="mpi-settings__extra-folder-title">Upscale Models</span>
+                                    <div id="mpiSettingsAddUpscaleFolderSlot"></div>
+                                </div>
+                                <div id="mpiSettingsUpscalePrimarySlot"></div>
+                                <div class="mpi-settings__extra-folder-list" id="mpiSettingsUpscaleFoldersSlot"></div>
+                            </div>
+                        </div>
+                        <span class="mpi-settings__hint">Extras are read-only additive folders. Cubric only installs, updates, and removes files from the primary managed folders.</span>
+                    </div>
                 </div>
             </div>
         </div>`,
@@ -77,6 +100,17 @@ export const MpiSettings = ComponentFactory.create({
         const _unsubs = [];
         let _syncReuseControls = null;
         let _syncReuseSource = null;
+        let _extraFolders = { loras: [], upscale_models: [] };
+        const _extraFolderControls = [];
+        let _ipcRenderer = null;
+
+        try {
+            if (typeof window.require === 'function') {
+                _ipcRenderer = window.require('electron')?.ipcRenderer || null;
+            }
+        } catch (err) {
+            clientLogger.warn('settings', '[MpiSettings] Electron IPC unavailable for folder picker', err);
+        }
 
         // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
         el.onOpen = () => _initFields(el);
@@ -243,12 +277,11 @@ export const MpiSettings = ComponentFactory.create({
                     });
                     browseInst.on('click', async () => {
                         try {
-                            const res = await fetch('/choose-folder', { method: 'POST' });
-                            const data = await res.json();
-                            if (!data.cancelled && data.path) {
+                            const folderPath = await _chooseFolder();
+                            if (folderPath) {
                                 const field = qs('.mpi-input__field', pathInst.el);
-                                if (field) field.value = data.path;
-                                _setComfyPath(data.path);
+                                if (field) field.value = folderPath;
+                                _setComfyPath(folderPath);
                             }
                         } catch (err) {
                             clientLogger.error('settings', '[MpiSettings] choose-folder failed', err);
@@ -256,6 +289,8 @@ export const MpiSettings = ComponentFactory.create({
                     });
                 }
             }
+
+            _hydrateExtraFolders(root);
         }
 
         _unsubs.push(Events.onState('promptReuseOptions', (value) => {
@@ -267,6 +302,7 @@ export const MpiSettings = ComponentFactory.create({
 
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
+            _clearExtraFolderControls();
         };
 
         async function _hydrateComfyPath(pathInst) {
@@ -281,6 +317,7 @@ export const MpiSettings = ComponentFactory.create({
                     state.comfyRootPath = canonical;
                     const field = qs('.mpi-input__field', pathInst.el);
                     if (field) field.value = canonical;
+                    _renderExtraFolders(el);
                 }
             } catch (err) {
                 clientLogger.error('settings', '[MpiSettings] hydrate comfy path failed', err);
@@ -290,6 +327,7 @@ export const MpiSettings = ComponentFactory.create({
         async function _setComfyPath(path) {
             Storage.setComfyRootPath(path);
             state.comfyRootPath = path;
+            _renderExtraFolders(el);
             try {
                 const res = await fetch('/comfy/set-path', {
                     method: 'POST',
@@ -303,6 +341,190 @@ export const MpiSettings = ComponentFactory.create({
             } catch (err) {
                 clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }
+        }
+
+        async function _hydrateExtraFolders(root) {
+            try {
+                const res = await fetch('/comfy/extra-folders');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to load extra folders');
+                _extraFolders = {
+                    loras: Array.isArray(data.folders?.loras) ? data.folders.loras : [],
+                    upscale_models: Array.isArray(data.folders?.upscale_models) ? data.folders.upscale_models : [],
+                };
+                _renderExtraFolders(root);
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] hydrate extra folders failed', err);
+            }
+        }
+
+        function _clearExtraFolderControls() {
+            while (_extraFolderControls.length) {
+                _extraFolderControls.pop()?.destroy?.();
+            }
+        }
+
+        function _primaryFolderLabel(bucket) {
+            const rootPath = Storage.getComfyRootPath() || state.comfyRootPath || '';
+            return rootPath ? `${rootPath}\\${bucket}` : `Default internal engine models/${bucket}`;
+        }
+
+        function _renderPrimaryFolder(root, bucket, slotId, label) {
+            const slot = qs(slotId, root);
+            if (!slot) return;
+            slot.innerHTML = '';
+            const inst = MpiInput.mount(slot, {
+                label,
+                value: _primaryFolderLabel(bucket),
+                readonly: true,
+            });
+            _extraFolderControls.push(inst);
+        }
+
+        function _renderExtraFolders(root) {
+            _clearExtraFolderControls();
+            _renderPrimaryFolder(root, 'loras', '#mpiSettingsLoraPrimarySlot', 'Primary LoRA folder');
+            _renderPrimaryFolder(root, 'upscale_models', '#mpiSettingsUpscalePrimarySlot', 'Primary upscale folder');
+            _renderExtraFolderBucket(root, 'loras', '#mpiSettingsLoraFoldersSlot', '#mpiSettingsAddLoraFolderSlot');
+            _renderExtraFolderBucket(root, 'upscale_models', '#mpiSettingsUpscaleFoldersSlot', '#mpiSettingsAddUpscaleFolderSlot');
+        }
+
+        function _renderExtraFolderBucket(root, bucket, listSelector, addSelector) {
+            const list = qs(listSelector, root);
+            const addSlot = qs(addSelector, root);
+            if (!list || !addSlot) return;
+
+            list.innerHTML = '';
+            addSlot.innerHTML = '';
+
+            const addBtn = MpiButton.mount(addSlot, {
+                icon: 'plus',
+                label: 'Add',
+                size: 'sm',
+                variant: 'secondary',
+                extraClasses: 'mpi-settings__extra-folder-add',
+            });
+            addBtn.on('click', () => _addExtraFolder(bucket));
+            _extraFolderControls.push(addBtn);
+
+            const folders = _extraFolders[bucket] || [];
+            if (!folders.length) {
+                list.appendChild(ce('div', { className: 'mpi-settings__empty-row', textContent: 'No extra folders configured.' }));
+                return;
+            }
+
+            folders.forEach((folderPath, index) => {
+                const row = ce('div', { className: 'mpi-settings__extra-folder-row' });
+                const inputSlot = ce('div', { className: 'mpi-settings__folder-input' });
+                const browseSlot = ce('div');
+                const removeSlot = ce('div');
+                const input = MpiInput.mount(inputSlot, {
+                    value: folderPath,
+                    readonly: true,
+                });
+                const browseBtn = MpiButton.mount(browseSlot, {
+                    text: 'Browse',
+                    size: 'sm',
+                    variant: 'secondary',
+                    extraClasses: 'mpi-settings__extra-folder-browse',
+                });
+                const removeBtn = MpiButton.mount(removeSlot, {
+                    icon: 'minus',
+                    size: 'sm',
+                    variant: 'secondary',
+                    extraClasses: 'mpi-settings__extra-folder-remove',
+                    info: 'Remove folder',
+                });
+                browseBtn.on('click', () => _replaceExtraFolder(bucket, index));
+                removeBtn.on('click', () => _removeExtraFolder(bucket, index));
+                row.appendChild(inputSlot);
+                row.appendChild(browseBtn.el);
+                row.appendChild(removeBtn.el);
+                list.appendChild(row);
+                _extraFolderControls.push(input, browseBtn, removeBtn);
+            });
+        }
+
+        async function _chooseFolder() {
+            if (_ipcRenderer) {
+                const data = await _ipcRenderer.invoke('choose-folder');
+                return data?.cancelled ? null : (data?.path || null);
+            }
+
+            const res = await fetch('/choose-folder', { method: 'POST' });
+            const data = await res.json();
+            return data?.cancelled ? null : (data?.path || null);
+        }
+
+        function _dedupeFolders(paths) {
+            const seen = new Set();
+            return paths.filter(folderPath => {
+                const key = String(folderPath || '').trim().toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        async function _addExtraFolder(bucket) {
+            try {
+                const folderPath = await _chooseFolder();
+                if (!folderPath) return;
+                _extraFolders = {
+                    ..._extraFolders,
+                    [bucket]: _dedupeFolders([ ...(_extraFolders[bucket] || []), folderPath ]),
+                };
+                await _saveExtraFolders();
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] add extra folder failed', err);
+                Events.emit('ui:error', { message: err.message || 'Failed to add extra model folder.' });
+            }
+        }
+
+        async function _removeExtraFolder(bucket, index) {
+            try {
+                _extraFolders = {
+                    ..._extraFolders,
+                    [bucket]: (_extraFolders[bucket] || []).filter((_, i) => i !== index),
+                };
+                await _saveExtraFolders();
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] remove extra folder failed', err);
+                Events.emit('ui:error', { message: err.message || 'Failed to remove extra model folder.' });
+            }
+        }
+
+        async function _replaceExtraFolder(bucket, index) {
+            try {
+                const folderPath = await _chooseFolder();
+                if (!folderPath) return;
+                const folders = [ ...(_extraFolders[bucket] || []) ];
+                folders[index] = folderPath;
+                _extraFolders = {
+                    ..._extraFolders,
+                    [bucket]: _dedupeFolders(folders),
+                };
+                await _saveExtraFolders();
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] replace extra folder failed', err);
+                Events.emit('ui:error', { message: err.message || 'Failed to update extra model folder.' });
+            }
+        }
+
+        async function _saveExtraFolders() {
+            const res = await fetch('/comfy/extra-folders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(_extraFolders),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed to save extra folders');
+            _extraFolders = {
+                loras: Array.isArray(data.folders?.loras) ? data.folders.loras : [],
+                upscale_models: Array.isArray(data.folders?.upscale_models) ? data.folders.upscale_models : [],
+            };
+            _renderExtraFolders(el);
+            await loadAssets();
         }
     },
 });

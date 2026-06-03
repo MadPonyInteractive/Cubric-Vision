@@ -8,6 +8,8 @@
  *   POST /comfy/unload              — unload models / free memory
  *   POST /comfy/set-path            — set custom models root path
  *   GET  /comfy/get-path            — read current custom models root path (from extra_model_paths.yaml)
+ *   GET  /comfy/extra-folders       — read additive LoRA/upscale model folders
+ *   POST /comfy/extra-folders       — set additive LoRA/upscale model folders
  *   GET  /comfy/list-files          — list model files in a subdirectory
  *   POST /comfy/models/check        — check which models are installed on disk
  */
@@ -27,9 +29,13 @@ const {
     resolveComfyPath,
     cleanEmptyDirs,
     getCustomRoot,
+    getDefaultModelsRoot,
+    getExtraModelFolders,
+    setExtraModelFolders,
+    hasExtraModelFolders,
+    writeExtraModelPathsYaml,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine');
-const { buildExtraModelPathsYaml } = require('./yamlHelper');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
@@ -289,15 +295,19 @@ router.post('/comfy/set-path', async (req, res) => {
     try {
         const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
         await fs.ensureDir(path.dirname(extraConfigPath));
+        const extras = await getExtraModelFolders();
 
         if (!customPath) {
-            if (await fs.pathExists(extraConfigPath)) await fs.remove(extraConfigPath);
+            if (hasExtraModelFolders(extras)) {
+                await writeExtraModelPathsYaml(getDefaultModelsRoot(), extras);
+            } else if (await fs.pathExists(extraConfigPath)) {
+                await fs.remove(extraConfigPath);
+            }
             return res.json({ success: true });
         }
 
-        const yamlContent = buildExtraModelPathsYaml(customPath);
-        await fs.writeFile(extraConfigPath, yamlContent, 'utf8');
-        res.json({ success: true, writtenTo: extraConfigPath });
+        const yamlContentPath = await writeExtraModelPathsYaml(customPath, extras);
+        res.json({ success: true, writtenTo: yamlContentPath });
     } catch (err) {
         logger.error('comfy', 'set-path failed', err);
         res.status(500).json({ error: err.message });
@@ -316,6 +326,33 @@ router.get('/comfy/get-path', async (_req, res) => {
     } catch (err) {
         logger.error('comfy', 'get-path failed', err);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.get('/comfy/extra-folders', async (_req, res) => {
+    try {
+        const folders = await getExtraModelFolders();
+        res.json({ success: true, folders });
+    } catch (err) {
+        logger.error('comfy', 'extra-folders get failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.post('/comfy/extra-folders', async (req, res) => {
+    try {
+        const folders = await setExtraModelFolders(req.body || {});
+        const primaryRoot = await getCustomRoot();
+        if (primaryRoot || hasExtraModelFolders(folders)) {
+            await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
+        } else {
+            const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
+            if (await fs.pathExists(extraConfigPath)) await fs.remove(extraConfigPath);
+        }
+        res.json({ success: true, folders });
+    } catch (err) {
+        logger.error('comfy', 'extra-folders set failed', err);
+        res.status(400).json({ success: false, error: err.message });
     }
 });
 
@@ -408,17 +445,16 @@ router.get('/comfy/list-files', async (req, res) => {
     if (!subDir) return res.status(400).json({ success: false, error: 'subDir required' });
 
     try {
+        const normalizedSubDir = String(subDir).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const bucket = normalizedSubDir.split('/')[0];
+        const bucketRemainder = normalizedSubDir.split('/').slice(1).join('/');
         const customRoot = await getCustomRoot();
-        const modelsRoot = customRoot || getComfyPath(ENGINE_ROOT, 'models');
-
-        const targetPath = path.join(modelsRoot, subDir);
-
-        if (!targetPath || !(await fs.pathExists(targetPath))) {
-            return res.json({ success: true, files: [] });
-        }
+        const modelsRoot = customRoot || getDefaultModelsRoot();
+        const extras = await getExtraModelFolders();
 
         const getAllFiles = async (dirPath, relativeTo) => {
             let results = [];
+            if (!(await fs.pathExists(dirPath))) return results;
             const list = await fs.readdir(dirPath);
             for (const file of list) {
                 const fullPath = path.join(dirPath, file);
@@ -435,8 +471,30 @@ router.get('/comfy/list-files', async (req, res) => {
             return results;
         };
 
-        const files = await getAllFiles(targetPath, targetPath);
-        res.json({ success: true, files: files.sort() });
+        const addFiles = async (dirPath, relativeTo, output, seen) => {
+            const files = await getAllFiles(dirPath, relativeTo);
+            for (const file of files) {
+                const normalized = file.replace(/\\/g, '/');
+                const key = process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                output.push(normalized);
+            }
+        };
+
+        const output = [];
+        const seen = new Set();
+        const primaryTarget = path.join(modelsRoot, normalizedSubDir);
+        await addFiles(primaryTarget, primaryTarget, output, seen);
+
+        if (bucket === 'loras' || bucket === 'upscale_models') {
+            for (const extraFolder of extras[bucket] || []) {
+                const extraTarget = bucketRemainder ? path.join(extraFolder, bucketRemainder) : extraFolder;
+                await addFiles(extraTarget, extraTarget, output, seen);
+            }
+        }
+
+        res.json({ success: true, files: output.sort() });
     } catch (err) {
         logger.error('comfy', 'list-files error', err);
         res.status(500).json({ success: false, error: err.message });
