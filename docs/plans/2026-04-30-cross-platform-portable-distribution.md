@@ -640,6 +640,22 @@ Linux and macOS do NOT block on Windows ship — once their host is available, t
 
 ---
 
+## Distribution & gating model (decided 2026-06-03)
+
+Repo + release strategy resolved. This frames how portable artifacts reach users:
+
+- **One repo, not two.** The old two-repo split (private dev + public release) existed to ship binaries while hiding source. Project is now open-source (AGPL-3.0), so that reason is dead. The empty public `Cubric-Vision` release repo is being deleted; `Cubric-Vision-Dev` is being renamed to `Cubric-Vision`. The dev repo stays **private until public launch**.
+- **Portable zip = readable source.** This plan ships unbundled source (`app/` = repo files + node_modules + portable Node/Electron). There is no compile, no asar, no signing (see non-goals). Anyone holding a portable zip holds buildable source. There is **no technical build gate** — do not design one into this plan.
+- **Gating lives in distribution + timing, not code:**
+  - Tier-1 (high) Patreons: **alpha zip hand-distributed in Discord**, ~1 month before public.
+  - Tier-2 Patreons: **beta zip in Discord**, ~2 weeks before public.
+  - Public: **GitHub Release + tag** for the stable cut at launch.
+- **Residual leak risk** = a Patreon re-sharing the Discord zip (full source, since portable = source). This is inherent to portable-source distribution and the same whether or not the repo is public. Mitigate **socially** (Patreon ToS / "don't redistribute pre-release builds"), optionally per-tier build watermarking for traceability — **not** with code obfuscation.
+- **History is clean for public flip.** A HuggingFace upload token (`upload.py:5`) was scrubbed from all 622 commits via `git filter-repo` and force-pushed (2026-06-03); token rotated on HF. The repo is safe to make public.
+- **LICENSE** = AGPL-3.0 (`LICENSE` file + `package.json` `"license": "AGPL-3.0-only"`).
+
+---
+
 ## Open-source contribution workflow
 
 Public GitHub repos do not need to give strangers push access. Normal open-source flow:

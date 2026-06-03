@@ -12,7 +12,7 @@
     "prepare": "husky"
   },
   "author": "MadPonyInteractive",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "7zip-bin": "^5.2.0",
     "axios": "^1.13.6",
