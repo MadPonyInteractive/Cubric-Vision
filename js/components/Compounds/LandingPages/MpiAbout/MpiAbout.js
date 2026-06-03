@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
-import { APP_VERSION } from '../../../core/appVersion.js';
-import { APP_STAGE_LABEL } from '../../../core/appStage.js';
+import { APP_VERSION } from '../../../../core/appVersion.js';
+import { APP_STAGE_LABEL } from '../../../../core/appStage.js';
 
 /**
  * MpiAbout — About content for the MpiSlideOver panel.
