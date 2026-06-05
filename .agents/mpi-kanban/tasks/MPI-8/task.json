@@ -1,13 +1,13 @@
 {
     "schema":  "mpi-kanban/task-card/v1",
     "id":  "MPI-8",
-    "title":  "Cross-platform portable distribution + Vision connector scaffold",
-    "description":  "Merged MPI-44 into this card on 2026-06-05. Owns portable distribution plus Vision v1 manifest-only connector staging, smoke assertions, update-manifest fields, and build hash injection.",
+    "title":  "Portable distribution, updater, and release validation",
+    "description":  "Rebuilt on 2026-06-05 after codebase validation. Owns portable artifacts, GitHub/local-zip updater flow, platform validation disclosures, Vision manifest-only connector staging, update-manifest generation, build hash injection, and release notes.",
     "column":  "todo",
     "maturity":  "planned",
     "status":  "active",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-05T00:00:00Z",
+    "updated_at":  "2026-06-05T12:00:00Z",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
@@ -22,6 +22,8 @@
                  "PLAN",
                  "portable",
                  "connector",
+                 "updater",
+                 "release-validation",
                  "merged-MPI-44"
              ],
     "priority":  "medium",

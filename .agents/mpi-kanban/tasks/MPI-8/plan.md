@@ -1,34 +1,273 @@
-# Plan Reference
+# Portable distribution, updater, and release validation
 
-Original portable distribution plan:
+## Current State
 
-- `docs/plans/2026-04-30-cross-platform-portable-distribution.md`
+Project mode: scalable-foundation. This card is the executable plan for Cubric
+Vision portable distribution. The old detailed document at
+`docs/plans/2026-04-30-cross-platform-portable-distribution.md` is now
+historical input, not the source of execution truth.
 
-This task was migrated from the legacy Markdown board. Keep the original plan
-file as the detailed source unless a future session rewrites it into this task
-workspace.
+Validated against the repo on 2026-06-05:
 
-## Merged Scope
+- No portable build script exists yet. `scripts/` has utility/pre-release
+  scripts only; `package.json` has no portable build/update scripts.
+- `electron-builder.yml` still targets NSIS/DMG/AppImage and excludes
+  `llama_engine/**` / `llama_models/**`. Installer formats are out of scope for
+  this card; LLM/llama packaging is legacy and must not be carried forward as
+  Vision scope.
+- Runtime pathing is still mostly dev/electron-builder shaped. `main.js` only
+  forwards `MPI_RESOURCES_PATH` when `app.isPackaged`; portable env vars such as
+  `CUBRIC_PORTABLE_ROOT` and `CUBRIC_ENGINE_ROOT` do not exist yet.
+- `routes/platformEngine.js`, `routes/engine.js`, `routes/shared.js`,
+  `routes/comfy.js`, and `routes/downloadManager.js` cache `ENGINE_ROOT` at
+  module import. Portable env/config must be set before `server.js` starts.
+- Windows engine provisioning exists. Linux/macOS engine provisioning is still a
+  placeholder: `resolveDownloadConfig()` always returns Windows `.7z` metadata,
+  and `_runEngineDownload()` extracts with `node-7z`.
+- `routes/downloadManager.js` imports `node-7z` and `7zip-bin` at module load.
+  This can break Mac/Linux stages until custom-node ZIP extraction is moved to a
+  cross-platform ZIP path or 7z is lazy-loaded only for Windows engine archives.
+- `routes/projects.js` still has one route that shells bare `ffprobe` and
+  `ffmpeg`. Most newer video routes already use `services/ffmpegBinary.js`.
+- `routes/system.js` still opens folders with Windows `start`.
+- `media/icons/` is absent. `main.js` sets Windows AppUserModelID to
+  `process.execPath`, not the permanent `cubric.studio.vision` identity.
+- `resources/cubric/connector-manifest.json` exists and is manifest-only.
+  `resources/cubric/update-manifest.json` does not exist yet.
+- Error reporter labels include app version and derived stage only; build hash
+  injection and `build:<hash>` labels are not implemented.
+- Model Manager slide-over and zero-model behavior have already shipped in
+  runtime code. MPI-8 only needs the combined fresh-install/manual validation
+  pass, not model-manager implementation.
 
-MPI-44 was merged into this card on 2026-06-05. Treat the following source docs
-as part of this card's implementation context:
+Release/testing reality:
 
-- `docs/plans/2026-05-23-cubric-hub-readiness-before-portable-distribution.md`
-  ("Required Before Portable Packaging Starts")
-- `docs/plans/2026-05-20-cubric-vision-foundation-ecosystem-backend.md`
-- `docs/specs/cubric-connector-sdk.md`
-- `docs/specs/cubric-vision-connector-integration-map.md`
+- One repo: this repo becomes public and publishes release artifacts here.
+- Early access users still receive zip artifacts before public release.
+- Windows can be tested on the development machine, but not on a clean separate
+  Windows host.
+- Linux can be install/launch tested on the user's old Ubuntu laptop. It is not
+  expected to run ComfyUI generation on that hardware.
+- macOS artifacts will still be produced, but they are maintainer-untested.
+  Release copy must say this clearly and request community validation.
 
-Execute the Vision v1 manifest-only connector scaffold alongside the portable
-build script/update-manifest work. Do not implement live connector runtime work
-in this card.
+## Completed
 
-## Carried-over follow-ups
+- [x] MPI-44 Vision connector scaffold scope merged into this card.
+- [x] Live Vision connector runtime kept out of v1 scope.
+- [x] Model Manager slide-over and zero-model implementation completed
+  elsewhere; only fresh-install validation remains here.
+- [x] Repo/release/update/LLM scope decisions recorded in project memory on
+  2026-06-05.
 
-- [ ] **Replace placeholder changelog copy (from MPI-46).** `js/data/releaseNotes.js`
-  ships a PLACEHOLDER `0.0.1` entry (whatIsNew/importantChanges). The first real
-  release cut from the portable-distribution flow must replace it with real copy
-  via `/mpi-version-bump` (the skill now writes both `js/data/releaseNotes.js` and
-  `docs/releases/*.md`). The in-app changelog overlay (`MpiChangelogDialog`) reads
-  this runtime module. **Verify:** the released `APP_VERSION` entry in
-  `releaseNotes.js` holds the actual release notes, not the alpha placeholder.
+## Remaining Work
+
+## Phase 1: Scope cleanup and release contract
+
+- [x] Replace stale portable-distribution assumptions in this task workspace and
+  keep the old long plan as historical reference only. **Verify:** this
+  `plan.md`, `brief.md`, `checklist.md`, and `validation.md` describe the same
+  executable scope and no longer treat LLM/llama packaging as Vision work.
+
+- [ ] Define the artifact contract for early-access and public releases.
+  **Verify:** release notes/spec text names full portable artifacts, local
+  update bundles, and GitHub update source without requiring manual folder
+  merging.
+
+- [ ] Decide script names and root layout before build scripting.
+  Recommended names:
+  `start.bat`, `update.bat`, `update-from-zip.bat`; `start.sh`, `update.sh`,
+  `update-from-zip.sh`; `start.command`, `update.command`,
+  `update-from-zip.command`. **Verify:** scripts can set portable env vars
+  before launching the app/server.
+
+## Phase 2: Runtime portability blockers
+
+- [ ] Add portable root/env resolution. `getEngineRoot()` should prefer
+  `CUBRIC_ENGINE_ROOT` before `.engine-config.json`; launchers should set
+  `CUBRIC_PORTABLE_ROOT`, `CUBRIC_ENGINE_ROOT`, `MPI_RESOURCES_PATH`, and
+  platform-specific `CUBRIC_UV_BIN` where applicable. **Verify:** a dev smoke
+  script can start the server with these env vars and print roots resolved to a
+  copied portable folder.
+
+- [ ] Replace the remaining bare `ffprobe`/`ffmpeg` shell route in
+  `routes/projects.js` with `execFile` using `services/ffmpegBinary.js`.
+  **Verify:** project media extraction still produces the same output shape and
+  works with paths containing spaces.
+
+- [ ] Make `/open-folder` cross-platform. Prefer Electron `shell.openPath`
+  through IPC or another established main-process bridge. **Verify:** landing
+  "open folder" still opens the folder on Windows and the route no longer
+  shells `start`.
+
+- [ ] Remove Mac/Linux module-load dependency on `7zip-bin` for custom-node ZIP
+  extraction. Use a cross-platform ZIP extractor for GitHub custom-node zips, or
+  lazy-load 7z only for Windows engine `.7z` archives. **Verify:**
+  `require('./routes/downloadManager')` succeeds on a non-Windows host/stage
+  without a Mac 7z binary, and Windows custom-node ZIP extraction still works.
+
+- [ ] Add permanent app identity and icon assets. Set Windows AUMID to
+  `cubric.studio.vision`; add `media/icons/cubric-vision.ico`,
+  `media/icons/cubric-vision.icns`, and `media/icons/cubric-vision.png`.
+  **Verify:** files exist and a dev Windows launch still opens normally.
+
+## Phase 3: Build metadata and connector manifests
+
+- [ ] Add build-time short commit hash injection. Dev/source runs should report
+  `dev`; staged portable builds should expose the short commit SHA to the
+  renderer/backend. **Verify:** error reports include `build.hash`, and backend
+  applies `build:<hash>` only when hash is neither absent nor `dev`.
+
+- [ ] Preserve `resources/cubric/connector-manifest.json` in every staged
+  artifact. **Verify:** staged manifest path is stable relative to the app root
+  and smoke assertions pass for `appId === "cubric.vision"`,
+  `protocolVersion === "0.1.0"`, and `metadata.manifestOnly === true`.
+
+- [ ] Generate `resources/cubric/update-manifest.json` during staging from
+  staged artifacts. Include `schemaVersion`, `appId`, `displayName`,
+  `platform`, `arch`, `toVersion`, `protocolVersion`,
+  `connectorManifestPath`, `connectorManifestHash`, `files[]`, `preserve[]`,
+  and `createdAt`. **Verify:** `connectorManifestHash` is computed from the
+  staged manifest file, not from an assumed source-tree path.
+
+- [ ] Keep Vision standalone. **Verify:** no runtime import of
+  `@cubric/connector`, no broker spawn, no PromptBox connector actions, no
+  permission/trust UI, and no disabled promotional connector controls.
+
+## Phase 4: Windows portable artifact
+
+- [ ] Implement the Windows staging/build path. It should stage app source,
+  `node_modules`, portable Electron/Node runtime as needed, resources, launchers,
+  connector/update manifests, and updater scripts. **Verify:** a full Windows
+  artifact can be extracted outside the repo and launched from its start script.
+
+- [ ] Implement Windows updater scripts. `update.bat` should download/apply the
+  latest compatible GitHub release/update bundle; `update-from-zip.bat` should
+  apply a local early-access/offline bundle. Both must preserve engine, models,
+  projects, and user-owned local config. **Verify:** update on a copied
+  portable folder replaces app files and leaves engine/model folders intact.
+
+- [ ] Run Windows validation on this machine. **Verify:** launch, engine
+  install/repair, Models slide-over discovery, model install or seeded-model
+  resync, one image generation, restart persistence, folder open, video
+  extraction/crop, error report build labels, and update-from-copy/update script
+  behavior.
+
+## Phase 5: Linux portable artifact
+
+- [ ] Implement Linux staging/build path. Include `start.sh`, `update.sh`,
+  `update-from-zip.sh`, staged resources, connector/update manifests, and
+  `uv`/comfy-cli bootstrap support if Linux engine install is in this artifact.
+  **Verify:** artifact extracts on Linux and `start.sh` can launch the app shell.
+
+- [ ] Add Linux engine bootstrap path without claiming generation support from
+  the user's old Ubuntu laptop. The code should use `uv` plus `comfy-cli` with
+  zip-local uv env vars. **Verify:** on Ubuntu laptop, install/launch path and
+  engine setup UI can be exercised far enough to validate paths/logs; ComfyUI
+  generation remains community or stronger-host validation.
+
+- [ ] Implement Linux updater scripts using the same update engine as Windows.
+  **Verify:** update-from-zip can apply an early-access bundle on Ubuntu while
+  preserving user-owned folders.
+
+## Phase 6: macOS portable artifact
+
+- [ ] Implement macOS staging/build path and launch/update scripts, with
+  `start.command`, `update.command`, and `update-from-zip.command`. **Verify:**
+  the artifact is mechanically produced and contains expected app, resource,
+  manifest, launcher, and updater files.
+
+- [ ] Mark macOS support as untested by maintainer in artifact notes and release
+  copy. **Verify:** GitHub release text and early-access notes explicitly say
+  macOS is community-validation-needed, and do not imply maintainer smoke
+  testing.
+
+- [ ] Add a contributor validation checklist for macOS. **Verify:** checklist
+  asks for OS version, CPU arch, launch result, Gatekeeper behavior, app log
+  tail, engine setup result, and whether generation was tested.
+
+## Phase 7: Release readiness and public repo flow
+
+- [ ] Replace placeholder `0.0.1` changelog/release copy through the version
+  bump/release-note flow. **Verify:** `js/data/releaseNotes.js` has real
+  `APP_VERSION` notes and no placeholder warning for the released version.
+
+- [ ] Prepare GitHub release asset naming and disclosure copy. **Verify:**
+  release assets are named for Cubric Vision, not legacy CubricStudio names, and
+  platform support language matches actual validation reality.
+
+- [ ] Prepare open-source contribution surfaces before public release.
+  **Verify:** issue/PR templates or release notes ask contributors for platform,
+  arch, GPU, artifact name, clean install/update path, and app log tail.
+
+## Parallel Batch: Independent implementation slices
+
+Use `mpi-execute-parallel` only after Phase 1 settles the exact artifact layout
+and if file ownership is clean.
+
+- [ ] Runtime portability blockers. Ownership: `main.js`,
+  `routes/platformEngine.js`, `routes/system.js`, `routes/projects.js`,
+  `services/ffmpegBinary.js`. Briefings: dos_and_donts, comfy_engine, shell,
+  project integrity. **Verify:** server/app path smoke plus focused route
+  checks pass on Windows.
+
+- [ ] Engine/download extraction portability. Ownership: `routes/engine.js`,
+  `routes/downloadManager.js`, `routes/shared.js`, `dev_configs/system_dependencies.json`.
+  Briefings: comfy_engine, downloads, project integrity. **Verify:** Windows
+  engine install path still works and custom-node ZIP extraction no longer
+  depends on Mac/Linux `7zip-bin` module load.
+
+- [ ] Build/updater artifact tooling. Ownership: `scripts/build-portable.*`,
+  staged launcher/update templates, `resources/cubric/update-manifest.json`
+  generation. Briefings: dos_and_donts, versioning, connector manifest context.
+  **Verify:** dry-run/staging command produces expected manifests and preserve
+  lists without touching user folders.
+
+- [ ] Release docs/copy gates. Ownership: `docs/releases/**`,
+  `js/data/releaseNotes.js`, release checklist docs or GitHub template files.
+  Briefings: versioning, project memory repo distribution. **Verify:** copy
+  states Windows tested locally, Linux install-tested on weak Ubuntu hardware,
+  macOS untested/community validation needed, and no Vision LLM claims.
+
+## Plan Drift
+
+- 2026-06-05: Rebuilt after validating the old portable plan against the repo.
+  Major drift found: no portable build script exists, Linux/macOS engine paths
+  are placeholders, update manifests are absent, the old LLM/llama future track
+  is no longer Vision scope, and model-manager implementation is already done.
+
+## Verification
+
+Final completion requires:
+
+- Windows portable artifact extracts outside the repo and launches.
+- Windows engine install/repair can complete and one image generation succeeds.
+- Windows model-manager/manual fresh-install sequence is recorded, including
+  whether real downloads or seeded model files were used.
+- Linux artifact extracts and launches on Ubuntu; logs/path diagnostics confirm
+  portable roots. Generation is marked unvalidated unless a stronger Linux host
+  or contributor validates it.
+- macOS artifact is produced but release notes clearly mark it maintainer
+  untested until community validation arrives.
+- Updater supports GitHub-release source and local update-zip source, with one
+  shared preserve/replace model.
+- Connector manifest and update manifest smoke assertions pass for staged
+  artifacts.
+- Error reports include stage/version/build hash labels as designed.
+- Release notes are real, platform-specific, and honest about validation gaps.
+
+## Preservation Notes
+
+- Do not implement installer formats in this card: no NSIS, DMG, AppImage, or
+  system-wide install flow.
+- Do not require Git for user updates. GitHub updater scripts should download
+  release assets/manifests, not run `git pull` in a user folder.
+- Do not manually ask users to merge folders. Updater scripts own replacement
+  and preservation.
+- Keep early-access zip/update delivery as a first-class path.
+- Do not add LLM/llama runtime or packaging back into Cubric Vision. LLM/prompt
+  intelligence belongs to Cubric Prompt.
+- Do not add live connector runtime work here. Vision v1 remains manifest-only
+  and standalone.
+- If implementation changes component wiring, workspace routing, events, state,
+  or Comfy injection behavior, ask before updating `.claude/rules/`.

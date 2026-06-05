@@ -1,81 +1,110 @@
-# Cross-platform portable distribution + Vision connector scaffold
+# Portable distribution, updater, and release validation
 
-## Legacy Markdown Entry
+## Purpose
 
-Source: `.agents/mpi-kanban/legacy/kanban-2026-06-01-072015.md` line 181.
-Legacy column: `PLANNING`.
+MPI-8 owns the first portable Cubric Vision distribution flow: build full
+portable artifacts, provide update scripts, keep the Vision connector manifest
+stable, inject build metadata, and validate release behavior honestly across the
+platforms the project can actually test.
 
-Original plan file: `docs/plans/2026-04-30-cross-platform-portable-distribution.md`.
+This card supersedes the old short "Plan Reference" workspace. The historical
+portable plan remains at:
 
-Sequencing lock 2026-05-21: start after current app implementation work and hub
-readiness. After portable distribution is ready and tested, handle
-website/Patreon/social/docs release surfaces before public release.
+- `docs/plans/2026-04-30-cross-platform-portable-distribution.md`
 
-## Install + model verification
+The executable source of truth is now:
 
-The "Model Manager slide-over and zero-model gating" plan defers its Phase 6
-manual install/model session here to avoid a duplicate large-download test pass.
-Once portable distribution is implemented, run one combined fresh-install
-session:
+- `.agents/mpi-kanban/tasks/MPI-8/plan.md`
 
-1. clean portable app/user-data/engine state
-2. first launch + engine install/repair
-3. project page -> confirm Models discoverable
-4. empty/new project zero-model -> Models slide-over auto-opens; existing-media
-   project zero-model -> read-only, no PromptBox
-5. install one model, or seed model files + UI refresh/resync
-6. confirm first installed model unlocks PromptBox/generation
-7. generate one image
-8. restart -> installed-model detection persists
+## Release Model
 
-Note in final results whether the real download path or the seeded-file resync
-path was exercised. Source:
-`docs/plans/2026-05-22-model-manager-slide-over-zero-model-gating.md` Phase 6.
+- One repo: this repo becomes public and publishes GitHub Release artifacts.
+- New users download full portable artifacts.
+- Early-access users receive zip/update artifacts before the public release.
+- Updates should use one updater system with two sources:
+  - GitHub release/update manifest.
+  - Local update zip for early-access/offline delivery.
+- Users should not manually merge folders. Update scripts preserve user-owned
+  folders and replace app-owned files.
 
-## Handoff from MPI-2 (2026-06-02) - build hash injection deferred here
+## Platform Reality
 
-MPI-2 (in-app error reporter stage/build GitHub labels) shipped stage + version
-labels but deliberately deferred the `build:<hash>` label to this card, since
-build-time injection belongs in the portable/build pipeline, not the app source.
+- Windows: testable on this development machine, but not on a separate clean
+  Windows host.
+- Linux: install/launch testable on the user's old Ubuntu laptop. ComfyUI
+  generation is not expected on that weak hardware.
+- macOS: artifact will be produced, but maintainer-untested. Release copy must
+  say this clearly and request community validation.
 
-What MPI-8 must add when wiring the portable build:
+## Current Codebase Findings
 
-- Inject a short git commit SHA at package/build time into an env the running
-  app can read, e.g. `CUBRIC_BUILD_HASH`. Dev/source runs have no `.git`-derived
-  value and should fall back to `dev`.
-- Surface it to the renderer alongside the existing stage/version path. The
-  error reporter already sends `build: { appVersion, stage }` to
-  `/github/create-issue`; extend that object with `hash` and have the backend
-  add a `build:<hash>` label. Skip the label when hash is `dev` or absent.
-- Stage is derived from `APP_VERSION`, not a build env. Do not add a stage env
-  var. See `js/core/appStage.js` and the mirrored `deriveStage()` in
-  `routes/system.js`.
+Validated 2026-06-05:
 
-This ties into the merged MPI-44 connector-manifest item: both
-`build:<hash>` and `connectorManifestHash` require staged-artifact values
-computed at build time.
+- No portable build script exists.
+- No updater scripts exist.
+- No `resources/cubric/update-manifest.json` exists.
+- `resources/cubric/connector-manifest.json` exists and is manifest-only.
+- Portable env vars are not wired; `main.js` only forwards packaged
+  `MPI_RESOURCES_PATH`.
+- Windows engine install exists; Linux/macOS engine install is placeholder.
+- `downloadManager` still module-loads `node-7z` / `7zip-bin`.
+- `routes/projects.js` still has one bare shell `ffmpeg`/`ffprobe` route.
+- `/open-folder` still shells Windows `start`.
+- `media/icons/` is absent; Windows AUMID is not the permanent app id.
+- Build hash injection is absent.
+- Model Manager slide-over and zero-model behavior already shipped; MPI-8 only
+  validates the fresh-install/model flow.
 
-## Merged from MPI-44 (2026-06-05) - Vision connector scaffold
+See research note:
 
-MPI-44 was merged into this card because its remaining Vision v1 work is part of
-the portable build/update-manifest pipeline, not separate hub implementation.
+- `.agents/mpi-kanban/tasks/MPI-8/research/2026-06-05-plan-rewrite-validation.md`
 
-Merged requirements:
+## In Scope
 
-- Keep `resources/cubric/connector-manifest.json` in portable staging. The
-  portable/Electron build must not exclude `resources/cubric/**`, and the
-  manifest path must remain stable relative to the app root.
-- Add a build smoke assertion against the staged connector manifest:
-  `appId === "cubric.vision"`, `protocolVersion === "0.1.0"`, and
-  `metadata.manifestOnly === true` for v0.0.1.
-- When this card adds `resources/cubric/update-manifest.json`, include
-  `connectorManifestPath` and `connectorManifestHash`. Compute the hash from the
-  staged manifest artifact, not from an assumed source-tree file.
-- Preserve standalone Vision behavior in v1. Do not add `@cubric/connector`,
-  `ensureBroker()`, broker spawn, PromptBox Prompt actions, permission/trust UI,
-  or any dead promotional controls.
-- The hub-side handoff README already exists in `c:\AI\Mpi\Cubric-Studio\`.
-  Further live hub cards are post-v1 and are not blockers for this merged card.
+- Portable app layout and launch/update scripts.
+- Windows portable artifact and full local validation.
+- Linux artifact and install/launch validation.
+- macOS artifact with explicit untested/community-validation disclosure.
+- ComfyUI engine install path corrections needed for portable release.
+- Update system with GitHub and local-zip sources.
+- Connector manifest staging and update-manifest generation.
+- Build hash injection for error-report labels.
+- Real release notes and platform disclosure copy.
 
-Out of scope remains unchanged: live connector runtime integration belongs to a
-future post-v1 / Cubric Prompt-era card.
+## Out Of Scope
+
+- NSIS, DMG, AppImage, or system-wide installers.
+- Requiring Git for user updates.
+- Manual folder merging by users.
+- Vision LLM/llama runtime or packaging.
+- Live `@cubric/connector` runtime integration.
+- Broker startup, PromptBox connector actions, permission/trust UI.
+- Claiming macOS is tested before community or maintainer validation exists.
+
+## Carry-Overs
+
+### From MPI-44
+
+- Keep `resources/cubric/connector-manifest.json` in staged artifacts.
+- Assert `appId === "cubric.vision"`, `protocolVersion === "0.1.0"`, and
+  `metadata.manifestOnly === true`.
+- Generate update-manifest connector fields from staged artifacts.
+
+### From MPI-2
+
+- Inject build hash at build/stage time.
+- Add `build:<hash>` GitHub labels for real build hashes only.
+- Keep stage derived from `APP_VERSION`; do not add a stage env var.
+
+### From Model Manager Validation
+
+Run one combined fresh-install validation session:
+
+1. Clean portable app/user-data/engine state.
+2. Launch app and run engine install/repair.
+3. Confirm Models is discoverable.
+4. Confirm zero-model gate/read-only behavior.
+5. Install or seed one model and refresh/resync.
+6. Confirm PromptBox/generation unlocks after model detection.
+7. Generate one image where hardware allows.
+8. Restart and confirm installed-model detection persists.
