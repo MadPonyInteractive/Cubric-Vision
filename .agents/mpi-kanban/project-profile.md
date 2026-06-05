@@ -4,8 +4,8 @@ mode: scalable-foundation
 mode_rationale: user-confirmed at setup; strong repo evidence (16 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-06-01
-last_refresh_notes: refresh pass - migrated 43 legacy kanban.md entries into board.json/task workspaces; state now points at JSON board; legacy kanban.md tombstoned with snapshot preserved.
+last_refresh: 2026-06-05
+last_refresh_notes: refresh pass - validated board/state/index against repo; all 19 index pointers exist, boot docs route to JSON board, done-column statuses resolved; archived orphan task folders MPI-1 (moved) and MPI-5 (deleted) into tasks/_archived/.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
