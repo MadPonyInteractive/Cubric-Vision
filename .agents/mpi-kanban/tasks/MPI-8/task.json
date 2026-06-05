@@ -3,11 +3,12 @@
     "id":  "MPI-8",
     "title":  "Portable distribution, updater, and release validation",
     "description":  "Rebuilt on 2026-06-05 after codebase validation. Owns portable artifacts, GitHub/local-zip updater flow, platform validation disclosures, Vision manifest-only connector staging, update-manifest generation, build hash injection, and release notes.",
-    "column":  "todo",
-    "maturity":  "planned",
+    "column":  "doing",
+    "maturity":  "in-progress",
     "status":  "active",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-05T12:00:00Z",
+    "updated_at":  "2026-06-05T13:00:00Z",
+    "activeSessionTitle":  "Portable distribution implementation",
     "links":  {
                   "brief":  "brief.md",
                   "plan":  "plan.md",
@@ -27,7 +28,7 @@
                  "merged-MPI-44"
              ],
     "priority":  "medium",
-    "defaultExpanded":  false,
+    "defaultExpanded":  true,
     "legacy_plan_reference":  "docs\\plans\\2026-04-30-cross-platform-portable-distribution.md",
     "legacy_column":  "PLANNING"
 }

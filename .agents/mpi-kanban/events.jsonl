@@ -90,3 +90,5 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-47","at":"2026-06-03T07:38:08.805Z","actor":"vscode","summary":"Created MPI-47."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-46","from":"todo","to":"done","at":"2026-06-05T08:45:00Z","actor":"claude","summary":"Changelog overlay implemented + manually verified (show/dismiss/persist gate). Moved to done."}
 {"schema":"mpi-kanban/event/v1","type":"task.removed","id":"MPI-47","at":"2026-06-05T08:45:00Z","actor":"claude","summary":"Removed stale/invalid MPI-47 per codex coordination message; reset next_id 48->47."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-8","from":"todo","to":"doing","at":"2026-06-05T13:00:00Z","actor":"codex","summary":"Moved MPI-8 into active implementation at user request."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-8","at":"2026-06-05T13:00:00Z","actor":"codex","summary":"Derived implementation checklist from phased portable release plan."}
