@@ -1,1 +1,2 @@
-{"id":"MPI-44","type":"task.created","summary":"Vision connector scaffold — unblock from Cubric Studio hub. Vision-side only; live integration post-v1.","to":"todo","actor":"claude","schema":"mpi-kanban/event/v1","at":"2026-06-01T11:02:04Z"}
+{"id":"MPI-44","type":"task.created","summary":"Vision connector scaffold - unblock from Cubric Studio hub. Vision-side only; live integration post-v1.","to":"todo","actor":"claude","schema":"mpi-kanban/event/v1","at":"2026-06-01T11:02:04Z"}
+{"schema":"mpi-kanban/event/v1","type":"task.superseded","id":"MPI-44","at":"2026-06-05T00:00:00Z","actor":"codex","summary":"Superseded by MPI-8. Remaining manifest-only connector scaffold work moved into portable distribution/update-manifest scope.","from":"todo","to":"done"}
