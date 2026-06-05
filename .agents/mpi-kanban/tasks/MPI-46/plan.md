@@ -10,6 +10,7 @@
 - Blocking overlay primitives already exist. New blocking UI should be a component using `ComponentFactory.create()`, `MpiModal`, existing primitives, BEM, registered CSS in `js/shell/preloadStyles.js`, and props documented in `js/components/types.js`.
 - Storage keys are centralized in `js/core/storageKeys.js`; typed helpers live in `js/core/storage.js`. A changelog seen marker must not use raw localStorage key strings.
 - MPI-8 distribution direction matters: portable releases publish full artifacts and later update bundles/scripts, not `electron-updater` or silent patching. The changelog overlay should describe the already-running app version after a bump/update; it must not become an updater or claim update-bundle support before MPI-8 lands.
+- User intent: after the user opens an already-updated app, the changelog should explain what is new and whether any breaking/important changes affect them. The user dismisses the overlay and continues using the app.
 - No sub-agents were spawned during planning because this session's delegation policy requires the user to explicitly request sub-agent work.
 
 ## Completed
@@ -21,6 +22,7 @@
 ## Phase 1: Runtime Release-Note Contract
 
 - [ ] Add a runtime-readable release-note data source keyed by app version, preferably `js/data/releaseNotes.js`, exporting a small current-release structure for `APP_VERSION` plus a fallback for missing notes. Keep markdown release files as archival/user-facing docs; do not parse markdown in the browser or rely on directory listing. **Verify:** importing the module in a browser/dev-server context returns the notes for `APP_VERSION` and a deterministic empty/fallback state for an unknown version.
+- [ ] Structure release-note payloads for user scanning: `whatIsNew`, `fixes`, `breakingChanges` or `importantChanges`, and optional `engineNotes`. Keep sections empty/hidden when not relevant. **Verify:** the changelog can clearly present both ordinary feature notes and breaking/important changes without inventing update-check behavior.
 - [ ] Update the release/versioning contract so future version bumps keep the runtime data source and markdown release notes aligned. Ownership: `docs/versioning.md`, `docs/releases/README.md`, and, if the version-bump skill exists in this repo, its instructions. **Verify:** docs clearly state that release-note markdown remains archival while the changelog overlay consumes the runtime module/manifest; no instruction says to hand-edit `operation_registry.json`.
 
 ## Phase 2: Changelog Modal Component

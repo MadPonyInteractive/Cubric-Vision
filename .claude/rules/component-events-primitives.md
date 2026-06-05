@@ -100,6 +100,11 @@ LISTENS: (none)
 EMITS:   `close` `{}`
 LISTENS: (forwarded from internal MpiOverlay 'close')
 
+### MpiChangelogDialog
+EMITS:   `dismiss`     `{ version }` — Done button only. Escape/backdrop hide the modal but do NOT emit dismiss; shell persists the seen version solely on `dismiss`.
+LISTENS: (none — internal MpiModal handles `ui:close-all-popups`)
+NOTE:    Startup "What's New" overlay. Content set via `el.open({ version, stage, notes })` before `show()`. Reads release notes from `js/data/releaseNotes.js`. Not an updater.
+
 ### MpiEngineInstall
 EMITS:   (none — emits to Events bus, not component events)
 LISTENS: `engine:downloading` — displays download progress

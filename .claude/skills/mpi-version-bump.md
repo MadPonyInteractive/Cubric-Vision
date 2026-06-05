@@ -207,6 +207,31 @@ You fill in the actual migration logic.
 
 ## Step 5: Generate Release Notes
 
+Release notes live in **two** places that must stay aligned:
+
+1. **Runtime source — `js/data/releaseNotes.js`** (consumed by the in-app changelog
+   overlay, `MpiChangelogDialog`, shown once per `APP_VERSION` at startup). Add an
+   entry to `RELEASE_NOTES` keyed by the new `APP_VERSION`:
+
+   ```javascript
+   '<newVersion>': {
+       version: '<newVersion>',
+       whatIsNew:        [ /* headline features from Q3 + Q6 */ ],
+       fixes:            [ /* bug fixes */ ],
+       breakingChanges:  [ /* from Q5 if schema changed, else [] */ ],
+       importantChanges: [ /* notable non-breaking changes, else [] */ ],
+       engineNotes:      [ /* from Q2 if ComfyUI version changed, else [] */ ],
+   },
+   ```
+
+   Keep sections as empty arrays when not relevant — the overlay hides empty
+   sections. Do NOT add any network/update-check behavior here (that is MPI-8 /
+   portable-distribution scope; the changelog overlay only describes the already-
+   running version).
+
+2. **Archival markdown — `docs/releases/YYYY-MM-DD-vX.Y.Z.md`** (user-facing docs,
+   not read by the app).
+
 I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 
 ```markdown

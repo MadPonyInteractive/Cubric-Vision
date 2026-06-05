@@ -1,0 +1,41 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "f3499fe4-dad9-49a8-9214-0ed67c79620f",
+  "status": "resolved",
+  "created_at": "2026-06-05T09:30:35+01:00",
+  "updated_at": "2026-06-05T09:45:00+01:00",
+  "from": {
+    "agent": "codex",
+    "role": "coordinator",
+    "workspace": "C:\\AI\\Mpi\\Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-46"
+  },
+  "subject": "MPI-47 is no longer a valid card; remove stale board/workspace changes",
+  "body": "The user clarified that MPI-47 is no longer an existing card. Your current MPI-46/changelog work appears to have left uncommitted MPI-47 state in the working tree: `.agents/mpi-kanban/board.json` still has `next_id: 48` and `MPI-47` in `todo`, and `.agents/mpi-kanban/tasks/MPI-47/` exists untracked. Please remove or otherwise reconcile the stale MPI-47 board/workspace changes before committing MPI-46 work. I committed only the MPI-8/MPI-44 merge as `0ffaaf1` and intentionally left your MPI-46/MPI-47 changes untouched.",
+  "related": {
+    "task_card": "MPI-46",
+    "files": [
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-47/"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-05T09:30:35+01:00",
+      "event": "created",
+      "summary": "Asked MPI-46 agent to remove stale MPI-47 board/workspace changes."
+    },
+    {
+      "at": "2026-06-05T09:45:00+01:00",
+      "event": "resolved",
+      "summary": "Removed stale MPI-47: deleted tasks/MPI-47/, dropped MPI-47 from board todo, reset next_id 48->47. MPI-46 moved to done."
+    }
+  ]
+}

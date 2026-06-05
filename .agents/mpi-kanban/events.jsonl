@@ -87,3 +87,6 @@
 {"id":"MPI-6","type":"task.updated","summary":"Implementation started for additive model folders.","at":"2026-06-03T04:08:57Z","actor":"codex","schema":"mpi-kanban/event/v1"}
 {"id":"MPI-6","type":"validation.updated","summary":"Recorded automated checks and user verification for additive model folders.","at":"2026-06-03T04:39:03Z","actor":"codex","schema":"mpi-kanban/event/v1"}
 {"id":"MPI-6","type":"task.moved","summary":"Moved verified additive model folders task to done.","from":"doing","to":"done","at":"2026-06-03T04:39:03Z","actor":"codex","schema":"mpi-kanban/event/v1"}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-47","at":"2026-06-03T07:38:08.805Z","actor":"vscode","summary":"Created MPI-47."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-46","from":"todo","to":"done","at":"2026-06-05T08:45:00Z","actor":"claude","summary":"Changelog overlay implemented + manually verified (show/dismiss/persist gate). Moved to done."}
+{"schema":"mpi-kanban/event/v1","type":"task.removed","id":"MPI-47","at":"2026-06-05T08:45:00Z","actor":"claude","summary":"Removed stale/invalid MPI-47 per codex coordination message; reset next_id 48->47."}

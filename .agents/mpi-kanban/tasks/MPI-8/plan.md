@@ -22,3 +22,13 @@ as part of this card's implementation context:
 Execute the Vision v1 manifest-only connector scaffold alongside the portable
 build script/update-manifest work. Do not implement live connector runtime work
 in this card.
+
+## Carried-over follow-ups
+
+- [ ] **Replace placeholder changelog copy (from MPI-46).** `js/data/releaseNotes.js`
+  ships a PLACEHOLDER `0.0.1` entry (whatIsNew/importantChanges). The first real
+  release cut from the portable-distribution flow must replace it with real copy
+  via `/mpi-version-bump` (the skill now writes both `js/data/releaseNotes.js` and
+  `docs/releases/*.md`). The in-app changelog overlay (`MpiChangelogDialog`) reads
+  this runtime module. **Verify:** the released `APP_VERSION` entry in
+  `releaseNotes.js` holds the actual release notes, not the alpha placeholder.

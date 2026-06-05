@@ -1118,3 +1118,25 @@
  */
 
 
+
+/**
+ * @typedef {Object} MpiChangelogDialogProps (Compound — js/components/Compounds/MpiChangelogDialog)
+ * No props required at mount time — content is provided imperatively via open().
+ *
+ * Startup "What's New" overlay. Describes the already-running APP_VERSION after a
+ * version bump/update. NOT an updater — never checks the network or polls for
+ * releases. Consumes the runtime release-note source (js/data/releaseNotes.js).
+ * Shown as a singleton from shell.js, once per APP_VERSION.
+ *
+ * Instance methods (on instance.el):
+ *   open({ version: string, stage?: string, notes: ReleaseNotes })
+ *     — Set content (kicker label + sections) before showing. Rebuilds the body,
+ *       so repeated open() calls are idempotent. Empty sections stay hidden.
+ *   show() — portal + blocking backdrop (idempotent)
+ *   hide() — release overlay
+ *
+ * Emits:
+ *   'dismiss' { version: string } — user clicked Done. Escape/backdrop hide the
+ *       modal but do NOT emit dismiss; the seen-version is persisted only on Done
+ *       (wired in shell.js).
+ */

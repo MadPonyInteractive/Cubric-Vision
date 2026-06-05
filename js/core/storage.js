@@ -83,6 +83,9 @@ export const Storage = {
 
   getPromptReuseSource: () => normalizePromptReuseSource(get(STORAGE_KEYS.PROMPT_REUSE_SOURCE, 'original')),
   setPromptReuseSource: (v) => set(STORAGE_KEYS.PROMPT_REUSE_SOURCE, normalizePromptReuseSource(v)),
+
+  getLastSeenChangelogVersion: () => get(STORAGE_KEYS.LAST_SEEN_CHANGELOG_VERSION, null),
+  setLastSeenChangelogVersion: (v) => set(STORAGE_KEYS.LAST_SEEN_CHANGELOG_VERSION, v),
 };
 
 export const Session = {

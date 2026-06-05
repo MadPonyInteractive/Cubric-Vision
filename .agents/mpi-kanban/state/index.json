@@ -1,6 +1,6 @@
 {
     "schema":  "mpi-kanban/state-index/v1",
-    "updated_at":  "2026-06-03T04:39:03Z",
+    "updated_at":  "2026-06-05T08:45:00Z",
     "board":  ".agents/mpi-kanban/board.json",
     "heartbeat_timeout_minutes":  120,
     "active_sessions":  [

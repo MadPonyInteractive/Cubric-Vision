@@ -32,7 +32,7 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
   - **Patch** (0.0.x → 0.0.y): Bug fixes, no new operations, no schema change.
   - **Minor** (0.x.0 → 0.(x+1).0): New operations added, or ComfyUI engine updated.
   - **Major** (x.0.0 → (x+1).0.0): Breaking changes (schema change, significant architectural shift).
-- **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`) and release notes file naming.
+- **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`), release notes file naming, and the runtime release-note source `js/data/releaseNotes.js` (keyed by `APP_VERSION`).
 
 ### COMFY_VERSION
 
@@ -141,6 +141,15 @@ Use the `/mpi-version-bump` slash command to guide the bump process interactivel
 
 Both flows are owned by the `/mpi-version-bump` slash command — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, syncs `operation_registry.json`, generates release notes under `docs/releases/`, and offers pre-release tests. Do NOT edit `appVersion.js` / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump.md`.
 
+### Release notes: archival vs. runtime
+
+Release notes exist in two aligned places, both maintained by `/mpi-version-bump`:
+
+- **`docs/releases/YYYY-MM-DD-vX.Y.Z.md`** — archival, user-facing markdown. **Not** read by the running app.
+- **`js/data/releaseNotes.js`** — the runtime source, keyed by `APP_VERSION`. Consumed by the in-app **changelog overlay** (`MpiChangelogDialog`), shown once per `APP_VERSION` at startup after engine/deps gates. Dismissal is persisted via `Storage.setLastSeenChangelogVersion()` (key `LAST_SEEN_CHANGELOG_VERSION`).
+
+The overlay only **describes the already-running version** — it is not an updater and performs no network/release checks (those remain MPI-8 / portable-distribution scope). Every bump must add an entry to `js/data/releaseNotes.js` for the new version.
+
 ---
 
 ## Migration System
@@ -176,4 +185,6 @@ These helpers compare `APP_VERSION` against each operation's `appVersionIntroduc
 - `js/managers/versioningManager.js` — version queries
 - `js/migrations/projectMigrations.js` — schema migration functions
 - `.claude/skills/mpi-version-bump.md` — the interactive version-bump skill (use this for releases)
-- `docs/releases/` — archived release notes per version
+- `docs/releases/` — archived release notes per version (user-facing markdown)
+- `js/data/releaseNotes.js` — runtime release-note source consumed by the startup changelog overlay
+- `js/components/Compounds/MpiChangelogDialog/` — the changelog overlay component

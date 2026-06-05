@@ -135,6 +135,7 @@ Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip.
 ## shell.js (global singletons — mounted once at startup)
 
 - `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event
+- `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
 - *(MpiModelsModal removed — model manager is now `MpiModelManager`, a slide-over content component opened via `models:open` → `slide-over:open { title: 'Models', component: MpiModelManager }`. No shell-level singleton for models.)*
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`

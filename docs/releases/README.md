@@ -2,6 +2,13 @@
 
 Cubric Studio release notes are stored here, one file per release.
 
+> **Archival vs. runtime.** The markdown files in this folder are **archival /
+> user-facing docs**. They are NOT read by the running app. The changelog overlay
+> (`MpiChangelogDialog`, shown once per `APP_VERSION` at startup) consumes the
+> **runtime** release-note source at `js/data/releaseNotes.js`. Every version bump
+> must keep the two aligned: add an entry to `js/data/releaseNotes.js` keyed by the
+> new `APP_VERSION` **and** write the markdown file here. See `docs/versioning.md`.
+
 ## Naming Convention
 
 Files are named `YYYY-MM-DD-vX.Y.Z.md` where:

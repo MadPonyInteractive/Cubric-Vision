@@ -33,6 +33,9 @@ export const STORAGE_KEYS = {
   // Reuse Prompt behavior
   PROMPT_REUSE_OPTIONS:'mpi_prompt_reuse_options',
   PROMPT_REUSE_SOURCE: 'mpi_prompt_reuse_source',
+
+  // Changelog overlay (last APP_VERSION the user dismissed the changelog for)
+  LAST_SEEN_CHANGELOG_VERSION: 'mpi_last_seen_changelog_version',
 };
 
 // --- sessionStorage keys ---

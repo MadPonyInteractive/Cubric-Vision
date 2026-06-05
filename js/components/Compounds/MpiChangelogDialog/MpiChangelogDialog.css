@@ -1,0 +1,118 @@
+/* ── MpiChangelogDialog ──────────────────────────────────────────────────────── */
+
+.mpi-changelog {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: var(--surface-1);
+    border-radius: var(--r-2);
+    border-top: 2px solid var(--accent-heat);
+    max-height: min(80vh, 720px);
+}
+
+/* Header */
+.mpi-changelog__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mpi-changelog__kicker {
+    font-size: var(--t-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.mpi-changelog__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    color: var(--ink-1);
+    line-height: 1.3;
+}
+
+/* Body — scrolls when notes are long */
+.mpi-changelog__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+/* Section */
+.mpi-changelog__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mpi-changelog__section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ink-2);
+}
+
+.mpi-changelog__section-title {
+    font-size: var(--t-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+}
+
+/* Tone accents on the heading color */
+.mpi-changelog__section--breaking .mpi-changelog__section-heading,
+.mpi-changelog__section--breaking .mpi-changelog__section-title {
+    color: var(--accent-heat);
+}
+
+.mpi-changelog__section--important .mpi-changelog__section-heading,
+.mpi-changelog__section--important .mpi-changelog__section-title {
+    color: var(--accent-warn);
+}
+
+.mpi-changelog__section--fixes .mpi-changelog__section-heading,
+.mpi-changelog__section--fixes .mpi-changelog__section-title {
+    color: var(--accent-ok);
+}
+
+/* List */
+.mpi-changelog__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.mpi-changelog__item {
+    position: relative;
+    padding-left: 1rem;
+    font-size: var(--t-md);
+    color: var(--ink-1);
+    line-height: 1.55;
+}
+
+.mpi-changelog__item::before {
+    content: '';
+    position: absolute;
+    left: 0.1rem;
+    top: 0.62em;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ink-4);
+}
+
+/* Actions */
+.mpi-changelog__actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+}

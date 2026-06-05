@@ -19,8 +19,12 @@ import { MpiProjectName } from './components/Compounds/MpiProjectName/MpiProject
 import { MpiErrorDialog } from './components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
 import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
+import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js';
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { getModelsByType } from './data/modelRegistry.js';
+import { APP_VERSION } from './core/appVersion.js';
+import { APP_STAGE_LABEL } from './core/appStage.js';
+import { getReleaseNotes, hasReleaseContent } from './data/releaseNotes.js';
 
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
@@ -42,6 +46,7 @@ let _projectNameInstance = null;
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
 const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
 const _engineInstall = MpiEngineInstall.mount(document.createElement('div'));
+const _changelogDialog = MpiChangelogDialog.mount(document.createElement('div'));
 
 /**
  * Show a user-facing error dialog with an optional log download button.
@@ -189,6 +194,11 @@ async function _bootApp() {
     handleNavigation(savedPage || PAGE_LANDING, savedParams);
   }
 
+  // 3.5. Changelog overlay — show once per APP_VERSION, after engine/deps gates
+  // and dev-state restore, but BEFORE optional Comfy auto-start so it never
+  // competes with mandatory engine provisioning. Not an updater (MPI-46).
+  _maybeShowChangelog();
+
   // Wire startup modal to comfy engine events.
   // comfyController emits these events; shell owns the component reference.
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
@@ -211,6 +221,27 @@ async function _bootApp() {
     const { ComfyUIController } = await import('./services/comfyController.js');
     ComfyUIController.ensureServerRunning();
   }
+}
+
+/**
+ * Show the changelog overlay once per APP_VERSION.
+ *
+ * Skips when the user has already seen this version's changelog, or when there
+ * are no release notes for the current version. Persists the seen-version only
+ * when the user explicitly dismisses (Done) — not when the modal merely opens —
+ * so an Escape/backdrop close still re-shows on next launch.
+ */
+function _maybeShowChangelog() {
+  const notes = getReleaseNotes(APP_VERSION);
+  if (!hasReleaseContent(notes)) return; // nothing to show for this version
+  if (Storage.getLastSeenChangelogVersion() === APP_VERSION) return; // already seen
+
+  _changelogDialog.on('dismiss', ({ version }) => {
+    Storage.setLastSeenChangelogVersion(version || APP_VERSION);
+  });
+
+  _changelogDialog.el.open({ version: APP_VERSION, stage: APP_STAGE_LABEL, notes });
+  _changelogDialog.el.show();
 }
 
 async function _initDataRegistries() {
