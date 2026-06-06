@@ -298,7 +298,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
     }
 
     const customRoot = await getCustomRoot();
-    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultModelsRoot = getDefaultModelsRoot();
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     // Pre-sum totalBytes from ALL deps (including already-installed ones)
@@ -783,7 +783,7 @@ function cancelAllDownloads() {
 async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, skipCustomNodeInstall = false) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const customRoot = await getCustomRoot();
-    const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+    const defaultModelsRoot = getDefaultModelsRoot();
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     logger.info('download', `startUniversalWorkflowInstall: customRoot=${customRoot}, ${depIds.length} deps to check`);

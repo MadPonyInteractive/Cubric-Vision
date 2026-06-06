@@ -365,8 +365,13 @@ export const MpiSettings = ComponentFactory.create({
         }
 
         function _primaryFolderLabel(bucket) {
-            const rootPath = Storage.getComfyRootPath() || state.comfyRootPath || '';
-            return rootPath ? `${rootPath}\\${bucket}` : `Default internal engine models/${bucket}`;
+            const rootPath = state.comfyRootPath || Storage.getComfyRootPath() || '';
+            if (!rootPath) return `Default internal engine models/${bucket}`;
+            // Join with the root's own separator; trim any trailing slash/backslash
+            // so we never produce mixed separators like "…/mpi_models/\loras".
+            const trimmed = rootPath.replace(/[\\/]+$/, '');
+            const sep = trimmed.includes('\\') ? '\\' : '/';
+            return `${trimmed}${sep}${bucket}`;
         }
 
         function _renderPrimaryFolder(root, bucket, slotId, label) {

@@ -222,3 +222,42 @@ Still remaining for Windows:
   extraction/crop, a live error-report submission, and update /
   update-from-zip on a copied portable folder. These are deeper interactive
   flows beyond the launch/path/boot validation above.
+
+### Windows deep validation + GPU/models/dev_mode fixes - 2026-06-06
+
+User-verified on a fresh portable install (zip-extracted outside repo):
+engine install, one image generation, settings change, app restart, settings
+persisted, project.json clean. update-from-zip self-verified (replace +
+preserve + rollback). open-folder bridge, ffprobe/ffmpeg execFile route, and
+ffmpeg binaries staged — all verified by inspection/run.
+
+Defects found during deep validation and fixed:
+
+- **GPU build selection was broken.** `detectNvidiaGPU()` read the `CUDA
+  Version:` header from stderr, but `--query-gpu=name` never emits it (header is
+  on stdout, bare `nvidia-smi` only), so CUDA was always `unknown` and every
+  card fell back to `cu126` (the legacy 10-series build per Comfy-Org). Modern
+  cards incl. Blackwell would get a non-working build. Fixed: two nvidia-smi
+  calls; new `selectNvidiaBuild()` picks by GPU architecture (20-series+/
+  datacenter Turing+ → `nvidia.7z`, 10-series/older → `cu126`). 16/16 unit
+  cases pass; live on RTX 4060 Ti → CUDA 13.2 + `nvidia.7z`; asset URL HEAD
+  302→200 (1.98 GB).
+- **Models path resolved to two folders.** Engine-install UI hardcoded relative
+  `engine/mpi_models/` → written verbatim to `extra_model_paths.yaml`. Cubric
+  resolves vs server cwd (`app/`), ComfyUI resolves vs its own dir → model
+  installed where generation can't see it. Fixed: `resolveModelsRoot()` anchors
+  to absolute (default `<ENGINE_ROOT>/mpi_models`); set-path/get-path always
+  absolute; UI hydrates default from server. 4 stale `ComfyUI/models` fallbacks
+  unified to `getDefaultModelsRoot()`. Settings folder labels separator-clean.
+- **dev_mode footgun removed.** Now derived `BUILD_HASH === 'dev'` (renderer +
+  main both); builds stamp staged buildInfo.js only, source untouched. Verified
+  dev=true / staged build=false for both readers.
+
+Verification: node --check + eslint clean on all changed files; resolution unit
+tests pass; fresh zip rebuilt (buildHash 41ff0f5700f0) with all fixes staged
+and confirmed.
+
+Still user-pending for Windows: engine repair, Models slide-over discovery on a
+truly fresh install, restart persistence on the rebuilt zip, folder-open click,
+video extraction/crop in-app, a live error-report POST, and update/
+update-from-zip on a copied install. User will run a fresh install later.

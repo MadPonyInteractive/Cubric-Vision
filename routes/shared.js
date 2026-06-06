@@ -311,7 +311,7 @@ async function resolveComfyPath(dep, customRoot, config) {
         } else {
             baseDir = config.local_models_path
                 ? config.local_models_path
-                : getComfyPath(ENGINE_ROOT, 'models');
+                : getDefaultModelsRoot();
         }
         localPath = path.join(baseDir, dep.filename || '');
     }
@@ -364,7 +364,29 @@ function getDefaultModelsRoot() {
     if (process.env.CUBRIC_MODELS_ROOT) {
         return path.resolve(process.env.CUBRIC_MODELS_ROOT);
     }
-    return getComfyPath(ENGINE_ROOT, 'models');
+    return path.join(ENGINE_ROOT, 'mpi_models');
+}
+
+/**
+ * Resolve a user/UI-supplied models-root path to an absolute path.
+ *
+ * The path stored in extra_model_paths.yaml MUST be absolute: Cubric resolves it
+ * against the server cwd while ComfyUI resolves it against its own dir, so a
+ * relative value lands in two different folders (model installed but invisible to
+ * generation). Empty input falls back to the default models root. Relative input
+ * is anchored on ENGINE_ROOT (so legacy "engine/mpi_models" → "<root>/engine/mpi_models").
+ *
+ * @param {string|null|undefined} input
+ * @returns {string} absolute models root
+ */
+function resolveModelsRoot(input) {
+    const trimmed = typeof input === 'string' ? input.trim() : '';
+    if (!trimmed) return getDefaultModelsRoot();
+    if (path.isAbsolute(trimmed)) return path.resolve(trimmed);
+    // Legacy relative defaults like "engine/mpi_models/" were authored assuming
+    // cwd === repo root. Anchor on the portable root (parent of ENGINE_ROOT) so
+    // "engine/mpi_models" maps to the same place in dev and portable.
+    return path.resolve(path.dirname(ENGINE_ROOT), trimmed);
 }
 
 function getExtraModelFoldersPath() {
@@ -559,6 +581,7 @@ module.exports = {
     cleanEmptyDirs,
     getCustomRoot,
     getDefaultModelsRoot,
+    resolveModelsRoot,
     normalizeExtraModelFolders,
     getExtraModelFolders,
     setExtraModelFolders,

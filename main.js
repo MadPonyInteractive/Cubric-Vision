@@ -13,16 +13,18 @@ const SESSION_ID = randomUUID();
 const MASK_TEMP_ROOT = path.join(app.getPath('temp'), 'cubric-' + SESSION_ID);
 
 function loadAppConfig() {
+  // dev_mode is derived from the build hash, mirroring dev_configs/app_config.js
+  // (main is CommonJS and cannot import that ESM module). Staged portable builds
+  // stamp a real hash into js/core/buildInfo.js, so dev_mode is off for releases
+  // and on only for source/dev runs (BUILD_HASH === 'dev'). Default off on error.
   const fallback = { dev_mode: false };
   try {
-    const source = fs.readFileSync(path.join(__dirname, 'dev_configs', 'app_config.js'), 'utf8');
-    const devMode = source.match(/\bdev_mode\s*:\s*(true|false)\b/);
-    return {
-      ...fallback,
-      dev_mode: devMode ? devMode[1] === 'true' : fallback.dev_mode,
-    };
+    const source = fs.readFileSync(path.join(__dirname, 'js', 'core', 'buildInfo.js'), 'utf8');
+    const hashMatch = source.match(/BUILD_HASH\s*=\s*['"]([^'"]+)['"]/);
+    const hash = hashMatch ? hashMatch[1] : 'dev';
+    return { ...fallback, dev_mode: hash === 'dev' };
   } catch (err) {
-    logger.warn('main', `Failed to read app_config.js; dev_mode=false (${err.message})`);
+    logger.warn('main', `Failed to read buildInfo.js; dev_mode=false (${err.message})`);
     return fallback;
   }
 }

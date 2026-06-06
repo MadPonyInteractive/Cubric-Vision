@@ -239,6 +239,16 @@ and if file ownership is clean.
 
 ## Plan Drift
 
+- 2026-06-06: Windows deep validation surfaced and fixed three real defects
+  (none from build tooling): GPU engine-build selection was broken (CUDA parsed
+  from wrong stream; everyone got legacy cu126 — now arch-based via
+  `selectNvidiaBuild`), models path resolved to two different folders in Cubric
+  vs ComfyUI (relative base_path — now forced absolute via `resolveModelsRoot`,
+  4 stale fallbacks unified), and dev_mode is now derived from BUILD_HASH (no
+  manual flip before release). User verified install/generate/persist on a fresh
+  portable extract. Remaining Windows checks (engine repair, slide-over on fresh
+  install, live error-report POST, update on copied folder) are user-pending.
+
 - 2026-06-05: Rebuilt after validating the old portable plan against the repo.
   Major drift found: no portable build script exists, Linux/macOS engine paths
   are placeholders, update manifests are absent, the old LLM/llama future track

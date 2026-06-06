@@ -7,7 +7,7 @@
 
 **Platform paths:** All engine paths (Python binary, ComfyUI folder, models, custom nodes) are centralized in `routes/platformEngine.js`. Use `getPythonBin()`, `getComfyPath()`, `COMFY_DIR` — never hardcode `'ComfyUI_windows_portable'`.
 
-**GPU detection:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and CUDA version to automatically select correct engine build (`_nvidia.7z`, `_nvidia_cu126.7z`, `_amd.7z`, `_intel.7z`). Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
+**GPU detection:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and selects the engine build by **GPU architecture** via `selectNvidiaBuild()` (Comfy-Org: 20-series+/datacenter Turing+ → `_nvidia.7z`; 10-series & older/pre-Turing → `_nvidia_cu126.7z`; plus `_amd.7z`, `_intel.7z`). CUDA version (parsed from a bare `nvidia-smi` header on **stdout**) is informational + a tiebreaker only, never the primary signal. Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
 
 **Model registry source of truth:** `js/data/modelRegistry.js` — all generative models (checkpoints, LoRAs, custom nodes) are defined here. Add new models to `MODELS` or `DEPS` here only.
 
@@ -42,7 +42,7 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 - **`getComfyPath(engineRoot, ...parts)`** — shorthand for paths inside ComfyUI folder
 - **`resolveDownloadConfig()`** — async GPU detection + returns correct download URLs + filenames
   - Detects NVIDIA (via `nvidia-smi`), AMD (via WMI), Intel Arc (via WMI)
-  - Parses CUDA version from `nvidia-smi` header
+  - Selects NVIDIA build by GPU architecture (`selectNvidiaBuild`); CUDA version (bare `nvidia-smi` stdout header) is informational/tiebreaker only
   - Returns: `{ comfy: { url, filename } }`
   - Cached per session — called once during engine install/upgrade
 
@@ -76,7 +76,7 @@ The Node.js backend tracks the active python process in memory (`processState.ac
 The engine installation is now **parallel-optimized** with aggregated progress reporting and **automatic GPU detection**:
 
 **Order of operations:**
-1. **GPU Detection** — `resolveDownloadConfig()` detects GPU (NVIDIA/AMD/Intel) and CUDA version to determine correct engine build
+1. **GPU Detection** — `resolveDownloadConfig()` detects GPU (NVIDIA/AMD/Intel) and selects the engine build by GPU architecture (`selectNvidiaBuild`); CUDA version is informational/tiebreaker only
 2. Pre-calculate combined size: engine archive (selected variant) + all deps with `installOnEngine: true` in `dependencies.js`
 3. **Start engine download** (of GPU-specific variant; progress fed to frontend)
 4. **Immediately fire engine-deps download in parallel** with `skipCustomNodeInstall=true` (progress also fed to frontend)

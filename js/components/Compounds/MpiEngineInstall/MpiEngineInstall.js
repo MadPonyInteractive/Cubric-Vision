@@ -141,18 +141,34 @@ export const MpiEngineInstall = ComponentFactory.create({
         }
 
         // ── Mount path input ──────────────────────────────────────────────────────
-        const defaultPath = 'engine/mpi_models/';
-        const savedPath = Storage.getComfyRootPath() || defaultPath;
+        // The default models root is server-owned and MUST be absolute (a relative
+        // path resolves to different folders in Cubric vs ComfyUI). Mount with the
+        // cached value first, then hydrate the authoritative absolute default from
+        // GET /comfy/get-path. localStorage is a cache only — the YAML/server wins.
+        const savedPath = Storage.getComfyRootPath() || '';
 
         _pathInputInst = MpiInput.mount(pathInputMount, {
             type: 'text',
-            placeholder: 'engine/mpi_models/',
+            placeholder: 'Default models folder',
             value: savedPath,
             size: 'md'
         });
 
         // Get reference to the actual input field
         const pathInputField = qs('.mpi-input__field', _pathInputInst.el);
+
+        // Hydrate the absolute default/custom root from the server.
+        (async () => {
+            try {
+                const res = await fetch('/comfy/get-path');
+                const data = await res.json();
+                if (data?.success && data.path && !(pathInputField.value || '').trim()) {
+                    pathInputField.value = data.path;
+                }
+            } catch (e) {
+                clientLogger.error('MpiEngineInstall', 'get-path hydrate failed:', e);
+            }
+        })();
 
         // ── Mount browse button ───────────────────────────────────────────────────
         _browseButtonInst = MpiButton.mount(browseButtonMount, {
@@ -192,7 +208,8 @@ export const MpiEngineInstall = ComponentFactory.create({
         });
 
         _installButtonInst.el.addEventListener('click', async () => {
-            const modelPath = (pathInputField.value || '').trim() || 'engine/mpi_models/';
+            // Empty → server resolves to the absolute default models root.
+            const modelPath = (pathInputField.value || '').trim();
 
             // Save path to localStorage for next session
             Storage.setComfyRootPath(modelPath);

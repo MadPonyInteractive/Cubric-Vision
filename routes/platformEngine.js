@@ -83,37 +83,93 @@ function getComfyPath(engineRoot, ...parts) {
     return path.join(engineRoot, COMFY_DIR, 'ComfyUI', ...parts);
 }
 
-/**
- * Detect NVIDIA GPU and parse CUDA version from nvidia-smi output.
- * @returns {Promise<{hasGPU: boolean, cudaVersion: string|null}>}
- */
-async function detectNvidiaGPU() {
+/** Promisified execFile that resolves stdout/stderr and never rejects. */
+function _run(cmd, args, timeout = 5000) {
     return new Promise((resolve) => {
-        const cmd = process.platform === 'win32' ? 'nvidia-smi' : 'which';
-        const args = process.platform === 'win32'
-            ? ['--query-gpu=name', '--format=csv,noheader']
-            : ['nvidia-smi'];
-
-        execFile(cmd, args, { timeout: 5000 }, (error, stdout, stderr) => {
-            if (error) {
-                logger.info('gpu-detect', 'nvidia-smi not found or failed');
-                return resolve({ hasGPU: false, cudaVersion: null });
-            }
-
-            // Parse CUDA version from nvidia-smi header line (e.g., "CUDA Version: 12.8")
-            let cudaVersion = null;
-            const headerMatch = stderr.match(/CUDA Version:\s+([\d.]+)/);
-            if (headerMatch) {
-                cudaVersion = headerMatch[1];
-            }
-
-            const gpuName = stdout.trim();
-            const hasGPU = gpuName.length > 0;
-
-            logger.info('gpu-detect', `NVIDIA GPU detected: ${hasGPU ? gpuName : 'none'}, CUDA: ${cudaVersion || 'unknown'}`);
-            resolve({ hasGPU, cudaVersion, gpuName: hasGPU ? gpuName : null });
+        execFile(cmd, args, { timeout }, (error, stdout, stderr) => {
+            resolve({ error, stdout: stdout || '', stderr: stderr || '' });
         });
     });
+}
+
+/**
+ * Detect NVIDIA GPU name and the driver's max-supported CUDA version.
+ *
+ * Two nvidia-smi calls: `--query-gpu=name` (machine-readable model name) and a
+ * bare `nvidia-smi` (the `CUDA Version:` header is printed to STDOUT, not stderr,
+ * and only appears without `--query-gpu`). The CUDA version is informational and
+ * a tiebreaker only — build selection is driven by GPU architecture, see
+ * `selectNvidiaBuild()`.
+ * @returns {Promise<{hasGPU: boolean, gpuName: string|null, cudaVersion: string|null}>}
+ */
+async function detectNvidiaGPU() {
+    const nameRes = await _run('nvidia-smi', ['--query-gpu=name', '--format=csv,noheader']);
+    if (nameRes.error) {
+        logger.info('gpu-detect', 'nvidia-smi not found or failed');
+        return { hasGPU: false, gpuName: null, cudaVersion: null };
+    }
+
+    const gpuName = nameRes.stdout.trim().split('\n')[0].trim();
+    const hasGPU = gpuName.length > 0;
+
+    // Driver max-supported CUDA from the bare-call header (stdout).
+    let cudaVersion = null;
+    const headerRes = await _run('nvidia-smi', []);
+    const headerMatch = headerRes.stdout.match(/CUDA Version:\s+([\d.]+)/);
+    if (headerMatch) cudaVersion = headerMatch[1];
+
+    logger.info('gpu-detect', `NVIDIA GPU detected: ${hasGPU ? gpuName : 'none'}, CUDA: ${cudaVersion || 'unknown'}`);
+    return { hasGPU, gpuName: hasGPU ? gpuName : null, cudaVersion };
+}
+
+/**
+ * Pick the ComfyUI portable NVIDIA build from the GPU model name.
+ *
+ * Per Comfy-Org guidance (github.com/Comfy-Org/ComfyUI): the default
+ * `nvidia.7z` supports "20 series and above" (includes 30/40/50-series Blackwell
+ * and datacenter cards); `nvidia_cu126.7z` is the legacy build for "10 series and
+ * older". So the rule is: 20-series+ → default build, 10-series/older → cu126.
+ *
+ * Build-name strings are stable across engine versions; only the release tag in
+ * the URL changes (from system_dependencies.json). Do not version-gate these names.
+ *
+ * @param {string|null} gpuName  Raw nvidia-smi model name.
+ * @param {string|null} cudaVersion  Driver CUDA (tiebreaker when name is unknown).
+ * @returns {string} portable build filename
+ */
+function selectNvidiaBuild(gpuName, cudaVersion) {
+    const NVIDIA_DEFAULT = 'ComfyUI_windows_portable_nvidia.7z';
+    const NVIDIA_LEGACY = 'ComfyUI_windows_portable_nvidia_cu126.7z';
+    const name = (gpuName || '').toLowerCase();
+
+    // GeForce consumer cards: "rtx 4060", "gtx 1080", "gtx 1660", "rtx 5090".
+    const geforce = name.match(/\b(?:rtx|gtx)\s*(\d{3,4})/);
+    if (geforce) {
+        const model = parseInt(geforce[1], 10);
+        // RTX series (20xx+) are always >= 2000. GTX 16xx (Turing) are modern too.
+        // Legacy = GTX 10xx and older, i.e. model < 1600.
+        return model >= 1600 ? NVIDIA_DEFAULT : NVIDIA_LEGACY;
+    }
+
+    // Datacenter / pro cards (A100, H100, L40, RTX A6000, Tesla T4, etc.) are
+    // all Turing+; the default build covers them.
+    if (/\b(a\d{2,3}|h\d{2,3}|l\d{2,3}|t4|t40|rtx a\d{3,4}|ada|hopper|blackwell|ampere|turing)\b/.test(name)) {
+        return NVIDIA_DEFAULT;
+    }
+
+    // Old datacenter (Tesla P/V/K series, Quadro pre-Turing) → legacy.
+    if (/\b(tesla [pvk]\d|quadro [pmk]\d|kepler|maxwell|pascal)/.test(name)) {
+        return NVIDIA_LEGACY;
+    }
+
+    // Name unrecognized: fall back on driver CUDA. CUDA 12.8+ ships on drivers
+    // for modern arches; below that, or unknown, prefer the safe modern default
+    // (Comfy-Org default targets 20-series+, the common case today).
+    if (cudaVersion) {
+        const [maj, min] = cudaVersion.split('.').map((n) => parseInt(n, 10));
+        if (maj < 11) return NVIDIA_LEGACY; // ancient driver → old card
+    }
+    return NVIDIA_DEFAULT;
 }
 
 /**
@@ -175,25 +231,9 @@ async function resolveDownloadConfig() {
 
     let comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';  // default
 
-    // ComfyUI variant selection
+    // ComfyUI variant selection — driven by GPU architecture, not driver CUDA.
     if (nvidiaResult.hasGPU) {
-        // NVIDIA GPU detected — parse CUDA version
-        if (nvidiaResult.cudaVersion) {
-            const cudaMajor = parseInt(nvidiaResult.cudaVersion.split('.')[0], 10);
-            const cudaMinor = parseInt(nvidiaResult.cudaVersion.split('.')[1], 10);
-
-            if (cudaMajor > 12 || (cudaMajor === 12 && cudaMinor >= 7)) {
-                comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';
-            } else if (cudaMajor === 12 && cudaMinor === 6) {
-                comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-            } else {
-                // CUDA < 12.6 — use cu126 as safest fallback
-                comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-            }
-        } else {
-            // CUDA version unknown — use cu126 as safe fallback
-            comfyFilename = 'ComfyUI_windows_portable_nvidia_cu126.7z';
-        }
+        comfyFilename = selectNvidiaBuild(nvidiaResult.gpuName, nvidiaResult.cudaVersion);
     } else if (hasAmd) {
         comfyFilename = 'ComfyUI_windows_portable_amd.7z';
     } else if (hasIntel) {
@@ -213,7 +253,7 @@ async function resolveDownloadConfig() {
         },
     };
 
-    logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename}`);
+    logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename} (CUDA ${nvidiaResult.cudaVersion || 'unknown'})`);
 
     // Cache for session
     _gpuDetectionCache = result;
@@ -265,6 +305,7 @@ module.exports = {
     getPythonBin,
     getComfyPath,
     resolveDownloadConfig,
+    selectNvidiaBuild,
     getEngineRoot,
     getPortableRoot,
     getPortableResourcesPath,

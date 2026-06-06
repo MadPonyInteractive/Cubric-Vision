@@ -30,6 +30,7 @@ const {
     cleanEmptyDirs,
     getCustomRoot,
     getDefaultModelsRoot,
+    resolveModelsRoot,
     getExtraModelFolders,
     setExtraModelFolders,
     hasExtraModelFolders,
@@ -306,8 +307,12 @@ router.post('/comfy/set-path', async (req, res) => {
             return res.json({ success: true });
         }
 
-        const yamlContentPath = await writeExtraModelPathsYaml(customPath, extras);
-        res.json({ success: true, writtenTo: yamlContentPath });
+        // Always persist an absolute root — a relative path resolves against the
+        // server cwd in Cubric but against the ComfyUI dir in ComfyUI, so a model
+        // installed via a relative root is invisible to generation.
+        const absoluteRoot = resolveModelsRoot(customPath);
+        const yamlContentPath = await writeExtraModelPathsYaml(absoluteRoot, extras);
+        res.json({ success: true, writtenTo: yamlContentPath, path: absoluteRoot });
     } catch (err) {
         logger.error('comfy', 'set-path failed', err);
         res.status(500).json({ error: err.message });
@@ -321,8 +326,11 @@ router.post('/comfy/set-path', async (req, res) => {
  */
 router.get('/comfy/get-path', async (_req, res) => {
     try {
+        // Return the effective absolute root: the custom YAML root if set (anchored
+        // to absolute in case a legacy relative value is on disk), else the default.
         const customPath = await getCustomRoot();
-        res.json({ success: true, path: customPath || null });
+        const effective = customPath ? resolveModelsRoot(customPath) : getDefaultModelsRoot();
+        res.json({ success: true, path: effective, isDefault: !customPath });
     } catch (err) {
         logger.error('comfy', 'get-path failed', err);
         res.status(500).json({ success: false, error: err.message });
@@ -371,7 +379,7 @@ router.post('/comfy/models/check', async (req, res) => {
 
     try {
         const customRoot = await getCustomRoot();
-        const defaultModelsRoot = getComfyPath(ENGINE_ROOT, 'models');
+        const defaultModelsRoot = getDefaultModelsRoot();
         const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
         const results = {};
