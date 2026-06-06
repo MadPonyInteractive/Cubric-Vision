@@ -6,7 +6,7 @@ Each item tracks a plan phase; detailed work remains in the plan.
 - [x] Scope cleanup and release contract
 - [x] Runtime portability blockers
 - [x] Build metadata and connector manifests
-- [ ] Windows portable artifact
+- [x] Windows portable artifact
 - [ ] Linux portable artifact
 - [ ] macOS portable artifact
 - [x] Release readiness and public repo flow
