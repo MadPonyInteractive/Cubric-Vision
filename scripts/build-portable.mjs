@@ -75,18 +75,32 @@ const APP_COPY_EXCLUDES = new Set([
   '.engine-config.json',
   '.github',
   '.husky',
+  '.kilo',
+  '.playwright',
   '.playwright-cli',
+  '.vscode',
+  'AGENTS.md',
+  'CLAUDE.md',
+  'Cubric-Vision.code-workspace',
+  'build',
   'coverage',
+  'debug.log',
   'dist',
+  'electron-builder.yml',
   'engine',
   'logs',
+  'media-for-testing',
+  'next.md',
   'nimbalyst-local',
+  'output',
+  'plans',
   'playwright-report',
   'playwright.desktop.config.js',
   'projects',
   'scripts',
   'test-results',
   'tests',
+  'tmp',
   'eslint.config.js',
   'jsconfig.json',
 ]);
@@ -260,16 +274,19 @@ function shouldExcludeAppPath(relPath, entryName) {
   return false;
 }
 
-async function copyAppTree(fromDir, toDir, relBase = '') {
+async function copyAppTree(fromDir, toDir, relBase = '', skipAbs = null) {
   await ensureDir(toDir);
   const entries = await fs.readdir(fromDir, { withFileTypes: true });
   for (const entry of entries) {
     const relPath = relBase ? path.join(relBase, entry.name) : entry.name;
     if (shouldExcludeAppPath(relPath, entry.name)) continue;
     const sourcePath = path.join(fromDir, entry.name);
+    // Never descend into the artifact/stage root itself — guards against a
+    // recursive copy bomb when --stage-dir resolves inside the repo.
+    if (skipAbs && path.resolve(sourcePath) === skipAbs) continue;
     const targetPath = path.join(toDir, entry.name);
     if (entry.isDirectory()) {
-      await copyAppTree(sourcePath, targetPath, relPath);
+      await copyAppTree(sourcePath, targetPath, relPath, skipAbs);
     } else if (entry.isFile()) {
       await copyFileEnsured(sourcePath, targetPath);
     } else if (entry.isSymbolicLink()) {
@@ -281,7 +298,7 @@ async function copyAppTree(fromDir, toDir, relBase = '') {
         // Windows without symlink privileges can still stage the resolved file.
         const realPath = await fs.realpath(sourcePath);
         const stat = await fs.stat(realPath);
-        if (stat.isDirectory()) await copyAppTree(realPath, targetPath, relPath);
+        if (stat.isDirectory()) await copyAppTree(realPath, targetPath, relPath, skipAbs);
         else await copyFileEnsured(realPath, targetPath);
       }
     }
@@ -319,9 +336,12 @@ function assertSafeClean(targetPath) {
   const repo = path.resolve(REPO_ROOT);
   const tmp = path.resolve(process.env.TEMP || process.env.TMP || 'C:\\tmp');
   const isUnderRepoDist = resolved.startsWith(path.join(repo, 'dist') + path.sep);
-  const isUnderTmp = resolved.startsWith(tmp + path.sep) || resolved.startsWith(path.resolve('C:\\tmp') + path.sep);
+  const isUnderTmp =
+    resolved.startsWith(tmp + path.sep) ||
+    resolved.startsWith(path.resolve('C:\\tmp') + path.sep) ||
+    resolved.startsWith(path.resolve('D:\\tmp') + path.sep);
   if (!isUnderRepoDist && !isUnderTmp) {
-    throw new Error(`Refusing to clean outside repo dist/ or temp: ${resolved}`);
+    throw new Error(`Refusing to clean outside repo dist/, C:\\tmp, D:\\tmp, or system temp: ${resolved}`);
   }
   if (resolved === repo || resolved.length < 12) {
     throw new Error(`Refusing to clean unsafe path: ${resolved}`);
@@ -367,7 +387,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
     return;
   }
 
-  await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'));
+  await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'), '', path.resolve(stageRoot));
   await writeBuildInfo(path.join(stageRoot, 'app'), opts.buildHash);
 }
 
@@ -652,6 +672,20 @@ async function main() {
   const updateRootName = `CubricVision-${config.label}-${opts.arch}-update-v${opts.version}`;
   const stageRoot = path.resolve(opts.stageDir, rootName);
   const updateStageRoot = path.resolve(opts.stageDir, updateRootName);
+
+  // Fail fast if the stage dir sits inside the repo (other than dist/). The
+  // copy walker skips the stage root, but staging inside the source tree is
+  // never intended and previously caused a recursive copy bomb.
+  const resolvedStageParent = path.resolve(opts.stageDir);
+  const repoResolved = path.resolve(REPO_ROOT);
+  const stageInsideRepo =
+    resolvedStageParent === repoResolved ||
+    resolvedStageParent.startsWith(repoResolved + path.sep);
+  const stageUnderDist = resolvedStageParent.startsWith(path.join(repoResolved, 'dist') + path.sep)
+    || resolvedStageParent === path.join(repoResolved, 'dist');
+  if (stageInsideRepo && !stageUnderDist) {
+    throw new Error(`Refusing to stage inside the repo tree: ${resolvedStageParent}. Use dist/, C:\\tmp, or D:\\tmp.`);
+  }
 
   if (opts.clean && await pathExists(stageRoot)) {
     assertSafeClean(stageRoot);

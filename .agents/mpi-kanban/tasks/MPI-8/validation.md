@@ -157,3 +157,68 @@ Remaining validation:
 - Exercise Linux artifact extraction/launch on Ubuntu.
 - Keep macOS marked maintainer-untested until contributor or maintainer Mac
   validation is recorded.
+
+### Windows portable launch validation - 2026-06-06
+
+Verification of the committed slice (HEAD `fea34e4`) surfaced a real packaging
+defect, which was fixed before launch validation.
+
+Defect found and fixed:
+
+- `scripts/build-portable.mjs` `APP_COPY_EXCLUDES` was incomplete. The staged
+  `app/` payload leaked dev-only roots and agent context: `.kilo`,
+  `.playwright`, `.vscode`, `Cubric-Vision.code-workspace`, `build`,
+  `debug.log`, `electron-builder.yml`, `media-for-testing`, `next.md`,
+  `output`, `plans`, `tmp`, plus `CLAUDE.md` and `AGENTS.md`. These are now
+  excluded. Runtime-referenced `dev_configs/`, `templates/`, and `LICENSE`
+  remain staged.
+- The copy walker (`copyAppTree`) had no guard against `--stage-dir` resolving
+  inside the repo. A mangled stage path caused a recursive copy bomb
+  (ENOSPC, runaway nested folders inside the repo) while the script still
+  exited 0. Added: (a) a `skipAbs` guard so the walker never descends into the
+  stage root, and (b) a fail-fast check in `main()` refusing stage dirs inside
+  the repo tree except under `dist/`. `assertSafeClean` now also allows
+  `D:\tmp` (preferred test root; C: is space-constrained).
+
+Build:
+
+- Clean full Windows build to `D:\tmp\cubric-validate` with
+  `--no-source-manifest` succeeded: `buildHash: fea34e40c89c` (matches HEAD),
+  `fileCount: 5330` (no recursion), `sourceManifest: null` (repo not dirtied).
+- Verified clean `app/` payload: none of the leaked entries present;
+  `app/js/core/buildInfo.js` stamped `fea34e40c89c`; `dev_configs/`,
+  `templates/`, `LICENSE`, `node_modules/` present.
+- In-repo stage-dir guard test rejected `--stage-dir ./should-fail-here` as
+  expected.
+
+Launch (from staged Electron, portable env vars set as `start.bat` does):
+
+- App booted and `Server started at http://127.0.0.1:3000`; `Server signaled
+  ready.` Three `electron.exe` processes ran.
+- Portable roots honored: `APP_USER_DATA set to: D:\tmp\...\user-data`.
+- `.env` injected 0 vars (no secret leak; `.env` excluded from payload).
+- GPU detection resolved `NVIDIA GeForce RTX 4060 Ti` ->
+  `ComfyUI_windows_portable_nvidia_cu126.7z` (engine provisioning path correct).
+- HTTP probes: `GET /` 200; `GET /system/stats` returns RAM/VRAM;
+  `GET /system/platform-config` returns `{platform: win32, comfyDir:
+  ComfyUI_windows_portable}`.
+- Build-hash error-report path verified by reading `routes/system.js`:
+  `normalizeBuildHash` returns null for absent/`dev`/non-hex and a valid 7-40
+  hex hash otherwise; body always prints `**Build:**` and the `build:<hash>`
+  label is added only for a real (non-`dev`) hash. No GitHub issue was POSTed.
+
+Test-environment note (not an artifact defect):
+
+- The Claude Code shell has `ELECTRON_RUN_AS_NODE=1` set, which makes
+  `electron.exe` run `main.js` as plain Node (`require('electron').app` is
+  undefined -> `app.getPath` TypeError at `main.js:13`). Setting the var to
+  empty does NOT clear it (presence-checked); `env -u ELECTRON_RUN_AS_NODE`
+  is required. A real user double-clicking `start.bat` is unaffected.
+
+Still remaining for Windows:
+
+- Engine install/repair completion, Models slide-over discovery, one image
+  generation, restart persistence, folder-open via Electron bridge, video
+  extraction/crop, a live error-report submission, and update /
+  update-from-zip on a copied portable folder. These are deeper interactive
+  flows beyond the launch/path/boot validation above.

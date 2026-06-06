@@ -256,6 +256,20 @@ and if file ownership is clean.
   built-in zip/tar.gz artifact writers, and added mechanical Linux/macOS
   dry-run artifact paths. Remaining validation is launch/platform hardware
   validation, Linux engine bootstrap validation, and macOS community validation.
+- 2026-06-06: Verification of the committed slice found two `build-portable.mjs`
+  defects, now fixed: (1) `APP_COPY_EXCLUDES` leaked dev-only roots + agent
+  context (`.kilo`, `.vscode`, `.playwright`, `build`, `media-for-testing`,
+  `next.md`, `output`, `plans`, `tmp`, `.code-workspace`, `electron-builder.yml`,
+  `debug.log`, `CLAUDE.md`, `AGENTS.md`) into the user payload; (2) the copy
+  walker could recurse into a stage dir resolved inside the repo (recursive copy
+  bomb, exit 0 hid it). Added a `skipAbs` walker guard, a fail-fast in-repo
+  stage-dir refusal, and `D:\tmp` allowance in `assertSafeClean`. A fresh clean
+  Windows build (`D:\tmp`, buildHash `fea34e40c89c`, 5330 files) launched from
+  the staged Electron with portable env: server reached
+  `http://127.0.0.1:3000`, portable user-data root honored, GPU/engine config
+  resolved, `/`, `/system/stats`, `/system/platform-config` all OK. Note: the
+  Claude shell sets `ELECTRON_RUN_AS_NODE=1`; must `env -u` it to launch
+  electron in this environment (not an artifact defect).
 
 ## Verification
 
