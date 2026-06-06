@@ -1,10 +1,13 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 47,
+  "next_id": 50,
   "columns": {
     "todo": [
       "MPI-4",
-      "MPI-7"
+      "MPI-7",
+      "MPI-47",
+      "MPI-48",
+      "MPI-49"
     ],
     "doing": [
       "MPI-8"

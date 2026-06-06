@@ -21,7 +21,8 @@ const execFileAsync = promisify(execFile);
 const PLATFORM_CONFIG = {
   win32: {
     label: 'windows',
-    start: 'start.bat',
+    start: 'start.vbs',
+    withTerminalStart: 'start-with-terminal.bat',
     update: 'update.bat',
     updateFromZip: 'update-from-zip.bat',
     templateDir: 'windows',
@@ -33,6 +34,7 @@ const PLATFORM_CONFIG = {
   linux: {
     label: 'linux',
     start: 'start.sh',
+    withTerminalStart: 'start-with-terminal.sh',
     update: 'update.sh',
     updateFromZip: 'update-from-zip.sh',
     templateDir: 'linux',
@@ -364,6 +366,11 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   const updateTarget = path.join(stageRoot, config.update);
   const updateFromZipTarget = path.join(stageRoot, config.updateFromZip);
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.start), startTarget);
+  if (config.withTerminalStart) {
+    const withTerminalTarget = path.join(stageRoot, config.withTerminalStart);
+    await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.withTerminalStart), withTerminalTarget);
+    await makeExecutableIfNeeded(withTerminalTarget);
+  }
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.update), updateTarget);
   await copyFileEnsured(
     path.join(TEMPLATE_ROOT, config.templateDir, config.updateFromZip),
@@ -374,6 +381,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await makeExecutableIfNeeded(updateFromZipTarget);
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'update-runbook.md'), path.join(stageRoot, 'update', 'README.md'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
+  await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
   if (opts.dryRun) {
     await writeFileEnsured(
@@ -455,7 +463,9 @@ async function createUpdateManifest(stageRoot, opts, config, artifactKind = null
     artifact: {
       kind: artifactKind || (opts.dryRun ? 'dry-run-stage' : 'portable-stage'),
       rootName: path.basename(stageRoot),
-      launchers: [config.start, config.update, config.updateFromZip],
+      launchers: config.withTerminalStart
+        ? [config.start, config.withTerminalStart, config.update, config.updateFromZip]
+        : [config.start, config.update, config.updateFromZip],
       buildHash: opts.buildHash,
     },
   };
@@ -477,7 +487,9 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
   await copyDirEnsured(path.join(fullStageRoot, 'app'), path.join(updateStageRoot, 'app'));
   await copyDirEnsured(path.join(fullStageRoot, 'resources'), path.join(updateStageRoot, 'resources'));
   await copyDirEnsured(path.join(fullStageRoot, 'update'), path.join(updateStageRoot, 'update'));
-  for (const launcher of [config.start, config.update, config.updateFromZip]) {
+  const bundledLaunchers = [config.start, config.update, config.updateFromZip];
+  if (config.withTerminalStart) bundledLaunchers.push(config.withTerminalStart);
+  for (const launcher of bundledLaunchers) {
     await copyFileEnsured(path.join(fullStageRoot, launcher), path.join(updateStageRoot, launcher));
     await makeExecutableIfNeeded(path.join(updateStageRoot, launcher));
   }

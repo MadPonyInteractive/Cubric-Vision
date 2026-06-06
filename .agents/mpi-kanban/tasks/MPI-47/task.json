@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-47",
+  "title": "Ctrl+ and Ctrl- to change UI size",
+  "description": "We already have a control mouse wheel to change the UI size. Let's add these new hotkeys as well.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-06T19:29:15.467Z",
+  "updated_at": "2026-06-06T19:29:15.467Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
