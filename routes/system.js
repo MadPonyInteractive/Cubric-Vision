@@ -244,7 +244,7 @@ function deriveStage(version) {
 /**
  * POST /github/create-issue
  * Creates a GitHub issue with error report.
- * Body: { title, message, summary, log, build?: { appVersion, stage } }
+ * Body: { title, message, summary, log, build?: { appVersion, stage, hash } }
  * Stage label is re-derived server-side from build.appVersion; client stage is ignored.
  */
 router.post('/github/create-issue', async (req, res) => {
@@ -267,6 +267,7 @@ router.post('/github/create-issue', async (req, res) => {
         // never trusted. Mirrors js/core/appStage.js deriveStage().
         const appVersion = (build && typeof build.appVersion === 'string') ? build.appVersion : 'unknown';
         const stage = deriveStage(appVersion);
+        const buildHash = normalizeBuildHash(build?.hash);
 
         // Trim log to last 2000 chars to stay within GitHub's 65k limit
         let trimmedLog = log || '(no log available)';
@@ -278,10 +279,13 @@ router.post('/github/create-issue', async (req, res) => {
         if (summary) {
             body += `\n\n**What I was doing:**\n${summary}`;
         }
-        body += `\n\n**App version:** ${appVersion}\n**Stage:** ${stage}`;
+        body += `\n\n**App version:** ${appVersion}\n**Stage:** ${stage}\n**Build:** ${buildHash || 'dev'}`;
         body += `\n\n<details>\n<summary>App Log</summary>\n\n\`\`\`\n${trimmedLog}\n\`\`\`\n\n</details>`;
 
         const labels = ['bug', 'auto-report', `stage:${stage}`];
+        if (buildHash) {
+            labels.push(`build:${buildHash}`);
+        }
 
         const ghHeaders = {
             'Authorization': `token ${token}`,
@@ -319,6 +323,13 @@ router.post('/github/create-issue', async (req, res) => {
         });
     }
 });
+
+function normalizeBuildHash(value) {
+    if (typeof value !== 'string') return null;
+    const hash = value.trim().toLowerCase();
+    if (!hash || hash === 'dev') return null;
+    return /^[0-9a-f]{7,40}$/.test(hash) ? hash : null;
+}
 
 // ── Platform Configuration ────────────────────────────────────────────────────
 

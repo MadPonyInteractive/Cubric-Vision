@@ -10,13 +10,14 @@ if [ "${1:-}" = "" ]; then
   exit 2
 fi
 if [ ! -f "$1" ]; then
-  echo "Update bundle not found: $1"
+echo "Update bundle not found: $1"
   exit 2
 fi
 
-echo "Cubric Vision local update validation skeleton."
-echo "Portable root: $CUBRIC_PORTABLE_ROOT"
-echo "Bundle: $1"
-echo "Manifest: $MPI_RESOURCES_PATH/cubric/update-manifest.json"
-echo "No files were changed."
-exit 2
+if [ -x "$ROOT/app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" ]; then
+  ELECTRON_RUN_AS_NODE=1 "$ROOT/app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" "$ROOT/update/apply-update.cjs" -- --root "$ROOT" --bundle "$1"
+elif [ -x "$ROOT/app/node_modules/electron/dist/electron" ]; then
+  ELECTRON_RUN_AS_NODE=1 "$ROOT/app/node_modules/electron/dist/electron" "$ROOT/update/apply-update.cjs" -- --root "$ROOT" --bundle "$1"
+else
+  node "$ROOT/update/apply-update.cjs" --root "$ROOT" --bundle "$1"
+fi

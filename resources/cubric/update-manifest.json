@@ -11,6 +11,11 @@
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
   "files": [
     {
+      "path": "app/js/core/buildInfo.js",
+      "size": 176,
+      "sha256": "16ca78dc6281ad2f2a035c06e0df4b9759f0cd2859a3dd859b51f0fd8ba942ad"
+    },
+    {
       "path": "app/PORTABLE_DRY_RUN.txt",
       "size": 149,
       "sha256": "a15fb740a8584624ad3008adb3ab52b06fcfa1a649083284872563a6e840c25c"
@@ -21,19 +26,54 @@
       "sha256": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee"
     },
     {
+      "path": "resources/cubric/update-manifest.schema.json",
+      "size": 1727,
+      "sha256": "4e2743edd58b4ca40e5da6b843791552260621b9570dabbbd5f1eb4ccea37a42"
+    },
+    {
+      "path": "resources/ffmpeg.exe",
+      "size": 82797568,
+      "sha256": "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00"
+    },
+    {
+      "path": "resources/ffprobe.exe",
+      "size": 63059968,
+      "sha256": "4303ec85855340689b1f8aa5d9c1dc06ef3e3090682de3034edc3fca2b0798d5"
+    },
+    {
+      "path": "resources/icons/cubric-vision.icns",
+      "size": 824190,
+      "sha256": "2476afe480f7cb97e36ffc6bd193ae47f5d582846cb1c20895e93107b63a00ee"
+    },
+    {
+      "path": "resources/icons/cubric-vision.ico",
+      "size": 100595,
+      "sha256": "21f81630fe8b82884e22f73c6fdbb858eb09ed7a74c520dc1c2d790251766ee1"
+    },
+    {
+      "path": "resources/icons/cubric-vision.png",
+      "size": 538086,
+      "sha256": "7574d3d1d5c224bf5bb60fac625edf348ba7f6b3c7e42d2269b8c7aaef14c1f0"
+    },
+    {
       "path": "start.bat",
-      "size": 492,
-      "sha256": "253260e8a55c8f131e300afbbddc6c5b2c0e9021afe4c8bd880b3ab73ed7a7ae"
+      "size": 498,
+      "sha256": "423afce19277528c0700265046bb264dbfbdc3c036a3059e5592c0750995cbbb"
     },
     {
       "path": "update-from-zip.bat",
-      "size": 491,
-      "sha256": "693f9c75f0f08b592cd7148e1f7f976ee7998f47b1b170fcaef53566d38c5ada"
+      "size": 678,
+      "sha256": "40b4998a9b820cde04424f2f0f9d3efa8227083f702e997716058bc28570661f"
     },
     {
       "path": "update.bat",
-      "size": 333,
-      "sha256": "b8f3cd66860550b167db1db4aca0f8da4087e7118c1d92966c5f24a2467d2ed7"
+      "size": 1258,
+      "sha256": "ca635d9e38e641e128fe0631be0971bee49d82450cfe135de459fde19bb8b4e5"
+    },
+    {
+      "path": "update/apply-update.cjs",
+      "size": 5237,
+      "sha256": "db752b97ad8f4401c6b07bddd80b6fdcb7d2ffada2169ef62e2ed9d43e06aed2"
     },
     {
       "path": "update/README.md",
@@ -48,7 +88,7 @@
     "<documents>/Cubric Studio/Projects/"
   ],
   "delete": [],
-  "createdAt": "2026-06-06T06:50:50.877Z",
+  "createdAt": "2026-06-06T08:08:30.191Z",
   "artifact": {
     "kind": "dry-run-stage",
     "rootName": "CubricVision-windows-x64-v0.0.1",
@@ -56,6 +96,7 @@
       "start.bat",
       "update.bat",
       "update-from-zip.bat"
-    ]
+    ],
+    "buildHash": "2fc25b0b1b2d"
   }
 }

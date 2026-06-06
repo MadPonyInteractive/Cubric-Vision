@@ -94,3 +94,66 @@ Known remaining gap:
   `media/icons/cubric-vision.png` from `assets/mascot/logo.png`.
 
 Expected final validation is listed in `plan.md` under `## Verification`.
+
+### Platform icons, build hash, and portable artifacts - 2026-06-06
+
+Implemented in this continuation:
+
+- Generated `media/icons/cubric-vision.png`,
+  `media/icons/cubric-vision.ico`, and `media/icons/cubric-vision.icns` from
+  `assets/mascot/logo.png`.
+- Added `js/core/buildInfo.js` with source/dev `BUILD_HASH = 'dev'`.
+- `scripts/build-portable.mjs` now stamps the staged copy of
+  `js/core/buildInfo.js` with the short Git commit hash.
+- Error reports now send `build.hash`; `routes/system.js` includes
+  `build:<hash>` labels only for valid non-`dev` hashes and records the build
+  value in the issue body.
+- `scripts/build-portable.mjs` now stages full portable roots, matching update
+  bundle roots, resources, icons, launchers, updater helper scripts, and
+  zip/tar.gz archives without adding a packaging dependency.
+- Windows `start.bat`, `update.bat`, and `update-from-zip.bat` use normalized
+  portable roots. `update-from-zip.bat` applies a local zip through the shared
+  `update/apply-update.cjs` helper.
+- Linux and macOS launcher/update templates now use the same local update
+  helper and GitHub-release asset download pattern, but remain mechanically
+  staged and not platform-validated on real hosts.
+
+Verification run:
+
+- Icon header/metadata checks passed: PNG is 1024x1024 with alpha, ICO has a
+  seven-image directory, and ICNS has the expected `icns` header.
+- `node --check scripts/build-portable.mjs` passed.
+- `node --check scripts/portable/apply-update.cjs` passed.
+- `node --check routes/system.js` passed.
+- `node scripts/build-portable.mjs --dry-run --clean --platform win32 --arch x64 --stage-dir C:\tmp\cubric-portable-final-dry` passed and refreshed the source manifest with build hash `2fc25b0b1b2d`.
+- Linux dry-run archive staging passed for `--platform linux --arch x64`.
+- macOS dry-run archive staging passed for `--platform darwin --arch arm64`.
+- Full Windows staging passed with
+  `node scripts/build-portable.mjs --clean --platform win32 --arch x64 --stage-dir C:\tmp\cubric-portable-full-final --no-archive --no-source-manifest`.
+- Full Windows archive staging passed with
+  `node scripts/build-portable.mjs --clean --platform win32 --arch x64 --stage-dir C:\tmp\cubric-portable-full-archive --no-source-manifest`,
+  producing both `CubricVision-windows-x64-v0.0.1.zip` and
+  `CubricVision-windows-x64-update-v0.0.1.zip`.
+- Pre-commit review caught and fixed full-zip root layout: full portable zip
+  entries now include the `CubricVision-windows-x64-v0.0.1/` root folder, while
+  update-bundle zip entries remain rootless for updater application.
+- Pre-commit review also excluded dev-only roots from staged `app/` copies:
+  `.agents`, `.claude`, `.github`, `.env*`, lint/test configs, `scripts/`,
+  `tests/`, and related build/test output folders are not included in the
+  portable app payload.
+- Staged manifest assertions passed: `artifact.kind === "portable-stage"`,
+  `artifact.buildHash === "2fc25b0b1b2d"`, connector manifest present, icon
+  assets present, and `update/apply-update.cjs` present.
+- Local update smoke passed on a copied full Windows stage:
+  `update-from-zip.bat` applied a tiny update zip, replaced
+  `app/js/core/buildInfo.js`, and created a rollback folder under
+  `update/rollback/`.
+- `npm run lint` passed with 10 existing unrelated warnings and 0 errors.
+
+Remaining validation:
+
+- Launch the full Windows portable artifact from `start.bat` outside the repo.
+- Run Windows engine/model/folder-open/video/error-report validation.
+- Exercise Linux artifact extraction/launch on Ubuntu.
+- Keep macOS marked maintainer-untested until contributor or maintainer Mac
+  validation is recorded.

@@ -7,6 +7,7 @@ import { qs } from '../../../utils/dom.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { APP_VERSION } from '../../../core/appVersion.js';
 import { APP_STAGE } from '../../../core/appStage.js';
+import { BUILD_HASH } from '../../../core/buildInfo.js';
 
 /**
  * MpiErrorDialog — Global Error Notification Dialog (Compound)
@@ -122,7 +123,7 @@ export const MpiErrorDialog = ComponentFactory.create({
                         message,
                         summary,
                         log,
-                        build: { appVersion: APP_VERSION, stage: APP_STAGE }
+                        build: { appVersion: APP_VERSION, stage: APP_STAGE, hash: BUILD_HASH }
                     })
                 });
 

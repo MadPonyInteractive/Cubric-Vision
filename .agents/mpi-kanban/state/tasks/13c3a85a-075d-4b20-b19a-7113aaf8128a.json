@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/task/v1",
   "id": "13c3a85a-075d-4b20-b19a-7113aaf8128a",
   "title": "Portable distribution implementation",
-  "status": "in_progress",
+  "status": "needs_verification",
   "task_card": "MPI-8",
   "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
   "owner_session": ".agents/mpi-kanban/state/sessions/baeee0b8-219c-4e51-9108-02e924fab8d8.json",
@@ -12,7 +12,16 @@
     ".agents/mpi-kanban/state/files/24fd67ce-8fce-4d4f-9d8e-432b5faf8f1d.json",
     ".agents/mpi-kanban/state/files/3f8e20e4-30b4-4305-85fa-e8578446a02c.json",
     ".agents/mpi-kanban/state/files/e91ff4db-48bd-439c-8392-ea8cb67f0746.json",
-    ".agents/mpi-kanban/state/files/64411a6d-3a49-4440-81ab-4b456691783c.json"
+    ".agents/mpi-kanban/state/files/64411a6d-3a49-4440-81ab-4b456691783c.json",
+    ".agents/mpi-kanban/state/files/7e035207-dd95-4765-b8ff-18f126f7dabd.json",
+    ".agents/mpi-kanban/state/files/87268fd8-4c1e-4d6f-baf6-687c8bec8fe3.json",
+    ".agents/mpi-kanban/state/files/6733cfe7-286a-4117-8a87-006dfcf9838a.json",
+    ".agents/mpi-kanban/state/files/91b6aad8-a19a-4af7-bc07-225fefa6d78e.json",
+    ".agents/mpi-kanban/state/files/1dd0722c-33c7-4c0d-a3eb-be32f4426c5d.json",
+    ".agents/mpi-kanban/state/files/e935e8eb-69ec-4906-a166-d93c2208f282.json",
+    ".agents/mpi-kanban/state/files/50d1cb65-78aa-453a-a85a-20c14e422ead.json",
+    ".agents/mpi-kanban/state/files/f471b528-583a-4fef-be6e-fc8f479b6429.json",
+    ".agents/mpi-kanban/state/files/d80f7aca-c25f-4ca1-a9ce-89cbac9825c3.json"
   ],
   "allowed_actions": [
     "read",
@@ -31,6 +40,30 @@
     {
       "at": "2026-06-06T06:13:09Z",
       "event": "phase_1_verified"
+    },
+    {
+      "at": "2026-06-06T07:19:18Z",
+      "event": "handoff_resumed",
+      "summary": "Continue MPI-8 from handoff caf0a30b-e4de-49d6-be05-35e0c83f39d7; next slice starts with platform icon assets."
+    },
+    {
+      "at": "2026-06-06T07:27:00Z",
+      "event": "files_claimed_for_icon_build_hash_and_artifacts"
+    },
+    {
+      "at": "2026-06-06T07:47:10Z",
+      "event": "implementation_ready_for_user_verification",
+      "summary": "Platform icons, build hash injection, Windows full portable/archive staging, and local update smoke are ready for user verification."
+    },
+    {
+      "at": "2026-06-06T08:06:01Z",
+      "event": "handoff_created",
+      "summary": "Created canonical handoff daab62ab-9252-480e-9bac-0db65f5eb153 for the next MPI-8 session."
+    },
+    {
+      "at": "2026-06-06T08:21:04Z",
+      "event": "session_closed",
+      "summary": "Implementation session closed; task remains active for user verification and platform validation."
     }
   ]
 }

@@ -5,8 +5,20 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 export CUBRIC_PORTABLE_ROOT="$ROOT"
 export MPI_RESOURCES_PATH="$ROOT/resources"
 
-echo "Cubric Vision GitHub release updater is not implemented in this skeleton."
-echo "Portable root: $CUBRIC_PORTABLE_ROOT"
-echo "Manifest: $MPI_RESOURCES_PATH/cubric/update-manifest.json"
-echo "No files were changed."
-exit 2
+REPO="${CUBRIC_GITHUB_REPO:-MadPonyInteractive/Cubric-Vision}"
+ARCH="$(uname -m)"
+if [ "$ARCH" = "arm64" ]; then
+  ASSET_REGEX='^CubricVision-macos-arm64-update-v.*\.zip$'
+else
+  ASSET_REGEX='^CubricVision-macos-x64-update-v.*\.zip$'
+fi
+DOWNLOAD_DIR="$ROOT/update/downloads"
+mkdir -p "$DOWNLOAD_DIR"
+
+API_JSON="$DOWNLOAD_DIR/latest-release.json"
+curl -fsSL -H 'User-Agent: CubricVision-Updater' "https://api.github.com/repos/$REPO/releases/latest" -o "$API_JSON"
+ASSET_URL="$(node -e "const fs=require('fs'); const rx=new RegExp(process.argv[2]); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const asset=(data.assets||[]).find(a=>rx.test(a.name)); if(!asset) process.exit(2); console.log(asset.browser_download_url);" "$API_JSON" "$ASSET_REGEX")"
+ASSET_NAME="$(node -e "const url=new URL(process.argv[1]); console.log(url.pathname.split('/').pop());" "$ASSET_URL")"
+TARGET="$DOWNLOAD_DIR/$ASSET_NAME"
+curl -fL -H 'User-Agent: CubricVision-Updater' "$ASSET_URL" -o "$TARGET"
+"$ROOT/update-from-zip.command" "$TARGET"

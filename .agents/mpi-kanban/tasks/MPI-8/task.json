@@ -7,7 +7,12 @@
     "maturity":  "in-progress",
     "status":  "active",
     "created_at":  "2026-06-01T06:30:12Z",
-    "updated_at":  "2026-06-05T13:00:00Z",
+    "updated_at":  "2026-06-06T08:21:04Z",
+    "attention":  {
+                      "state":  "required",
+                      "reason":  "Verify the icon/build-hash/portable artifact implementation, then continue Windows platform validation.",
+                      "updated_at":  "2026-06-06T08:21:04Z"
+                  },
     "activeSessionTitle":  "Portable distribution implementation",
     "links":  {
                   "brief":  "brief.md",

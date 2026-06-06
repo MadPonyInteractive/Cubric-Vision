@@ -6,6 +6,8 @@
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
+    "build:portable": "node scripts/build-portable.mjs",
+    "build:portable:dry-run": "node scripts/build-portable.mjs --dry-run",
     "test:desktop": "playwright test --config=playwright.desktop.config.js",
     "lint": "eslint js/ --max-warnings=9999",
     "lint:components": "eslint js/components/ --max-warnings=9999",

@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "f471b528-583a-4fef-be6e-fc8f479b6429",
+  "path": ".agents/mpi-kanban/tasks/MPI-8/**",
+  "owner_session": ".agents/mpi-kanban/state/sessions/baeee0b8-219c-4e51-9108-02e924fab8d8.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/13c3a85a-075d-4b20-b19a-7113aaf8128a.json",
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-06T07:47:10Z",
+  "allowed_actions": ["edit", "verify"],
+  "recent_events": [
+    {
+      "at": "2026-06-06T07:27:00Z",
+      "event": "claimed_for_task_workspace_updates"
+    },
+    {
+      "at": "2026-06-06T07:47:10Z",
+      "event": "implementation_ready_for_verification"
+    }
+  ]
+}

@@ -114,14 +114,14 @@ Release/testing reality:
 - [x] Add permanent app identity. Set Windows AUMID to
   `cubric.studio.vision`. **Verify:** dev Windows launch still opens normally.
 
-- [ ] Add platform icon assets from the existing source logo. Generate
+- [x] Add platform icon assets from the existing source logo. Generate
   `media/icons/cubric-vision.ico`, `media/icons/cubric-vision.icns`, and
   `media/icons/cubric-vision.png` from `assets/mascot/logo.png`.
   **Verify:** files exist and can be staged into portable artifacts.
 
 ## Phase 3: Build metadata and connector manifests
 
-- [ ] Add build-time short commit hash injection. Dev/source runs should report
+- [x] Add build-time short commit hash injection. Dev/source runs should report
   `dev`; staged portable builds should expose the short commit SHA to the
   renderer/backend. **Verify:** error reports include `build.hash`, and backend
   applies `build:<hash>` only when hash is neither absent nor `dev`.
@@ -144,12 +144,12 @@ Release/testing reality:
 
 ## Phase 4: Windows portable artifact
 
-- [ ] Implement the Windows staging/build path. It should stage app source,
+- [x] Implement the Windows staging/build path. It should stage app source,
   `node_modules`, portable Electron/Node runtime as needed, resources, launchers,
   connector/update manifests, and updater scripts. **Verify:** a full Windows
   artifact can be extracted outside the repo and launched from its start script.
 
-- [ ] Implement Windows updater scripts. `update.bat` should download/apply the
+- [x] Implement Windows updater scripts. `update.bat` should download/apply the
   latest compatible GitHub release/update bundle; `update-from-zip.bat` should
   apply a local early-access/offline bundle. Both must preserve engine, models,
   projects, and user-owned local config. **Verify:** update on a copied
@@ -251,6 +251,11 @@ and if file ownership is clean.
 - 2026-06-06: Parallel batch verified. Remaining drift: Phase 2 icon asset
   generation is still open because `media/icons/` does not exist yet; the source
   image for those assets is `assets/mascot/logo.png`.
+- 2026-06-06: Sequential continuation generated platform icon assets, added
+  build-hash injection, implemented full Windows portable/update staging plus
+  built-in zip/tar.gz artifact writers, and added mechanical Linux/macOS
+  dry-run artifact paths. Remaining validation is launch/platform hardware
+  validation, Linux engine bootstrap validation, and macOS community validation.
 
 ## Verification
 
