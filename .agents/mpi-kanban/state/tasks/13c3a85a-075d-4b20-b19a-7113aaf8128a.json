@@ -21,7 +21,8 @@
     ".agents/mpi-kanban/state/files/e935e8eb-69ec-4906-a166-d93c2208f282.json",
     ".agents/mpi-kanban/state/files/50d1cb65-78aa-453a-a85a-20c14e422ead.json",
     ".agents/mpi-kanban/state/files/f471b528-583a-4fef-be6e-fc8f479b6429.json",
-    ".agents/mpi-kanban/state/files/d80f7aca-c25f-4ca1-a9ce-89cbac9825c3.json"
+    ".agents/mpi-kanban/state/files/d80f7aca-c25f-4ca1-a9ce-89cbac9825c3.json",
+    ".agents/mpi-kanban/state/files/ed3a4377-fe26-4c18-854d-7d5f685a321a.json"
   ],
   "allowed_actions": [
     "read",
@@ -64,6 +65,21 @@
       "at": "2026-06-06T08:21:04Z",
       "event": "session_closed",
       "summary": "Implementation session closed; task remains active for user verification and platform validation."
+    },
+    {
+      "at": "2026-06-06T12:10:00Z",
+      "event": "handoff_resumed",
+      "summary": "Continue MPI-8 from handoff daab62ab; verified committed slice."
+    },
+    {
+      "at": "2026-06-06T12:15:00Z",
+      "event": "validation.updated",
+      "summary": "Found+fixed build-portable exclude leak and recursive-copy bomb; committed 9246b3a; Windows portable artifact launch-validated."
+    },
+    {
+      "at": "2026-06-06T12:22:00Z",
+      "event": "handoff_created",
+      "summary": "Created handoff for fresh session; task stays needs_verification for deeper Windows checks + Linux/macOS validation."
     }
   ]
 }

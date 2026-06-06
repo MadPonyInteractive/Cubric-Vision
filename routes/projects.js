@@ -27,7 +27,7 @@ const util = require('util');
 const { execFile } = require('child_process');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
-const { getProjectsRoot, COMFYUI_PORT, streamDownload } = require('./shared');
+const { getProjectsRoot, COMFYUI_PORT, streamDownload, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
@@ -508,7 +508,20 @@ router.post('/list-projects', async (req, res) => {
     try {
         const { extraPaths = [] } = req.body;
         const defaultRoot = getProjectsRoot();
-        const roots = [defaultRoot, ...extraPaths];
+
+        // Durable registry (Documents) is the source of truth for external
+        // project parent dirs. Migrate any localStorage-only paths the renderer
+        // still sends into the registry so they survive a folder delete /
+        // reinstall, then union both for this listing.
+        const normExtra = extraPaths.map(p => String(p).replace(/\\/g, '/'));
+        for (const p of normExtra) {
+            await addProjectPathToRegistry(p);
+        }
+        const registryPaths = await readProjectPathsRegistry();
+        const externalRoots = [...new Set([...registryPaths, ...normExtra])];
+
+        const defaultRootNorm = defaultRoot.replace(/\\/g, '/');
+        const roots = [defaultRoot, ...externalRoots.filter(r => r !== defaultRootNorm)];
         const projects = [];
 
         for (const root of roots) {
@@ -544,6 +557,35 @@ router.post('/list-projects', async (req, res) => {
         res.json({ success: true, projects: unique });
     } catch (err) {
         logger.error('project', 'list-projects error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Register an external project parent dir in the durable registry. The renderer
+// also keeps a localStorage copy; the registry is the store that survives a
+// portable-folder delete / reinstall.
+router.post('/add-project-path', async (req, res) => {
+    try {
+        const { parentDir } = req.body;
+        if (!parentDir) return res.status(400).json({ success: false, error: 'parentDir required' });
+        const paths = await addProjectPathToRegistry(parentDir);
+        res.json({ success: true, paths });
+    } catch (err) {
+        logger.error('project', 'add-project-path error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Remove an external project parent dir from the durable registry. Caller is
+// responsible for deciding the parent no longer holds wanted projects.
+router.post('/remove-project-path', async (req, res) => {
+    try {
+        const { parentDir } = req.body;
+        if (!parentDir) return res.status(400).json({ success: false, error: 'parentDir required' });
+        const paths = await removeProjectPathFromRegistry(parentDir);
+        res.json({ success: true, paths });
+    } catch (err) {
+        logger.error('project', 'remove-project-path error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -632,6 +674,27 @@ router.post('/delete-project', async (req, res) => {
             } catch (_) { /* unreadable json — still refuse below if no id guard met */ }
         }
         await fs.remove(folderPath);
+
+        // Prune the parent dir from the durable registry only if it no longer
+        // holds any project (siblings keep the entry alive). The default
+        // Documents root is never registered, so this is a no-op for it.
+        try {
+            const parentDir = path.dirname(folderPath).replace(/\\/g, '/');
+            let hasSibling = false;
+            if (await fs.pathExists(parentDir)) {
+                const entries = await fs.readdir(parentDir);
+                for (const entry of entries) {
+                    if (await fs.pathExists(path.join(parentDir, entry, 'project.json'))) {
+                        hasSibling = true;
+                        break;
+                    }
+                }
+            }
+            if (!hasSibling) await removeProjectPathFromRegistry(parentDir);
+        } catch (pruneErr) {
+            logger.warn('project', `registry prune after delete failed: ${pruneErr.message}`);
+        }
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });

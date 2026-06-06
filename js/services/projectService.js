@@ -278,6 +278,8 @@ export async function openProject(project) {
     if (!extras.includes(parentDir)) {
         extras.push(parentDir);
         Storage.setExtraProjectPaths(extras);
+        // Mirror to the durable Documents registry so it survives reinstall.
+        post('/add-project-path', { parentDir }).catch(() => {});
     }
     Storage.setLastProject(reconciled.folderPath);
 
@@ -301,6 +303,8 @@ export async function addProjectByFolder(folderPath) {
     if (!extras.includes(parentDir)) {
         extras.push(parentDir);
         Storage.setExtraProjectPaths(extras);
+        // Mirror to the durable Documents registry so it survives reinstall.
+        post('/add-project-path', { parentDir }).catch(() => {});
     }
     return res.project;
 }

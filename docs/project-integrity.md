@@ -24,6 +24,13 @@ This document explains the project data model, how items are stored, how reconci
 
 ## Disk Structure
 
+### Project Locations & External-Project Registry
+
+- **Default root:** `<Documents>/Cubric Vision/Projects` (`getProjectsRoot()` in `routes/shared.js`, via `APP_DOCUMENTS`). Durable user data — lives outside the app/portable folder, so it survives reinstall.
+- **External projects** (created in a custom folder, opened from elsewhere, or dropped/imported via `addProjectByFolder()`) are tracked by their **parent dir** in a durable registry: `<Documents>/Cubric Vision/project-paths.json` (`{ "paths": [...] }`, server-owned atomic writes in `routes/shared.js`). `list-projects` scans the default root + every registry parent for subfolders containing `project.json`.
+- **Registry is the source of truth; localStorage is a cache.** The renderer still keeps `extraProjectPaths` in localStorage and sends it on `list-projects`; the server migrates those into the registry on every call (self-heal). So external projects survive a portable-folder delete / reinstall and are shared across portable copies, even though localStorage was wiped.
+- Routes: `POST /add-project-path`, `POST /remove-project-path`. `delete-project` prunes a parent from the registry only when no sibling `project.json` remains under it.
+
 ### `project.json`
 
 Located at `<projectFolder>/project.json`. Shape: `{ id, name, folderPath, createdAt, updatedAt, thumbnail, schemaVersion, itemGroups[], modelSettings, toolSettings }`. Each `itemGroups[i]` is `{ id, type, name, createdAt, selectedIndex, open, favourite, history: string[] }` — `history` contains UUID strings ONLY (full data lives in `.meta/<uuid>.json` sidecars).

@@ -61,7 +61,8 @@ const PRESERVE = [
   'engine/',
   'models/',
   'user-data/',
-  '<documents>/Cubric Studio/Projects/',
+  '<documents>/Cubric Vision/Projects/',
+  '<documents>/Cubric Vision/project-paths.json',
 ];
 
 const APP_COPY_EXCLUDES = new Set([

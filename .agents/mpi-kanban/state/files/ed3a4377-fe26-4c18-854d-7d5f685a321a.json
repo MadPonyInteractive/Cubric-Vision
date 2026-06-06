@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/file/v1",
+  "id": "ed3a4377-fe26-4c18-854d-7d5f685a321a",
+  "path": "scripts/build-portable.mjs",
+  "status": "verified",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/6922e79b-8403-4e29-80e3-c5014ba5a55d.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/13c3a85a-075d-4b20-b19a-7113aaf8128a.json",
+  "heartbeat_at": "2026-06-06T12:20:00Z",
+  "recent_events": [
+    { "at": "2026-06-06T08:32:00Z", "event": "claimed", "note": "patch APP_COPY_EXCLUDES dev-junk leak" },
+    { "at": "2026-06-06T12:20:00Z", "event": "verified", "note": "Exclude-leak + recursion-bomb fix committed in 9246b3a; Windows launch validated." }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "6922e79b-8403-4e29-80e3-c5014ba5a55d",
+  "status": "handoff_ready",
+  "role": "implementer",
+  "agent": "claude",
+  "name": "MPI-8 verification and Windows portable validation",
+  "heartbeat_at": "2026-06-06T12:22:00Z",
+  "task": ".agents/mpi-kanban/state/tasks/13c3a85a-075d-4b20-b19a-7113aaf8128a.json",
+  "handoff": ".agents/mpi-kanban/state/handoffs/63e9bb90-f2b5-441f-a949-978a7385abcc.json",
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "claim_files",
+    "edit_owned_files",
+    "handoff"
+  ],
+  "recent_events": [
+    { "at": "2026-06-06T08:30:00Z", "event": "session_started" },
+    { "at": "2026-06-06T12:22:00Z", "event": "handoff_ready", "note": "Fix committed 9246b3a; Windows launch validated; handoff 63e9bb90 for fresh session." }
+  ]
+}

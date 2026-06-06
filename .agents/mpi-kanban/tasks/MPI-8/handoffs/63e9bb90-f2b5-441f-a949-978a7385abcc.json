@@ -1,0 +1,120 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "63e9bb90-f2b5-441f-a949-978a7385abcc",
+  "generated_at": "2026-06-06T12:22:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/6922e79b-8403-4e29-80e3-c5014ba5a55d.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 verification + Windows portable launch validation",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-8: verify committed icon/build-hash/portable slice, then launch the Windows portable artifact and run platform validation.",
+    "status": "in_progress",
+    "summary": "Committed slice verified. Verification found and fixed two real build-portable.mjs defects (dev-junk/agent-doc payload leak; recursive-copy bomb when staging inside the repo). A fresh clean Windows artifact launches from the staged Electron and the server reaches 127.0.0.1:3000 with portable roots honored. Fix committed in 9246b3a. MPI-8 stays in doing/needs_verification for deeper Windows checks and Linux/macOS validation."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "completed": [
+      "Verified committed slice on disk (icons, js/core/buildInfo.js=dev, scripts/portable/apply-update.cjs).",
+      "Fixed APP_COPY_EXCLUDES leak (.kilo/.vscode/.playwright/build/media-for-testing/next.md/output/plans/tmp/.code-workspace/electron-builder.yml/debug.log/CLAUDE.md/AGENTS.md). Kept dev_configs/templates/LICENSE.",
+      "Fixed recursive-copy bomb: skipAbs walker guard + fail-fast in-repo stage-dir refusal + D:\\tmp allowance in assertSafeClean.",
+      "Built fresh clean Windows artifact to D:\\tmp\\cubric-validate (buildHash fea34e40c89c, 5330 files); verified clean app/ payload.",
+      "Launched from staged Electron: server reached 127.0.0.1:3000, portable user-data root honored, GPU/engine config resolved, GET / + /system/stats + /system/platform-config OK.",
+      "Verified build-hash error-report logic in routes/system.js by read (no GitHub issue POSTed).",
+      "Committed fix + package.json build:portable:win|linux|mac aliases + project-profile entry in 9246b3a."
+    ],
+    "pending": [
+      "Deeper Windows validation: engine install/repair, Models slide-over discovery, one image generation, restart persistence, folder-open via Electron bridge, video extraction/crop, a live error-report submission, update.bat + update-from-zip.bat on a copied portable folder.",
+      "Linux artifact extraction/launch + engine bootstrap on the Ubuntu laptop (generation stays community/stronger-host validated).",
+      "macOS staging stays maintainer-untested; needs contributor validation."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "claim_files", "edit_owned_files", "handoff"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-8 plan.md Plan Drift, validation.md, and events.jsonl record the fix + Windows launch validation.",
+      "Fix and discoverability changes committed in 9246b3a on master.",
+      "File claim ed3a4377 (scripts/build-portable.mjs) set to verified."
+    ],
+    "pending": [
+      "Run the deeper Windows interactive checks listed in plan.md Phase 4 / Verification.",
+      "Do not move MPI-8 to done until platform validation is represented and explicitly approved.",
+      "Ask before updating .claude/rules/ if later validation changes component wiring, workspace routing, events, state, or Comfy injection behavior."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-8: a good Windows artifact already exists at D:\\tmp\\cubric-validate\\CubricVision-windows-x64-v0.0.1\\ (double-click start.bat to launch). Decide with the user which deeper Windows checks the agent can self-verify vs. which the user verifies on the installed build, then proceed; afterward move to Linux validation on the Ubuntu laptop.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Single build-portable.mjs covers win32/linux/darwin via PLATFORM_CONFIG; not separate per-platform scripts.",
+      "Stage to D:\\tmp (C: is space-constrained). Script refuses staging inside the repo tree except under dist/.",
+      "ELECTRON_RUN_AS_NODE=1 is set in the Claude Code shell; electron.exe must be launched with `env -u ELECTRON_RUN_AS_NODE` from this environment. A user double-clicking start.bat is unaffected.",
+      "Build-hash label (build:<hash>) is added only for a real non-dev hex hash; dev/absent normalize to no label."
+    ],
+    "constraints": [
+      "No NSIS/DMG/AppImage/system-wide installer.",
+      "No Git requirement for user updates; updater uses release assets/manifests.",
+      "macOS stays maintainer-untested until community validation.",
+      "Linux generation stays unvalidated on the weak Ubuntu laptop.",
+      "MPI-8 stays in doing; do not close without explicit approval.",
+      "NEVER commit unless the user asks."
+    ],
+    "files_modified": [
+      "scripts/build-portable.mjs",
+      "package.json",
+      ".agents/mpi-kanban/project-profile.md",
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-8/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "scripts/build-portable.mjs",
+      "scripts/portable/windows/start.bat",
+      "routes/system.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI engine / backend / models",
+      "Downloads",
+      "Versioning & migrations",
+      "Shell, overlays, hotkeys",
+      "Project data & integrity"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/project-integrity.md",
+    "docs/versioning.md",
+    "docs/shell.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-06T12:22:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/63e9bb90-f2b5-441f-a949-978a7385abcc.json and use mpi-continue to continue MPI-8. The committed slice and a build-portable.mjs fix (commit 9246b3a) are verified; a good Windows artifact exists at D:\\tmp\\cubric-validate\\CubricVision-windows-x64-v0.0.1\\ (start.bat). Next: agree with the user which deeper Windows checks to self-verify vs. user-verify on the installed build, run them, then move to Linux validation on the Ubuntu laptop. In this shell, launch electron with `env -u ELECTRON_RUN_AS_NODE`."
+}

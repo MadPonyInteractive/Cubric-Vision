@@ -52,6 +52,71 @@ function getProjectsRoot() {
     }
     return path.join(__dirname, '..', 'projects');
 }
+
+/**
+ * Resolve the durable project-paths registry file. Lives next to the default
+ * projects root so it survives portable-folder deletion / reinstall, the same
+ * way the default Documents projects do.
+ *   - Portable / packaged: <Documents>/Cubric Vision/project-paths.json
+ *   - Dev fallback: <repo>/project-paths.json
+ *
+ * This registry is the durable store for *external* project parent dirs the
+ * user added. localStorage on the renderer is treated as a cache that
+ * self-heals from this file (see routes/projects.js list-projects).
+ */
+function getProjectPathsRegistryFile() {
+    if (process.env.APP_DOCUMENTS) {
+        return path.join(process.env.APP_DOCUMENTS, 'Cubric Vision', 'project-paths.json');
+    }
+    return path.join(__dirname, '..', 'project-paths.json');
+}
+
+const _registryQueue = { p: Promise.resolve() };
+
+/** Read the registry. Returns a de-duped array of normalized parent dirs. */
+async function readProjectPathsRegistry() {
+    try {
+        const file = getProjectPathsRegistryFile();
+        if (!(await fs.pathExists(file))) return [];
+        const data = await fs.readJson(file);
+        const list = Array.isArray(data?.paths) ? data.paths : [];
+        return [...new Set(list.map(p => String(p).replace(/\\/g, '/')))];
+    } catch (err) {
+        logger.warn('project', `project-paths registry read failed: ${err.message}`);
+        return [];
+    }
+}
+
+/** Atomically replace the registry contents with the given paths. */
+async function writeProjectPathsRegistry(paths) {
+    const normalized = [...new Set((paths || []).map(p => String(p).replace(/\\/g, '/')))];
+    const run = _registryQueue.p.catch(() => {}).then(async () => {
+        const file = getProjectPathsRegistryFile();
+        await fs.ensureDir(path.dirname(file));
+        const tmp = `${file}.${process.pid}.tmp`;
+        await fs.writeFile(tmp, `${JSON.stringify({ paths: normalized }, null, 2)}\n`, 'utf8');
+        await fs.rename(tmp, file);
+        return normalized;
+    });
+    _registryQueue.p = run.catch(() => {});
+    return run;
+}
+
+/** Add one parent dir to the registry. Returns the updated list. */
+async function addProjectPathToRegistry(parentDir) {
+    const norm = String(parentDir).replace(/\\/g, '/');
+    const current = await readProjectPathsRegistry();
+    if (current.includes(norm)) return current;
+    return writeProjectPathsRegistry([...current, norm]);
+}
+
+/** Remove one parent dir from the registry. Returns the updated list. */
+async function removeProjectPathFromRegistry(parentDir) {
+    const norm = String(parentDir).replace(/\\/g, '/');
+    const current = await readProjectPathsRegistry();
+    if (!current.includes(norm)) return current;
+    return writeProjectPathsRegistry(current.filter(p => p !== norm));
+}
 const SYS_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'system_dependencies.json');
 const COMFYUI_PORT = 8188;
 
@@ -478,6 +543,10 @@ async function cleanComfyUITempFiles() {
 
 module.exports = {
     getProjectsRoot,
+    getProjectPathsRegistryFile,
+    readProjectPathsRegistry,
+    addProjectPathToRegistry,
+    removeProjectPathFromRegistry,
     SYS_DEPS_PATH,
     COMFYUI_PORT,
     processState,
