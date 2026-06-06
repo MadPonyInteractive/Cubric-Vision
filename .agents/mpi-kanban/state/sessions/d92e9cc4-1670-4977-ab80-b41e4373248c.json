@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "d92e9cc4-1670-4977-ab80-b41e4373248c",
+  "agent": "codex-worker-a",
+  "role": "implementer",
+  "status": "completed",
+  "task": ".agents/mpi-kanban/state/tasks/315fb7b9-f8fb-44b9-8e95-c5e882464962.json",
+  "heartbeat_at": "2026-06-06T06:28:36Z",
+  "allowed_actions": [
+    "read",
+    "claim_files",
+    "edit_owned_files",
+    "verify",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-06T06:28:36Z",
+      "event": "session_started"
+    },
+    {
+      "at": "2026-06-06T06:40:41Z",
+      "event": "worker_a_complete"
+    }
+  ]
+}

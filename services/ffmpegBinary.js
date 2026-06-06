@@ -19,11 +19,20 @@ const fs   = require('fs');
 function _resolvePackaged(name) {
     // Packaged Electron exposes process.resourcesPath. Server.js runs as a
     // forked child; parent exports MPI_RESOURCES_PATH env in main.js on package.
-    const base = process.env.MPI_RESOURCES_PATH || process.resourcesPath || '';
-    if (!base) return null;
     const exe = process.platform === 'win32' ? `${name}.exe` : name;
-    const p = path.join(base, exe);
-    return fs.existsSync(p) ? p : null;
+    const candidates = [
+        process.env.MPI_RESOURCES_PATH,
+        process.env.CUBRIC_RESOURCES_PATH,
+        process.env.CUBRIC_PORTABLE_ROOT ? path.join(process.env.CUBRIC_PORTABLE_ROOT, 'resources') : null,
+        process.resourcesPath,
+    ].filter(Boolean);
+
+    for (const base of candidates) {
+        const p = path.join(path.resolve(base), exe);
+        if (fs.existsSync(p)) return p;
+    }
+
+    return null;
 }
 
 function _resolveDev(pkgName) {

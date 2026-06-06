@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "036416bb-ee1c-43a9-b013-7d5ce77c516a",
+  "path": "docs/releases/README.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/baeee0b8-219c-4e51-9108-02e924fab8d8.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/13c3a85a-075d-4b20-b19a-7113aaf8128a.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-06T06:07:19Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-06T06:07:19Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-06-06T06:13:09Z",
+      "event": "verified"
+    }
+  ]
+}

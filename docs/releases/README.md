@@ -9,6 +9,14 @@ Cubric Studio release notes are stored here, one file per release.
 > must keep the two aligned: add an entry to `js/data/releaseNotes.js` keyed by the
 > new `APP_VERSION` **and** write the markdown file here. See `docs/versioning.md`.
 
+## Portable Distribution
+
+Portable release and update artifacts follow the contract in
+[`portable-distribution-contract.md`](portable-distribution-contract.md). Use
+that document for artifact names, root layout, launcher/update script names,
+preservation rules, update-manifest fields, and platform validation
+disclosures.
+
 ## Naming Convention
 
 Files are named `YYYY-MM-DD-vX.Y.Z.md` where:

@@ -1,0 +1,37 @@
+﻿{
+    "schema":  "mpi-kanban/task/v1",
+    "id":  "5334ce79-7083-4c2d-91f7-8aba9021b99a",
+    "title":  "MPI-8 Worker D release docs/copy gates",
+    "status":  "verified",
+    "task_card":  "MPI-8",
+    "plan":  ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/64736c66-7a5f-4ac6-a3c4-2e5caeaf2d16.json",
+    "file_claims":  [
+                        ".agents/mpi-kanban/state/files/31c05579-c111-4d64-bada-e71f8356a8e0.json",
+                        ".agents/mpi-kanban/state/files/b5c6cfeb-65e5-4a81-a016-9c17f238b77d.json",
+                        ".agents/mpi-kanban/state/files/b5d4bbef-835d-40d5-86ad-2a3a5847123a.json",
+                        ".agents/mpi-kanban/state/files/53e4c106-c2f8-4705-addf-79d4ef6ee79c.json"
+                    ],
+    "allowed_actions":  [
+                            "read",
+                            "claim_files",
+                            "edit_owned_files",
+                            "verify",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-06T06:27:50Z",
+                              "event":  "worker_d_parallel_slice_started"
+                          },
+                          {
+                              "summary":  "Runtime release notes, release checklist, issue template, and PR gate prepared.",
+                              "event":  "worker_d_complete",
+                              "at":  "2026-06-06T06:33:47Z"
+                          },
+                          {
+                              "at":  "2026-06-06T06:56:28Z",
+                              "event":  "user_verified_parallel_batch"
+                          }
+                      ]
+}

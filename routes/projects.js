@@ -23,15 +23,19 @@ const express = require('express');
 const router = express.Router();
 const fs     = require('fs-extra');
 const path   = require('path');
+const util = require('util');
+const { execFile } = require('child_process');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 
 const projectJsonQueues = new Map();
 const itemMetaQueues = new Map();
+const execFilePromise = util.promisify(execFile);
 const RECENT_THUMBNAIL_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'mp4', 'webm']);
 const RECENT_THUMBNAIL_EXCLUDED_OPERATIONS = new Set(['frame-drop', 'frame-capture']);
 
@@ -1161,10 +1165,6 @@ router.get('/project-file', async (req, res) => {
 
 //  (FFmpeg Extraction Route)
 
-const { exec } = require('child_process');
-const util = require('util');
-const execPromise = util.promisify(exec);
-
 router.post('/project-media/:projectId/extract', async (req, res) => {
     try {
         const { folderPath, sourceUrl, startTime, duration, crop } = req.body;
@@ -1184,8 +1184,13 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
         }
 
         // 1. Get source dimensions using ffprobe
-        const ffprobeCmd = `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${inputPath}"`;
-        const { stdout: dimensions } = await execPromise(ffprobeCmd);
+        const { stdout: dimensions } = await execFilePromise(ffprobePath, [
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height',
+            '-of', 'csv=s=x:p=0',
+            inputPath,
+        ], { windowsHide: true });
         const [srcW, srcH] = dimensions.trim().split('x').map(Number);
 
         if (!srcW || !srcH) throw new Error('Could not determine source dimensions');
@@ -1207,10 +1212,20 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
         // -ss before -i for fast seeking, -t for duration
         // Filter: crop=w:h:x:y
         // libx264 for universal compatibility
-        const ffmpegCmd = `ffmpeg -ss ${startTime} -t ${duration} -i "${inputPath}" -filter:v "crop=${cropW}:${cropH}:${cropX}:${cropY}" -c:v libx264 -crf 18 -preset fast -c:a copy "${outputPath}"`;
+        const ffmpegArgs = [
+            '-ss', String(startTime),
+            '-t', String(duration),
+            '-i', inputPath,
+            '-filter:v', `crop=${cropW}:${cropH}:${cropX}:${cropY}`,
+            '-c:v', 'libx264',
+            '-crf', '18',
+            '-preset', 'fast',
+            '-c:a', 'copy',
+            outputPath,
+        ];
 
-        logger.info('project', `ffmpeg: ${ffmpegCmd}`);
-        await execPromise(ffmpegCmd);
+        logger.info('project', `ffmpeg: ${quote(ffmpegPath)} ${ffmpegArgs.map(quote).join(' ')}`);
+        await execFilePromise(ffmpegPath, ffmpegArgs, { windowsHide: true });
 
         res.json({ success: true, filePath: outputPath, filename });
     } catch (err) {

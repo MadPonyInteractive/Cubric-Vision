@@ -1,0 +1,27 @@
+﻿{
+    "schema":  "mpi-kanban/session/v1",
+    "id":  "64736c66-7a5f-4ac6-a3c4-2e5caeaf2d16",
+    "agent":  "codex",
+    "role":  "implementer",
+    "name":  "Worker D - release docs/copy gates",
+    "status":  "completed",
+    "task":  ".agents/mpi-kanban/state/tasks/5334ce79-7083-4c2d-91f7-8aba9021b99a.json",
+    "heartbeat_at":  "2026-06-06T06:33:47Z",
+    "allowed_actions":  [
+                            "read",
+                            "claim_files",
+                            "edit_owned_files",
+                            "verify",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-06T06:27:50Z",
+                              "event":  "session_started"
+                          },
+                          {
+                              "at":  "2026-06-06T06:33:47Z",
+                              "event":  "worker_d_completed"
+                          }
+                      ]
+}

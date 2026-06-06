@@ -1,0 +1,33 @@
+﻿{
+    "schema":  "mpi-kanban/task/v1",
+    "id":  "3bc9c91f-91c6-4c2c-a713-3690310cda89",
+    "title":  "MPI-8 parallel implementation batch",
+    "status":  "verified",
+    "task_card":  "MPI-8",
+    "plan":  ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/8575ac34-838c-40e4-b4ec-26cd24777775.json",
+    "file_claims":  [
+                        ".agents/mpi-kanban/state/files/f0240f75-c2ee-4fec-9ce7-010bb9968284.json",
+                        ".agents/mpi-kanban/state/files/e963c68b-754b-47b3-a6d3-22d84a317565.json",
+                        ".agents/mpi-kanban/state/files/08d7e687-c178-4ca5-8468-dda710094a08.json"
+                    ],
+    "allowed_actions":  [
+                            "coordinate",
+                            "claim_files",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-06T06:18:33Z",
+                              "event":  "parallel_batch_started"
+                          },
+                          {
+                              "at":  "2026-06-06T06:49:44Z",
+                              "event":  "integrator_fixes_recorded"
+                          },
+                          {
+                              "at":  "2026-06-06T06:56:28Z",
+                              "event":  "user_verified_parallel_batch"
+                          }
+                      ]
+}

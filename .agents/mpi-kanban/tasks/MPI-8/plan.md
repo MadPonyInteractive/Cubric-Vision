@@ -59,6 +59,11 @@ Release/testing reality:
   elsewhere; only fresh-install validation remains here.
 - [x] Repo/release/update/LLM scope decisions recorded in project memory on
   2026-06-05.
+- [x] Phase 1 portable release contract documented in
+  `docs/releases/portable-distribution-contract.md`.
+- [x] Parallel implementation batch verified on 2026-06-06: runtime
+  portability blockers, engine/download extraction portability, build/updater
+  artifact tooling skeleton, and release docs/copy gates.
 
 ## Remaining Work
 
@@ -69,12 +74,12 @@ Release/testing reality:
   `plan.md`, `brief.md`, `checklist.md`, and `validation.md` describe the same
   executable scope and no longer treat LLM/llama packaging as Vision work.
 
-- [ ] Define the artifact contract for early-access and public releases.
+- [x] Define the artifact contract for early-access and public releases.
   **Verify:** release notes/spec text names full portable artifacts, local
   update bundles, and GitHub update source without requiring manual folder
   merging.
 
-- [ ] Decide script names and root layout before build scripting.
+- [x] Decide script names and root layout before build scripting.
   Recommended names:
   `start.bat`, `update.bat`, `update-from-zip.bat`; `start.sh`, `update.sh`,
   `update-from-zip.sh`; `start.command`, `update.command`,
@@ -83,33 +88,36 @@ Release/testing reality:
 
 ## Phase 2: Runtime portability blockers
 
-- [ ] Add portable root/env resolution. `getEngineRoot()` should prefer
+- [x] Add portable root/env resolution. `getEngineRoot()` should prefer
   `CUBRIC_ENGINE_ROOT` before `.engine-config.json`; launchers should set
   `CUBRIC_PORTABLE_ROOT`, `CUBRIC_ENGINE_ROOT`, `MPI_RESOURCES_PATH`, and
   platform-specific `CUBRIC_UV_BIN` where applicable. **Verify:** a dev smoke
   script can start the server with these env vars and print roots resolved to a
   copied portable folder.
 
-- [ ] Replace the remaining bare `ffprobe`/`ffmpeg` shell route in
+- [x] Replace the remaining bare `ffprobe`/`ffmpeg` shell route in
   `routes/projects.js` with `execFile` using `services/ffmpegBinary.js`.
   **Verify:** project media extraction still produces the same output shape and
   works with paths containing spaces.
 
-- [ ] Make `/open-folder` cross-platform. Prefer Electron `shell.openPath`
+- [x] Make `/open-folder` cross-platform. Prefer Electron `shell.openPath`
   through IPC or another established main-process bridge. **Verify:** landing
   "open folder" still opens the folder on Windows and the route no longer
   shells `start`.
 
-- [ ] Remove Mac/Linux module-load dependency on `7zip-bin` for custom-node ZIP
+- [x] Remove Mac/Linux module-load dependency on `7zip-bin` for custom-node ZIP
   extraction. Use a cross-platform ZIP extractor for GitHub custom-node zips, or
   lazy-load 7z only for Windows engine `.7z` archives. **Verify:**
   `require('./routes/downloadManager')` succeeds on a non-Windows host/stage
   without a Mac 7z binary, and Windows custom-node ZIP extraction still works.
 
-- [ ] Add permanent app identity and icon assets. Set Windows AUMID to
-  `cubric.studio.vision`; add `media/icons/cubric-vision.ico`,
-  `media/icons/cubric-vision.icns`, and `media/icons/cubric-vision.png`.
-  **Verify:** files exist and a dev Windows launch still opens normally.
+- [x] Add permanent app identity. Set Windows AUMID to
+  `cubric.studio.vision`. **Verify:** dev Windows launch still opens normally.
+
+- [ ] Add platform icon assets from the existing source logo. Generate
+  `media/icons/cubric-vision.ico`, `media/icons/cubric-vision.icns`, and
+  `media/icons/cubric-vision.png` from `assets/mascot/logo.png`.
+  **Verify:** files exist and can be staged into portable artifacts.
 
 ## Phase 3: Build metadata and connector manifests
 
@@ -118,19 +126,19 @@ Release/testing reality:
   renderer/backend. **Verify:** error reports include `build.hash`, and backend
   applies `build:<hash>` only when hash is neither absent nor `dev`.
 
-- [ ] Preserve `resources/cubric/connector-manifest.json` in every staged
+- [x] Preserve `resources/cubric/connector-manifest.json` in every staged
   artifact. **Verify:** staged manifest path is stable relative to the app root
   and smoke assertions pass for `appId === "cubric.vision"`,
   `protocolVersion === "0.1.0"`, and `metadata.manifestOnly === true`.
 
-- [ ] Generate `resources/cubric/update-manifest.json` during staging from
+- [x] Generate `resources/cubric/update-manifest.json` during staging from
   staged artifacts. Include `schemaVersion`, `appId`, `displayName`,
   `platform`, `arch`, `toVersion`, `protocolVersion`,
   `connectorManifestPath`, `connectorManifestHash`, `files[]`, `preserve[]`,
   and `createdAt`. **Verify:** `connectorManifestHash` is computed from the
   staged manifest file, not from an assumed source-tree path.
 
-- [ ] Keep Vision standalone. **Verify:** no runtime import of
+- [x] Keep Vision standalone. **Verify:** no runtime import of
   `@cubric/connector`, no broker spawn, no PromptBox connector actions, no
   permission/trust UI, and no disabled promotional connector controls.
 
@@ -188,15 +196,15 @@ Release/testing reality:
 
 ## Phase 7: Release readiness and public repo flow
 
-- [ ] Replace placeholder `0.0.1` changelog/release copy through the version
+- [x] Replace placeholder `0.0.1` changelog/release copy through the version
   bump/release-note flow. **Verify:** `js/data/releaseNotes.js` has real
   `APP_VERSION` notes and no placeholder warning for the released version.
 
-- [ ] Prepare GitHub release asset naming and disclosure copy. **Verify:**
+- [x] Prepare GitHub release asset naming and disclosure copy. **Verify:**
   release assets are named for Cubric Vision, not legacy CubricStudio names, and
   platform support language matches actual validation reality.
 
-- [ ] Prepare open-source contribution surfaces before public release.
+- [x] Prepare open-source contribution surfaces before public release.
   **Verify:** issue/PR templates or release notes ask contributors for platform,
   arch, GPU, artifact name, clean install/update path, and app log tail.
 
@@ -205,25 +213,25 @@ Release/testing reality:
 Use `mpi-execute-parallel` only after Phase 1 settles the exact artifact layout
 and if file ownership is clean.
 
-- [ ] Runtime portability blockers. Ownership: `main.js`,
+- [x] Runtime portability blockers. Ownership: `main.js`,
   `routes/platformEngine.js`, `routes/system.js`, `routes/projects.js`,
   `services/ffmpegBinary.js`. Briefings: dos_and_donts, comfy_engine, shell,
   project integrity. **Verify:** server/app path smoke plus focused route
   checks pass on Windows.
 
-- [ ] Engine/download extraction portability. Ownership: `routes/engine.js`,
+- [x] Engine/download extraction portability. Ownership: `routes/engine.js`,
   `routes/downloadManager.js`, `routes/shared.js`, `dev_configs/system_dependencies.json`.
   Briefings: comfy_engine, downloads, project integrity. **Verify:** Windows
   engine install path still works and custom-node ZIP extraction no longer
   depends on Mac/Linux `7zip-bin` module load.
 
-- [ ] Build/updater artifact tooling. Ownership: `scripts/build-portable.*`,
+- [x] Build/updater artifact tooling. Ownership: `scripts/build-portable.*`,
   staged launcher/update templates, `resources/cubric/update-manifest.json`
   generation. Briefings: dos_and_donts, versioning, connector manifest context.
   **Verify:** dry-run/staging command produces expected manifests and preserve
   lists without touching user folders.
 
-- [ ] Release docs/copy gates. Ownership: `docs/releases/**`,
+- [x] Release docs/copy gates. Ownership: `docs/releases/**`,
   `js/data/releaseNotes.js`, release checklist docs or GitHub template files.
   Briefings: versioning, project memory repo distribution. **Verify:** copy
   states Windows tested locally, Linux install-tested on weak Ubuntu hardware,
@@ -235,6 +243,14 @@ and if file ownership is clean.
   Major drift found: no portable build script exists, Linux/macOS engine paths
   are placeholders, update manifests are absent, the old LLM/llama future track
   is no longer Vision scope, and model-manager implementation is already done.
+- 2026-06-06: Phase 1 contract work landed as
+  `docs/releases/portable-distribution-contract.md`. Build scripting should use
+  that document for artifact names, root layout, launcher/update script names,
+  update sources, preservation rules, update-manifest fields, connector staging,
+  and platform disclosure language.
+- 2026-06-06: Parallel batch verified. Remaining drift: Phase 2 icon asset
+  generation is still open because `media/icons/` does not exist yet; the source
+  image for those assets is `assets/mascot/logo.png`.
 
 ## Verification
 

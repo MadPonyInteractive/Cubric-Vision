@@ -14,7 +14,7 @@ const router = express.Router();
 const os   = require('os');
 const fs   = require('fs-extra');
 const path = require('path');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const axios = require('axios');
 const logger = require('./logger');
 const { COMFY_DIR, resolveDownloadConfig } = require('./platformEngine');
@@ -23,10 +23,51 @@ const { COMFY_DIR, resolveDownloadConfig } = require('./platformEngine');
 
 async function getVramStats() {
     return new Promise((resolve) => {
-        exec('nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader,nounits', (err, stdout) => {
+        execFile('nvidia-smi', ['--query-gpu=memory.total,memory.used', '--format=csv,noheader,nounits'], (err, stdout) => {
             if (err || !stdout) return resolve({ total: 0, used: 0 });
             const [total, used] = stdout.split(',').map(s => parseInt(s.trim(), 10));
             resolve({ total: total || 0, used: used || 0 });
+        });
+    });
+}
+
+function openFolderViaMainProcess(folderPath) {
+    return new Promise((resolve, reject) => {
+        if (!process.send) {
+            reject(new Error('Electron main process bridge unavailable'));
+            return;
+        }
+
+        const id = `open-folder-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const timeout = setTimeout(() => {
+            process.removeListener('message', onMessage);
+            reject(new Error('Timed out waiting for Electron folder open bridge'));
+        }, 10000);
+
+        function onMessage(message) {
+            if (!message || message.type !== 'open-folder-result' || message.id !== id) return;
+            clearTimeout(timeout);
+            process.removeListener('message', onMessage);
+            if (message.ok) resolve();
+            else reject(new Error(message.error || 'Failed to open folder'));
+        }
+
+        process.on('message', onMessage);
+        process.send({ type: 'open-folder', id, folderPath });
+    });
+}
+
+function openFolderViaPlatform(folderPath) {
+    return new Promise((resolve, reject) => {
+        const opener = process.platform === 'win32'
+            ? { command: 'explorer.exe', args: [folderPath] }
+            : process.platform === 'darwin'
+                ? { command: 'open', args: [folderPath] }
+                : { command: 'xdg-open', args: [folderPath] };
+
+        execFile(opener.command, opener.args, { windowsHide: true }, (err) => {
+            if (err) reject(err);
+            else resolve();
         });
     });
 }
@@ -88,16 +129,21 @@ router.post('/choose-folder', (req, res) => {
     res.json({ success: true, status: 'use_ipc' });
 });
 
-router.post('/open-folder', (req, res) => {
+router.post('/open-folder', async (req, res) => {
     const { folderPath } = req.body;
     if (!folderPath) return res.status(400).send('No path provided');
-    exec(`start "" "${folderPath}"`, (err) => {
-        if (err) {
-            logger.error('system', 'Failed to open folder', err);
-            return res.status(500).send('Failed to open folder');
+    try {
+        const normalizedPath = path.resolve(folderPath);
+        if (process.send) {
+            await openFolderViaMainProcess(normalizedPath);
+        } else {
+            await openFolderViaPlatform(normalizedPath);
         }
         res.send('Folder opened');
-    });
+    } catch (err) {
+        logger.error('system', 'Failed to open folder', err);
+        res.status(500).send('Failed to open folder');
+    }
 });
 
 /**

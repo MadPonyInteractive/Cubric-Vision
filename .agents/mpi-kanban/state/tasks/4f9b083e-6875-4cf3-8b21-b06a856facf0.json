@@ -1,0 +1,37 @@
+﻿{
+    "schema":  "mpi-kanban/task/v1",
+    "id":  "4f9b083e-6875-4cf3-8b21-b06a856facf0",
+    "title":  "MPI-8 Worker C build/updater artifact tooling",
+    "status":  "verified",
+    "task_card":  "MPI-8",
+    "plan":  ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/78f1a245-484b-47e8-9e5a-f4c59e942da5.json",
+    "file_claims":  [
+                        ".agents/mpi-kanban/state/files/1be3ab76-aa4d-4cc0-8abb-cc5b82ee213a.json",
+                        ".agents/mpi-kanban/state/files/6e84a76b-e86a-4c7b-9cbc-4602cfe9f946.json",
+                        ".agents/mpi-kanban/state/files/3a1b30ba-a67d-45ff-97e9-3e3c51279645.json",
+                        ".agents/mpi-kanban/state/files/459455f6-22ee-42db-9eaf-c511ee08be07.json",
+                        ".agents/mpi-kanban/state/files/fb1a2f2f-7022-42b6-befd-df9169deb0dd.json"
+                    ],
+    "allowed_actions":  [
+                            "read",
+                            "claim_files",
+                            "edit_owned_files",
+                            "verify",
+                            "handoff"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-06T06:39:10Z",
+                              "event":  "worker_c_parallel_slice_started"
+                          },
+                          {
+                              "at":  "2026-06-06T06:46:18Z",
+                              "event":  "worker_c_ready_for_review"
+                          },
+                          {
+                              "at":  "2026-06-06T06:56:28Z",
+                              "event":  "user_verified_parallel_batch"
+                          }
+                      ]
+}

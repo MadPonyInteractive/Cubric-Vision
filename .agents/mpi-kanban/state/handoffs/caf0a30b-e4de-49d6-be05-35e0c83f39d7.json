@@ -1,0 +1,147 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "caf0a30b-e4de-49d6-be05-35e0c83f39d7",
+  "generated_at": "2026-06-06T07:06:31Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/8575ac34-838c-40e4-b4ec-26cd24777775.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 portable distribution implementation",
+    "branch": "not captured by handoff"
+  },
+  "goal": {
+    "original": "Let's start implementing MPI-8.",
+    "status": "in_progress",
+    "summary": "MPI-8 Phase 1 and the independent parallel implementation batch are complete and user-verified. The remaining work is focused on platform icon assets, build-hash injection, full Windows/Linux/macOS portable artifacts, updater implementation, and final platform validation."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "completed": [
+      "Scope cleanup and release contract",
+      "Runtime portability root/env handling, ffmpeg execFile route, cross-platform open-folder bridge, AUMID, no module-load 7z for custom-node ZIP extraction",
+      "Portable staging skeleton, launcher/update templates, connector/update manifest dry-run generation",
+      "Release notes, GitHub release checklist, issue template, and PR template gates"
+    ],
+    "pending": [
+      "Generate media/icons/cubric-vision.ico, media/icons/cubric-vision.icns, and media/icons/cubric-vision.png from assets/mascot/logo.png",
+      "Add build-time short commit hash injection and build:<hash> issue labels",
+      "Implement full Windows portable staging/build and updater scripts",
+      "Implement Linux and macOS portable artifact paths and platform validation disclosures",
+      "Run final fresh-install/model-manager/platform validation"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "claim_files",
+    "edit_owned_files",
+    "verify",
+    "handoff"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-8 plan/checklist/validation updated for Phase 1 and parallel batch completion.",
+      "Parallel worker/integrator file states marked verified.",
+      "Icon asset gap split into a remaining Phase 2 item with source logo path recorded."
+    ],
+    "pending": [
+      "Commit from this session should include the handoff and all verified MPI-8 phase/batch files.",
+      "After icon/build/artifact work changes component wiring, workspace routing, events, state, or Comfy injection behavior, ask before updating .claude/rules/."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-8 by generating platform icon assets from assets/mascot/logo.png, then move to build-hash injection and full portable artifact implementation.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Portable contract is the source for artifact names, root layout, launcher/update script names, update sources, preserve rules, manifest fields, and platform disclosures.",
+      "Vision remains manifest-only for connector scope in v1; no runtime @cubric/connector integration, broker startup, or PromptBox connector controls were added.",
+      "extract-zip is now a direct runtime dependency because routes/downloadManager.js lazy-loads it for custom-node ZIP extraction.",
+      "CUBRIC_MODELS_ROOT is honored by routes/shared.js so portable model storage follows the launcher contract.",
+      "media/icons/ does not exist yet; icon files should be generated from assets/mascot/logo.png."
+    ],
+    "constraints": [
+      "Do not add NSIS, DMG, AppImage, or system-wide installer flow for MPI-8.",
+      "Do not require Git for user updates; updater scripts should use release assets/manifests.",
+      "Do not ask users to manually merge folders; updater scripts own replacement/preservation.",
+      "macOS remains maintainer-untested until real validation exists.",
+      "Linux generation remains unvalidated unless tested on stronger hardware or by contributors."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/state/index.json",
+      ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-8/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "docs/releases/README.md",
+      "docs/releases/portable-distribution-contract.md",
+      "docs/releases/github-release-checklist.md",
+      "js/data/releaseNotes.js",
+      "main.js",
+      "package.json",
+      "package-lock.json",
+      "routes/downloadManager.js",
+      "routes/platformEngine.js",
+      "routes/projects.js",
+      "routes/shared.js",
+      "routes/system.js",
+      "services/ffmpegBinary.js",
+      "resources/cubric/update-manifest.json",
+      "resources/cubric/update-manifest.schema.json",
+      "scripts/build-portable.mjs",
+      "scripts/build-portable.ps1",
+      "scripts/portable/**",
+      ".github/**"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "docs/releases/portable-distribution-contract.md",
+      "scripts/build-portable.mjs",
+      "routes/platformEngine.js",
+      "routes/shared.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI engine / backend / models",
+      "Downloads",
+      "Versioning & migrations",
+      "Shell, overlays, hotkeys",
+      "Project data & integrity"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/project-integrity.md",
+    "docs/versioning.md",
+    "docs/shell.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-06T07:06:31Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/caf0a30b-e4de-49d6-be05-35e0c83f39d7.json and use mpi-continue to continue MPI-8. The next action is to generate platform icon assets from assets/mascot/logo.png, then continue with build-hash injection and full portable artifact implementation."
+}

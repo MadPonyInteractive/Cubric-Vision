@@ -86,8 +86,10 @@ function atomicWritePng(filePath, dataUrl) {
 
 // Required on Windows to show the app icon (not Electron's) when launched via .bat.
 // Use exe path as model ID — recommended for unpackaged Electron apps on Windows.
+const WINDOWS_APP_USER_MODEL_ID = 'cubric.studio.vision';
+
 if (process.platform === 'win32') {
-  app.setAppUserModelId(process.execPath);
+  app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
 }
 
 if (process.env.CUBRIC_E2E) {
@@ -99,6 +101,9 @@ if (process.env.CUBRIC_E2E) {
 if (process.env.CUBRIC_E2E_USER_DATA) {
   fs.mkdirSync(process.env.CUBRIC_E2E_USER_DATA, { recursive: true });
   app.setPath('userData', path.resolve(process.env.CUBRIC_E2E_USER_DATA));
+} else if (process.env.CUBRIC_USER_DATA_ROOT) {
+  fs.mkdirSync(process.env.CUBRIC_USER_DATA_ROOT, { recursive: true });
+  app.setPath('userData', path.resolve(process.env.CUBRIC_USER_DATA_ROOT));
 }
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
@@ -309,6 +314,60 @@ function createWindow() {
 }
 
 // Start the Express server
+function resolveMainPortableRoot() {
+  if (process.env.CUBRIC_PORTABLE_ROOT) {
+    return path.resolve(process.env.CUBRIC_PORTABLE_ROOT);
+  }
+  if (!app.isPackaged) return '';
+
+  const executableDir = path.dirname(process.execPath);
+  return path.basename(executableDir).toLowerCase() === 'app'
+    ? path.dirname(executableDir)
+    : executableDir;
+}
+
+function resolveMainResourcesPath(portableRoot) {
+  if (process.env.MPI_RESOURCES_PATH) {
+    return path.resolve(process.env.MPI_RESOURCES_PATH);
+  }
+  if (app.isPackaged && process.resourcesPath) {
+    return process.resourcesPath;
+  }
+  if (portableRoot) {
+    return path.join(portableRoot, 'resources');
+  }
+  return '';
+}
+
+function buildServerEnv(userDataPath, documentsPath) {
+  const portableRoot = resolveMainPortableRoot();
+  const resourcesPath = resolveMainResourcesPath(portableRoot);
+  const env = {
+    ...process.env,
+    APP_USER_DATA: userDataPath,
+    APP_DOCUMENTS: documentsPath,
+    MPI_RESOURCES_PATH: resourcesPath,
+  };
+
+  if (portableRoot) {
+    env.CUBRIC_PORTABLE_ROOT = portableRoot;
+  }
+  if (process.env.CUBRIC_ENGINE_ROOT) {
+    env.CUBRIC_ENGINE_ROOT = path.resolve(process.env.CUBRIC_ENGINE_ROOT);
+  }
+  if (process.env.CUBRIC_MODELS_ROOT) {
+    env.CUBRIC_MODELS_ROOT = path.resolve(process.env.CUBRIC_MODELS_ROOT);
+  }
+  if (process.env.CUBRIC_USER_DATA_ROOT) {
+    env.CUBRIC_USER_DATA_ROOT = path.resolve(process.env.CUBRIC_USER_DATA_ROOT);
+  }
+  if (process.env.CUBRIC_UV_BIN) {
+    env.CUBRIC_UV_BIN = path.resolve(process.env.CUBRIC_UV_BIN);
+  }
+
+  return env;
+}
+
 function startServer() {
   const userDataPath = app.getPath('userData');
   const documentsPath = app.getPath('documents');
@@ -316,12 +375,7 @@ function startServer() {
   console.log('[main] APP_DOCUMENTS set to:', documentsPath);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
     silent: true,
-    env: {
-      ...process.env,
-      APP_USER_DATA: userDataPath,
-      APP_DOCUMENTS: documentsPath,
-      MPI_RESOURCES_PATH: app.isPackaged ? process.resourcesPath : '',
-    }
+    env: buildServerEnv(userDataPath, documentsPath)
   });
 
   const pipeChildStream = (stream, level) => {
@@ -395,7 +449,21 @@ app.on('ready', () => {
   };
 
   // Wait for the server to signal it's ready
-  serverProcess.on('message', (msg) => {
+  serverProcess.on('message', async (msg) => {
+    if (msg && typeof msg === 'object' && msg.type === 'open-folder') {
+      try {
+        const folderPath = typeof msg.folderPath === 'string' ? path.resolve(msg.folderPath) : '';
+        if (!folderPath) throw new Error('Invalid folder path');
+        const error = await shell.openPath(folderPath);
+        if (error) throw new Error(error);
+        serverProcess.send?.({ type: 'open-folder-result', id: msg.id, ok: true });
+      } catch (err) {
+        logger.error('system', 'open-folder bridge error', err);
+        serverProcess.send?.({ type: 'open-folder-result', id: msg.id, ok: false, error: err.message });
+      }
+      return;
+    }
+
     if (msg === 'server-ready') {
       console.log('[main] Server signaled ready.');
       onReady();

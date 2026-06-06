@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "appId": "cubric.vision",
+  "displayName": "Cubric Studio Vision",
+  "platform": "win32",
+  "arch": "x64",
+  "fromVersion": null,
+  "toVersion": "0.0.1",
+  "protocolVersion": "0.1.0",
+  "connectorManifestPath": "resources/cubric/connector-manifest.json",
+  "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
+  "files": [
+    {
+      "path": "app/PORTABLE_DRY_RUN.txt",
+      "size": 149,
+      "sha256": "a15fb740a8584624ad3008adb3ab52b06fcfa1a649083284872563a6e840c25c"
+    },
+    {
+      "path": "resources/cubric/connector-manifest.json",
+      "size": 711,
+      "sha256": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee"
+    },
+    {
+      "path": "start.bat",
+      "size": 492,
+      "sha256": "253260e8a55c8f131e300afbbddc6c5b2c0e9021afe4c8bd880b3ab73ed7a7ae"
+    },
+    {
+      "path": "update-from-zip.bat",
+      "size": 491,
+      "sha256": "693f9c75f0f08b592cd7148e1f7f976ee7998f47b1b170fcaef53566d38c5ada"
+    },
+    {
+      "path": "update.bat",
+      "size": 333,
+      "sha256": "b8f3cd66860550b167db1db4aca0f8da4087e7118c1d92966c5f24a2467d2ed7"
+    },
+    {
+      "path": "update/README.md",
+      "size": 414,
+      "sha256": "f3225170e9c5e9c72b010354d42efe8b137390761e5ae6a832a91867735778f3"
+    }
+  ],
+  "preserve": [
+    "engine/",
+    "models/",
+    "user-data/",
+    "<documents>/Cubric Studio/Projects/"
+  ],
+  "delete": [],
+  "createdAt": "2026-06-06T06:50:50.877Z",
+  "artifact": {
+    "kind": "dry-run-stage",
+    "rootName": "CubricVision-windows-x64-v0.0.1",
+    "launchers": [
+      "start.bat",
+      "update.bat",
+      "update-from-zip.bat"
+    ]
+  }
+}

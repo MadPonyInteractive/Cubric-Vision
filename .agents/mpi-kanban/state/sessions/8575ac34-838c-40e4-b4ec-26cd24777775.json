@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "8575ac34-838c-40e4-b4ec-26cd24777775",
+  "agent": "codex",
+  "role": "orchestrator",
+  "status": "active",
+  "task": ".agents/mpi-kanban/state/tasks/3bc9c91f-91c6-4c2c-a713-3690310cda89.json",
+  "heartbeat_at": "2026-06-06T06:18:33Z",
+  "allowed_actions": [
+    "coordinate",
+    "assign",
+    "reclaim_stale",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-06T06:18:33Z",
+      "event": "parallel_orchestrator_started"
+    }
+  ]
+}

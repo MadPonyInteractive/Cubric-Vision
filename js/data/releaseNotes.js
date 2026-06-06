@@ -35,25 +35,25 @@
 /**
  * Release notes by version string. Newest entries can be added on top; lookup is
  * by exact version key, so order does not affect behavior.
- *
- * NOTE: Copy below for 0.0.1 is PLACEHOLDER — replace with real changelog text
- * before shipping (tracked: MPI-46).
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
   '0.0.1': {
     version: '0.0.1',
     whatIsNew: [
-      'First alpha build of Cubric Studio Vision — image and video generation in a single desktop app.',
+      'First alpha build of Cubric Studio Vision for local image and video generation in a desktop project workspace.',
       'Project-based workspace: organize generations, history, and the gallery per project.',
-      'Built-in ComfyUI engine management — install, upgrade, and auto-start handled for you.',
+      'Model-aware workflows run through the local ComfyUI engine, with in-app engine setup and model discovery.',
     ],
     fixes: [],
     breakingChanges: [],
     importantChanges: [
-      'This is an early alpha. Projects and settings may need to be recreated as the app evolves.',
+      'This is alpha-quality software. Platform validation, portable updates, and project/settings compatibility may change before public release.',
+      'Windows is the maintainer-tested path first. Linux and macOS release notes should be checked for the latest validation status before sharing artifacts.',
     ],
-    engineNotes: [],
+    engineNotes: [
+      'Generation uses the configured local ComfyUI engine and local model files for this release.',
+    ],
   },
 };
 

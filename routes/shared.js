@@ -296,6 +296,9 @@ async function getCustomRoot() {
 }
 
 function getDefaultModelsRoot() {
+    if (process.env.CUBRIC_MODELS_ROOT) {
+        return path.resolve(process.env.CUBRIC_MODELS_ROOT);
+    }
     return getComfyPath(ENGINE_ROOT, 'models');
 }
 

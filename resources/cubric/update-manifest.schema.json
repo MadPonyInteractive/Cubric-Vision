@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cubric.example/schemas/update-manifest.schema.json",
+  "title": "Cubric Vision Portable Update Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "appId",
+    "displayName",
+    "platform",
+    "arch",
+    "toVersion",
+    "protocolVersion",
+    "connectorManifestPath",
+    "connectorManifestHash",
+    "files",
+    "preserve",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "appId": { "const": "cubric.vision" },
+    "displayName": { "type": "string", "minLength": 1 },
+    "platform": { "enum": ["win32", "linux", "darwin"] },
+    "arch": { "type": "string", "minLength": 1 },
+    "fromVersion": { "type": ["string", "null"] },
+    "toVersion": { "type": "string", "minLength": 1 },
+    "protocolVersion": { "const": "0.1.0" },
+    "connectorManifestPath": { "const": "resources/cubric/connector-manifest.json" },
+    "connectorManifestHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "preserve": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "delete": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

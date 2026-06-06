@@ -37,6 +37,32 @@ const PYTHON_BIN_PARTS_MAP = {
 // Cached GPU detection result for the session
 let _gpuDetectionCache = null;
 
+function _resolveEnvPath(name) {
+    const value = process.env[name];
+    if (typeof value !== 'string' || value.trim() === '') return null;
+    return path.resolve(value.trim());
+}
+
+/**
+ * Root of an extracted portable distribution, when launched from one.
+ * @returns {string|null}
+ */
+function getPortableRoot() {
+    return _resolveEnvPath('CUBRIC_PORTABLE_ROOT');
+}
+
+/**
+ * Resource root for portable/packaged binaries such as ffmpeg.
+ * @returns {string|null}
+ */
+function getPortableResourcesPath() {
+    const explicit = _resolveEnvPath('MPI_RESOURCES_PATH') || _resolveEnvPath('CUBRIC_RESOURCES_PATH');
+    if (explicit) return explicit;
+
+    const portableRoot = getPortableRoot();
+    return portableRoot ? path.join(portableRoot, 'resources') : null;
+}
+
 /**
  * Get the full path to the Python binary.
  * @param {string} engineRoot - root directory containing engine folder
@@ -216,6 +242,16 @@ function _readEngineConfig() {
  * @returns {string} engine root directory path
  */
 function getEngineRoot() {
+    const envRoot = _resolveEnvPath('CUBRIC_ENGINE_ROOT');
+    if (envRoot) {
+        return envRoot;
+    }
+
+    const portableRoot = getPortableRoot();
+    if (portableRoot) {
+        return path.join(portableRoot, 'engine');
+    }
+
     const config = _readEngineConfig();
     if (config && config.enginePath && require('fs').existsSync(config.enginePath)) {
         return config.enginePath;
@@ -230,4 +266,6 @@ module.exports = {
     getComfyPath,
     resolveDownloadConfig,
     getEngineRoot,
+    getPortableRoot,
+    getPortableResourcesPath,
 };

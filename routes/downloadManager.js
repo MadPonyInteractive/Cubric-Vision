@@ -31,10 +31,16 @@ const logger = require('./logger');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { DownloaderHelper } = require('node-downloader-helper');
-const { extractFull } = require('node-7z');
-const sevenBin = require('7zip-bin');
 
 const _require = createRequire(__filename);
+let _extractZip = null;
+
+async function _extractZipArchive(zipPath, extractDir) {
+    if (!_extractZip) {
+        _extractZip = _require('extract-zip');
+    }
+    await _extractZip(zipPath, { dir: path.resolve(extractDir) });
+}
 
 const ENGINE_ROOT = getEngineRoot();
 
@@ -485,11 +491,7 @@ async function _runCustomNodeInstall(modelJob) {
         try {
             if (await fs.pathExists(zipPath)) {
                 logger.info('download', `Extracting zip: ${zipPath}`);
-                const stream = extractFull(zipPath, extractDir, { $bin: sevenBin.path7za });
-                await new Promise((resolve, reject) => {
-                    stream.on('end', resolve);
-                    stream.on('error', reject);
-                });
+                await _extractZipArchive(zipPath, extractDir);
                 await fs.remove(zipPath); // clean up zip after successful extraction
                 logger.info('download', `Zip extracted and removed: ${zipPath}`);
                 extractionSucceeded = true;

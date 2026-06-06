@@ -1,0 +1,30 @@
+﻿{
+    "schema":  "mpi-kanban/file-claim/v1",
+    "id":  "b5d4bbef-835d-40d5-86ad-2a3a5847123a",
+    "path":  ".github/ISSUE_TEMPLATE/portable-validation.yml",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/64736c66-7a5f-4ac6-a3c4-2e5caeaf2d16.json",
+    "owner_role":  "implementer",
+    "task":  ".agents/mpi-kanban/state/tasks/5334ce79-7083-4c2d-91f7-8aba9021b99a.json",
+    "status":  "verified",
+    "claim_kind":  "write",
+    "heartbeat_at":  "2026-06-06T06:33:47Z",
+    "allowed_actions":  [
+                            "edit",
+                            "verify"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-06T06:27:50Z",
+                              "event":  "claimed_by_worker_d_release_docs_copy_gates"
+                          },
+                          {
+                              "summary":  "Release docs/copy gates implemented and targeted rg checks passed.",
+                              "event":  "worker_d_release_docs_copy_gates_complete",
+                              "at":  "2026-06-06T06:33:47Z"
+                          },
+                          {
+                              "at":  "2026-06-06T06:56:28Z",
+                              "event":  "user_verified_parallel_batch"
+                          }
+                      ]
+}

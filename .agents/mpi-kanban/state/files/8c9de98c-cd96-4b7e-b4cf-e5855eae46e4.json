@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "8c9de98c-cd96-4b7e-b4cf-e5855eae46e4",
+  "path": "routes/shared.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/5de00590-13af-442e-91f6-c8618d85a5bc.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/13c3a85a-075d-4b20-b19a-7113aaf8128a.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-06T06:30:45Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-06T06:26:41Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-06-06T06:30:45Z",
+      "event": "verified",
+      "summary": "No edits required for routes/shared.js."
+    }
+  ]
+}
