@@ -80,10 +80,18 @@ function _write(level, category, message, err) {
     const base = `[${ts}] [${level.toUpperCase()}] [${category}] ${message}`;
     const line = err ? `${base}\n  ${err.stack || err}` : base;
 
-    // Always mirror to console so dev tools still work
-    if (level === 'error') console.error(line);
-    else if (level === 'warn') console.warn(line);
-    else console.log(line);
+    // Always mirror to console so dev tools still work. Guard against a dead
+    // stdout/stderr: when the controlling terminal or pipe closes (app exit on
+    // Linux/macOS), a console write throws a synchronous EIO that would surface
+    // as an uncaught "JavaScript error in the main process" dialog. The file
+    // write below is the durable sink, so dropping the console mirror is safe.
+    try {
+        if (level === 'error') console.error(line);
+        else if (level === 'warn') console.warn(line);
+        else console.log(line);
+    } catch {
+        // stdout/stderr unavailable (closed pipe) — rely on the file log.
+    }
 
     // Update ring buffer
     _ring.push(line);

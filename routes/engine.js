@@ -214,8 +214,11 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     }
 
     // ── 1. uv venv (uv fetches Python 3.12 if the host lacks it) ────────────
+    // --seed installs pip into the venv. uv venvs are pip-less by default, but
+    // comfy-cli's DependencyCompiler runs `python -m pip install ... uv` against
+    // the active VIRTUAL_ENV, which fails with "No module named pip" without it.
     broadcastEngineEvent('engine:extracting', { status: 'Creating Python environment…', progress: 0 });
-    await _runStreaming(uvBin, ['venv', '--python', '3.12', venvDir], { cwd: targetDir, stage: 'uv-venv' });
+    await _runStreaming(uvBin, ['venv', '--seed', '--python', '3.12', venvDir], { cwd: targetDir, stage: 'uv-venv' });
 
     // ── 2. Install comfy-cli into the venv ──────────────────────────────────
     await _runStreaming(uvBin, ['pip', 'install', '--python', venvPython, 'comfy-cli'], { cwd: targetDir, stage: 'install-comfy-cli' });
