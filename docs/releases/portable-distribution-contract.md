@@ -6,6 +6,81 @@ manual validation. The historical planning detail remains in
 `docs/plans/2026-04-30-cross-platform-portable-distribution.md`; this document
 is the current release contract for implementation.
 
+## Build Process
+
+This is how portable artifacts are produced. The contract below (names, layout,
+manifests) describes the *output*; this section describes *how to create it*.
+
+### Canonical builds run in CI, per-OS
+
+Portable artifacts are built by the GitHub Actions workflow
+`.github/workflows/build-portable.yml`, one job per OS (Windows, Linux, macOS).
+**This is the only correct way to produce a shippable artifact.** Each runner
+does a native `npm ci`, so `node_modules` carries that platform's native
+binaries (Electron, ffmpeg). These cannot be cross-built: a Linux or macOS
+artifact must be built on its own OS. A Windows machine cannot produce a
+working Linux/macOS tarball.
+
+Triggers:
+
+- Push a `v*` tag, or
+- `gh workflow run build-portable.yml --ref <branch> -f version=<version>`
+
+Each job calls `scripts/build-portable.mjs` with an explicit `--stage-dir`
+under `${{ runner.temp }}` and uploads the full artifact plus update bundle as a
+GitHub Actions artifact named `cubric-vision-<platform>-<arch>` (14-day
+retention). CI does **not** publish a GitHub Release and cannot write to a local
+disk — see "Collecting CI artifacts" below.
+
+### Local dev builds
+
+`scripts/build-portable.mjs` can be run locally for the current OS only
+(`--platform`/`--arch` default to the host). Useful for inspecting layout or
+iterating on launcher scripts — **not** for shipping a cross-OS artifact.
+
+- Output folder: on the maintainer Windows workstation the default
+  `--stage-dir` is `D:\CubricStudio\Vision\Builds` (used when the `D:` drive is
+  present). Elsewhere it falls back to the repo's `dist/portable`. Override with
+  `--stage-dir <path>`.
+- `--no-update-bundle` skips the update zip; `--no-archive` stages folders only.
+- `--no-node-modules` is dev/test only — it produces a non-runnable tree and
+  must never be used for a real artifact.
+
+### Collecting CI artifacts
+
+`D:\CubricStudio\Vision\Builds` is the canonical local home for finished build
+distributions. CI runs in the cloud and cannot write there, so pull artifacts
+down explicitly:
+
+```sh
+gh run download <run-id> -n cubric-vision-linux-x64 -D "D:\CubricStudio\Vision\Builds"
+```
+
+Then verify the archive carries executable bits before trusting it (see next
+section).
+
+### Executable bits and symlinks
+
+`build-portable.mjs` writes archives with a hand-rolled tar/zip writer, not a
+system `tar`. Two consequences a builder must know:
+
+- It does not preserve symlinks (`node_modules/.bin/*` shims are dropped), and
+  it only sets the executable bit on entries `isExecutableEntry()` recognises
+  (launcher scripts, `node_modules/electron/dist/electron`, the macOS Electron
+  binary, `uv/uv`, and `node_modules/.bin/` entries).
+- Because the `.bin/electron` shim does not survive archiving, the Linux/macOS
+  launchers invoke the Electron binary directly
+  (`node_modules/electron/dist/electron`) and `chmod +x` it at startup, falling
+  back to the shim then `npm start` only if absent. Do not reintroduce a launch
+  path that depends on the `.bin` shim surviving an archive.
+
+Verify a Linux tarball before shipping:
+
+```sh
+tar -tvzf CubricVision-linux-x64-v<version>.tar.gz | grep 'electron/dist/electron$'
+# expect -rwxr-xr-x, not -rw-r--r--
+```
+
 ## Release Channels
 
 Cubric Vision uses one portable distribution model across early-access and

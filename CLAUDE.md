@@ -90,6 +90,10 @@ If you need to understand how project.json, .meta/ files, project load/reconcili
 If you are working with resumable downloads, IPC/SSE download events, or the download manager:
 **->** **MUST READ:** `.claude/rules/downloads.md`
 
+### Portable Builds & Distribution
+If you need to build, produce, or collect portable release artifacts (CI workflow, `scripts/build-portable.mjs`, output folders, exec-bit/symlink gotchas, the `D:\CubricStudio\Vision\Builds` distribution folder):
+**->** **READ:** `docs/releases/portable-distribution-contract.md` (§ "Build Process"). The same doc holds the artifact contract (names, layout, manifests); `docs/releases/github-release-checklist.md` covers release copy.
+
 ### Component Mount Map
 If you need to know who mounts a component, what props it receives, or where it appears in the UI:
 **->** **MUST READ:** `.claude/rules/component-mounts.md`
