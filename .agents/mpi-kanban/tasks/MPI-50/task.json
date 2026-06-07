@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-50",
+  "title": "Explore Triton + SageAttention accelerator builds",
+  "description": "Generation accelerators (Triton, SageAttention) are not plain pip add-ons: they require matching CUDA toolkit/nvcc, are GPU-arch gated (Ampere+ only), and change workflows by imposing new/different nodes. Too risky for the default cross-platform portable install. Explore shipping them as SEPARATE optional accelerator builds with their own workflows, not in the base engine bootstrap.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-07T00:00:00.000Z",
+  "updated_at": "2026-06-07T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

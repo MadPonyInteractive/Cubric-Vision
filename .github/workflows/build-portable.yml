@@ -1,0 +1,76 @@
+name: Build portable artifacts
+
+# Per-OS portable builds. node_modules contains native, platform-specific
+# binaries (Electron, ffmpeg) that cannot be cross-built, so each artifact is
+# built on its own runner with a native `npm ci`. Shipped builds bundle
+# node_modules — no end-user `npm install`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (defaults to package.json)
+        required: false
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win32
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # build hash needs git history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install uv (bundled into the artifact)
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies (native, pinned)
+        run: npm ci
+
+      - name: Build portable artifact
+        shell: bash
+        run: |
+          VERSION_ARG=""
+          if [ -n "${{ inputs.version }}" ]; then VERSION_ARG="--version ${{ inputs.version }}"; fi
+          UV_BIN="$(command -v uv)"
+          node scripts/build-portable.mjs \
+            --platform ${{ matrix.platform }} \
+            --arch ${{ matrix.arch }} \
+            --stage-dir "${{ runner.temp }}/cubric-portable" \
+            --no-source-manifest \
+            --uv-bin "$UV_BIN" \
+            $VERSION_ARG
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubric-vision-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            ${{ runner.temp }}/cubric-portable/*.zip
+            ${{ runner.temp }}/cubric-portable/*.tar.gz
+          if-no-files-found: error
+          retention-days: 14

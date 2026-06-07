@@ -15,8 +15,9 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, getEngineRoot } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
+const { spawn } = require('child_process');
 
 const ENGINE_ROOT = getEngineRoot();
 
@@ -44,6 +45,193 @@ router.get('/engine/status', async (req, res) => {
  * 5. Write extra_model_paths.yaml
  * 6. Broadcast SSE events at key stages
  */
+/**
+ * Windows engine provisioning: download the prebuilt portable archive and
+ * extract it with 7-Zip, firing UW deps downloads in parallel.
+ *
+ * @param {string} targetDir   engine root
+ * @param {object} engineInfo  { version, filename, url }
+ * @param {string[]} missingDepIds  UW deps to install in parallel
+ * @returns {Promise<{ uwModelJob: object|null }>}
+ */
+async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
+    const type = 'comfy';
+
+    // ── Download engine using ResumableDownloader ───────────────────────────
+    let engineArchiveSize = 0;
+    broadcastEngineEvent('engine:downloading', { progress: 0, downloadedBytes: 0, totalBytes: 0 });
+
+    await fs.ensureDir(targetDir);
+    const archivePath = path.join(targetDir, engineInfo.filename);
+
+    logger.info('system', `Downloading engine: ${engineInfo.url}`);
+
+    const downloadId = `engine-${type}`;
+    const depJob = {
+        id: downloadId,
+        url: engineInfo.url,
+        localPath: archivePath,
+        status: 'downloading',
+        downloadedBytes: 0,
+        totalBytes: 0,
+        refCount: 1,
+        error: null,
+        sha256Expected: null
+    };
+
+    const downloader = new ResumableDownloader(depJob, archivePath);
+
+    downloader.onProgress = (downloaded, total, speed) => {
+        engineArchiveSize = total;
+        const progress = total > 0 ? Math.round((downloaded / total) * 100) : 0;
+        broadcastEngineEvent('engine:downloading', { progress, downloadedBytes: downloaded, totalBytes: total, speed });
+    };
+
+    await downloader._ensureDownloader();
+    registerEngineDownload(downloader, downloadId);
+
+    // Fire UW deps download immediately (parallel with engine download, skip custom node install for now)
+    let uwModelJob = null;
+    let uwDepsPromise = Promise.resolve();
+    if (missingDepIds.length > 0) {
+        logger.info('engine', `Firing ${missingDepIds.length} UW deps downloads (parallel)...`);
+        uwDepsPromise = startUniversalWorkflowInstall(missingDepIds, true, true)  // true = skip custom node install
+            .then(modelJob => { uwModelJob = modelJob; return modelJob; })
+            .catch(err => {
+                logger.error('engine', `UW deps download error: ${err.message}`);
+                broadcastEngineEvent('engine:uw-installing', {
+                    status: 'Some dependencies could not be installed. You can repair them later.'
+                });
+            });
+    }
+
+    await new Promise((resolve, reject) => {
+        downloader._downloader.on('end', () => { clearEngineDownload(); resolve(); });
+        downloader._downloader.on('error', (err) => { clearEngineDownload(); reject(err); });
+        downloader._downloader.start();
+    });
+
+    // ── Extract ─────────────────────────────────────────────────────────────
+    broadcastEngineEvent('engine:extracting', { status: 'extracting', progress: 0 });
+    logger.info('system', 'Extracting engine archive...');
+
+    const sevenBin = require('7zip-bin');
+    const { extractFull } = require('node-7z');
+    const myStream = extractFull(archivePath, targetDir, { $bin: sevenBin.path7za });
+
+    await new Promise((resolve, reject) => {
+        myStream.on('data', (data) => {
+            if (data && data.status) {
+                broadcastEngineEvent('engine:extracting', { status: 'extracting', file: data.file || '', progress: 0 });
+            }
+        });
+        myStream.on('end', resolve);
+        myStream.on('error', reject);
+    });
+
+    await fs.remove(archivePath);
+
+    // ── Wait for UW deps downloads to finish ────────────────────────────────
+    logger.info('engine', 'Waiting for UW deps downloads to complete...');
+    await uwDepsPromise;
+    return { uwModelJob };
+}
+
+/** Promisified spawn that streams stdout/stderr lines into engine SSE + log. */
+function _runStreaming(cmd, args, { cwd, env, stage } = {}) {
+    return new Promise((resolve, reject) => {
+        logger.info('engine', `${stage}: ${cmd} ${args.join(' ')}`);
+        const child = spawn(cmd, args, { cwd, env: env || process.env });
+        const onLine = (level, buf) => {
+            const text = buf.toString();
+            for (const raw of text.split(/\r?\n/)) {
+                const line = raw.trim();
+                if (!line) continue;
+                logger[level === 'err' ? 'warn' : 'info']('engine', `[${stage}] ${line}`);
+                broadcastEngineEvent('engine:extracting', { status: stage, file: line, progress: 0 });
+            }
+        };
+        child.stdout.on('data', (d) => onLine('out', d));
+        child.stderr.on('data', (d) => onLine('err', d));
+        child.on('error', reject);
+        child.on('exit', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`${stage} failed (exit ${code}): ${cmd} ${args.join(' ')}`));
+        });
+    });
+}
+
+/**
+ * Linux/macOS engine provisioning: bootstrap ComfyUI via uv + comfy-cli into the
+ * layout getPythonBin()/getComfyPath() expect (`<COMFY_DIR>/venv`, `<COMFY_DIR>/ComfyUI`).
+ *
+ * No prebuilt portable exists for these platforms. We create a uv venv, install
+ * comfy-cli into it, and run `comfy install` against the workspace. Accelerators
+ * (Triton/SageAttention) are intentionally NOT installed here — see MPI-50.
+ *
+ * @param {string} targetDir   engine root
+ * @param {string[]} missingDepIds  UW deps to install after the venv exists
+ * @param {object} downloadConfig  resolveDownloadConfig() result (for GPU vendor)
+ * @returns {Promise<{ uwModelJob: object|null }>}
+ */
+async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
+    const uvBin = resolveUvBin();
+    if (!uvBin) {
+        throw new Error('uv not found. Stage a uv binary at <root>/uv/uv (CUBRIC_UV_BIN) or install uv on PATH.');
+    }
+
+    const workspace = path.join(targetDir, COMFY_DIR);          // <engine>/ComfyUI_linux
+    const venvDir = path.join(workspace, 'venv');
+    const venvPython = getPythonBin(targetDir);                  // <workspace>/venv/bin/python3
+    const comfyBin = path.join(venvDir, 'bin', 'comfy');
+
+    await fs.ensureDir(workspace);
+    broadcastEngineEvent('engine:downloading', { progress: 0, downloadedBytes: 0, totalBytes: 0, status: 'Bootstrapping ComfyUI environment…' });
+
+    // ── 1. uv venv (uv fetches Python 3.12 if the host lacks it) ────────────
+    broadcastEngineEvent('engine:extracting', { status: 'Creating Python environment…', progress: 0 });
+    await _runStreaming(uvBin, ['venv', '--python', '3.12', venvDir], { cwd: workspace, stage: 'uv-venv' });
+
+    // ── 2. Install comfy-cli into the venv ──────────────────────────────────
+    await _runStreaming(uvBin, ['pip', 'install', '--python', venvPython, 'comfy-cli'], { cwd: workspace, stage: 'install-comfy-cli' });
+
+    // ── 3. comfy install into the workspace (non-interactive) ───────────────
+    // Flag names verified against comfy-cli source: --skip-prompt/--workspace are
+    // global (before `install`); --nvidia/--amd/--m-series/--cpu are install opts.
+    const vendor = downloadConfig?.gpu?.vendor;
+    let gpuFlag = '--cpu';
+    if (vendor === 'nvidia') gpuFlag = '--nvidia';
+    else if (vendor === 'amd') gpuFlag = '--amd';
+    else if (process.platform === 'darwin') gpuFlag = '--m-series';  // Apple Silicon
+    await _runStreaming(
+        comfyBin,
+        ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'],
+        { cwd: workspace, env: { ...process.env, VIRTUAL_ENV: venvDir }, stage: 'comfy-install' },
+    );
+
+    if (!(await fs.pathExists(venvPython))) {
+        throw new Error(`uv bootstrap finished but Python not found at ${venvPython}`);
+    }
+    if (!(await fs.pathExists(getComfyPath(targetDir, 'main.py')))) {
+        throw new Error('uv bootstrap finished but ComfyUI/main.py is missing');
+    }
+
+    // ── 4. UW deps (sequential — venv must exist before pip installs) ────────
+    let uwModelJob = null;
+    if (missingDepIds.length > 0) {
+        logger.info('engine', `Installing ${missingDepIds.length} UW deps...`);
+        try {
+            uwModelJob = await startUniversalWorkflowInstall(missingDepIds, true, true);
+        } catch (err) {
+            logger.error('engine', `UW deps install error: ${err.message}`);
+            broadcastEngineEvent('engine:uw-installing', {
+                status: 'Some dependencies could not be installed. You can repair them later.'
+            });
+        }
+    }
+    return { uwModelJob };
+}
+
 async function _runEngineDownload() {
     const type = 'comfy';
     logger.info('engine', `_runEngineDownload started`);
@@ -52,130 +240,33 @@ async function _runEngineDownload() {
         const config = await fs.readJson(SYS_DEPS_PATH);
         logger.info('engine', `System dependencies loaded successfully`);
 
-        // Detect GPU and resolve download URLs
+        // Detect GPU and resolve provisioning method
         const downloadConfig = await resolveDownloadConfig();
-
-        const engineInfo = {
-            version: config.engine.version,
-            filename: downloadConfig.comfy.filename,
-            url: downloadConfig.comfy.url,
-        };
         const targetDir = ENGINE_ROOT;
 
-        if (!engineInfo) throw new Error('Engine info not found in configs');
-
-        // ── 1. Pre-calculate combined size (engine + UW deps) ────────────────────
-        let uwDepsTotalBytes = 0;
-        let missingDepIds = [];
-
+        // ── Pre-calculate combined size (engine + UW deps) ──────────────────────
         const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-        missingDepIds = missingDeps;
+        const missingDepIds = missingDeps;
         if (missingDeps.length > 0) {
             logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
-            uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
+            const uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
             logger.info('engine', `UW deps total size: ${(uwDepsTotalBytes / 1024 / 1024 / 1024).toFixed(2)} GB`);
         }
 
-        // ── 2. Download engine using ResumableDownloader ────────────────────────
-        let engineArchiveSize = 0;
-        broadcastEngineEvent('engine:downloading', {
-            progress: 0,
-            downloadedBytes: 0,
-            totalBytes: 0
-        });
-
-        await fs.ensureDir(targetDir);
-        const archivePath = path.join(targetDir, engineInfo.filename);
-
-        logger.info('system', `Downloading engine: ${engineInfo.url}`);
-
-        const downloadId = `engine-${type}`;
-        const depJob = {
-            id: downloadId,
-            url: engineInfo.url,
-            localPath: archivePath,
-            status: 'downloading',
-            downloadedBytes: 0,
-            totalBytes: 0,
-            refCount: 1,
-            error: null,
-            sha256Expected: null
-        };
-
-        const downloader = new ResumableDownloader(depJob, archivePath);
-
-        downloader.onProgress = (downloaded, total, speed) => {
-            engineArchiveSize = total;
-            const progress = total > 0 ? Math.round((downloaded / total) * 100) : 0;
-            broadcastEngineEvent('engine:downloading', {
-                progress,
-                downloadedBytes: downloaded,
-                totalBytes: total,
-                speed
-            });
-        };
-
-        await downloader._ensureDownloader();
-        registerEngineDownload(downloader, downloadId);
-
-        // Fire UW deps download immediately (parallel with engine download, skip custom node install for now)
+        // ── Provision engine binaries (platform-specific) ───────────────────────
         let uwModelJob = null;
-        let uwDepsPromise = Promise.resolve();
-        if (missingDepIds.length > 0) {
-            logger.info('engine', `Firing ${missingDepIds.length} UW deps downloads (parallel)...`);
-            uwDepsPromise = startUniversalWorkflowInstall(missingDepIds, true, true)  // true = skip custom node install
-                .then(modelJob => {
-                    uwModelJob = modelJob;
-                    return modelJob;
-                })
-                .catch(err => {
-                    logger.error('engine', `UW deps download error: ${err.message}`);
-                    broadcastEngineEvent('engine:uw-installing', {
-                        status: 'Some dependencies could not be installed. You can repair them later.'
-                    });
-                });
+        if (downloadConfig.method === 'uv-bootstrap') {
+            ({ uwModelJob } = await _provisionUvEngine(targetDir, missingDepIds, downloadConfig));
+        } else {
+            const engineInfo = {
+                version: config.engine.version,
+                filename: downloadConfig.comfy.filename,
+                url: downloadConfig.comfy.url,
+            };
+            ({ uwModelJob } = await _provisionWindowsEngine(targetDir, engineInfo, missingDepIds));
         }
 
-        await new Promise((resolve, reject) => {
-            downloader._downloader.on('end', () => {
-                clearEngineDownload();
-                resolve();
-            });
-            downloader._downloader.on('error', (err) => {
-                clearEngineDownload();
-                reject(err);
-            });
-            downloader._downloader.start();
-        });
-
-        // ── 3. Extract ─────────────────────────────────────────────────────────
-        broadcastEngineEvent('engine:extracting', { status: 'extracting', progress: 0 });
-        logger.info('system', 'Extracting engine archive...');
-
-        const sevenBin = require('7zip-bin');
-        const { extractFull } = require('node-7z');
-        const myStream = extractFull(archivePath, targetDir, { $bin: sevenBin.path7za });
-
-        await new Promise((resolve, reject) => {
-            myStream.on('data', (data) => {
-                if (data && data.status) {
-                    broadcastEngineEvent('engine:extracting', {
-                        status: 'extracting',
-                        file: data.file || '',
-                        progress: 0
-                    });
-                }
-            });
-            myStream.on('end', resolve);
-            myStream.on('error', reject);
-        });
-
-        await fs.remove(archivePath);
-
-        // ── Wait for UW deps downloads, then finish custom node install ─────────
-        logger.info('engine', 'Waiting for UW deps downloads to complete...');
-        await uwDepsPromise;
-
+        // ── Finish custom node install (shared) ─────────────────────────────────
         let uwInstallFailed = false;
         if (uwModelJob) {
             logger.info('engine', 'Engine ready, finishing custom node installation...');
@@ -188,7 +279,7 @@ async function _runEngineDownload() {
             }
         }
 
-        // ── 4. Patch ───────────────────────────────────────────────────────────
+        // ── Patch (Windows-only run_nvidia_gpu.bat; Linux/mac launch via spawn) ──
         broadcastEngineEvent('engine:patching', { status: 'patching' });
         logger.info('system', 'Patching engine...');
 
