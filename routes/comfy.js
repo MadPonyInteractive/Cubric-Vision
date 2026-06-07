@@ -36,7 +36,7 @@ const {
     hasExtraModelFolders,
     writeExtraModelPathsYaml,
 } = require('./shared');
-const { getPythonBin, getComfyPath, getEngineRoot } = require('./platformEngine');
+const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
@@ -214,7 +214,16 @@ router.post('/comfy/start', async (req, res) => {
 
         logger.info('comfy', 'Starting ComfyUI background process...');
         const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
-        const args = [mainPath, '--listen', '127.0.0.1', '--port', COMFYUI_PORT.toString(), '--lowvram', '--preview-method', 'taesd', '--enable-cors-header'];
+
+        // Launch mode must match the installed torch build (see routes/engine.js):
+        // a CPU install cannot be started in GPU/--lowvram mode. When no GPU vendor
+        // was detected, run ComfyUI with --cpu; otherwise use the GPU --lowvram path.
+        const { gpu } = await resolveDownloadConfig();   // cached after first detect
+        const useCpu = !gpu || !gpu.vendor;
+        const modeArgs = useCpu ? ['--cpu'] : ['--lowvram'];
+        if (useCpu) logger.info('comfy', 'No GPU detected — starting ComfyUI in CPU mode.');
+
+        const args = [mainPath, '--listen', '127.0.0.1', '--port', COMFYUI_PORT.toString(), ...modeArgs, '--preview-method', 'taesd', '--enable-cors-header'];
 
         if (await fs.pathExists(extraConfigPath)) {
             logger.info('comfy', `Using extra model paths: ${extraConfigPath}`);

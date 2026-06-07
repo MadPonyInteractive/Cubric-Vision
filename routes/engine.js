@@ -226,6 +226,9 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     // ── 3. comfy install into the workspace (non-interactive) ───────────────
     // Flag names verified against comfy-cli source: --skip-prompt/--workspace are
     // global (before `install`); --nvidia/--amd/--m-series/--cpu are install opts.
+    // The install build is vendor-driven; the launch (routes/comfy.js) mirrors
+    // the same vendor so a CPU install is launched in CPU mode (and an NVIDIA
+    // install in GPU mode) — the two must stay consistent.
     const vendor = downloadConfig?.gpu?.vendor;
     let gpuFlag = '--cpu';
     if (vendor === 'nvidia') gpuFlag = '--nvidia';
