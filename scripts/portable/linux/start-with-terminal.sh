@@ -12,7 +12,14 @@ if [ -x "$ROOT/uv/uv" ]; then
 fi
 
 cd "$ROOT/app"
-if [ -x "node_modules/.bin/electron" ]; then
+# Prefer the bundled Electron binary directly. The node_modules/.bin/electron
+# shim is a symlink that does not survive archiving on all platforms, so do not
+# rely on it. Fall back to the shim, then npm, only if the binary is absent.
+ELECTRON_BIN="node_modules/electron/dist/electron"
+if [ -f "$ELECTRON_BIN" ]; then
+  [ -x "$ELECTRON_BIN" ] || chmod +x "$ELECTRON_BIN" 2>/dev/null || true
+  "$ELECTRON_BIN" .
+elif [ -x "node_modules/.bin/electron" ]; then
   "node_modules/.bin/electron" .
 else
   npm start

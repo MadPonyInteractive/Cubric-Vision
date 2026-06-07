@@ -2,6 +2,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import zlib from 'node:zlib';
@@ -15,7 +16,13 @@ const CONNECTOR_MANIFEST_REL = 'resources/cubric/connector-manifest.json';
 const UPDATE_MANIFEST_REL = 'resources/cubric/update-manifest.json';
 const BUILD_INFO_REL = 'js/core/buildInfo.js';
 const TEMPLATE_ROOT = path.join(SCRIPT_DIR, 'portable');
-const DEFAULT_STAGE_DIR = path.join(REPO_ROOT, 'dist', 'portable');
+// Local builds default to the shared distribution folder on the D: drive when
+// it is reachable (dev workstation); otherwise fall back to the repo dist/.
+// CI always passes an explicit --stage-dir, so this default never applies there.
+const DIST_BUILDS_DIR = 'D:\\CubricStudio\\Vision\\Builds';
+const DEFAULT_STAGE_DIR = (process.platform === 'win32' && existsSync('D:\\'))
+  ? DIST_BUILDS_DIR
+  : path.join(REPO_ROOT, 'dist', 'portable');
 const execFileAsync = promisify(execFile);
 
 const PLATFORM_CONFIG = {
@@ -182,6 +189,7 @@ Options:
   --version <value>      Release version. Defaults to package.json version.
   --build-hash <value>   Build hash to stamp. Defaults to Git short SHA.
   --stage-dir <path>     Parent directory for the artifact root.
+                         Local Windows default: ${DEFAULT_STAGE_DIR}.
   --no-source-manifest   Do not mirror the generated manifest to resources/cubric.
   --no-archive           Stage folders only; do not write zip/tar.gz artifacts.
   --no-update-bundle     Do not stage the matching update bundle.
@@ -378,8 +386,9 @@ function assertSafeClean(targetPath) {
     resolved.startsWith(tmp + path.sep) ||
     resolved.startsWith(path.resolve('C:\\tmp') + path.sep) ||
     resolved.startsWith(path.resolve('D:\\tmp') + path.sep);
-  if (!isUnderRepoDist && !isUnderTmp) {
-    throw new Error(`Refusing to clean outside repo dist/, C:\\tmp, D:\\tmp, or system temp: ${resolved}`);
+  const isUnderDistBuilds = resolved.startsWith(path.resolve(DIST_BUILDS_DIR) + path.sep);
+  if (!isUnderRepoDist && !isUnderTmp && !isUnderDistBuilds) {
+    throw new Error(`Refusing to clean outside repo dist/, C:\\tmp, D:\\tmp, ${DIST_BUILDS_DIR}, or system temp: ${resolved}`);
   }
   if (resolved === repo || resolved.length < 12) {
     throw new Error(`Refusing to clean unsafe path: ${resolved}`);
@@ -629,6 +638,19 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
   return zipPath;
 }
 
+// POSIX archives carry no on-disk permission bits when built on Windows, so the
+// tar writer must decide which entries get the executable bit. Cover launcher
+// scripts, the bundled Electron native binary (Linux + macOS), the uv binary,
+// and any node_modules/.bin shims that survived staging.
+function isExecutableEntry(relPath) {
+  if (relPath.endsWith('.sh') || relPath.endsWith('.command')) return true;
+  if (relPath.includes('node_modules/.bin/')) return true;
+  if (relPath === 'app/node_modules/electron/dist/electron') return true;
+  if (relPath.endsWith('/Electron.app/Contents/MacOS/Electron')) return true;
+  if (relPath === 'uv/uv') return true;
+  return false;
+}
+
 function tarHeader(name, size, mode = 0o644, type = '0') {
   const header = Buffer.alloc(512, 0);
   let namePart = name;
@@ -669,7 +691,7 @@ async function createTarGzFromDir(sourceDir, tarGzPath) {
   for (const relPath of files) {
     const sourcePath = path.join(sourceDir, ...relPath.split('/'));
     const data = await fs.readFile(sourcePath);
-    const mode = relPath.endsWith('.sh') || relPath.endsWith('.command') ? 0o755 : 0o644;
+    const mode = isExecutableEntry(relPath) ? 0o755 : 0o644;
     const name = `${rootName}/${relPath}`;
     parts.push(tarHeader(name, data.length, mode, '0'), data);
     const remainder = data.length % 512;
