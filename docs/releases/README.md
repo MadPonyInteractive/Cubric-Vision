@@ -17,6 +17,12 @@ that document for artifact names, root layout, launcher/update script names,
 preservation rules, update-manifest fields, and platform validation
 disclosures.
 
+For the *lessons-learned journal* of actually building per-OS artifacts (what
+broke, cross-build limits, CI, the macOS unknowns), see
+[`build-experience-log.md`](build-experience-log.md). Append a dated section
+there after any build or build-tooling change — especially for macOS, which is
+maintainer-untested.
+
 ## Naming Convention
 
 Files are named `YYYY-MM-DD-vX.Y.Z.md` where:
