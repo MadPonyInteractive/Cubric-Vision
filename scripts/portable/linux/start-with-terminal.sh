@@ -11,6 +11,12 @@ if [ -x "$ROOT/uv/uv" ]; then
   export CUBRIC_UV_BIN="$ROOT/uv/uv"
 fi
 
+# Install/refresh the per-user .desktop entry + icon so the taskbar shows
+# "Cubric Vision" and our logo (not "Electron"). Idempotent and non-fatal.
+if [ -f "$ROOT/setup-desktop.sh" ]; then
+  sh "$ROOT/setup-desktop.sh" >/dev/null 2>&1 || true
+fi
+
 cd "$ROOT/app"
 # Prefer the bundled Electron binary directly. The node_modules/.bin/electron
 # shim is a symlink that does not survive archiving on all platforms, so do not

@@ -94,6 +94,13 @@ if (process.platform === 'win32') {
   app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
 }
 
+// Internal Electron name (app.getName(), menu, notification sender). Does NOT
+// change the OS taskbar/dock name on its own — that comes from package.json
+// `name`/`desktopName` (Linux WM_CLASS/Wayland app_id), the bundled Info.plist
+// (macOS), and setAppUserModelId (Windows). Set it anyway so in-app references
+// read "Cubric Vision" instead of "cubric-vision"/"Electron".
+app.setName('Cubric Vision');
+
 if (process.env.CUBRIC_E2E) {
   app.disableHardwareAcceleration();
   app.commandLine.appendSwitch('disable-gpu');
@@ -440,6 +447,17 @@ function startServer() {
 app.on('ready', () => {
   pruneStaleMaskTemp();
   logger.info('mask-temp', `session=${SESSION_ID} tempDir=${MASK_TEMP_ROOT}`);
+
+  // macOS dock icon for the unpackaged portable: the bundled Electron.app ships
+  // electron.icns; the build swaps it, but set it at runtime too as a fallback
+  // for builds where the bundle icon was not replaced.
+  if (process.platform === 'darwin' && app.dock) {
+    try {
+      app.dock.setIcon(path.join(__dirname, 'favicon.png'));
+    } catch (err) {
+      logger.warn('main', `Failed to set dock icon: ${err.message}`);
+    }
+  }
 
   startServer();
 

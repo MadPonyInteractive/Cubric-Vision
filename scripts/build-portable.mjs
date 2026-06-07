@@ -428,6 +428,22 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
+  // Linux taskbar/dock branding: ship the app icon at the portable root and a
+  // first-run installer (called by the launcher) that writes a per-user
+  // .desktop + hicolor icon so the dock shows "Cubric Vision" + our logo.
+  if (opts.platform === 'linux') {
+    await copyFileEnsured(
+      path.join(REPO_ROOT, 'media', 'icons', 'cubric-vision.png'),
+      path.join(stageRoot, 'cubric-vision.png'),
+    );
+    const setupDesktopTarget = path.join(stageRoot, 'setup-desktop.sh');
+    await copyFileEnsured(
+      path.join(TEMPLATE_ROOT, 'linux', 'setup-desktop.sh'),
+      setupDesktopTarget,
+    );
+    await makeExecutableIfNeeded(setupDesktopTarget);
+  }
+
   // Dev/test builds ship without node_modules — stage a setup script so the
   // tester does not paste install commands by hand. Shipped builds bundle
   // node_modules and never include this.
@@ -453,6 +469,38 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
 
   await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'), '', path.resolve(stageRoot), !opts.nodeModules);
   await writeBuildInfo(path.join(stageRoot, 'app'), opts.buildHash);
+
+  // macOS dock branding: the bundled Electron.app ships CFBundleName=Electron
+  // and electron.icns. Rename it to "Cubric Vision" and swap the icon so the
+  // unpackaged portable shows our name/logo in the dock. Requires plutil
+  // (always present on the macOS CI runner); skipped if node_modules was
+  // excluded or the bundle/plutil is missing.
+  if (opts.platform === 'darwin' && opts.nodeModules) {
+    await brandMacBundle(path.join(stageRoot, 'app'));
+  }
+}
+
+async function brandMacBundle(appDir) {
+  const bundle = path.join(appDir, 'node_modules', 'electron', 'dist', 'Electron.app');
+  const plist = path.join(bundle, 'Contents', 'Info.plist');
+  if (!(await pathExists(plist))) {
+    console.warn(`brandMacBundle: ${plist} not found — skipping dock branding`);
+    return;
+  }
+  try {
+    await execFileAsync('plutil', ['-replace', 'CFBundleName', '-string', 'Cubric Vision', plist]);
+    await execFileAsync('plutil', ['-replace', 'CFBundleDisplayName', '-string', 'Cubric Vision', plist]);
+    // Swap the dock icon: overwrite the icns the plist points at. favicon.png is
+    // not an .icns, so we only replace if a prebuilt icns exists; otherwise the
+    // runtime app.dock.setIcon() in main.js handles the icon and we leave the
+    // name change (which always works) in place.
+    const icnsSrc = path.join(REPO_ROOT, 'build', 'icon.icns');
+    if (await pathExists(icnsSrc)) {
+      await copyFileEnsured(icnsSrc, path.join(bundle, 'Contents', 'Resources', 'electron.icns'));
+    }
+  } catch (err) {
+    console.warn(`brandMacBundle: failed to brand bundle (${err.message}) — continuing`);
+  }
 }
 
 function assertConnectorManifest(manifest) {
