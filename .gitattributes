@@ -1,0 +1,5 @@
+# Shell scripts MUST stay LF — CRLF breaks the shebang on Linux/macOS
+# ("bad interpreter: /usr/bin/env sh^M"). Affects portable launchers and
+# updaters staged into Linux/mac artifacts.
+*.sh        text eol=lf
+*.command   text eol=lf

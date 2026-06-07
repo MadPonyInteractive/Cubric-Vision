@@ -229,35 +229,57 @@ async function resolveDownloadConfig() {
         detectIntelArcGPU(),
     ]);
 
-    let comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';  // default
-
-    // ComfyUI variant selection — driven by GPU architecture, not driver CUDA.
-    if (nvidiaResult.hasGPU) {
-        comfyFilename = selectNvidiaBuild(nvidiaResult.gpuName, nvidiaResult.cudaVersion);
-    } else if (hasAmd) {
-        comfyFilename = 'ComfyUI_windows_portable_amd.7z';
-    } else if (hasIntel) {
-        comfyFilename = 'ComfyUI_windows_portable_intel.7z';
-    }
-    // else: default to NVIDIA build, ComfyUI will handle fallback if no GPU
-
-    const result = {
-        comfy: {
-            url: `${COMFY_BASE}/${comfyFilename}`,
-            filename: 'ComfyUI_windows_portable.7z',
-        },
-        gpu: {
-            name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : null),
-            vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : null,
-            cudaVersion: nvidiaResult.cudaVersion || null,
-        },
+    const gpu = {
+        name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : null),
+        vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : null,
+        cudaVersion: nvidiaResult.cudaVersion || null,
     };
 
-    logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename} (CUDA ${nvidiaResult.cudaVersion || 'unknown'})`);
+    let result;
+    if (process.platform === 'win32') {
+        // Windows ships a prebuilt portable archive selected by GPU architecture.
+        let comfyFilename = 'ComfyUI_windows_portable_nvidia.7z';  // default
+        if (nvidiaResult.hasGPU) {
+            comfyFilename = selectNvidiaBuild(nvidiaResult.gpuName, nvidiaResult.cudaVersion);
+        } else if (hasAmd) {
+            comfyFilename = 'ComfyUI_windows_portable_amd.7z';
+        } else if (hasIntel) {
+            comfyFilename = 'ComfyUI_windows_portable_intel.7z';
+        }
+        // else: default to NVIDIA build, ComfyUI will handle fallback if no GPU
+        result = {
+            method: 'archive',
+            comfy: {
+                url: `${COMFY_BASE}/${comfyFilename}`,
+                filename: 'ComfyUI_windows_portable.7z',
+            },
+            gpu,
+        };
+        logger.info('gpu-detect', `Resolved config: ComfyUI=${comfyFilename} (CUDA ${nvidiaResult.cudaVersion || 'unknown'})`);
+    } else {
+        // Linux/macOS have no prebuilt portable — bootstrap via uv + comfy-cli.
+        result = { method: 'uv-bootstrap', comfy: null, gpu };
+        logger.info('gpu-detect', `Resolved config: uv-bootstrap (vendor ${gpu.vendor || 'none'}, CUDA ${nvidiaResult.cudaVersion || 'unknown'})`);
+    }
 
     // Cache for session
     _gpuDetectionCache = result;
     return result;
+}
+
+/**
+ * Resolve the `uv` binary for non-Windows engine bootstrap.
+ *
+ * Prefers the zip-local uv staged in a portable artifact (CUBRIC_UV_BIN, set by
+ * the launchers when `$ROOT/uv/uv` exists), then falls back to `uv` on PATH.
+ * Returns null if neither is available so the caller can surface a clear error.
+ * @returns {string|null} absolute path or bare `uv` command, or null
+ */
+function resolveUvBin() {
+    const explicit = _resolveEnvPath('CUBRIC_UV_BIN');
+    if (explicit && require('fs').existsSync(explicit)) return explicit;
+    // Fall back to PATH — `uv` resolved by the shell at exec time.
+    return 'uv';
 }
 
 /**
@@ -306,7 +328,9 @@ module.exports = {
     getComfyPath,
     resolveDownloadConfig,
     selectNvidiaBuild,
+    resolveUvBin,
     getEngineRoot,
+    COMFY_DIR_MAP,
     getPortableRoot,
     getPortableResourcesPath,
 };

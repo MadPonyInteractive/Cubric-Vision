@@ -119,6 +119,8 @@ function parseArgs(argv) {
     archive: true,
     updateBundle: true,
     buildHash: null,
+    nodeModules: true,
+    uvBin: process.env.CUBRIC_BUNDLE_UV || null,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -133,6 +135,12 @@ function parseArgs(argv) {
       opts.archive = false;
     } else if (arg === '--no-update-bundle') {
       opts.updateBundle = false;
+    } else if (arg === '--no-node-modules') {
+      opts.nodeModules = false;
+    } else if (arg === '--uv-bin') {
+      opts.uvBin = argv[++i];
+    } else if (arg.startsWith('--uv-bin=')) {
+      opts.uvBin = arg.slice('--uv-bin='.length);
     } else if (arg === '--platform') {
       opts.platform = argv[++i];
     } else if (arg.startsWith('--platform=')) {
@@ -177,6 +185,10 @@ Options:
   --no-source-manifest   Do not mirror the generated manifest to resources/cubric.
   --no-archive           Stage folders only; do not write zip/tar.gz artifacts.
   --no-update-bundle     Do not stage the matching update bundle.
+  --no-node-modules      Exclude node_modules from the app copy. Use when
+                         cross-building for another OS; run npm install on target.
+  --uv-bin <path>        Bundle this uv binary at <root>/uv/uv for zero-setup
+                         engine bootstrap. Also reads CUBRIC_BUNDLE_UV env.
 `);
 }
 
@@ -268,28 +280,29 @@ async function writeBuildInfo(appRoot, buildHash) {
   );
 }
 
-function shouldExcludeAppPath(relPath, entryName) {
+function shouldExcludeAppPath(relPath, entryName, excludeNodeModules = false) {
   const normalized = toPosix(relPath);
   const rootName = normalized.split('/')[0] || entryName;
   if (APP_COPY_EXCLUDES.has(rootName)) return true;
+  if (excludeNodeModules && rootName === 'node_modules') return true;
   if (rootName.startsWith('.env')) return true;
   if (normalized.endsWith('.log')) return true;
   return false;
 }
 
-async function copyAppTree(fromDir, toDir, relBase = '', skipAbs = null) {
+async function copyAppTree(fromDir, toDir, relBase = '', skipAbs = null, excludeNodeModules = false) {
   await ensureDir(toDir);
   const entries = await fs.readdir(fromDir, { withFileTypes: true });
   for (const entry of entries) {
     const relPath = relBase ? path.join(relBase, entry.name) : entry.name;
-    if (shouldExcludeAppPath(relPath, entry.name)) continue;
+    if (shouldExcludeAppPath(relPath, entry.name, excludeNodeModules)) continue;
     const sourcePath = path.join(fromDir, entry.name);
     // Never descend into the artifact/stage root itself — guards against a
     // recursive copy bomb when --stage-dir resolves inside the repo.
     if (skipAbs && path.resolve(sourcePath) === skipAbs) continue;
     const targetPath = path.join(toDir, entry.name);
     if (entry.isDirectory()) {
-      await copyAppTree(sourcePath, targetPath, relPath, skipAbs);
+      await copyAppTree(sourcePath, targetPath, relPath, skipAbs, excludeNodeModules);
     } else if (entry.isFile()) {
       await copyFileEnsured(sourcePath, targetPath);
     } else if (entry.isSymbolicLink()) {
@@ -301,11 +314,26 @@ async function copyAppTree(fromDir, toDir, relBase = '', skipAbs = null) {
         // Windows without symlink privileges can still stage the resolved file.
         const realPath = await fs.realpath(sourcePath);
         const stat = await fs.stat(realPath);
-        if (stat.isDirectory()) await copyAppTree(realPath, targetPath, relPath, skipAbs);
+        if (stat.isDirectory()) await copyAppTree(realPath, targetPath, relPath, skipAbs, excludeNodeModules);
         else await copyFileEnsured(realPath, targetPath);
       }
     }
   }
+}
+
+// Stage a uv binary at <root>/uv/uv(.exe) so portable launchers can export
+// CUBRIC_UV_BIN to it (zero-setup engine bootstrap on Linux/macOS). The path is
+// supplied by --uv-bin / CUBRIC_BUNDLE_UV — typically a uv installed by CI on
+// the matching OS runner.
+async function stageUvBinary(stageRoot, opts) {
+  if (!opts.uvBin) return;
+  if (!await pathExists(opts.uvBin)) {
+    throw new Error(`--uv-bin path not found: ${opts.uvBin}`);
+  }
+  const uvName = opts.platform === 'win32' ? 'uv.exe' : 'uv';
+  const target = path.join(stageRoot, 'uv', uvName);
+  await copyFileEnsured(opts.uvBin, target);
+  if (opts.platform !== 'win32') await fs.chmod(target, 0o755);
 }
 
 async function stageResources(stageRoot, opts, config) {
@@ -361,6 +389,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await ensureDir(path.join(stageRoot, 'update'));
 
   await stageResources(stageRoot, opts, config);
+  await stageUvBinary(stageRoot, opts);
 
   const startTarget = path.join(stageRoot, config.start);
   const updateTarget = path.join(stageRoot, config.update);
@@ -383,6 +412,16 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
+  // Dev/test builds ship without node_modules — stage a setup script so the
+  // tester does not paste install commands by hand. Shipped builds bundle
+  // node_modules and never include this.
+  if (!opts.nodeModules) {
+    const setupName = opts.platform === 'win32' ? 'setup.bat' : 'setup.sh';
+    const setupTarget = path.join(stageRoot, setupName);
+    await copyFileEnsured(path.join(TEMPLATE_ROOT, 'dev-setup', setupName), setupTarget);
+    await makeExecutableIfNeeded(setupTarget);
+  }
+
   if (opts.dryRun) {
     await writeFileEnsured(
       path.join(stageRoot, 'app', 'PORTABLE_DRY_RUN.txt'),
@@ -396,7 +435,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
     return;
   }
 
-  await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'), '', path.resolve(stageRoot));
+  await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'), '', path.resolve(stageRoot), !opts.nodeModules);
   await writeBuildInfo(path.join(stageRoot, 'app'), opts.buildHash);
 }
 

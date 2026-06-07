@@ -163,7 +163,7 @@ Release/testing reality:
 
 ## Phase 5: Linux portable artifact
 
-- [ ] Implement Linux staging/build path. Include `start.sh`, `update.sh`,
+- [x] Implement Linux staging/build path. Include `start.sh`, `update.sh`,
   `update-from-zip.sh`, staged resources, connector/update manifests, and
   `uv`/comfy-cli bootstrap support if Linux engine install is in this artifact.
   **Verify:** artifact extracts on Linux and `start.sh` can launch the app shell.
@@ -174,7 +174,7 @@ Release/testing reality:
   engine setup UI can be exercised far enough to validate paths/logs; ComfyUI
   generation remains community or stronger-host validation.
 
-- [ ] Implement Linux updater scripts using the same update engine as Windows.
+- [x] Implement Linux updater scripts using the same update engine as Windows.
   **Verify:** update-from-zip can apply an early-access bundle on Ubuntu while
   preserving user-owned folders.
 
