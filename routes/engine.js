@@ -348,7 +348,9 @@ async function _runEngineDownload() {
         }
 
         // ── 5. Post-install: Write version stamp ───────────────────────────────
-        const INSTALLED_ENGINE_VERSION = engineInfo.version;
+        // config.engine.version is the canonical engine version for both paths;
+        // engineInfo only exists in the Windows branch, so use config here.
+        const INSTALLED_ENGINE_VERSION = config.engine.version;
         await fs.writeFile(
             path.join(targetDir, '.mpi_engine_version'),
             INSTALLED_ENGINE_VERSION,

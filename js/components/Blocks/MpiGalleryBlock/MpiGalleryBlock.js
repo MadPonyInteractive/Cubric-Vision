@@ -23,7 +23,7 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
-import { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
+import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
@@ -1264,13 +1264,33 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
         // ── Zero-installed check ───────────────────────────────────────────────
-        // Decision 1: empty/new project (groups.length === 0) + zero models → auto-open slide-over.
+        // Decision 1: empty/new project (groups.length === 0) + zero models → prompt
+        //   the user (once) to go back to the Projects page and install a model.
         // Decision 2: project has existing media (groups.length > 0) + zero models → read-only,
-        //   no PromptBox mount, no auto-open. User can browse media without interruption.
+        //   no PromptBox mount, no prompt. User can browse media without interruption.
         // `groups` is resolved synchronously from state.currentProject?.itemGroups at mount time
         // and is the reliable signal for "project has media" without waiting for loadAssets.
+        //
+        // The slide-over is no longer auto-opened here: opening it triggered a model
+        // re-sync that re-wrote `s_installedModelIds` (still empty), which the watcher
+        // below treated as a signal to re-open the drawer — an open→close→open flicker
+        // loop. We show a one-shot popup instead. `_noModelsPromptShown` guards against
+        // both the mount-time check and the watcher re-firing the popup.
         const _projectHasMedia = groups.length > 0;
-        if (installedAllModels.length === 0 && !_projectHasMedia) Events.emit('models:open');
+        let _noModelsPromptShown = false;
+        const _promptInstallModels = () => {
+            if (_noModelsPromptShown) return;
+            _noModelsPromptShown = true;
+            const dialog = MpiOkCancel.mount(document.createElement('div'), {
+                title:      'No models installed',
+                text:       'This project needs a model before you can generate. Go back to the Projects page to install one.',
+                okLabel:    'Go to Projects',
+                showCancel: false,
+            });
+            dialog.on('ok', () => navigate(PAGE_LANDING));
+            dialog.el.show();
+        };
+        if (installedAllModels.length === 0 && !_projectHasMedia) _promptInstallModels();
 
         // ── Install-state watcher — replaces both the old `s_installedModelIds` watcher
         // and the deleted `models:closed` listener. `models:closed` no longer fires;
@@ -1278,8 +1298,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             installedAllModels = MODELS.filter(m => m.installed !== false);
             if (installedAllModels.length === 0) {
-                // Zero models: if project is empty/new → re-open slide-over; otherwise read-only.
-                if (!_projectHasMedia) Events.emit('models:open');
+                // Zero models: if project is empty/new → prompt once; otherwise read-only.
+                if (!_projectHasMedia) _promptInstallModels();
                 _pb?.el?.setModelList?.(installedAllModels);
                 return;
             }
