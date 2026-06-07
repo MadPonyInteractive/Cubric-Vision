@@ -10,6 +10,12 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
 
+// Seconds to wait for the ComfyUI server to report ready before giving up.
+// Cold start on a slow / CPU-only machine loads torch + a checkpoint and can
+// take well over a minute; the previous 60s limit timed out the frontend while
+// the server was still coming up. Polling is 1s/iteration, so this is seconds.
+const COMFY_READY_TIMEOUT_S = 240;
+
 function _buildComfyViewUrl(serverAddress, fileInfo) {
     const params = new URLSearchParams();
     for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
@@ -80,7 +86,7 @@ export const ComfyUIController = {
                 });
 
                 // Poll until ready
-                let retries = 60;
+                let retries = COMFY_READY_TIMEOUT_S;
                 while (retries-- > 0) {
                     await new Promise(r => setTimeout(r, 1000));
                     try {
@@ -111,7 +117,7 @@ export const ComfyUIController = {
                 await fetch('/comfy/start', { method: 'POST' });
             }
 
-            for (let i = 0; i < 60; i++) {
+            for (let i = 0; i < COMFY_READY_TIMEOUT_S; i++) {
                 const checkRes = await fetch('/comfy/status');
                 const check = await checkRes.json();
                 if (check.ready) {
