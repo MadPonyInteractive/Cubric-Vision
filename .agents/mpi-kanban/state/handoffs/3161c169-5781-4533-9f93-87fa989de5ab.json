@@ -4,7 +4,7 @@
   "generated_at": "2026-06-07T15:27:04Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-8 Linux portable: bug fixes, taskbar branding, additive models folder — toward merge",
     "branch": "mpi-8/git-auto-provision"
