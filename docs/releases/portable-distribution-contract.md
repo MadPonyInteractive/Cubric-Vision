@@ -183,6 +183,31 @@ Prompt-intelligence runtime paths are out of scope for v1. Do not add
 `llama_engine` or `llama_models` to the required portable layout unless a later
 release explicitly changes this scope.
 
+## Host Dependencies (Linux / macOS engine install)
+
+The Windows engine install downloads a prebuilt ComfyUI archive and has no host
+dependency beyond the bundled runtime. The Linux/macOS engine install instead
+bootstraps ComfyUI with `uv` + `comfy-cli`, and `comfy-cli` clones ComfyUI and
+custom nodes through GitPython, which **requires a real `git` binary**.
+
+The app does not assume git is present. `routes/gitProvision.js` runs before the
+uv venv is created and:
+
+1. Uses host `git` if found (PATH or common locations).
+2. Otherwise installs it via the host package manager — Linux elevates with
+   `pkexec` (a graphical password dialog that works even on a no-terminal
+   launch), falling back to `sudo` only when a TTY is attached; macOS uses
+   Homebrew (no sudo) or points the user at `xcode-select --install`.
+3. If neither works (offline, no package manager, no graphical elevation), the
+   install fails with an actionable message naming the exact manual command,
+   surfaced on the install screen — never a cryptic GitPython dump.
+
+The resolved git path is passed to `comfy install` as
+`GIT_PYTHON_GIT_EXECUTABLE` (with `GIT_PYTHON_REFRESH=quiet`) so GitPython uses
+it without depending on PATH. Git is **not** bundled into the artifact; the
+install-or-use model above is intentional. `uv` is still bundled at
+`<root>/uv/uv` as before.
+
 ## Update Sources
 
 The updater has two sources and one preservation model.
@@ -302,6 +327,8 @@ Before a platform artifact is published as validated for that platform, record:
 - Resolved portable root, engine root, models root, user-data root, and
   resources path.
 - Engine install or repair result.
+- On Linux/macOS: whether host git was used or auto-installed (and via which
+  package manager / pkexec / brew), or the manual fallback shown.
 - Model Manager discoverability.
 - Zero-model gate/read-only behavior.
 - Installed model detection after refresh or restart.

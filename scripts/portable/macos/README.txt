@@ -26,3 +26,13 @@ update-from-zip.command
     or have no internet on this machine.
 
 Both updaters preserve your engine, models, user data, and projects.
+
+
+SETTING UP THE AI ENGINE (ComfyUI)
+----------------------------------
+
+The first time you install the engine, the app needs "git" to download
+ComfyUI. Most Macs already have it via the Xcode Command Line Tools. If git is
+missing, the installer will use Homebrew when available, or ask you to run:
+    xcode-select --install
+Complete the install, then click Retry on the install screen.

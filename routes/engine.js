@@ -16,6 +16,7 @@ const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDep
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
+const { ensureGit } = require('./gitProvision');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
 const { spawn } = require('child_process');
 
@@ -188,6 +189,15 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     await fs.ensureDir(workspace);
     broadcastEngineEvent('engine:downloading', { progress: 0, downloadedBytes: 0, totalBytes: 0, status: 'Bootstrapping ComfyUI environment…' });
 
+    // ── 0. Ensure git (comfy-cli clones ComfyUI + nodes via GitPython) ──────
+    // Use host git if present, else install it (pkexec/brew). The resolved path
+    // is passed to comfy-install via GIT_PYTHON_GIT_EXECUTABLE so GitPython does
+    // not depend on PATH. Windows never reaches here (prebuilt archive path).
+    broadcastEngineEvent('engine:extracting', { status: 'Checking for git…', progress: 0 });
+    const gitPath = await ensureGit({
+        onStatus: (status) => broadcastEngineEvent('engine:extracting', { status, progress: 0 }),
+    });
+
     // ── 1. uv venv (uv fetches Python 3.12 if the host lacks it) ────────────
     broadcastEngineEvent('engine:extracting', { status: 'Creating Python environment…', progress: 0 });
     await _runStreaming(uvBin, ['venv', '--python', '3.12', venvDir], { cwd: workspace, stage: 'uv-venv' });
@@ -206,7 +216,18 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     await _runStreaming(
         comfyBin,
         ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'],
-        { cwd: workspace, env: { ...process.env, VIRTUAL_ENV: venvDir }, stage: 'comfy-install' },
+        {
+            cwd: workspace,
+            env: {
+                ...process.env,
+                VIRTUAL_ENV: venvDir,
+                // Point GitPython at the resolved git and silence its noisy
+                // import-time banner (the "Bad git executable" warning block).
+                GIT_PYTHON_GIT_EXECUTABLE: gitPath,
+                GIT_PYTHON_REFRESH: 'quiet',
+            },
+            stage: 'comfy-install',
+        },
     );
 
     if (!(await fs.pathExists(venvPython))) {

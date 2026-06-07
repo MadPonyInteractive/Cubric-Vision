@@ -30,3 +30,14 @@ update-from-zip.sh
     or have no internet on this machine.
 
 Both updaters preserve your engine, models, user data, and projects.
+
+
+SETTING UP THE AI ENGINE (ComfyUI)
+----------------------------------
+
+The first time you install the engine, the app needs "git" to download
+ComfyUI. If git is not already on this machine, the installer will offer to
+install it for you and may show a graphical password prompt (pkexec). If that
+is unavailable, the app will tell you the exact command to run, for example:
+    sudo apt install git
+Install git, then click Retry on the install screen.
