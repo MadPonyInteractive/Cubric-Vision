@@ -327,12 +327,19 @@ async function copyAppTree(fromDir, toDir, relBase = '', skipAbs = null, exclude
 // the matching OS runner.
 async function stageUvBinary(stageRoot, opts) {
   if (!opts.uvBin) return;
-  if (!await pathExists(opts.uvBin)) {
+  let source = opts.uvBin;
+  // On Windows, `command -v uv` (Git-bash) yields an extension-less path; the
+  // real binary is uv.exe. Fall back to the .exe sibling.
+  if (!await pathExists(source) && opts.platform === 'win32' && !source.toLowerCase().endsWith('.exe')) {
+    const withExe = `${source}.exe`;
+    if (await pathExists(withExe)) source = withExe;
+  }
+  if (!await pathExists(source)) {
     throw new Error(`--uv-bin path not found: ${opts.uvBin}`);
   }
   const uvName = opts.platform === 'win32' ? 'uv.exe' : 'uv';
   const target = path.join(stageRoot, 'uv', uvName);
-  await copyFileEnsured(opts.uvBin, target);
+  await copyFileEnsured(source, target);
   if (opts.platform !== 'win32') await fs.chmod(target, 0o755);
 }
 
