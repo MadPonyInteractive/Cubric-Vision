@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-52",
+  "title": "Install CPU-only torch on no-GPU boxes (comfy-cli --cpu pulls CUDA torch)",
+  "description": "On the Linux/uv engine path, `comfy install --cpu --fast-deps` silently installs a CUDA torch wheel (observed torch 2.12.0+cu130) on a GPU-less laptop, wasting ~2GB of CUDA libs. Root cause is a comfy-cli bug: cmdline.py passes bare Python `None` for --cpu instead of GPU_OPTION.CPU; with --fast-deps the DependencyCompiler compares `gpu == GPU_OPTION.CPU` (whose .value is None, but the enum member != Python None), falls into the else branch, sets no torch index, and uv resolves the PyPI default, which is now the CUDA build on Linux. It runs fine on CPU (Device: cpu, vram DISABLED) so this is a disk/efficiency issue, not a blocker. Fix (Option A): in routes/engine.js _provisionUvEngine, when vendor resolves to CPU, pre-install CPU torch into the venv via `uv pip install --python <venvPython> torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu`, then run comfy install with `--skip-torch-or-directml` so comfy-cli does not overwrite it. Verify the `--skip-torch-or-directml` flag name against the pinned comfy-cli version before shipping (subagent read latest main). Only testable on the GPU-less laptop; needs a fresh full reinstall (~30+ min CPU) to re-validate. Do AFTER MPI-8 merges so the validated install path stays stable for the merge.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-07T00:00:00.000Z",
+  "updated_at": "2026-06-07T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

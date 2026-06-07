@@ -1,0 +1,120 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c7a170ac-7972-4697-98b7-1b6b0f0c41cb",
+  "generated_at": "2026-06-07T13:13:06Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 Linux portable engine install brought end-to-end on a no-GPU laptop",
+    "branch": "mpi-8/git-auto-provision"
+  },
+  "goal": {
+    "original": "Continue MPI-8. Make the Linux portable build actually install ComfyUI and run, validated on the user's real (GPU-less, old) Ubuntu laptop.",
+    "status": "in_progress",
+    "summary": "Linux engine install now completes end-to-end (git auto-provision + comfy-cli layout + pip-seeded uv venv + CPU launch). The install succeeds and ComfyUI launches in CPU mode. Two open bugs remain: a version-stamp ReferenceError after install (retry works) and a no-models project-page UX bug (side-drawer flicker). Branch is pushed but NOT merged, pending these fixes + user validation of a generation."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Fixed broken Linux tarball: hand-rolled tar writer dropped symlinks + exec bits (exit 18 'NPM not found'). Launchers now call electron/dist/electron directly + self-chmod; isExecutableEntry() marks binary/scripts/uv/.bin 755. (commit on master, merged)",
+      "Set D:\\CubricStudio\\Vision\\Builds as the canonical build-distribution folder; local Windows builds default --stage-dir there. Documented build process in docs/releases/portable-distribution-contract.md + CLAUDE.md router. (merged to master)",
+      "Git auto-provision for Linux/mac engine install (routes/gitProvision.js): use host git else install via pkexec/brew; GIT_PYTHON_GIT_EXECUTABLE + GIT_PYTHON_REFRESH=quiet. VALIDATED on laptop (pkexec dialog appeared, git installed).",
+      "Fixed Linux/mac engine layout to match comfy-cli: <engine>/ComfyUI_linux IS the repo root (no /ComfyUI subdir), uv venv moved to sibling <engine>/comfy-venv, VIRTUAL_ENV reuse, stale-workspace guard. getComfyRepoRel() single source, sent to client. VALIDATED (clone succeeded).",
+      "Seeded uv venv with pip (uv venv --seed) so comfy-cli DependencyCompiler's 'python -m pip install pip uv' works. VALIDATED (got past it).",
+      "Guarded logger console writes against EIO on app close (routes/logger.js) — was throwing 'JavaScript error in main process' dialog. VALIDATED (no dialog).",
+      "Launch ComfyUI in CPU mode when no GPU detected (routes/comfy.js): mirrors the install vendor; --cpu (drop --lowvram) when no vendor. comfy.js is the only runtime launch path; run_nvidia_gpu.bat is patched but never executed. VALIDATED (install completed, custom nodes installed, ComfyUI launched)."
+    ],
+    "pending": [
+      "FIX BUG 1: routes/engine.js:351 'ReferenceError: engineInfo is not defined'. engineInfo is only defined in the Windows branch (_runEngineDownload else-block ~line 261-265); the Linux/uv path never defines it, so the post-install version-stamp step crashes. Use config.engine.version (config is in scope at ~line 240) or COMFY_VERSION instead of engineInfo.version. Retry currently works because the engine is already installed, but the stamp still fails.",
+      "FIX BUG 2 (no-models project UX): When a user creates/opens a project with no models installed, the model side-drawer keeps opening and closing (flicker loop), forcing the user back to the projects page to open the models folder. Requested fix: (a) remove the open/close flicker loop, (b) show a popup when entering a project with zero models installed, prompting the user to go back to the projects page and install a model.",
+      "After fixes: rebuild via CI on branch mpi-8/git-auto-provision, user re-validates on laptop, then run a real (slow CPU) generation test.",
+      "When validated: merge mpi-8/git-auto-provision -> master (git auto-provision + layout + pip-seed + logger guard + CPU launch). Branch currently NOT merged.",
+      "Deferred (separate task): GPU policy / gating for no-GPU users (warn vs block). User explicitly deferred this; not a blocker now."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "edit", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "Saved memory project_portable_tar_exec_symlink.md (tar drops symlinks/exec bits; launcher calls electron binary directly) + indexed in MEMORY.md.",
+      "Refined memory project_per_os_ci_build.md (workflow_dispatch works on any branch when YAML on default branch; gh run download into Builds; verify exec bit).",
+      "Documented build process in docs/releases/portable-distribution-contract.md (Build Process + Host Dependencies sections) + Linux/mac README templates + CLAUDE.md router entry. All merged to master."
+    ],
+    "pending": [
+      "Consider a memory note for the comfy-cli engine layout (workspace IS repo root on Linux/mac, venv is sibling comfy-venv, VIRTUAL_ENV reuse, uv venv --seed needed for pip) once the path is fully validated with a generation.",
+      "Update validation.md in the MPI-8 task workspace with the laptop validation evidence (git auto-install via pkexec, clone, CPU install completed, ComfyUI launched) before end-session."
+    ]
+  },
+  "next_action": {
+    "description": "Fix routes/engine.js:351 (engineInfo undefined on the Linux/uv path — use config.engine.version or COMFY_VERSION), then fix the no-models project-page side-drawer flicker + add a 'no models installed' popup prompting the user to install a model. Then rebuild on branch mpi-8/git-auto-provision via gh workflow, have the user re-validate on the laptop, and merge to master once a generation works.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Linux/mac engine install uses comfy-cli, which HARD-REQUIRES git. Chose install-or-use (pkexec/brew), NOT bundling a portable git (git is a tree of binaries+templates+CA certs, fragile to relocate per-OS; package manager does it correctly). pkexec chosen for elevation so it works on no-terminal launches.",
+      "Aligned our Linux layout to comfy-cli's reality rather than fighting it: comfy-cli clones ComfyUI directly INTO --workspace (must not pre-exist) and reuses an active VIRTUAL_ENV. So <engine>/ComfyUI_linux IS the repo root and the uv venv is a sibling (comfy-venv).",
+      "uv venvs are pip-less by default; comfy-cli's DependencyCompiler needs pip -> use 'uv venv --seed'.",
+      "Install vendor and launch mode MUST match. Install picks torch build by GPU vendor; launch now mirrors it (CPU install -> CPU launch). comfy.js is the single runtime launch path.",
+      "GPU gating for no-GPU users deferred by user; not added now.",
+      "Build/test loop: edit -> commit -> push branch -> gh workflow run build-portable.yml --ref mpi-8/git-auto-provision -f version=0.0.1 -> gh run download -n cubric-vision-linux-x64 -> move tar.gz to D:\\CubricStudio\\Vision\\Builds (drop update zip) -> user tests on laptop. Each loop ~5-8 min CI."
+    ],
+    "constraints": [
+      "Linux/mac engine changes CANNOT be tested on the Windows dev box — native node_modules + comfy-cli clone only run on real Linux. The user's old GPU-less Ubuntu laptop is the validation machine. Generation is very slow on CPU (torch build deps took 30+ min) — expected, not a bug.",
+      "Windows engine path (_provisionWindowsEngine, prebuilt 7z archive) is UNCHANGED and must stay so. All Linux/mac edits branch on USES_COMFY_CLI (linux||darwin). Windows path helpers verified byte-identical.",
+      "CI workflow_dispatch runs the master-registered build-portable.yml against --ref <branch>. Workflow file is on master; can dispatch any branch.",
+      "Never push the Docs sibling repo (hard rule in CLAUDE.md). Kanban writes are pre-authorized.",
+      "CAVEMAN MODE is active in this session (terse output). The next session may or may not have it."
+    ],
+    "files_modified": [
+      "routes/gitProvision.js (new)",
+      "routes/engine.js (ensureGit, layout, --seed, vendor flag, BUG at line 351)",
+      "routes/platformEngine.js (USES_COMFY_CLI, COMFY_VENV_DIR, getComfyRepoRel, getPythonBin/getComfyPath branch)",
+      "routes/system.js (comfyRepoRel in /system/platform-config)",
+      "routes/comfy.js (CPU launch mode)",
+      "routes/logger.js (EIO console guard)",
+      "js/data/modelRegistry.js (use comfyRepoRel)",
+      "scripts/build-portable.mjs (exec bits + D: Builds default — merged to master)",
+      "scripts/portable/linux/start-with-terminal.sh, macos/start.command (direct electron — merged)",
+      "scripts/portable/linux/README.txt, macos/README.txt (git engine-setup note)",
+      "docs/releases/portable-distribution-contract.md (Build Process + Host Dependencies — merged)",
+      "CLAUDE.md (Portable Builds router entry — merged)"
+    ],
+    "files_to_read_first": [
+      "routes/engine.js",
+      "routes/platformEngine.js",
+      "routes/comfy.js",
+      "routes/gitProvision.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["engine install", "portable distribution", "comfy launch", "model manager / project page UX"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-07T13:13:06Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-8 (Portable distribution, updater, and release validation) on branch mpi-8/git-auto-provision. Read .agents/mpi-kanban/state/handoffs/c7a170ac-7972-4697-98b7-1b6b0f0c41cb.json and use mpi-continue. The Linux portable engine install was just brought end-to-end on the user's GPU-less Ubuntu laptop (git auto-provision via pkexec, comfy-cli layout fix, pip-seeded uv venv, logger EIO guard, CPU launch mode — all validated). Two bugs remain. First: routes/engine.js line 351 throws 'ReferenceError: engineInfo is not defined' — engineInfo is only defined in the Windows branch; the Linux/uv path must use config.engine.version (config is in scope ~line 240) or COMFY_VERSION for the version stamp. Second: opening a project with no models installed causes the model side-drawer to flicker open/close repeatedly; fix the flicker loop AND add a popup that prompts the user to go back to the projects page and install a model. Linux/mac engine code can ONLY be validated on the user's real Linux laptop (not the Windows dev box), and the build/test loop is: edit -> commit -> push -> gh workflow run build-portable.yml --ref mpi-8/git-auto-provision -f version=0.0.1 -> gh run download -n cubric-vision-linux-x64 -> move tar.gz into D:\\CubricStudio\\Vision\\Builds -> user tests. Keep the Windows engine path (prebuilt archive) untouched; all Linux/mac branching is on USES_COMFY_CLI. The branch is pushed but NOT merged — merge to master only after the user validates a generation."
+}

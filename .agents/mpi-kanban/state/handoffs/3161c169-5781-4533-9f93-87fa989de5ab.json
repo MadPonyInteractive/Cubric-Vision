@@ -1,0 +1,134 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "3161c169-5781-4533-9f93-87fa989de5ab",
+  "generated_at": "2026-06-07T15:27:04Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 Linux portable: bug fixes, taskbar branding, additive models folder — toward merge",
+    "branch": "mpi-8/git-auto-provision"
+  },
+  "goal": {
+    "original": "Continue MPI-8: get the Linux portable build to install ComfyUI and run a generation, validated on the user's GPU-less Ubuntu laptop; fix bugs found along the way; then merge to master.",
+    "status": "in_progress",
+    "summary": "Five fixes landed this session on branch mpi-8/git-auto-provision (NOT merged). BUG 2 (no-models popup) verified on the Windows build. The user is now testing the latest Linux build (hash 0a19fb4) on the laptop: install in default folder, then change the models folder to a pre-existing /home/<user>/CubricModels (which already holds checkpoints/SDXL_Realistic.safetensors), to prove pointing at an existing folder works AND that a generation completes. Merge to master only after a real generation succeeds."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "FIX 1 (commit 499c5c8): routes/engine.js post-install version stamp used engineInfo.version (Windows-only var) — crashed on Linux/uv path. Changed to config.engine.version (in scope both paths).",
+      "FIX 2 (commit 499c5c8): no-models project popup + flicker loop. MpiGalleryBlock.js no longer auto-opens the model slide-over on zero models (that re-synced s_installedModelIds and a watcher re-opened the drawer = flicker). Now a one-shot MpiOkCancel popup 'No models installed → Go to Projects', guarded by _noModelsPromptShown; navigate(PAGE_LANDING). VERIFIED on the Windows build (popup shows, navigates, no flicker).",
+      "FIX 3 (commit 03c88dc): js/services/comfyController.js readiness timeout 60s→240s (named COMFY_READY_TIMEOUT_S, both cold-start + post-install auto-restart loops). The laptop generation logged 'failed to become ready in time' but the CPU server actually came up ~40s after the 60s give-up. Harmless on fast machines.",
+      "FIX 4 (commit 6cf6fbe): Linux taskbar branding. package.json adds productName + desktopName=cubric-vision.desktop (Wayland app_id). New scripts/portable/linux/setup-desktop.sh writes a per-user .desktop + hicolor icon at first run; launcher (start-with-terminal.sh) calls it. build-portable.mjs stages cubric-vision.png + setup-desktop.sh at the Linux portable root. main.js: app.setName('Cubric Vision') (internal only) + darwin app.dock.setIcon(favicon.png) at ready. macOS bundle branding via brandMacBundle() in build-portable.mjs (plutil rewrites CFBundleName/DisplayName; swaps electron.icns only if build/icon.icns exists — it does NOT yet).",
+      "FIX 5 (commit 0a19fb4): custom models folder is now ADDITIVE over the default root. routes/yamlHelper.js always emits the default mpi_models root as its own ComfyUI config block (comfyui_default) plus the active/custom block (comfyui). Install-status checks (/comfy/models/check in comfy.js, resolveComfyPath in shared.js) fall back to the default root when a dep isn't under the custom root. set-path revert / extra-folders clear no longer DELETE the YAML (would orphan default models) — they rewrite with the default block; removing an extra folder still GCs it from the YAML.",
+      "Logged comfy-cli CUDA-torch-on-CPU bug as kanban MPI-52 (deferred).",
+      "Appended a full session section to docs/releases/build-experience-log.md (all five fixes + macOS implications).",
+      "Built + downloaded the latest Linux artifact (hash 0a19fb4) to D:\\CubricStudio\\Vision\\Builds\\CubricVision-linux-x64-v0.0.1.tar.gz via CI run 27096136512."
+    ],
+    "pending": [
+      "USER IS TESTING NOW: install latest Linux build in default folder, change models folder in Settings to /home/<user>/CubricModels (has checkpoints/SDXL_Realistic.safetensors), confirm model shows installed + NO false 'no models' popup + a generation completes (CPU-slow, 240s timeout now covers it).",
+      "If the test passes: MERGE mpi-8/git-auto-provision → master (all five fixes). Branch is pushed but NOT merged.",
+      "CLEANUP (user-requested, do after the test passes): move setup-desktop.sh AND cubric-vision.png into the portable resources/ folder, and make BOTH launchers (start.sh + start-with-terminal.sh) call setup-desktop explicitly (today start.sh only reaches it by detaching into start-with-terminal.sh). See memory project_linux_desktop_setup_todo. Update build-portable.mjs staging targets + launcher paths + setup-desktop.sh ICON_SRC/LAUNCHER paths.",
+      "If taskbar logo still wrong on the laptop: ask the user for `echo $XDG_SESSION_TYPE` + `echo $XDG_CURRENT_DESKTOP`; icon may need one logout/login for the DE icon cache. Name may still show 'Electron' (user said that's acceptable; only the icon matters).",
+      "Deferred MPI-52: comfy-cli --cpu --fast-deps installs CUDA torch on no-GPU boxes (~2GB waste, works). Fix = pre-install torch+cpu then comfy install --cpu --fast-deps --skip-torch-or-directml.",
+      "Deferred MPI-50: optional accelerator (SageAttention) build track.",
+      "macOS first build prep (when a Mac is available): generate build/icon.icns; verify plutil name change + dock icon; re-run additive-folder test; check comfy-cli torch wheel arch. See docs/releases/build-experience-log.md macOS sections."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "edit", "build", "verify", "merge-after-validation"],
+  "knowledge_preservation": {
+    "completed": [
+      "Saved memory project_linux_desktop_setup_todo.md (move setup-desktop.sh + cubric-vision.png to resources/; both launchers call setup-desktop explicitly) + indexed in MEMORY.md.",
+      "Created kanban MPI-52 (CPU-only torch on no-GPU boxes) with full root-cause + fix in task.json; board next_id bumped to 53.",
+      "Appended the session lessons section to docs/releases/build-experience-log.md including macOS carry-overs."
+    ],
+    "pending": [
+      "On merge/end-session: add a memory note for the additive-folder YAML contract (two blocks: comfyui + comfyui_default; status checks fall back to default root; never delete the YAML) once validated by the generation test.",
+      "Update validation.md in the MPI-8 workspace with laptop evidence (folder repoint recognized, generation completed) before end-session.",
+      "Consider a memory note for the comfy-cli engine layout once a generation fully validates it (workspace IS repo root on Linux/mac, venv is sibling comfy-venv, uv venv --seed for pip)."
+    ]
+  },
+  "next_action": {
+    "description": "Wait for the user's laptop test result (install in default → change models folder to /home/<user>/CubricModels with existing checkpoints/SDXL_Realistic.safetensors → confirm no false 'no models' popup + a generation completes). If it passes, merge mpi-8/git-auto-provision → master. Then do the user-requested cleanup: move setup-desktop.sh + cubric-vision.png into resources/ and make both launchers call setup-desktop explicitly (see memory project_linux_desktop_setup_todo).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Models folder is additive, not replacing: emit BOTH a custom and a default ComfyUI config block in extra_model_paths.yaml (each top-level block is an independent search root in ComfyUI). Never delete the YAML on revert/clear — that would orphan models under the default mpi_models root.",
+      "No-models UX: show a one-shot popup, not an auto-opened drawer. The drawer auto-open caused a re-sync→watcher→re-open flicker loop; the popup + _noModelsPromptShown flag breaks it.",
+      "Readiness timeout raised to 240s (named const) because CPU/old hardware loads torch + checkpoint well past the old 60s limit; the server was fine, the frontend was impatient.",
+      "Linux taskbar branding for an UNPACKAGED Electron portable needs a per-user .desktop + hicolor icon (app.setName / BrowserWindow icon do NOT set the dock). Wayland app_id needs package.json desktopName. Installed at first run by the launcher (no system install step).",
+      "macOS dock name via plutil on the bundled Info.plist; dock icon needs build/icon.icns (missing — runtime app.dock.setIcon is the current fallback). Verified facts came from Electron docs/issues research, not assumption.",
+      "comfy-cli --cpu --fast-deps installs CUDA torch (cu130) due to a comfy-cli enum/None bug; deferred to MPI-52 (works on CPU, just wastes ~2GB).",
+      "Build/test loop: edit → commit → push branch → gh workflow run build-portable.yml --ref mpi-8/git-auto-provision -f version=0.0.1 → gh run watch → gh run download -n cubric-vision-linux-x64 → move tar.gz into D:\\CubricStudio\\Vision\\Builds → user tests on the laptop."
+    ],
+    "constraints": [
+      "Linux/mac engine + folder/path server code CANNOT be fully validated on the Windows dev box — only the real Linux laptop exercises native node_modules, the comfy-cli clone, and actual generation. Frontend-only fixes (BUG 2 popup) CAN be checked on the Windows build.",
+      "Windows engine path (_provisionWindowsEngine, prebuilt 7z) is UNCHANGED and must stay so. All Linux/mac engine branching is on USES_COMFY_CLI (linux||darwin). The additive-folder fix is platform-agnostic server code (runs on all OSes).",
+      "The additive-folder fix only changes FUTURE YAML writes. An install with the old single-block YAML must re-trigger set-path (or fresh install) to regenerate it. The user's test is a fresh install so it is correct from the start.",
+      "PAGE_LANDING is the projects page (router.js). The no-models popup navigates there.",
+      "CI workflow_dispatch: the build-portable.yml is registered on master; dispatch any branch with --ref. Builds all 3 OSes per run.",
+      "Never push the Docs sibling repo (hard rule in CLAUDE.md). Kanban writes are pre-authorized.",
+      "Generation on the GPU-less laptop is very slow (CPU torch build deps took 30+ min during install; a CPU generation is also slow) — expected, not a bug.",
+      "CAVEMAN MODE was active this session (terse output). The next session may or may not have it; it does not affect code/commits.",
+      "build/icon.icns does NOT exist yet (only build/icon.png) — macOS dock icon is runtime-only until it is generated."
+    ],
+    "files_modified": [
+      "routes/engine.js (FIX 1 version stamp; defaultRoot passed to YAML builder)",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (FIX 2 popup; PAGE_LANDING import)",
+      "js/services/comfyController.js (FIX 3 timeout const)",
+      "package.json (productName + desktopName)",
+      "main.js (app.setName + darwin dock icon)",
+      "scripts/build-portable.mjs (Linux icon/setup-desktop staging; brandMacBundle for darwin)",
+      "scripts/portable/linux/setup-desktop.sh (new)",
+      "scripts/portable/linux/start-with-terminal.sh (calls setup-desktop)",
+      "scripts/portable/linux/README.txt (desktop-entry note)",
+      "routes/yamlHelper.js (FIX 5 two-block additive YAML; _buildBlock helper)",
+      "routes/shared.js (resolveComfyPath default-root fallback; writeExtraModelPathsYaml passes default)",
+      "routes/comfy.js (models/check default-root fallback; set-path + extra-folders never delete YAML; removed unused hasExtraModelFolders import)",
+      "docs/releases/build-experience-log.md (session lessons section)",
+      ".agents/mpi-kanban/board.json + tasks/MPI-52/task.json (new MPI-52)"
+    ],
+    "files_to_read_first": [
+      "routes/yamlHelper.js",
+      "routes/shared.js",
+      "routes/comfy.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "scripts/build-portable.mjs",
+      "scripts/portable/linux/setup-desktop.sh",
+      "docs/releases/build-experience-log.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["engine install", "portable distribution", "models path / extra_model_paths.yaml", "model manager / project page UX", "Linux/mac branding"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-07T15:27:04Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-8 (Portable distribution, updater, and release validation) on branch mpi-8/git-auto-provision. Read .agents/mpi-kanban/state/handoffs/3161c169-5781-4533-9f93-87fa989de5ab.json and use mpi-continue. Five fixes landed this session (all on the branch, NOT merged): (1) engine.js version-stamp ReferenceError on the Linux/uv path → config.engine.version; (2) no-models project popup replacing the flicker-looping slide-over auto-open (verified on Windows); (3) ComfyUI readiness timeout 60s→240s for slow/CPU boxes; (4) Linux taskbar branding via a first-run per-user .desktop + icon (setup-desktop.sh) plus package.json desktopName, and macOS dock prep (plutil name change; icon via runtime app.dock.setIcon until build/icon.icns exists); (5) the custom models folder is now ADDITIVE over the default mpi_models root (two ComfyUI config blocks in extra_model_paths.yaml + status-check fallback to the default root + never deleting the YAML). The latest Linux build (hash 0a19fb4) is at D:\\CubricStudio\\Vision\\Builds\\CubricVision-linux-x64-v0.0.1.tar.gz. The user is testing it on a GPU-less Ubuntu laptop: install in the default folder, then change the models folder to /home/<user>/CubricModels (which already has checkpoints/SDXL_Realistic.safetensors), to prove repointing at an existing folder works and that a generation completes. If the test passes, merge mpi-8/git-auto-provision → master. Then do the user-requested cleanup: move setup-desktop.sh + cubric-vision.png into the portable resources/ folder and make BOTH start.sh and start-with-terminal.sh call setup-desktop explicitly (see memory project_linux_desktop_setup_todo). Linux/mac engine + path code can only be fully validated on the real laptop; the Windows engine path stays untouched. Build/test loop: edit → commit → push → gh workflow run build-portable.yml --ref mpi-8/git-auto-provision -f version=0.0.1 → gh run download -n cubric-vision-linux-x64 → move tar.gz into D:\\CubricStudio\\Vision\\Builds → user tests."
+}
