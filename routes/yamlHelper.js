@@ -5,7 +5,16 @@ const { createRequire } = require('module');
 const _require = createRequire(__filename);
 
 /**
- * Builds the extra_model_paths.yaml content for a given base path.
+ * Builds the extra_model_paths.yaml content.
+ *
+ * ComfyUI reads every top-level block in this file as an independent search
+ * root, so the file is ADDITIVE: the default models root is ALWAYS emitted as
+ * its own block, and when the user picks a different primary root that root is
+ * emitted as a SECOND block. This means changing the models folder ADDS a
+ * search location instead of replacing it — models the engine installed under
+ * the default `mpi_models` stay visible to ComfyUI after the user repoints the
+ * folder. User-added read-only `loras`/`upscale_models` folders are merged into
+ * the primary block as additive multiline entries.
  *
  * Folder entries are derived from dep filenames in dependencies.js — the first
  * path segment of each filename IS the ComfyUI folder type key (e.g.
@@ -17,19 +26,44 @@ const _require = createRequire(__filename);
  * When a new dep with a new folder type is added to dependencies.js, the YAML
  * auto-includes it on the next engine install or path set — no manual edits needed.
  *
- * @param {string} basePath - Absolute path to the primary models root directory.
+ * @param {string} basePath - Absolute path to the primary (active) models root.
  * @param {{ loras?: string[], upscale_models?: string[] }} [extras] - Absolute bucket folders to add.
+ * @param {string} [defaultRoot] - Absolute path to the default models root. Always
+ *   emitted as its own block so it is never dropped when basePath is custom. When
+ *   omitted or equal to basePath, only the primary block is written.
  * @returns {string} YAML file content.
  */
-function buildExtraModelPathsYaml(basePath, extras = {}) {
-    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
-
+function buildExtraModelPathsYaml(basePath, extras = {}, defaultRoot = null) {
     const normalizedBase = basePath.replace(/\\/g, '/');
-    const additiveKeys = new Set(['loras', 'upscale_models']);
+    const normalizedDefault = defaultRoot ? defaultRoot.replace(/\\/g, '/') : null;
     const normalizedExtras = {
         loras: _normalizeExtraPaths(extras.loras),
         upscale_models: _normalizeExtraPaths(extras.upscale_models),
     };
+
+    // Primary block carries the active root + any user-added additive folders.
+    let yaml = _buildBlock('comfyui', normalizedBase, normalizedExtras);
+
+    // Always keep the default root searchable as a separate block, unless it IS
+    // the primary root (no point emitting it twice). The default block does not
+    // carry the additive extras — those belong to whatever the user picked.
+    if (normalizedDefault && normalizedDefault !== normalizedBase) {
+        yaml += _buildBlock('comfyui_default', normalizedDefault, { loras: [], upscale_models: [] });
+    }
+
+    return yaml;
+}
+
+/**
+ * Builds a single top-level ComfyUI config block (base_path + folder-type map).
+ * @param {string} blockKey - Top-level YAML key (e.g. "comfyui", "comfyui_default").
+ * @param {string} normalizedBase - Forward-slash base path for this block.
+ * @param {{ loras: string[], upscale_models: string[] }} normalizedExtras - Additive folders.
+ * @returns {string}
+ */
+function _buildBlock(blockKey, normalizedBase, normalizedExtras) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const additiveKeys = new Set(['loras', 'upscale_models']);
 
     // Derive unique folder keys from dep filenames (non-custom-node deps only).
     // First segment of filename = ComfyUI folder type = subfolder name.
@@ -59,7 +93,7 @@ function buildExtraModelPathsYaml(basePath, extras = {}) {
     ];
     for (const key of coreExtras) folderKeys.add(key);
 
-    let yaml = `\ncomfyui:\n    base_path: ${normalizedBase}\n`;
+    let yaml = `\n${blockKey}:\n    base_path: ${normalizedBase}\n`;
 
     for (const key of [...folderKeys].sort()) {
         const extraPaths = additiveKeys.has(key) ? normalizedExtras[key] : [];

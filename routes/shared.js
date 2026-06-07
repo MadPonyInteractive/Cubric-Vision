@@ -298,7 +298,18 @@ async function resolveComfyPath(dep, customRoot, config) {
         } else if (dep.filename) {
             const baseFilename = path.basename(dep.filename);
             const found = await findFileRecursive(customRoot, baseFilename);
-            localPath = found || directPath;
+            if (found) {
+                localPath = found;
+            } else {
+                // Not in the custom root — fall back to the default root, which the
+                // YAML keeps searchable. A dep the engine installed under the default
+                // mpi_models must resolve to that existing file (so status checks see
+                // it as installed) rather than a phantom path under the custom root.
+                // For a brand-new download neither exists, so this returns directPath
+                // under the custom root and the file lands there as intended.
+                const defaultPath = path.join(getDefaultModelsRoot(), dep.filename);
+                localPath = (await fs.pathExists(defaultPath)) ? defaultPath : directPath;
+            }
         } else {
             localPath = customRoot;
         }
@@ -455,7 +466,7 @@ async function writeExtraModelPathsYaml(primaryRoot, extras = null) {
     const normalizedExtras = extras || await getExtraModelFolders();
     const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
     await fs.ensureDir(path.dirname(extraConfigPath));
-    await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(root, normalizedExtras), 'utf8');
+    await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(root, normalizedExtras, getDefaultModelsRoot()), 'utf8');
     return extraConfigPath;
 }
 

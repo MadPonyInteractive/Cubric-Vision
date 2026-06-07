@@ -33,7 +33,6 @@ const {
     resolveModelsRoot,
     getExtraModelFolders,
     setExtraModelFolders,
-    hasExtraModelFolders,
     writeExtraModelPathsYaml,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
@@ -308,11 +307,11 @@ router.post('/comfy/set-path', async (req, res) => {
         const extras = await getExtraModelFolders();
 
         if (!customPath) {
-            if (hasExtraModelFolders(extras)) {
-                await writeExtraModelPathsYaml(getDefaultModelsRoot(), extras);
-            } else if (await fs.pathExists(extraConfigPath)) {
-                await fs.remove(extraConfigPath);
-            }
+            // Reverting to the default root: always keep the YAML pointing at the
+            // default models root (plus any additive extras). Do NOT delete the
+            // file — without it ComfyUI would stop searching mpi_models and any
+            // models installed there would be orphaned.
+            await writeExtraModelPathsYaml(getDefaultModelsRoot(), extras);
             return res.json({ success: true });
         }
 
@@ -360,12 +359,10 @@ router.post('/comfy/extra-folders', async (req, res) => {
     try {
         const folders = await setExtraModelFolders(req.body || {});
         const primaryRoot = await getCustomRoot();
-        if (primaryRoot || hasExtraModelFolders(folders)) {
-            await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
-        } else {
-            const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
-            if (await fs.pathExists(extraConfigPath)) await fs.remove(extraConfigPath);
-        }
+        // Always (re)write the YAML so removed extra folders are dropped from it
+        // (garbage collection) while the default root block is preserved. Never
+        // delete the file — that would orphan models under the default root.
+        await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
         res.json({ success: true, folders });
     } catch (err) {
         logger.error('comfy', 'extra-folders set failed', err);
@@ -412,8 +409,14 @@ router.post('/comfy/models/check', async (req, res) => {
                     if (await fs.pathExists(directPath)) {
                         depPath = directPath;
                     } else {
+                        // Search the custom root, then fall back to the default root:
+                        // the YAML keeps the default folder searchable, so engine deps
+                        // installed there before a path change must still count as present.
                         const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
-                        depPath = found || directPath;
+                        depPath = found
+                            || (await fs.pathExists(path.join(defaultModelsRoot, dep.filename))
+                                ? path.join(defaultModelsRoot, dep.filename)
+                                : directPath);
                     }
                 } else {
                     depPath = path.join(defaultModelsRoot, dep.filename);
