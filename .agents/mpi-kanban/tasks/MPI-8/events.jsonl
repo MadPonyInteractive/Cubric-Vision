@@ -12,3 +12,4 @@
 {"schema":"mpi-kanban/event/v1","type":"attention.required","id":"MPI-8","at":"2026-06-06T08:21:04Z","actor":"codex","summary":"Session closed with MPI-8 still in doing; next session should verify this implementation and continue platform validation."}
 {"at":"2026-06-06T12:10:00Z","event":"validation.updated","note":"Fixed build-portable exclude leak + recursive-copy guard; fresh Windows artifact (buildHash fea34e40c89c) launched from staged Electron, server reached 127.0.0.1:3000, portable roots honored, HTTP/GPU/build-hash checks passed."}
 {"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-8","at":"2026-06-06T19:45:32.000Z","actor":"claude","summary":"Checked 'Windows portable artifact' — install-validated end-to-end (fresh install, model download, generation)."}
+{"at":"2026-06-07T09:30:00Z","event":"handoff_created","ref":"a1f4c7e2-9b30-4d18-8e6a-2c5b71f0d934","note":"Phase 5 to-do 2 implemented + CI green; pending X121e validation"}

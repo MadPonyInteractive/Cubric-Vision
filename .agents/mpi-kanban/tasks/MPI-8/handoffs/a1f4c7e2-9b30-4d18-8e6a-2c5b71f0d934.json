@@ -1,0 +1,123 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a1f4c7e2-9b30-4d18-8e6a-2c5b71f0d934",
+  "generated_at": "2026-06-07T09:30:00Z",
+  "from_session": "MPI-8 Phase 5 — Linux engine bootstrap + per-OS CI build",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 Phase 5 Linux engine bootstrap, per-OS CI, uv bundling",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Execute MPI-8 Phase 5 (Linux portable artifact). Build a Linux artifact the maintainer can validate on an old ThinkPad X121e Ubuntu laptop.",
+    "status": "in_progress",
+    "summary": "Phase 5 to-dos 1 (staging) and 3 (updaters) were already shipped by the merged parallel batch and are marked [x]. To-do 2 (Linux/macOS engine bootstrap) was the real gap and is now IMPLEMENTED: routes/engine.js branches by process.platform — Windows keeps the 7z portable flow (preserved verbatim, 7z required only inside that branch), Linux/macOS bootstrap via uv + comfy-cli. Built per-OS artifacts in GitHub Actions CI (new workflow); all 3 platforms (win/linux/mac) green on run 27086961816. The full native Linux artifact (400MB, includes Linux Electron + ffmpeg + bundled uv, NO npm install needed) is downloaded at D:\\tmp\\ci-linux\\CubricVision-linux-x64-v0.0.1.tar.gz. Maintainer is now copying it to the laptop to validate the uv/comfy-cli chain. To-do 2 stays [ ] until that real Ubuntu validation passes."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+    "completed": [
+      "Phase 5 to-do 1 (Linux staging) marked [x] — templates + PLATFORM_CONFIG.linux + tar.gz writer already existed from parallel batch.",
+      "Phase 5 to-do 3 (Linux updaters) marked [x] — update.sh/update-from-zip.sh + apply-update.cjs already existed.",
+      "Implemented Linux/macOS engine bootstrap (to-do 2 code): routes/platformEngine.js resolveDownloadConfig now platform-aware (method: 'archive' vs 'uv-bootstrap'); added resolveUvBin (CUBRIC_UV_BIN then PATH uv); exported COMFY_DIR_MAP.",
+      "routes/engine.js: split _runEngineDownload into _provisionWindowsEngine (verbatim old flow) + _provisionUvEngine (uv venv --python 3.12 -> uv pip install comfy-cli -> comfy --skip-prompt --workspace install <gpu> --fast-deps). Shared tail (custom-node finish, patch, stamp, yaml, complete) unchanged. comfy-cli flags verified against source.",
+      "Verified Linux layout matches launch contract: venv python at getPythonBin(linux), ComfyUI/main.py at getComfyPath(linux). comfy.js spawn-based launch unchanged.",
+      "build-portable.mjs: added --no-node-modules (cross-OS dev staging), --uv-bin / CUBRIC_BUNDLE_UV (bundle uv at <root>/uv/uv; win32 falls back to uv.exe), and dev-setup setup.sh/.bat staged only into stripped builds.",
+      "Added .github/workflows/build-portable.yml: per-OS matrix (win/linux/mac) runs npm ci + native build + astral-sh/setup-uv, bundles uv, uploads artifacts.",
+      "Added .gitattributes forcing LF on *.sh/*.command (CRLF was unguarded and would break launcher shebangs on Linux/mac).",
+      "Created kanban card MPI-50 (defer Triton/SageAttention to separate accelerator builds).",
+      "Created kanban card MPI-51 (branch cleanup + contributor onboarding + memory->docs/rules sweep).",
+      "Committed everything to master (commits f7b2b3f merge 9dbecf1, fix 998f95c) and pushed.",
+      "CI run 27086961816 green on all 3 platforms; downloaded Linux artifact to D:\\tmp\\ci-linux\\."
+    ],
+    "pending": [
+      "VALIDATE Phase 5 to-do 2 on the Ubuntu X121e: extract CubricVision-linux-x64-v0.0.1.tar.gz, run ./start-with-terminal.sh, run engine setup in the UI, confirm the uv venv -> uv pip install comfy-cli -> comfy install chain fires and creates engine/ComfyUI_linux/venv/bin/python3 + ComfyUI/main.py. Generation NOT expected (no GPU) — path/log validation is the goal. Then mark to-do 2 [x].",
+      "Phase 4: remaining deeper Windows validation (engine install/repair, Models slide-over, one image generation, restart persistence, folder open, video extraction/crop, error report build labels, update.bat/update-from-zip.bat on a copied folder).",
+      "Phase 6: macOS — staging is mechanically produced by CI now; mark maintainer-untested in release copy; add contributor validation checklist.",
+      "Validate updater (update.sh/update-from-zip.sh) on a copied Linux folder preserving engine/models/projects."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-8/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md"
+    },
+    "guidance": [
+      "Do not mark Phase 5 to-do 2 [x] until the X121e validation result is reported.",
+      "Do not move MPI-8 to done until platform validation is represented and explicitly approved.",
+      "Ask before updating .claude/rules/ if validation changes component wiring, workspace routing, events, state, or Comfy injection.",
+      "NEVER commit unless the user asks (committing this session was explicitly approved by the user)."
+    ]
+  },
+  "next_action": {
+    "description": "Resume by asking the maintainer for the X121e validation result. They are extracting D:\\tmp\\ci-linux\\CubricVision-linux-x64-v0.0.1.tar.gz on the laptop and running ./start-with-terminal.sh then engine setup. Capture: did the app shell launch? did the uv/comfy-cli chain run (paste log tail)? were venv/bin/python3 + ComfyUI/main.py created? which uv was used (bundled ./uv/uv expected)? On success, mark Phase 5 to-do 2 [x] and add a Plan Drift note. On failure, debug from the pasted log. Then proceed to remaining Windows checks / macOS notes.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "node_modules cannot be cross-built from Windows (native per-OS binaries). Ship builds bundle node_modules built ON each OS via CI — never make end users run npm install. --no-node-modules is for dev/test cross-transfer only.",
+      "GitHub Actions matrix (windows/linux/macos runners) is the per-OS build path. This is how macOS ships without the maintainer owning a Mac. Still produces portable extract-and-run artifacts, NOT installers.",
+      "uv is bundled into artifacts at <root>/uv/uv via CI (astral-sh/setup-uv + --uv-bin). Launchers export CUBRIC_UV_BIN. Zero-setup engine bootstrap on the laptop.",
+      "Linux engine = uv venv + comfy-cli (no prebuilt portable exists for Linux/mac). GPU flag auto: --nvidia if nvidia-smi sees a card, --m-series on darwin, else --cpu. X121e gets --cpu.",
+      "Triton/SageAttention deferred to MPI-50 — fragile (need nvcc + matching CUDA, Ampere+ only) and they change workflows. Not a safe default install add-on.",
+      "workflow_dispatch only triggers when the workflow YAML is on the DEFAULT branch (master) — that's why the feature branch was merged to master before CI could run."
+    ],
+    "constraints": [
+      "No NSIS/DMG/AppImage/system-wide installer.",
+      "No Git requirement for user updates; updater uses release assets/manifests.",
+      "macOS stays maintainer-untested until community validation.",
+      "Linux generation stays unvalidated on the weak X121e laptop.",
+      "MPI-8 stays in doing; do not close without explicit approval.",
+      "Test builds must pass --no-source-manifest so they don't clobber the committed resources/cubric/update-manifest.json."
+    ],
+    "files_modified": [
+      "routes/engine.js",
+      "routes/platformEngine.js",
+      "scripts/build-portable.mjs",
+      "scripts/portable/dev-setup/setup.sh",
+      "scripts/portable/dev-setup/setup.bat",
+      ".github/workflows/build-portable.yml",
+      ".gitattributes",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-50/ (new card)",
+      ".agents/mpi-kanban/tasks/MPI-51/ (new card)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "routes/engine.js",
+      "routes/platformEngine.js",
+      "scripts/build-portable.mjs",
+      ".github/workflows/build-portable.yml"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI engine / backend / models",
+      "Downloads",
+      "Versioning & migrations",
+      "Project data & integrity"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/project-integrity.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-07T09:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/tasks/MPI-8/handoffs/a1f4c7e2-9b30-4d18-8e6a-2c5b71f0d934.json and use mpi-continue to continue MPI-8. Phase 5 to-do 2 (Linux engine bootstrap via uv + comfy-cli) is IMPLEMENTED and committed to master; CI run 27086961816 built green per-OS artifacts. The maintainer is validating the full native Linux artifact (D:\\tmp\\ci-linux\\CubricVision-linux-x64-v0.0.1.tar.gz, bundled uv, no npm install needed) on an old ThinkPad X121e Ubuntu laptop: extract, ./start-with-terminal.sh, run engine setup, confirm uv venv -> comfy-cli -> comfy install creates engine/ComfyUI_linux/venv/bin/python3 + ComfyUI/main.py. ASK the user for that result first. On success mark Phase 5 to-do 2 [x] + add a Plan Drift note. Two new cards exist: MPI-50 (defer Triton/SageAttention accelerator builds) and MPI-51 (branch cleanup + contributor onboarding + memory->docs/rules sweep). Do not close MPI-8 without explicit approval; ask before editing .claude/rules/."
+}
