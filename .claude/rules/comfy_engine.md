@@ -7,7 +7,9 @@
 
 **Platform paths:** All engine paths (Python binary, ComfyUI folder, models, custom nodes) are centralized in `routes/platformEngine.js`. Use `getPythonBin()`, `getComfyPath()`, `COMFY_DIR` — never hardcode `'ComfyUI_windows_portable'`.
 
-**GPU detection:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and selects the engine build by **GPU architecture** via `selectNvidiaBuild()` (Comfy-Org: 20-series+/datacenter Turing+ → `_nvidia.7z`; 10-series & older/pre-Turing → `_nvidia_cu126.7z`; plus `_amd.7z`, `_intel.7z`). CUDA version (parsed from a bare `nvidia-smi` header on **stdout**) is informational + a tiebreaker only, never the primary signal. Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
+**GPU detection + provisioning method:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and returns `{ method, comfy, gpu }`. **Windows** (`method: 'archive'`) selects a prebuilt portable build by **GPU architecture** via `selectNvidiaBuild()` (Comfy-Org: 20-series+/datacenter Turing+ → `_nvidia.7z`; 10-series & older/pre-Turing → `_nvidia_cu126.7z`; plus `_amd.7z`, `_intel.7z`) and sets `comfy: { url, filename }`. **Linux/macOS** (`method: 'uv-bootstrap'`) have no prebuilt portable, so `comfy` is `null` and the engine is built via uv + comfy-cli (see Engine Install below). CUDA version (parsed from a bare `nvidia-smi` header on **stdout**) is informational + a tiebreaker only, never the primary signal. Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
+
+**Engine install is platform-branched:** `_runEngineDownload()` in `routes/engine.js` dispatches on `resolveDownloadConfig().method`. Windows → `_provisionWindowsEngine()` (download `.7z` + extract; `7zip-bin`/`node-7z` are required **only** inside that branch, never at module load). Linux/macOS → `_provisionUvEngine()` (`uv venv --python 3.12` → `uv pip install comfy-cli` → `comfy --skip-prompt --workspace <COMFY_DIR> install <gpu-flag> --fast-deps`). uv comes from `resolveUvBin()` (`CUBRIC_UV_BIN` then PATH `uv`). Both branches produce the same layout `getPythonBin()`/`getComfyPath()` expect, so the spawn-based launch in `comfy.js` is platform-agnostic. Accelerators (Triton/SageAttention) are intentionally NOT installed — see kanban MPI-50.
 
 **Model registry source of truth:** `js/data/modelRegistry.js` — all generative models (checkpoints, LoRAs, custom nodes) are defined here. Add new models to `MODELS` or `DEPS` here only.
 
@@ -26,7 +28,7 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 2. **Source of Truth:** `js/data/modelRegistry.js` is the single source of truth for ALL generative models. If you need to add a checkpoint, LoRA, or custom node, you add it to the `MODELS` or `DEPS` dictionary here.
 3. **Never Hardcode Install Status:** Never hardcode `installed: true` in the registry. Model presence is dynamically resolved at runtime by the backend `GET /comfy/models/check`.
 4. **No Direct Python Exec:** Do not attempt to spawn Python or run `pip` manually from arbitrary files. All engine management is strictly handled by `routes/comfy.js` and `routes/shared.js`.
-5. **GPU Detection at Download Time:** Engine download URLs are resolved at runtime via `resolveDownloadConfig()` in `_runEngineDownload()`. GPU detection happens once per install/upgrade; never hardcode specific builds in `system_dependencies.json`.
+5. **GPU Detection + Platform Branch at Install Time:** Provisioning is resolved at runtime via `resolveDownloadConfig()` in `_runEngineDownload()`, which branches on `.method`: Windows extracts a prebuilt `.7z` (`_provisionWindowsEngine`, 7z required only there), Linux/macOS bootstrap via uv + comfy-cli (`_provisionUvEngine`). GPU detection happens once per install/upgrade; never hardcode specific builds in `system_dependencies.json`. Do NOT require `7zip-bin`/`node-7z` at module load — keep them inside the Windows branch.
 6. **Extra Folder Contract:** Only `loras` and `upscale_models` support additive external folders. Keep extras outside dependency registry, install, uninstall, and garbage-collection flows.
 
 ---
@@ -40,11 +42,12 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 - **`COMFY_DIR`** — engine folder name (`'ComfyUI_windows_portable'` on Windows, etc.)
 - **`getPythonBin(engineRoot)`** — full path to Python executable
 - **`getComfyPath(engineRoot, ...parts)`** — shorthand for paths inside ComfyUI folder
-- **`resolveDownloadConfig()`** — async GPU detection + returns correct download URLs + filenames
+- **`resolveDownloadConfig()`** — async GPU detection + provisioning method
   - Detects NVIDIA (via `nvidia-smi`), AMD (via WMI), Intel Arc (via WMI)
-  - Selects NVIDIA build by GPU architecture (`selectNvidiaBuild`); CUDA version (bare `nvidia-smi` stdout header) is informational/tiebreaker only
-  - Returns: `{ comfy: { url, filename } }`
+  - Windows: selects prebuilt NVIDIA build by GPU architecture (`selectNvidiaBuild`); CUDA version (bare `nvidia-smi` stdout header) is informational/tiebreaker only
+  - Returns: `{ method: 'archive'|'uv-bootstrap', comfy: { url, filename }|null, gpu }` — `comfy` is null on Linux/macOS (uv-bootstrap)
   - Cached per session — called once during engine install/upgrade
+- **`resolveUvBin()`** — resolves the uv binary for Linux/macOS bootstrap: `CUBRIC_UV_BIN` (zip-local `<root>/uv/uv`) then PATH `uv`
 
 **Usage:** Import from platformEngine.js in `routes/shared.js`, `routes/engine.js`, `routes/comfy.js`, `main.js`, `routes/system.js`. Never hardcode path strings or binary names.
 
