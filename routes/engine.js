@@ -15,7 +15,7 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
 const { ensureGit } = require('./gitProvision');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
 const { spawn } = require('child_process');
@@ -163,12 +163,15 @@ function _runStreaming(cmd, args, { cwd, env, stage } = {}) {
 }
 
 /**
- * Linux/macOS engine provisioning: bootstrap ComfyUI via uv + comfy-cli into the
- * layout getPythonBin()/getComfyPath() expect (`<COMFY_DIR>/venv`, `<COMFY_DIR>/ComfyUI`).
+ * Linux/macOS engine provisioning: bootstrap ComfyUI via uv + comfy-cli.
  *
- * No prebuilt portable exists for these platforms. We create a uv venv, install
- * comfy-cli into it, and run `comfy install` against the workspace. Accelerators
- * (Triton/SageAttention) are intentionally NOT installed here — see MPI-50.
+ * No prebuilt portable exists for these platforms. comfy-cli clones ComfyUI
+ * directly into the workspace it is given, so the workspace IS the ComfyUI repo
+ * root (`<engine>/<COMFY_DIR>`, matching getComfyPath on these platforms). The uv
+ * venv lives in a sibling dir (`<engine>/comfy-venv`, matching getPythonBin) so it
+ * is not inside the dir comfy-cli must clone into; VIRTUAL_ENV points comfy-cli at
+ * it so it reuses that venv as ComfyUI's runtime instead of making its own.
+ * Accelerators (Triton/SageAttention) are intentionally NOT installed — see MPI-50.
  *
  * @param {string} targetDir   engine root
  * @param {string[]} missingDepIds  UW deps to install after the venv exists
@@ -181,12 +184,16 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         throw new Error('uv not found. Stage a uv binary at <root>/uv/uv (CUBRIC_UV_BIN) or install uv on PATH.');
     }
 
-    const workspace = path.join(targetDir, COMFY_DIR);          // <engine>/ComfyUI_linux
-    const venvDir = path.join(workspace, 'venv');
-    const venvPython = getPythonBin(targetDir);                  // <workspace>/venv/bin/python3
+    // comfy-cli clones ComfyUI DIRECTLY into the workspace it is given and
+    // refuses a pre-existing non-git dir, so the workspace IS the ComfyUI repo
+    // root and must not exist (or be a valid clone) before `comfy install`. The
+    // uv venv therefore lives in a SIBLING dir, not inside the workspace.
+    const workspace = path.join(targetDir, COMFY_DIR);          // <engine>/ComfyUI_linux (ComfyUI repo root)
+    const venvDir = path.join(targetDir, COMFY_VENV_DIR);       // <engine>/comfy-venv (sibling)
+    const venvPython = getPythonBin(targetDir);                  // <engine>/comfy-venv/bin/python3
     const comfyBin = path.join(venvDir, 'bin', 'comfy');
 
-    await fs.ensureDir(workspace);
+    await fs.ensureDir(targetDir);
     broadcastEngineEvent('engine:downloading', { progress: 0, downloadedBytes: 0, totalBytes: 0, status: 'Bootstrapping ComfyUI environment…' });
 
     // ── 0. Ensure git (comfy-cli clones ComfyUI + nodes via GitPython) ──────
@@ -198,12 +205,20 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         onStatus: (status) => broadcastEngineEvent('engine:extracting', { status, progress: 0 }),
     });
 
+    // ── 0b. Clear a stale workspace from a failed prior run ─────────────────
+    // comfy-cli aborts if the workspace exists but is not a valid ComfyUI clone
+    // (e.g. an interrupted earlier attempt). Remove it so retries start clean.
+    if (await fs.pathExists(workspace) && !(await fs.pathExists(path.join(workspace, '.git')))) {
+        logger.warn('engine', `Removing stale ComfyUI workspace (no .git): ${workspace}`);
+        await fs.remove(workspace);
+    }
+
     // ── 1. uv venv (uv fetches Python 3.12 if the host lacks it) ────────────
     broadcastEngineEvent('engine:extracting', { status: 'Creating Python environment…', progress: 0 });
-    await _runStreaming(uvBin, ['venv', '--python', '3.12', venvDir], { cwd: workspace, stage: 'uv-venv' });
+    await _runStreaming(uvBin, ['venv', '--python', '3.12', venvDir], { cwd: targetDir, stage: 'uv-venv' });
 
     // ── 2. Install comfy-cli into the venv ──────────────────────────────────
-    await _runStreaming(uvBin, ['pip', 'install', '--python', venvPython, 'comfy-cli'], { cwd: workspace, stage: 'install-comfy-cli' });
+    await _runStreaming(uvBin, ['pip', 'install', '--python', venvPython, 'comfy-cli'], { cwd: targetDir, stage: 'install-comfy-cli' });
 
     // ── 3. comfy install into the workspace (non-interactive) ───────────────
     // Flag names verified against comfy-cli source: --skip-prompt/--workspace are
@@ -217,7 +232,7 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         comfyBin,
         ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'],
         {
-            cwd: workspace,
+            cwd: targetDir,
             env: {
                 ...process.env,
                 VIRTUAL_ENV: venvDir,
@@ -234,7 +249,7 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         throw new Error(`uv bootstrap finished but Python not found at ${venvPython}`);
     }
     if (!(await fs.pathExists(getComfyPath(targetDir, 'main.py')))) {
-        throw new Error('uv bootstrap finished but ComfyUI/main.py is missing');
+        throw new Error(`uv bootstrap finished but main.py is missing at ${getComfyPath(targetDir, 'main.py')}`);
     }
 
     // ── 4. UW deps (sequential — venv must exist before pip installs) ────────

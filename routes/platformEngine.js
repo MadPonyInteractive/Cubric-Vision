@@ -27,11 +27,23 @@ const COMFY_DIR_MAP = {
 };
 const COMFY_DIR = COMFY_DIR_MAP[process.platform] ?? COMFY_DIR_MAP.win32;
 
+// Engine layout differs by platform:
+//  - Windows ships a prebuilt portable archive whose ComfyUI tree lives at
+//    <engine>/<COMFY_DIR>/ComfyUI and whose Python is the embedded interpreter.
+//  - Linux/macOS bootstrap via comfy-cli, which clones ComfyUI DIRECTLY into the
+//    workspace it is given. We make <engine>/<COMFY_DIR> that workspace (so it IS
+//    the ComfyUI repo root — no extra ComfyUI/ subdir) and keep the uv venv in a
+//    sibling dir so it does not sit inside the dir comfy-cli must clone into.
+const USES_COMFY_CLI = process.platform === 'linux' || process.platform === 'darwin';
+
+// uv venv directory name for the comfy-cli bootstrap (sibling of the workspace).
+const COMFY_VENV_DIR = 'comfy-venv';
+
 // Python binary paths relative to engine root
 const PYTHON_BIN_PARTS_MAP = {
     win32: [COMFY_DIR_MAP.win32, 'python_embeded', 'python.exe'],
-    darwin: ['ComfyUI_macos', 'venv', 'bin', 'python3'],
-    linux: ['ComfyUI_linux', 'venv', 'bin', 'python3'],
+    darwin: [COMFY_VENV_DIR, 'bin', 'python3'],
+    linux: [COMFY_VENV_DIR, 'bin', 'python3'],
 };
 
 // Cached GPU detection result for the session
@@ -74,13 +86,29 @@ function getPythonBin(engineRoot) {
 }
 
 /**
- * Get a path inside the ComfyUI folder.
+ * Get a path inside the ComfyUI repository root.
+ *
+ * Windows: the portable archive nests ComfyUI at <engine>/<COMFY_DIR>/ComfyUI.
+ * Linux/macOS: comfy-cli clones ComfyUI directly into <engine>/<COMFY_DIR>, so
+ * that dir IS the repo root (no extra ComfyUI/ segment).
+ *
  * @param {string} engineRoot - root directory containing engine folder
- * @param {...string} parts - path segments relative to ComfyUI/
+ * @param {...string} parts - path segments relative to the ComfyUI repo root
  * @returns {string} full path
  */
 function getComfyPath(engineRoot, ...parts) {
-    return path.join(engineRoot, COMFY_DIR, 'ComfyUI', ...parts);
+    return path.join(engineRoot, ...getComfyRepoRel(), ...parts);
+}
+
+/**
+ * ComfyUI repo root relative to the engine root, as path segments.
+ * Windows nests it at <COMFY_DIR>/ComfyUI; Linux/macOS (comfy-cli) make
+ * <COMFY_DIR> itself the repo root. Single source of truth for both the
+ * server path helpers and the client (via /system/platform-config).
+ * @returns {string[]}
+ */
+function getComfyRepoRel() {
+    return USES_COMFY_CLI ? [COMFY_DIR] : [COMFY_DIR, 'ComfyUI'];
 }
 
 /** Promisified execFile that resolves stdout/stderr and never rejects. */
@@ -323,9 +351,11 @@ function getEngineRoot() {
 
 module.exports = {
     COMFY_DIR,
+    COMFY_VENV_DIR,
     COMFY_VERSION,
     getPythonBin,
     getComfyPath,
+    getComfyRepoRel,
     resolveDownloadConfig,
     selectNvidiaBuild,
     resolveUvBin,

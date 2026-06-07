@@ -17,7 +17,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const axios = require('axios');
 const logger = require('./logger');
-const { COMFY_DIR, resolveDownloadConfig } = require('./platformEngine');
+const { COMFY_DIR, getComfyRepoRel, resolveDownloadConfig } = require('./platformEngine');
 
 // ── VRAM Helper ───────────────────────────────────────────────────────────────
 
@@ -342,6 +342,9 @@ router.get('/system/platform-config', (req, res) => {
         success: true,
         platform: process.platform,
         comfyDir: COMFY_DIR,
+        // ComfyUI repo root relative to engine/, e.g. "ComfyUI_windows_portable/ComfyUI"
+        // on Windows or "ComfyUI_linux" on Linux/macOS (comfy-cli clones in place).
+        comfyRepoRel: getComfyRepoRel().join('/'),
     });
 });
 

@@ -47,9 +47,13 @@ export async function initPaths() {
     try {
         const res = await fetch('/system/platform-config');
         if (res.ok) {
-            const { comfyDir } = await res.json();
-            _paths.models = `engine/${comfyDir}/ComfyUI/models`;
-            _paths.customNodes = `engine/${comfyDir}/ComfyUI/custom_nodes`;
+            const { comfyDir, comfyRepoRel } = await res.json();
+            // comfyRepoRel is the ComfyUI repo root relative to engine/ and already
+            // encodes the per-platform layout (Windows nests /ComfyUI; Linux/mac
+            // do not). Fall back to the legacy Windows shape for older servers.
+            const repoRel = comfyRepoRel || `${comfyDir}/ComfyUI`;
+            _paths.models = `engine/${repoRel}/models`;
+            _paths.customNodes = `engine/${repoRel}/custom_nodes`;
         }
     } catch (err) {
         clientLogger.warn('modelRegistry', 'Failed to fetch platform config, using defaults:', err);
