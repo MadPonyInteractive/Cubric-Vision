@@ -6,6 +6,15 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+export CUBRIC_PORTABLE_ROOT="$ROOT"
+
+# Install/refresh the per-user .desktop entry + icon so the taskbar shows
+# "Cubric Vision" and our logo (not "Electron"). Idempotent and non-fatal.
+# Done here too (not only via start-with-terminal.sh) so the branding lands
+# even on the no-terminal default path before we detach.
+if [ -f "$ROOT/resources/setup-desktop.sh" ]; then
+  sh "$ROOT/resources/setup-desktop.sh" >/dev/null 2>&1 || true
+fi
 
 # Prefer setsid to fully detach from any controlling terminal; fall back to
 # plain nohup background when setsid is unavailable.

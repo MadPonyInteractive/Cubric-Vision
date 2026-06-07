@@ -261,3 +261,33 @@ Still user-pending for Windows: engine repair, Models slide-over discovery on a
 truly fresh install, restart persistence on the rebuilt zip, folder-open click,
 video extraction/crop in-app, a live error-report POST, and update/
 update-from-zip on a copied install. User will run a fresh install later.
+
+---
+
+## 2026-06-07 — Linux portable laptop validation (Ubuntu, GPU-less, 8GB RAM)
+
+Build under test: Linux x64 portable, hash `0a19fb4` (later cleanup on top,
+hash c9c6fbf, merged to master).
+
+VERIFIED on the laptop:
+- **Taskbar/dock branding** — the app shows "Cubric Vision" + our logo in the
+  taskbar (was "Electron" + default icon). First-run `setup-desktop.sh` per-user
+  `.desktop` + hicolor icon path works.
+- **Additive models folder** — installed in the default folder, then repointed
+  the models folder in Settings to a pre-existing `/home/<user>/CubricModels`
+  holding `checkpoints/SDXL_Realistic.safetensors`. The model shows as
+  INSTALLED, and there is **NO false "no models" popup**. Confirms the two-block
+  additive YAML + status-check fallback to the default root (FIX 5).
+- **No-models popup** (FIX 2) — already verified on the Windows build; not
+  re-triggered here because models were present.
+
+NOT validated (hardware limit, not a bug — deferred):
+- **CPU generation** — starting a generation makes the ComfyUI process die
+  mid model-load ("ComfyUI process exited" → frontend "failed to become ready").
+  Root cause: 8GB RAM is below our advised 16-32GB; SDXL fp32 on CPU OOM-kills.
+  Filed as MPI-53 (diagnostics: capture exit code/signal + clear OOM message;
+  low-RAM detection / fp16 CPU load). User OK'd merging MPI-8 without CPU-gen.
+
+Still pending (Linux/mac, when hardware available): a generation on an
+in-spec machine, comfy-cli CPU-torch waste (MPI-52), macOS first build (icon.icns,
+plutil name, dock icon, additive-folder re-test).

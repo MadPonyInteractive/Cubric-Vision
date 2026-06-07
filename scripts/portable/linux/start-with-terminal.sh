@@ -13,8 +13,8 @@ fi
 
 # Install/refresh the per-user .desktop entry + icon so the taskbar shows
 # "Cubric Vision" and our logo (not "Electron"). Idempotent and non-fatal.
-if [ -f "$ROOT/setup-desktop.sh" ]; then
-  sh "$ROOT/setup-desktop.sh" >/dev/null 2>&1 || true
+if [ -f "$ROOT/resources/setup-desktop.sh" ]; then
+  sh "$ROOT/resources/setup-desktop.sh" >/dev/null 2>&1 || true
 fi
 
 cd "$ROOT/app"

@@ -428,15 +428,18 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
-  // Linux taskbar/dock branding: ship the app icon at the portable root and a
-  // first-run installer (called by the launcher) that writes a per-user
-  // .desktop + hicolor icon so the dock shows "Cubric Vision" + our logo.
+  // Linux taskbar/dock branding: ship the app icon + first-run installer under
+  // resources/ (not the portable root) to keep the top-level folder clean. The
+  // installer writes a per-user .desktop + hicolor icon so the dock shows
+  // "Cubric Vision" + our logo. Both launchers call resources/setup-desktop.sh.
   if (opts.platform === 'linux') {
+    const resourcesDir = path.join(stageRoot, 'resources');
+    await ensureDir(resourcesDir);
     await copyFileEnsured(
       path.join(REPO_ROOT, 'media', 'icons', 'cubric-vision.png'),
-      path.join(stageRoot, 'cubric-vision.png'),
+      path.join(resourcesDir, 'cubric-vision.png'),
     );
-    const setupDesktopTarget = path.join(stageRoot, 'setup-desktop.sh');
+    const setupDesktopTarget = path.join(resourcesDir, 'setup-desktop.sh');
     await copyFileEnsured(
       path.join(TEMPLATE_ROOT, 'linux', 'setup-desktop.sh'),
       setupDesktopTarget,

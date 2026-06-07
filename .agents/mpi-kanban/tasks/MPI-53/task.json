@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-53",
+  "title": "Handle CPU generation on low-RAM boxes (SDXL fp32 OOM-kills on 8GB)",
+  "description": "On a GPU-less Ubuntu laptop with 8GB RAM, starting a generation makes the ComfyUI process die silently mid model-load: log shows 'ComfyUI process exited' followed by the frontend 'failed to become ready in time'. No Python traceback — the kernel OOM-killer reaps the process. Cause: --cpu mode loads SDXL weights in fp32 (UNet+VAE+CLIP ~6-7GB) plus the torch runtime + activations, which exceeds 8GB. We advise 16-32GB so this is below spec, deferred (user OK'd merge of MPI-8 without CPU-gen working). Two sub-items: (1) DIAGNOSTICS — the spawn exit handler in routes/comfy.js (~line 235) logs only 'ComfyUI process exited' with no exit code/signal; capture code+signal and surface a clear 'engine crashed (likely out of memory)' message instead of a generic readiness timeout, so future low-RAM crashes are self-explanatory. (2) MEMORY HANDLING — investigate fp16/bf16 CPU weight load (--cpu may not honor --fp16-unet on CPU; verify), and/or detect low total RAM at start and either warn the user up front or refuse with a clear message before the OOM. Confirm OOM on the laptop with `dmesg | grep -i 'killed process'`. Lower priority than MPI-52.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-07T00:00:00.000Z",
+  "updated_at": "2026-06-07T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

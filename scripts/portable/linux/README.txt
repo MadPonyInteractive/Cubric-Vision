@@ -13,7 +13,7 @@ start-with-terminal.sh
     Use this only when you need to see diagnostics or report a problem.
     (The app also writes a full log to logs/app.log either way.)
 
-    On first launch the app installs a desktop entry (under
+    On first launch (either launcher) the app installs a desktop entry (under
     ~/.local/share/applications) so it shows up as "Cubric Vision" with our
     icon in your taskbar/dock and app menu. You may need to log out and back
     in once for the icon to appear. Nothing is installed system-wide.

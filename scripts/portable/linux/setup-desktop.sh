@@ -11,10 +11,14 @@
 # launcher calls this on first run. Everything is written under ~/.local — no
 # root required. Re-running is cheap and idempotent (paths are refreshed in case
 # the portable folder moved).
+#
+# This script lives in <portable-root>/resources/. Both launchers export
+# CUBRIC_PORTABLE_ROOT before calling it; when run standalone we derive the
+# portable root as the parent of this script's resources/ directory.
 set -eu
 
-ROOT="${CUBRIC_PORTABLE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}"
-ICON_SRC="$ROOT/cubric-vision.png"
+ROOT="${CUBRIC_PORTABLE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
+ICON_SRC="$ROOT/resources/cubric-vision.png"
 LAUNCHER="$ROOT/start.sh"
 
 APPS_DIR="$HOME/.local/share/applications"
