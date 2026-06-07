@@ -168,11 +168,16 @@ Release/testing reality:
   `uv`/comfy-cli bootstrap support if Linux engine install is in this artifact.
   **Verify:** artifact extracts on Linux and `start.sh` can launch the app shell.
 
-- [ ] Add Linux engine bootstrap path without claiming generation support from
+- [x] Add Linux engine bootstrap path without claiming generation support from
   the user's old Ubuntu laptop. The code should use `uv` plus `comfy-cli` with
   zip-local uv env vars. **Verify:** on Ubuntu laptop, install/launch path and
   engine setup UI can be exercised far enough to validate paths/logs; ComfyUI
   generation remains community or stronger-host validation.
+  <!-- DONE 2026-06-07: uv + comfy-cli bootstrap installed ComfyUI on the Ubuntu
+  laptop; install/launch path, engine setup UI, models-folder repoint, and
+  paths/logs all validated (see validation.md). Generation left to community/
+  stronger-host per the verify carve-out (8GB box OOM-kills SDXL fp32 on CPU,
+  below the advertised 16-32GB minimum). -->
 
 - [x] Implement Linux updater scripts using the same update engine as Windows.
   **Verify:** update-from-zip can apply an early-access bundle on Ubuntu while
