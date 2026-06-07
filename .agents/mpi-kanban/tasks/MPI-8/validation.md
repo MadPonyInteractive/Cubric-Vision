@@ -281,12 +281,13 @@ VERIFIED on the laptop:
 - **No-models popup** (FIX 2) — already verified on the Windows build; not
   re-triggered here because models were present.
 
-NOT validated (hardware limit, not a bug — deferred):
-- **CPU generation** — starting a generation makes the ComfyUI process die
-  mid model-load ("ComfyUI process exited" → frontend "failed to become ready").
-  Root cause: 8GB RAM is below our advised 16-32GB; SDXL fp32 on CPU OOM-kills.
-  Filed as MPI-53 (diagnostics: capture exit code/signal + clear OOM message;
-  low-RAM detection / fp16 CPU load). User OK'd merging MPI-8 without CPU-gen.
+NOT validated (out of scope — below advertised spec, not a bug):
+- **CPU generation on 8GB RAM** — starting a generation makes the ComfyUI
+  process die mid model-load ("ComfyUI process exited" → frontend "failed to
+  become ready"). Root cause: 8GB is below our advertised 16-32GB minimum; SDXL
+  fp32 on CPU OOM-kills. We do not promote local runs on such low specs (cloud
+  connection later covers lower-spec machines), so this is intentionally NOT
+  tracked — no fix planned. User OK'd merging MPI-8 without CPU-gen on this box.
 
 Still pending (Linux/mac, when hardware available): a generation on an
 in-spec machine, comfy-cli CPU-torch waste (MPI-52), macOS first build (icon.icns,

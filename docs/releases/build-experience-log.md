@@ -534,6 +534,121 @@ recognized → generation loads checkpoint from custom + deps from default" test
 
 ---
 
+## macOS pre-build checklist — carry-overs from the Linux build (2026-06-07)
+
+Author: Claude Opus 4.8.
+
+We **cannot test macOS**. This section consolidates every Linux obstacle that has
+a macOS analogue so the first mac build accounts for them up front. Read this
+section in full before running the mac CI build. Cross-references point at the
+detailed Linux write-ups above.
+
+**Status of Linux work referenced below:** all five Linux fixes are MERGED to
+master (the "NOT master / merge after generation" notes in earlier sections are
+historical). The branding files were moved into `resources/` and both launchers
+now call `setup-desktop.sh` explicitly — the "Deferred this session" note about
+that is also DONE.
+
+### 1. Engine layout + provisioning (uv + comfy-cli, shared with Linux)
+
+- The mac engine uses the **same uv + comfy-cli path as Linux** (`USES_COMFY_CLI
+  = linux || darwin`), NOT the Windows prebuilt 7z. Everything the Linux engine
+  hit applies: workspace IS the repo root, venv is the sibling `comfy-venv`,
+  `uv venv --seed` for pip. The Windows path stays untouched.
+- **git auto-provision**: Linux offers a `pkexec`/`sudo apt install git` flow
+  when git is missing. macOS has no apt — `git` ships via the **Xcode Command
+  Line Tools** (`xcode-select --install` triggers a GUI installer). Verify the
+  mac install screen's "git missing" branch gives a mac-correct instruction
+  (`xcode-select --install`), not the Linux apt command.
+
+### 2. comfy-cli torch wheel architecture (HIGH RISK — verify first)
+
+- Linux `--cpu --fast-deps` pulled a **CUDA** torch wheel (comfy-cli enum bug,
+  MPI-52). The macOS analogue: `--cpu` / `--m-series` may resolve a **non-Metal
+  default** torch, or an x86 wheel on Apple Silicon. **At first mac build,
+  confirm `python -c "import torch; print(torch.__version__, torch.backends.mps.is_available())"`
+  in the venv** reports a Metal-capable build on Apple Silicon. If wrong, apply
+  the MPI-52 pattern: pre-install the correct torch wheel, then
+  `comfy install … --skip-torch-or-directml`.
+- **Apple Silicon vs Intel**: confirm which arch the mac CI runner is and which
+  the build targets. A wheel built for the runner's arch must match the user's
+  Mac (arm64 vs x86_64). node_modules can't be cross-built (per-OS CI rule) — the
+  same is true for native python wheels.
+
+### 3. Launch mode + readiness timeout
+
+- Linux launches ComfyUI with `--cpu` (no GPU) or `--lowvram`. On Apple Silicon
+  the GPU path is **Metal/MPS**, not CUDA — the launch-mode selection in
+  `routes/comfy.js` (`useCpu = !gpu || !gpu.vendor`) must recognize Apple GPUs so
+  it does NOT force `--cpu` on an M-series Mac. Check `resolveDownloadConfig()`
+  GPU detection has an Apple branch (or the mac correctly falls through to a
+  Metal launch arg, not `--cpu`).
+- Readiness timeout is now **240s** (`COMFY_READY_TIMEOUT_S`). Mac first-load
+  (torch + checkpoint) should fit, but confirm — a cold MPS load can be slow.
+
+### 4. tar exec bits + symlinks (same hand-rolled-tar trap as Linux)
+
+- The hand-rolled tar that dropped exec bits + symlinks on Linux (launch exit 18)
+  affects mac too. The Linux launcher self-chmods the electron binary and calls
+  it directly (avoids the `.bin/electron` symlink). The mac launcher must do the
+  same: the **real** mac electron binary is at
+  `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron` (NOT a
+  top-level `electron`). Verify the mac `start` script targets that path and
+  chmods it. See the Linux "exec bits / direct electron binary" write-up.
+
+### 5. Dock branding (name + icon)
+
+- **Name** via `plutil -replace CFBundleName/CFBundleDisplayName` on the staged
+  `Electron.app/Contents/Info.plist` — `brandMacBundle()` in `build-portable.mjs`
+  already does this (darwin only). `plutil` is present on the macOS runner.
+- **Icon**: `brandMacBundle()` swaps `electron.icns` **only if `build/icon.icns`
+  exists** — it **does NOT exist yet** (repo has `build/icon.png`).
+  **ACTION: generate `build/icon.icns` from the logo before the mac build** so
+  the dock icon is correct at launch, not just via the runtime
+  `app.dock.setIcon()` fallback in `main.js`.
+- Editing Info.plist breaks an ad-hoc signature — we don't sign, so fine; if
+  signing is ever added, re-sign AFTER the plist edit.
+- Note: the per-user `.desktop` + hicolor icon (`setup-desktop.sh`) is **Linux
+  only** — mac uses the bundle Info.plist, no equivalent first-run installer.
+
+### 6. Additive models folder (platform-agnostic — just re-run the test)
+
+- The two-block additive YAML (Fixed 5) is server code that runs on mac
+  unchanged. No mac-specific work. The mac validator should run the same test
+  the Linux laptop passed: **install in default → repoint the models folder to a
+  pre-existing folder with a checkpoint → model still recognized, no false "no
+  models" popup → a generation loads the checkpoint from the custom folder and
+  deps from the default root.**
+
+### 7. Terminal-window behavior
+
+- Linux ships a no-terminal `start.sh` (detached via `setsid`/`nohup`) + a
+  `*-with-terminal` variant. macOS **still shows Terminal** for the launcher
+  (deferred — `.command` files open Terminal). Decide whether to ship an
+  `.app`-style double-clickable wrapper or accept the Terminal window for the
+  first mac build (acceptable per the launcher-split decision).
+
+### What the mac builder must do (ordered)
+
+1. Generate `build/icon.icns` from the logo (else dock icon is runtime-only).
+2. Confirm the CI runner arch (arm64 vs x86_64) matches the target Mac.
+3. Run the mac CI build; in the venv verify torch is Metal-capable on Apple
+   Silicon (apply MPI-52 pattern if not).
+4. Verify the mac launcher targets the real `Electron.app/.../MacOS/Electron`
+   binary and chmods it (tar exec-bit trap).
+5. Verify GPU detection picks Metal (not `--cpu`) on an M-series Mac.
+6. Verify `plutil` name change landed + dock icon shows the logo.
+7. Verify the mac "git missing" branch tells the user `xcode-select --install`.
+8. Re-run the additive-models-folder test (item 6 above), ending in a real
+   generation.
+
+> Minimum spec reminder: we advertise **16–32 GB RAM** for local runs. CPU/low-
+> RAM generation is intentionally out of scope (the 8 GB Linux laptop OOM-killed
+> SDXL fp32 on CPU — expected, below spec, not a bug to fix). Cloud connection
+> later covers lower-spec machines.
+
+---
+
 ## Template for new entries
 
 ```

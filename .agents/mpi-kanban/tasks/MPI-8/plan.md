@@ -180,6 +180,13 @@ Release/testing reality:
 
 ## Phase 6: macOS portable artifact
 
+> **READ FIRST:** `docs/releases/build-experience-log.md` → section
+> "macOS pre-build checklist — carry-overs from the Linux build". It consolidates
+> every Linux obstacle with a mac analogue (engine layout, comfy-cli torch arch,
+> Metal vs --cpu launch, tar exec-bit trap, dock name/icon + `build/icon.icns`,
+> git via `xcode-select`, additive-folder re-test) into an ordered pre-build
+> checklist. macOS is untestable here, so this is the primary risk-reduction doc.
+
 - [ ] Implement macOS staging/build path and launch/update scripts, with
   `start.command`, `update.command`, and `update-from-zip.command`. **Verify:**
   the artifact is mechanically produced and contains expected app, resource,
