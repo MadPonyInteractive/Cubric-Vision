@@ -10,14 +10,14 @@
       "MPI-51",
       "MPI-52",
       "MPI-54",
-      "MPI-55",
       "MPI-56"
     ],
     "doing": [
       "MPI-8",
-      "MPI-47"
+      "MPI-55"
     ],
     "done": [
+      "MPI-47",
       "MPI-2",
       "MPI-45",
       "MPI-39",
