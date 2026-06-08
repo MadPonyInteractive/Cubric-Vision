@@ -13,24 +13,30 @@ manifests) describes the *output*; this section describes *how to create it*.
 
 ### Canonical builds run in CI, per-OS
 
-Portable artifacts are built by the GitHub Actions workflow
-`.github/workflows/build-portable.yml`, one job per OS (Windows, Linux, macOS).
-**This is the only correct way to produce a shippable artifact.** Each runner
-does a native `npm ci`, so `node_modules` carries that platform's native
-binaries (Electron, ffmpeg). These cannot be cross-built: a Linux or macOS
-artifact must be built on its own OS. A Windows machine cannot produce a
-working Linux/macOS tarball.
+Portable artifacts are built by the private GitHub Actions workflow
+`MadPonyInteractive/mpi-ci/.github/workflows/cubric-vision-portable.yml`, one
+job per OS (Windows, Linux, macOS). **This is the only correct way to produce a
+shippable artifact.** Each runner does a native `npm ci`, so `node_modules`
+carries that platform's native binaries (Electron, ffmpeg). These cannot be
+cross-built: a Linux or macOS artifact must be built on its own OS. A Windows
+machine cannot produce a working Linux/macOS tarball.
 
 Triggers:
 
-- Push a `v*` tag, or
-- `gh workflow run build-portable.yml --ref <branch> -f version=<version>`
+- Manual dispatch in the private `mpi-ci` repo:
+  `gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=<branch-or-tag> -f version=<version>`
+- Optional dispatcher in Cubric-Vision:
+  `.github/workflows/build-portable.yml` requests the private `mpi-ci` workflow
+  and does not build or upload artifacts in the source repository. It requires
+  a Cubric-Vision secret named `MPI_CI_WORKFLOW_TOKEN` that can dispatch
+  workflows in `MadPonyInteractive/mpi-ci`.
 
 Each job calls `scripts/build-portable.mjs` with an explicit `--stage-dir`
 under `${{ runner.temp }}` and uploads the full artifact plus update bundle as a
-GitHub Actions artifact named `cubric-vision-<platform>-<arch>` (14-day
-retention). CI does **not** publish a GitHub Release and cannot write to a local
-disk — see "Collecting CI artifacts" below.
+private GitHub Actions artifact named `cubric-vision-<platform>-<arch>` (14-day
+retention). Public source-repo workflows must not upload early-access portable
+artifacts. CI does **not** publish a GitHub Release and cannot write to a local
+disk - see "Collecting CI artifacts" below.
 
 ### Local dev builds
 

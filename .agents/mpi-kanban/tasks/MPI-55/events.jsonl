@@ -1,1 +1,15 @@
 {"at":"2026-06-08T00:00:00Z","event":"task.created","by":"implementer","note":"Public-repo artifact leak: build-portable.yml upload-artifact downloadable on public Actions runs, bypasses Discord gate. Block before going public."}
+{"at":"2026-06-08T17:16:31Z","event":"implementation.started","by":"Codex","note":"Moved MPI-55 to doing to record private CI repo creation and artifact-leak mitigation decision."}
+{"at":"2026-06-08T17:16:31Z","event":"repo.created","by":"Codex","note":"Created private GitHub repository MadPonyInteractive/mpi-ci."}
+{"at":"2026-06-08T17:16:31Z","event":"repo.seeded","by":"Codex","note":"Pushed mpi-ci commit 98b517a with README, .gitignore, and cubric-vision-portable private artifact workflow."}
+{"at":"2026-06-08T17:42:00Z","event":"repo.connected","by":"Codex","note":"Added read-only Cubric-Vision deploy key and stored matching private key as mpi-ci secret CUBRIC_VISION_DEPLOY_KEY; pushed mpi-ci commit 7f12aca using SSH checkout."}
+{"at":"2026-06-08T17:42:00Z","event":"public_artifact_workflow.removed","by":"Codex","note":"Deleted Cubric-Vision .github/workflows/build-portable.yml and updated docs/releases/portable-distribution-contract.md to point artifact builds at private mpi-ci workflow."}
+{"at":"2026-06-08T17:42:00Z","event":"scratch_artifacts.removed","by":"Codex","note":"Removed MPI-55 brief/plan/checklist/validation/files scratch files from Cubric-Vision per user request."}
+{"at":"2026-06-08T18:05:00Z","event":"task.updated","by":"Codex","note":"Corrected invalid maturity value from implemented to validating."}
+{"at":"2026-06-08T18:05:00Z","event":"github_artifacts.deleted","by":"Codex","note":"Deleted 29 existing cubric-vision-* Actions artifacts from MadPonyInteractive/Cubric-Vision."}
+{"at":"2026-06-08T18:05:00Z","event":"workflow.restored_as_dispatcher","by":"Codex","note":"Restored .github/workflows/build-portable.yml as a dispatcher to private mpi-ci workflow; it does not build or upload artifacts in Cubric-Vision."}
+{"at":"2026-06-08T18:18:00Z","event":"github_workflow_runs.deleted","by":"Codex","note":"Deleted 10 historical Build portable artifacts workflow run records from MadPonyInteractive/Cubric-Vision; artifacts and runs both verified at total_count 0."}
+{"at":"2026-06-08T18:45:00Z","event":"secret.verified","by":"Codex","note":"Verified Cubric-Vision repository secret MPI_CI_WORKFLOW_TOKEN exists; token value not inspected or recorded."}
+{"at":"2026-06-08T18:45:00Z","event":"identity_registry.updated","by":"Codex","note":"Registered mpi-ci repo, CI secret names, artifact cleanup, and private artifact gate in MadPony-Identity and Cubric project memory without storing secret values."}
+{"at":"2026-06-08T18:55:00Z","event":"validation.updated","by":"Codex","note":"User approved end-session completion; private repo, secrets, artifact cleanup, run cleanup, dispatcher workflow, release docs, Identity registry, and project memory were verified."}
+{"at":"2026-06-08T18:55:00Z","event":"task.moved","by":"Codex","from":"doing","to":"done","note":"MPI-55 complete after user requested session close and card completion."}

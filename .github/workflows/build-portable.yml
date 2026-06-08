@@ -1,15 +1,18 @@
-name: Build portable artifacts
+name: Request portable artifacts
 
-# Per-OS portable builds. node_modules contains native, platform-specific
-# binaries (Electron, ffmpeg) that cannot be cross-built, so each artifact is
-# built on its own runner with a native `npm ci`. Shipped builds bundle
-# node_modules — no end-user `npm install`.
+# Artifact builds run in the private mpi-ci repository so early-access
+# artifacts are not exposed on public Cubric-Vision Actions runs.
 
 on:
   workflow_dispatch:
     inputs:
+      ref:
+        description: Branch, tag, or SHA to build
+        required: true
+        default: main
+        type: string
       version:
-        description: Release version (defaults to package.json)
+        description: Release version override
         required: false
         type: string
   push:
@@ -20,57 +23,31 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win32
-            arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
-    runs-on: ${{ matrix.os }}
+  request-private-build:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # build hash needs git history
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install uv (bundled into the artifact)
-        uses: astral-sh/setup-uv@v5
-
-      - name: Install dependencies (native, pinned)
-        run: npm ci
-
-      - name: Build portable artifact
-        shell: bash
+      - name: Dispatch private mpi-ci build
+        env:
+          GH_TOKEN: ${{ secrets.MPI_CI_WORKFLOW_TOKEN }}
+          SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref_name }}
+          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
         run: |
-          VERSION_ARG=""
-          if [ -n "${{ inputs.version }}" ]; then VERSION_ARG="--version ${{ inputs.version }}"; fi
-          UV_BIN="$(command -v uv)"
-          node scripts/build-portable.mjs \
-            --platform ${{ matrix.platform }} \
-            --arch ${{ matrix.arch }} \
-            --stage-dir "${{ runner.temp }}/cubric-portable" \
-            --no-source-manifest \
-            --uv-bin "$UV_BIN" \
-            $VERSION_ARG
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Missing secret MPI_CI_WORKFLOW_TOKEN. Add a fine-grained token that can dispatch workflows in MadPonyInteractive/mpi-ci."
+            exit 1
+          fi
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: cubric-vision-${{ matrix.platform }}-${{ matrix.arch }}
-          path: |
-            ${{ runner.temp }}/cubric-portable/*.zip
-            ${{ runner.temp }}/cubric-portable/*.tar.gz
-          if-no-files-found: error
-          retention-days: 14
+          args=(
+            workflow run cubric-vision-portable.yml
+            --repo MadPonyInteractive/mpi-ci
+            --ref main
+            -f source_repo=MadPonyInteractive/Cubric-Vision
+            -f ref="$SOURCE_REF"
+          )
+
+          if [ -n "$VERSION" ]; then
+            args+=(-f version="$VERSION")
+          fi
+
+          gh "${args[@]}"
+          echo "Private portable build requested in MadPonyInteractive/mpi-ci for $SOURCE_REF."
