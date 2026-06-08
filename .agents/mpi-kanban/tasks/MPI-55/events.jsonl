@@ -1,0 +1,1 @@
+{"at":"2026-06-08T00:00:00Z","event":"task.created","by":"implementer","note":"Public-repo artifact leak: build-portable.yml upload-artifact downloadable on public Actions runs, bypasses Discord gate. Block before going public."}

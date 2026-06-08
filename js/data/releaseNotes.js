@@ -38,6 +38,20 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.2': {
+    version: '0.0.2',
+    whatIsNew: [
+      'New keyboard shortcuts to change the UI size: Ctrl and Plus to enlarge, Ctrl and Minus to shrink — matching the existing Ctrl + mouse-wheel control.',
+    ],
+    fixes: [
+      'More reliable ComfyUI engine setup: stale install artifacts are cleared and the Python runtime is verified before continuing, with a smarter Retry.',
+      'Engine download Pause/Resume controls no longer disappear or misbehave while background dependencies are installing.',
+      'Changing the models folder in Settings no longer leaves a stale "no models installed" message.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.1': {
     version: '0.0.1',
     whatIsNew: [

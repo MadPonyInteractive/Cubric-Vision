@@ -473,6 +473,36 @@ export const HOTKEY_REGISTRY = [
         description:      'Toggle fullscreen',
         allowWhileTyping: true,
     },
+    // UI size (global webFrame zoom) — keyboard equivalents of Ctrl+wheel.
+    // Two enlarge keys: numpad/main-row '+' and the shiftless '=' (browser
+    // zoom-in convention). Distinct mapKeys from the gallery's bare '+'/'-'.
+    {
+        id:               'system.uiZoom.in.plus',
+        key:              'control++',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Increase UI size',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'system.uiZoom.in.equal',
+        key:              'control+=',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Increase UI size',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'system.uiZoom.out',
+        key:              'control+-',
+        type:             KEY_TYPE.DOWN,
+        category:         'system',
+        scopeLabel:       'System',
+        description:      'Decrease UI size',
+        allowWhileTyping: true,
+    },
     {
         id:               'devtools.toggle',
         key:              'control+shift+i',

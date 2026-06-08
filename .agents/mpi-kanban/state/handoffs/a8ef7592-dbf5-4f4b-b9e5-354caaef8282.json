@@ -1,0 +1,127 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a8ef7592-dbf5-4f4b-b9e5-354caaef8282",
+  "generated_at": "2026-06-08T00:00:00.000Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 update-flow prep: MPI-47 hotkeys + 0.0.2 bump + version-bump skill; pivot to delta-update design",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Test the portable update flow: implement MPI-47, bump 0.0.1 -> 0.0.2, build the 0.0.2 update zip, and run the Windows update flow against D:/cubric-install-test; then Linux.",
+    "status": "in_progress",
+    "summary": "MPI-47 implemented + user-verified. Version bumped 0.0.1 -> 0.0.2 (patch). /mpi-version-bump converted to a real invocable skill + docs fixed. Then discovered the update bundle ships the FULL app (incl. node_modules/electron) so it is ~same size as the full portable. User chose to design delta-update FIRST (this handoff) before resuming the actual update-flow test. The update zip was NOT built and the update flow has NOT been tested yet."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-47 DONE + USER-VERIFIED: Ctrl+ / Ctrl- UI-size hotkeys. New js/utils/uiZoom.js (applyUiZoom + ZOOM_MIN/MAX/STEP); init.js Ctrl+wheel refactored to use it; 3 registry entries in hotkeyRegistry.js (control++, control+=, control+-, allowWhileTyping:true); bound as built-ins in hotkeyManager.init(); System help rows added to MpiHelp.js. No conflict with gallery bare +/- (distinct mapKeys). MPI-47 moved todo->doing on the board (still in doing; close at end-session once committed).",
+      "Version bump 0.0.1 -> 0.0.2 (PATCH): js/core/appVersion.js APP_VERSION='0.0.2' (SCHEMA_VERSION untouched at 2); package.json version='0.0.2'; js/data/releaseNotes.js new '0.0.2' entry; docs/releases/2026-06-08-v0.0.2.md archival notes. All three version sources verified equal to 0.0.2.",
+      "Converted /mpi-version-bump into a REAL invocable skill: created .claude/skills/mpi-version-bump/SKILL.md (frontmatter name/description/user-invocable:true), deleted the old bare .claude/skills/mpi-version-bump.md. Added a 'Quick path: patch-only release' section (4 files: appVersion.js, package.json, releaseNotes.js, archival md) and a new Step 4b 'Edit package.json' (was MISSING from the old flow). Skill now appears in the available-skills list.",
+      "Fixed docs/versioning.md: added APP_VERSION<->package.json sync rule; 'slash command' -> 'skill'; path -> .claude/skills/mpi-version-bump/SKILL.md; noted the patch quick-path; flagged package.json as hand-edit-forbidden.",
+      "Created MPI-55 (todo, high): public-repo Actions artifact leak — build-portable.yml upload-artifact (retention-days 14) lets anyone download portable builds from public Actions runs, bypassing the Discord gate. Fix BEFORE repo goes public.",
+      "Created MPI-56 (todo, high, THIS handoff's task): delta update bundles (parent MPI-8)."
+    ],
+    "pending": [
+      "MPI-56 (delta-update) — THE NEXT SESSION'S JOB. Make scripts/build-portable.mjs stageUpdateBundle/createUpdateManifest emit only files whose SHA256 differs from (or are missing in) the from-version manifest, and populate manifest.delete[]. The applier scripts/portable/apply-update.cjs is ALREADY manifest-driven (copies only manifest.files[], deletes manifest.delete[], rollback backup) — likely little/no applier change; work is build-side. Reuse existing version-compare machinery where it fits (see context). Recommend running /mpi-create-plan or /mpi-create-large-plan for MPI-56 first.",
+      "AFTER delta lands (resume on MPI-8, separate session): build the 0.0.2 delta update zip (node scripts/build-portable.mjs, WITHOUT --no-update-bundle), then run the Windows update flow against the EXISTING install at D:/cubric-install-test (update.bat / update-from-zip.bat per runbook). Confirm PRESERVE survives: engine/, models/, user-data/, <documents> Cubric Vision projects.",
+      "AFTER Windows update passes: build + run the Linux update flow.",
+      "User mentioned: once the delta flow is finished, they will also ask to update the release-bump flow (mpi-version-bump skill) to account for delta. Watch for that."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-56",
+    "title": "Delta update bundles: ship only changed files, not the full app",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-56/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-56/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-56/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-56/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-56/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "plan", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/versioning.md updated for package.json sync + real skill path.",
+      ".claude/skills/mpi-version-bump/SKILL.md created (real skill); old bare md deleted.",
+      "docs/releases/2026-06-08-v0.0.2.md archival release notes written.",
+      "MPI-55 + MPI-56 task cards created with full descriptions."
+    ],
+    "pending": [
+      "NOTHING COMMITTED this session — all changes uncommitted in the working tree (MPI-47 code, 0.0.2 bump, skill, docs, kanban). Commit timing is end-session / user's call. Note prior session's engine/download/models-path fixes are ALSO still uncommitted.",
+      "MPI-47 card is in doing but not yet closed — close to done at end-session after commit + the user has already verified it.",
+      "MPI-8 task workspace checklist/validation not yet updated with this session's bump + the delta-deferral decision — update at end-session.",
+      "When MPI-56 delta lands, update the mpi-version-bump skill + portable-distribution-contract doc to describe delta bundles (user will request)."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-56 (delta update bundles). First read scripts/build-portable.mjs (stageUpdateBundle ~L587-602, createUpdateManifest ~L555-585, buildFileEntries, PRESERVE ~L69), scripts/portable/apply-update.cjs (already manifest-driven), and resources/cubric/update-manifest.schema.json. Then design a build-side delta: diff the to-version file list against the from-version manifest by SHA256, stage/zip only changed+added files, and populate delete[] for removed files. Recommend creating a plan first via /mpi-create-plan (or /mpi-create-large-plan if it grows). Do NOT modify the fragile backend ResumableDownloader. After delta is built + verified, a SEPARATE session resumes the deferred MPI-8 Windows then Linux update-flow test.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Update bundle is currently a FULL app replacement, not a delta: stageUpdateBundle copies all of app/ (incl. node_modules/electron/dist — the ~hundreds-of-MB bulk) + resources/ + update/. Only engine/ and models/ are excluded (they are in PRESERVE). So full vs update zip are nearly the same size — user correctly flagged this defeats the purpose, hence MPI-56.",
+      "The manifest plumbing for delta ALREADY EXISTS: update-manifest.json has fromVersion, toVersion, files[] with per-file sha256, and delete[]. buildFileEntries computes the hashes. The applier apply-update.cjs ONLY copies manifest.files[] and deletes manifest.delete[], with rollback backup. => Delta is a BUILD-SIDE feature; the applier should need little/no change.",
+      "Version bump for 0.0.2 is a PATCH (MPI-47 UI change + prior bug fixes only; no new ops, no engine change, no schema change). Used the new patch quick-path: 4 files only.",
+      "package.json version was MISSING from the old version-bump doc/skill even though the build reads it; added it as Step 4b and to the patch quick-path.",
+      "Chose to design delta FIRST in a new session, then resume the update-flow test in yet another session, to keep each session scoped and the context small."
+    ],
+    "constraints": [
+      "Do NOT modify the backend ResumableDownloader pause/abort path — fragile, working (carried from prior handoff 5184d783).",
+      "Existing working install for the eventual update test lives at D:/cubric-install-test (engine installed, models linked, gen verified). Use THIS folder; do NOT overwrite with a fresh extract.",
+      "Local Windows portable builds output to D:/CubricStudio/Vision/Builds (build-portable default when D: exists).",
+      "PRESERVE list (must survive an update): engine/, models/, user-data/, <documents>/Cubric Vision/Projects/, <documents>/Cubric Vision/project-paths.json.",
+      "Caveman comms mode active for chat (code/commits/security written normal). PowerShell is denied via Bash; use node/Bash(sh) for file inspection.",
+      "Nothing committed; build copies working-tree files so uncommitted fixes ARE in any build. buildHash stays the last commit hash until a commit is made."
+    ],
+    "files_modified": [
+      "js/utils/uiZoom.js",
+      "js/init.js",
+      "js/managers/hotkeyRegistry.js",
+      "js/managers/hotkeyManager.js",
+      "js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js",
+      "js/core/appVersion.js",
+      "package.json",
+      "js/data/releaseNotes.js",
+      "docs/releases/2026-06-08-v0.0.2.md",
+      ".claude/skills/mpi-version-bump/SKILL.md",
+      "docs/versioning.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-47/task.json",
+      ".agents/mpi-kanban/tasks/MPI-47/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-55/task.json",
+      ".agents/mpi-kanban/tasks/MPI-56/task.json"
+    ],
+    "files_to_read_first": [
+      "scripts/build-portable.mjs",
+      "scripts/portable/apply-update.cjs",
+      "resources/cubric/update-manifest.schema.json",
+      "resources/cubric/update-manifest.json",
+      "docs/releases/portable-distribution-contract.md",
+      "js/managers/versioningManager.js",
+      "routes/engine.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "versioning", "downloads"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-08T00:00:00.000Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/a8ef7592-dbf5-4f4b-b9e5-354caaef8282.json and use mpi-continue to continue from where we left off. You are working on MPI-56 (delta update bundles), a child of MPI-8 portable distribution. Background: in the prior session MPI-47 (Ctrl+/Ctrl- UI-size hotkeys) was implemented and user-verified, the app was bumped 0.0.1 -> 0.0.2 (patch), and /mpi-version-bump was turned into a real invocable skill. We were about to build the 0.0.2 update zip and test the Windows update flow, but discovered the update bundle ships the ENTIRE app (incl. node_modules/electron/dist) so it is nearly the same size as the full ~398MB portable — only engine/ and models/ are excluded. So we are designing a true DELTA update FIRST. Your job: make scripts/build-portable.mjs emit an update bundle containing only files whose SHA256 differs from (or are missing in) the from-version manifest, and populate manifest.delete[] for removed files. The applier scripts/portable/apply-update.cjs is already manifest-driven (copies only manifest.files[], deletes manifest.delete[], with rollback backup), so the work is build-side; reuse existing version-compare machinery (versioningManager.js, /engine/version-check) where it fits. Recommend starting with /mpi-create-plan. Do NOT modify the fragile backend ResumableDownloader. NOTHING is committed yet. AFTER delta is built and verified, a separate session resumes the deferred MPI-8 update-flow test: build the 0.0.2 delta zip, run the Windows update flow against the existing install at D:/cubric-install-test (do NOT overwrite it), confirm the PRESERVE list (engine/, models/, user-data/, Documents projects) survives, then repeat for Linux. The user also plans to update the mpi-version-bump skill for delta once this is done."
+}

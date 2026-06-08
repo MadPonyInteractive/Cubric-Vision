@@ -13,6 +13,11 @@ export const APP_VERSION = '0.0.1';  // Application release version (semver)
 export const SCHEMA_VERSION = 1;     // Project data schema version (integer)
 ```
 
+`package.json` carries a matching `"version"` field. `APP_VERSION` and the
+`package.json` `version` MUST always be identical: `APP_VERSION` drives the in-app
+version, release-note lookup, and derived stage; `package.json` `version` drives
+the portable build artifact and Electron. The `/mpi-version-bump` skill bumps both.
+
 Engine versions are stored in `dev_configs/system_dependencies.json` and accessed via `routes/platformEngine.js`:
 
 ```json
@@ -139,7 +144,7 @@ Use the `/mpi-version-bump` slash command to guide the bump process interactivel
 
 ## Release Workflow & Adding Operations
 
-Both flows are owned by the `/mpi-version-bump` slash command — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, syncs `operation_registry.json`, generates release notes under `docs/releases/`, and offers pre-release tests. Do NOT edit `appVersion.js` / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump.md`.
+Both flows are owned by the `/mpi-version-bump` skill — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, bumps `appVersion.js` **and** `package.json` together, syncs `operation_registry.json`, generates release notes under `docs/releases/`, and offers pre-release tests. Do NOT edit `appVersion.js` / `package.json` version / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump/SKILL.md` (it has a **patch-only quick path** for the common bug-fix release: only `appVersion.js`, `package.json`, `releaseNotes.js`, and the archival md need editing).
 
 ### Release notes: archival vs. runtime
 
@@ -154,7 +159,7 @@ The overlay only **describes the already-running version** — it is not an upda
 
 ## Migration System
 
-When `project.json` structure changes, bump `SCHEMA_VERSION` in `js/core/appVersion.js` AND add a `migrateV<n>toV<n+1>` entry to `MIGRATIONS` map in `js/migrations/projectMigrations.js`. The `SCHEMA_VERSION` constant must match in both files. `/mpi-version-bump` with "schema changing? yes" creates the stub. On project open, `openProject()` runs all pending migrations sequentially before reconciliation/hydration. See `docs/project-integrity.md` § "The `openProject()` Flow" for the load sequence.
+When `project.json` structure changes, bump `SCHEMA_VERSION` in `js/core/appVersion.js` AND add a `migrateV<n>toV<n+1>` entry to `MIGRATIONS` map in `js/migrations/projectMigrations.js`. The `SCHEMA_VERSION` constant must match in both files. The `/mpi-version-bump` skill with "schema changing? yes" creates the stub. On project open, `openProject()` runs all pending migrations sequentially before reconciliation/hydration. See `docs/project-integrity.md` § "The `openProject()` Flow" for the load sequence.
 
 ---
 

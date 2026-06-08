@@ -4,6 +4,7 @@ import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { HOTKEY_REGISTRY, KEY_TYPE } from './hotkeyRegistry.js';
 import { on, qsa } from '../utils/dom.js';
 import { state } from '../state.js';
+import { applyUiZoom } from '../utils/uiZoom.js';
 
 let ipcRenderer = null;
 try {
@@ -85,6 +86,12 @@ class HotkeyManager {
         // Electron can show its native Inspect Element menu.
         this.bind('system.contextMenu', () => this._openContextMenuAtPointer());
         this.bind('system.contextMenu.shiftF10', () => this._openContextMenuAtPointer());
+
+        // Built-in: global UI size (webFrame zoom) — Ctrl+ / Ctrl- equivalents
+        // of the Ctrl+wheel handler in init.js.
+        this.bind('system.uiZoom.in.plus',  () => applyUiZoom(1));
+        this.bind('system.uiZoom.in.equal', () => applyUiZoom(1));
+        this.bind('system.uiZoom.out',      () => applyUiZoom(-1));
     }
 
     /**

@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-55",
+  "title": "Public repo: portable artifacts downloadable from Actions runs bypass Discord gate",
+  "description": "Before flipping the repo to public: the build-portable.yml CI workflow uploads portable zips/tars via actions/upload-artifact (retention-days: 14). On a PUBLIC repo, anyone can download these artifacts from any Actions run page with no auth, bypassing the planned Discord alpha/beta distribution gate (see project_repo_distribution_gating). No GitHub Release step exists yet, so delayed-tag gating alone does not cover the artifact leak. Options: (1) stop uploading portable artifacts in the public repo and build/push to a gated channel instead; (2) move the build workflow to a private repo/fork, public repo holds source only; (3) drop retention-days to 1 (shrinks window, does not close it). Decide and apply BEFORE the repo goes public.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-08T00:00:00.000Z",
+  "updated_at": "2026-06-08T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": ["security", "distribution", "ci", "pre-public"],
+  "priority": "high"
+}

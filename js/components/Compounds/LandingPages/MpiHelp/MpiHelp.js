@@ -183,6 +183,8 @@ export const MpiHelp = ComponentFactory.create({
                             <h4>System</h4>
                             <ul>
                                 <li><span>F11</span><span>Toggle fullscreen</span></li>
+                                <li><span>CTRL+Wheel</span><span>Change UI size</span></li>
+                                <li><span>CTRL +/-</span><span>Change UI size</span></li>
                                 <li><span>MENU</span><span>Open context menu</span></li>
                                 <li><span>SHIFT+F10</span><span>Open context menu</span></li>
                             </ul>

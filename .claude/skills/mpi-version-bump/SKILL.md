@@ -1,5 +1,7 @@
 ---
-description: Interactive release workflow — bump app version, update operation registry, update model mappings, sync operation_registry.json, generate release notes, and run pre-release tests.
+name: mpi-version-bump
+description: Interactive release workflow — bump app version (appVersion.js + package.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, and run pre-release tests. Use when cutting a new Cubric Studio release or when the user says "bump the version", "cut a release", "/mpi-version-bump".
+user-invocable: true
 ---
 # /mpi-version-bump — Interactive Release Workflow
 
@@ -9,10 +11,39 @@ Use this skill whenever you're ready to cut a new release of Cubric Studio.
 
 ---
 
+## Quick path: patch-only release (most common)
+
+If the release is a **pure patch** — bug fixes and/or small UI changes, with
+**no new operations, no ComfyUI engine change, and no project-schema change** —
+you only need to edit **four** files. Skip every operation/engine/schema step.
+
+1. `js/core/appVersion.js` — bump `APP_VERSION` (e.g. `0.0.1` → `0.0.2`). Leave `SCHEMA_VERSION` untouched.
+2. `package.json` — bump the top-level `"version"` to the same value. **The portable build reads this**; it must match `APP_VERSION`.
+3. `js/data/releaseNotes.js` — add a new `RELEASE_NOTES['<newVersion>']` entry (runtime changelog overlay source).
+4. `docs/releases/YYYY-MM-DD-vX.Y.Z.md` — archival, user-facing markdown notes.
+
+Then verify the three version sources agree:
+
+```bash
+node -e "console.log('package:', require('./package.json').version)"
+grep "APP_VERSION = " js/core/appVersion.js
+node --check js/data/releaseNotes.js
+```
+
+`APP_VERSION` and `package.json` `version` MUST be identical. Optionally run the
+pre-release tests (Step 6) — for a pure patch with no operation changes the test
+output hash is unaffected, but running it confirms nothing else drifted.
+
+For anything beyond a pure patch (new ops, engine bump, schema change), use the
+full flow below.
+
+---
+
 ## Step 1: Read Current State
 
 I will read the following files to understand the current state:
 - `js/core/appVersion.js` — current APP_VERSION, SCHEMA_VERSION
+- `package.json` — current `version` (must track APP_VERSION)
 - `dev_configs/system_dependencies.json` — current COMFY_VERSION
 - `js/core/operationRegistry.js` — all registered operations
 - `js/data/commandRegistry.js` — UI metadata for all operations
@@ -123,14 +154,20 @@ Answer `n` to re-do the questions, `y` to continue.
 - If schema version changing, increment `SCHEMA_VERSION`
 - **Do NOT edit engine versions** — those are in `system_dependencies.json`
 
-### 4b. Edit `dev_configs/system_dependencies.json`
+### 4b. Edit `package.json`
+
+- Bump the top-level `"version"` field to the **same** new version as `APP_VERSION`.
+- This is what the portable build (`scripts/build-portable.mjs`) and Electron read. If it drifts from `APP_VERSION`, the build artifact and in-app version disagree.
+- Do not run `npm install` or touch other fields.
+
+### 4c. Edit `dev_configs/system_dependencies.json`
 
 If ComfyUI version changed:
 - Update `engine.version` to the new ComfyUI version
 
 This is the **single source of truth** for the engine version. `routes/platformEngine.js` reads from this file.
 
-### 4c. Edit `js/core/operationRegistry.js`
+### 4d. Edit `js/core/operationRegistry.js`
 
 For each new operation:
 - Add entry: `opKey: { latestVersion: '1.0', appVersionIntroduced: '<newVersion>' }`
@@ -138,7 +175,7 @@ For each new operation:
 For each deprecated operation:
 - Add field: `deprecated: true` (do NOT remove the entry)
 
-### 4d. Edit `js/data/commandRegistry.js`
+### 4e. Edit `js/data/commandRegistry.js`
 
 For each new operation, add a CommandDef:
 
@@ -154,7 +191,7 @@ myNewOp: {
 },
 ```
 
-### 4e. Edit `js/data/modelConstants/models.js`
+### 4f. Edit `js/data/modelConstants/models.js`
 
 For each model that supports a new operation:
 - Add the operation key to the model's `supportedOps[]` array
@@ -170,7 +207,7 @@ workflows: {
 },
 ```
 
-### 4f. Edit `js/data/modelConstants/universal_workflows.js`
+### 4g. Edit `js/data/modelConstants/universal_workflows.js`
 
 For each new universal operation, add entry:
 
@@ -181,11 +218,11 @@ myNewOp: {
 },
 ```
 
-### 4g. Edit `operation_registry.json`
+### 4h. Edit `operation_registry.json`
 
 Add/update entries to match `operationRegistry.js` exactly. Add `universal: true` for universal ops. Mark deprecated ops with `deprecated: true`.
 
-### 4h. If Schema Changed: Edit `js/migrations/projectMigrations.js`
+### 4i. If Schema Changed: Edit `js/migrations/projectMigrations.js`
 
 I will add a migration stub:
 
@@ -201,7 +238,8 @@ export const MIGRATIONS = {
 };
 ```
 
-You fill in the actual migration logic.
+You fill in the actual migration logic. Remember `SCHEMA_VERSION` must match in
+both `appVersion.js` and `projectMigrations.js`.
 
 ---
 
@@ -239,7 +277,7 @@ I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 
 ## Changelog
 
-<summary from Q7>
+<summary from Q6>
 
 ### Changes
 - <changelog items>
@@ -249,7 +287,7 @@ I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 (or "None")
 
 ### Breaking Changes
-<list from Q6 if schema changed, otherwise "None">
+<list from Q5 if schema changed, otherwise "None">
 
 ### ComfyUI Engine
 ComfyUI version unchanged (X.Y.Z) | Updated to X.Y.Z
@@ -262,7 +300,7 @@ After publishing this release, update all parallel platforms:
 
 - [ ] **Landing Page**: Update version badge, feature list if new ops added
 - [ ] **Documentation Website**: Update operation list, changelog page
-- [ ] **GitHub Releases**: Create release with tag vX.Y.Z, attach Windows installer, write release notes
+- [ ] **GitHub Releases**: Create release with tag vX.Y.Z, attach portable artifacts (gated per repo-distribution rules), write release notes
 - [ ] **Patreon**: Post update announcement with changelog highlights
 - [ ] **Discord**: Post in #updates channel with release highlights and download link
 ```
@@ -296,11 +334,14 @@ After all edits and tests:
 
 Files edited:
 - js/core/appVersion.js
+- package.json
 - dev_configs/system_dependencies.json
 - js/core/operationRegistry.js
 - js/data/commandRegistry.js
 - js/data/modelConstants/models.js
 - operation_registry.json
+- js/data/releaseNotes.js
+- docs/releases/YYYY-MM-DD-vX.Y.Z.md
 
 New operations: 2 (myNewOp, anotherOp)
 Deprecated: 0
@@ -331,6 +372,9 @@ A: Yes, the skill edits files atomically in order. If something fails, check the
 
 **Q: The pre-release tests failed. Should I still release?**
 A: No, FAIL means the test output hash changed unexpectedly. Investigate why, fix the issue, update the baselines if the change is intentional, then re-run.
+
+**Q: `APP_VERSION` and `package.json` disagree after a bump — which wins?**
+A: They must be identical. `package.json` drives the portable build artifact name/Electron version; `APP_VERSION` drives in-app version, release-note lookup, and derived stage. Fix both to the same value before building.
 
 **Q: How do I add a new model?**
 A: Add the model to `js/data/modelConstants/models.js` with its `id`, `supportedOps`, and workflow filenames. The version-bump skill doesn't touch models — that's a separate step. Rerun `/mpi-version-bump` if model additions happen in the same release.
