@@ -4,10 +4,10 @@
   "title": "Model cross-restart download resume + partial detection + close-app warning",
   "description": "Models (safetensors up to 20GB) must resume after a full app close, not restart. node-downloader-helper writes to the FINAL filename with no .part, so a killed partial reads as installed=true (models/check uses bare fs.pathExists -> truncated model loaded). Plan: (1) sidecar marker <file>.cubricdl written on download start, deleted on verified complete; central isCompleteOnDisk(path) = exists && no sidecar, used by routes/comfy.js models/check + all install 'isInstalled' checks + UW deps checks. (2) ResumableDownloader.resumeFromDisk(): on a fresh instance, if partial+sidecar exist, manual resumeFromFile() (verified to continue AND keep pause working) instead of start(). Wire into model download start path. (3) pause() crash safety: defer abort via setImmediate (ERR_STREAM_WRITE_AFTER_END mid-chunk). (4) Both-tier close-app warning: Electron before-quit queries new GET /comfy/downloads/active {models:[],engine:bool}; models in flight -> 'will resume next launch', engine -> 'will restart'. Engine stays restart-from-scratch (already handled). DO NOT use resumeIfFileExists/override on the constructor (breaks in-session pause). See memory project_ndh_resumable_downloads + project_engine_bootstrap_retry. Verify on real desktop: kill mid model download, relaunch, confirm resume + correct installed state + working pause.",
   "column": "todo",
-  "maturity": "spec",
-  "status": "pending",
+  "maturity": "planned",
+  "status": "active",
   "created_at": "2026-06-07T17:00:00.000Z",
-  "updated_at": "2026-06-07T17:00:00.000Z",
+  "updated_at": "2026-06-08T20:14:06+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
