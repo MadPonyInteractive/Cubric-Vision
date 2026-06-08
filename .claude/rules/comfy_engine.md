@@ -113,8 +113,14 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 
 Users may add read-only additive folders for only `loras` and `upscale_models`.
 The primary models root still comes from `extra_model_paths.yaml` `base_path:`
-via `getCustomRoot()` or falls back to the engine models root. Extra folders
-are stored separately in `extra_model_folders.json` and written back into
+via `getCustomRoot()` or falls back to the **default models root**
+(`getDefaultModelsRoot()` in `routes/shared.js`). That default is
+`CUBRIC_MODELS_ROOT` when set — the portable launchers export it as
+`<portable-root>/models` (OUTSIDE the engine folder) — and only falls back to
+`<ENGINE_ROOT>/mpi_models` in dev/no-env runs. **`mpi_models` is legacy:** never
+hardcode it or `ensureDir` it on install/upgrade; always use
+`getDefaultModelsRoot()` so the folder lands where the launcher points. Extra
+folders are stored separately in `extra_model_folders.json` and written back into
 `extra_model_paths.yaml` as multiline values for only those two keys.
 
 Backend contract:

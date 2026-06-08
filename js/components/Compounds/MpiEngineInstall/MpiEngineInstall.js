@@ -103,6 +103,10 @@ export const MpiEngineInstall = ComponentFactory.create({
         let _modal = null;
         let _currentMode = null; // 'installing' or 'upgrading'
         let _downloadState = 'idle'; // 'downloading', 'paused', 'extracting', 'patching'
+        // True once the engine archive download has emitted real progress, i.e.
+        // the backend request exists and Pause can actually abort it. Gates the
+        // Pause button so an early click during async start() is not a no-op.
+        let _engineDownloadStarted = false;
         let _progressBarInst = null;
         let _pathInputInst = null;
         let _browseButtonInst = null;
@@ -224,6 +228,10 @@ export const MpiEngineInstall = ComponentFactory.create({
 
                 // 2. Move to progress phase and start download
                 _showPhase('progress');
+                // Re-arm the Pause gate for this cold start (disabled until first
+                // real progress arrives — see _engineDownloadStarted).
+                _engineDownloadStarted = false;
+                if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(true);
                 _subscribeEngineEvents();
                 // Ensure SSE is connected BEFORE the POST to avoid missing engine:* broadcasts
                 downloadService._ensureSSE();
@@ -260,10 +268,27 @@ export const MpiEngineInstall = ComponentFactory.create({
         _retryButtonInst.el.addEventListener('click', async () => {
             try {
                 _showPhase('progress');
+                // Re-arm the Pause gate — a retry may re-trigger /engine/download.
+                _engineDownloadStarted = false;
+                if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(true);
                 _subscribeEngineEvents();
                 // Ensure SSE is connected before POST so engine:* events are not missed
                 downloadService._ensureSSE();
-                await fetch('/engine/repair-deps', { method: 'POST' });
+                // Route by failure phase: if the engine binary (embedded Python)
+                // is missing, the download/extract failed — full re-provision via
+                // /engine/download. Only when Python already exists is the failure
+                // deps-only, where /engine/repair-deps (pip) is the right path.
+                // Repairing deps with no Python yields "cannot run pip".
+                let engineReady = false;
+                try {
+                    const statusRes = await fetch('/engine/status');
+                    const status = await statusRes.json();
+                    engineReady = status && status.exists === true;
+                } catch {
+                    engineReady = false;
+                }
+                const route = engineReady ? '/engine/repair-deps' : '/engine/download';
+                await fetch(route, { method: 'POST' });
                 progressSubtitle.textContent = 'Retrying installation...';
             } catch (err) {
                 _showPhase('setup');
@@ -272,13 +297,20 @@ export const MpiEngineInstall = ComponentFactory.create({
         });
 
         // ── Mount pause button ────────────────────────────────────────────────────
+        // Starts disabled: the backend ResumableDownloader's start() is async
+        // (HEAD then request), so a Pause fired before the request object exists
+        // is a no-op and the download keeps running. Enable Pause only once the
+        // first real download progress arrives (request exists, bytes flowing).
         _pauseButtonInst = MpiButton.mount(pauseButtonMount, {
             text: 'Pause',
             size: 'md',
-            variant: 'secondary'
+            variant: 'secondary',
+            disabled: true
         });
 
         _pauseButtonInst.el.addEventListener('click', async () => {
+            // Ignore clicks until the download has actually started streaming.
+            if (!_engineDownloadStarted) return;
             try {
                 await fetch('/engine/pause', { method: 'POST' });
                 _downloadState = 'paused';
@@ -468,12 +500,21 @@ export const MpiEngineInstall = ComponentFactory.create({
             if (_unsubs.length) return;
 
             _unsubs.push(Events.on('engine:downloading', (data) => {
+                el.setLoading(false); // Disable pulsation during actual download
+                el.setProgress(data);
+                // First real progress means the backend request exists — Pause can
+                // now actually abort. Enable the button and mark download started.
+                if (!_engineDownloadStarted && (data.downloadedBytes || 0) > 0) {
+                    _engineDownloadStarted = true;
+                    if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(false);
+                }
+                // Do not override an explicit user Pause: if paused, keep showing
+                // Resume. Late engine:downloading ticks can arrive mid-pause.
+                if (_downloadState === 'paused') return;
                 _downloadState = 'downloading';
                 // Show pause button, hide resume button during download
                 pauseButtonMount.style.display = 'block';
                 resumeButtonMount.style.display = 'none';
-                el.setLoading(false); // Disable pulsation during actual download
-                el.setProgress(data);
             }));
 
             _unsubs.push(Events.on('engine:extracting', (data) => {
@@ -517,14 +558,23 @@ export const MpiEngineInstall = ComponentFactory.create({
                 if (data.progress !== undefined) {
                     el.setProgress(data);
                 }
-                el.setLoading(true);
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'none';
+                // UW deps download in PARALLEL with the engine archive. Do NOT
+                // touch pause/resume button visibility here — that hid the engine
+                // Pause control mid-download when a UW dep finished. Button state
+                // is owned solely by the engine-archive phase events
+                // (downloading/extracting/patching/complete/error). Only pulse
+                // when the engine is no longer actively downloading.
+                if (_downloadState !== 'downloading' && _downloadState !== 'paused') {
+                    el.setLoading(true);
+                }
             }));
 
             _unsubs.push(Events.on('download:progress', (data) => {
                 if (data.modelId === '__universal_workflow__') {
-                    el.setLoading(false); // Disable pulsation during actual download
+                    // UW deps (parallel) — update progress only, never buttons.
+                    if (_downloadState !== 'downloading' && _downloadState !== 'paused') {
+                        el.setLoading(false);
+                    }
                     el.setProgress(data);
                 }
             }));

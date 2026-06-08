@@ -8,6 +8,7 @@ import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
 import { loadAll as loadAssets } from '../../../../services/assetService.js';
+import { reSyncInstalledModels } from '../../../../data/modelRegistry.js';
 import { ce, qs } from '../../../../utils/dom.js';
 
 const REUSE_PARTS = [
@@ -337,7 +338,13 @@ export const MpiSettings = ComponentFactory.create({
                 const data = await res.json();
                 if (!data.success) {
                     clientLogger.error('settings', '[MpiSettings] Failed to sync ComfyUI path', data.error);
+                    return;
                 }
+                // Re-sync installed models against the NEW root so MODELS[].installed
+                // reflects what is present at the changed path. Without this, the
+                // in-memory flags stay stale and opening a project shows a false
+                // "no models installed" popup until some other surface re-syncs.
+                await reSyncInstalledModels();
             } catch (err) {
                 clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }

@@ -108,9 +108,10 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Memory:** `project_website_subdomain_strategy.md`
 - **Notes:** separate repos; use absolute paths and `git -C`; CLAUDE.md does NOT auto-load there.
 
-### Cubric Studio user docs (project-local skill)
+### Cubric Studio user docs (sibling Docs repo)
 
-- **Read first:** `.agents/skills/cubric-user-docs/SKILL.md`
+- **Read first:** `c:\AI\Mpi\Cubric Studio (Docs)\.agents\skills\cubric-user-docs\SKILL.md`
+- **Notes:** docs-only work should open `c:\AI\Mpi\Cubric Studio (Docs)\` directly and use its local MPI board.
 
 ### Dev configs & engine internals
 

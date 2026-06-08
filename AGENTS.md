@@ -33,10 +33,10 @@ Do not pin this project to a specific Claude plugin cache path. If a bridge file
 - `.agents/mpi-kanban/project-profile.md` — mode, architecture summary, conventions, commands
 - `.agents/mpi-kanban/project-knowledge-index.md` — topic → files map
 
-## Project-Local Codex Skills
+## Sibling Docs Work
 
-For Cubric Studio user-facing documentation work, use the project-local skill:
+Cubric Studio Docs work has moved to the sibling repository:
 
-- `.agents/skills/cubric-user-docs/SKILL.md`
+- `C:\AI\Mpi\Cubric Studio (Docs)`
 
-This skill covers the sibling docs website, source-grounded writing, approval-first docs edits, and screenshot/GIF capture planning.
+Open that folder directly for docs-only sessions. Its local `.agents/` folder now owns the docs MPI board and the `cubric-user-docs` skill.

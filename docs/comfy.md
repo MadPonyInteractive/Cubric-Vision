@@ -137,8 +137,18 @@ rewrites `extra_model_paths.yaml`.
 
 Extras are re-merged whenever `/comfy/set-path` rewrites YAML. Clearing the
 primary models path removes `extra_model_paths.yaml` only when no extras are
-configured; with extras present, YAML is regenerated against the default engine
+configured; with extras present, YAML is regenerated against the default
 models root so ComfyUI still sees the additive folders on restart.
+
+**Default models root.** `getDefaultModelsRoot()` (`routes/shared.js`) returns
+`CUBRIC_MODELS_ROOT` when set — the portable launchers export it as
+`<portable-root>/models`, OUTSIDE the engine folder — falling back to
+`<ENGINE_ROOT>/mpi_models` only in dev/no-env runs. `mpi_models` is legacy and
+must not be hardcoded; engine install/upgrade write the YAML and create the
+folder via `getDefaultModelsRoot()`. The YAML is additive: the active root is the
+`comfyui:` block and the default root is always emitted as a separate
+`comfyui_default:` block so repointing the folder adds a search location rather
+than replacing it.
 
 ### LoRA and upscaler visibility
 

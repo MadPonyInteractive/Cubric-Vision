@@ -1,7 +1,0 @@
-interface:
-  display_name: "Cubric User Docs"
-  short_description: "Draft Cubric docs with captures"
-  default_prompt: "Use $cubric-user-docs to help document a Cubric Studio feature for the user docs site."
-
-policy:
-  allow_implicit_invocation: true

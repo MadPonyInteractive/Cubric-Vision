@@ -156,6 +156,20 @@ class ResumableDownloader {
         const fileName = path.basename(this.localPath);
         const destDir = path.dirname(this.localPath);
 
+        // DO NOT add `resumeIfFileExists`/`override` here. They route start()
+        // through an async getTotalSize()→resumeFromFile() chain, so this.__request
+        // is not yet set when pause()/abort() runs immediately after start() — the
+        // abort misses and the stream keeps downloading after a Pause. In-session
+        // pause/resume relies on the synchronous start() path below.
+        //   - In-session resume uses the SAME instance via resume() (getResumeState
+        //     + resumeFromFile), which is independent of these constructor options.
+        //   - The cross-restart "(1)" duplication that resumeIfFileExists/override
+        //     would have addressed is instead handled by explicitly scrubbing stale
+        //     archives/.part/dups BEFORE download (see _clearStaleWindowsEngineArtifacts
+        //     in routes/engine.js). That keeps the fragile pause path untouched.
+        // `resume` is not a real node-downloader-helper option (silently ignored),
+        // but it is left as a harmless marker of intent; do not "fix" it to
+        // resumeIfFileExists — that reintroduces the pause race.
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
             resume: true,

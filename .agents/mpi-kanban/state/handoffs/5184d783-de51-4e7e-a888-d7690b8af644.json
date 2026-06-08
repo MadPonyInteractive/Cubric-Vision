@@ -1,0 +1,120 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "5184d783-de51-4e7e-a888-d7690b8af644",
+  "generated_at": "2026-06-07T18:08:19.605Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 portable update-flow prep: engine-bootstrap + resumable-download + models-path fixes",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Test the portable update flow: build a fresh Windows portable baseline, install it in a separate folder + run a generation, then address MPI-47 and bump the version to create an updater zip and run the Windows update flow; if it passes, do the same for Linux.",
+    "status": "in_progress",
+    "summary": "Baseline build + install repeatedly surfaced engine-install/download bugs that were diagnosed and fixed this session (all UI-verified). The actual update-flow test has NOT started yet. Next session: MPI-47, bump 0.0.1 -> 0.0.2, build the update zip, run the Windows update flow."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Built fresh Windows portable baseline v0.0.1 (D:/CubricStudio/Vision/Builds/CubricVision-windows-x64-v0.0.1.zip, ~398MB, 5335 files) — rebuilt several times as fixes landed; current zip has ALL of this session's fixes",
+      "Fixed engine bootstrap retry/cleanup (engine.js): _clearStaleWindowsEngineArtifacts scrub + post-extract Python verify; retry button routes by GET /engine/status (no more 'cannot run pip')",
+      "Reverted a bad resumeIfFileExists/override change on the shared ResumableDownloader that broke in-session pause; documented why (downloadManager.js) — pause restored to prior working state",
+      "Fixed first-pause race (MpiEngineInstall.js): Pause button disabled until first real engine:downloading progress; re-armed on install/retry — USER VERIFIED",
+      "Fixed pause/resume buttons vanishing mid-download (MpiEngineInstall.js): parallel UW-deps events (engine:uw-installing, UW download:progress) no longer touch button visibility — USER VERIFIED",
+      "Fixed stale 'no models installed' popup after changing models path in Settings (MpiSettings.js): added await reSyncInstalledModels() after /comfy/set-path — USER VERIFIED (gen succeeded)",
+      "Fixed stray legacy mpi_models folder (engine.js install-time YAML write + upgrade legacy-migration): now use env-aware getDefaultModelsRoot() instead of hardcoded mpi_models — user accepts, will recheck on future builds",
+      "Updated docs/rules/memory for the env-aware default models root (.claude/rules/comfy_engine.md, docs/comfy.md, memory project_models_path_absolute + project_additive_models_yaml)",
+      "Created MPI-54 (todo) for deferred model cross-restart resume + sidecar + close-app warning",
+      "Saved memory: project_ndh_resumable_downloads, project_engine_bootstrap_retry"
+    ],
+    "pending": [
+      "MPI-47: add Ctrl+ / Ctrl- hotkeys to change UI size (mouse-wheel UI-size already exists)",
+      "Bump app version 0.0.1 -> 0.0.2 (package.json) reflecting the MPI-47 change",
+      "Build the update bundle/zip: node scripts/build-portable.mjs (NOT --no-update-bundle) for the 0.0.2 update artifact",
+      "Run the Windows update flow against the existing install at D:/cubric-install-test (use update.bat / update-from-zip.bat per the runbook); confirm preserve list survives (engine/, models/, user-data/, Documents projects)",
+      "If Windows update passes: build + run Linux update flow"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable release foundation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/rules updated: .claude/rules/comfy_engine.md (default models root + mpi_models legacy), docs/comfy.md (Default models root paragraph)",
+      "memory updated: project_models_path_absolute, project_additive_models_yaml (env-aware default root); new: project_ndh_resumable_downloads, project_engine_bootstrap_retry; MEMORY.md index updated"
+    ],
+    "pending": [
+      "No commit made this session (user has not asked). All fixes are uncommitted in the working tree. Decide commit timing in next session / at end-session.",
+      "MPI-8 task workspace checklist/validation not updated with this session's bootstrap/download/models-path fixes — update at end-session.",
+      "Engine /engine/upgrade legacy-migration path now targets getDefaultModelsRoot(); untested (only fires for ancient no-YAML installs)."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-47 (Ctrl+ / Ctrl- hotkeys for UI size, mirroring the existing mouse-wheel UI-size control via Hotkeys.bind + hotkeyRegistry.js), then bump package.json 0.0.1 -> 0.0.2, build the 0.0.2 update zip (node scripts/build-portable.mjs, WITHOUT --no-update-bundle), and run the Windows update flow against D:/cubric-install-test to verify the updater works and the preserve list survives.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Engine downloads re-download from scratch after a full app close (no cross-restart resume) by user's explicit call — only model downloads (safetensors up to 20GB) need cross-restart resume, deferred to MPI-54.",
+      "All download/pause fixes were kept UI-only; the fragile backend ResumableDownloader abort/pause path was NOT modified (user spent days getting it right). resume:true is a fake node-downloader-helper option but left in place because it keeps start() synchronous (pause works); do NOT change it to resumeIfFileExists.",
+      "Version bump target chosen earlier: 0.0.1 (baseline) -> 0.0.2 (updated).",
+      "Default models root is env-aware getDefaultModelsRoot(): CUBRIC_MODELS_ROOT (portable launchers set <portable-root>/models, OUTSIDE engine), falling back to <ENGINE_ROOT>/mpi_models only in dev. mpi_models is legacy; never hardcode."
+    ],
+    "constraints": [
+      "node-downloader-helper 2.1.11 writes to the FINAL filename — NO .part/temp suffix, no rename-on-complete. A killed partial sits at the final path and reads as installed=true (models/check uses bare fs.pathExists) — latent bug tracked in MPI-54.",
+      "Build hash stays 3fdd910cbcca (last commit) because fixes are uncommitted; build copies working-tree files so fixes ARE in the zip.",
+      "Local Windows builds output to D:/CubricStudio/Vision/Builds (build-portable default when D: exists).",
+      "Existing working install lives at D:/cubric-install-test (engine installed, models linked to D:/CubricModels custom + D:/cubric-install-test/models default, gen verified). Use THIS folder for the update-flow test — do NOT overwrite it with a fresh extract.",
+      "Read CLAUDE.md routing before coding: MPI-47 touches Hotkeys -> read .claude/rules/events.md + components.md; never raw window.addEventListener('keydown'), use Hotkeys.bind with a hotkeyRegistry.js id.",
+      "PowerShell is denied via Bash; use node for file inspection. Caveman comms mode is active for chat (code/commits normal)."
+    ],
+    "files_modified": [
+      "routes/engine.js",
+      "routes/downloadManager.js",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+      ".claude/rules/comfy_engine.md",
+      "docs/comfy.md",
+      ".agents/mpi-kanban/tasks/MPI-54/task.json",
+      ".agents/mpi-kanban/board.json"
+    ],
+    "files_to_read_first": [
+      "CLAUDE.md",
+      ".claude/rules/events.md",
+      ".claude/rules/components.md",
+      "docs/releases/portable-distribution-contract.md",
+      "docs/releases/github-release-checklist.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "engine-install", "resumable-downloads", "hotkeys"]
+  },
+  "rules_active": [
+    ".claude/rules/events.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-07T18:08:19.605Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/5184d783-de51-4e7e-a888-d7690b8af644.json and use mpi-continue to continue MPI-8. This session fixed several engine-install/resumable-download/models-path bugs (all UI-verified) but the portable update-flow test itself has NOT started. Your next action: implement MPI-47 (add Ctrl+ and Ctrl- hotkeys to change UI size, mirroring the existing mouse-wheel UI-size control — use Hotkeys.bind with a hotkeyRegistry.js id, never raw keydown), then bump package.json from 0.0.1 to 0.0.2, build the 0.0.2 update zip with `node scripts/build-portable.mjs` (WITHOUT --no-update-bundle), and run the Windows update flow against the existing install at D:/cubric-install-test (do NOT overwrite that folder). Do not modify the backend ResumableDownloader pause/abort path — it is fragile and working. Nothing is committed yet. After Windows update passes, repeat for Linux."
+}

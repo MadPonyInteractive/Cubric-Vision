@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -55,6 +55,55 @@ router.get('/engine/status', async (req, res) => {
  * @param {string[]} missingDepIds  UW deps to install in parallel
  * @returns {Promise<{ uwModelJob: object|null }>}
  */
+/**
+ * Remove stale Windows engine artifacts left by a killed or failed run:
+ *   - the partial archive (node-downloader-helper writes straight to the final
+ *     name with no `.part`, so a killed download leaves a truncated <filename>)
+ *   - OS-renamed download duplicates ("<base> (1).7z", etc.)
+ *   - a partial extract folder that has no embedded Python
+ * Keeps a complete, valid engine folder untouched (handled by version-check).
+ *
+ * The engine deliberately re-downloads from scratch after an app close (no
+ * cross-restart resume) — the partial archive is scrubbed here. Models DO get
+ * cross-restart resume (separate path); see the resumable-downloads handoff.
+ *
+ * @param {string} targetDir   engine root
+ * @param {string} filename    the GPU-variant archive filename being fetched
+ */
+async function _clearStaleWindowsEngineArtifacts(targetDir, filename) {
+    // Partial archive at the final name (NDH 2.x has no `.part`); the `.part`
+    // entry is belt-and-suspenders in case a future lib version reintroduces it.
+    for (const p of [path.join(targetDir, filename), path.join(targetDir, `${filename}.part`)]) {
+        if (await fs.pathExists(p)) {
+            logger.warn('engine', `Removing stale engine artifact: ${p}`);
+            await fs.remove(p).catch(() => {});
+        }
+    }
+
+    // OS-renamed download duplicates: "<base> (1).7z", "<base> (2).7z", plus
+    // their `.part` siblings. node-downloader-helper appends " (n)" when it
+    // cannot resume/override an existing final-named file.
+    const ext = path.extname(filename);
+    const base = path.basename(filename, ext);
+    const entries = await fs.readdir(targetDir).catch(() => []);
+    const dupRe = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\(\\d+\\)${ext.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\.part)?$`);
+    for (const name of entries) {
+        if (dupRe.test(name)) {
+            const dup = path.join(targetDir, name);
+            logger.warn('engine', `Removing stale engine download duplicate: ${dup}`);
+            await fs.remove(dup).catch(() => {});
+        }
+    }
+
+    // Partial extract folder with no embedded Python — unusable, must be cleared
+    // so a fresh extract does not merge onto a broken tree.
+    const comfyDir = path.join(targetDir, COMFY_DIR);
+    if (await fs.pathExists(comfyDir) && !(await fs.pathExists(getPythonBin(targetDir)))) {
+        logger.warn('engine', `Removing partial engine folder (no embedded Python): ${comfyDir}`);
+        await fs.remove(comfyDir).catch(() => {});
+    }
+}
+
 async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
     const type = 'comfy';
 
@@ -64,6 +113,14 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
 
     await fs.ensureDir(targetDir);
     const archivePath = path.join(targetDir, engineInfo.filename);
+
+    // ── Clear stale artifacts from a killed/failed prior run ────────────────
+    // A process killed mid-download (e.g. app closed during the engine fetch)
+    // leaves a truncated archive and/or a partial ComfyUI_windows_portable
+    // folder. Without this scrub, the extractor would read the junk archive and
+    // produce a folder missing python_embeded ("embedded python not found").
+    // Mirrors the Linux stale-workspace guard in _provisionUvEngine.
+    await _clearStaleWindowsEngineArtifacts(targetDir, engineInfo.filename);
 
     logger.info('system', `Downloading engine: ${engineInfo.url}`);
 
@@ -129,6 +186,17 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
         myStream.on('end', resolve);
         myStream.on('error', reject);
     });
+
+    // ── Verify the extract actually produced a usable engine ────────────────
+    // A truncated/corrupt archive can extract "successfully" yet leave the
+    // embedded Python missing. Catch that here so it surfaces as a clear,
+    // retryable download-phase error instead of a later "cannot run pip".
+    const pythonBin = getPythonBin(targetDir);
+    if (!(await fs.pathExists(pythonBin))) {
+        await fs.remove(archivePath).catch(() => {});
+        await _clearStaleWindowsEngineArtifacts(targetDir, engineInfo.filename);
+        throw new Error('Engine archive extracted without an embedded Python — the download was incomplete or corrupt. Press Retry to download it again.');
+    }
 
     await fs.remove(archivePath);
 
@@ -362,10 +430,14 @@ async function _runEngineDownload() {
         const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
 
         if (!(await fs.pathExists(extraConfigPath))) {
-            const mpiModelsDir = path.join(targetDir, 'mpi_models');
-            await fs.ensureDir(mpiModelsDir);
-            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(mpiModelsDir, await getExtraModelFolders(), mpiModelsDir), 'utf8');
-            logger.info('engine', `extra_model_paths.yaml written with default: ${mpiModelsDir}`);
+            // Use the env-aware default root (portable launcher sets
+            // CUBRIC_MODELS_ROOT=<root>/models). Hardcoding "<engine>/mpi_models"
+            // here created a stray legacy folder that nothing used — the launcher
+            // default lives OUTSIDE the engine folder.
+            const defaultModelsDir = getDefaultModelsRoot();
+            await fs.ensureDir(defaultModelsDir);
+            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(defaultModelsDir, await getExtraModelFolders(), defaultModelsDir), 'utf8');
+            logger.info('engine', `extra_model_paths.yaml written with default: ${defaultModelsDir}`);
         } else {
             logger.info('engine', `extra_model_paths.yaml already exists, preserving existing configuration`);
         }
@@ -467,7 +539,9 @@ router.post('/engine/repair-deps', async (req, res) => {
 router.post('/engine/upgrade', async (req, res) => {
     try {
         const portableDir = path.join(ENGINE_ROOT, COMFY_DIR);
-        const mpiModelsDir = path.join(ENGINE_ROOT, 'mpi_models');
+        // Migrate legacy in-engine models to the env-aware default root (portable
+        // launcher sets CUBRIC_MODELS_ROOT=<root>/models), NOT a stray mpi_models.
+        const defaultModelsDir = getDefaultModelsRoot();
         const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
 
         // 1. Check if models are inside engine (legacy user)
@@ -476,8 +550,8 @@ router.post('/engine/upgrade', async (req, res) => {
             broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
             const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
             if (await fs.pathExists(defaultModels)) {
-                logger.info('engine', 'Migrating legacy models from engine to mpi_models');
-                await fs.move(defaultModels, mpiModelsDir, { overwrite: false });
+                logger.info('engine', `Migrating legacy models from engine to ${defaultModelsDir}`);
+                await fs.move(defaultModels, defaultModelsDir, { overwrite: false });
             }
         }
 
