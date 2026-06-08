@@ -3,9 +3,9 @@
   "id": "MPI-56",
   "title": "Delta update bundles: ship only changed files, not the full app",
   "description": "The portable update bundle (scripts/build-portable.mjs stageUpdateBundle) currently copies the entire app/ tree (incl. node_modules/electron/dist) + resources/ + update/, so the 0.0.2 update zip is nearly as large as the full ~398MB portable. Only engine/ and models/ are excluded (PRESERVE). Goal: make the update bundle a true delta — include only files whose SHA256 differs from (or are absent in) the from-version manifest, and populate manifest.delete[] for removed files. The applier (scripts/portable/apply-update.cjs) is ALREADY manifest-driven (copies only manifest.files[], deletes manifest.delete[], backs up to rollback dir) so it likely needs little/no change — the work is build-side. Reuse existing version-comparison machinery (js/managers/versioningManager.js semver/appVersionIntroduced logic; routes/engine.js GET /engine/version-check; dependencies.js dep hashes) where it fits. Parent: MPI-8 portable distribution. Blocks the MPI-8 update-flow test (deferred until delta lands).",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-06-08T00:00:00.000Z",
   "updated_at": "2026-06-08T00:00:00.000Z",
   "links": {

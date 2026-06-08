@@ -1,0 +1,3 @@
+# MPI-56 Checklist
+
+- [x] Add build-side file-level delta to `scripts/build-portable.mjs`: `--from-manifest` flag, SHA256 diff vs baseline, prune bundle to changed/added, populate `delete[]`, set `fromVersion`, full-bundle+warn fallback when no baseline. Scope-aware diff so a full-artifact baseline produces no false deletes. **Verified:** dry-run (no flag) = full bundle / `fromVersion:null` / `delete:[]` / warn / validates; real before+after build with `--from-manifest` = only changed file(s) in `files[]`, correct `delete[]`, no PRESERVE/out-of-scope path deleted, `fromVersion` set, validates; `apply-update.cjs` untouched; no `ResumableDownloader` edits.

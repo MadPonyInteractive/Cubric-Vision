@@ -128,6 +128,7 @@ function parseArgs(argv) {
     buildHash: null,
     nodeModules: true,
     uvBin: process.env.CUBRIC_BUNDLE_UV || null,
+    fromManifest: null,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -168,6 +169,10 @@ function parseArgs(argv) {
       opts.stageDir = argv[++i];
     } else if (arg.startsWith('--stage-dir=')) {
       opts.stageDir = arg.slice('--stage-dir='.length);
+    } else if (arg === '--from-manifest') {
+      opts.fromManifest = argv[++i];
+    } else if (arg.startsWith('--from-manifest=')) {
+      opts.fromManifest = arg.slice('--from-manifest='.length);
     } else if (arg === '--help' || arg === '-h') {
       opts.help = true;
     } else {
@@ -193,6 +198,11 @@ Options:
   --no-source-manifest   Do not mirror the generated manifest to resources/cubric.
   --no-archive           Stage folders only; do not write zip/tar.gz artifacts.
   --no-update-bundle     Do not stage the matching update bundle.
+  --from-manifest <path> Previous release's update-manifest.json. The update
+                         bundle becomes a true delta: only files whose SHA256
+                         differs from (or are absent in) the baseline are kept,
+                         and removed files are listed in manifest.delete[].
+                         Omitted = full update bundle (fromVersion null).
   --no-node-modules      Exclude node_modules from the app copy. Use when
                          cross-building for another OS; run npm install on target.
   --uv-bin <path>        Bundle this uv binary at <root>/uv/uv for zero-setup
@@ -546,7 +556,83 @@ async function buildFileEntries(stageRoot) {
   return entries;
 }
 
-async function createUpdateManifest(stageRoot, opts, config, artifactKind = null) {
+// Compare MAJOR.MINOR.PATCH strings. Returns -1/0/1. Mirrors
+// js/managers/versioningManager.js compareSemVer; inlined here so this build
+// tool never imports app runtime modules (which would pull operationRegistry).
+function compareSemVer(v1, v2) {
+  const parse = (v) => String(v).split('.').map(Number);
+  const [a1, a2, a3] = parse(v1);
+  const [b1, b2, b3] = parse(v2);
+  if (a1 !== b1) return a1 < b1 ? -1 : 1;
+  if (a2 !== b2) return a2 < b2 ? -1 : 1;
+  if (a3 !== b3) return a3 < b3 ? -1 : 1;
+  return 0;
+}
+
+function isUnderPreserve(relPath) {
+  const normalized = toPosix(relPath);
+  for (const preserved of PRESERVE) {
+    if (preserved.startsWith('<')) continue; // <documents>/... never lives in the bundle tree
+    if (normalized === preserved || normalized.startsWith(preserved)) return true;
+  }
+  return false;
+}
+
+// Turn a fully-staged update bundle into a true file-level delta against the
+// previous release's manifest. Prunes files whose SHA256 matches the baseline,
+// keeps changed/added files plus always-required files (the manifest itself and
+// the launcher scripts the applier/runbook expect), and returns the
+// fromVersion + delete[] for createUpdateManifest. SHA256-only: per
+// docs/releases/portable-distribution-contract.md, MPI-8 ships changed-file
+// bundles, not binary deltas.
+async function applyDelta(updateStageRoot, baseline, alwaysKeep) {
+  const baselineByPath = new Map((baseline.files || []).map((entry) => [entry.path, entry.sha256]));
+  const newEntries = await buildFileEntries(updateStageRoot);
+  const newPaths = new Set(newEntries.map((entry) => entry.path));
+  const keep = new Set(alwaysKeep);
+
+  // Scope-aware diff. The baseline may be a FULL-artifact manifest (it lists
+  // portable-root files like README.txt, setup.bat, and update/* that the update
+  // bundle never carries). Restrict change-detection and delete[] to the path
+  // roots the update bundle actually ships (derived from the staged bundle
+  // itself). Baseline entries whose root is outside that scope are ignored, so a
+  // full-artifact manifest works as a baseline without producing false deletes.
+  const inScopeRoots = new Set(newEntries.map((entry) => toPosix(entry.path).split('/')[0]));
+  const isInScope = (relPath) => inScopeRoots.has(toPosix(relPath).split('/')[0]);
+
+  let changed = 0;
+  for (const entry of newEntries) {
+    const baselineHash = baselineByPath.get(entry.path);
+    const isAddedOrChanged = baselineHash === undefined || baselineHash !== entry.sha256;
+    if (isAddedOrChanged) {
+      keep.add(entry.path);
+      changed += 1;
+    }
+  }
+
+  // Prune unchanged files from the staged bundle tree so the zip carries only
+  // the delta. Always-keep files survive even when unchanged.
+  for (const entry of newEntries) {
+    if (keep.has(entry.path)) continue;
+    await fs.rm(path.join(updateStageRoot, ...entry.path.split('/')), { force: true });
+  }
+
+  // delete[] = in-scope baseline files that no longer exist, minus anything
+  // under a PRESERVE prefix (defense-in-depth) and minus the manifest path.
+  const deletes = [];
+  for (const entry of baseline.files || []) {
+    if (newPaths.has(entry.path)) continue;
+    if (!isInScope(entry.path)) continue;
+    if (entry.path === UPDATE_MANIFEST_REL) continue;
+    if (isUnderPreserve(entry.path)) continue;
+    deletes.push(entry.path);
+  }
+  deletes.sort((a, b) => a.localeCompare(b));
+
+  return { fromVersion: baseline.toVersion ?? null, deletes, changedCount: changed };
+}
+
+async function createUpdateManifest(stageRoot, opts, config, artifactKind = null, delta = null) {
   const connectorPath = path.join(stageRoot, CONNECTOR_MANIFEST_REL);
   const connectorManifest = await readJson(connectorPath);
   assertConnectorManifest(connectorManifest);
@@ -557,14 +643,14 @@ async function createUpdateManifest(stageRoot, opts, config, artifactKind = null
     displayName: 'Cubric Studio Vision',
     platform: opts.platform,
     arch: opts.arch,
-    fromVersion: null,
+    fromVersion: delta?.fromVersion ?? null,
     toVersion: opts.version,
     protocolVersion: connectorManifest.protocolVersion,
     connectorManifestPath: CONNECTOR_MANIFEST_REL,
     connectorManifestHash: await sha256(connectorPath),
     files: await buildFileEntries(stageRoot),
     preserve: PRESERVE,
-    delete: [],
+    delete: delta?.deletes ?? [],
     createdAt: new Date().toISOString(),
     artifact: {
       kind: artifactKind || (opts.dryRun ? 'dry-run-stage' : 'portable-stage'),
@@ -599,7 +685,47 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
     await copyFileEnsured(path.join(fullStageRoot, launcher), path.join(updateStageRoot, launcher));
     await makeExecutableIfNeeded(path.join(updateStageRoot, launcher));
   }
-  return createUpdateManifest(updateStageRoot, opts, config, opts.dryRun ? 'dry-run-update-bundle' : 'update-bundle');
+
+  // Delta: when a previous release's manifest is supplied, prune the freshly
+  // staged full bundle down to only changed/added files and compute delete[].
+  // Without --from-manifest the bundle stays full (fromVersion null) — safe for
+  // the first release and for any flow that has no baseline.
+  let delta = null;
+  if (opts.fromManifest) {
+    const baselinePath = path.resolve(opts.fromManifest);
+    if (!await pathExists(baselinePath)) {
+      throw new Error(`--from-manifest path not found: ${baselinePath}`);
+    }
+    const baseline = await readJson(baselinePath);
+    if (baseline.toVersion && compareSemVer(baseline.toVersion, opts.version) >= 0) {
+      console.warn(
+        `WARNING: --from-manifest toVersion ${baseline.toVersion} is not older than ${opts.version}; `
+        + 'building the delta anyway.',
+      );
+    }
+    // Always keep the manifest itself, the connector manifest (createUpdateManifest
+    // re-reads + hashes it), and the launcher scripts the applier/runbook expect,
+    // even when their bytes are unchanged from the baseline.
+    const alwaysKeep = [UPDATE_MANIFEST_REL, CONNECTOR_MANIFEST_REL, ...bundledLaunchers];
+    delta = await applyDelta(updateStageRoot, baseline, alwaysKeep);
+    console.log(
+      `Delta update bundle: from ${delta.fromVersion ?? 'unknown'} -> ${opts.version}; `
+      + `${delta.changedCount} changed/added file(s), ${delta.deletes.length} delete(s).`,
+    );
+  } else {
+    console.warn(
+      'WARNING: no --from-manifest supplied; shipping a FULL update bundle (fromVersion null). '
+      + 'Pass the previous release manifest to produce a delta.',
+    );
+  }
+
+  return createUpdateManifest(
+    updateStageRoot,
+    opts,
+    config,
+    opts.dryRun ? 'dry-run-update-bundle' : 'update-bundle',
+    delta,
+  );
 }
 
 function crc32(buffer) {
@@ -861,6 +987,9 @@ async function main() {
     connectorManifestHash: manifest.connectorManifestHash,
     fileCount: manifest.files.length,
     updateFileCount: updateManifest?.files?.length ?? null,
+    updateBundleMode: opts.updateBundle ? (opts.fromManifest ? 'delta' : 'full') : null,
+    deltaFromVersion: updateManifest?.fromVersion ?? null,
+    deltaDeleteCount: updateManifest?.delete?.length ?? null,
     preserve: manifest.preserve,
   };
   console.log(JSON.stringify(summary, null, 2));
