@@ -4,7 +4,7 @@
   "generated_at": "2026-06-08T00:00:00.000Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-8 update-flow prep: MPI-47 hotkeys + 0.0.2 bump + version-bump skill; pivot to delta-update design",
     "branch": "master"

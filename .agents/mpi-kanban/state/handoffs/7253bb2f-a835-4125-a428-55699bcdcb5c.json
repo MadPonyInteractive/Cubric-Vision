@@ -1,0 +1,101 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7253bb2f-a835-4125-a428-55699bcdcb5c",
+  "generated_at": "2026-06-08T00:00:00.000Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 update-flow test: build 0.0.2 delta zip + run Windows then Linux update flow",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Resume the deferred MPI-8 portable update-flow test now that the delta-update build (MPI-56) has landed: build the 0.0.2 delta update zip and run the Windows update flow against the existing install at D:/cubric-install-test, then Linux.",
+    "status": "in_progress",
+    "summary": "MPI-56 (delta update bundles) is DONE + user-verified + committed (424df64). scripts/build-portable.mjs now emits a true file-level SHA256 delta update bundle when given --from-manifest <prior-release-manifest>; without the flag it falls back to a full bundle. The applier scripts/portable/apply-update.cjs was untouched (already manifest-driven). This handoff resumes the original MPI-8 task that was paused to design delta first: actually build the 0.0.2 update zip and run the real update flow against D:/cubric-install-test. NO update zip has been built/tested yet."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-56 DONE + USER-VERIFIED + COMMITTED (424df64): scripts/build-portable.mjs gained --from-manifest <path>; applyDelta() does a scope-aware SHA256 diff vs the baseline manifest, prunes unchanged files from the staged update bundle, populates manifest.delete[], sets fromVersion from baseline.toVersion. No flag = full bundle + warn (fromVersion null). PRESERVE prefixes + manifest path never deleted; alwaysKeep = update-manifest.json + connector-manifest.json + launchers. compareSemVer inlined (no app-module import). apply-update.cjs unchanged. Summary now reports updateBundleMode/deltaFromVersion/deltaDeleteCount. Verified via dry-run full fallback + a real scope-aware delta build (9/9 assertions).",
+      "Prior session (already committed by concurrent agents): MPI-47 Ctrl+/Ctrl- UI-size hotkeys (d99b8b9), 0.0.2 patch bump + real mpi-version-bump skill + docs (b2f53ba). MPI-55 private-CI artifact gate (3c1a832)."
+    ],
+    "pending": [
+      "BUILD THE 0.0.2 DELTA UPDATE ZIP. Pick the baseline (--from-manifest). The committed resources/cubric/update-manifest.json is the v0.0.1 FULL-artifact manifest (kind portable-stage, 5335 files incl node_modules) — it IS a valid baseline because the delta diff is scope-aware (ignores baseline roots the update bundle doesn't ship). Run: node scripts/build-portable.mjs --from-manifest resources/cubric/update-manifest.json   (WITHOUT --no-update-bundle, WITHOUT --no-node-modules for a real shippable build; on the dev workstation it outputs to D:/CubricStudio/Vision/Builds). Confirm the produced CubricVision-windows-x64-update-v0.0.2.zip is MUCH smaller than the full portable and its update-manifest.json has fromVersion 0.0.1, a small files[], and a sane delete[].",
+      "RUN THE WINDOWS UPDATE FLOW against the EXISTING install at D:/cubric-install-test (engine installed, models linked, gen already verified — do NOT overwrite it with a fresh extract). Use update-from-zip.bat per scripts/portable/update-runbook.md (the runbook ships in the portable as update/README.md). Point it at the 0.0.2 update zip. Confirm the PRESERVE list survives the update: engine/, models/, user-data/, <Documents>/Cubric Vision/Projects/, <Documents>/Cubric Vision/project-paths.json. Launch, confirm app reports 0.0.2 and still works.",
+      "AFTER Windows passes: build + run the Linux update flow (separate OS; CI/mpi-ci builds the Linux artifact per the CI split — see note below).",
+      "AFTER both pass: user will request updating the mpi-version-bump skill + docs/releases/portable-distribution-contract.md to document the delta flow + --from-manifest (deferred, do NOT pre-empt)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution (parent)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-56 committed 424df64. Memory written: project_delta_update_bundles.md (--from-manifest delta) + project_ci_split_mpi_ci.md (builds moved to private mpi-ci). MEMORY.md index updated.",
+      "MPI-56 task workspace has plan.md / checklist.md / validation.md."
+    ],
+    "pending": [
+      "When the update flow passes, update mpi-version-bump skill + portable-distribution-contract.md to describe the delta flow (user will request).",
+      "MPI-8 task workspace checklist/validation should record the delta-landed milestone + update-flow-test result at the end of that session."
+    ]
+  },
+  "next_action": {
+    "description": "Build the 0.0.2 delta update zip with: node scripts/build-portable.mjs --from-manifest resources/cubric/update-manifest.json (real build: keep node_modules + update bundle; dev workstation outputs to D:/CubricStudio/Vision/Builds). Then run update-from-zip against the existing install at D:/cubric-install-test (do NOT overwrite it) and confirm the PRESERVE list survives + app reports 0.0.2. Then repeat for Linux. Recommend reading docs/versioning.md, scripts/portable/update-runbook.md, and the two delta/CI memory files first. Do NOT touch the backend ResumableDownloader.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Delta baseline is supplied via the explicit --from-manifest flag (chosen with user). No flag = full bundle + warn (first-release safe). The diff is scope-aware so the committed v0.0.1 full-artifact manifest works directly as the baseline — no need to archive a separate update-bundle manifest for the first delta.",
+      "File-level SHA256 delta only — NOT binary deltas (docs/releases/portable-distribution-contract.md L136-137 forbids binary deltas for MPI-8).",
+      "Builds moved to private MadPonyInteractive/mpi-ci (MPI-55). Cubric-Vision/.github/workflows/build-portable.yml is now a DISPATCHER only; real artifacts are produced by mpi-ci/.github/workflows/cubric-vision-portable.yml. Do NOT re-add upload-artifact for gated early-access builds in Cubric-Vision. For LOCAL Windows test builds (this update-flow test), just run scripts/build-portable.mjs directly on the workstation — that is unchanged and outputs to D:/CubricStudio/Vision/Builds. The Linux artifact for the Linux update test should come from mpi-ci (node_modules can't be cross-built locally on Windows)."
+    ],
+    "constraints": [
+      "Do NOT modify the backend ResumableDownloader pause/abort path — fragile, working.",
+      "Use the EXISTING install at D:/cubric-install-test for the Windows update test; do NOT overwrite it with a fresh extract.",
+      "Local Windows portable builds output to D:/CubricStudio/Vision/Builds (build-portable default when D: exists).",
+      "PRESERVE list (must survive an update): engine/, models/, user-data/, <documents>/Cubric Vision/Projects/, <documents>/Cubric Vision/project-paths.json.",
+      "A plain `node scripts/build-portable.mjs --dry-run` (without --no-source-manifest) MIRRORS a dry-run manifest back over the committed resources/cubric/update-manifest.json — pre-existing behavior, NOT a MPI-56 bug. For any TEST build always pass --no-source-manifest, or git checkout the manifest after. A real release build is fine (it mirrors a real full manifest).",
+      "Caveman comms mode active for chat (code/commits/security written normal). PowerShell denied via Bash; use node/Bash(sh) for inspection."
+    ],
+    "files_modified": [
+      "scripts/build-portable.mjs (MPI-56, committed 424df64)"
+    ],
+    "files_to_read_first": [
+      "scripts/build-portable.mjs",
+      "scripts/portable/apply-update.cjs",
+      "scripts/portable/update-runbook.md",
+      "resources/cubric/update-manifest.json",
+      "docs/versioning.md",
+      "docs/releases/portable-distribution-contract.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "versioning", "downloads"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-08T00:00:00.000Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/7253bb2f-a835-4125-a428-55699bcdcb5c.json and use mpi-continue to continue from where we left off. You are resuming MPI-8 (portable distribution). The delta-update build (MPI-56) is DONE + verified + committed (424df64): scripts/build-portable.mjs now emits a true file-level SHA256 delta update bundle when given --from-manifest <prior-release-manifest>, with a full-bundle fallback when the flag is omitted; the applier apply-update.cjs was untouched. Your job is the deferred update-flow TEST: (1) build the 0.0.2 delta update zip via `node scripts/build-portable.mjs --from-manifest resources/cubric/update-manifest.json` (real build, keep node_modules + update bundle; on the dev workstation it lands in D:/CubricStudio/Vision/Builds). Confirm the update zip is much smaller than the full portable and its manifest has fromVersion 0.0.1 + a small files[]. (2) Run the Windows update flow with update-from-zip.bat (see scripts/portable/update-runbook.md) against the EXISTING install at D:/cubric-install-test — do NOT overwrite it. Confirm the PRESERVE list survives (engine/, models/, user-data/, Documents Cubric Vision projects + project-paths.json) and the app reports 0.0.2 and still works. (3) Then build + run the Linux update flow (the Linux artifact must come from the private mpi-ci repo since node_modules can't be cross-built on Windows; builds moved there in MPI-55 — Cubric-Vision's own workflow is now just a dispatcher). Do NOT modify the fragile backend ResumableDownloader. For any TEST build pass --no-source-manifest (or git checkout the manifest after) so you don't clobber the committed baseline manifest. After both update flows pass, the user will ask you to update the mpi-version-bump skill + portable-distribution-contract.md to document the delta flow."
+}
