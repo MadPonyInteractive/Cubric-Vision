@@ -38,6 +38,17 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.3': {
+    version: '0.0.3',
+    whatIsNew: [],
+    fixes: [
+      'Linux: applying an update from a zip now installs the full update correctly instead of stopping partway through.',
+      'Linux: the no-terminal launcher (start.sh) now starts the app reliably; previously it could silently fail to launch.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.2': {
     version: '0.0.2',
     whatIsNew: [
