@@ -384,9 +384,22 @@ Resumes the deferred MPI-8 update-flow test now that the delta-update build
   delta-based flow. Linux likely tolerates overwriting a running binary
   (inode stays mapped) — to confirm on the next Linux on-host test.
 
-- PENDING: rebuild the Linux artifact with these fixes (next version bump), then
-  user runs `sh ./update-from-zip.sh <zip>` on the Ubuntu laptop against an
-  existing install and confirms the new version + PRESERVE survives.
+### 0.0.3 cut + fixed Linux artifact built (2026-06-09)
+
+- Committed the three fixes (`8e039da`) + bumped 0.0.2 -> 0.0.3 (`34c02f3`, pure
+  patch: appVersion.js + package.json + releaseNotes.js + docs/releases note).
+  Pushed master.
+- Dispatched mpi-ci (run 27209468252) — all 3 OS green. Downloaded the Linux
+  0.0.3 artifact to `D:\CubricStudio\Vision\Builds\mpi-ci-linux-0.0.3\`
+  (`CubricVision-linux-x64-v0.0.3.tar.gz` full + update zip).
+- Verified the SHIPPED tarball carries every fix: `update/apply-update.cjs` has
+  `process.noAsar`, `start.sh` uses the `sh`-invoke, `app/package.json` is 0.0.3.
+
+- PENDING (user, on Ubuntu laptop): fresh-install the fixed full tarball (gives
+  an install whose applier + launchers are fixed), confirm it reports 0.0.3 and
+  `start.sh` launches. THEN a later 0.0.4 delta + `sh ./update-from-zip.sh`
+  exercises the real fixed update path (the current install's applier is the old
+  broken one, so the update test must run from a fresh fixed install).
 
 ### Still pending after Linux
 
