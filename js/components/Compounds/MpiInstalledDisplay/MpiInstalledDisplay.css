@@ -45,13 +45,33 @@
 .mpi-installed-display__image {
     border-radius: var(--r-2);
     overflow: hidden;
+    /* Constrain the preview to a sensible portrait-friendly column so 4:5 source
+       art is shown at a respectful ratio instead of a thin landscape crop. */
+    max-width: 320px;
+    margin-inline: auto;
 }
 
 .mpi-installed-display__image-img {
     width: 100%;
-    height: 120px;
+    height: 100%;
     object-fit: cover;
     display: block;
+}
+
+/* Portrait box for still images (source art is ~4:5). */
+.mpi-installed-display__image--portrait {
+    aspect-ratio: 4 / 5;
+}
+
+/* Landscape box for video previews (16:9 clips). Full width, no max cap. */
+.mpi-installed-display__image--landscape {
+    aspect-ratio: 16 / 9;
+    max-width: none;
+}
+
+/* Hover-play video preview shares the still-image box; hint it's interactive */
+.mpi-installed-display__image-video {
+    cursor: pointer;
 }
 
 /* ── Info row: icon + text ───────────────────────────────────────────────── */

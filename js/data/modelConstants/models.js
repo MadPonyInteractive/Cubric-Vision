@@ -5,6 +5,8 @@
  * @property {string}   name         - Display name
  * @property {string}   [dropdownMeta] - Short UI category shown in compact model selectors
  * @property {'image'|'video'} mediaType
+ * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
+ * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
  * @property {string[]} supportedOps - Operation keys from commandRegistry.js
  * @property {Record<string,string>} workflows - op key → workflow filename
@@ -20,7 +22,7 @@ export const MODELS = [
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
-        image: 'Lustify7.png',
+        image: 'sdxl-real-01.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
@@ -43,7 +45,7 @@ export const MODELS = [
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
-        image: 'Lustify7.png',
+        image: 'sdxl-real-05.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
@@ -66,7 +68,7 @@ export const MODELS = [
         dropdownMeta: 'ANIME',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        image: 'AlchemyMix176.png',
+        image: 'sdxl-anime-08.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
@@ -89,7 +91,7 @@ export const MODELS = [
         dropdownMeta: 'ANIME',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        image: 'AnimeMixV80.png',
+        image: 'sdxl-anime-06.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
@@ -112,7 +114,7 @@ export const MODELS = [
         dropdownMeta: 'STYLIZED',
         mediaType: 'image',
         defaultUpscale: '4x-AnimeSharp',
-        image: 'AnimerJeiV30.png',
+        image: 'sdxl-pony-13.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
@@ -135,6 +137,7 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
+        video: 'wan22_preview.mp4',
         type: 'wan',
         loraStages: [
             { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },

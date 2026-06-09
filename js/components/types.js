@@ -654,8 +654,13 @@
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
  * @property {string} [text='']           - Descriptive body text
- * @property {string} [image='']          - Preview PNG filename from modelConstants (e.g. 'Lustify7.png').
+ * @property {string} [image='']          - Preview still filename from modelConstants (e.g. 'sdxl-real-01.webp').
  *                                          Renders <img> from 'comfy_workflows/display/{image}'.
+ * @property {string} [video='']          - Preview clip filename (e.g. 'wan22_preview.mp4'). Renders a muted,
+ *                                          looping <video> that plays on hover and resets on mouse-leave.
+ *                                          Takes precedence over `image` when both are set.
+ * @property {'portrait'|'landscape'} [mediaRatio] - Preview box aspect. Defaults to 'landscape' for video,
+ *                                          else 'portrait' (still art is ~4:5).
  * @property {string} [icon='info']       - MpiIcon registry key for the info row
  * @property {string} [iconText='']       - Text shown next to the icon
  * @property {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Info icon size
