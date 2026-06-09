@@ -67,6 +67,32 @@ function backupExisting(root, backupRoot, relPath) {
   fs.cpSync(target, backup, { recursive: true, force: true });
 }
 
+// Restore the executable bit after copy. fs.copyFileSync does NOT preserve mode,
+// so an updated launcher (start.sh, *.command, the electron binary) lands
+// non-executable on Linux/macOS — file managers then drop the "Run as program"
+// option and double-click opens the script as text. We (1) copy the bundle
+// file's own mode (build ships scripts at 755) and (2) force +x on known
+// launcher extensions as a belt-and-suspenders for zips that flatten modes.
+// No-op on Windows where exec semantics come from the extension, not the mode.
+function restoreExecBit(source, target, relPath) {
+  if (process.platform === 'win32') return;
+  let mode;
+  try {
+    mode = fs.statSync(source).mode & 0o777;
+  } catch {
+    mode = 0o644;
+  }
+  const base = path.basename(target);
+  const isLauncher = /\.(sh|command)$/.test(base)
+    || target.includes(`${path.sep}node_modules${path.sep}electron${path.sep}dist${path.sep}electron`);
+  if (isLauncher) mode |= 0o111; // u+x g+x o+x
+  try {
+    fs.chmodSync(target, mode);
+  } catch {
+    // Non-fatal: a failed chmod must not abort the whole update.
+  }
+}
+
 function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
   const source = path.resolve(bundleRoot, ...relPath.split('/'));
   const target = assertInside(portableRoot, path.join(portableRoot, ...relPath.split('/')));
@@ -79,6 +105,7 @@ function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
   backupExisting(portableRoot, backupRoot, relPath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(source, target);
+  restoreExecBit(source, target, relPath);
 }
 
 function applyDeletes(portableRoot, backupRoot, manifest) {
