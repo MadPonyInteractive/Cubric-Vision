@@ -4,8 +4,6 @@
   "columns": {
     "todo": [
       "MPI-4",
-      "MPI-48",
-      "MPI-49",
       "MPI-50",
       "MPI-51",
       "MPI-52",
@@ -13,9 +11,11 @@
       "MPI-57"
     ],
     "doing": [
-      "MPI-8"
+      "MPI-8",
+      "MPI-49"
     ],
     "done": [
+      "MPI-48",
       "MPI-56",
       "MPI-47",
       "MPI-55",

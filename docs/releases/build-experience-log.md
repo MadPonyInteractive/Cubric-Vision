@@ -649,6 +649,102 @@ that is also DONE.
 
 ---
 
+## Linux update-flow testing — 0.0.3 → 0.0.4 (2026-06-09)
+
+Author: Claude Opus 4.8 (1M ctx). Validation box: maintainer's Ubuntu ThinkPad
+X121e. This session cut 0.0.4 (three portable bugs + a gallery UI fix) and tested
+the **update-from-zip** path on Windows + Linux from a fresh 0.0.3 install. Three
+new launcher/applier learnings surfaced — all macOS risks because the launcher
+and applier code is shared. Read before the first mac update test.
+
+### Trap 1 — the APPLIER strips exec bits (distinct from the build-tar trap) ⭐
+
+The build-tar exec-bit trap is already documented above (hand-rolled tar dropped
+modes/symlinks; launchers self-chmod the electron binary). **The updater has a
+SEPARATE exec-bit bug in the same family.** `scripts/portable/apply-update.cjs`
+copied each updated file with `fs.copyFileSync`, which does **not** preserve mode.
+So when an update bundle changed a launcher (e.g. `start.sh` in this 0.0.4 delta),
+the applier wrote it **non-executable** on Linux. Symptom on the box: after
+updating, `start.sh`/`start-with-terminal.sh` lost the file-manager **"Run as
+program"** option and double-click opened them as text. The bundle's own copy was
+fine (zip carried mode 755); the loss happened at apply time.
+
+- **Recovery for an already-broken install:** `chmod +x start.sh
+  start-with-terminal.sh update.sh update-from-zip.sh resources/setup-desktop.sh`.
+- **Fix (commit `d351c41`):** `restoreExecBit()` in `apply-update.cjs` reapplies
+  the source file's mode after each copy and force-adds `+x` on `.sh`/`.command`
+  and the electron binary. No-op on Windows; chmod failures non-fatal.
+- **macOS will hit this identically** — `.command` launchers and the
+  `Electron.app/.../MacOS/Electron` binary would land non-exec after an update.
+  The fix covers `.command` + the electron-binary path, but VERIFY on a real mac
+  update that the `.command` regains exec + Finder/`open` works post-update.
+- **Lesson:** there are now TWO exec-bit hazards — the **archive writer** (build
+  time) and the **applier** (`copyFileSync`, update time). Any new file-copy path
+  in distribution tooling must consider mode; `copyFileSync`/`cpSync` do not
+  preserve exec on their own across all the flags we use.
+- **Note:** the fix only takes effect in a bundle built WITH it, so it ships from
+  **0.0.5 onward**, not the 0.0.4 that exposed it.
+
+### Trap 2 — start.sh failed under file-manager "Run as program" (not terminal) ⭐
+
+Separate from exec bits: even when executable, the no-terminal `start.sh` would
+launch fine from a **terminal** (`sh ./start.sh`) but NOT when run via the GNOME
+Files right-click **"Run as program"**. Root cause: Nautilus tracks the
+descendants of the script it launches and tears them down when the script exits;
+the old `setsid nohup … &` left the GUI as a backgrounded **child** (still a
+tracked descendant), so it was killed before drawing. Fix: `setsid --fork`
+double-forks the app into a new session reparented to init (PID 1), returning
+immediately, with **no trailing `&`** (which would re-add a tracked child).
+Fallbacks: backgrounded `setsid`, then `nohup`, for setsid builds lacking
+`--fork`. **VALIDATED on the laptop:** right-click → "Run as program" launches the
+app. macOS uses a Terminal `.command` (no "Run as program" equivalent), so this
+specific trap is Linux-only, but the general lesson — *test the file-manager
+launch gesture, not just the terminal* — applies to any desktop OS.
+
+### Trap 3 — update-from-zip is arg-required; drag-drop is Windows-only
+
+`update-from-zip.{bat,sh,command}` require the update-zip path as an argument.
+- **Windows:** double-click with no arg flashes the one-line usage and exits
+  (no `pause`) — looks like nothing happened. But **dragging the zip onto the
+  .bat works** (Explorer passes the drop as `%1`). User confirmed the Windows
+  0.0.4 update this way.
+- **Linux/macOS:** file managers do **NOT** pass a dropped file as an arg to a
+  script, so those users must run it from a **terminal** with the path. The
+  per-OS README shows the command form; Patreon delivery posts will repeat it.
+- A future "auto-detect a `CubricVision-*update*.zip` next to the launcher +
+  prompt fallback + `pause`" improvement was discussed but **deferred** — it
+  would give Linux/mac a no-terminal path and stop the Windows flash. If picked
+  up, apply to all three launchers and remember it only helps from the *next*
+  bundle.
+
+### Delta-bundle facts confirmed this cycle
+
+- Local Windows delta (`--from-manifest release-baselines/windows-x64.json
+  --no-source-manifest`): `updateBundleMode: delta`, 266 changed files (+3
+  node_modules deletes from axios/proxy churn), buildHash matched the pushed
+  commit. Output to `D:\CubricStudio\Vision\Builds`.
+- mpi-ci auto-delta (committed `release-baselines/<plat>-<arch>.json`): Linux
+  delta = only **19** changed files (no node_modules churn on Linux this cycle),
+  `fromVersion 0.0.3 → toVersion 0.0.4`. Far smaller than Windows — expected.
+- The Linux update-bundle manifest variant omits the `updateBundleMode` field but
+  carries `fromVersion`/`toVersion` + the partial file list, which is sufficient
+  to confirm delta.
+
+### What the next update-flow tester must check
+
+- [ ] After applying an update that changes a launcher, on Linux: `stat -c %a
+      start.sh` is `755` and right-click → "Run as program" is offered. (Confirms
+      the applier exec-bit fix shipped in the bundle.)
+- [ ] macOS: post-update `.command` files are executable and `open`/double-click
+      still works; the `Electron.app/.../MacOS/Electron` binary stayed exec.
+- [ ] Windows offline update: drag the zip onto `update-from-zip.bat` (or run
+      from cmd with the path) — version flips, PRESERVE survives.
+- [ ] BUG A/C + gallery icon checks must run on a box that can **generate**
+      (Windows here) — the GPU-less Linux laptop cannot validate generation-tied
+      flows.
+
+---
+
 ## Template for new entries
 
 ```
