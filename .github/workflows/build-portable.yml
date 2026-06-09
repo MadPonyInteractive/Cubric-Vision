@@ -9,7 +9,7 @@ on:
       ref:
         description: Branch, tag, or SHA to build
         required: true
-        default: main
+        default: master
         type: string
       version:
         description: Release version override

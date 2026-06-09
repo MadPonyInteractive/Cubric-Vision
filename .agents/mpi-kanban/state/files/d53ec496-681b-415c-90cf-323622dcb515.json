@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "d53ec496-681b-415c-90cf-323622dcb515",
+  "path": "CODE_OF_CONDUCT.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f3fda309-efbc-4f93-bb40-7639ca3f81a6.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/f4006f0d-c892-4f21-b182-b4c847a2da09.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-09T20:25:00Z",
+  "allowed_actions": ["edit", "verify"],
+  "recent_events": [
+    {"at": "2026-06-09T20:25:00Z", "event": "claimed_for_write"},
+    {"at": "2026-06-09T21:18:00Z", "event": "verified"}
+  ]
+}

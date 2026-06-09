@@ -2,6 +2,26 @@
 
 - 
 
+## Contribution Type
+
+- [ ] Bug fix
+- [ ] Feature or workflow improvement
+- [ ] Documentation
+- [ ] Portable build, release, or updater change
+- [ ] Refactor or maintenance
+
+## Contributor Checklist
+
+- [ ] I branched from `master` and this PR targets `master`.
+- [ ] I kept the change focused and avoided unrelated formatting/refactors.
+- [ ] I read `CONTRIBUTING.md`.
+- [ ] For component/UI work, I followed BEM, ComponentFactory, icon, DOM helper,
+      event cleanup, and CSS-token rules.
+- [ ] For ComfyUI work, workflow injection targets `_meta.title`, not numeric
+      node IDs.
+- [ ] For project JSON writes, backend changes use the queued atomic project
+      write path.
+
 ## Release or Portable Impact
 
 If this PR affects portable artifacts, release copy, updater behavior, platform
@@ -29,3 +49,4 @@ validation, or public contribution surfaces, fill this in:
 
 - [ ] Targeted tests or manual validation are listed in the PR.
 - [ ] No unrelated files were reformatted or refactored.
+- [ ] Documentation was updated when behavior, setup, or contributor workflow changed.

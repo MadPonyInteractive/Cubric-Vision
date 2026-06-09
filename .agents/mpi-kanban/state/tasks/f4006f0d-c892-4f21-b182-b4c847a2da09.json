@@ -1,0 +1,43 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "f4006f0d-c892-4f21-b182-b4c847a2da09",
+  "status": "closed",
+  "task_card": "MPI-51",
+  "title": "Branch cleanup, contributor onboarding, and rules/docs sync for open source",
+  "plan": ".agents/mpi-kanban/tasks/MPI-51/plan.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f3fda309-efbc-4f93-bb40-7639ca3f81a6.json",
+  "heartbeat_at": "2026-06-09T21:18:00Z",
+  "allowed_actions": [
+    "read",
+    "write",
+    "test",
+    "update_task_workspace"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-09T19:55:07Z",
+      "type": "task_attached",
+      "summary": "Attached coordination task for MPI-51 Phase 1 implementation."
+    },
+    {
+      "at": "2026-06-09T20:03:00Z",
+      "type": "phase1_branch_recheck",
+      "summary": "Recorded branch workflow explanation and branch audit; waiting on maintainer confirmation before deletion."
+    },
+    {
+      "at": "2026-06-09T20:12:00Z",
+      "type": "phase1_verified",
+      "summary": "Approved stale branches deleted and Phase 1 checklist completed."
+    },
+    {
+      "at": "2026-06-09T20:52:00Z",
+      "type": "implementation_validating",
+      "summary": "All MPI-51 checklist items complete; awaiting maintainer verification before board close."
+    },
+    {
+      "at": "2026-06-09T21:18:00Z",
+      "type": "task_closed",
+      "summary": "MPI-51 moved to done after explicit maintainer verification."
+    }
+  ]
+}

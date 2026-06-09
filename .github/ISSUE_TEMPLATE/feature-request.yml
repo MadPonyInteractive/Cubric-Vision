@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest an improvement that fits Cubric Vision's image/video scope.
+title: "[feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cubric Vision is scoped to image and video workflows. Audio, LLM, and prompt-intelligence features belong to sibling Cubric apps unless the maintainer explicitly changes scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or workflow gap
+      description: What workflow is difficult or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should Cubric Vision do?
+    validations:
+      required: true
+  - type: dropdown
+    id: media_type
+    attributes:
+      label: Media area
+      options:
+        - Image
+        - Video
+        - Both image and video
+        - Project/history management
+        - Model/download/setup
+        - Other Vision-scoped workflow
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Include workarounds or related tools if relevant.
+    validations:
+      required: false
