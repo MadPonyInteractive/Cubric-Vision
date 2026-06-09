@@ -7,6 +7,6 @@ Each item tracks a plan phase; detailed work remains in the plan.
 - [x] Runtime portability blockers
 - [x] Build metadata and connector manifests
 - [x] Windows portable artifact
-- [ ] Linux portable artifact
-- [ ] macOS portable artifact
+- [x] Linux portable artifact (mpi-ci CI build green; update zip + tarball downloaded; on-host update-from-zip test pending)
+- [ ] macOS portable artifact (mpi-ci CI build green; no host validation yet)
 - [x] Release readiness and public repo flow

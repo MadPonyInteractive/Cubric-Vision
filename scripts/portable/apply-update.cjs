@@ -2,6 +2,15 @@
 
 'use strict';
 
+// The portable launchers run this script via electron-as-node
+// (ELECTRON_RUN_AS_NODE=1), which has no standalone Node binary to fall back
+// on. Electron's asar-aware `fs` hook intercepts writes to any `*.asar` file
+// (the bundle contains app/node_modules/electron/dist/resources/default_app.asar)
+// and rejects them with "Invalid package", which silently stalls extract-zip's
+// lazyEntries chain partway through a large bundle. Disabling asar handling for
+// this short-lived applier process makes `.asar` entries extract as plain files.
+process.noAsar = true;
+
 const fs = require('fs');
 const path = require('path');
 

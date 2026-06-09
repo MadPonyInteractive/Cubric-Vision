@@ -16,10 +16,16 @@ if [ -f "$ROOT/resources/setup-desktop.sh" ]; then
   sh "$ROOT/resources/setup-desktop.sh" >/dev/null 2>&1 || true
 fi
 
+# Invoke through `sh` (not direct exec) so a dropped exec bit on
+# start-with-terminal.sh does not silently no-op the launch. Archiving can
+# strip exec bits on some platforms; `sh <file>` ignores the bit entirely.
+# Also self-chmod as a belt-and-suspenders for any direct callers.
+chmod +x "$ROOT/start-with-terminal.sh" 2>/dev/null || true
+
 # Prefer setsid to fully detach from any controlling terminal; fall back to
 # plain nohup background when setsid is unavailable.
 if command -v setsid >/dev/null 2>&1; then
-  setsid nohup "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
+  setsid nohup sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
 else
-  nohup "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
+  nohup sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
 fi

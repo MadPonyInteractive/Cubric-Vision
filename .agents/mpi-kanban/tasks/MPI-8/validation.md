@@ -292,3 +292,106 @@ NOT validated (out of scope — below advertised spec, not a bug):
 Still pending (Linux/mac, when hardware available): a generation on an
 in-spec machine, comfy-cli CPU-torch waste (MPI-52), macOS first build (icon.icns,
 plutil name, dock icon, additive-folder re-test).
+
+---
+
+## 2026-06-08 — Update-flow test (delta build + apply)
+
+Resumes the deferred MPI-8 update-flow test now that the delta-update build
+(MPI-56, `--from-manifest`) has landed.
+
+### Windows update flow — USER-VERIFIED
+
+- Built the 0.0.2 **delta** update zip on the workstation:
+  `node scripts/build-portable.mjs --from-manifest resources/cubric/update-manifest.json --no-source-manifest`
+  → `D:\CubricStudio\Vision\Builds\CubricVision-windows-x64-update-v0.0.2.zip`.
+  Delta confirmed: **276 KB / 18 files** vs the full portable **399 MB / 5337
+  files**. Bundle manifest `fromVersion 0.0.1 -> toVersion 0.0.2`, 0 deletes,
+  `files[]` = exactly the 13 changed (0.0.2 bump + MPI-47 hotkeys + release docs
+  + stamped buildInfo) plus 5 alwaysKeep (launchers + update/connector
+  manifests). Scope-aware diff correctly pruned node_modules/engine/models.
+- Applied to the EXISTING install at `D:/cubric-install-test` (NOT overwritten)
+  via `apply-update.cjs` through the install's bundled electron-as-node (same
+  path `update-from-zip.bat` takes). Exit 0; rollback dir created.
+- Result: install flipped **0.0.1 -> 0.0.2** (package.json + appVersion.js +
+  buildInfo `BUILD_HASH 6bf61a63850e`). Changed-file SHAs match the bundle.
+  New file `app/js/utils/uiZoom.js` (added in 0.0.2) created from MISSING.
+- **PRESERVE list survived** (by omission — none are in the bundle):
+  `engine/ComfyUI_windows_portable`, `models/{sams,ultralytics,upscale_models}`,
+  `user-data/`, `~/Documents/Cubric Vision/{Projects, project-paths.json}`.
+- Smoke: headless `server.js` boot served APP_VERSION **0.0.2** and the new
+  `uiZoom.js` (both HTTP 200). User then launched the desktop app, saw the
+  in-app update note, and confirmed it reports 0.0.2.
+- Known cosmetic: the install-ROOT `resources/cubric/update-manifest.json` still
+  reads 0.0.1 (the bundle ships `app/resources/...`, not the root copy). App
+  reads version from appVersion.js/package.json, which are correct. Note for the
+  contract doc.
+
+### Linux update flow — ARTIFACT READY, manual test pending
+
+- mpi-ci first dispatch failed all matrix jobs at `Checkout source`
+  (`Input required and not supplied: token`). Root cause: the checkout step's
+  `token:` ternary resolved to empty string for the Cubric-Vision case;
+  checkout@v4 rejects an empty `token` before trying the `ssh-key`, so the valid
+  `CUBRIC_VISION_DEPLOY_KEY` deploy key was never reached. Fixed in mpi-ci
+  `cubric-vision-portable.yml` (commit `02ab89f`): token fallback is now
+  `github.token` (non-empty); ssh-key still wins for Cubric-Vision self-checkout.
+- Re-dispatched via the production path (Cubric-Vision dispatcher
+  `build-portable.yml` -f ref=master -f version=0.0.2 -> mpi-ci). mpi-ci run
+  succeeded on all 3 OS (win32/linux/darwin).
+- Downloaded the Linux artifact to
+  `D:\CubricStudio\Vision\Builds\mpi-ci-linux\`:
+  `CubricVision-linux-x64-update-v0.0.2.zip` (379 MB, FULL bundle —
+  `fromVersion null -> 0.0.2`, 5296 files; mpi-ci does not pass `--from-manifest`,
+  correct for the first per-OS release) and
+  `CubricVision-linux-x64-v0.0.2.tar.gz` (full portable). Top-level manifest
+  verified: `platform linux`, `arch x64`, Linux launchers incl
+  `update-from-zip.sh`.
+- Linux on-host test (2026-06-09) FOUND THREE BUGS, all fixed at source:
+
+  1. **Applier silently extracted only 1553 of 5297 files (the real blocker).**
+     The portable launchers run `apply-update.cjs` via electron-as-node
+     (`ELECTRON_RUN_AS_NODE=1`; no standalone node ships in the portable).
+     Electron's asar-aware `fs` hook intercepts writes to any `*.asar` file —
+     the bundle contains `app/node_modules/electron/dist/resources/default_app.asar`
+     (zip entry ~#1554) — and rejects the write with "Invalid package", which
+     silently stalls extract-zip's lazyEntries chain (no reject, no throw, the
+     process just stops calling readEntry). Reproduced identically on Windows
+     and Linux; **real standalone node extracts all 5297 fine** (no asar hook),
+     which isolated the cause. Fixed: `process.noAsar = true` at the top of
+     `scripts/portable/apply-update.cjs`. Verified end-to-end — a full 5337-file
+     Windows bundle now extracts completely (incl `default_app.asar`) under
+     electron-as-node. This is why the earlier Windows 276K/18-file DELTA test
+     passed: it finished before reaching the asar entry. Any large/full bundle
+     hit the stall.
+  2. **`start.sh` silently no-op'd.** It invoked `start-with-terminal.sh` by
+     direct exec, which needs the exec bit; archiving strips exec bits (see
+     [[project-portable-tar-exec-symlink]]). When stripped, the backgrounded
+     `setsid nohup` call failed into /dev/null and start.sh exited 0 with
+     nothing launched. Fixed: invoke via `sh "$ROOT/start-with-terminal.sh"`
+     (interpreter ignores the bit) + a `chmod +x` belt-and-suspenders.
+  3. **`update-from-zip.sh` double-click flashed and closed.** Correct behavior
+     (it requires the zip path as an arg) but bad UX on a file-manager
+     double-click (no arg → usage → exit 2 → window closes before readable).
+     Fixed: added an explicit terminal-only message pointing to `update.sh`.
+
+- Known edge case (NOT a delta-path bug): applying a FULL update bundle over a
+  RUNNING Windows install fails with `EBUSY` on
+  `app/node_modules/electron/dist/electron.exe` (Windows locks a running exe).
+  The normal DELTA path never recopies electron.exe (unchanged → pruned from
+  files[]), so it is unaffected. Full bundles are for fresh installs; a full
+  in-place self-update would need a swap-on-restart, out of scope for the
+  delta-based flow. Linux likely tolerates overwriting a running binary
+  (inode stays mapped) — to confirm on the next Linux on-host test.
+
+- PENDING: rebuild the Linux artifact with these fixes (next version bump), then
+  user runs `sh ./update-from-zip.sh <zip>` on the Ubuntu laptop against an
+  existing install and confirms the new version + PRESERVE survives.
+
+### Still pending after Linux
+
+- GitHub `update.sh`/`update.bat` flow (downloads the update asset from the
+  latest GitHub Release) — needs a tagged release with the asset attached.
+- Document the delta flow + `--from-manifest` in the mpi-version-bump skill and
+  `docs/releases/portable-distribution-contract.md` (deferred per handoff until
+  both update flows pass).
