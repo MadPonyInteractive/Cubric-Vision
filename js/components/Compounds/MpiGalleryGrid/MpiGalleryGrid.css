@@ -364,18 +364,29 @@
     accent-color: var(--accent-heat);
 }
 
-/* ── Favourite button (top-right, hover-revealed) ────────────────────────── */
-
-.mpi-group-card__fav-wrap {
+/* ── Top-right action stack (favourite + reuse) ──────────────────────────── */
+/* One absolutely-positioned flex column holds both buttons. They flow with a
+ * gap, so they never overlap regardless of button size, label state, or UI
+ * zoom — no per-button magic-number offsets that drift out of sync. */
+.mpi-group-card__top-actions {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    z-index: 6;
+}
+
+/* ── Favourite button (hover-revealed) ───────────────────────────────────── */
+
+.mpi-group-card__fav-wrap {
     opacity: 0;
     transform: translate(6px, -4px);
     transition:
         opacity var(--t-fast) var(--ease),
         transform var(--t-fast) var(--ease);
-    z-index: 6;
 }
 
 .mpi-group-card:hover .mpi-group-card__fav-wrap,
@@ -539,15 +550,11 @@
 /* ── Reuse button ───────────────────────────────────────────────────────── */
 
 .mpi-group-card__reuse-wrap {
-    position: absolute;
-    top: calc(0.5rem + 2.15rem);
-    right: 0.5rem;
     opacity: 0;
     transform: translate(6px, -4px);
     transition:
         opacity var(--t-fast) var(--ease),
         transform var(--t-fast) var(--ease);
-    z-index: 6;
 }
 
 .mpi-group-card:hover .mpi-group-card__reuse-wrap {
@@ -704,13 +711,11 @@
     display: none;
 }
 
-/* Preview cards: stack fav + reuse below the PREVIEW / stage2 / assets badges
- * (top-right column) so all top-right chrome shares the same axis. */
-.mpi-group-card--preview .mpi-group-card__fav-wrap {
+/* Preview cards: drop the whole action stack below the PREVIEW / stage2 /
+ * assets badges (top-right column) so all top-right chrome shares one axis.
+ * One container offset — the flex gap handles button spacing. */
+.mpi-group-card--preview .mpi-group-card__top-actions {
     top: 5.4rem;
-}
-.mpi-group-card--preview .mpi-group-card__reuse-wrap {
-    top: 7.3rem;
 }
 
 .mpi-group-card__preview-actions {

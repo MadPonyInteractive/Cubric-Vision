@@ -401,6 +401,39 @@ Resumes the deferred MPI-8 update-flow test now that the delta-update build
   exercises the real fixed update path (the current install's applier is the old
   broken one, so the update test must run from a fresh fixed install).
 
+### 0.0.3 on-host test — TWO MORE BUGS found (2026-06-09), both for 0.0.4
+
+1. **Linux `start.sh` STILL does not launch (the prior fix was insufficient).**
+   On the fresh 0.0.3 Linux install, `start.sh` again did nothing — user had to
+   fall back to `start-with-terminal.sh`. The 2026-06-09 fix (invoke via `sh` +
+   chmod, in `scripts/portable/linux/start.sh`) shipped in 0.0.3 but did NOT
+   resolve it. Re-investigate: the detach path (`setsid nohup sh start-with-terminal.sh
+   >/dev/null 2>&1 < /dev/null &`) is still failing silently. Candidate causes to
+   check next session: (a) `setsid` not present / behaving differently on that
+   distro; (b) the backgrounded child dies because `set -eu` in the parent or a
+   missing env propagation; (c) the detached child's electron needs a controlling
+   tty or DISPLAY that the nohup/setsid path drops; (d) start-with-terminal.sh
+   itself only works because it stays attached. Reproduce by running
+   `sh -x ./start.sh` on the laptop to trace where it exits. start-with-terminal.sh
+   works, so the delta is purely the detach/background wrapper.
+
+2. **Pause/Resume button disappears mid-download (Linux confirmed; likely Windows
+   too).** During engine install the Pause/Resume control shows at the START of
+   the download, then vanishes after some %, leaving the rest of the install with
+   no pause/resume. NOTE the contradiction with memory
+   [[project-ndh-resumable-downloads]] and the 0.0.2 fix that claimed
+   "Pause/Resume controls no longer vanish or fire prematurely while parallel
+   dependency installs run" — that fix is incomplete or regressed. The button is
+   re-armed in `MpiEngineInstall._engineDownloadStarted` (disabled until first
+   real progress) — investigate why it then disappears: likely a re-render/phase
+   transition that drops the button, or an `engine:*` event that hides it. Do NOT
+   touch the fragile backend ResumableDownloader pause/abort path
+   ([[project-ndh-resumable-downloads]]); this is almost certainly a frontend
+   button-visibility bug in MpiEngineInstall, not the downloader.
+
+Both queued for the 0.0.4 bump alongside the models-folder bug
+([[project-install-models-folder-wiped]]) and MPI-48.
+
 ### Still pending after Linux
 
 - GitHub `update.sh`/`update.bat` flow (downloads the update asset from the

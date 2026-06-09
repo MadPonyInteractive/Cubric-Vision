@@ -81,10 +81,6 @@ export const MpiEngineInstall = ComponentFactory.create({
                         <a href="https://docs.cubric.studio" data-ref="docsLink" target="_blank" rel="noopener noreferrer">documentation</a>.
                     </p>
 
-                    <div class="mpi-engine-install__button-group">
-                        <div data-ref="pauseButtonMount"></div>
-                        <div data-ref="resumeButtonMount" style="display: none;"></div>
-                    </div>
                 </div>
             </div>
 
@@ -102,18 +98,15 @@ export const MpiEngineInstall = ComponentFactory.create({
     setup: (el, props, emit) => {
         let _modal = null;
         let _currentMode = null; // 'installing' or 'upgrading'
-        let _downloadState = 'idle'; // 'downloading', 'paused', 'extracting', 'patching'
-        // True once the engine archive download has emitted real progress, i.e.
-        // the backend request exists and Pause can actually abort it. Gates the
-        // Pause button so an early click during async start() is not a no-op.
-        let _engineDownloadStarted = false;
+        // Tracks the active install phase so the parallel UW-deps progress events
+        // know whether to pulse the loading animation. The engine install has no
+        // pause/resume — that only exists for model downloads (see MPI-54).
+        let _downloadState = 'idle'; // 'downloading', 'extracting', 'patching'
         let _progressBarInst = null;
         let _pathInputInst = null;
         let _browseButtonInst = null;
         let _installButtonInst = null;
         let _retryButtonInst = null;
-        let _pauseButtonInst = null;
-        let _resumeButtonInst = null;
         const _unsubs = [];
 
         const progressBar = qs('[data-ref="progressBar"]', el);
@@ -128,10 +121,6 @@ export const MpiEngineInstall = ComponentFactory.create({
         const browseButtonMount = qs('[data-ref="browseButtonMount"]', el);
         const installButtonMount = qs('[data-ref="installButtonMount"]', el);
         const retryButtonMount = qs('[data-ref="retryButtonMount"]', el);
-
-        // Mount primitives in Phase 2 (progress)
-        const pauseButtonMount = qs('[data-ref="pauseButtonMount"]', el);
-        const resumeButtonMount = qs('[data-ref="resumeButtonMount"]', el);
 
         // ── IPC access (Electron) ────────────────────────────────────────────────
         let ipcRenderer = null;
@@ -228,14 +217,18 @@ export const MpiEngineInstall = ComponentFactory.create({
 
                 // 2. Move to progress phase and start download
                 _showPhase('progress');
-                // Re-arm the Pause gate for this cold start (disabled until first
-                // real progress arrives — see _engineDownloadStarted).
-                _engineDownloadStarted = false;
-                if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(true);
                 _subscribeEngineEvents();
                 // Ensure SSE is connected BEFORE the POST to avoid missing engine:* broadcasts
                 downloadService._ensureSSE();
-                await fetch('/engine/download', { method: 'POST' });
+                // Send the chosen models root in the body too. The pre-download
+                // set-path YAML is wiped by the fresh-install extract scrub, so the
+                // post-extract step 6 reads this value to write the final YAML with
+                // the user's choice (empty → server resolves to the default root).
+                await fetch('/engine/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modelsRoot: modelPath })
+                });
             } catch (err) {
                 _setError(`Failed to start installation: ${err.message}`);
             }
@@ -268,9 +261,6 @@ export const MpiEngineInstall = ComponentFactory.create({
         _retryButtonInst.el.addEventListener('click', async () => {
             try {
                 _showPhase('progress');
-                // Re-arm the Pause gate — a retry may re-trigger /engine/download.
-                _engineDownloadStarted = false;
-                if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(true);
                 _subscribeEngineEvents();
                 // Ensure SSE is connected before POST so engine:* events are not missed
                 downloadService._ensureSSE();
@@ -296,50 +286,10 @@ export const MpiEngineInstall = ComponentFactory.create({
             }
         });
 
-        // ── Mount pause button ────────────────────────────────────────────────────
-        // Starts disabled: the backend ResumableDownloader's start() is async
-        // (HEAD then request), so a Pause fired before the request object exists
-        // is a no-op and the download keeps running. Enable Pause only once the
-        // first real download progress arrives (request exists, bytes flowing).
-        _pauseButtonInst = MpiButton.mount(pauseButtonMount, {
-            text: 'Pause',
-            size: 'md',
-            variant: 'secondary',
-            disabled: true
-        });
-
-        _pauseButtonInst.el.addEventListener('click', async () => {
-            // Ignore clicks until the download has actually started streaming.
-            if (!_engineDownloadStarted) return;
-            try {
-                await fetch('/engine/pause', { method: 'POST' });
-                _downloadState = 'paused';
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'block';
-                progressSubtitle.textContent = 'Download paused. Click Resume to continue.';
-            } catch (err) {
-                clientLogger.error('MpiEngineInstall', 'Pause failed:', err);
-            }
-        });
-
-        // ── Mount resume button ───────────────────────────────────────────────────
-        _resumeButtonInst = MpiButton.mount(resumeButtonMount, {
-            text: 'Resume',
-            size: 'md',
-            variant: 'primary'
-        });
-
-        _resumeButtonInst.el.addEventListener('click', async () => {
-            try {
-                await fetch('/engine/resume', { method: 'POST' });
-                _downloadState = 'downloading';
-                pauseButtonMount.style.display = 'block';
-                resumeButtonMount.style.display = 'none';
-                progressSubtitle.textContent = 'Resuming download...';
-            } catch (err) {
-                clientLogger.error('MpiEngineInstall', 'Resume failed:', err);
-            }
-        });
+        // NOTE: The engine install intentionally has NO pause/resume UI. The engine
+        // archive and the UW model deps download in parallel, and only the engine
+        // archive was ever pausable — once it finished the control became a dead
+        // button mid-download. Pause/resume lives with model downloads only (MPI-54).
 
         // ── Phase management ──────────────────────────────────────────────────────
         function _showPhase(phaseName) {
@@ -489,8 +439,6 @@ export const MpiEngineInstall = ComponentFactory.create({
             if (_browseButtonInst) _browseButtonInst.destroy();
             if (_installButtonInst) _installButtonInst.destroy();
             if (_retryButtonInst) _retryButtonInst.destroy();
-            if (_pauseButtonInst) _pauseButtonInst.destroy();
-            if (_resumeButtonInst) _resumeButtonInst.destroy();
             if (_modal) _modal.el.hide();
             el.hide();
         };
@@ -502,26 +450,11 @@ export const MpiEngineInstall = ComponentFactory.create({
             _unsubs.push(Events.on('engine:downloading', (data) => {
                 el.setLoading(false); // Disable pulsation during actual download
                 el.setProgress(data);
-                // First real progress means the backend request exists — Pause can
-                // now actually abort. Enable the button and mark download started.
-                if (!_engineDownloadStarted && (data.downloadedBytes || 0) > 0) {
-                    _engineDownloadStarted = true;
-                    if (_pauseButtonInst) _pauseButtonInst.el.setDisabled(false);
-                }
-                // Do not override an explicit user Pause: if paused, keep showing
-                // Resume. Late engine:downloading ticks can arrive mid-pause.
-                if (_downloadState === 'paused') return;
                 _downloadState = 'downloading';
-                // Show pause button, hide resume button during download
-                pauseButtonMount.style.display = 'block';
-                resumeButtonMount.style.display = 'none';
             }));
 
             _unsubs.push(Events.on('engine:extracting', (data) => {
                 _downloadState = 'extracting';
-                // Hide both pause/resume buttons during extraction
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'none';
                 let displayFile = '';
                 if (data.file) {
                     // Extract just the filename from the full path
@@ -541,9 +474,6 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             _unsubs.push(Events.on('engine:patching', (data) => {
                 _downloadState = 'patching';
-                // Hide buttons during patching
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'none';
                 el.setStatus(data.status || 'Finalizing...');
                 progressInfo.textContent = 'Finalizing installation...';
                 el.setLoading(true);
@@ -558,21 +488,18 @@ export const MpiEngineInstall = ComponentFactory.create({
                 if (data.progress !== undefined) {
                     el.setProgress(data);
                 }
-                // UW deps download in PARALLEL with the engine archive. Do NOT
-                // touch pause/resume button visibility here — that hid the engine
-                // Pause control mid-download when a UW dep finished. Button state
-                // is owned solely by the engine-archive phase events
-                // (downloading/extracting/patching/complete/error). Only pulse
-                // when the engine is no longer actively downloading.
-                if (_downloadState !== 'downloading' && _downloadState !== 'paused') {
+                // UW deps download in PARALLEL with the engine archive. Only pulse
+                // the loading animation when the engine archive is not itself
+                // actively downloading (it owns the determinate progress bar).
+                if (_downloadState !== 'downloading') {
                     el.setLoading(true);
                 }
             }));
 
             _unsubs.push(Events.on('download:progress', (data) => {
                 if (data.modelId === '__universal_workflow__') {
-                    // UW deps (parallel) — update progress only, never buttons.
-                    if (_downloadState !== 'downloading' && _downloadState !== 'paused') {
+                    // UW deps (parallel) — update progress only.
+                    if (_downloadState !== 'downloading') {
                         el.setLoading(false);
                     }
                     el.setProgress(data);
@@ -582,8 +509,6 @@ export const MpiEngineInstall = ComponentFactory.create({
             _unsubs.push(Events.on('engine:complete', () => {
                 _downloadState = 'idle';
                 _unsubscribeEngineEvents();
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'none';
                 el.setLoading(false);
                 el.setStatus('Complete!');
                 setTimeout(() => {
@@ -594,9 +519,6 @@ export const MpiEngineInstall = ComponentFactory.create({
             _unsubs.push(Events.on('engine:error', (data) => {
                 _downloadState = 'idle';
                 _unsubscribeEngineEvents();
-                // Hide pause/resume during error state
-                pauseButtonMount.style.display = 'none';
-                resumeButtonMount.style.display = 'none';
                 _setError(data.error);
             }));
         }

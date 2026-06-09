@@ -38,6 +38,19 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.4': {
+    version: '0.0.4',
+    whatIsNew: [],
+    fixes: [
+      'First-run install now keeps the models folder you pick before pressing Install, instead of silently reverting to the default location.',
+      'Linux: the no-terminal launcher (start.sh) now starts the app when run via the file manager’s "Run as program", not only from a terminal.',
+      'Engine install no longer shows a Pause/Resume button that could vanish mid-download — the engine download runs straight through (Pause/Resume remains for model downloads).',
+      'Gallery cards: the favourite and reuse buttons no longer overlap as the UI is scaled up or in preview state.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.3': {
     version: '0.0.3',
     whatIsNew: [],

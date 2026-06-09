@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -342,7 +342,7 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     return { uwModelJob };
 }
 
-async function _runEngineDownload() {
+async function _runEngineDownload(chosenModelsRoot) {
     const type = 'comfy';
     logger.info('engine', `_runEngineDownload started`);
     try {
@@ -426,15 +426,26 @@ async function _runEngineDownload() {
         );
         logger.info('engine', `Version stamp written: ${INSTALLED_ENGINE_VERSION}`);
 
-        // ── 6. Post-install: Write extra_model_paths.yaml (if needed) ────────────
+        // ── 6. Post-install: Write extra_model_paths.yaml ────────────────────────
+        // The extract scrub wipes any pre-download /comfy/set-path YAML, so this is
+        // the authoritative write for a fresh install. The user's chosen root
+        // arrives via the /engine/download body (chosenModelsRoot) — honour it here
+        // rather than always reverting to the default, which silently discarded the
+        // folder the user picked before pressing Install.
         const extraConfigPath = getComfyPath(targetDir, 'extra_model_paths.yaml');
+        const defaultModelsDir = getDefaultModelsRoot();
 
-        if (!(await fs.pathExists(extraConfigPath))) {
-            // Use the env-aware default root (portable launcher sets
-            // CUBRIC_MODELS_ROOT=<root>/models). Hardcoding "<engine>/mpi_models"
-            // here created a stray legacy folder that nothing used — the launcher
+        if (chosenModelsRoot && chosenModelsRoot.trim()) {
+            // Explicit user choice — always write it (absolute, additive extras),
+            // overwriting any stale default that survived the scrub.
+            const chosenRoot = resolveModelsRoot(chosenModelsRoot);
+            await fs.ensureDir(chosenRoot);
+            await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(chosenRoot, await getExtraModelFolders(), defaultModelsDir), 'utf8');
+            logger.info('engine', `extra_model_paths.yaml written with chosen root: ${chosenRoot}`);
+        } else if (!(await fs.pathExists(extraConfigPath))) {
+            // No explicit choice and no surviving YAML — write the env-aware default
+            // root (portable launcher sets CUBRIC_MODELS_ROOT=<root>/models). The
             // default lives OUTSIDE the engine folder.
-            const defaultModelsDir = getDefaultModelsRoot();
             await fs.ensureDir(defaultModelsDir);
             await fs.writeFile(extraConfigPath, buildExtraModelPathsYaml(defaultModelsDir, await getExtraModelFolders(), defaultModelsDir), 'utf8');
             logger.info('engine', `extra_model_paths.yaml written with default: ${defaultModelsDir}`);
@@ -464,10 +475,17 @@ async function _runEngineDownload() {
 router.post('/engine/download', async (req, res) => {
     logger.info('engine', `Download request received`);
 
+    // The pre-download /comfy/set-path YAML lives inside the comfy dir and is
+    // wiped by the fresh-install extract scrub, so carry the user's chosen models
+    // root through the request body to the post-extract step 6 (see _runEngineDownload).
+    const chosenModelsRoot = req.body && typeof req.body.modelsRoot === 'string'
+        ? req.body.modelsRoot
+        : '';
+
     res.json({ success: true, status: 'started' }); // respond immediately — NEVER block
 
     logger.info('engine', `Starting async engine download`);
-    _runEngineDownload().catch(e => {
+    _runEngineDownload(chosenModelsRoot).catch(e => {
         logger.error('engine', 'Uncaught engine download error (already handled)', e);
     });
 });

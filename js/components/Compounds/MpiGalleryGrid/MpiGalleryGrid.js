@@ -306,8 +306,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 </div>
                 <div class="mpi-group-card__top-badge"></div>
                 <div class="mpi-group-card__order-badge mpi-selection-order-badge" style="display:none"></div>
-                <div class="mpi-group-card__fav-wrap"></div>
-                <div class="mpi-group-card__reuse-wrap"></div>
+                <div class="mpi-group-card__top-actions">
+                    <div class="mpi-group-card__fav-wrap"></div>
+                    <div class="mpi-group-card__reuse-wrap"></div>
+                </div>
                 <div class="mpi-group-card__preview-badge">PREVIEW</div>
                 <div class="mpi-group-card__stage2-badge" hidden></div>
                 <div class="mpi-group-card__assets-badge" hidden></div>

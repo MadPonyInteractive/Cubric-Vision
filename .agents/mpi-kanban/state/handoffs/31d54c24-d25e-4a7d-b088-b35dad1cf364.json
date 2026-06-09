@@ -1,0 +1,122 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "31d54c24-d25e-4a7d-b088-b35dad1cf364",
+  "generated_at": "2026-06-09T15:57:25.922Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 portable update flow: asar fix + 0.0.3 cut + delta CI wiring; queued 0.0.4 bug batch",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Test the portable update flow (update-from-zip) on Windows then Linux, building real delta update bundles. Fix anything that breaks. Then keep iterating: bump 0.0.4 (with MPI-48 + accumulated bug fixes) and re-test the delta update on both boxes.",
+    "status": "in_progress",
+    "summary": "Windows update flow passed (user-verified). The big blocker — large/full update bundles silently extracting only ~1553 of ~5297 files — was root-caused to electron-as-node's asar fs hook stalling extract-zip on default_app.asar, and fixed with process.noAsar=true in apply-update.cjs (verified end-to-end). 0.0.3 was cut (pure patch: asar fix + 2 Linux launcher fixes), pushed, and built green on all 3 OS via mpi-ci. mpi-ci was wired to build true DELTA update bundles via committed release-baselines/<plat>-<arch>.json (verified by local dry-run). 0.0.3 fresh-install artifacts for all 3 platforms are downloaded under D:/CubricStudio/Vision/Builds/. On the 0.0.3 Linux on-host test the user found THREE bugs still open (models-folder-on-install ignored; start.sh STILL not launching despite the shipped fix; Pause/Resume button vanishes mid-download). All three are queued for 0.0.4. NO 0.0.4 work has started — next session implements the 0.0.4 bug batch (await user go + MPI-48 scope), then bump 0.0.3->0.0.4, build both deltas, re-test."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "ASAR EXTRACT STALL root-caused + FIXED + verified (commit 8e039da). electron-as-node's asar-aware fs hook rejected writes to *.asar (bundle has app/node_modules/electron/dist/resources/default_app.asar), silently stalling extract-zip lazyEntries at ~1553/5297 files (exit 0, no error). Standalone node extracts fine. Fix: process.noAsar=true at top of scripts/portable/apply-update.cjs. Verified: full 5337-file bundle extracts completely incl default_app.asar. See memory project_electron_asnode_asar_extract.",
+      "Linux launcher fixes shipped in 8e039da: start.sh now sh-invokes start-with-terminal.sh + chmod; update-from-zip.sh prints terminal-only usage. (NOTE: start.sh fix INSUFFICIENT — see pending bug 2.)",
+      "0.0.3 cut (commit 34c02f3, pure patch): appVersion.js + package.json 0.0.2->0.0.3, releaseNotes.js entry, docs/releases/2026-06-09-v0.0.3.md. Version sources agree. Pre-release test is engine-backed (needs live ComfyUI) and irrelevant for ops-unchanged patch — skipped correctly.",
+      "Pushed master (6bf61a6 was already pushed pre-session; this session pushed 34c02f3 then 7ac53df). origin/master == local.",
+      "mpi-ci CHECKOUT BUG fixed (mpi-ci commit 02ab89f): the workflow passed an empty token to actions/checkout@v4 which errored before trying the ssh-key; changed token fallback to github.token (non-empty) so the CUBRIC_VISION_DEPLOY_KEY ssh path is used. See memory project_private_ci_artifact_gate.",
+      "DELTA CI WIRED (mpi-ci commit 93ff49d + Cubric-Vision commit 7ac53df): mpi-ci build step passes --from-manifest release-baselines/<platform>-<arch>.json when present (else full). Committed the v0.0.3 update-bundle manifests as baselines at release-baselines/{linux-x64,windows-x64,darwin-arm64}.json + README. Verified by local dry-run: updateBundleMode=delta, deltaFromVersion=0.0.3. See memory project_ci_split_mpi_ci (2026-06-09 entry).",
+      "mpi-ci 0.0.3 build (run 27209468252) green on win32/linux/darwin. All 3 platform artifacts downloaded: D:/CubricStudio/Vision/Builds/mpi-ci-linux-0.0.3/, mpi-ci-win32-x64-0.0.3/, mpi-ci-darwin-arm64-0.0.3/. Verified shipped Linux tarball carries the fixes (process.noAsar present, start.sh sh-invoke, package.json 0.0.3).",
+      "Windows update flow USER-VERIFIED earlier this session: 276K/18-file delta applied to D:/cubric-install-test, 0.0.1->0.0.2, PRESERVE list survived, in-app update note shown, app reported 0.0.2."
+    ],
+    "pending": [
+      "0.0.4 BUG BATCH (await user go; user wants to bundle with MPI-48). Implement these three, all documented:",
+      "BUG A — models folder ignored on first-run install (memory project_install_models_folder_wiped). Root cause VERIFIED: /comfy/set-path writes extra_model_paths.yaml INSIDE the comfy dir (getComfyPath(ENGINE_ROOT,...)); on fresh install /engine/download scrubs+extracts over that dir (engine.js ~L103/173), wiping the YAML; post-extract step 6 (engine.js ~L432) then writes the DEFAULT root (getDefaultModelsRoot, hardcoded), discarding the user's choice. Fix at step 6: apply the user's chosen root after extraction (pass through /engine/download body — currently ignored — or read the persisted Storage.comfyRootPath), not via a pre-download set-path that gets wiped.",
+      "BUG B — Linux start.sh STILL does not launch on 0.0.3 (the shipped sh-invoke fix was INSUFFICIENT). User again had to use start-with-terminal.sh. Re-investigate the detach wrapper (setsid nohup sh start-with-terminal.sh >/dev/null 2>&1 < /dev/null &) in scripts/portable/linux/start.sh. Reproduce with `sh -x ./start.sh` on the laptop to see where it exits. start-with-terminal.sh works, so the bug is the detach/background path only.",
+      "BUG C — Pause/Resume button disappears mid-download (Linux confirmed, likely Windows too). Shows at download start, vanishes after some %, no pause/resume for the rest. Frontend bug in js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js (_engineDownloadStarted re-arms the button; find why a later render/phase/engine:* event drops it). DO NOT touch the backend ResumableDownloader pause/abort path (fragile — memory project_ndh_resumable_downloads). Contradicts the 0.0.2 'Pause/Resume no longer vanish' claim — that fix is incomplete/regressed.",
+      "AFTER fixes: bump 0.0.3->0.0.4 (mpi-version-bump; pure patch unless MPI-48 adds ops). REFRESH release-baselines/ with the 0.0.3 manifests is ALREADY DONE — they are the 0.0.3 baselines, so 0.0.4 deltas against 0.0.3 automatically. After SHIPPING 0.0.4, refresh baselines to the 0.0.4 manifests for the next cycle.",
+      "BUILD 0.0.4 deltas: Windows locally (node scripts/build-portable.mjs --from-manifest release-baselines/windows-x64.json --no-source-manifest, outputs D:/CubricStudio/Vision/Builds); Linux+mac via mpi-ci dispatch (gh workflow run build-portable.yml --repo MadPonyInteractive/Cubric-Vision --ref master -f ref=master -f version=0.0.4) — now auto-delta via committed baselines.",
+      "RE-TEST update flow on BOTH boxes from a FRESH 0.0.3 install (which has the fixed applier): Windows update-from-zip.bat + Linux sh ./update-from-zip.sh, applying the 0.0.4 delta. Confirm version flips to 0.0.4 + PRESERVE survives.",
+      "DEFERRED (after both update flows pass): document the delta flow + --from-manifest + release-baselines refresh in the mpi-version-bump skill and docs/releases/portable-distribution-contract.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Portable distribution, updater, and release validation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-8/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-8/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-8/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "Memory written this session: project_electron_asnode_asar_extract (asar stall + noAsar fix + Linux launcher fixes), project_install_models_folder_wiped (BUG A root cause), project_ci_split_mpi_ci updated (delta baseline wiring + checkout fix + ref=master gotcha), project_private_ci_artifact_gate updated (empty-token checkout bug). MEMORY.md index updated for the two new files.",
+      "MPI-8 validation.md updated with: Windows update pass, asar root-cause+fix, Linux launcher fixes, 0.0.3 cut + fixed artifact verification, delta-baseline wiring, and the THREE 0.0.3 on-host bugs (models-folder, start.sh-still-broken, pause-button-vanishes).",
+      "MPI-8 checklist.md: Linux portable artifact marked [x] (CI green + downloaded)."
+    ],
+    "pending": [
+      "After the 0.0.4 bug batch passes + both update flows verified: update mpi-version-bump skill + docs/releases/portable-distribution-contract.md to document the delta flow, --from-manifest, and the release-baselines refresh-after-release step.",
+      "Refresh release-baselines/ to the 0.0.4 update manifests AFTER 0.0.4 ships (so 0.0.5 deltas against 0.0.4)."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-8. Three bugs from the 0.0.3 on-host test are queued for the 0.0.4 bump (all root-caused/documented): (A) first-run install ignores the models folder picked before Install — fix engine.js step 6 to use the user's chosen root after extraction instead of the hardcoded default (see memory project_install_models_folder_wiped); (B) Linux start.sh STILL does not launch despite the shipped sh-invoke fix — re-investigate the setsid/nohup detach wrapper, reproduce with `sh -x ./start.sh`; (C) Pause/Resume button vanishes mid-download — frontend visibility bug in MpiEngineInstall.js, do NOT touch the backend ResumableDownloader. Ask the user for the go + MPI-48 scope before writing code (the user wants to bundle these with MPI-48). After fixes: mpi-version-bump 0.0.3->0.0.4, build Windows delta locally + dispatch mpi-ci (auto-delta via committed release-baselines), then re-test update-from-zip on a FRESH 0.0.3 install on both boxes (the existing installs have the old broken applier).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "asar stall fixed with process.noAsar=true in apply-update.cjs (not by swapping extractors or bundling node). Verified end-to-end. The portable has no standalone node — the applier MUST run under electron, so disabling asar handling is the right lever.",
+      "Delta baseline source = committed release-baselines/<plat>-<arch>.json in Cubric-Vision (chosen with user over pulling prior artifact or GitHub Release). mpi-ci reads it as --from-manifest when present, full bundle when absent. Baselines must be committed+pushed BEFORE dispatching the next build (mpi-ci checks out Cubric-Vision). Refresh after each release.",
+      "0.0.3 = fixes-only patch by user choice (their app changes + MPI-48 will land in 0.0.4). Both 0.0.4 updates will be true deltas (Windows local --from-manifest; Linux mpi-ci auto via baseline).",
+      "Three bugs were DIAGNOSED only, NOT fixed — user is mid-test and wants to bundle the fixes with MPI-48 in the 0.0.4 bump. Do not pre-empt; await go + scope."
+    ],
+    "constraints": [
+      "Do NOT modify the backend ResumableDownloader pause/abort path — fragile, working (memory project_ndh_resumable_downloads). BUG C is a FRONTEND button-visibility issue in MpiEngineInstall.js.",
+      "Dispatcher input default ref is 'main' but the branch is 'master' — ALWAYS dispatch with `-f ref=master`.",
+      "mpi-ci builds FULL portable + DELTA update bundle per run (upload globs *.zip + *.tar.gz). Linux/mac full archive is .tar.gz; Windows is .zip. The applier reads the TOP-LEVEL resources/cubric/update-manifest.json, NOT app/resources/cubric/... (that nested one is the bundled source baseline and on Linux reads platform win32/0.0.1 — ignore it).",
+      "Windows EBUSY edge case: applying a FULL bundle over a RUNNING Windows install fails on the locked electron.exe. The DELTA path never recopies electron.exe (unchanged->pruned) so it's unaffected. Full bundles = fresh install only.",
+      "For any TEST build pass --no-source-manifest so the committed baseline/source manifest isn't clobbered. Local Windows builds output to D:/CubricStudio/Vision/Builds.",
+      "Existing installs (D:/cubric-install-test at 0.0.2, the user's Linux 0.0.1 install) have the OLD broken applier. The update-flow re-test MUST run from a FRESH 0.0.3 install (fixed applier). 0.0.3 fresh-install artifacts are at D:/CubricStudio/Vision/Builds/mpi-ci-{linux,win32-x64,darwin-arm64}-0.0.3/.",
+      "Caveman comms mode active for chat (code/commits/security written normal). PowerShell denied via Bash; cmd.exe interactive shell does not run .bat with args through the Bash tool — invoke the applier directly via electron-as-node, or run on the real box."
+    ],
+    "files_modified": [
+      "scripts/portable/apply-update.cjs (asar fix, committed 8e039da)",
+      "scripts/portable/linux/start.sh (sh-invoke fix — INSUFFICIENT, BUG B still open, committed 8e039da)",
+      "scripts/portable/linux/update-from-zip.sh (usage message, committed 8e039da)",
+      "js/core/appVersion.js, package.json, js/data/releaseNotes.js, docs/releases/2026-06-09-v0.0.3.md (0.0.3 bump, committed 34c02f3)",
+      "release-baselines/{linux-x64,windows-x64,darwin-arm64}.json + README.md (delta baselines, committed 7ac53df)",
+      "mpi-ci/.github/workflows/cubric-vision-portable.yml (checkout token fix 02ab89f + delta wiring 93ff49d — in the SEPARATE private MadPonyInteractive/mpi-ci repo)",
+      ".agents/mpi-kanban/tasks/MPI-8/validation.md + checklist.md (tracking; validation.md has uncommitted edits as of this handoff)"
+    ],
+    "files_to_read_first": [
+      "routes/engine.js (BUG A: step 6 ~L429-443 hardcodes getDefaultModelsRoot; scrub ~L103; extract ~L173-178; download route ~L464)",
+      "routes/comfy.js (set-path ~L302-328 writes YAML inside comfy dir)",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js (BUG A install handler ~L214; BUG C pause button re-arm _engineDownloadStarted)",
+      "scripts/portable/linux/start.sh (BUG B detach wrapper)",
+      "scripts/portable/apply-update.cjs (the shipped fix, reference)",
+      "release-baselines/README.md (delta baseline contract)",
+      "docs/releases/portable-distribution-contract.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "downloads", "comfy_engine", "versioning"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-09T15:57:25.922Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/31d54c24-d25e-4a7d-b088-b35dad1cf364.json and use mpi-continue to continue from where we left off. You are resuming MPI-8 (portable distribution / updater). Done this session: the big update-flow blocker (large bundles silently extracting only ~1553/5297 files) was root-caused to electron-as-node's asar fs hook stalling extract-zip on default_app.asar and FIXED with process.noAsar=true in scripts/portable/apply-update.cjs (verified end-to-end). 0.0.3 was cut (pure patch: asar fix + 2 Linux launcher fixes; commits 8e039da + 34c02f3), pushed, and built green on all 3 OS via the private mpi-ci repo. mpi-ci was fixed (empty-token checkout bug, commit 02ab89f) and wired for TRUE DELTA update bundles via committed release-baselines/<plat>-<arch>.json (commits 93ff49d in mpi-ci + 7ac53df in Cubric-Vision); verified by local dry-run. 0.0.3 fresh-install artifacts for all 3 platforms are at D:/CubricStudio/Vision/Builds/mpi-ci-{linux,win32-x64,darwin-arm64}-0.0.3/. The 0.0.3 Linux on-host test surfaced THREE bugs, all queued for 0.0.4 and root-caused/documented: (A) the first-run install ignores the models folder picked before Install — engine.js step 6 writes the hardcoded default after the extract scrubs the set-path YAML; fix step 6 to use the user's chosen root (memory project_install_models_folder_wiped); (B) Linux start.sh STILL does not launch despite the shipped sh-invoke fix — re-investigate the setsid/nohup detach wrapper, reproduce with `sh -x ./start.sh`; (C) the Pause/Resume button vanishes mid-download — a FRONTEND visibility bug in MpiEngineInstall.js (do NOT touch the backend ResumableDownloader). The user wants to bundle these three fixes with MPI-48 in the 0.0.4 bump — ASK for the go + MPI-48 scope before writing code. After fixing: bump 0.0.3->0.0.4 (mpi-version-bump), build the Windows delta locally (--from-manifest release-baselines/windows-x64.json --no-source-manifest) and dispatch mpi-ci for Linux/mac (gh workflow run build-portable.yml --repo MadPonyInteractive/Cubric-Vision --ref master -f ref=master -f version=0.0.4 — auto-delta via the committed baselines), then re-test update-from-zip on a FRESH 0.0.3 install on both boxes (existing installs have the old broken applier). Constraints: never touch the backend ResumableDownloader; always dispatch with -f ref=master; for test builds pass --no-source-manifest; refresh release-baselines/ to the 0.0.4 manifests AFTER 0.0.4 ships."
+}

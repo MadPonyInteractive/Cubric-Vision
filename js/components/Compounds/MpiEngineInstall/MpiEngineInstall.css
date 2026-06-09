@@ -178,12 +178,3 @@
     border-radius: var(--r-2);
     line-height: 1.5;
 }
-
-/* ── Button group (pause/resume) ─────────────────────────────────────────── */
-.mpi-engine-install__button-group {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    width: 100%;
-    margin-top: 4px;
-}

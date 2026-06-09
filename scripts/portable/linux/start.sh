@@ -22,10 +22,24 @@ fi
 # Also self-chmod as a belt-and-suspenders for any direct callers.
 chmod +x "$ROOT/start-with-terminal.sh" 2>/dev/null || true
 
-# Prefer setsid to fully detach from any controlling terminal; fall back to
-# plain nohup background when setsid is unavailable.
+# Fully detach the app so it survives this launcher exiting.
+#
+# This MUST work under file-manager "Run as program" (GNOME Files / Nautilus),
+# not just from a terminal. Nautilus tracks the descendants of the script it
+# launched and tears them down when the script exits — a backgrounded child
+# (`... &`) is still a descendant, so the GUI process was being killed before it
+# could draw (the 0.0.3 bug). `setsid --fork` double-forks the child into a NEW
+# session reparented to init (PID 1), escaping Nautilus's tracked process group;
+# it returns immediately, so we do NOT background it with `&` (that would re-add
+# a tracked child). Fall back to `setsid` without --fork, then plain nohup, for
+# the rare setsid lacking --fork or absent entirely.
 if command -v setsid >/dev/null 2>&1; then
-  setsid nohup sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
+  if setsid --fork sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null; then
+    :
+  else
+    # --fork unsupported on this setsid — fall back to backgrounded setsid.
+    setsid nohup sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
+  fi
 else
   nohup sh "$ROOT/start-with-terminal.sh" >/dev/null 2>&1 < /dev/null &
 fi
