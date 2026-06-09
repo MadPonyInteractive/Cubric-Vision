@@ -38,6 +38,20 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.5': {
+    version: '0.0.5',
+    whatIsNew: [
+      'Model preview cards now use sharper still images, and video models play a short preview clip when you hover over them.',
+    ],
+    fixes: [
+      'Large model downloads now resume where they left off after you close and reopen the app, instead of starting over. A partially downloaded model is no longer mistaken for a finished one.',
+      'Closing the app mid-download now warns you: models in flight will resume on next launch; the engine download restarts.',
+      'Linux/macOS: launchers stay executable after applying an update, so "Run as program" and double-click keep working (previously an update could strip the executable bit).',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.4': {
     version: '0.0.4',
     whatIsNew: [],

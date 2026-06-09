@@ -48,3 +48,63 @@ file managers do NOT pass drops as args, so those users must run it from a
 terminal with the path. Patreon delivery posts will include the terminal command.
 A future "auto-detect zip in folder + prompt fallback" launcher improvement was
 discussed but deferred.
+
+## 0.0.5 cycle — online-update path investigation (2026-06-09)
+
+Investigated `update.bat` / `update.sh` (and `update.command`, same shape)
+before attempting the online test. The scripts as shipped CANNOT pull from a
+private repo. Three hard blockers:
+
+1. **`/releases/latest` excludes prereleases/drafts.** GitHub's `latest`
+   endpoint never returns a prerelease, so a private *pre*-release tag is
+   invisible. Online update only sees a FULL (non-prerelease) release.
+2. **No auth.** Both scripts send only a `User-Agent` header (no
+   `Authorization: token`). A private repo returns 404 on both the API call
+   and `browser_download_url`. Private-repo online update is impossible as
+   written.
+3. **Gating conflict.** Per memory `project_repo_distribution_gating` +
+   `project_private_ci_artifact_gate`, portable artifacts are intentionally
+   gated (built in private mpi-ci, NOT attached to public Cubric-Vision
+   releases). A public release asset is exactly what the gating avoids.
+
+Options to actually test the online path:
+- (A) Publish a real PUBLIC, non-prerelease release on
+  MadPonyInteractive/Cubric-Vision with the update zip attached. Works
+  unchanged, but ships an ungated artifact (violates current gating unless
+  accepted for this cycle).
+- (B) **[recommended]** Patch the three scripts to support a token + explicit
+  tag: send `Authorization: token <CUBRIC_GITHUB_TOKEN>`, use
+  `/releases/tags/<tag>` instead of `/releases/latest` (so prereleases work),
+  set `CUBRIC_GITHUB_REPO` to the private repo. Tests privately, keeps gating
+  intact, and the token+tag support is reusable for gated early-access
+  delivery. Requires script edits + a PAT on the test box.
+- (C) Throwaway separate private repo as a fake release host — same script
+  patch + PAT as (B), fully isolated from the real repos.
+
+Status: investigation complete; no online test run yet (awaiting the 0.0.5
+build + a decision on A/B/C). Build held until MPI-51 (open-source branch/docs
+cleanup, currently `doing`) finishes, to avoid concurrent git activity.
+
+### 0.0.5 prep done (2026-06-09)
+- `release-baselines/windows-x64.json` + `linux-x64.json` refreshed to the
+  **0.0.4** update-bundle manifests (win 266 files, linux 19 files,
+  toVersion 0.0.4 / fromVersion 0.0.3) so 0.0.5 deltas against 0.0.4.
+  `darwin-arm64.json` left at 0.0.3 (mac skipped this cycle). README "Current
+  baselines" note updated. NOT committed (held with the bump).
+- MPI-54 (download resume, commit 1f21db1) and MPI-57 (model WebP/hover,
+  commit 0dde673) already landed on master — they ship in 0.0.5.
+
+### BLOCKED on MPI-51 (decision: WAIT)
+0.0.5 bump+build is held until the MPI-51 codex agent commits its uncommitted
+open-source files (README.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md,
+.github/ISSUE_TEMPLATE/*, PULL_REQUEST_TEMPLATE.md, build-portable.yml).
+Reason: `build-portable.mjs` stages the WORKING TREE, and those docs are NOT in
+`APP_COPY_EXCLUDES`, so building now would ship half-written contributor docs;
+also avoids a git race with MPI-51's branch/commit work. When the tree is clean,
+do the full 0.0.5 pass in one go: bump -> build deltas (win local
+--from-manifest --no-source-manifest + mpi-ci linux `-f ref=master`, skip mac)
+-> clean Builds (delete 0.0.3 folders + extracted 0.0.4 dupes, keep archives +
+mpi-ci-*-0.0.4) -> create a PUBLIC non-prerelease GitHub Release with the delta
+zips (user toggles repo public for the online test, then back to private).
+Online updater works unchanged on a public, non-prerelease release (the
+`/releases/latest` API skips prereleases, so it must be marked latest).

@@ -5,7 +5,7 @@
   "platform": "linux",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "0.0.3",
+  "toVersion": "0.0.4",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
@@ -631,6 +631,11 @@
       "sha256": "5fa8ead6bb8f8b5db6b32b5a1cfeef11b2f2c5a46ddca53dea8d8ff5e773ef13"
     },
     {
+      "path": "app/docs/releases/2026-06-09-v0.0.4.md",
+      "size": 2761,
+      "sha256": "e07d1ee8e64d2f5e525dbb7d9872554a53eef950d74f92db4a6dd715c647cb70"
+    },
+    {
       "path": "app/docs/releases/build-experience-log.md",
       "size": 36244,
       "sha256": "9f05df59fd10dac3c3e1494264fc3ece0ad1eae6f0320304e1ab38e40c3a91f6"
@@ -802,13 +807,13 @@
     },
     {
       "path": "app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
-      "size": 5915,
-      "sha256": "3291f9c5bb8bbf254dc2ebfb747a99da0831bf6005ca1bc9fe85dceb4beda37a"
+      "size": 5605,
+      "sha256": "d9ab16d3b7d1b24603255d7fbce1cc366a1b0c9e44acd23007eb982ed954f0a7"
     },
     {
       "path": "app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
-      "size": 29014,
-      "sha256": "01259efab51ae8126f45a535f51a4dc250be66462b71bdc7094e5bc28e8cead8"
+      "size": 24681,
+      "sha256": "9a4b0b5b154320bf638761a91f83a27daa2d5cb37106c6336e511bf170b3f023"
     },
     {
       "path": "app/js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css",
@@ -822,13 +827,13 @@
     },
     {
       "path": "app/js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
-      "size": 23856,
-      "sha256": "85418e7c41f9cfe50bd532ee54a8d6c9979675843f932e9b7be0a1da763e8be7"
+      "size": 24279,
+      "sha256": "d81247644b9eb7e2db818e6303f5f8a4a8c5c5d07cbb9d38daa135d244ceb15b"
     },
     {
       "path": "app/js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
-      "size": 66878,
-      "sha256": "af08dd48e8052175d728743c25f3dc4c49cdd533bc071e13f9962bed6e31e8ce"
+      "size": 66967,
+      "sha256": "6ea6dd8cbc6c8713f307e3bd62a8391e5789b4362ecb4aca536dde17a7ba1920"
     },
     {
       "path": "app/js/components/Compounds/MpiHistoryList/MpiHistoryList.css",
@@ -1348,12 +1353,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 786,
-      "sha256": "1592fb593f86774d540001adcf31f6dcfcd4cf231e0288ef765586ee22530818"
+      "sha256": "7ca9d8f0ea2d2dedc078f7db1e631f8a2c7f9ce42131f9f5bc44d9fa0e57c2d1"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "9f7d5e9b5dfd3cda251f925c98f64b708b58d543028f4a93a8256a47444beff4"
+      "sha256": "4cd8adfd1c9d7ed9261f8f8a7be9f29549f0a7b3973f547f0145340d58b118a6"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -1407,8 +1412,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 5041,
-      "sha256": "e070fe8107e3ce50ba4d9fa6e1317645eff6097569fcb1ff2f311998aeca6c9c"
+      "size": 5786,
+      "sha256": "eb2adbdbd6b9f303d28ad38b250a2bb44d009103f9de536363f04462f787d6e1"
     },
     {
       "path": "app/js/events.js",
@@ -26258,7 +26263,27 @@
     {
       "path": "app/package.json",
       "size": 2044,
-      "sha256": "8e1316f0c0fd200fa282881bee030b0205c4b71db6f1af8b9b89441952420523"
+      "sha256": "90649d57ec799f1f5c3deecc4b1514558aa78fc503c4046e5c6475634090e6b0"
+    },
+    {
+      "path": "app/release-baselines/darwin-arm64.json",
+      "size": 1024704,
+      "sha256": "6162352d7f3bc6e8f3f618bb243d1943bad54eb895befb7390646fbec89d017a"
+    },
+    {
+      "path": "app/release-baselines/linux-x64.json",
+      "size": 969702,
+      "sha256": "b1451c9b06ab95f2a99d3e00633d674ef50e8c4a5ebe4d9af07b806d5501d202"
+    },
+    {
+      "path": "app/release-baselines/README.md",
+      "size": 1559,
+      "sha256": "512af0ab75a6e7244fcc97f025a713d8df87f3c3c2f619006ae1c8b7cb96ea8e"
+    },
+    {
+      "path": "app/release-baselines/windows-x64.json",
+      "size": 975601,
+      "sha256": "0ec80bd40aceea88609e96ff892e9f0fc3ced2e3a8ec997420c06e31fabd63aa"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -26287,8 +26312,8 @@
     },
     {
       "path": "app/routes/engine.js",
-      "size": 28378,
-      "sha256": "328a28df32e7e7a569b71110d45b56f569dd7d5e2fa1ac31d269d8ca705c64c2"
+      "size": 29732,
+      "sha256": "23fa65f187c167b6692e343e3908cdbe4fd60ad26cc5357cebc75e91d7b8cc03"
     },
     {
       "path": "app/routes/gitProvision.js",
@@ -26421,6 +26446,11 @@
       "sha256": "e4b9cfb5c57e920a496152c98c4072394152e0dc86c4ed10fd92a16a3302291d"
     },
     {
+      "path": "README.txt",
+      "size": 1826,
+      "sha256": "8735963e26ad244cbbe833b6be3933b76861496e45d1d50d903fd844b45b1f57"
+    },
+    {
       "path": "resources/cubric-vision.png",
       "size": 538086,
       "sha256": "7574d3d1d5c224bf5bb60fac625edf348ba7f6b3c7e42d2269b8c7aaef14c1f0"
@@ -26472,8 +26502,8 @@
     },
     {
       "path": "start.sh",
-      "size": 1463,
-      "sha256": "e612d8d7778ca29e767a7b77cab86611463a697221fa5b3bfeacfa0d93d791e1"
+      "size": 2272,
+      "sha256": "2448ba6aa6437c8c0336d72d682e1cb09b057adda6721a7a7920d36ada26493e"
     },
     {
       "path": "update-from-zip.sh",
@@ -26494,6 +26524,11 @@
       "path": "update/README.md",
       "size": 414,
       "sha256": "f3225170e9c5e9c72b010354d42efe8b137390761e5ae6a832a91867735778f3"
+    },
+    {
+      "path": "uv/uv",
+      "size": 60184464,
+      "sha256": "a00d3a24514fc0403fc232c9c99bf5e542657c38f4ed941e0611731e4cff268b"
     }
   ],
   "preserve": [
@@ -26504,16 +26539,16 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-06-09T13:28:54.796Z",
+  "createdAt": "2026-06-09T17:30:08.057Z",
   "artifact": {
-    "kind": "update-bundle",
-    "rootName": "CubricVision-linux-x64-update-v0.0.3",
+    "kind": "portable-stage",
+    "rootName": "CubricVision-linux-x64-v0.0.4",
     "launchers": [
       "start.sh",
       "start-with-terminal.sh",
       "update.sh",
       "update-from-zip.sh"
     ],
-    "buildHash": "34c02f34ddbe"
+    "buildHash": "61cd926037b4"
   }
 }

@@ -1,6 +1,7 @@
 # Release baselines (delta-update `--from-manifest` sources)
 
-These are the **previous release's** update-bundle manifests, one per platform/arch:
+These are the **previous release's FULL (portable-stage) manifests**, one per
+platform/arch:
 
 - `linux-x64.json`
 - `windows-x64.json`
@@ -22,16 +23,29 @@ Local Windows builds do the same by hand:
 
 ## Contract
 
-- Each file is the **update-bundle** top-level `update-manifest.json` from the
-  PREVIOUS shipped version (the one users are updating FROM). Its `toVersion` is
-  that previous version (e.g. `0.0.3`), which becomes the new bundle's
-  `fromVersion`.
+- Each file is the **FULL (portable-stage) `update-manifest.json`** from the
+  PREVIOUS shipped version's **full build** — the top-level
+  `resources/cubric/update-manifest.json` inside `CubricVision-<plat>-<arch>-v<ver>.zip`
+  / `.tar.gz` (NOT the `-update-v<ver>` delta bundle). It has `fromVersion: null`,
+  `artifact.kind: portable-stage`, and lists **every** staged file's hash (~5k+
+  entries). Its `toVersion` (e.g. `0.0.4`) becomes the new bundle's `fromVersion`.
+- **Do NOT use the update-bundle (delta) manifest** as a baseline. It only lists
+  the handful of files that changed last release, so the diff has no hashes for
+  the unchanged files and flags the whole app as "added" — producing a bogus
+  multi-thousand-file "delta" instead of a real one. (This bit us on 0.0.5: a
+  266-file update-bundle baseline yielded a 5093-file false delta; the correct
+  5343-file full manifest yielded the real 38-file delta.)
 - The diff is **scope-aware**, so a baseline with extra roots the new bundle does
   not ship is fine.
-- **After cutting a release**, refresh these files with that release's update
+- **After cutting a release**, refresh these files with that release's FULL
   manifests so the NEXT version deltas against it. Stale baselines just produce a
   larger (but still correct) delta.
 
 ## Current baselines
 
-Captured from mpi-ci run 27209468252 (v0.0.3). `toVersion: 0.0.3` for all three.
+- `windows-x64.json`, `linux-x64.json`: refreshed to the **v0.0.4 FULL
+  (portable-stage)** manifests (2026-06-09) so the 0.0.5 build deltas against
+  0.0.4. `toVersion: 0.0.4`, `fromVersion: null`, `kind: portable-stage`
+  (windows 5343 files, linux 5304 files).
+- `darwin-arm64.json`: still the **v0.0.3** full manifest. macOS was skipped for
+  the 0.0.4/0.0.5 cycle; refresh it when the first mac delta is cut.
