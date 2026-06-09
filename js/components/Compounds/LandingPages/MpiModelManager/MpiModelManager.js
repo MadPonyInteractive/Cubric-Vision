@@ -182,9 +182,12 @@ export const MpiModelManager = ComponentFactory.create({
                         if (depStatus) {
                             const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
                             for (const dep of deps) {
-                                const depInstalled = depStatus.get(dep.id);
-                                if (depInstalled === true) {
+                                const depState = depStatus.get(dep.id);
+                                const depInstalled = depState === true || depState?.installed === true;
+                                if (depInstalled) {
                                     partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                                } else if (depState?.partialBytes) {
+                                    partialDownloadedBytes += depState.partialBytes;
                                 }
                                 partialTotalBytes += _parseSizeToBytes(dep.size);
                             }
@@ -208,6 +211,7 @@ export const MpiModelManager = ComponentFactory.create({
                         meta: stats.sizeText,
                         text: model.description || '',
                         image: model.image || '',
+                        video: model.video || '',
                         icon: 'info',
                         iconText: stats.vramText,
                         installed: true,
@@ -276,9 +280,12 @@ export const MpiModelManager = ComponentFactory.create({
                     if (depStatus) {
                         const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
                         for (const dep of deps) {
-                            const depInstalled = depStatus.get(dep.id);
-                            if (depInstalled === true) {
+                            const depState = depStatus.get(dep.id);
+                            const depInstalled = depState === true || depState?.installed === true;
+                            if (depInstalled) {
                                 partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                            } else if (depState?.partialBytes) {
+                                partialDownloadedBytes += depState.partialBytes;
                             }
                             partialTotalBytes += _parseSizeToBytes(dep.size);
                         }
@@ -299,6 +306,7 @@ export const MpiModelManager = ComponentFactory.create({
                     meta: stats.sizeText,
                     text: model.description || '',
                     image: model.image || '',
+                    video: model.video || '',
                     icon: 'warning',
                     iconText: stats.vramText,
                     installed: false,
@@ -370,6 +378,7 @@ export const MpiModelManager = ComponentFactory.create({
                     meta: stats.sizeText,
                     text: model.description || '',
                     image: model.image || '',
+                    video: model.video || '',
                     icon: 'info',
                     iconText: stats.vramText,
                     installed: model.installed === true,
@@ -391,14 +400,20 @@ export const MpiModelManager = ComponentFactory.create({
             }
         }));
 
-        _unsubs.push(Events.on('download:paused', ({ modelId }) => {
+        _unsubs.push(Events.on('download:paused', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
             const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('paused');
+            if (card) {
+                card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
+                card.display.el.setDownloadState('paused');
+            }
         }));
 
-        _unsubs.push(Events.on('download:resumed', ({ modelId }) => {
+        _unsubs.push(Events.on('download:resumed', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
             const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('downloading');
+            if (card) {
+                card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
+                card.display.el.setDownloadState('downloading');
+            }
         }));
 
         _unsubs.push(Events.on('download:installing', ({ modelId }) => {

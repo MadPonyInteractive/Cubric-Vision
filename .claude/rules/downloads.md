@@ -7,7 +7,7 @@
 
 **Frontend entry point:** `js/services/downloadService.js` — a singleton. Always use `downloadService.start/pause/resume/cancel/uninstall()`, never raw `fetch` directly.
 
-**Backend router:** `routes/downloadManager.js` — manages `ResumableDownloader` instances, job maps, and SSE broadcast. The `.part` file pattern is used for resume — never delete these manually.
+**Backend router:** `routes/downloadManager.js` — manages `ResumableDownloader` instances, job maps, completion sidecars, and SSE broadcast. NDH writes directly to the final filename; Cubric marks in-progress managed downloads with `<file>.cubricdl` and treats a file as installed only when `exists && no sidecar`.
 
 **SHA256 verification is automatic.** Each dep can declare a `sha256` in the registry. The backend verifies on completion and marks `failed` on mismatch. Do not bypass or override this. **Exception: `custom_nodes` deps must NOT have `sha256` set** — GitHub branch archive zips regenerate on every commit, making pinned hashes permanently stale. Leave `sha256` as `null`/omitted for all `custom_nodes` type deps.
 
@@ -37,7 +37,7 @@
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **Never Raw Fetch for Downloads:** Always use `downloadService.start/pause/resume/cancel/uninstall()`. Raw `fetch` bypasses the SSE sync and state management.
-2. **Never Delete \****`.part`**\*\* Files:** The resume mechanism depends on `.part` files written by `node-downloader-helper`. Deleting them breaks resume.
+2. **Never Delete \****`.cubricdl`**\*\* Markers Casually:** Model resume and installed-state safety depend on `<file>.cubricdl` sidecars. They are created on download start and removed only after verified completion, explicit cancel, uninstall, or checksum failure cleanup.
 3. **Never Skip \****`comfyNeedsRestart`**\*\*:** After custom node install, ComfyUI must be restarted. `ensureServerRunning()` handles this automatically — do not suppress or bypass it.
 4. **Always Use Events for Download UI:** Components must subscribe to `download:*` events via `Events.on()`, not poll `state.downloadJobs` directly. Store the unsubscribe function and call it on cleanup.
 5. **Never Open a Second EventSource:** Only `downloadService._connectSSE()` opens `/comfy/downloads/stream`. All other code subscribes via `Events.on()` to events already bridged by `downloadService`.
@@ -139,3 +139,5 @@ The backend also exposes pause/resume for **engine** downloads (distinct from mo
 - `POST /engine/resume` — resume paused engine download
 
 Managed via `registerEngineDownload()` / `clearEngineDownload()` and `_activeEngineDownloader` in `routes/downloadManager.js`.
+
+`GET /comfy/downloads/active` reports active model downloads separately from engine downloads for Electron quit warnings. Model downloads are resumable across app restart when a sidecar-marked partial exists; engine archive downloads still restart from scratch by design.

@@ -13,6 +13,7 @@ const fs     = require('fs-extra');
 const path   = require('path');
 const { createRequire } = require('module');
 const logger = require('./logger');
+const { isCompleteOnDisk } = require('./downloadCompletion');
 const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
@@ -276,7 +277,7 @@ async function findFileRecursive(dir, filename) {
         if (stat.isDirectory()) {
             const found = await findFileRecursive(fullPath, filename);
             if (found) return found;
-        } else if (file === filename) {
+        } else if (file === filename && await isCompleteOnDisk(fullPath)) {
             return fullPath;
         }
     }
@@ -293,7 +294,7 @@ async function resolveComfyPath(dep, customRoot, config) {
 
     if (customRoot && !isCustomNode) {
         const directPath = path.join(customRoot, dep.filename || '');
-        if (dep.filename && await fs.pathExists(directPath)) {
+        if (dep.filename && await isCompleteOnDisk(directPath)) {
             localPath = directPath;
         } else if (dep.filename) {
             const baseFilename = path.basename(dep.filename);
@@ -308,7 +309,7 @@ async function resolveComfyPath(dep, customRoot, config) {
                 // For a brand-new download neither exists, so this returns directPath
                 // under the custom root and the file lands there as intended.
                 const defaultPath = path.join(getDefaultModelsRoot(), dep.filename);
-                localPath = (await fs.pathExists(defaultPath)) ? defaultPath : directPath;
+                localPath = (await isCompleteOnDisk(defaultPath)) ? defaultPath : directPath;
             }
         } else {
             localPath = customRoot;

@@ -30,6 +30,12 @@ const { createRequire } = require('module');
 const logger = require('./logger');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
+const {
+    isCompleteOnDisk,
+    markDownloadInProgress,
+    clearDownloadMarker,
+    getPartialDownloadState,
+} = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
 
 const _require = createRequire(__filename);
@@ -125,12 +131,14 @@ class ResumableDownloader {
             _activeDownloaders.delete(this.depJob.id);
             try {
                 await _verifySha256(this.localPath, this.depJob.sha256Expected);
+                await clearDownloadMarker(this.localPath);
                 this.depJob.status = 'complete';
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
                 _checkModelJobsComplete();
             } catch (err) {
                 // SHA256 mismatch — clean up and mark failed
                 await fs.remove(this.localPath).catch(() => {});
+                await clearDownloadMarker(this.localPath).catch(() => {});
                 this.depJob.status = 'failed';
                 this.depJob.error = err.message;
                 _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
@@ -180,12 +188,38 @@ class ResumableDownloader {
 
     async download() {
         await this._ensureDownloader();
+        const partial = await getPartialDownloadState(this.localPath);
+        if (partial.resumable) {
+            await markDownloadInProgress(this.localPath, {
+                depId: this.depJob.id,
+                url: this.depJob.url,
+                resumedAt: new Date().toISOString(),
+            });
+            this.depJob.downloadedBytes = partial.downloaded;
+            this._downloader.resumeFromFile(partial.filePath, {
+                downloaded: partial.downloaded,
+                fileName: partial.fileName,
+            }).catch(() => {});
+            return;
+        }
+        await markDownloadInProgress(this.localPath, {
+            depId: this.depJob.id,
+            url: this.depJob.url,
+        });
         this._downloader.start();
     }
 
     abort() {
         if (this._downloader) {
-            this._downloader.pause().catch(() => {});
+            setImmediate(() => {
+                this._downloader.pause().catch(() => {});
+            });
+        }
+    }
+
+    async cancel() {
+        if (this._downloader) {
+            await this._downloader.stop().catch(() => false);
         }
     }
 
@@ -297,6 +331,29 @@ router.get('/comfy/downloads/status', (req, res) => {
     res.json({ success: true, jobs });
 });
 
+router.get('/comfy/downloads/active', (req, res) => {
+    const models = Array.from(_modelJobs.values())
+        .filter(job => ['queued', 'downloading', 'paused', 'installing'].includes(job.status))
+        .filter(job => job.modelId !== '__universal_workflow__')
+        .map(job => ({
+            modelId: job.modelId,
+            status: job.status,
+            deps: job.deps
+                .filter(dep => ['queued', 'downloading', 'paused'].includes(dep.status))
+                .map(dep => ({
+                    id: dep.id,
+                    status: dep.status,
+                    downloadedBytes: dep.downloadedBytes || 0,
+                    totalBytes: dep.totalBytes || 0,
+                })),
+        }));
+    res.json({
+        success: true,
+        models,
+        engine: !!_activeEngineDownloader,
+    });
+});
+
 // ── Start Endpoint ────────────────────────────────────────────────────────────
 
 router.post('/comfy/models/download/start', async (req, res) => {
@@ -337,7 +394,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
             installedCheckPath = localPath;
         }
 
-        const isInstalled = await fs.pathExists(installedCheckPath);
+        const isInstalled = await isCompleteOnDisk(installedCheckPath);
 
         let depJob = _depJobs.get(dep.id);
         if (!depJob) {
@@ -433,6 +490,23 @@ function _wireProgress(depJob, downloader) {
 }
 
 // ── Model Job Completion ──────────────────────────────────────────────────────
+
+function _recalculateModelJobProgress(modelJob) {
+    modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+    modelJob.totalBytes = modelJob.deps.reduce((sum, d) => sum + (d.totalBytes || 0), 0) || modelJob.totalBytes;
+    modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+}
+
+function _downloadJobEventPayload(modelJob) {
+    return {
+        modelId: modelJob.modelId,
+        status: modelJob.status,
+        downloadedBytes: modelJob.downloadedBytes || 0,
+        totalBytes: modelJob.totalBytes || 0,
+        speed: modelJob.speed || '',
+        progress: modelJob.progress || 0,
+    };
+}
 
 function _checkModelJobsComplete() {
     for (const modelJob of _modelJobs.values()) {
@@ -623,7 +697,8 @@ router.post('/comfy/models/download/pause', (req, res) => {
             d.status = 'paused';
         }
     });
-    _broadcast('download:paused', { modelId });
+    _recalculateModelJobProgress(job);
+    _broadcast('download:paused', _downloadJobEventPayload(job));
     res.json({ success: true });
 });
 
@@ -633,12 +708,13 @@ router.post('/comfy/models/download/resume', (req, res) => {
     if (!job) return res.status(404).json({ error: 'Job not found' });
     job.status = 'downloading';
     job.deps.forEach(d => { if (d.status === 'paused') d.status = 'queued'; });
-    _broadcast('download:resumed', { modelId });
+    _recalculateModelJobProgress(job);
+    _broadcast('download:resumed', _downloadJobEventPayload(job));
     _startPendingDeps();
     res.json({ success: true });
 });
 
-router.post('/comfy/models/download/cancel', (req, res) => {
+router.post('/comfy/models/download/cancel', async (req, res) => {
     const { modelId } = req.body;
     const job = _modelJobs.get(modelId);
     if (!job) return res.status(404).json({ error: 'Job not found' });
@@ -648,10 +724,11 @@ router.post('/comfy/models/download/cancel', (req, res) => {
         if (dep.refCount <= 0) {
             const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
             if (dl) {
-                dl.abort();
+                await dl.cancel();
                 _activeDownloaders.delete(dep.id);
                 _pausedDownloaders.delete(dep.id);
             }
+            if (dep.localPath) clearDownloadMarker(dep.localPath).catch(() => {});
             dep.status = 'cancelled';
             _depJobs.delete(dep.id);
         }
@@ -744,6 +821,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
                 await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
                 logger.info('download', `uninstall: moved to trash ${localPath}`);
             }
+            await clearDownloadMarker(localPath).catch(() => {});
             removed.push({ depId: dep.id, depName: dep.name || dep.id });
             const depJob = _depJobs.get(dep.id);
             if (depJob) {
@@ -765,10 +843,10 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
 function cancelAllDownloads() {
     for (const [, downloader] of _activeDownloaders) {
-        downloader.abort();
+        downloader.cancel().catch(() => {});
     }
     for (const [, downloader] of _pausedDownloaders) {
-        downloader.abort();
+        downloader.cancel().catch(() => {});
     }
     _activeDownloaders.clear();
     _pausedDownloaders.clear();
@@ -842,7 +920,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             installedCheckPath = localPath;
         }
 
-        const isInstalled = await fs.pathExists(installedCheckPath);
+        const isInstalled = await isCompleteOnDisk(installedCheckPath);
         logger.info('download', `startUniversalWorkflowInstall: dep ${depId} resolved to ${localPath}, installedCheck=${installedCheckPath}, exists=${isInstalled}`);
 
         let depJob = _depJobs.get(depId);

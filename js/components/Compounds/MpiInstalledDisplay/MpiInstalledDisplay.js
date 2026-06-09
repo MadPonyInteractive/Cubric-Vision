@@ -3,7 +3,7 @@ import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { qs, ce } from '../../../utils/dom.js';
+import { qs, ce, on } from '../../../utils/dom.js';
 import { formatBytes } from '../../../utils/formatBytes.js';
 
 /**
@@ -16,8 +16,15 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {string} [title='']          - Title text displayed on the top-left
  * @param {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
  * @param {string} [text='']           - Descriptive text body
- * @param {string} [image='']          - Preview PNG filename from modelConstants (e.g. 'Lustify7.png').
+ * @param {string} [image='']          - Preview still filename from modelConstants (e.g. 'sdxl-real-01.webp').
  *                                        Renders an <img> from 'comfy_workflows/display/{image}'.
+ * @param {string} [video='']          - Preview clip filename from modelConstants (e.g. 'wan22_preview.mp4').
+ *                                        Renders a muted, looping <video> from 'comfy_workflows/display/{video}'
+ *                                        that plays on hover and resets on mouse-leave. Takes precedence over
+ *                                        `image` when both are set.
+ * @param {'portrait'|'landscape'} [mediaRatio] - Preview box aspect. Defaults to 'landscape' when `video`
+ *                                        is set, else 'portrait' (still art is ~4:5). Controls how the
+ *                                        media slot is shaped so portrait art isn't cropped to a strip.
  * @param {string} [icon='info']       - MpiIcon registry key for the info row icon
  * @param {string} [iconText='']       - Text shown alongside the icon in the info row
  * @param {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Size of the info row icon
@@ -93,13 +100,39 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const textSlot = qs('#idtext-slot', el);
         if (props.text) textSlot.textContent = props.text;
 
-        // Image preview
+        // Media preview — hover-play <video> when `video` is set, else a still <img>.
+        // Hover listeners are collected in _mediaUnsubs and torn down in destroy().
+        const _mediaUnsubs = [];
         const imageSlot = qs('#idimage-slot', el);
-        if (props.image) {
+        // Shape the media box: video defaults to landscape (16:9 clips), stills to
+        // portrait (~4:5 source art). Caller may override via props.mediaRatio.
+        if (props.video || props.image) {
+            const ratio = props.mediaRatio || (props.video ? 'landscape' : 'portrait');
+            imageSlot.classList.add(`mpi-installed-display__image--${ratio}`);
+        }
+        if (props.video) {
+            const video = ce('video', {
+                src: `comfy_workflows/display/${props.video}`,
+                className: 'mpi-installed-display__image-img mpi-installed-display__image-video',
+            });
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.preload = 'metadata';
+            // Failed media must not collapse the card — hide the slot if the clip can't load.
+            _mediaUnsubs.push(on(video, 'error', () => { imageSlot.style.display = 'none'; }));
+            _mediaUnsubs.push(on(imageSlot, 'mouseenter', () => { video.play().catch(() => {}); }));
+            _mediaUnsubs.push(on(imageSlot, 'mouseleave', () => {
+                video.pause();
+                try { video.currentTime = 0; } catch (_) { /* ignore */ }
+            }));
+            imageSlot.appendChild(video);
+        } else if (props.image) {
             const img = ce('img', {
                 src: `comfy_workflows/display/${props.image}`,
                 className: 'mpi-installed-display__image-img',
             });
+            _mediaUnsubs.push(on(img, 'error', () => { imageSlot.style.display = 'none'; }));
             imageSlot.appendChild(img);
         } else {
             imageSlot.style.display = 'none';
@@ -264,7 +297,9 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             if (!_progressLabelEl) return;
             const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes } = _current;
             if (downloadState === 'paused') {
-                _progressLabelEl.textContent = `Paused${speed ? ' — ' + speed : ''}`;
+                const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
+                const suffix = [downloadedText, speed].filter(Boolean).join(' - ');
+                _progressLabelEl.textContent = suffix ? `Paused - ${suffix}` : 'Paused';
             } else if (hasPartialProgress) {
                 const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
                 _progressLabelEl.textContent = downloadedText || 'Partially installed';
@@ -310,6 +345,10 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         };
 
         el.destroy = () => {
+            for (const fn of _mediaUnsubs) {
+                try { fn(); } catch (_) { /* ignore */ }
+            }
+            _mediaUnsubs.length = 0;
             for (const child of _children) {
                 if (typeof child.destroy === 'function') {
                     try { child.destroy(); } catch (_) { /* ignore */ }

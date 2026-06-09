@@ -258,14 +258,28 @@ const downloadService = {
         this._eventSource.addEventListener('download:paused', (e) => {
             const data = JSON.parse(e.data);
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) { job.status = 'paused'; state.downloadJobs = [...state.downloadJobs]; }
+            if (job) {
+                job.status = 'paused';
+                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
+                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
+                if (typeof data.progress === 'number') job.progress = data.progress;
+                if (typeof data.speed === 'string') job.speed = data.speed;
+                state.downloadJobs = [...state.downloadJobs];
+            }
             Events.emit('download:paused', data);
         });
 
         this._eventSource.addEventListener('download:resumed', (e) => {
             const data = JSON.parse(e.data);
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) { job.status = 'downloading'; state.downloadJobs = [...state.downloadJobs]; }
+            if (job) {
+                job.status = 'downloading';
+                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
+                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
+                if (typeof data.progress === 'number') job.progress = data.progress;
+                if (typeof data.speed === 'string') job.speed = data.speed;
+                state.downloadJobs = [...state.downloadJobs];
+            }
             Events.emit('download:resumed', data);
         });
 

@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/downloadCompletion.js",
+    "routes/downloadManager.js",
+    "routes/comfy.js",
+    "routes/shared.js",
+    "main.js",
+    "js/services/downloadService.js",
+    "js/data/modelRegistry.js",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js",
+    "tests/download-completion.test.cjs",
+    "docs/comfy.md",
+    ".claude/rules/downloads.md"
+  ]
+}

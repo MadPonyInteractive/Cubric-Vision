@@ -103,7 +103,12 @@ export async function syncModelInstalled() {
                 // Cache per-dep status for partial-progress display
                 const depMap = new Map();
                 for (const depResult of results[model.id].deps) {
-                    if (depResult.id) depMap.set(depResult.id, depResult.installed);
+                    if (depResult.id) {
+                        depMap.set(depResult.id, {
+                            installed: depResult.installed,
+                            partialBytes: depResult.partialBytes || 0,
+                        });
+                    }
                 }
                 _modelDepStatusCache.set(model.id, depMap);
             }

@@ -1,0 +1,28 @@
+{
+    "schema":  "mpi-kanban/task/v1",
+    "id":  "6fea4dc9-92b0-4a0f-b479-98757371a071",
+    "status":  "closed",
+    "task_card":  "MPI-54",
+    "title":  "Model cross-restart download resume + partial detection + close-app warning",
+    "plan":  ".agents/mpi-kanban/tasks/MPI-54/plan.md",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/9c5c62b5-968b-4d15-9bde-46972382004d.json",
+    "heartbeat_at":  "2026-06-09T20:45:34+01:00",
+    "allowed_actions":  [
+                            "read",
+                            "write",
+                            "test",
+                            "update_task_workspace"
+                        ],
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-09T20:07:45+01:00",
+                              "type":  "task_attached",
+                              "summary":  "Attached coordination task for MPI-54 implementation."
+                          },
+                          {
+                              "at":  "2026-06-09T20:45:34+01:00",
+                              "type":  "task_closed",
+                              "summary":  "Closed coordination task after MPI-54 moved to done."
+                          }
+                      ]
+}

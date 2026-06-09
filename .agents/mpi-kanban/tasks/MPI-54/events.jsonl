@@ -1,1 +1,6 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"task.updated","at":"2026-06-08T20:14:06+01:00","actor":"codex","summary":"Created compact plan for model cross-restart resume safety and corrected invalid maturity from spec to planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"task.moved","at":"2026-06-09T20:07:45+01:00","actor":"codex","summary":"Moved MPI-54 from todo to doing for implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"checklist.updated","at":"2026-06-09T20:07:45+01:00","actor":"codex","summary":"Derived compact-plan checklist item: Implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"task.updated","at":"2026-06-09T20:07:45+01:00","actor":"codex","summary":"Fixed follow-up issues: pause/resume byte display, cold-start partial byte reporting, close-dialog cancel behavior, and hard cancel using NDH stop()."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"validation.updated","at":"2026-06-09T20:45:34+01:00","actor":"codex","summary":"Recorded user verification and test evidence."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-54","type":"task.moved","at":"2026-06-09T20:45:34+01:00","actor":"codex","summary":"Moved MPI-54 from doing to done after explicit user verification."}

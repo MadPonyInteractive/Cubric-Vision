@@ -2,7 +2,7 @@
 
 ## Current State
 
-Project mode: scalable-foundation.
+Project mode: scalable-foundation. Implementation is verified and closed.
 
 Model dependency downloads are managed by `routes/downloadManager.js` with `node-downloader-helper` 2.1.11. In-session pause/resume works through the same `ResumableDownloader` instance and `resumeFromFile()`, but app restart clears the in-memory job maps. NDH writes directly to the final filename, so a process killed mid-download can leave a truncated model at the canonical path.
 
@@ -22,11 +22,11 @@ The existing NDH constructor must not be changed to `resumeIfFileExists` or `ove
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] Implemented model download completion markers, marker-aware installed checks, cross-restart partial resume, pause/cancel hardening, active-download close warning, partial-byte UI reporting, tests, docs, rules, and memory update.
 
 ## Remaining Work
 
-- Implement the planned change end to end.
+- None for MPI-54.
 
 ## Plan Drift
 

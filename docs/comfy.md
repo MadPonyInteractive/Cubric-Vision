@@ -177,7 +177,7 @@ js/services/downloadService.js  ←→  REST/POST  →  routes/downloadManager.j
    Components subscribe
 ```
 
-The backend uses `node-downloader-helper` under the hood, which writes `.part` files to enable resume after pause/cancel.
+The backend uses `node-downloader-helper` under the hood. NDH writes directly to the final filename, so Cubric creates `<file>.cubricdl` sidecars while managed downloads are in progress. Installed-state checks require `exists && no sidecar`, which prevents a killed partial model from being treated as installed.
 
 ### Frontend — `js/services/downloadService.js`
 Singleton that owns the frontend download queue.
@@ -196,6 +196,7 @@ Non-blocking download router using `node-downloader-helper` with pause/resume su
 - `POST /comfy/models/download/start` — enqueue a model's dependencies
 - `POST /comfy/models/download/pause` / `resume` / `cancel`
 - `GET /comfy/downloads/status` — full queue snapshot
+- `GET /comfy/downloads/active` — active model downloads plus engine-download flag for Electron quit warnings
 - `GET /comfy/downloads/stream` — SSE broadcast channel
 - `POST /comfy/models/uninstall` — uninstall a model
 - `POST /engine/pause` / `engine/resume` — pause/resume active engine downloads
@@ -203,11 +204,11 @@ Non-blocking download router using `node-downloader-helper` with pause/resume su
 **ResumableDownloader class** (`routes/downloadManager.js`):
 A wrapper around `node-downloader-helper` that adds SHA256 verification and SSE progress broadcasting.
 - `_downloader`: `DownloaderHelper` instance with `{ resume: true }`
-- `.download()`: starts fresh or resumes from `.part` file
+- `.download()`: starts fresh or, on a fresh app instance, resumes from a final-filename partial only when `<file>.cubricdl` exists
 - `.abort()`: pauses and retains instance for later resume
-- `.resume()`: resumes from the stored `.part` file using `getResumeState()`
-- On completion: verifies `sha256Expected` against downloaded file, then marks dep `complete`
-- On SHA256 mismatch: deletes the file and marks dep `failed`
+- `.resume()`: in-session resume uses the same instance via `getResumeState()` + `resumeFromFile()`
+- On completion: verifies `sha256Expected` against downloaded file, clears `<file>.cubricdl`, then marks dep `complete`
+- On SHA256 mismatch: deletes the file, clears the marker, and marks dep `failed`
 
 **Job storage:**
 - `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, refCount, sha256)

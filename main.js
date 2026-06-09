@@ -86,6 +86,79 @@ function atomicWritePng(filePath, dataUrl) {
   fs.renameSync(tmp, filePath);
 }
 
+async function getActiveDownloadsForQuit() {
+  if (!serverProcess || serverProcess.killed) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1000);
+  try {
+    const res = await fetch('http://127.0.0.1:3000/comfy/downloads/active', {
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    logger.warn('main', `Failed to query active downloads before quit: ${err.message}`);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function confirmQuitWithActiveDownloads() {
+  if (process.env.CUBRIC_E2E) return true;
+  const active = await getActiveDownloadsForQuit();
+  const modelCount = Array.isArray(active?.models) ? active.models.length : 0;
+  const hasEngineDownload = !!active?.engine;
+  if (modelCount === 0 && !hasEngineDownload) return true;
+
+  const details = [];
+  if (modelCount > 0) {
+    details.push(`${modelCount} model download${modelCount === 1 ? '' : 's'} will resume from the existing partial file on next launch.`);
+  }
+  if (hasEngineDownload) {
+    details.push('The engine download will restart from scratch on next launch.');
+  }
+
+  const options = {
+    type: 'warning',
+    buttons: ['Quit', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    title: 'Downloads are still running',
+    message: 'Quit Cubric Vision while downloads are active?',
+    detail: details.join('\n'),
+  };
+  const result = mainWindow
+    ? await dialog.showMessageBox(mainWindow, options)
+    : await dialog.showMessageBox(options);
+
+  return result.response === 0;
+}
+
+function cleanSessionTempFolders() {
+  const ENGINE_ROOT = getEngineRoot();
+  const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+  const outputDir = getComfyPath(ENGINE_ROOT, 'output');
+  for (const dir of [inputDir, outputDir]) {
+    if (fs.existsSync(dir)) {
+      // Empty the directory contents without removing the directory itself
+      for (const entry of fs.readdirSync(dir)) {
+        fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+      }
+      logger.info('comfy', `Cleaned temp folder: ${dir}`);
+    }
+  }
+
+  if (fs.existsSync(MASK_TEMP_ROOT)) {
+    try {
+      fs.rmSync(MASK_TEMP_ROOT, { recursive: true, force: true });
+      logger.info('mask-temp', `Cleaned session dir: ${MASK_TEMP_ROOT}`);
+    } catch (err) {
+      logger.warn('mask-temp', `Failed to clean ${MASK_TEMP_ROOT}: ${err.message}`);
+    }
+  }
+}
+
 // Required on Windows to show the app icon (not Electron's) when launched via .bat.
 // Use exe path as model ID — recommended for unpackaged Electron apps on Windows.
 const WINDOWS_APP_USER_MODEL_ID = 'cubric.studio.vision';
@@ -122,6 +195,8 @@ let mainWindow;
 let serverProcess;
 let windowState = {};
 const activeNotifications = new Set();
+let quitDownloadWarningAccepted = false;
+let quitDownloadWarningInProgress = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -232,6 +307,19 @@ function createWindow() {
       mainWindow.setFullScreen(true);
     }
     mainWindow.show();
+  });
+
+  mainWindow.on('close', (event) => {
+    if (quitDownloadWarningAccepted) return;
+    event.preventDefault();
+    if (quitDownloadWarningInProgress) return;
+    quitDownloadWarningInProgress = true;
+    confirmQuitWithActiveDownloads().then((shouldQuit) => {
+      quitDownloadWarningInProgress = false;
+      if (!shouldQuit) return;
+      quitDownloadWarningAccepted = true;
+      mainWindow?.close();
+    });
   });
 
   // Save state on move/resize (debounced)
@@ -784,27 +872,7 @@ app.on('window-all-closed', () => {
 
 // Clean ComfyUI temp folders on quit (cross-platform, synchronous)
 app.on('before-quit', () => {
-  const ENGINE_ROOT = getEngineRoot();
-  const inputDir = getComfyPath(ENGINE_ROOT, 'input');
-  const outputDir = getComfyPath(ENGINE_ROOT, 'output');
-  for (const dir of [inputDir, outputDir]) {
-    if (fs.existsSync(dir)) {
-      // Empty the directory contents without removing the directory itself
-      for (const entry of fs.readdirSync(dir)) {
-        fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
-      }
-      logger.info('comfy', `Cleaned temp folder: ${dir}`);
-    }
-  }
-
-  if (fs.existsSync(MASK_TEMP_ROOT)) {
-    try {
-      fs.rmSync(MASK_TEMP_ROOT, { recursive: true, force: true });
-      logger.info('mask-temp', `Cleaned session dir: ${MASK_TEMP_ROOT}`);
-    } catch (err) {
-      logger.warn('mask-temp', `Failed to clean ${MASK_TEMP_ROOT}: ${err.message}`);
-    }
-  }
+  cleanSessionTempFolders();
 });
 
 app.on('quit', () => {

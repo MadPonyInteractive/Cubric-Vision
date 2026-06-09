@@ -1,0 +1,23 @@
+{
+    "schema":  "mpi-kanban/file/v1",
+    "id":  "522113ff-b867-4106-98fb-172ff7b85bef",
+    "status":  "verified",
+    "claim_kind":  "write",
+    "path":  "js/data/modelRegistry.js",
+    "owner_session":  ".agents/mpi-kanban/state/sessions/9c5c62b5-968b-4d15-9bde-46972382004d.json",
+    "owner_role":  "implementer",
+    "task":  ".agents/mpi-kanban/state/tasks/6fea4dc9-92b0-4a0f-b479-98757371a071.json",
+    "heartbeat_at":  "2026-06-09T20:45:34+01:00",
+    "recent_events":  [
+                          {
+                              "at":  "2026-06-09T20:07:45+01:00",
+                              "type":  "claimed",
+                              "summary":  "Claimed model dependency status cache for partial byte reporting."
+                          },
+                          {
+                              "at":  "2026-06-09T20:45:34+01:00",
+                              "type":  "verified",
+                              "summary":  "Verified as part of MPI-54 close-out."
+                          }
+                      ]
+}

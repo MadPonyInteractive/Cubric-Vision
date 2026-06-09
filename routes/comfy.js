@@ -22,6 +22,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const logger = require('./logger');
+const { isCompleteOnDisk, getPartialBytes } = require('./downloadCompletion');
 const {
     COMFYUI_PORT,
     processState,
@@ -406,7 +407,7 @@ router.post('/comfy/models/check', async (req, res) => {
                     const baseFilename = path.basename(dep.filename);
                     const subDir = path.dirname(dep.filename);
                     const directPath = path.join(customRoot, dep.filename);
-                    if (await fs.pathExists(directPath)) {
+                    if (await isCompleteOnDisk(directPath)) {
                         depPath = directPath;
                     } else {
                         // Search the custom root, then fall back to the default root:
@@ -414,7 +415,7 @@ router.post('/comfy/models/check', async (req, res) => {
                         // installed there before a path change must still count as present.
                         const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
                         depPath = found
-                            || (await fs.pathExists(path.join(defaultModelsRoot, dep.filename))
+                            || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
                                 ? path.join(defaultModelsRoot, dep.filename)
                                 : directPath);
                     }
@@ -422,9 +423,10 @@ router.post('/comfy/models/check', async (req, res) => {
                     depPath = path.join(defaultModelsRoot, dep.filename);
                 }
 
-                const isInstalled = await fs.pathExists(depPath);
+                const isInstalled = await isCompleteOnDisk(depPath);
+                const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
                 if (!isInstalled) allPresent = false;
-                depResults.push({ id: dep.id || null, installed: isInstalled });
+                depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });
             }
 
             results[model.id] = { installed: allPresent, deps: depResults };
@@ -446,7 +448,7 @@ async function _findFile(dir, filename) {
         if (stat.isDirectory()) {
             const found = await _findFile(full, filename);
             if (found) return found;
-        } else if (entry === filename) {
+        } else if (entry === filename && await isCompleteOnDisk(full)) {
             return full;
         }
     }
