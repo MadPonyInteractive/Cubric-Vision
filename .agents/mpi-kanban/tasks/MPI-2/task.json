@@ -5,7 +5,7 @@
     "description":  "Cubric-Vision implementation slice split from the cross-repo Discord/GitHub bug-report workflow card.",
     "column":  "done",
     "maturity":  "complete",
-    "status":  "done",
+    "status":  "verified",
     "created_at":  "2026-06-01T06:30:12Z",
     "updated_at":  "2026-06-01T10:28:02Z",
     "links":  {

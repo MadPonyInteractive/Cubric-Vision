@@ -1,3 +1,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-47","at":"2026-06-06T19:29:15.467Z","actor":"vscode","summary":"Created MPI-47."}
 {"at":"2026-06-08T00:00:00Z","event":"task.moved","from":"todo","to":"doing","by":"implementer","note":"MPI-47 begin: Ctrl+/Ctrl- UI zoom hotkeys (part of MPI-8 update-flow test)"}
 {"at":"2026-06-08T00:00:00Z","event":"task.moved","from":"doing","to":"done","by":"implementer","note":"MPI-47 verified by user + committed (b2f53ba). Ctrl+/Ctrl- UI-size hotkeys."}
+{"at":"2026-06-09T20:44:00Z","event":"task.repaired","actor":"claude","note":"Fixed invalid status \"done\" -> \"verified\" (done is not a valid status value). Per mpi-lib task-board-ops."}

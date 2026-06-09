@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-57","at":"2026-06-08T19:27:33.905Z","actor":"vscode","summary":"Created MPI-57."}
+{"at":"2026-06-09T18:52:17Z","event":"plan.created","actor":"codex","note":"Created implementation-ready plan for model preview asset refresh and video-hover model card support."}
+{"at":"2026-06-09T20:00:00Z","event":"task.moved","actor":"claude","from":"todo","to":"doing","note":"Started implementation (logged retroactively — card should have been moved at start)."}
+{"at":"2026-06-09T20:30:00Z","event":"task.completed","actor":"claude","from":"doing","to":"done","note":"Swapped 5 model previews to portrait webp, added wan22 hover-play video (cropped 25s/2.3MB), portrait/landscape card ratios, removed 5 unreferenced old display files. Verified visually by Fabio."}
+{"at":"2026-06-09T20:35:00Z","event":"task.repaired","actor":"claude","note":"Corrected invalid status: changed status \"done\" (not a valid status value) to \"verified\" per mpi-lib task-board-ops. Maturity \"complete\" + column \"done\" already correct."}

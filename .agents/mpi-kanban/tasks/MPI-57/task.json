@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-57",
+  "title": "Change model downloads images.",
+  "description": "The model downloads slide bar page still has old images for the models. I will provide them, and we need to change them. Also, the video models should have a playable video on hovering the mouse.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "verified",
+  "created_at": "2026-06-08T19:27:33.905Z",
+  "updated_at": "2026-06-09T20:30:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "task": "MPI-57",
+  "likely_touched": [
+    "comfy_workflows/display/",
+    "js/data/modelConstants/models.js",
+    "js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js",
+    "js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "js/components/types.js"
+  ],
+  "verification_targets": [
+    "Models slide-over image preview rendering",
+    "Video model hover playback",
+    "Download-state card rebuilds",
+    "Install/pause/resume/cancel/uninstall controls"
+  ],
+  "notes": [
+    "Replacement asset filenames and mapping are expected from Fabio before final model mapping.",
+    "Keep preview media under comfy_workflows/display/ unless implementation discovers a better existing display-media convention."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "task": "MPI-51",
+  "likely_touched": [
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/",
+    ".github/workflows/build-portable.yml",
+    "docs/PROJECT.md",
+    "docs/comfy.md",
+    "docs/releases/portable-distribution-contract.md",
+    ".claude/rules/"
+  ],
+  "notes": [
+    "Branch deletion uses git commands only after explicit maintainer confirmation.",
+    ".claude/rules/ edits require explicit maintainer permission before modification."
+  ]
+}

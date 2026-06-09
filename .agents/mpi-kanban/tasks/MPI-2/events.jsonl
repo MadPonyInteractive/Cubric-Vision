@@ -2,3 +2,4 @@
 {"id":"MPI-2","actor":"codex","schema":"mpi-kanban/event/v1","at":"2026-06-01T08:01:39Z","type":"task.updated","summary":"Narrowed task to Cubric-Vision app-side GitHub issue labels/build metadata after splitting cross-repo workflow to MadPony-Identity."}
 {"schema":"mpi-kanban/event/v1","type":"plan.attached","id":"MPI-2","at":"2026-06-01T10:28:02Z","actor":"codex","summary":"Created compact implementation plan for app-side stage/build metadata and GitHub Issue labels."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-2","from":"todo","to":"done","at":"2026-06-02T14:10:00Z","actor":"claude","summary":"Stage/version GitHub labels implemented + validated (dry-run, client-lie override, 422 degrade); committed 7df039d. build:<hash> deferred to MPI-8."}
+{"at":"2026-06-09T20:44:00Z","event":"task.repaired","actor":"claude","note":"Fixed invalid status \"done\" -> \"verified\" (done is not a valid status value). Per mpi-lib task-board-ops."}

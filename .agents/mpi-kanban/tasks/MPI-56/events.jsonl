@@ -4,3 +4,4 @@
 {"at":"2026-06-08T00:00:00.000Z","event":"checklist.updated","actor":"implementer","note":"Sole item done."}
 {"at":"2026-06-08T00:00:00.000Z","event":"validation.updated","actor":"implementer","note":"User verified. Dry-run full fallback + scope-aware delta build both PASS (9/9 assertions); applier untouched; no download-path edits."}
 {"at":"2026-06-08T00:00:00.000Z","event":"task.moved","actor":"implementer","from":"doing","to":"done","note":"Delta update bundles implemented + user-verified. maturity=complete."}
+{"at":"2026-06-09T20:44:00Z","event":"task.repaired","actor":"claude","note":"Fixed invalid status \"done\" -> \"verified\" (done is not a valid status value). Per mpi-lib task-board-ops."}

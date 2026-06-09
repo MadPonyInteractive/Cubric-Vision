@@ -4,8 +4,8 @@
   "title": "Fav and reuse prompt icons overlapping on preview cards",
   "description": "The favourite and reuse buttons on gallery group cards drift closer together and overlap as the UI scales up (Electron webFrame zoom) and in preview state. Root cause: the two buttons were separate absolutely-positioned wraps with hardcoded rem offsets smaller than the (label-bearing) button height, so the gap went sub-pixel/negative. Fixed by wrapping both in a single `__top-actions` flex column (gap-based), so they self-size and never overlap at any button height, label state, or zoom. Fixed in 0.0.4.",
   "column": "done",
-  "maturity": "done",
-  "status": "complete",
+  "maturity": "complete",
+  "status": "verified",
   "created_at": "2026-06-06T19:31:06.491Z",
   "updated_at": "2026-06-09T18:00:00.000Z",
   "links": {

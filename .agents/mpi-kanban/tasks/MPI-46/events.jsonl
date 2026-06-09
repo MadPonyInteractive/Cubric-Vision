@@ -1,3 +1,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-46","at":"2026-06-03T03:58:36.419Z","actor":"vscode","summary":"Created MPI-46."}
 {"schema":"mpi-kanban/event/v1","type":"task.planned","id":"MPI-46","at":"2026-06-03T04:24:30.693Z","actor":"codex","summary":"Created implementable large plan for changelog overlay."}
 {"schema":"mpi-kanban/event/v1","type":"plan.updated","id":"MPI-46","at":"2026-06-03T04:35:00.000Z","actor":"codex","summary":"Added user-intent note and suggested changelog content sections."}
+{"at":"2026-06-09T20:42:00Z","event":"task.repaired","actor":"claude","note":"Fixed invalid/incoherent fields: maturity \"planned\" (incoherent for done column) -> \"complete\"; status \"done\" (invalid status value) -> \"verified\". Per mpi-lib task-board-ops."}

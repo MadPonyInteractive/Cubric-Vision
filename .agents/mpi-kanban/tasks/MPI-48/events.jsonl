@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-48","at":"2026-06-06T19:31:06.491Z","actor":"vscode","summary":"Created MPI-48."}
+{"at":"2026-06-09T20:40:00Z","event":"task.repaired","actor":"claude","note":"Fixed invalid fields: maturity \"done\" (not a valid maturity) -> \"complete\"; status \"complete\" (that is a maturity value, not a status) -> \"verified\". Per mpi-lib task-board-ops."}

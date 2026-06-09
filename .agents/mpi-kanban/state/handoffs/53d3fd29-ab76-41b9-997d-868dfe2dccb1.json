@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "53d3fd29-ab76-41b9-997d-868dfe2dccb1",
+  "generated_at": "2026-06-09T18:46:25.243Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8/MPI-49: 0.0.4 bug batch + version bump + delta builds + Windows/Linux update-flow test",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Resume MPI-8: fix the three 0.0.3 on-host bugs (models-folder-on-install, Linux start.sh, Pause/Resume button) plus MPI-48, bump 0.0.4, build both deltas, re-test update-from-zip on a fresh 0.0.3 install on Windows + Linux.",
+    "status": "in_progress",
+    "summary": "0.0.4 cut (commit 61cd926) with all four fixes; true delta bundles built for all 3 platforms (Windows local, Linux+mac via mpi-ci run 27223953212). Windows + Linux update-from-zip applied successfully onto fresh 0.0.3 installs. BUG B (Linux start.sh 'Run as program') verified on the laptop. A NEW regression — the applier stripped exec bits — was found and fixed (commit d351c41), shipping from 0.0.5. Still unverified on a box: BUG A (models folder), BUG C (no pause button), MPI-48 (gallery icons) — must be checked on Windows (the GPU-less Linux laptop cannot generate). macOS update never tested. Online update path (update.bat/.sh) deferred to 0.0.5 (needs a private-repo release asset)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "BUG A (models folder on first-run install) FIXED: chosen root now travels through the /engine/download request body to the post-extract YAML write (routes/engine.js step 6, ~L429-455), surviving the extract scrub that previously wiped the pre-download set-path YAML. UI sends {modelsRoot} in the /engine/download POST (MpiEngineInstall.js). Empty input still resolves to default. NOT yet verified on a box (needs a real fresh engine provision).",
+      "BUG B (Linux start.sh not launching via file-manager 'Run as program') FIXED + VERIFIED: setsid --fork double-forks the app to init (escaping Nautilus's tracked process group), returns immediately, no trailing &; fallbacks = backgrounded setsid then nohup. scripts/portable/linux/start.sh. User confirmed 'Run as program' launches the app on the laptop.",
+      "BUG C (engine-install Pause/Resume button vanishes mid-download) FIXED by REMOVING the pause/resume UI entirely (user decision: only the engine archive was ever pausable; once done it became a dead button). MpiEngineInstall.js (markup/mounts/handlers/state/visibility all removed; kept _downloadState for UW-deps pulsation) + MpiEngineInstall.css (orphan __button-group rule removed). Backend /engine/pause|resume routes left untouched (dead, harmless; MPI-54 may reuse). Pause/resume remains for model downloads only. NOT yet verified on a box.",
+      "MPI-48 (gallery fav/reuse icons overlap as UI scales / in preview) FIXED + DEV-VERIFIED: wrapped both buttons in a single __top-actions flex column (gap-based) instead of two absolutely-positioned wraps with hardcoded rem offsets. Live-measured with playwright (gap constant 6.4px all states, scales to 12.8px at 2x zoom, no overlap). User re-verified via npm start. MPI-48 moved to DONE.",
+      "Version bump 0.0.3 -> 0.0.4 (pure patch, commit 61cd926): appVersion.js + package.json (both 0.0.4, agree), releaseNotes.js entry, docs/releases/2026-06-09-v0.0.4.md. Pre-release test skipped (engine-backed, irrelevant for ops-unchanged patch).",
+      "Delta bundles built + verified TRUE deltas (0.0.3 -> 0.0.4): Windows local (node scripts/build-portable.mjs --platform win32 --arch x64 --from-manifest release-baselines/windows-x64.json --no-source-manifest) = 266 changed files, buildHash 61cd926037b4, at D:/CubricStudio/Vision/Builds/CubricVision-windows-x64-update-v0.0.4.zip. Linux+mac via mpi-ci run 27223953212 (gh workflow run build-portable.yml --repo MadPonyInteractive/Cubric-Vision --ref master -f ref=master -f version=0.0.4) all green; Linux delta = 19 files; artifacts at D:/CubricStudio/Vision/Builds/mpi-ci-{linux-0.0.4,darwin-arm64-0.0.4}/.",
+      "Update-from-zip applied on Windows (drag zip onto update-from-zip.bat; user-verified 0.0.3->0.0.4 valid) and Linux (terminal sh ./update-from-zip.sh <zip>).",
+      "APPLIER exec-bit regression FIXED (commit d351c41): apply-update.cjs copied files with fs.copyFileSync (no mode preservation) so updated launchers landed non-executable on Linux/mac after an update -> no 'Run as program', double-click opened as text. restoreExecBit() now reapplies the bundle file's mode + forces +x on .sh/.command/electron binary; Windows no-op; chmod failures non-fatal. Recovered the live 0.0.4 install with manual chmod. SHIPS FROM 0.0.5 (takes effect only in a bundle built with it).",
+      "Knowledge preserved + committed: build-experience-log.md new 2026-06-09 section (3 update-flow traps + delta facts); MPI-49 validation.md (0.0.4 cycle status); MPI-48 -> done, MPI-49 -> doing; MPI-48 card description updated with real scope. All pushed (master at ac18f29)."
+    ],
+    "pending": [
+      "VERIFY on the Windows box (it can generate; the Linux laptop cannot): BUG A (fresh engine install with a custom models folder keeps the chosen root in extra_model_paths.yaml base_path), BUG C (engine install shows NO pause/resume button and runs through), MPI-48 (gallery fav/reuse icons no overlap at zoom/preview post-update).",
+      "The user will independently address MPI-51, MPI-54, MPI-57 before the next session; those land in the NEXT bump (0.0.5) alongside the already-committed applier exec-bit fix.",
+      "0.0.5 cycle: bump 0.0.4 -> 0.0.5 (mpi-version-bump), REFRESH release-baselines/{linux-x64,windows-x64,darwin-arm64}.json to the 0.0.4 update manifests FIRST so 0.0.5 deltas against 0.0.4 (currently they are the 0.0.3 baselines). Then build deltas (Windows local --from-manifest + mpi-ci dispatch) and re-test.",
+      "0.0.5: TEST THE ONLINE UPDATE PATH (update.bat / update.sh) — user wants this exercised, ideally against the PRIVATE repo (MadPonyInteractive). Needs a real/pre-release GitHub Release asset on a private repo; figure out whether update.bat/update.sh can pull from a private repo (auth) or whether a private pre-release tag works. This was deferred all cycle because it needs a release asset.",
+      "macOS update-from-zip never tested (no mac build/test this cycle); the applier exec-bit fix covers .command + the Electron.app binary but is unverified on real Apple hardware. See build-experience-log macOS pre-build checklist.",
+      "DEFERRED (optional, discussed): improve update-from-zip launchers to auto-detect a CubricVision-*update*.zip next to them + prompt fallback + pause, so Linux/mac get a no-terminal path and Windows stops flashing the usage line on double-click. Apply to all 3 launchers; only helps from the next bundle.",
+      "DEFERRED: document the delta flow + --from-manifest + release-baselines refresh-after-release step in the mpi-version-bump skill and docs/releases/portable-distribution-contract.md (carried from prior handoff, still open)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-49",
+    "title": "Test portable update flow (Windows + Linux) with a version bump",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-49/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-49/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-49/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-49/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "build-experience-log.md: appended 2026-06-09 'Linux update-flow testing' section (applier exec-bit trap, start.sh Run-as-program vs terminal, arg-required update-from-zip / Windows-only drag-drop, delta-bundle facts, next-tester checklist). Committed ac18f29.",
+      "MPI-49 validation.md written with the full 0.0.3->0.0.4 cycle: PASS list, the applier regression+fix, NOT-yet-verified list, UX note. Committed ac18f29.",
+      "Board: MPI-48 -> done, MPI-49 -> doing; events appended; MPI-48 card description updated with the real (UI-scale) scope. Committed ac18f29.",
+      "Commits this session: 61cd926 (0.0.4 bump + 4 fixes), d351c41 (applier exec-bit fix), ac18f29 (tracking + log). All pushed; origin/master == local at ac18f29."
+    ],
+    "pending": [
+      "After 0.0.4 is fully verified on Windows + the 0.0.5 cycle: refresh release-baselines/ to the 0.0.4 manifests, and document the delta/--from-manifest/baseline-refresh flow in mpi-version-bump + portable-distribution-contract.md.",
+      "When the online update path is tested (0.0.5), record the private-repo auth mechanism + result in MPI-49 validation.md and build-experience-log.md."
+    ]
+  },
+  "next_action": {
+    "description": "Resume the 0.0.4 update-flow validation. FIRST verify on the WINDOWS box (the GPU-less Linux laptop cannot generate): (A) a fresh engine install with a custom models folder keeps the chosen root in extra_model_paths.yaml base_path; (B/C) the engine install shows NO pause/resume button and runs through; MPI-48 gallery fav/reuse icons do not overlap at zoom/preview post-update. The applier exec-bit fix (commit d351c41) is already committed and ships from 0.0.5 — do NOT rebuild 0.0.4 for it. The user is separately doing MPI-51/MPI-54/MPI-57 for the next bump. When ready for 0.0.5: REFRESH release-baselines/ to the 0.0.4 manifests BEFORE building, bump 0.0.4->0.0.5, build deltas, and TEST THE ONLINE UPDATE PATH (update.bat/update.sh) — ideally against the private MadPonyInteractive repo (needs a release/pre-release asset + private-repo auth investigation).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "BUG C resolved by REMOVING engine-install pause/resume UI, not by fixing button visibility — user decided a control that can only pause the engine archive (not the parallel UW model deps) is pointless once the archive finishes. Backend pause routes left intact for MPI-54 reuse.",
+      "MPI-48 fixed with a flex container (user's suggestion) over the agent's original magic-number-offset approach — self-sizing, zoom/state-invariant. Verified by live playwright measurement, not just code reasoning.",
+      "Applier exec-bit fix rolls into 0.0.5, NOT a 0.0.4 rebuild (user choice) — the live 0.0.4 install is recovered via manual chmod and otherwise valid for testing the other fixes.",
+      "0.0.4 = pure patch. release-baselines/ are still the 0.0.3 manifests, so 0.0.4 deltas were against 0.0.3 automatically. They must be refreshed to 0.0.4 BEFORE the 0.0.5 build.",
+      "Online update path testing deferred to 0.0.5 against the private repo — needs a release asset; private-repo auth for update.bat/.sh is an open question to investigate."
+    ],
+    "constraints": [
+      "Do NOT touch the backend ResumableDownloader pause/abort path (fragile; memory project_ndh_resumable_downloads). BUG C was a pure frontend removal.",
+      "Always dispatch mpi-ci with -f ref=master (dispatcher input default ref is 'main' but the branch is 'master').",
+      "For TEST builds pass --no-source-manifest so the committed baseline/source manifest is not clobbered. Local Windows builds output to D:/CubricStudio/Vision/Builds.",
+      "update-from-zip.{bat,sh,command} are ARG-REQUIRED. Windows: drag the zip onto the .bat (Explorer passes %1) OR run from cmd with the path. Linux/mac: file managers do NOT pass drops to scripts -> must run from a terminal with the path.",
+      "Generation-tied checks (BUG A/C, gallery) must run on the WINDOWS box — the GPU-less Linux laptop cannot generate.",
+      "The applier reads the TOP-LEVEL resources/cubric/update-manifest.json. Existing installs prior to 0.0.4 had the asar-stall applier; the 0.0.4 fresh installs have the fixed applier; the 0.0.5+ bundles will carry the exec-bit-preserving applier.",
+      "Caveman comms mode active for chat (code/commits/security written normal)."
+    ],
+    "files_modified": [
+      "routes/engine.js (BUG A: /engine/download body -> _runEngineDownload(chosenModelsRoot) -> step 6 honors chosen root; committed 61cd926)",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js (BUG A body send + BUG C pause UI removal; committed 61cd926)",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css (orphan __button-group rule removed; committed 61cd926)",
+      "scripts/portable/linux/start.sh (BUG B setsid --fork; committed 61cd926)",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js + .css (MPI-48 __top-actions flex; committed 61cd926)",
+      "js/core/appVersion.js, package.json, js/data/releaseNotes.js, docs/releases/2026-06-09-v0.0.4.md (0.0.4 bump; committed 61cd926)",
+      "scripts/portable/apply-update.cjs (applier exec-bit preservation; committed d351c41)",
+      "docs/releases/build-experience-log.md, .agents/mpi-kanban/* (tracking + log; committed ac18f29)"
+    ],
+    "files_to_read_first": [
+      "docs/releases/build-experience-log.md (2026-06-09 'Linux update-flow testing' section — the 3 traps)",
+      ".agents/mpi-kanban/tasks/MPI-49/validation.md (0.0.4 cycle status)",
+      "scripts/portable/apply-update.cjs (the shipped exec-bit fix)",
+      "routes/engine.js (BUG A fix at step 6, ~L429-455)",
+      "release-baselines/README.md (delta baseline contract; refresh to 0.0.4 before 0.0.5)",
+      "docs/releases/portable-distribution-contract.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "downloads", "comfy_engine", "versioning"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-09T18:46:25.243Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/53d3fd29-ab76-41b9-997d-868dfe2dccb1.json and use mpi-continue to continue from where we left off. You are resuming MPI-49 (portable update-flow testing), under the MPI-8 umbrella. Done this session: cut 0.0.4 (commit 61cd926) with four fixes — BUG A (first-run install now keeps the chosen models folder via the /engine/download body -> engine.js step 6), BUG B (Linux start.sh launches via file-manager 'Run as program' using setsid --fork; user-verified), BUG C (removed the engine-install Pause/Resume UI entirely), and MPI-48 (gallery fav/reuse icons no longer overlap — flex __top-actions column, live-verified, moved to done). Built TRUE delta bundles (0.0.3->0.0.4) for all 3 platforms (Windows local 266 files; Linux+mac via mpi-ci run 27223953212; Linux 19 files) at D:/CubricStudio/Vision/Builds. Windows + Linux update-from-zip applied onto fresh 0.0.3 installs successfully. A NEW regression was found and fixed: the applier (apply-update.cjs) stripped exec bits via fs.copyFileSync, so updated Linux/mac launchers landed non-executable (no 'Run as program') — fixed with restoreExecBit() (commit d351c41), which SHIPS FROM 0.0.5 (recover a current install with chmod +x on the launchers). NEXT: verify the still-unchecked 0.0.4 fixes on the WINDOWS box (it can generate; the GPU-less Linux laptop cannot) — BUG A (chosen models folder kept), BUG C (no pause button, runs through), MPI-48 (no icon overlap post-update). The user is separately doing MPI-51, MPI-54, MPI-57 for the next bump. When ready for 0.0.5: FIRST refresh release-baselines/ to the 0.0.4 manifests (so deltas are against 0.0.4), then bump 0.0.4->0.0.5, build deltas, and TEST THE ONLINE UPDATE PATH (update.bat/update.sh) — ideally against the private MadPonyInteractive repo, which needs a release/pre-release asset and a private-repo auth investigation. Constraints: never touch the backend ResumableDownloader; always dispatch mpi-ci with -f ref=master; for test builds pass --no-source-manifest; update-from-zip is arg-required (Windows drag-drop onto the .bat works, Linux/mac need a terminal). master is at ac18f29; origin == local."
+}
