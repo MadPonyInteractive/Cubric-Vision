@@ -43,14 +43,13 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- **None.** Reset 2026-06-10 for the **0.0.11 baseline release**. The stale
-  manifests (darwin `0.0.3`, linux/windows `0.0.6`) were removed so the 0.0.11
-  CI build produces **FULL** update bundles for all three platforms (no
-  stale-delta superset). 0.0.11 is the new fresh-install baseline installed on
-  all three boxes.
-- **Next step (after the 0.0.11 build):** commit the three 0.0.11 **FULL
-  (portable-stage)** manifests here — `darwin-arm64.json`, `linux-x64.json`,
-  `windows-x64.json`, each the top-level `resources/cubric/update-manifest.json`
-  from inside `CubricVision-<plat>-<arch>-v0.0.11.zip`/`.tar.gz` (`toVersion:
-  0.0.11`, `fromVersion: null`, `kind: portable-stage`). The next version
-  (0.0.12) then deltas cleanly against 0.0.11.
+- All three refreshed to the **v0.0.11 FULL (portable-stage)** manifests
+  (2026-06-10) from mpi-ci run #22, so the next build (0.0.12) deltas cleanly
+  against 0.0.11. `toVersion: 0.0.11`, `fromVersion: null`,
+  `kind: portable-stage`:
+  - `darwin-arm64.json` — 5499 files
+  - `linux-x64.json` — 5316 files
+  - `windows-x64.json` — 5353 files
+- This is the first cycle where all three platforms share a current baseline
+  (the old darwin `0.0.3` stale baseline is gone). 0.0.11 is the new
+  fresh-install baseline installed on all three boxes.
