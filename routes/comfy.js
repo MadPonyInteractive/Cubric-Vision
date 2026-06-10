@@ -228,7 +228,10 @@ router.post('/comfy/start', async (req, res) => {
         if (vendor === 'apple') {
             // No mode flag → ComfyUI auto-selects the MPS device. --use-pytorch-cross-attention
             // is the recommended attention path on M-series (15-50% faster, no downside).
-            modeArgs = ['--use-pytorch-cross-attention'];
+            // --fp32-vae forces the VAE decode to run in fp32: MPS fp16 VAE produces
+            // banded/corrupt output on Apple Silicon (observed on M4, 2026-06-10). The VAE
+            // is a small fraction of total compute, so the precision bump is cheap insurance.
+            modeArgs = ['--use-pytorch-cross-attention', '--fp32-vae'];
         } else if (useCpu) {
             modeArgs = ['--cpu'];
         } else {
