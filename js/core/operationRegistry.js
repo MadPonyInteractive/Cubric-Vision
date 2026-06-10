@@ -9,7 +9,7 @@
  * an entry here with the current APP_VERSION as appVersionIntroduced.
  */
 
-/** All 13 non-stub operations from commandRegistry.js. */
+/** All non-stub operations from commandRegistry.js. */
 export const OPERATION_REGISTRY = {
     // Image operations
     t2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
@@ -21,13 +21,17 @@ export const OPERATION_REGISTRY = {
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     // Video operations
     t2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    t2v_ms:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     i2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    i2v_ms:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     extend:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     // Universal operations (not model-tied)
     interpolate:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     videoUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    resizeVideo:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
 };
 
 /**

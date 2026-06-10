@@ -41,6 +41,7 @@ WORKFLOWS_DIR = REPO_ROOT / 'comfy_workflows'
 BASELINES_PATH = REPO_ROOT / 'docs' / 'workflows' / 'baselines.json'
 FIXTURES_DIR = REPO_ROOT / 'tests' / 'fixtures'
 OUTPUTS_DIR = REPO_ROOT / 'test-outputs'
+SYSTEM_DEPS_PATH = REPO_ROOT / 'dev_configs' / 'system_dependencies.json'
 
 LOW_RES_IMAGE = {'width': 288, 'height': 288}
 LOW_RES_VIDEO = {'width': 256, 'height': 144, 'num_frames': 2}
@@ -447,9 +448,10 @@ def main():
             m = re.search(r"APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]", content)
             if m:
                 app_version = m.group(1)
-            m = re.search(r"COMFY_VERSION\s*=\s*['\"]([^'\"]+)['\"]", content)
-            if m:
-                comfy_version = m.group(1)
+    if SYSTEM_DEPS_PATH.exists():
+        with open(SYSTEM_DEPS_PATH) as f:
+            deps = json.load(f)
+            comfy_version = deps.get('engine', {}).get('version', comfy_version)
 
     # Run tests
     print('=== Cubric Studio Pre-Release Test ===')

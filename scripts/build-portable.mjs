@@ -222,6 +222,23 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
+async function assertAppPackageVersionParity(packageVersion) {
+  const appVersionPath = path.join(REPO_ROOT, 'js', 'core', 'appVersion.js');
+  const appVersionText = await fs.readFile(appVersionPath, 'utf8');
+  const match = /APP_VERSION\s*=\s*['"]([^'"]+)['"]/.exec(appVersionText);
+  if (!match) {
+    throw new Error('Could not find APP_VERSION in js/core/appVersion.js.');
+  }
+
+  const appVersion = match[1];
+  if (appVersion !== packageVersion) {
+    throw new Error(
+      `Version mismatch before portable build: APP_VERSION is ${appVersion}, package.json version is ${packageVersion}. `
+      + 'Run npm run release:check and complete the version bump before building artifacts.',
+    );
+  }
+}
+
 async function pathExists(filePath) {
   try {
     await fs.access(filePath);
@@ -996,6 +1013,7 @@ async function main() {
 
   assertSupportedPlatform(opts.platform);
   const packageJson = await readJson(path.join(REPO_ROOT, 'package.json'));
+  await assertAppPackageVersionParity(packageJson.version);
   opts.version ??= packageJson.version;
   opts.buildHash = await resolveBuildHash(opts.buildHash);
 

@@ -9,11 +9,11 @@ Cubric Vision is actively cutting/testing release `0.0.11`. The existing release
 - `APP_VERSION` and `package.json` currently match at `0.0.11`.
 - Engine version is centralized in `dev_configs/system_dependencies.json`.
 - Runtime changelog notes exist for `0.0.11` in `js/data/releaseNotes.js`, and archival notes exist in `docs/releases/2026-06-10-v0.0.11.md`.
-- `operationRegistry.js` is missing active operations from `commandRegistry.js`/model support: `t2v_ms`, `i2v_ms`, `resize`, `resizeVideo`.
-- `operation_registry.json` is missing active registry entries, including at least `imageUpscale`, `resize`, `resizeVideo`.
-- `routes/projects.js` still creates new projects with `schemaVersion: 1` while the current schema is `2`.
-- `scripts/pre_release_test.py` still attempts to read `COMFY_VERSION` from `appVersion.js`, although engine version moved to `dev_configs/system_dependencies.json`.
-- `scripts/build-portable.mjs` derives artifact version from `package.json`, but does not fail fast if `APP_VERSION` and `package.json` drift.
+- `operationRegistry.js` and `operation_registry.json` now cover all active, non-stub commands, model supported operations, and universal workflows.
+- `routes/projects.js` now creates schema v2 projects using `SCHEMA_VERSION` and initializes `shared.image` / `shared.video`.
+- `scripts/pre_release_test.py` now reads ComfyUI version from `dev_configs/system_dependencies.json`.
+- `scripts/build-portable.mjs` now fails fast if `APP_VERSION` and `package.json` drift before portable staging.
+- `npm run release:check` is the new executable release-health gate and currently passes.
 
 This plan is intentionally broader than the current `0.0.11` release card: it should leave future agents with one release-health command and one clear playbook, instead of making them grep through version, provisioning, operations, model, workflow, build, and changelog files.
 
@@ -21,26 +21,28 @@ This plan is intentionally broader than the current `0.0.11` release card: it sh
 
 - [x] Initial audit identified operation registry drift, schema creation drift, pre-release test engine-version drift, and missing build-time version parity enforcement.
 - [x] Created this MPI task/card so release-hardening work is tracked separately from the active `0.0.11` build/testing card.
+- [x] Repaired operation registry and JSON mirror drift for current active operations.
+- [x] Added `npm run release:check`, fixed current release-health drifts, and added portable build version parity fail-fast.
 
 ## Remaining Work
 
 ## Phase 1: Repair Current Registry Drift
 
-- [ ] Update `js/core/operationRegistry.js` so every active, non-stub operation in `js/data/commandRegistry.js` is represented with `latestVersion`, `appVersionIntroduced`, and deprecation metadata where needed. Include current active gaps: `t2v_ms`, `i2v_ms`, `resize`, `resizeVideo`. **Verify:** a registry comparison script reports no non-stub command missing from `OPERATION_REGISTRY`.
-- [ ] Update `operation_registry.json` to mirror `operationRegistry.js`, including universal flags where applicable. Include current mirror gaps: `imageUpscale`, `resize`, `resizeVideo`, and any Phase 1 additions. **Verify:** a mirror comparison script reports no registry entry missing from `operation_registry.json`.
-- [ ] Decide and record correct `appVersionIntroduced` values for operations that were added before `0.0.11` but not registered at the time. **Verify:** the decision is documented in the plan or release notes so future compatibility checks do not misrepresent history.
+- [x] Update `js/core/operationRegistry.js` so every active, non-stub operation in `js/data/commandRegistry.js` is represented with `latestVersion`, `appVersionIntroduced`, and deprecation metadata where needed. Include current active gaps: `t2v_ms`, `i2v_ms`, `resize`, `resizeVideo`. **Verify:** a registry comparison script reports no non-stub command missing from `OPERATION_REGISTRY`.
+- [x] Update `operation_registry.json` to mirror `operationRegistry.js`, including universal flags where applicable. Include current mirror gaps: `imageUpscale`, `resize`, `resizeVideo`, and any Phase 1 additions. **Verify:** a mirror comparison script reports no registry entry missing from `operation_registry.json`.
+- [x] Decide and record correct `appVersionIntroduced` values for operations that were added before `0.0.11` but not registered at the time. **Verify:** the decision is documented in the plan or release notes so future compatibility checks do not misrepresent history.
 
 ## Phase 2: Add Release Health Check
 
-- [ ] Add a script such as `scripts/release-health-check.mjs` and an npm script such as `npm run release:check`. It should fail on version drift between `APP_VERSION`, `package.json`, and lockfile root version; missing release notes for current `APP_VERSION`; schema constant drift; stale new-project schema; operation registry drift; JSON mirror drift; and pre-release test engine-version source drift. **Verify:** `npm run release:check` fails before the known drifts are fixed and passes after they are fixed.
-- [ ] Wire `scripts/build-portable.mjs` or the release build command to run/fail on the version parity subset before staging artifacts. **Verify:** a deliberate local mismatch between `APP_VERSION` and `package.json` causes a clear build failure before archive staging.
-- [ ] Update `scripts/pre_release_test.py` to read ComfyUI version from `dev_configs/system_dependencies.json`. **Verify:** the pre-release banner prints the current engine version from that file.
+- [x] Add a script such as `scripts/release-health-check.mjs` and an npm script such as `npm run release:check`. It should fail on version drift between `APP_VERSION`, `package.json`, and lockfile root version; missing release notes for current `APP_VERSION`; schema constant drift; stale new-project schema; operation registry drift; JSON mirror drift; and pre-release test engine-version source drift. **Verify:** `npm run release:check` fails before the known drifts are fixed and passes after they are fixed.
+- [x] Wire `scripts/build-portable.mjs` or the release build command to run/fail on the version parity subset before staging artifacts. **Verify:** a deliberate local mismatch between `APP_VERSION` and `package.json` causes a clear build failure before archive staging.
+- [x] Update `scripts/pre_release_test.py` to read ComfyUI version from `dev_configs/system_dependencies.json`. **Verify:** the pre-release banner prints the current engine version from that file.
 
 ## Phase 3: Normalize Schema and Changelog Coverage
 
-- [ ] Fix project creation paths so new projects are created at current `SCHEMA_VERSION` and include v2 fields such as `shared`. **Verify:** creating a project through the backend route produces `schemaVersion: 2` and does not need immediate migration.
+- [x] Fix project creation paths so new projects are created at current `SCHEMA_VERSION` and include v2 fields such as `shared`. **Verify:** creating a project through the backend route produces `schemaVersion: 2` and does not need immediate migration.
 - [ ] Add release-health validation that every public runtime release note has matching archival markdown, while allowing explicitly internal/skipped versions such as `0.0.9` through an allowlist. **Verify:** the script reports `0.0.8`/`0.0.1` historical gaps unless they are documented or backfilled.
-- [ ] Decide whether current `package-lock.json` root version should be bumped with app releases or explicitly excluded from release identity. **Verify:** the decision is enforced by `npm run release:check` and documented in `docs/versioning.md`.
+- [x] Decide whether current `package-lock.json` root version should be bumped with app releases or explicitly excluded from release identity. **Verify:** the decision is enforced by `npm run release:check` and documented in `docs/versioning.md`.
 
 ## Phase 4: Agent Playbook and Rule Updates
 
@@ -58,7 +60,7 @@ Use `mpi-execute-parallel` only after Phase 1 registry repair is complete, becau
 
 ## Plan Drift
 
-- None yet.
+- 2026-06-10: Phase 2 pulled `package-lock.json` version parity and backend project schema creation into the current implementation because the new release-health gate would otherwise be red on known drift. The remaining Phase 3 work is now historical release-note coverage and documentation of the lockfile policy.
 
 ## Verification
 

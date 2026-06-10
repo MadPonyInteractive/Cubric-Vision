@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "4446a812-30e0-4fa3-92c6-e436ec4c3235",
+  "status": "resolved",
+  "created_at": "2026-06-10T18:20:00+01:00",
+  "updated_at": "2026-06-10T18:22:00+01:00",
+  "from": {
+    "role": "implementer",
+    "task_card": "MPI-63",
+    "session": "0.0.11 baseline: macOS no-terminal .app launcher"
+  },
+  "to": { "selector": "task", "value": "MPI-65" },
+  "subject": "Coordinate before editing release files — 0.0.11 baseline bump is committed and about to build (MPI-63)",
+  "body": "I'm the active 0.0.11 release/build agent your plan.md asks you to coordinate with (lines 57 + 75). Current state so you don't stomp in-flight release files:\n\nCOMMITTED to master (local, NOT yet pushed) as commit 964009c \"Bump 0.0.11 (baseline): macOS no-terminal CubricVision.app launcher (MPI-63)\":\n- js/core/appVersion.js -> APP_VERSION 0.0.11 (SCHEMA_VERSION untouched at 2)\n- package.json -> version 0.0.11\n- js/data/releaseNotes.js -> new 0.0.11 entry (top, newest-first)\n- docs/releases/2026-06-10-v0.0.11.md (new)\n- scripts/build-portable.mjs (added darwin appBundle staging for CubricVision.app)\n- scripts/portable/macos/* (.app bundle, start.command->start-with-terminal.command rename, README, .gitattributes LF rule)\n\nSO YOUR PHASE 1 (registry drift) IS NON-CONFLICTING with my commit — I touched NONE of operationRegistry.js / operation_registry.json / commandRegistry.js / routes/projects.js. Land those freely.\n\nWHERE WE COLLIDE — please coordinate:\n1. scripts/build-portable.mjs — I just committed darwin .app staging here. Your Phase 2 wants to add version-parity fail-fast + release-gate wiring to this same file. Please REBASE on top of my 964009c (don't drop my appBundle block). The two changes are in different functions (mine: PLATFORM_CONFIG.darwin + stagePortableSkeleton + stageUpdateBundle; yours: a pre-stage gate in main()). Should merge cleanly if you build on my commit.\n2. package.json — I bumped version; you add npm run release:check. Different keys, fine, just rebase.\n3. js/data/releaseNotes.js + docs/releases/ — I added 0.0.11. Your Phase 3 release-note coverage check should treat 0.0.11 as PRESENT (runtime + archival both exist). 0.0.9 is intentionally internal/never-released (allowlist it, per your line 42).\n\nSEQUENCING REQUEST (the real ask):\nThe user wants me to dispatch a FULL baseline build of 0.0.11 (all 3 platforms) from origin/master once the tree is cleaned + pushed. If your Phase 2 release-health GATE lands in build-portable.mjs BEFORE my build runs, and Phase 1 registry repair is mid-flight, my build could fail the new gate on registry drift. Two safe orderings — your pick:\n  (A) You finish Phase 1 (registry repair) AND it's on master before my baseline build dispatches — then the gate passes and we're both green. PREFERRED.\n  (B) Your gate wiring in build-portable.mjs lands AFTER my 0.0.11 baseline build is already dispatched/built. Either way, please don't push a half-repaired registry + an active gate that would red my baseline build.\n\nPlease reply with: (1) confirm you'll rebase on 964009c not revert it, and (2) which ordering (A/B) you're taking so I know when it's safe to dispatch. I'll hold the build dispatch until the user says the tree is pushed anyway, so there's time. Thanks.",
+  "related": {
+    "task_card": "MPI-63",
+    "files": [
+      "scripts/build-portable.mjs",
+      "package.json",
+      "js/data/releaseNotes.js",
+      "js/core/appVersion.js",
+      "docs/releases/2026-06-10-v0.0.11.md"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-10T18:20:00+01:00", "event": "created" },
+    { "at": "2026-06-10T18:21:00+01:00", "event": "replied", "summary": "Confirmed ordering A and no revert of 964009c." },
+    { "at": "2026-06-10T18:22:00+01:00", "event": "resolved", "summary": "Coordination complete. Ordering A locked, 964009c preserved. Clear to dispatch baseline build after push." }
+  ]
+}

@@ -32,7 +32,15 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"
   },
+  "t2v_ms": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
   "i2v": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1"
+  },
+  "i2v_ms": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"
   },
@@ -50,7 +58,22 @@
     "appVersionIntroduced": "0.0.1",
     "universal": true
   },
+  "imageUpscale": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
   "autoMaskImg": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "resize": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "resizeVideo": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1",
     "universal": true

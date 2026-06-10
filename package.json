@@ -13,6 +13,7 @@
     "build:portable:win": "node scripts/build-portable.mjs --clean --platform win32 --arch x64 --stage-dir D:\\tmp\\cubric-portable --no-source-manifest",
     "build:portable:linux": "node scripts/build-portable.mjs --clean --platform linux --arch x64 --stage-dir D:\\tmp\\cubric-portable --no-source-manifest",
     "build:portable:mac": "node scripts/build-portable.mjs --clean --platform darwin --arch arm64 --stage-dir D:\\tmp\\cubric-portable --no-source-manifest",
+    "release:check": "node scripts/release-health-check.mjs",
     "test:desktop": "playwright test --config=playwright.desktop.config.js",
     "lint": "eslint js/ --max-warnings=9999",
     "lint:components": "eslint js/components/ --max-warnings=9999",

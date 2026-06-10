@@ -2,3 +2,7 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"task.updated","at":"2026-06-10T18:09:04+01:00","actor":"codex","summary":"Attached large adaptive plan and registry audit research notes."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"task.moved","at":"2026-06-10T18:11:01+01:00","actor":"codex","from":"todo","to":"doing","summary":"Implementation started for immediate operation registry repair."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"checklist.updated","at":"2026-06-10T18:11:01+01:00","actor":"codex","summary":"Derived checklist from large plan phases."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"checklist.item_checked","at":"2026-06-10T18:12:00+01:00","actor":"codex","summary":"Completed Phase 1 registry drift repair."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:12:00+01:00","actor":"codex","summary":"Registry/mirror comparison, releaseNotes syntax check, and JSON parse checks passed."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"checklist.item_checked","at":"2026-06-10T18:21:23+01:00","actor":"codex","summary":"Completed Phase 2 release health check implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:21:23+01:00","actor":"codex","summary":"release:check, syntax checks, py_compile, and portable dry-run smoke passed."}

@@ -32,6 +32,7 @@ const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
+const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
 
 const projectJsonQueues = new Map();
 const itemMetaQueues = new Map();
@@ -488,10 +489,11 @@ router.post('/create-project', async (req, res) => {
             updatedAt: new Date().toISOString(),
             folderPath: projectRoot.replace(/\\/g, '/'),
             thumbnail: null,
-            schemaVersion: 1,
+            schemaVersion: SCHEMA_VERSION,
             itemGroups: [],
             modelSettings: {},
             toolSettings: {},
+            shared: { image: {}, video: {} },
             tutorialSeen: false,
         };
 
