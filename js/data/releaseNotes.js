@@ -38,6 +38,20 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.8': {
+    version: '0.0.8',
+    whatIsNew: [
+      'First macOS (Apple Silicon) build — Cubric Vision now runs on Windows, Linux, and Mac.',
+    ],
+    fixes: [
+      'macOS: the app now uses your Mac’s GPU (Metal) for generation instead of the CPU.',
+      'macOS: bundled tools and launchers keep their permissions so the app starts correctly.',
+      'Opening an image or video in the history view no longer fails on Linux.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.7': {
     version: '0.0.7',
     whatIsNew: [

@@ -899,8 +899,32 @@ async function createTarGzFromDir(sourceDir, tarGzPath) {
   return tarGzPath;
 }
 
+// macOS .app bundles rely on symlinks (every .framework has a top-level
+// `Foo → Versions/Current/Foo` link that dyld resolves via @rpath). The
+// hand-rolled zip/tar writers drop symlinks entirely (listFiles skips them), so a
+// bundle archived that way fails to launch with "Library not loaded". On the mac
+// runner, use ditto — Apple's archiver — which preserves symlinks, exec bits, and
+// bundle metadata, and produces a zip whose permissions survive Archive Utility /
+// Safari auto-extract. Falls back to the hand-rolled writer only if ditto is
+// absent (non-darwin host), which cannot produce a runnable mac bundle anyway.
+async function createMacZipWithDitto(sourceDir, zipPath, { includeRoot = false } = {}) {
+  await ensureDir(path.dirname(zipPath));
+  if (await pathExists(zipPath)) await fs.rm(zipPath, { force: true });
+  // -c create, -k PKZip format. --keepParent includes the top folder in the
+  // archive paths (matches includeRoot:true). --sequesterRsrc keeps resource
+  // forks tidy. ditto preserves symlinks and POSIX modes natively.
+  const args = ['-c', '-k', '--sequesterRsrc'];
+  if (includeRoot) args.push('--keepParent');
+  args.push(sourceDir, zipPath);
+  await execFileAsync('ditto', args);
+  return zipPath;
+}
+
 async function createArchiveFromDir(sourceDir, archivePath, ext, { includeRoot = false } = {}) {
   if (ext === '.tar.gz') return createTarGzFromDir(sourceDir, archivePath);
+  if (ext === '.zip' && process.platform === 'darwin') {
+    return createMacZipWithDitto(sourceDir, archivePath, { includeRoot });
+  }
   return createZipFromDir(sourceDir, archivePath, { includeRoot });
 }
 
