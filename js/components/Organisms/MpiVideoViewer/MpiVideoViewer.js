@@ -60,7 +60,7 @@ import { MpiViewerCorners } from '../../Compounds/MpiViewerCorners/MpiViewerCorn
 import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { createCropTool } from '../../../utils/cropTool.js';
 import { SOCIAL_RATIOS } from '../../../utils/ratios.js';
-import { captureFrameBlob } from '../../../utils/Video.js';
+import { captureFrameBlob } from '../../../utils/video.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 
