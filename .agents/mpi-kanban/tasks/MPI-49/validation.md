@@ -261,3 +261,58 @@ self-heal held. This is the definitive online-update proof for Linux. The 0.0.7
 release + tag are to be deleted (throwaway):
 - `gh release delete v0.0.7 --repo MadPonyInteractive/Cubric-Vision --yes`
 - `git push origin :refs/tags/v0.0.7`
+
+## macOS — first hardware acceptance (rentamac M4, macOS 26.4.1, 2026-06-10)
+
+First-ever macOS validation on real Apple Silicon (rented Mac Mini M4, 16 GB,
+arm64; Fabio drove via DeskIn, Claude relayed). Covers 0.0.8 fresh install +
+0.0.8 -> 0.0.9 offline update.
+
+### PASS — fresh 0.0.8 install (ditto build)
+- **ditto symlink fix:** fresh Safari download + Finder double-click extract +
+  double-click `start.command` LAUNCHED WITH ZERO MANUAL REPAIR — no xattr, no
+  chmod, no symlink recreation. (The pre-ditto build needed all three.) The
+  hand-rolled zip dropped every Electron.app framework symlink -> dyld abort;
+  archiving darwin with `ditto` on the mac runner preserves symlinks + exec bits +
+  metadata, and perms survive Archive Utility / Safari. THE key mac fix.
+- **Version display (fix #7):** app header reads **0.0.8** (was hardcoded 0.0.7;
+  CI `-f version` only names the artifact, does NOT patch appVersion.js — always
+  run mpi-version-bump).
+- **Apple Silicon detect:** gpu vendor 'apple'; engine installs via
+  `comfy install --m-series`; git path shows `xcode-select` (not apt).
+- **MPS generation, NO --cpu:** real diffusion at ~8 s/it (GPU speed, not
+  CPU-glacial); `VAE load device: mps`. Generation works on Metal/MPS.
+
+### PASS — 0.0.8 -> 0.0.9 OFFLINE update (update-from-zip.command)
+- Applied cleanly: `Applied Cubric Vision update to 0.0.9.`, rollback saved, no
+  asar stall (process.noAsar). App relaunched reads **0.0.9**; test project +
+  assets PRESERVED across the update.
+- **MPI-58 video zoom:** wheel-zoom + double-click reset confirmed in the video
+  history viewer on the Mac (also confirmed on Linux 0.0.7->0.0.9). Card -> done.
+- **MPI-59 thumbnails:** not reproduced on Mac (ffmpeg working); fixed + verified
+  on Linux. Card -> done.
+
+### FINDINGS (logged, NOT 1.0.0 blockers)
+- **fp32-vae REVERTED.** A brief 0.0.9 `--fp32-vae` (to fix fp16-VAE banding) OOM'd
+  even a SINGLE image on the 16 GB M4 AND a global VAE flag overrides each
+  workflow's authored VAE precision (fp8/fp16/bf16/fp32). Reverted; banding is a
+  per-workflow concern -> MPI-61. Apple launch is back to just
+  `--use-pytorch-cross-attention`.
+- **MPI-60:** VRAM gauge reads 0.0/0 GB on Apple Silicon (unified memory, no
+  discrete VRAM). Cosmetic.
+- **MPI-62:** Safari auto-extracts the update zip into a folder (and truncates the
+  long folder name) -> `update-from-zip.command` can't take a directory. Workaround
+  used live: re-zip with `ditto -c -k --keepParent <folder> /tmp/x.zip`.
+- **No-terminal mac launch:** `.command` always opens Terminal; a no-terminal
+  `.app` wrapper is still deferred (Win/Linux have a no-terminal default; mac does
+  not).
+
+### NOT YET TESTED on Mac
+- **Online update (`update.command`)** — needs repo PUBLIC + a non-prerelease
+  'latest'. Deferred; offline path proven on Mac. Plan: roll MPI-60/61/62 into a
+  single 0.0.10 update build for Mac + Linux, then test online then.
+- Video generation on Mac (78 GB model download + slow encode; skipped to save the
+  rental clock).
+
+macOS offline acceptance (fresh install + offline update) is COMPLETE and PASSING.
+Online update on Mac remains the one untested updater path.
