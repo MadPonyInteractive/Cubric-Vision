@@ -29,10 +29,27 @@ function _resolvePackaged(name) {
 
     for (const base of candidates) {
         const p = path.join(path.resolve(base), exe);
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+            _ensureExecutable(p);
+            return p;
+        }
     }
 
     return null;
+}
+
+// Portable archives (zip/tar built on Windows) may strip the exec bit. The build
+// marks these +x, but self-heal at resolve time so a binary that arrived without
+// it (old bundle, manual copy) still runs instead of failing with EACCES. Win32
+// has no exec bit; skip.
+function _ensureExecutable(p) {
+    if (process.platform === 'win32') return;
+    try {
+        const mode = fs.statSync(p).mode & 0o777;
+        if ((mode & 0o111) !== 0o111) fs.chmodSync(p, mode | 0o111);
+    } catch (_) {
+        // Non-fatal — spawn will surface a clearer error if it truly can't run.
+    }
 }
 
 function _resolveDev(pkgName) {

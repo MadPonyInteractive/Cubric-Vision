@@ -829,7 +829,8 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
 // POSIX archives carry no on-disk permission bits when built on Windows, so the
 // tar writer must decide which entries get the executable bit. Cover launcher
 // scripts, the bundled Electron native binary (Linux + macOS), the uv binary,
-// and any node_modules/.bin shims that survived staging.
+// the bundled ffmpeg/ffprobe media tools, and any node_modules/.bin shims that
+// survived staging.
 function isExecutableEntry(relPath) {
   // Suffix-tolerant matches: the full-build zip prefixes every entry with a root
   // folder name (includeRoot:true), so exact `===` checks would miss there. The
@@ -839,6 +840,10 @@ function isExecutableEntry(relPath) {
   if (relPath.endsWith('app/node_modules/electron/dist/electron')) return true;
   if (relPath.endsWith('/Electron.app/Contents/MacOS/Electron')) return true;
   if (relPath.endsWith('uv/uv')) return true;
+  // Bundled media tools are spawned as binaries; staged at resources/ffmpeg(.exe)
+  // and resources/ffprobe(.exe). The runtime resolver (services/ffmpegBinary.js)
+  // does not chmod, so they must be executable straight out of the archive.
+  if (relPath.endsWith('resources/ffmpeg') || relPath.endsWith('resources/ffprobe')) return true;
   return false;
 }
 
