@@ -3,9 +3,9 @@
   "id": "MPI-61",
   "title": "Apple Silicon: fp16 VAE banding — solve per-workflow, NOT via a global launch flag",
   "description": "BACKGROUND: in 0.0.9 we briefly added --fp32-vae on Apple Silicon to fix fp16-VAE colour banding seen in a batch on the M4. It was REVERTED (commit after f59684a) for two reasons: (1) it OOM'd even a SINGLE image on a 16 GB M4 — 'RuntimeError: MPS backend out of memory ... Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0' at VAE decode → 'Generation completed but no output returned' (fp32 VAE ~2x the fp16 footprint, tips 16 GB unified memory over the MPS watermark); and (2) MORE IMPORTANTLY, a global --fp32-vae/--bf16-vae/--cpu-vae launch flag OVERRIDES each workflow's authored VAE precision — Fabio's workflows individually choose fp8/fp16/bf16/fp32, and a blanket flag stomps all of them. So forcing VAE precision on the command line is the wrong layer. CONSTRAINTS (from Fabio, 2026-06-10): do NOT force a global VAE flag; do NOT add VAE tiling (he removed tiling from most workflows — it slows down powerful machines for no benefit to them; 'users with more powerful machines don't get the benefit of the more powerful machine'); a 16 GB-Mac user who sees batch artifacts can simply run single images. PROPER FIX DIRECTION (investigate for a later bump, NOT 1.0.0): if a specific workflow's fp16 VAE bands on MPS, fix THAT workflow's VAE node precision in its own JSON (per-workflow, authored), not globally. Confirm which workflow/model actually banded on the M4 (the batch that showed it) and whether its VAE node is fp16; if so set that node to fp32/bf16 in the workflow file only. Also consider a clearer 'out of memory — reduce batch size' user message instead of the silent 'no output returned'. Available ComfyUI flags for reference (cli_args.py): --fp16-vae (may cause black images), --fp32-vae, --bf16-vae, --cpu-vae — all mutually exclusive, all GLOBAL, hence unsuitable. NOT a 1.0.0 blocker.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "pending",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "needs-verification",
   "created_at": "2026-06-10T13:00:00.000Z",
   "updated_at": "2026-06-10T13:00:00.000Z",
   "links": {
