@@ -4,8 +4,17 @@ These are the **previous release's FULL (portable-stage) manifests**, one per
 platform/arch:
 
 - `linux-x64.json`
-- `windows-x64.json`
+- `win32-x64.json`
 - `darwin-arm64.json`
+
+> **Filename = `<matrix.platform>-<matrix.arch>.json`, NOT `<config.label>`.**
+> The mpi-ci workflow looks up `release-baselines/${matrix.platform}-${matrix.arch}.json`,
+> and its Windows matrix uses `platform: win32` (the Node `process.platform`
+> value), so the Windows baseline MUST be `win32-x64.json` — even though the
+> build's artifact label is `windows`. It was `windows-x64.json` through 0.0.12,
+> which silently never matched, so every Windows build fell back to a FULL update
+> bundle (MPI-66). darwin/linux match either way. Keep this name in sync with the
+> CI matrix `platform` value, not the artifact label.
 
 ## Purpose
 
@@ -19,7 +28,7 @@ the file matching the current `--platform`/`--arch` and passes it as
 bundle (first-release safe).
 
 Local Windows builds do the same by hand:
-`node scripts/build-portable.mjs --from-manifest release-baselines/windows-x64.json ...`
+`node scripts/build-portable.mjs --from-manifest release-baselines/win32-x64.json ...`
 
 ## Contract
 
@@ -49,7 +58,8 @@ Local Windows builds do the same by hand:
   `kind: portable-stage`:
   - `darwin-arm64.json` — 5499 files
   - `linux-x64.json` — 5316 files
-  - `windows-x64.json` — 5353 files
+  - `win32-x64.json` — 5353 files (renamed from `windows-x64.json` to match the
+    CI matrix `platform: win32`; see the naming note above — MPI-66)
 - This is the first cycle where all three platforms share a current baseline
   (the old darwin `0.0.3` stale baseline is gone). 0.0.11 is the new
   fresh-install baseline installed on all three boxes.
