@@ -38,6 +38,20 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.0.0': {
+    version: '1.0.0',
+    whatIsNew: [
+      'First public release of Cubric Vision — a local, open-source image and video generator powered by ComfyUI, running entirely on your own machine.',
+      'Available as portable builds for Windows, Linux, and macOS (Apple Silicon), each with a zero-setup engine bootstrap and resumable model downloads.',
+      'Built-in updater: get new versions in place without reinstalling, with your engine, models, projects, and settings preserved.',
+    ],
+    fixes: [],
+    breakingChanges: [],
+    importantChanges: [
+      'macOS builds are not yet notarized. On first launch, clear the download quarantine once with: xattr -dr com.apple.quarantine "<the Cubric Vision folder>", then double-click start.command.',
+    ],
+    engineNotes: [],
+  },
   '0.0.12': {
     version: '0.0.12',
     whatIsNew: [],
