@@ -14,6 +14,7 @@ Cubric Vision is actively cutting/testing release `0.0.11`. The existing release
 - `scripts/pre_release_test.py` now reads ComfyUI version from `dev_configs/system_dependencies.json`.
 - `scripts/build-portable.mjs` now fails fast if `APP_VERSION` and `package.json` drift before portable staging.
 - `npm run release:check` is the new executable release-health gate and currently passes.
+- Runtime release-note coverage now has archival markdown backfills for `0.0.1` and `0.0.8`, and the release-health gate checks every runtime release-note key.
 
 This plan is intentionally broader than the current `0.0.11` release card: it should leave future agents with one release-health command and one clear playbook, instead of making them grep through version, provisioning, operations, model, workflow, build, and changelog files.
 
@@ -23,6 +24,7 @@ This plan is intentionally broader than the current `0.0.11` release card: it sh
 - [x] Created this MPI task/card so release-hardening work is tracked separately from the active `0.0.11` build/testing card.
 - [x] Repaired operation registry and JSON mirror drift for current active operations.
 - [x] Added `npm run release:check`, fixed current release-health drifts, and added portable build version parity fail-fast.
+- [x] Backfilled historical archival release notes and documented/enforced package-lock version parity.
 
 ## Remaining Work
 
@@ -41,7 +43,7 @@ This plan is intentionally broader than the current `0.0.11` release card: it sh
 ## Phase 3: Normalize Schema and Changelog Coverage
 
 - [x] Fix project creation paths so new projects are created at current `SCHEMA_VERSION` and include v2 fields such as `shared`. **Verify:** creating a project through the backend route produces `schemaVersion: 2` and does not need immediate migration.
-- [ ] Add release-health validation that every public runtime release note has matching archival markdown, while allowing explicitly internal/skipped versions such as `0.0.9` through an allowlist. **Verify:** the script reports `0.0.8`/`0.0.1` historical gaps unless they are documented or backfilled.
+- [x] Add release-health validation that every public runtime release note has matching archival markdown, while allowing explicitly internal/skipped versions such as `0.0.9` through an allowlist. **Verify:** the script reports `0.0.8`/`0.0.1` historical gaps unless they are documented or backfilled.
 - [x] Decide whether current `package-lock.json` root version should be bumped with app releases or explicitly excluded from release identity. **Verify:** the decision is enforced by `npm run release:check` and documented in `docs/versioning.md`.
 
 ## Phase 4: Agent Playbook and Rule Updates
@@ -61,6 +63,7 @@ Use `mpi-execute-parallel` only after Phase 1 registry repair is complete, becau
 ## Plan Drift
 
 - 2026-06-10: Phase 2 pulled `package-lock.json` version parity and backend project schema creation into the current implementation because the new release-health gate would otherwise be red on known drift. The remaining Phase 3 work is now historical release-note coverage and documentation of the lockfile policy.
+- 2026-06-10: Phase 3 backfilled archival notes for `0.0.1` and `0.0.8` instead of allowlisting them. `0.0.9` remains only an internal/skipped build note folded into `0.0.10`, so it is not present in runtime release notes.
 
 ## Verification
 

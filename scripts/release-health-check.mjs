@@ -28,6 +28,11 @@ const FILES = {
 };
 
 const failures = [];
+const RELEASE_MARKDOWN_ALLOWLIST = new Set([
+  // Internal/unpublished builds can be listed here only when runtime notes are
+  // intentionally present without a public archival markdown file.
+  '0.0.9',
+]);
 
 function fail(message) {
   failures.push(message);
@@ -243,6 +248,21 @@ async function checkReleaseNotes(appVersion) {
   const hasMarkdown = releaseFiles.some((name) => name.endsWith(`-v${appVersion}.md`));
   if (!hasMarkdown) {
     fail(`Missing archival release note docs/releases/YYYY-MM-DD-v${appVersion}.md.`);
+  }
+
+  const runtimeVersions = [...notesText.matchAll(/^\s*['"](\d+\.\d+\.\d+)['"]\s*:/gm)]
+    .map((match) => match[1])
+    .sort();
+  const markdownVersions = releaseFiles
+    .map((name) => /^\d{4}-\d{2}-\d{2}-v(\d+\.\d+\.\d+)\.md$/.exec(name)?.[1])
+    .filter(Boolean);
+  const markdownVersionSet = new Set(markdownVersions);
+
+  for (const version of runtimeVersions) {
+    if (RELEASE_MARKDOWN_ALLOWLIST.has(version)) continue;
+    if (!markdownVersionSet.has(version)) {
+      fail(`Runtime release notes for ${version} have no archival docs/releases/YYYY-MM-DD-v${version}.md file.`);
+    }
   }
 }
 

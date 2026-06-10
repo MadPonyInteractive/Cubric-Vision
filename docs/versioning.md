@@ -13,10 +13,13 @@ export const APP_VERSION = '0.0.1';  // Application release version (semver)
 export const SCHEMA_VERSION = 1;     // Project data schema version (integer)
 ```
 
-`package.json` carries a matching `"version"` field. `APP_VERSION` and the
-`package.json` `version` MUST always be identical: `APP_VERSION` drives the in-app
-version, release-note lookup, and derived stage; `package.json` `version` drives
-the portable build artifact and Electron. The `/mpi-version-bump` skill bumps both.
+`package.json` and the root `package-lock.json` metadata carry matching
+`"version"` fields. `APP_VERSION`, `package.json` `version`,
+`package-lock.json` `version`, and `package-lock.json` `packages[""].version`
+MUST always be identical: `APP_VERSION` drives the in-app version, release-note
+lookup, and derived stage; package metadata drives Electron, npm tooling, and
+portable build artifact names. The `/mpi-version-bump` skill bumps all of them.
+Run `npm run release:check` before building or publishing a release.
 
 Engine versions are stored in `dev_configs/system_dependencies.json` and accessed via `routes/platformEngine.js`:
 
@@ -37,7 +40,7 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
   - **Patch** (0.0.x → 0.0.y): Bug fixes, no new operations, no schema change.
   - **Minor** (0.x.0 → 0.(x+1).0): New operations added, or ComfyUI engine updated.
   - **Major** (x.0.0 → (x+1).0.0): Breaking changes (schema change, significant architectural shift).
-- **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`), release notes file naming, and the runtime release-note source `js/data/releaseNotes.js` (keyed by `APP_VERSION`).
+- **Propagates to:** `operationRegistry.js` entries (as `appVersionIntroduced`), release notes file naming, the runtime release-note source `js/data/releaseNotes.js` (keyed by `APP_VERSION`), and package metadata (`package.json` plus root `package-lock.json` fields).
 
 ### COMFY_VERSION
 
