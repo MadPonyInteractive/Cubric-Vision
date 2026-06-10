@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-59",
+  "title": "History view (Linux only): video entry shows missing video/image link",
+  "description": "On LINUX, a video entry in the group-history list/view shows a 'missing video or image link' (broken media reference / placeholder) — the video media does not resolve. IMPORTANT: this did NOT reproduce on the macOS M4 test (2026-06-10 rentamac) — on Mac the same history re-entry showed the video correctly. So this is LINUX-SPECIFIC, unlike MPI-58 (video zoom, which is cross-platform). Strong candidate: a path/case-sensitivity or media-resolve issue specific to Linux's case-sensitive filesystem (cf. the Video.js->video.js case bug just fixed) OR a poster/thumbnail path that resolves on case-insensitive FS but not Linux. Investigate the video media-resolve path: resolveMediaUrl / extractFilenameFromPath (utils/mediaActions), the poster JPG / thumbnail generation (gallery_video_thumb_pattern), and any hardcoded-case path segment. Check on the Linux box what URL the history entry requests vs what exists on disk. Tested on 0.0.7/0.0.8 Linux. Queued after MPI-8 Mac acceptance. NOT a 1.0.0 blocker per Fabio.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-10T00:00:00.000Z",
+  "updated_at": "2026-06-10T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
