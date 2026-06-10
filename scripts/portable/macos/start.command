@@ -2,6 +2,13 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+# Strip Gatekeeper quarantine from the whole portable tree. Unsigned, un-notarized
+# downloads get com.apple.quarantine, which blocks the bundled Electron.app and the
+# .command launchers ("cannot be opened / is damaged"). xattr ships with macOS;
+# best-effort, never fatal. Runs once per launch — cheap and idempotent.
+xattr -dr com.apple.quarantine "$ROOT" 2>/dev/null || true
+
 export CUBRIC_PORTABLE_ROOT="$ROOT"
 export CUBRIC_ENGINE_ROOT="$ROOT/engine"
 export CUBRIC_MODELS_ROOT="$ROOT/models"

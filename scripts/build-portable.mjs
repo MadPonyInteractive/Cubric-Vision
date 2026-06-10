@@ -58,7 +58,7 @@ const PLATFORM_CONFIG = {
     templateDir: 'macos',
     fullArchiveExt: '.zip',
     updateArchiveExt: '.zip',
-    ffmpegRelByArch: {
+    ffprobeRelByArch: {
       x64: 'node_modules/ffprobe-static/bin/darwin/x64/ffprobe',
       arm64: 'node_modules/ffprobe-static/bin/darwin/arm64/ffprobe',
     },
@@ -763,6 +763,16 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
     const name = Buffer.from(archivePath, 'utf8');
     const checksum = crc32(raw);
 
+    // POSIX permission bits are not stored on Windows-built archives. For entries
+    // that must be executable on Linux/macOS (launchers, the bundled Electron
+    // binary, uv, .bin shims), mark the central-directory record as Unix-host and
+    // write the file mode into the high 16 bits of external attributes so macOS
+    // Archive Utility / unzip restore the exec bit. Non-executable entries keep the
+    // DOS host (versionMadeBy=20) and zero attributes — unchanged for Windows.
+    const isExec = isExecutableEntry(archivePath);
+    const versionMadeBy = isExec ? 0x031e : 20; // 0x03=Unix host, 0x1e=spec v3.0
+    const externalAttrs = isExec ? ((0o755 << 16) >>> 0) : 0;
+
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
@@ -779,7 +789,7 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
 
     const central = Buffer.alloc(46);
     central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(versionMadeBy, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(0x0800, 8);
     central.writeUInt16LE(8, 10);
@@ -793,7 +803,7 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
     central.writeUInt16LE(0, 32);
     central.writeUInt16LE(0, 34);
     central.writeUInt16LE(0, 36);
-    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(externalAttrs, 38);
     central.writeUInt32LE(offset, 42);
     centralParts.push(central, name);
     offset += local.length + name.length + compressed.length;
@@ -821,11 +831,14 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
 // scripts, the bundled Electron native binary (Linux + macOS), the uv binary,
 // and any node_modules/.bin shims that survived staging.
 function isExecutableEntry(relPath) {
+  // Suffix-tolerant matches: the full-build zip prefixes every entry with a root
+  // folder name (includeRoot:true), so exact `===` checks would miss there. The
+  // tar path is unprefixed; suffix matching is correct for both.
   if (relPath.endsWith('.sh') || relPath.endsWith('.command')) return true;
   if (relPath.includes('node_modules/.bin/')) return true;
-  if (relPath === 'app/node_modules/electron/dist/electron') return true;
+  if (relPath.endsWith('app/node_modules/electron/dist/electron')) return true;
   if (relPath.endsWith('/Electron.app/Contents/MacOS/Electron')) return true;
-  if (relPath === 'uv/uv') return true;
+  if (relPath.endsWith('uv/uv')) return true;
   return false;
 }
 

@@ -30,3 +30,7 @@ fi
 for f in start.command start-with-terminal.command update.command update-from-zip.command; do
   [ -e "$ROOT/$f" ] && chmod +x "$ROOT/$f" 2>/dev/null || true
 done
+
+# Freshly-written / extracted files can carry Gatekeeper quarantine. Strip it from
+# the whole tree so the updated launchers + Electron.app open without a block.
+xattr -dr com.apple.quarantine "$ROOT" 2>/dev/null || true

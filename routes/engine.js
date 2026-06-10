@@ -302,9 +302,15 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     if (vendor === 'nvidia') gpuFlag = '--nvidia';
     else if (vendor === 'amd') gpuFlag = '--amd';
     else if (process.platform === 'darwin') gpuFlag = '--m-series';  // Apple Silicon
+    // --fast-deps (comfy-cli DependencyCompiler) has no Apple-Silicon branch and
+    // falls through to generic PyPI torch, skipping the MPS nightly wheel the
+    // standard --m-series path installs. Omit it on mac so torch is MPS-capable.
+    const installArgs = gpuFlag === '--m-series'
+        ? ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag]
+        : ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'];
     await _runStreaming(
         comfyBin,
-        ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'],
+        installArgs,
         {
             cwd: targetDir,
             env: {

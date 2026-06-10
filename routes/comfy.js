@@ -217,11 +217,25 @@ router.post('/comfy/start', async (req, res) => {
 
         // Launch mode must match the installed torch build (see routes/engine.js):
         // a CPU install cannot be started in GPU/--lowvram mode. When no GPU vendor
-        // was detected, run ComfyUI with --cpu; otherwise use the GPU --lowvram path.
+        // was detected, run ComfyUI with --cpu; otherwise use the GPU path.
+        //  - Apple Silicon: the engine installs an MPS/Metal torch (--m-series). Pass
+        //    NO mode flag so ComfyUI auto-selects the MPS device; --cpu would force
+        //    CPU and --lowvram is an NVIDIA/CUDA-oriented flag, neither correct here.
         const { gpu } = await resolveDownloadConfig();   // cached after first detect
-        const useCpu = !gpu || !gpu.vendor;
-        const modeArgs = useCpu ? ['--cpu'] : ['--lowvram'];
+        const vendor = gpu && gpu.vendor;
+        const useCpu = !vendor;
+        let modeArgs;
+        if (vendor === 'apple') {
+            // No mode flag → ComfyUI auto-selects the MPS device. --use-pytorch-cross-attention
+            // is the recommended attention path on M-series (15-50% faster, no downside).
+            modeArgs = ['--use-pytorch-cross-attention'];
+        } else if (useCpu) {
+            modeArgs = ['--cpu'];
+        } else {
+            modeArgs = ['--lowvram'];
+        }
         if (useCpu) logger.info('comfy', 'No GPU detected — starting ComfyUI in CPU mode.');
+        else if (vendor === 'apple') logger.info('comfy', 'Apple Silicon — starting ComfyUI with Metal/MPS.');
 
         const args = [mainPath, '--listen', '127.0.0.1', '--port', COMFYUI_PORT.toString(), ...modeArgs, '--preview-method', 'taesd', '--enable-cors-header'];
 
@@ -230,7 +244,14 @@ router.post('/comfy/start', async (req, res) => {
             args.push('--extra-model-paths-config', extraConfigPath);
         }
 
-        processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath) });
+        // On Apple Silicon, PYTORCH_ENABLE_MPS_FALLBACK lets ops not yet implemented
+        // for MPS fall back to CPU instead of throwing — the difference between a
+        // graceful slowdown and a hard crash mid-generation.
+        const spawnEnv = vendor === 'apple'
+            ? { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
+            : process.env;
+
+        processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
         processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));
         processState.activeComfyProcess.stderr.on('data', (d) => _handleComfyOutput('warn', d));
         processState.activeComfyProcess.on('exit', () => {

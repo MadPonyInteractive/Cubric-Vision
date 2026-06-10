@@ -257,9 +257,15 @@ async function resolveDownloadConfig() {
         detectIntelArcGPU(),
     ]);
 
+    // Apple Silicon has no nvidia-smi / AMD / Intel-Arc signal — the three probes
+    // above all return empty on a Mac. Detect it from the platform/arch directly so
+    // the launch path uses Metal/MPS instead of falling through to --cpu. (Intel
+    // Macs stay vendor:null → --cpu, which is correct: no MPS torch exists for x86.)
+    const isAppleSilicon = process.platform === 'darwin' && process.arch === 'arm64';
+
     const gpu = {
-        name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : null),
-        vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : null,
+        name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : isAppleSilicon ? 'Apple Silicon GPU' : null),
+        vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : isAppleSilicon ? 'apple' : null,
         cudaVersion: nvidiaResult.cudaVersion || null,
     };
 

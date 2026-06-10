@@ -10,6 +10,24 @@ start.command
     logs/app.log.)
 
 
+FIRST LAUNCH — "cannot be opened" / "is damaged" (macOS Gatekeeper)
+-------------------------------------------------------------------
+
+This build is not signed or notarized (it is open-source and runs in place),
+so on first launch macOS may block it with a security warning. Two ways past it:
+
+  Easiest: right-click (or Control-click) start.command -> Open -> Open.
+  You only need to do this once.
+
+  If macOS still refuses, open Terminal, drag this folder onto the window to
+  get its path, then run:
+      xattr -dr com.apple.quarantine "/path/to/this/folder"
+  Then double-click start.command again.
+
+start.command also tries to clear this automatically each time it runs, so the
+warning usually appears only on the very first launch.
+
+
 UPDATING THE APP
 ----------------
 
