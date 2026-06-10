@@ -53,9 +53,6 @@ const PLATFORM_CONFIG = {
   darwin: {
     label: 'macos',
     start: 'start.command',
-    // One-time quarantine-clear the user runs first (right-click -> Open). macOS
-    // only; Windows/Linux have no Gatekeeper equivalent.
-    setup: 'setup.command',
     update: 'update.command',
     updateFromZip: 'update-from-zip.command',
     templateDir: 'macos',
@@ -446,11 +443,6 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
     await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.withTerminalStart), withTerminalTarget);
     await makeExecutableIfNeeded(withTerminalTarget);
   }
-  if (config.setup) {
-    const setupTarget = path.join(stageRoot, config.setup);
-    await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.setup), setupTarget);
-    await makeExecutableIfNeeded(setupTarget);
-  }
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.update), updateTarget);
   await copyFileEnsured(
     path.join(TEMPLATE_ROOT, config.templateDir, config.updateFromZip),
@@ -681,13 +673,9 @@ async function createUpdateManifest(stageRoot, opts, config, artifactKind = null
     artifact: {
       kind: artifactKind || (opts.dryRun ? 'dry-run-stage' : 'portable-stage'),
       rootName: path.basename(stageRoot),
-      launchers: [
-        config.start,
-        ...(config.withTerminalStart ? [config.withTerminalStart] : []),
-        ...(config.setup ? [config.setup] : []),
-        config.update,
-        config.updateFromZip,
-      ],
+      launchers: config.withTerminalStart
+        ? [config.start, config.withTerminalStart, config.update, config.updateFromZip]
+        : [config.start, config.update, config.updateFromZip],
       buildHash: opts.buildHash,
     },
   };
@@ -711,7 +699,6 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
   await copyDirEnsured(path.join(fullStageRoot, 'update'), path.join(updateStageRoot, 'update'));
   const bundledLaunchers = [config.start, config.update, config.updateFromZip];
   if (config.withTerminalStart) bundledLaunchers.push(config.withTerminalStart);
-  if (config.setup) bundledLaunchers.push(config.setup);
   for (const launcher of bundledLaunchers) {
     await copyFileEnsured(path.join(fullStageRoot, launcher), path.join(updateStageRoot, launcher));
     await makeExecutableIfNeeded(path.join(updateStageRoot, launcher));

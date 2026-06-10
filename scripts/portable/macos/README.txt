@@ -1,31 +1,35 @@
 Cubric Studio Vision - Portable (macOS)
 =======================================
 
+FIRST: CLEAR THE QUARANTINE ONCE (macOS Gatekeeper)
+---------------------------------------------------
+
+This build is not signed or notarized (it is open-source and runs in place),
+so macOS marks the download as "quarantined" and blocks it on first launch
+("Apple could not verify ... is free of malware"). On recent macOS, even
+right-click -> Open hits the same dead-end dialog for a downloaded .command, so
+the one reliable way to clear it is a single Terminal command. You only do this
+ONCE per download:
+
+  1. Open Terminal (Applications -> Utilities -> Terminal).
+  2. Type  xattr -dr com.apple.quarantine  followed by a space, then DRAG this
+     folder from Finder onto the Terminal window (that pastes its full path).
+     The line should look like:
+         xattr -dr com.apple.quarantine "/Users/you/Downloads/CubricVision-macos-arm64-vX.Y.Z"
+  3. Press Return.
+  4. Now double-click start.command in Finder — it launches normally, no popup.
+
+(After an in-app update via update.command the files are not re-downloaded by
+the browser, so no re-quarantine and no need to repeat this.)
+
+
 STARTING THE APP
 ----------------
 
 start.command
-    Double-click to launch the app. On macOS this opens a Terminal window
-    that stays open while the app runs. (The app also writes a full log to
-    logs/app.log.)
-
-
-FIRST LAUNCH — "cannot be opened" / "is damaged" (macOS Gatekeeper)
--------------------------------------------------------------------
-
-This build is not signed or notarized (it is open-source and runs in place),
-so on first launch macOS may block it with a security warning. Two ways past it:
-
-  Easiest: right-click (or Control-click) start.command -> Open -> Open.
-  You only need to do this once.
-
-  If macOS still refuses, open Terminal, drag this folder onto the window to
-  get its path, then run:
-      xattr -dr com.apple.quarantine "/path/to/this/folder"
-  Then double-click start.command again.
-
-start.command also tries to clear this automatically each time it runs, so the
-warning usually appears only on the very first launch.
+    Double-click to launch the app (after clearing the quarantine once, above).
+    On macOS this opens a Terminal window that stays open while the app runs.
+    (The app also writes a full log to logs/app.log.)
 
 
 UPDATING THE APP
