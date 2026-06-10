@@ -22,7 +22,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 |---|---|---|
 | Workspaces | [workspaces.md](workspaces.md) | Landing, Gallery, Group History, routing |
 | Data Layer | [data.md](data.md) | modelRegistry, commandRegistry, projectModel |
-| Versioning | [versioning.md](versioning.md) | APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry, release workflow |
+| Versioning | [versioning.md](versioning.md) + [.claude/rules/versioning.md](../.claude/rules/versioning.md) | APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry, release workflow |
 | Project Integrity | [project-integrity.md](project-integrity.md) | .meta/ sidecars, UUID history, migration, reconciliation, hydration |
 | ComfyUI Integration | [comfy.md](comfy.md) | comfyController, commandExecutor, download manager, workflow injection |
 | Downloads | [comfy.md#download-manager](comfy.md#download-manager) | Resumable downloads, IPC/SSE, resume/pause/cancel, SHA256 verification |

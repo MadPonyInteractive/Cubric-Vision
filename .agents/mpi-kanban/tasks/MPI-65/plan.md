@@ -15,6 +15,7 @@ Cubric Vision is actively cutting/testing release `0.0.11`. The existing release
 - `scripts/build-portable.mjs` now fails fast if `APP_VERSION` and `package.json` drift before portable staging.
 - `npm run release:check` is the new executable release-health gate and currently passes.
 - Runtime release-note coverage now has archival markdown backfills for `0.0.1` and `0.0.8`, and the release-health gate checks every runtime release-note key.
+- Agent release docs and the local bump skill now require `npm run release:check` and include a change impact matrix covering version, operation, model, schema, provisioning, build, and changelog-only changes.
 
 This plan is intentionally broader than the current `0.0.11` release card: it should leave future agents with one release-health command and one clear playbook, instead of making them grep through version, provisioning, operations, model, workflow, build, and changelog files.
 
@@ -25,6 +26,7 @@ This plan is intentionally broader than the current `0.0.11` release card: it sh
 - [x] Repaired operation registry and JSON mirror drift for current active operations.
 - [x] Added `npm run release:check`, fixed current release-health drifts, and added portable build version parity fail-fast.
 - [x] Backfilled historical archival release notes and documented/enforced package-lock version parity.
+- [x] Updated release docs and the local version-bump skill with the mandatory release gate and change impact matrix.
 
 ## Remaining Work
 
@@ -48,9 +50,9 @@ This plan is intentionally broader than the current `0.0.11` release card: it sh
 
 ## Phase 4: Agent Playbook and Rule Updates
 
-- [ ] Update `docs/versioning.md`, `docs/releases/README.md`, and `.claude/skills/mpi-version-bump/SKILL.md` so agents must run `npm run release:check` before building or testing a bump. **Verify:** all release docs name the same command and describe the same required gates.
-- [ ] Add a small "change impact matrix" for agents: command control changes, operation parameter changes, workflow filename/graph changes, model additions, engine/provisioning changes, schema changes, build/launcher changes, and changelog-only releases. **Verify:** each change type lists the exact files/scripts to update and the required bump type or "no bump" rationale.
-- [ ] Update project rules only if the user explicitly approves rule-doc changes after code/doc changes, per `CLAUDE.md`. **Verify:** final implementation asks whether `.claude/rules/` should be updated if routing or architecture expectations changed.
+- [x] Update `docs/versioning.md`, `docs/releases/README.md`, and `.claude/skills/mpi-version-bump/SKILL.md` so agents must run `npm run release:check` before building or testing a bump. **Verify:** all release docs name the same command and describe the same required gates.
+- [x] Add a small "change impact matrix" for agents: command control changes, operation parameter changes, workflow filename/graph changes, model additions, engine/provisioning changes, schema changes, build/launcher changes, and changelog-only releases. **Verify:** each change type lists the exact files/scripts to update and the required bump type or "no bump" rationale.
+- [x] Update project rules only if the user explicitly approves rule-doc changes after code/doc changes, per `CLAUDE.md`. **Verify:** no `.claude/rules/` files were changed; final implementation asks whether `.claude/rules/` should be updated if routing or architecture expectations changed.
 
 ## Parallel Batch: Independent Follow-Up Work
 
@@ -64,6 +66,7 @@ Use `mpi-execute-parallel` only after Phase 1 registry repair is complete, becau
 
 - 2026-06-10: Phase 2 pulled `package-lock.json` version parity and backend project schema creation into the current implementation because the new release-health gate would otherwise be red on known drift. The remaining Phase 3 work is now historical release-note coverage and documentation of the lockfile policy.
 - 2026-06-10: Phase 3 backfilled archival notes for `0.0.1` and `0.0.8` instead of allowlisting them. `0.0.9` remains only an internal/skipped build note folded into `0.0.10`, so it is not present in runtime release notes.
+- 2026-06-10: Phase 4 first updated release docs and the local bump skill. After explicit user approval, `.claude/rules/versioning.md` was added and the project router now requires it before `docs/versioning.md` for versioning/release work.
 
 ## Verification
 

@@ -64,8 +64,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Versioning & migrations
 
 - **Read first:** `docs/versioning.md`
-- **Rules:** none
-- **Notes:** APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry.
+- **Rules:** `.claude/rules/versioning.md`
+- **Notes:** APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry, release-health gate.
 
 ### Shell, overlays, hotkeys
 

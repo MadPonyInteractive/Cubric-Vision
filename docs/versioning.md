@@ -145,9 +145,34 @@ Use the `/mpi-version-bump` slash command to guide the bump process interactivel
 
 ---
 
+## Change Impact Matrix
+
+Agents must check this matrix before cutting a bump. If any row applies, update
+the listed files and run `npm run release:check` before release builds,
+portable dry-runs, pre-release generation tests, tags, pushes, or publication.
+
+| Change type | Required updates | Version impact |
+| --- | --- | --- |
+| Changelog-only or copy-only release | `APP_VERSION`, `package.json`, root `package-lock.json`, `js/data/releaseNotes.js`, `docs/releases/YYYY-MM-DD-vX.Y.Z.md` | Patch |
+| Command control/default text changes without output/API change | Runtime release notes and archival markdown; update docs if user-facing behavior changed | Usually patch |
+| Operation parameter semantics changed, removed, or made incompatible | `operationRegistry.js` `latestVersion`, `operation_registry.json`, command/workflow injectors, release notes | Major if backward-incompatible; patch/minor only with explicit compatibility rationale |
+| New operation or deprecated operation | `commandRegistry.js`, `operationRegistry.js`, `operation_registry.json`, model/universal workflow mapping, release notes | Minor for new operation; patch/minor for deprecation depending on user impact |
+| Workflow filename or graph changed for existing compatible operation | `models.js` or `universal_workflows.js` if filenames changed, release notes, workflow baselines/pre-release validation | Patch if compatible; major if old project/history payloads break |
+| New model or model workflow support | `models.js`, dependency registry/provisioning docs as needed, release notes | Minor when user-facing |
+| ComfyUI engine/provisioning/dependency change | `dev_configs/system_dependencies.json`, engine/provisioning routes/docs, release notes engine section | Minor for engine upgrade; patch for installer/provisioning fix |
+| Project schema/data-shape change | `SCHEMA_VERSION`, `projectMigrations.js`, project creation defaults, release notes breaking/important sections | Major |
+| Portable build, launcher, updater, artifact naming, or manifest change | `scripts/build-portable.mjs`/portable templates/docs, release notes platform section, dry-run or platform validation notes | Patch unless release artifact compatibility breaks |
+
+`npm run release:check` currently enforces the high-risk invariants: app/package
+version parity, current release notes, archival release-note coverage, schema
+constant/default drift, operation registry/mirror drift, universal/model
+operation drift, and pre-release test engine-version source.
+
+---
+
 ## Release Workflow & Adding Operations
 
-Both flows are owned by the `/mpi-version-bump` skill — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, bumps `appVersion.js` **and** `package.json` together, syncs `operation_registry.json`, generates release notes under `docs/releases/`, and offers pre-release tests. Do NOT edit `appVersion.js` / `package.json` version / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump/SKILL.md` (it has a **patch-only quick path** for the common bug-fix release: only `appVersion.js`, `package.json`, `releaseNotes.js`, and the archival md need editing).
+Both flows are owned by the `/mpi-version-bump` skill — it interactively handles bump type, new ops, ComfyUI version change, schema migrations, bumps `appVersion.js`, `package.json`, and root `package-lock.json` version metadata together, syncs `operation_registry.json`, generates release notes under `docs/releases/`, runs `npm run release:check`, and offers pre-release tests. Do NOT edit `appVersion.js` / `package.json` version / `package-lock.json` version metadata / `operationRegistry.js` / `operation_registry.json` by hand; the skill keeps them in sync. See `.claude/skills/mpi-version-bump/SKILL.md` (it has a **patch-only quick path** for the common bug-fix release: only `appVersion.js`, `package.json`, `package-lock.json`, `releaseNotes.js`, and the archival md need editing).
 
 ### Release notes: archival vs. runtime
 

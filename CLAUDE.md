@@ -80,7 +80,7 @@ If you are adding models to the registry, managing downloads, or dealing with th
 
 ### App Versioning System
 If you need to understand how APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, or the operation registry work:
-**->** **READ:** `docs/versioning.md`
+**->** **MUST READ:** `.claude/rules/versioning.md`, then `docs/versioning.md`
 
 ### Project Data & Meta File System
 If you need to understand how project.json, .meta/ files, project load/reconciliation, or history items work:
@@ -179,7 +179,7 @@ Four skills manage a human-in-the-loop execution system:
 | Component event wiring | `.claude/rules/component-events.md` | `## Sub-Agent Briefing` |
 | Component state connections | `.claude/rules/component-state.md` | `## Sub-Agent Briefing` |
 | Component ComfyUI injection | `.claude/rules/component-comfy.md` | `## Sub-Agent Briefing` |
-| App versioning system | `docs/versioning.md` | No briefing section — provide context inline |
+| App versioning system | `.claude/rules/versioning.md` | `## Sub-Agent Briefing` |
 | Project data model | `docs/project-integrity.md` | No briefing section — provide context inline |
 | Download system | `.claude/rules/downloads.md` | `## Sub-Agent Briefing` |
 | **Stage UI baseline (merged)** | `docs/redesign/PORTING.md` (+ `PRODUCT.md`, `DESIGN.md`, `RECOLOR.md`) | Read these only when touching a *new* surface or doing a follow-up phase. For routine work, the live `styles/01_base.css` and `.claude/rules/components.md` (§ "Stage design baseline") are sufficient. |

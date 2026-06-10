@@ -1,11 +1,11 @@
 ---
 name: mpi-version-bump
-description: Interactive release workflow — bump app version (appVersion.js + package.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, and run pre-release tests. Use when cutting a new Cubric Studio release or when the user says "bump the version", "cut a release", "/mpi-version-bump".
+description: Interactive release workflow — bump app version (appVersion.js + package.json + package-lock.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, run release:check, and offer pre-release tests. Use when cutting a new Cubric Studio release or when the user says "bump the version", "cut a release", "/mpi-version-bump".
 user-invocable: true
 ---
 # /mpi-version-bump — Interactive Release Workflow
 
-This skill guides you through a complete release: bumping the app version, updating engine versions, registering new operations, updating all related files, generating release notes, and optionally running pre-release tests.
+This skill guides you through a complete release: bumping the app version, updating engine versions, registering new operations, updating all related files, generating release notes, running `npm run release:check`, and optionally running pre-release tests.
 
 Use this skill whenever you're ready to cut a new release of Cubric Studio.
 
@@ -15,24 +15,24 @@ Use this skill whenever you're ready to cut a new release of Cubric Studio.
 
 If the release is a **pure patch** — bug fixes and/or small UI changes, with
 **no new operations, no ComfyUI engine change, and no project-schema change** —
-you only need to edit **four** files. Skip every operation/engine/schema step.
+you only need to edit **five** files. Skip every operation/engine/schema step.
 
 1. `js/core/appVersion.js` — bump `APP_VERSION` (e.g. `0.0.1` → `0.0.2`). Leave `SCHEMA_VERSION` untouched.
 2. `package.json` — bump the top-level `"version"` to the same value. **The portable build reads this**; it must match `APP_VERSION`.
-3. `js/data/releaseNotes.js` — add a new `RELEASE_NOTES['<newVersion>']` entry (runtime changelog overlay source).
-4. `docs/releases/YYYY-MM-DD-vX.Y.Z.md` — archival, user-facing markdown notes.
+3. `package-lock.json` — bump the root `"version"` and `packages[""].version` to the same value.
+4. `js/data/releaseNotes.js` — add a new `RELEASE_NOTES['<newVersion>']` entry (runtime changelog overlay source).
+5. `docs/releases/YYYY-MM-DD-vX.Y.Z.md` — archival, user-facing markdown notes.
 
-Then verify the three version sources agree:
+Then run the release gate:
 
 ```bash
-node -e "console.log('package:', require('./package.json').version)"
-grep "APP_VERSION = " js/core/appVersion.js
-node --check js/data/releaseNotes.js
+npm run release:check
 ```
 
-`APP_VERSION` and `package.json` `version` MUST be identical. Optionally run the
-pre-release tests (Step 6) — for a pure patch with no operation changes the test
-output hash is unaffected, but running it confirms nothing else drifted.
+`APP_VERSION`, `package.json` `version`, and root `package-lock.json` version
+metadata MUST be identical. Optionally run the pre-release tests (Step 6) — for
+a pure patch with no operation changes the test output hash is unaffected, but
+running it confirms nothing else drifted.
 
 For anything beyond a pure patch (new ops, engine bump, schema change), use the
 full flow below.
@@ -44,12 +44,34 @@ full flow below.
 I will read the following files to understand the current state:
 - `js/core/appVersion.js` — current APP_VERSION, SCHEMA_VERSION
 - `package.json` — current `version` (must track APP_VERSION)
+- `package-lock.json` — root `version` metadata (must track APP_VERSION)
 - `dev_configs/system_dependencies.json` — current COMFY_VERSION
 - `js/core/operationRegistry.js` — all registered operations
 - `js/data/commandRegistry.js` — UI metadata for all operations
 - `js/data/modelConstants/models.js` — model/operation/workflow mappings
 - `js/data/modelConstants/universal_workflows.js` — universal operation definitions
 - `operation_registry.json` — JSON mirror (should match operationRegistry.js)
+
+---
+
+## Change Impact Matrix
+
+Before asking bump questions, classify the change:
+
+| Change type | Required updates | Bump |
+| --- | --- | --- |
+| Changelog-only or copy-only release | `appVersion.js`, `package.json`, `package-lock.json`, `releaseNotes.js`, archival markdown | Patch |
+| Command control/default text changes without output/API change | Runtime + archival release notes; docs if user-facing | Usually patch |
+| Operation parameter semantics changed, removed, or made incompatible | `operationRegistry.js` `latestVersion`, `operation_registry.json`, command/workflow injectors, release notes | Major if incompatible |
+| New or deprecated operation | `commandRegistry.js`, `operationRegistry.js`, `operation_registry.json`, model/universal mapping, release notes | Minor for new op |
+| Workflow filename or graph changed for compatible operation | `models.js` or `universal_workflows.js` if filenames changed, release notes, workflow validation | Patch unless payloads break |
+| New model or model workflow support | `models.js`, dependencies/provisioning docs as needed, release notes | Minor when user-facing |
+| ComfyUI engine/provisioning/dependency change | `dev_configs/system_dependencies.json`, provisioning routes/docs, release notes engine section | Minor for engine upgrade |
+| Project schema/data-shape change | `SCHEMA_VERSION`, `projectMigrations.js`, project creation defaults, breaking/important release notes | Major |
+| Portable build, launcher, updater, artifact naming, or manifest change | `scripts/build-portable.mjs`/portable templates/docs, platform release notes, dry-run/platform validation | Patch unless artifact compatibility breaks |
+
+Always run `npm run release:check` after edits and before builds, tags, pushes,
+pre-release generation tests, or publication.
 
 ---
 
@@ -160,14 +182,19 @@ Answer `n` to re-do the questions, `y` to continue.
 - This is what the portable build (`scripts/build-portable.mjs`) and Electron read. If it drifts from `APP_VERSION`, the build artifact and in-app version disagree.
 - Do not run `npm install` or touch other fields.
 
-### 4c. Edit `dev_configs/system_dependencies.json`
+### 4c. Edit `package-lock.json`
+
+- Bump the root `"version"` field and `packages[""].version` to the **same** new version as `APP_VERSION`.
+- Do not run `npm install` solely for this metadata change.
+
+### 4d. Edit `dev_configs/system_dependencies.json`
 
 If ComfyUI version changed:
 - Update `engine.version` to the new ComfyUI version
 
 This is the **single source of truth** for the engine version. `routes/platformEngine.js` reads from this file.
 
-### 4d. Edit `js/core/operationRegistry.js`
+### 4e. Edit `js/core/operationRegistry.js`
 
 For each new operation:
 - Add entry: `opKey: { latestVersion: '1.0', appVersionIntroduced: '<newVersion>' }`
@@ -175,7 +202,7 @@ For each new operation:
 For each deprecated operation:
 - Add field: `deprecated: true` (do NOT remove the entry)
 
-### 4e. Edit `js/data/commandRegistry.js`
+### 4f. Edit `js/data/commandRegistry.js`
 
 For each new operation, add a CommandDef:
 
@@ -191,7 +218,7 @@ myNewOp: {
 },
 ```
 
-### 4f. Edit `js/data/modelConstants/models.js`
+### 4g. Edit `js/data/modelConstants/models.js`
 
 For each model that supports a new operation:
 - Add the operation key to the model's `supportedOps[]` array
@@ -207,7 +234,7 @@ workflows: {
 },
 ```
 
-### 4g. Edit `js/data/modelConstants/universal_workflows.js`
+### 4h. Edit `js/data/modelConstants/universal_workflows.js`
 
 For each new universal operation, add entry:
 
@@ -218,11 +245,11 @@ myNewOp: {
 },
 ```
 
-### 4h. Edit `operation_registry.json`
+### 4i. Edit `operation_registry.json`
 
 Add/update entries to match `operationRegistry.js` exactly. Add `universal: true` for universal ops. Mark deprecated ops with `deprecated: true`.
 
-### 4i. If Schema Changed: Edit `js/migrations/projectMigrations.js`
+### 4j. If Schema Changed: Edit `js/migrations/projectMigrations.js`
 
 I will add a migration stub:
 
@@ -307,7 +334,7 @@ After publishing this release, update all parallel platforms:
 
 ---
 
-## Step 6: Offer to Run Pre-Release Tests
+## Step 6: Run Release Gate, Then Offer Pre-Release Tests
 
 I will print a summary of all changes made:
 - Files edited
@@ -315,9 +342,18 @@ I will print a summary of all changes made:
 - New operations added
 - Release notes written to `docs/releases/`
 
+Then I run:
+
+```bash
+npm run release:check
+```
+
+If it fails, I stop and fix the release drift before building, tagging, pushing,
+or running pre-release generation tests.
+
 Then ask:
 ```
-All edits complete. Would you like to run scripts/pre_release_test.py now? [y/n]
+Release gate passed. Would you like to run scripts/pre_release_test.py now? [y/n]
 ```
 
 If **yes**, I run the test suite and surface the results. If tests FAIL, you can re-run them or skip.
@@ -335,6 +371,7 @@ After all edits and tests:
 Files edited:
 - js/core/appVersion.js
 - package.json
+- package-lock.json
 - dev_configs/system_dependencies.json
 - js/core/operationRegistry.js
 - js/data/commandRegistry.js
@@ -373,8 +410,8 @@ A: Yes, the skill edits files atomically in order. If something fails, check the
 **Q: The pre-release tests failed. Should I still release?**
 A: No, FAIL means the test output hash changed unexpectedly. Investigate why, fix the issue, update the baselines if the change is intentional, then re-run.
 
-**Q: `APP_VERSION` and `package.json` disagree after a bump — which wins?**
-A: They must be identical. `package.json` drives the portable build artifact name/Electron version; `APP_VERSION` drives in-app version, release-note lookup, and derived stage. Fix both to the same value before building.
+**Q: `APP_VERSION`, `package.json`, and `package-lock.json` disagree after a bump — which wins?**
+A: None wins automatically. They must be identical. `package.json` drives the portable build artifact name/Electron version; `APP_VERSION` drives in-app version, release-note lookup, and derived stage; root `package-lock.json` metadata tracks package identity. Fix all three to the same value, then run `npm run release:check` before building.
 
 **Q: How do I add a new model?**
 A: Add the model to `js/data/modelConstants/models.js` with its `id`, `supportedOps`, and workflow filenames. The version-bump skill doesn't touch models — that's a separate step. Rerun `/mpi-version-bump` if model additions happen in the same release.

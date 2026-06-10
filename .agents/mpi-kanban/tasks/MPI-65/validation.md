@@ -21,3 +21,10 @@ Remaining validation belongs to Phase 2+ release-health automation.
 - PASS: `npm run release:check`.
 - PASS: `node --check scripts/release-health-check.mjs`.
 - PASS: historical runtime release-note versions now have archival markdown coverage for `0.0.1` and `0.0.8`.
+
+## 2026-06-10 Phase 4
+
+- PASS: `npm run release:check`.
+- PASS: stale-reference scan found the updated release gate, package-lock, and change impact matrix references with no old quick-path/manual-check wording.
+- PASS: no `.claude/rules/` files were modified before explicit approval.
+- PASS: after explicit approval, `.claude/rules/versioning.md` was added and `CLAUDE.md` routes app versioning work through it.

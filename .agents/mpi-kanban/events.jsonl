@@ -136,3 +136,7 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:21:23+01:00","actor":"codex","summary":"release:check, syntax checks, py_compile, and portable dry-run smoke passed."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"checklist.item_checked","at":"2026-06-10T18:26:22+01:00","actor":"codex","summary":"Completed Phase 3 changelog coverage and lockfile policy cleanup."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:26:22+01:00","actor":"codex","summary":"release:check and release-health script syntax check passed after historical release-note backfills."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"checklist.item_checked","at":"2026-06-10T18:33:39+01:00","actor":"codex","summary":"Completed Phase 4 release playbook and impact matrix updates."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:33:39+01:00","actor":"codex","summary":"release:check passed and release docs/skill now require the gate and impact matrix."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"validation.updated","at":"2026-06-10T18:49:45+01:00","actor":"codex","summary":"Added approved versioning rule and routing updates; release:check passed."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-65","type":"task.moved","at":"2026-06-10T18:49:45+01:00","actor":"codex","from":"doing","to":"done","summary":"Release/version bump integrity workflow completed and validated."}
