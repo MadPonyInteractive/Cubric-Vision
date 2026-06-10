@@ -1,0 +1,97 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "eda19e23-e778-48a7-86b7-f0d392423993",
+  "generated_at": "2026-06-10T07:00:00.000Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8: macOS portable build + 1.0.0 three-platform release",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Produce the first macOS portable build, then cut 1.0.0 and build all three platforms (Windows, Linux, macOS) as the Patreon tier-3 release.",
+    "status": "not_started",
+    "summary": "MPI-49 (portable update flow) is DONE and verified on Windows + Linux: offline + online update, exec-bit self-heal, no-curl bundled-Electron updater, all proven on real hardware up through a 0.0.6->0.0.7 online 'Run as program' test. macOS is the only untested platform. Next: bring the macOS portable build end-to-end on real Apple hardware (the updater code already mirrors Linux but is unverified there), then bump to 1.0.0 and build/ship all three platforms as the tier-3 release."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-49 portable update flow DONE (Windows + Linux). Offline (update-from-zip) + online (update.bat / update.sh) both verified on real hardware.",
+      "Online updater HARDENED to assume NO host tools: all network work in scripts/portable/fetch-release.cjs (pure Node https, redirect-aware, clear private-repo/no-release 404), run via electron-as-node (the bundled Electron binary is the only guaranteed runtime). update.sh/.command rewritten to use it; update.bat kept on PowerShell (guaranteed on Windows). build-portable.mjs ships fetch-release.cjs in update/.",
+      "Exec-bit self-heal: three independent layers so launchers stay runnable after any update regardless of applier version or delta contents — restoreExecBit (per-delta-file), restoreLauncherBits() (apply-update.cjs final sweep, manifest-independent), and chmod sweeps in update-from-zip.{sh,command} (wrapper-side, version-skew immune).",
+      "Released + tested 0.0.5, 0.0.6 (the hardening), and a throwaway 0.0.7 to prove the online 'Run as program' path on Linux (PASS: terminal showed updating, app reported 0.0.7).",
+      "Baseline + delta discipline locked: baselines = FULL portable-stage manifest (fromVersion:null, ~5.3k files) of the previous release, NOT the update-bundle/delta manifest (a delta baseline yields a bogus whole-app delta). Always --clean the local stage. release-baselines/README.md contract corrected.",
+      "Knowledge preserved: docs/releases/build-experience-log.md has the 2026-06-10 'Online-updater hardening' + 'macOS build — what the Linux/Windows cycle means for it' sections. MPI-49 validation.md has the full result. Tiered rollout cadence recorded in memory project-repo-distribution-gating."
+    ],
+    "pending": [
+      "BUILD macOS portable on real Apple hardware (arm64 first). Read docs/releases/build-experience-log.md 'macOS pre-build checklist' + 'macOS build — what the Linux/Windows cycle means for it' + memory project_macos_build_prep FIRST. Known mac-specific risks: (a) Gatekeeper quarantine (com.apple.quarantine xattr) will block unsigned/un-notarized .app/.command — plan xattr -dr or signing/notarization; (b) verify the Electron-as-node path app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron exists and runs fetch-release.cjs; (c) icon.icns, Metal torch, xcode-select, launcher binary path per the checklist; (d) the exec-bit self-heal + no-curl updater are coded for mac but UNVERIFIED on Apple hardware.",
+      "VERIFY the macOS update flow end-to-end on Apple hardware: offline update-from-zip.command, then online update.command (no curl/system-node — bundled Electron only), and confirm launchers stay executable + no quarantine block.",
+      "BUMP to 1.0.0 (mpi-version-bump). Decide if 1.0.0 is a pure patch (likely yes — no new ops/engine/schema) or carries anything from the mac work. Refresh release-baselines to the 0.0.7 FULL manifests FIRST (currently 0.0.6 full; darwin-arm64 still STALE at 0.0.3 — refresh it to the first real mac full manifest before any mac delta).",
+      "BUILD all three platforms for 1.0.0: Windows local + mpi-ci (linux + darwin) via dispatch (gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=1.0.0). Download all three artifacts.",
+      "RELEASE 1.0.0 for Patreon TIER 3 (2-week window). Rollout cadence: tier 3 (2wk) -> tier 2 (2wk) -> public; reported issues bump the patch digit (tier-2 'second digit' wording is semver-ambiguous — confirm with user before cutting). Online auto-update needs the repo PUBLIC + a non-prerelease 'latest' release; during gated tier windows use Discord/Patreon zips (offline update-from-zip) or a temporary public toggle.",
+      "DELETE the throwaway test releases when done: v0.0.7 (and confirm no stray v0.0.x update releases remain) — gh release delete v0.0.7 --repo MadPonyInteractive/Cubric-Vision --yes ; git push origin :refs/tags/v0.0.7.",
+      "DEFERRED: add a success-path 'Press Enter to close' pause to update.sh + update.command so the 'Run as program' click path shows positive confirmation (currently only failures pause; success just closes the window). Apply to both, rebuild. Good 1.0.0 polish.",
+      "DEFERRED (carried): document the delta/--from-manifest/baseline-refresh flow in the mpi-version-bump skill + docs/releases/portable-distribution-contract.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Cross-platform portable distribution (umbrella)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-49/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "next_action": {
+    "description": "Start the macOS portable build on real Apple hardware. Read the build-experience-log macOS sections + memory project_macos_build_prep first; the biggest mac-specific unknowns are Gatekeeper quarantine (will block unsigned .app/.command) and verifying the Electron.app-as-node path for the updater. Bring the mac build + its update flow to a verified state, then bump 1.0.0 (refresh baselines to 0.0.7 full first; refresh the stale darwin baseline to the first real mac full manifest), build all three platforms via local Windows + mpi-ci dispatch, and cut the 1.0.0 tier-3 Patreon release. Then delete the throwaway v0.0.7 test release.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Updater must assume NO host tools — only the bundled Electron binary is guaranteed. All network work lives in fetch-release.cjs run via electron-as-node. This is the load-bearing fix; apply the same reasoning to anything mac-specific.",
+      "Exec-bit self-heal is three independent layers (per-file + applier sweep + wrapper sweep); on mac the same layers exist but Gatekeeper quarantine is an ADDITIONAL blocker not present on Linux.",
+      "A broken self-updater cannot fix itself online (bootstrap trap); offline update-from-zip is the permanent escape hatch — lead with it in update instructions for the first jump to a fixed updater (mac included).",
+      "Release baselines must be the FULL portable-stage manifest of the previous release; the darwin-arm64 baseline is STALE (0.0.3) and must be refreshed to the first real mac full manifest before any mac delta.",
+      "Tiered Patreon rollout: tier3 (2wk) -> tier2 (2wk) -> public, patch-bump on reported issues; tier-2 'second digit' wording is semver-ambiguous and must be confirmed before cutting such a bump (see memory project-repo-distribution-gating)."
+    ],
+    "constraints": [
+      "Never touch the backend ResumableDownloader pause/abort path.",
+      "Always dispatch mpi-ci with -f ref=master (the dispatcher default was fixed main->master, but pass it explicitly).",
+      "For local Windows test builds pass --no-source-manifest and --clean; output goes to D:/CubricStudio/Vision/Builds.",
+      "Online update needs the repo PUBLIC + a non-prerelease 'latest' release (the updater scripts have no auth and /releases/latest ignores prereleases).",
+      "Generation-tied checks must run on a box that can generate (Windows); the GPU-less Linux laptop cannot.",
+      "Caveman comms mode active for chat (code/commits/security written normal)."
+    ],
+    "files_to_read_first": [
+      "docs/releases/build-experience-log.md (the 2026-06-10 macOS section + the older 'macOS pre-build checklist')",
+      ".agents/mpi-kanban/tasks/MPI-49/validation.md (full update-flow result)",
+      "scripts/portable/fetch-release.cjs (the no-host-tool updater helper)",
+      "scripts/portable/apply-update.cjs (restoreLauncherBits self-heal)",
+      "scripts/portable/macos/update.command + update-from-zip.command (mac updater, unverified)",
+      "release-baselines/README.md (FULL-manifest baseline contract; darwin still 0.0.3)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "macos", "versioning", "comfy_engine"]
+  },
+  "rules_active": [
+    "docs/versioning.md",
+    "docs/releases/portable-distribution-contract.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-10T07:00:00.000Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/eda19e23-e778-48a7-86b7-f0d392423993.json and use mpi-continue. You are resuming MPI-8 (cross-platform portable distribution). MPI-49 (portable update flow) is DONE and verified on Windows + Linux through a 0.0.6->0.0.7 online 'Run as program' test: offline + online update, exec-bit self-heal, and a no-curl updater that does all network work via fetch-release.cjs run through the bundled Electron binary (the only guaranteed runtime — never assume curl/wget/system-node). Exec-bit survives updates via three layers (restoreExecBit + restoreLauncherBits in apply-update.cjs + chmod sweeps in update-from-zip.{sh,command}). master is clean and pushed; current shipped version is 0.0.7 (a THROWAWAY test build — delete its release/tag: gh release delete v0.0.7 --repo MadPonyInteractive/Cubric-Vision --yes ; git push origin :refs/tags/v0.0.7). NEXT: (1) build the macOS portable on real Apple hardware — read the build-experience-log macOS sections + memory project_macos_build_prep first; the mac-specific risks are Gatekeeper quarantine (com.apple.quarantine xattr blocking unsigned .app/.command) and verifying the Electron.app-as-node path for the updater; the mac updater code mirrors Linux but is UNVERIFIED on Apple hardware. (2) Verify the mac update flow (offline then online, no curl, launchers stay executable). (3) Bump 1.0.0 — refresh release-baselines to the 0.0.7 FULL manifests first, and refresh the STALE darwin-arm64 baseline (still 0.0.3) to the first real mac full manifest before any mac delta. (4) Build all three platforms (Windows local + mpi-ci linux+darwin via -f ref=master -f version=1.0.0). (5) Cut the 1.0.0 Patreon TIER-3 release (rollout: tier3 2wk -> tier2 2wk -> public; patch-bump on issues; confirm the tier-2 'second digit' bump with the user — it is semver-ambiguous). Constraints: never touch the backend ResumableDownloader; local test builds use --no-source-manifest --clean; online update needs the repo public + non-prerelease 'latest'."
+}

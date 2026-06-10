@@ -251,3 +251,13 @@ Then toggle the repo PRIVATE again.
 untested (no mac hardware/build this cycle); the updater fixes cover .command +
 the Electron.app binary but are unverified on real Apple hardware — see the macOS
 pre-build checklist.
+
+### ONLINE UPDATE via "Run as program" — FULL PASS (0.0.6 -> 0.0.7, 2026-06-10)
+Cut a throwaway 0.0.7 (changelog-only) and tested the ONLINE path from the click
+method users use: right-click `update.sh` -> "Run as program" opened a terminal,
+showed the updating output, applied 0.0.7; launching the app (also "Run as
+program") showed the "Updated to version 0.0.7" overlay. No curl needed; exec-bit
+self-heal held. This is the definitive online-update proof for Linux. The 0.0.7
+release + tag are to be deleted (throwaway):
+- `gh release delete v0.0.7 --repo MadPonyInteractive/Cubric-Vision --yes`
+- `git push origin :refs/tags/v0.0.7`

@@ -808,6 +808,57 @@ us on 0.0.5: 266-file baseline → 5093-file false delta; see
 (a stale stage swept a repo-local `tmp-*` dir into the bundle once). Never create
 temp dirs inside the repo root during a build.
 
+### Online update — FULL PASS via "Run as program" (0.0.6 → 0.0.7, 2026-06-10)
+Cut a throwaway 0.0.7 (changelog-only) to exercise the no-curl online updater
+end-to-end from the click path users actually use. Result on the Linux box:
+right-click `update.sh` → "Run as program" opened a terminal, showed the
+"updating" output, applied 0.0.7; launching the app (also via "Run as program")
+showed the "Updated to version 0.0.7" changelog overlay. **The bundled-Electron
+download path needs no curl, and the exec-bit self-heal holds across an online
+update.** This closes the portable-update validation for Windows + Linux.
+
+UX note carried to mac: the hardened `update.sh`/`.command` pause on FAILURE
+("Press Enter to close") but NOT on success — via "Run as program" a successful
+run's terminal closes when the script exits. A success-path pause was discussed
+(so the click path shows positive confirmation) and DEFERRED to the 1.0.0 polish;
+add it to update.sh AND update.command together if wanted.
+
+## macOS build — what the Linux/Windows cycle means for it (pre-build, 2026-06-10)
+
+Before the first macOS portable build + the 1.0.0 three-platform release, fold in
+everything above. The mac updater code already exists and MIRRORS the Linux fixes,
+but is UNVERIFIED on real Apple hardware. Specifics:
+
+- **No host-tool assumptions (the big one).** `update.command` was rewritten to do
+  all network work via `fetch-release.cjs` run through the bundled Electron binary
+  inside the `.app` — path
+  `app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`. macOS
+  ships curl, but bare `node` is NOT guaranteed, so the Electron-as-node path is
+  what to trust. Verify that exact binary path exists in a real mac build before
+  relying on it.
+- **Exec bit + quarantine.** The three-layer exec-bit self-heal (restoreExecBit +
+  restoreLauncherBits + wrapper chmod in `update-from-zip.command`) is in place but
+  untested on mac. Additionally macOS adds **Gatekeeper quarantine** (`com.apple.
+  quarantine` xattr) on downloaded zips/apps — unsigned/un-notarized builds will be
+  blocked ("cannot be opened") and a double-clicked `.command` may be quarantined.
+  Expect to need `xattr -dr com.apple.quarantine <app>` in the README, or proper
+  signing/notarization. This is the mac analogue of the Linux "Run as program" /
+  exec-bit problem and is the most likely first-run blocker.
+- **fetch-release.cjs is shipped** in `update/` by build-portable.mjs for all
+  platforms (verified in win + linux bundles); confirm it lands in the mac bundle
+  too.
+- **Bootstrap trap applies to mac too.** Any mac install predating the no-curl
+  updater can only escape via the OFFLINE `update-from-zip.command`. Lead with the
+  offline step in mac update instructions for the first jump.
+- **Delta/baseline rules are identical.** Use the FULL portable-stage manifest of
+  the previous mac release as `release-baselines/darwin-arm64.json` (currently
+  STALE at 0.0.3 — refresh to the 1.0.0 full manifest after the first mac build
+  before cutting any mac delta). Always `--clean`. mpi-ci builds all three
+  platforms in one run; mac was simply not downloaded/tested these cycles.
+- See also the existing "macOS pre-build checklist" section earlier in this file
+  (icon.icns, Metal torch, launcher binary path, xcode-select) and memory
+  `project_macos_build_prep`.
+
 ---
 
 ## Template for new entries
