@@ -43,9 +43,14 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- `windows-x64.json`, `linux-x64.json`: refreshed to the **v0.0.6 FULL
-  (portable-stage)** manifests (2026-06-10) so the 0.0.7 build deltas against
-  0.0.6. `toVersion: 0.0.6`, `fromVersion: null`, `kind: portable-stage`
-  (windows 5352 files, linux 5313 files).
-- `darwin-arm64.json`: still the **v0.0.3** full manifest. macOS was skipped for
-  the 0.0.4–0.0.7 cycles; refresh it when the first mac delta is cut.
+- **None.** Reset 2026-06-10 for the **0.0.11 baseline release**. The stale
+  manifests (darwin `0.0.3`, linux/windows `0.0.6`) were removed so the 0.0.11
+  CI build produces **FULL** update bundles for all three platforms (no
+  stale-delta superset). 0.0.11 is the new fresh-install baseline installed on
+  all three boxes.
+- **Next step (after the 0.0.11 build):** commit the three 0.0.11 **FULL
+  (portable-stage)** manifests here — `darwin-arm64.json`, `linux-x64.json`,
+  `windows-x64.json`, each the top-level `resources/cubric/update-manifest.json`
+  from inside `CubricVision-<plat>-<arch>-v0.0.11.zip`/`.tar.gz` (`toVersion:
+  0.0.11`, `fromVersion: null`, `kind: portable-stage`). The next version
+  (0.0.12) then deltas cleanly against 0.0.11.
