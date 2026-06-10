@@ -43,7 +43,7 @@ export const RELEASE_NOTES = {
     whatIsNew: [],
     fixes: [
       'Video zoom now works on macOS and Linux — scroll to zoom and double-click to reset in the video viewer.',
-      'macOS: generated images no longer come out with colour banding (the VAE now decodes in full precision on Apple Silicon).',
+      'History thumbnails for video entries now render correctly (no more "missing video/image link").',
     ],
     breakingChanges: [],
     importantChanges: [],
