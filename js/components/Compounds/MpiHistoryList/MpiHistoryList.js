@@ -123,7 +123,15 @@ export const MpiHistoryList = ComponentFactory.create({
             const thumb = document.createElement('img');
             thumb.className = 'mpi-history-list__thumb';
             thumb.alt = '';
-            const srcPath = (item.type === 'video' && item.thumbPath) ? item.thumbPath : item.filePath;
+            // For video items, only use thumbPath (a JPG) — never fall back to
+            // item.filePath (an MP4/WebM URL) because <img> cannot display video
+            // and would show a broken-image icon (observed on Linux when ffmpeg
+            // failed to extract the thumbnail, leaving thumbPath unset). If
+            // thumbPath is absent, leave src unset; the CSS background colour
+            // fills the slot without a broken-image indicator.
+            const srcPath = (item.type === 'video')
+                ? (item.thumbPath || null)
+                : item.filePath;
             if (srcPath) thumb.src = _resolveUrl(srcPath);
 
             const meta = document.createElement('div');
