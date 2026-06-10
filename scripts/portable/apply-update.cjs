@@ -165,15 +165,31 @@ async function main() {
   if (!fs.existsSync(opts.bundle)) {
     throw new Error(`Update bundle not found: ${opts.bundle}`);
   }
-  const extractZip = loadExtractZip(opts.root);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const tmpRoot = path.join(opts.root, 'update', 'tmp', `update-${stamp}`);
-  const rollbackRoot = path.join(opts.root, 'update', 'rollback', stamp);
-  fs.rmSync(tmpRoot, { recursive: true, force: true });
-  fs.mkdirSync(tmpRoot, { recursive: true });
-  await extractZip(opts.bundle, { dir: tmpRoot });
 
-  const bundleRoot = findManifestRoot(tmpRoot);
+  // The bundle may be EITHER a .zip OR an already-extracted directory. macOS
+  // Safari/Archive-Utility auto-extracts a downloaded update .zip into a folder
+  // (and truncates a long folder name), so a default-Safari mac user ends up
+  // with a directory, not a zip (MPI-62). Accept both: a directory is used in
+  // place as the extracted bundle (no extractZip, nothing to clean up); a zip is
+  // extracted into a scratch tmpRoot as before.
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const rollbackRoot = path.join(opts.root, 'update', 'rollback', stamp);
+  const bundleIsDir = fs.statSync(opts.bundle).isDirectory();
+
+  let searchRoot;
+  let tmpRoot = null;
+  if (bundleIsDir) {
+    searchRoot = opts.bundle;
+  } else {
+    const extractZip = loadExtractZip(opts.root);
+    tmpRoot = path.join(opts.root, 'update', 'tmp', `update-${stamp}`);
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+    fs.mkdirSync(tmpRoot, { recursive: true });
+    await extractZip(opts.bundle, { dir: tmpRoot });
+    searchRoot = tmpRoot;
+  }
+
+  const bundleRoot = findManifestRoot(searchRoot);
   if (!bundleRoot) {
     throw new Error('Update bundle does not contain resources/cubric/update-manifest.json');
   }
@@ -195,7 +211,9 @@ async function main() {
     copyManifestFile(bundleRoot, opts.root, rollbackRoot, file.path);
   }
   applyDeletes(opts.root, rollbackRoot, manifest);
-  fs.rmSync(tmpRoot, { recursive: true, force: true });
+  // Only remove the scratch dir WE created from a zip. A user-supplied
+  // already-extracted directory (MPI-62 Safari case) is left untouched.
+  if (tmpRoot) fs.rmSync(tmpRoot, { recursive: true, force: true });
   restoreLauncherBits(opts.root);
   console.log(`Applied Cubric Vision update to ${manifest.toVersion || 'unknown version'}.`);
   console.log(`Rollback files, if any, are in: ${rollbackRoot}`);

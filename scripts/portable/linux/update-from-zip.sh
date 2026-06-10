@@ -14,7 +14,9 @@ if [ "${1:-}" = "" ]; then
   echo "download-and-apply from the latest GitHub release, run update.sh instead."
   exit 2
 fi
-if [ ! -f "$1" ]; then
+# Accept a .zip file OR an already-extracted directory. Some file managers
+# auto-extract a downloaded archive; apply-update.cjs handles both (MPI-62).
+if [ ! -e "$1" ]; then
   echo "Update bundle not found: $1"
   exit 2
 fi

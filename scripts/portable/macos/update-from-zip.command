@@ -7,10 +7,18 @@ export MPI_RESOURCES_PATH="$ROOT/resources"
 
 if [ "${1:-}" = "" ]; then
   echo "Usage: update-from-zip.command path/to/CubricVision-update.zip"
+  echo
+  echo "The argument may be the downloaded update .zip OR the FOLDER that Safari"
+  echo "auto-extracted it into (Safari/Archive Utility unzips downloads by"
+  echo "default). Both work — drag either onto this script in Terminal."
   exit 2
 fi
-if [ ! -f "$1" ]; then
-echo "Update bundle not found: $1"
+# Accept a .zip file OR an already-extracted directory. macOS Safari/Archive
+# Utility auto-extracts a downloaded update .zip into a folder (and truncates a
+# long folder name), so a default-Safari user has a directory, not a zip
+# (MPI-62). apply-update.cjs handles both — just pass it through.
+if [ ! -e "$1" ]; then
+  echo "Update bundle not found: $1"
   exit 2
 fi
 

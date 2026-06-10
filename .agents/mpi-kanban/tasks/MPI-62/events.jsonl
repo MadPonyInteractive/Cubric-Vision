@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-62","at":"2026-06-10T12:27:48.626Z","actor":"claude","from":"todo","to":"doing","reason":"Implementation complete on Windows; awaiting on-Mac validation of the Safari auto-extract path."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-62","at":"2026-06-10T12:27:48.626Z","actor":"claude","maturity":"validating","status":"needs_verification"}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-62","at":"2026-06-10T12:27:48.626Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-62","at":"2026-06-10T12:27:48.626Z","actor":"claude"}
