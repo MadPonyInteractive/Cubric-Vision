@@ -86,6 +86,42 @@ no gpu-detect spam + zoom regression OK. (Linux is CPU-only, skip generation.)
   MPS, fix THAT workflow's VAE node, not a global flag (Fabio: no global flag, no
   tiling). Future work.
 
+## UPDATE (end of session, after first nap message)
+
+Validated on hardware this round (patched 0.0.10, pre-folder-name-fix build):
+- **VRAM gauge GONE on Apple Silicon** ✅ (CSS [hidden] fix worked). On Linux (no
+  GPU) it correctly STILL shows 0/0 — hide only triggers on vendor 'apple' /
+  unified memory, which is right (Apple Silicon never has discrete VRAM; an Intel
+  Mac with an AMD dGPU keeps the gauge).
+- **No gpu-detect log spam** ✅.
+- **Generation duration** ✅ (was already shipped).
+- **Linux update 0.0.9→0.0.10 applied** ✅. The `Syntax error: "do" unexpected` at
+  the end was the OLD 0.0.3-era wrapper's death rattle (it ran, applied the update,
+  then the old script's tail choked under dash) — the update OVERWROTE it with the
+  current dash-clean wrapper, so it won't recur. Applier's restoreLauncherBits
+  re-chmod'd launchers independently, so they should be executable; verify
+  `ls -l *.sh` on the box if unsure.
+
+NEW since the boxes updated — needs ONE more rebuild to test:
+- **MPI-62 version-first folder (commit 523c938):** the update bundle now wraps in
+  a short `CubricVision-v<version>` folder so Safari's extracted folder is short +
+  version-visible. The staged 0.0.10 bundles do NOT have this yet (builder change).
+- The applier's **folder-accept** was ALREADY in the bundle Fabio applied — he
+  re-zipped out of habit. The folder-direct path (point update-from-zip.command at
+  the extracted folder, no re-zip) is testable RIGHT NOW on the Mac without any
+  rebuild. The rebuild only improves the FOLDER NAME.
+
+### NEXT when back
+1. Rebuild 0.0.10 once more (in place, no bump) to ship commit 523c938 +
+   0484449. `gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci
+   --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=0.0.10`.
+   Stage Mac+Linux update bundles. Verify the mac update zip's top level is a single
+   `CubricVision-v0.0.10/` dir (unzip -l … | head).
+2. On Mac: download → let Safari extract → point update-from-zip.command at the
+   `CubricVision-v0.0.10` folder DIRECTLY (no re-zip). Confirm it applies → MPI-62
+   fully validated. Confirm extracted folder name is short/version-visible.
+3. Close MPI-60, MPI-61, MPI-62 → done. Record in MPI-49 validation + memory.
+
 ## 1.0.0 — STILL HARD-GATED on Fabio's explicit go. Do NOT bump without it.
 
 When green-lit: run mpi-version-bump (NOT `-f version` alone), refresh the darwin
