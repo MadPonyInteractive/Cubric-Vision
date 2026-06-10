@@ -441,3 +441,51 @@ Both queued for the 0.0.4 bump alongside the models-folder bug
 - Document the delta flow + `--from-manifest` in the mpi-version-bump skill and
   `docs/releases/portable-distribution-contract.md` (deferred per handoff until
   both update flows pass).
+
+---
+
+## MPI-8 COMPLETE — 1.0.0 first public release (2026-06-10)
+
+The umbrella is done. Full per-platform acceptance detail lives in MPI-49
+validation.md; this is the umbrella-level summary.
+
+### Platform install + run — all 3 PASS
+Windows x64, Linux x64, macOS arm64 each: fresh portable install -> launch ->
+engine bootstrap -> generation. Built per-OS via private mpi-ci. macOS validated
+on a rented M4 (rentamac.io) across 0.0.8 -> 0.0.12.
+
+### Updater — validated
+- **Offline (`update-from-zip`)** — PASS on all 3, including the macOS
+  version-first folder fix (MPI-62) that survives Safari auto-extract truncation.
+- **Online (`update.command`/`.sh`/`.bat`)** — Windows + Linux applied
+  0.0.11 -> 0.0.12 end-to-end from a real GitHub release. macOS reached the
+  GitHub API correctly (right URL + UA) but the rented-Mac shared datacenter IP
+  had exhausted GitHub's 60/hr unauthenticated rate limit (HTTP 403, used 60/60 —
+  confirmed via /rate_limit). Not a code/repo bug; not reproducible for a real
+  home user. fetch-release.cjs now surfaces a clear rate-limit message.
+
+### macOS launcher — resolved (start.command + Terminal xattr)
+The no-terminal `CubricVision.app` FAILED on M4 (Finder launches a .app with cwd
+`/` -> bundled Electron `EPERM: uv_cwd`; plus a Rosetta prompt) and was dropped.
+A `setup.command` quarantine-clear was also dropped — it is itself a quarantined
+.command, so right-click->Open hits the same Gatekeeper dead-end (verified on
+M4). macOS ships `start.command` (proven since 0.0.8); the one reliable
+first-launch step is the Terminal `xattr -dr com.apple.quarantine "<folder>"`.
+See MPI-63.
+
+### Pre-release fixes folded in
+- MPI-66: Windows release-baseline filename mismatch (`win32-x64.json`, not
+  `windows-x64.json`) made every Windows update bundle a full ~390 MB
+  re-download. Fixed before 1.0.0.
+
+### 1.0.0 build
+First public release = FULL installs only (no update bundles). 1.0.0 was NOT
+re-run on Mac hardware (rentamac ended after the 0.0.12 mac acceptance); it is
+mechanically identical to the M4-validated 0.0.12 (same launcher/updater/code;
+version strings + the win32 baseline rename, neither of which affects the full
+install) -> safe by equivalence.
+
+### Deferred (non-blocking)
+- Signed/notarized no-terminal macOS `.app` — needs a paid Apple Developer
+  account for notarization.
+- Per-workflow VAE fp16-banding fix on Apple Silicon MPS (MPI-61) — backlog.

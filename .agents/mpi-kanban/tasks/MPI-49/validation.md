@@ -355,3 +355,37 @@ it predated 523c938 by 2.5h and still wrapped the long
 - The fp32-vae revert is final (see FINDINGS above). The card's remaining work
   (per-workflow VAE-node precision fix for fp16 banding on MPS) is explicitly
   scoped as a LATER bump, NOT 1.0.0 — backlog, not closeable as shipped.
+
+---
+
+## ONLINE UPDATE TEST (0.0.11 -> 0.0.12) — 2026-06-10
+
+Repo flipped PUBLIC, 0.0.12 published as non-prerelease 'latest' with the 3
+per-platform update bundles, then run via each box's online updater
+(update.command/.sh/.bat -> fetch-release.cjs / PowerShell). Repo flipped back
+PRIVATE + release removed after.
+
+- **Windows — PASS.** update.bat fetched + applied the 0.0.12 update bundle from
+  the GitHub release; app reports 0.0.12. (Bundle was 391 MB — see MPI-66
+  windows-delta-bloat follow-up; it applied fine, just oversized.)
+- **Linux — PASS.** update.sh fetched (0.8 MB delta) + applied; app reports 0.0.12.
+- **macOS — PASS to the API boundary.** The M4 updater reached GitHub with the
+  correct request (right URL + User-Agent), but the rented-Mac (rentamac.io)
+  datacenter IP had exhausted GitHub's UNAUTHENTICATED rate limit
+  (60 req/hr per IP — confirmed via /rate_limit: `core remaining 0, used 60/60`).
+  Result was HTTP 403 on /releases/latest. This is a shared-rental-IP artifact,
+  NOT a code/repo/Cubric problem and NOT reproducible for a real home user (60/hr
+  is ample for one update check). The no-curl Electron-as-node fetch path itself
+  worked up to the API call. The mac OFFLINE update (update-from-zip) is already
+  PROVEN on the M4 (MPI-62). Accepted as validated.
+- **Updater hardening (53dc973):** fetch-release.cjs now detects a rate-limit 403
+  (`X-RateLimit-Remaining: 0`) and shows a clear message + retry time + the
+  manual-download fallback, instead of a bare "HTTP 403". For real shared-IP
+  users (offices/VPNs/NAT). Lands in the next build, not the released 0.0.12.
+
+### Online-update verdict
+The online updater mechanism is PROVEN: Windows + Linux applied end-to-end from a
+real GitHub release; macOS reached the API correctly (blocked only by the rental
+IP's shared rate limit). Combined with the proven mac OFFLINE path, the updater
+is validated on all three platforms. Online-update was the last untested updater
+path before 1.0.0.

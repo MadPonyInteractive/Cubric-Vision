@@ -1,0 +1,4 @@
+{"at":"2026-06-07T09:30:00Z","event":"card_created","note":"Defer Triton/SageAttention to separate accelerator builds"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-50","type":"task.updated","at":"2026-06-10T18:10:51Z","actor":"codex","summary":"Created large adaptive plan and preserved upstream accelerator research snapshot."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-50","type":"task.updated","at":"2026-06-10T18:16:23Z","actor":"codex","summary":"Reverted MPI-50 to idea/brainstorm state; previous plan marked as superseded draft."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-50","type":"task.deleted","at":"2026-06-10T18:24:56Z","actor":"codex","summary":"Rejected and archived to .agents/mpi-kanban/tasks/_archived/MPI-50 because Triton/SageAttention is too fragile for the product surface."}
