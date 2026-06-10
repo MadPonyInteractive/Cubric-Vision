@@ -242,9 +242,10 @@ async function detectIntelArcGPU() {
  * @returns {Promise<{comfy: {url: string, filename: string}}>}
  */
 async function resolveDownloadConfig() {
-    // Return cached result if available
+    // Return cached result if available. No log here: /system/stats calls this on
+    // every poll (~0.5 Hz), so logging each cache hit floods app.log. The initial
+    // (uncached) detection below still logs once.
     if (_gpuDetectionCache) {
-        logger.info('gpu-detect', 'Using cached GPU detection result');
         return _gpuDetectionCache;
     }
 

@@ -23,6 +23,13 @@
     gap: 0.5rem;
 }
 
+/* The `.mpi-mem-monitor__item { display: flex }` rule above overrides the UA
+   `[hidden] { display: none }` (same specificity, later source order), so a
+   hidden VRAM row on Apple Silicon would still show. This restores the hide. */
+.mpi-mem-monitor__item[hidden] {
+    display: none;
+}
+
 .mpi-mem-monitor__label {
     font-size: var(--t-xs);
     font-weight: 700;
