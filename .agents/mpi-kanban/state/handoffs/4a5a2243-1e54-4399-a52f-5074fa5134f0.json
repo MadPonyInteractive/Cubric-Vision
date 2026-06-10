@@ -1,0 +1,140 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "4a5a2243-1e54-4399-a52f-5074fa5134f0",
+  "generated_at": "2026-06-10T16:00:00.000Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8 macOS/Linux portable: 0.0.10 patch cycle (MPI-58/59/60/62 fixes, fp32-vae revert) — pre VS Code restart",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Validate the macOS portable build on real Apple hardware (rentamac M4), fix everything found, then cut 1.0.0 across all three platforms. This session: land the MPI-58/59/60/62 fixes as 0.0.10 and validate on Mac + Linux.",
+    "status": "in_progress",
+    "summary": "0.0.10 (folds the never-released 0.0.9) is built + mostly validated on hardware. MPI-58 (video zoom) + MPI-59 (history thumbnail) DONE on both platforms. MPI-60 (Apple VRAM gauge hide + status progress + generation duration) and MPI-62 (macOS Safari auto-extract update) implemented by parallel agents, reviewed, committed. fp32-vae was tried then REVERTED (OOM'd a single image on 16GB M4 + a global VAE flag overrides per-workflow precision). On the patched 0.0.10: VRAM-hide + no-log-spam + duration all PASS on the M4; Linux 0.0.9->0.0.10 update applied OK. ONE more rebuild is needed to ship the MPI-62 version-first folder-name change (commit 523c938) and then do the final folder-direct MPI-62 test on the Mac. 1.0.0 is HARD-GATED on Fabio's explicit go."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-58 (video zoom macOS/Linux): transform applied to the video element not the wrapper (commit f48f68b). VALIDATED on both Linux + macOS M4 via 0.0.9/0.0.10 updates. Card -> done.",
+      "MPI-59 (history video thumbnail 'missing link'): root cause was ffmpeg exec-bit EACCES (NOT case-sensitivity). 3-layer fix: runtime self-heal (f168fa5), applier restores +x on resources/ffmpeg+ffprobe (9708459), MpiHistoryList no longer puts a video URL in <img> when thumbPath null (685f0c2). VALIDATED on Linux. Card -> done.",
+      "fp32-vae REVERTED (d2f9e68): OOM'd a single image on 16GB M4 AND a global VAE-precision flag overrides each workflow's authored precision. Apple launch is back to just --use-pytorch-cross-attention.",
+      "MPI-60 (3 fixes, commit efe1fba + follow-up 0484449): (1) Apple-unified VRAM gauge hidden (only RAM shown) — needed a CSS fix `.mpi-mem-monitor__item[hidden]{display:none}` because the flex rule overrode UA [hidden]; (2) status-bar progress rerouted through Events 'tool:progress' (StatusBar listens); (3) generation duration via wall-clock _activeStartedAt. Plus removed gpu-detect cache log spam (platformEngine.js). Agent also updated 4 .claude/rules/*.md to document MPI-58/tool:progress — Fabio approved keeping them. VRAM-hide + no-spam + duration all PASS on M4.",
+      "MPI-62 (commit cbe2f22 + 523c938): macOS Safari auto-extracts the update zip into a (truncated) folder. (b) apply-update.cjs accepts a directory OR a zip as the bundle + (a) update-from-zip wrappers relaxed -f->-e. (c) build-portable.mjs now wraps the update bundle in a SHORT VERSION-FIRST folder `CubricVision-v<version>` via includeRoot, keeping the long archive FILENAME (updater regex intact). Folder-accept already works; version-first folder name needs a rebuild to ship + a folder-direct test on Mac.",
+      "0.0.10 bump (0e3c70a): pure patch, folds the unreleased 0.0.9. appVersion + package.json + releaseNotes + docs/releases/2026-06-10-v0.0.10.md. Built + delta-verified on Mac+Linux (mac delta is a 1419-file superset because darwin baseline is stale 0.0.3; applies fine).",
+      "MPI-49 validation.md updated with the full macOS first-hardware acceptance section; memory project_macos_build_fixes flipped to a PASS scorecard."
+    ],
+    "pending": [
+      "REBUILD 0.0.10 one more time IN PLACE (no version bump — 0.0.10 unreleased) to ship commits 523c938 (version-first update folder) + 0484449 (VRAM/spam). Dispatch: gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=0.0.10. Stage Mac+Linux update bundles to D:/CubricStudio/Vision/Builds/v0.0.10/. VERIFY the mac update zip top level is a single CubricVision-v0.0.10/ dir (unzip -l ... | head).",
+      "ON MAC: download the rebuilt mac update bundle, let Safari auto-extract, then point update-from-zip.command at the extracted CubricVision-v0.0.10 FOLDER DIRECTLY (no re-zip). If it applies -> MPI-62 fully validated (folder-accept + short version-first name). The applier already accepts folders; Fabio re-zipped last time out of habit without realising.",
+      "ON LINUX (already on 0.0.10): optional re-update to the rebuilt 0.0.10 if you want the version-first folder there too; otherwise Linux is already validated.",
+      "CLOSE MPI-60, MPI-61, MPI-62 -> done once the above passes. MPI-61 needs no further hardware test (it was the fp32-vae revert decision). Record results in .agents/mpi-kanban/tasks/MPI-49/validation.md + flip memory project_macos_build_fixes.",
+      "OPTIONAL: macOS ONLINE update test (update.command, no-curl fetch-release) — never tested on Mac. Needs repo PUBLIC + 0.0.10 as non-prerelease 'latest'. Offline path is proven on Mac.",
+      "BEFORE 1.0.0: refresh the STALE darwin-arm64 release baseline (0.0.3) to a 0.0.10 FULL manifest so the next mac delta is minimal (linux/win baselines are 0.0.6). Use the FULL portable-stage manifest (fromVersion null), not the delta manifest (the 0.0.5 trap).",
+      "1.0.0 BUMP — HARD-GATED on Fabio's explicit go. Run mpi-version-bump (NOT -f version alone), refresh baselines first, build all three via mpi-ci."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Cross-platform portable distribution (umbrella)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-49/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-49 validation.md: macOS first-hardware acceptance section written (0.0.8 install + 0.0.8->0.0.9 + 0.0.9->0.0.10 updates).",
+      "memory project_macos_build_fixes: flipped to PASS scorecard (all 7 build/launch fixes confirmed on M4) + fp32-vae revert + MPI-60/61/62 notes.",
+      "MPI-58 + MPI-59 cards -> done with validation.md. MPI-60/61/62 cards updated (doing/validating) with full resolutions.",
+      "Two resume docs written: HANDOFF-0.0.10-resume.md (markdown, detailed) + this canonical JSON handoff.",
+      ".claude/rules component-map updates (components.md, component-mounts.md, component-events-organisms/lifecycle.md) for the MPI-58 transform + tool:progress event — Fabio approved."
+    ],
+    "pending": [
+      "After the final rebuild + Mac folder-direct test: flip MPI-60/61/62 to done in board.json + task.json, record the MPI-62 folder-direct PASS + MPI-60 on-hardware PASS in MPI-49 validation.md.",
+      "Refresh darwin-arm64 release baseline to a 0.0.10 full manifest before any 1.0.0 mac delta.",
+      "Delete any throwaway GitHub release tags if created (none created this session — builds went to mpi-ci artifacts + Drive only)."
+    ]
+  },
+  "next_action": {
+    "description": "Rebuild 0.0.10 in place (no bump) via mpi-ci to ship commits 523c938 (MPI-62 version-first update folder) + 0484449 (MPI-60 VRAM-hide + log-spam). Stage the Mac + Linux update bundles to D:/CubricStudio/Vision/Builds/v0.0.10/ and byte-verify the mac update zip wraps a single CubricVision-v0.0.10/ folder. Then on the Mac: download, let Safari auto-extract, and point update-from-zip.command at the extracted CubricVision-v0.0.10 FOLDER directly (no re-zip) to finally validate MPI-62. Then close MPI-60/61/62. Do NOT bump 1.0.0 without Fabio's explicit go.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "0.0.9 was an internal test build, never released; its MPI-58/59 fixes were folded into 0.0.10 rather than shipping a separate 0.0.9.",
+      "fp32-vae is the WRONG layer: a global ComfyUI VAE-precision launch flag (--fp32-vae/--bf16-vae/--cpu-vae) overrides each workflow's own authored VAE precision (fp8/fp16/bf16/fp32). It also OOM'd a single image on a 16GB M4. Reverted. Per-workflow VAE banding is a per-workflow fix (MPI-61), NOT a global flag, and NOT VAE tiling (Fabio removed tiling — it slows powerful machines).",
+      "VRAM gauge hide is correct ONLY on Apple Silicon (vendor 'apple' / unified memory) — Apple Silicon NEVER has discrete VRAM. Intel Macs with an AMD dGPU keep the gauge (vendor != apple). Linux with no GPU correctly still shows 0/0 (not hidden). Matches rgthree behaviour on Mac.",
+      "MPI-62: the truncation is a NAME-LENGTH issue (Archive Utility truncates long extracted folder names). Fix = applier accepts a folder (so re-zip is unnecessary) + the bundle now extracts to a short VERSION-FIRST folder CubricVision-v<ver> (version stays visible even if truncated — Fabio's idea). The ZIP FILENAME stays long so the updater asset-name regex still matches.",
+      "macOS .command launchers always open a Terminal window; there is no no-terminal mac launcher (deferred — needs a .app wrapper). Win/Linux have a no-terminal default.",
+      "1.0.0 bump is HARD-GATED on Fabio's explicit go."
+    ],
+    "constraints": [
+      "Never touch the backend ResumableDownloader pause/abort path.",
+      "Always dispatch mpi-ci with -f ref=master explicitly (CI default is main).",
+      "CI -f version=X only NAMES the artifact + stamps buildInfo.js/manifest; it does NOT patch appVersion.js/package.json. Always run mpi-version-bump (or hand-bump) BEFORE building.",
+      "Online update needs the repo PUBLIC + a non-prerelease 'latest' release (updater scripts have no auth; /releases/latest ignores prereleases).",
+      "Update-bundle deltas must diff against the previous release's FULL portable-stage manifest (fromVersion null), never the delta manifest — that was the 0.0.5 5093-file bogus-delta trap.",
+      "The darwin-arm64 baseline is STALE (0.0.3); the 0.0.10 mac delta is a correct ~1419-file superset that applies fine onto 0.0.9 but is large. Refresh before 1.0.0.",
+      "When updating in place: the INSTALLED applier runs (from update/apply-update.cjs), not the one inside the new bundle. So an applier fix only takes effect on the NEXT update after it is installed.",
+      "Caveman comms mode active for chat (code/commits/security written normal).",
+      "Fabio is restarting VS Code (extension + mpi-kanban skill updates) — this handoff is for a FRESH session."
+    ],
+    "files_modified": [
+      "routes/comfy.js",
+      "routes/system.js",
+      "routes/platformEngine.js",
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "js/shell/statusBar.js",
+      "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js",
+      "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css",
+      "js/components/Compounds/MpiHistoryList/MpiHistoryList.js",
+      "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+      "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css",
+      "scripts/portable/apply-update.cjs",
+      "scripts/portable/macos/update-from-zip.command",
+      "scripts/portable/linux/update-from-zip.sh",
+      "scripts/build-portable.mjs",
+      "js/core/appVersion.js",
+      "package.json",
+      "js/data/releaseNotes.js",
+      "docs/releases/2026-06-10-v0.0.10.md",
+      ".claude/rules/components.md",
+      ".claude/rules/component-mounts.md",
+      ".claude/rules/component-events-organisms.md",
+      ".claude/rules/component-events-lifecycle.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/handoffs/HANDOFF-0.0.10-resume.md (detailed markdown resume — the human-readable companion to this JSON)",
+      ".agents/mpi-kanban/tasks/MPI-49/validation.md (macOS + Linux acceptance results so far)",
+      "memory project_macos_build_fixes (PASS scorecard + fp32-vae revert + MPI-60/61/62)",
+      "scripts/build-portable.mjs lines ~971-1027 (updateArchiveName vs updateRootName=CubricVision-v<ver> + includeRoot)",
+      ".agents/mpi-kanban/tasks/MPI-62/task.json (full resolution + what still needs the folder-direct Mac test)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "macos", "versioning", "comfy_engine"]
+  },
+  "rules_active": [
+    "docs/versioning.md",
+    "docs/releases/portable-distribution-contract.md",
+    "docs/releases/build-experience-log.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-10T16:00:00.000Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/4a5a2243-1e54-4399-a52f-5074fa5134f0.json and use mpi-continue. You are resuming MPI-8 (cross-platform portable distribution) mid-way through the 0.0.10 patch cycle, in a FRESH session after Fabio restarted VS Code (extension + mpi-kanban skill updates). CONTEXT: the macOS build is being validated on a rented Apple M4 (rentamac.io, DeskIn remote desktop — Fabio drives the Mac and pastes Terminal output, you relay exact commands). There is also a Linux ThinkPad (no GPU, CPU-only) Fabio can drive directly. This session landed and mostly validated 0.0.10 (which folds the never-released 0.0.9). DONE + validated on hardware: MPI-58 (video zoom on macOS/Linux — transform moved to the video element), MPI-59 (history 'missing video/image link' — root cause was ffmpeg exec-bit EACCES, fixed 3 ways), MPI-60 (Apple Silicon VRAM gauge now hidden since there is no discrete VRAM — needed a CSS `.mpi-mem-monitor__item[hidden]{display:none}` fix; plus status-bar progress via a tool:progress event and generation-duration wall-clock; plus removed gpu-detect log spam), and the fp32-vae REVERT (it OOM'd a single image on the 16GB M4 and a global VAE flag overrides each workflow's authored VAE precision). MPI-62 (macOS Safari auto-extracts the update zip into a truncated folder): the applier now accepts a directory as the bundle (so no re-zip is needed) and the build now wraps the update bundle in a short version-first folder CubricVision-v<version> (the zip FILENAME stays long so the updater regex still matches). THE NEXT ACTION: rebuild 0.0.10 ONE more time IN PLACE (no version bump — 0.0.10 was never released) via mpi-ci to ship commits 523c938 + 0484449 (gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=0.0.10), stage the Mac + Linux update bundles to D:/CubricStudio/Vision/Builds/v0.0.10/, byte-verify the mac update zip wraps a single CubricVision-v0.0.10/ folder, then on the Mac let Safari auto-extract and point update-from-zip.command at the extracted CubricVision-v0.0.10 FOLDER directly (no re-zip) to finally validate MPI-62. Then close MPI-60/61/62 to done and record results in MPI-49 validation.md + memory project_macos_build_fixes. Constraints: never touch the backend ResumableDownloader; dispatch mpi-ci with -f ref=master; CI -f version only names the artifact (always bump appVersion.js+package.json via mpi-version-bump before a real build); update deltas diff against the previous FULL manifest not the delta manifest; the darwin baseline is stale 0.0.3 (refresh to a 0.0.10 full manifest before any 1.0.0 mac delta). 1.0.0 is HARD-GATED on Fabio's explicit go — do NOT bump without it. master is clean + pushed at HEAD f44832b. The detailed markdown companion is .agents/mpi-kanban/state/handoffs/HANDOFF-0.0.10-resume.md."
+}
