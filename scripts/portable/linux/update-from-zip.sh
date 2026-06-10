@@ -24,3 +24,12 @@ if [ -x "$ROOT/app/node_modules/electron/dist/electron" ]; then
 else
   node "$ROOT/update/apply-update.cjs" --root "$ROOT" --bundle "$1"
 fi
+
+# Belt-and-suspenders: re-assert +x on the launchers from the WRAPPER too, not
+# only inside the applier. The applier is itself updated by the bundle, so when
+# an OLD applier applies a new bundle its exec-bit fix may be absent — but this
+# wrapper always runs, so the launchers end up executable regardless of applier
+# version. Restores the file-manager "Run as program" / double-click path.
+for f in start.sh start-with-terminal.sh update.sh update-from-zip.sh resources/setup-desktop.sh; do
+  [ -e "$ROOT/$f" ] && chmod +x "$ROOT/$f" 2>/dev/null || true
+done

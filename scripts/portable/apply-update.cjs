@@ -93,6 +93,40 @@ function restoreExecBit(source, target, relPath) {
   }
 }
 
+// Final belt-and-suspenders sweep run AFTER every update, independent of the
+// manifest. restoreExecBit only touches files that were in the delta, so a
+// launcher not present in a given update keeps whatever (possibly stripped) mode
+// it had. This forces +x on every known launcher + the Electron binary so the
+// file-manager "Run as program" / double-click path always survives an update,
+// even one applied by an older applier or a delta that did not ship the
+// launchers. No-op on Windows. All failures are non-fatal.
+function restoreLauncherBits(portableRoot) {
+  if (process.platform === 'win32') return;
+  const launchers = [
+    'start.sh',
+    'start-with-terminal.sh',
+    'update.sh',
+    'update-from-zip.sh',
+    'start.command',
+    'start-with-terminal.command',
+    'update.command',
+    'update-from-zip.command',
+    'resources/setup-desktop.sh',
+    'app/node_modules/electron/dist/electron',
+    'app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron',
+  ];
+  for (const rel of launchers) {
+    const target = path.join(portableRoot, ...rel.split('/'));
+    try {
+      if (!fs.existsSync(target)) continue;
+      const mode = fs.statSync(target).mode & 0o777;
+      fs.chmodSync(target, mode | 0o111); // u+x g+x o+x
+    } catch {
+      // Non-fatal: a missing launcher or a failed chmod must not abort the update.
+    }
+  }
+}
+
 function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
   const source = path.resolve(bundleRoot, ...relPath.split('/'));
   const target = assertInside(portableRoot, path.join(portableRoot, ...relPath.split('/')));
@@ -157,6 +191,7 @@ async function main() {
   }
   applyDeletes(opts.root, rollbackRoot, manifest);
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  restoreLauncherBits(opts.root);
   console.log(`Applied Cubric Vision update to ${manifest.toVersion || 'unknown version'}.`);
   console.log(`Rollback files, if any, are in: ${rollbackRoot}`);
 }

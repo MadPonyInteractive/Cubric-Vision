@@ -21,3 +21,12 @@ elif [ -x "$ROOT/app/node_modules/electron/dist/electron" ]; then
 else
   node "$ROOT/update/apply-update.cjs" --root "$ROOT" --bundle "$1"
 fi
+
+# Belt-and-suspenders: re-assert +x on the launchers from the WRAPPER too, not
+# only inside the applier (which is itself updated by the bundle, so an old
+# applier may lack the exec-bit fix). This wrapper always runs, so the launchers
+# end up executable regardless of applier version — restoring the Finder
+# double-click "open" path.
+for f in start.command start-with-terminal.command update.command update-from-zip.command; do
+  [ -e "$ROOT/$f" ] && chmod +x "$ROOT/$f" 2>/dev/null || true
+done

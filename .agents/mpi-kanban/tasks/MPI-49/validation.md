@@ -108,3 +108,86 @@ mpi-ci-*-0.0.4) -> create a PUBLIC non-prerelease GitHub Release with the delta
 zips (user toggles repo public for the online test, then back to private).
 Online updater works unchanged on a public, non-prerelease release (the
 `/releases/latest` API skips prereleases, so it must be marked latest).
+
+## 0.0.4 -> 0.0.5 cycle (2026-06-09)
+
+Bumped 0.0.4 -> 0.0.5 (commit 8bbc50e, pure patch). Ships: MPI-54 (model
+download cross-restart resume), MPI-57 (model preview WebP + hover video),
+MPI-49 (applier exec-bit fix — first bundle to carry it), MPI-51 (open-source
+contributor docs).
+
+### BASELINE BUG FOUND + FIXED (important)
+The first 0.0.5 Windows build produced a **bogus 5093-file "delta"**. Root cause:
+the release-baselines were refreshed to the 0.0.4 **update-bundle (delta)**
+manifest (266 files) instead of the **full portable-stage** manifest. The delta
+diff needs the previous release's COMPLETE file set; with only 266 hashes it
+flagged the whole app as "added". Fixed by using the full
+`portable-stage` manifest (`fromVersion: null`) from the previous **full** build
+(win 5343 files, linux 5304 files) -> real **38-file / 5-delete** delta.
+`release-baselines/README.md` contract corrected so this won't recur.
+Second trap: the stale stage dir wasn't wiped between builds, so a temp dir
+(`tmp-baseline-fix/`) created inside the repo got swept into the bundle. Fix:
+always pass `--clean`, and never create temp dirs inside the repo root during a
+build.
+
+### Deltas built + verified (true 0.0.4 -> 0.0.5 deltas, buildHash 8bbc50e0d01d)
+- Windows: local build, 38 files / 5 deletes,
+  `D:/CubricStudio/Vision/Builds/CubricVision-windows-x64-update-v0.0.5.zip`.
+- Linux: mpi-ci run 27234648345 (success), 38 files / 5 deletes,
+  `.../mpi-ci-linux-0.0.5/CubricVision-linux-x64-update-v0.0.5.zip`. Same
+  buildHash as Windows (both from 8bbc50e); mpi-ci read the committed full
+  baseline and produced a real delta too.
+- macOS: SKIPPED this cycle (per user; next stage = author the mac build from
+  the build-experience-log).
+- Both bundles carry `update/apply-update.cjs` with the exec-bit fix.
+
+### GitHub Release created (for online-updater test)
+`gh release create v0.0.5 --repo MadPonyInteractive/Cubric-Vision --target master`
+non-prerelease, marked latest. `/releases/latest` returns v0.0.5. Both delta
+zips attached (names match the updater patterns
+`CubricVision-{windows-x64,linux-x64}-update-v*.zip`). Tag `v0.0.5` -> 8bbc50e
+pushed to origin.
+
+### ONLINE UPDATE TEST — READY (awaiting user)
+Repo is private; the updater's `/releases/latest` + asset download 404 on a
+private repo (no auth in the scripts). To test: toggle the repo PUBLIC, run the
+online updater on a v0.0.4 install, confirm it pulls + applies v0.0.5, then
+toggle PRIVATE again.
+- Windows: run `update.bat` in the v0.0.4 portable install.
+- Linux: run `sh ./update.sh` in the v0.0.4 portable install.
+
+### Cleanup commands (release is fully deletable)
+- `gh release delete v0.0.5 --repo MadPonyInteractive/Cubric-Vision --yes`
+- `git push origin :refs/tags/v0.0.5` (delete remote tag)
+- `git tag -d v0.0.5` (delete local tag, if created locally)
+
+### ONLINE UPDATE TEST — RESULT (2026-06-10)
+- **Windows online update: PASS.** `update.bat` (PowerShell) pulled v0.0.5 from
+  the public release and applied it.
+- **Linux online update: the original `update.sh` FAILED — root cause `curl` not
+  installed** ("curl: not found", exit 127; `set -e` aborted, terminal just
+  flashed). The updater must NOT assume host tools (especially for macOS, which
+  we cannot test). FIX: all network work moved into a new
+  `scripts/portable/fetch-release.cjs` (pure Node `https`, follows redirects,
+  clear 404/private-repo message) run via electron-as-node — the bundled
+  Electron binary is the ONLY guaranteed runtime. `update.sh` and
+  `update.command` rewritten to just locate Electron + run fetch-release.cjs +
+  error/pause; zero curl/wget/system-node dependency. `update.bat` left on
+  PowerShell (guaranteed on Windows; already worked). build-portable.mjs now
+  copies fetch-release.cjs into `update/`. After this, Linux online update
+  APPLIED v0.0.5 successfully (run from a terminal).
+- **EXEC-BIT STRIP recurred after the online update** (launchers lost "Run as
+  program"). Root cause this round: the install was 0.0.4, so the OLD applier
+  (no exec-bit fix) applied the bundle. The 0.0.5 bundle DID ship the fixed
+  applier (verified: `restoreExecBit` present), so the install now has it.
+  Hardening added so this never depends on applier version or delta contents:
+  (1) `restoreLauncherBits()` in apply-update.cjs — a final sweep that force +x's
+  every known launcher + the Electron binary, manifest-independent;
+  (2) wrapper-side `chmod +x` sweeps in update-from-zip.{sh,command} that always
+  run, immune to applier version skew. Three independent layers now.
+- ALL the above (fetch-release.cjs, launcher-bit sweeps) are UNCOMMITTED and ship
+  from **0.0.6**. The current 0.0.5 install has the fixed applier but not the new
+  sweeps. Manual recovery of the live Linux install:
+  `chmod +x start.sh start-with-terminal.sh update.sh update-from-zip.sh resources/setup-desktop.sh`.
+- NEXT: cut 0.0.6 with these fixes, then test 0.0.5 -> 0.0.6 online update and
+  confirm the launchers STAY executable (the real self-heal proof).

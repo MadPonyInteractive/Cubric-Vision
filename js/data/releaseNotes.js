@@ -38,6 +38,18 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.6': {
+    version: '0.0.6',
+    whatIsNew: [],
+    fixes: [
+      'Online update (Linux/macOS) no longer requires curl to be installed — it now uses the app’s own bundled runtime, so it works on minimal systems out of the box.',
+      'After an update, the launchers stay runnable (“Run as program” / double-click) on Linux and macOS instead of losing their executable flag.',
+      'Clearer messages if an update can’t be found or downloaded, instead of the window closing with no explanation.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.5': {
     version: '0.0.5',
     whatIsNew: [

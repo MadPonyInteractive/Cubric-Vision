@@ -436,6 +436,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await makeExecutableIfNeeded(updateFromZipTarget);
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'update-runbook.md'), path.join(stageRoot, 'update', 'README.md'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
+  await copyFileEnsured(path.join(TEMPLATE_ROOT, 'fetch-release.cjs'), path.join(stageRoot, 'update', 'fetch-release.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
   // Linux taskbar/dock branding: ship the app icon + first-run installer under
