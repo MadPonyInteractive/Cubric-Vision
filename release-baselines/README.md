@@ -52,14 +52,12 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three refreshed to the **v0.0.11 FULL (portable-stage)** manifests
-  (2026-06-10) from mpi-ci run #22, so the next build (0.0.12) deltas cleanly
-  against 0.0.11. `toVersion: 0.0.11`, `fromVersion: null`,
-  `kind: portable-stage`:
-  - `darwin-arm64.json` — 5499 files
-  - `linux-x64.json` — 5316 files
-  - `win32-x64.json` — 5353 files (renamed from `windows-x64.json` to match the
-    CI matrix `platform: win32`; see the naming note above — MPI-66)
-- This is the first cycle where all three platforms share a current baseline
-  (the old darwin `0.0.3` stale baseline is gone). 0.0.11 is the new
-  fresh-install baseline installed on all three boxes.
+- All three refreshed to the **v1.0.0 FULL (portable-stage)** manifests
+  (2026-06-10) from the 1.0.0 first-public-release build (mpi-ci run #25), so the
+  next build (1.0.1) deltas cleanly against 1.0.0. `toVersion: 1.0.0`,
+  `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 5501 files
+  - `linux-x64.json` — 5321 files
+  - `win32-x64.json` — 5358 files
+- First cycle where the `win32-x64.json` name is correct (MPI-66), so the next
+  Windows delta should finally be minimal instead of a ~390 MB full bundle.

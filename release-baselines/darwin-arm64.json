@@ -5,15 +5,15 @@
   "platform": "darwin",
   "arch": "arm64",
   "fromVersion": null,
-  "toVersion": "0.0.11",
+  "toVersion": "1.0.0",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
   "files": [
     {
       "path": "app/.gitattributes",
-      "size": 401,
-      "sha256": "2d53daef9daa5ef99e83246c98cd6b4a711612357d130c00fa3a2f6745dea70f"
+      "size": 237,
+      "sha256": "d8ae1e7d54f136b8cac4b8b1acdb962b2aed913a8f4665a5ad0d48c33294f393"
     },
     {
       "path": "app/.gitignore",
@@ -676,6 +676,11 @@
       "sha256": "da30680843d07517076ebe6280ffb94042a88c4d49753c28aa2f06364218a5ce"
     },
     {
+      "path": "app/docs/releases/2026-06-10-v0.0.12.md",
+      "size": 1803,
+      "sha256": "1a1e93e3d4f4424d7acc49ecad03b30288ce80a37e4e78904dee27c501d586e2"
+    },
+    {
       "path": "app/docs/releases/2026-06-10-v0.0.6.md",
       "size": 2618,
       "sha256": "ba3781e91f8af9a35c0d107aba94456899c0d69ef5038f1c59393cbc18803579"
@@ -689,6 +694,11 @@
       "path": "app/docs/releases/2026-06-10-v0.0.8.md",
       "size": 1015,
       "sha256": "41a5ade08dec3a39b7b84106c10352a3cb6f70b272c33c9917f448cccf946917"
+    },
+    {
+      "path": "app/docs/releases/2026-06-10-v1.0.0.md",
+      "size": 2813,
+      "sha256": "d4fd54bb9d26383d5ecd0aa1329f7738ed07575a063b56988404818565ed75d7"
     },
     {
       "path": "app/docs/releases/build-experience-log.md",
@@ -1407,13 +1417,13 @@
     },
     {
       "path": "app/js/core/appVersion.js",
-      "size": 787,
-      "sha256": "1ef70a634ab8296f7d5882f2d932a80d945f8c0fe8d989253ad9500e64a4a40b"
+      "size": 786,
+      "sha256": "f44400cb7aa8b1f83601803d948f0a13b13ff09c57514791042a5ab34a2b9343"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "927167253b7ff6e279f03f2c6034386f670bdf8146c7b09ec25807c77d4afef8"
+      "sha256": "5fd86eccb5bb514453fd4f9d355d273ba15671a11755c4a13df7e138984160c2"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -1467,8 +1477,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 9060,
-      "sha256": "f8183641c3b378236842cc0bf386f8654b62de83d1cdb5ebeb675bf910db15dc"
+      "size": 10268,
+      "sha256": "102974b97851438f9492d52067684bfd3efe95b563219e1203898fc43480d763"
     },
     {
       "path": "app/js/events.js",
@@ -1782,8 +1792,8 @@
     },
     {
       "path": "app/node_modules/.package-lock.json",
-      "size": 158528,
-      "sha256": "78b283bf5db30276470ea2fdf61ace71b027bf4a5b3409d65f57fe8e225eaa23"
+      "size": 158527,
+      "sha256": "2fb90b8e18e3f22524ed04165ccc56fb8519a0ab98ed6b81540e68cb9fd0f346"
     },
     {
       "path": "app/node_modules/@derhuerst/http-basic/lib/cache-control-utils.d.ts",
@@ -27227,13 +27237,13 @@
     },
     {
       "path": "app/package-lock.json",
-      "size": 173620,
-      "sha256": "514591d66cad5adae338f0320ebb424894709500d0e3d869362656b5e99427e8"
+      "size": 173618,
+      "sha256": "87cf46dfe21bd370d37de207d542a15cc81ec0b1fb502f880409426578d47443"
     },
     {
       "path": "app/package.json",
-      "size": 2107,
-      "sha256": "f4370cc950f8fc8eff0fab3208eded08b278f45a8c5f58fd85e31e88a21aca21"
+      "size": 2106,
+      "sha256": "f4d54031d11f017aee1dac8f89ff5c8148c0dc0e3a949669a4f44aff0f5655f2"
     },
     {
       "path": "app/README.md",
@@ -27241,9 +27251,24 @@
       "sha256": "36a933babe000980dd4bb7a9dfcc6f51e0aa1f4400edf1cc3df6966ca6d19d61"
     },
     {
+      "path": "app/release-baselines/darwin-arm64.json",
+      "size": 1028589,
+      "sha256": "f23efd95cb65a322d855102c3c8fa5f1bde126ddf648e4725444269af21c505d"
+    },
+    {
+      "path": "app/release-baselines/linux-x64.json",
+      "size": 972847,
+      "sha256": "a57a7d5491e0ad2fb588f8e681a34104ebb0cfb39e5b8adaf2b12342083dc109"
+    },
+    {
       "path": "app/release-baselines/README.md",
-      "size": 2923,
-      "sha256": "8ab7d72878bec8c41c76b03b1891a75fde496d8ab8e982bcf787bc4d0939daee"
+      "size": 3454,
+      "sha256": "c363fac17169a39976f6417eb854ddb0d4dd7d50cf24847eb1c056ad18070341"
+    },
+    {
+      "path": "app/release-baselines/win32-x64.json",
+      "size": 978748,
+      "sha256": "0b68141c7531d8c9887d72e1f66d226532f49d2f0e86987216b2fd65938bd344"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -27416,24 +27441,9 @@
       "sha256": "e4b9cfb5c57e920a496152c98c4072394152e0dc86c4ed10fd92a16a3302291d"
     },
     {
-      "path": "CubricVision.app/Contents/Info.plist",
-      "size": 789,
-      "sha256": "348f6ea4832bf2783f74b531cbe119625bb38eecd0509790b988a6b69d4027cd"
-    },
-    {
-      "path": "CubricVision.app/Contents/MacOS/CubricVision",
-      "size": 1696,
-      "sha256": "9e0a9af49f2367baa9d23b4faa825d9b9a6ad03ca742488bb2ebc1d62aceee87"
-    },
-    {
-      "path": "CubricVision.app/Contents/Resources/icon.icns",
-      "size": 1792939,
-      "sha256": "59da3e946a6859a0d12d610d5563eadd603cd3f6606062bba6bb792c6f702417"
-    },
-    {
       "path": "README.txt",
-      "size": 2330,
-      "sha256": "8126aededaacf32b0ec1c88ae8dd9eeb6ec260ed245f653aa4acb570a3576025"
+      "size": 2435,
+      "sha256": "3222a3003ead5aa39fbb20608273bbf89904a9fd43c7a9758e1a175dfeeaa5f1"
     },
     {
       "path": "resources/cubric/connector-manifest.json",
@@ -27471,7 +27481,7 @@
       "sha256": "7574d3d1d5c224bf5bb60fac625edf348ba7f6b3c7e42d2269b8c7aaef14c1f0"
     },
     {
-      "path": "start-with-terminal.command",
+      "path": "start.command",
       "size": 1288,
       "sha256": "0d425cb31c2b3bf9a59455e6af78039c3a2a219c28f532aec121676c0ca42b4e"
     },
@@ -27492,8 +27502,8 @@
     },
     {
       "path": "update/fetch-release.cjs",
-      "size": 5069,
-      "sha256": "6910ca5dbcd83e04404b6ef449995fa3a0b8994a7ae6334d3e869341969d17c9"
+      "size": 6151,
+      "sha256": "af1eb92c3af1f7ee0ed3b8a4e7717c5c99d929ba78d2e7baabba6068e3817b41"
     },
     {
       "path": "update/README.md",
@@ -27514,16 +27524,15 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-06-10T17:59:38.088Z",
+  "createdAt": "2026-06-10T20:03:36.567Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-macos-arm64-v0.0.11",
+    "rootName": "CubricVision-macos-arm64-v1.0.0",
     "launchers": [
-      "start-with-terminal.command",
-      "CubricVision.app",
+      "start.command",
       "update.command",
       "update-from-zip.command"
     ],
-    "buildHash": "a36b6e1f8262"
+    "buildHash": "330e33db2cdc"
   }
 }
