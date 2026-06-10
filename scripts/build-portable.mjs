@@ -52,7 +52,14 @@ const PLATFORM_CONFIG = {
   },
   darwin: {
     label: 'macos',
-    start: 'start.command',
+    // No-terminal default is the CubricVision.app bundle (double-click = no Terminal,
+    // also gives a Dock icon). `start` points at the terminal/debug variant so the
+    // existing single-file launcher pipeline (stage, chmod, manifest, update bundle)
+    // works unchanged; the .app is staged separately via `appBundle` (it is a
+    // directory tree, not a single file). macOS has no withTerminalStart because the
+    // `.command` IS the terminal variant.
+    start: 'start-with-terminal.command',
+    appBundle: 'CubricVision.app',
     update: 'update.command',
     updateFromZip: 'update-from-zip.command',
     templateDir: 'macos',
@@ -434,6 +441,14 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await makeExecutableIfNeeded(startTarget);
   await makeExecutableIfNeeded(updateTarget);
   await makeExecutableIfNeeded(updateFromZipTarget);
+  // macOS no-terminal default: a CubricVision.app bundle (directory tree, not a
+  // single file). Stage it recursively and make its inner launcher executable.
+  // ditto on the mac runner preserves the exec bit + bundle metadata into the zip.
+  if (config.appBundle) {
+    const appBundleTarget = path.join(stageRoot, config.appBundle);
+    await copyDirEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.appBundle), appBundleTarget);
+    await makeExecutableIfNeeded(path.join(appBundleTarget, 'Contents', 'MacOS', 'CubricVision'));
+  }
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'update-runbook.md'), path.join(stageRoot, 'update', 'README.md'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'fetch-release.cjs'), path.join(stageRoot, 'update', 'fetch-release.cjs'));
@@ -656,9 +671,13 @@ async function createUpdateManifest(stageRoot, opts, config, artifactKind = null
     artifact: {
       kind: artifactKind || (opts.dryRun ? 'dry-run-stage' : 'portable-stage'),
       rootName: path.basename(stageRoot),
-      launchers: config.withTerminalStart
-        ? [config.start, config.withTerminalStart, config.update, config.updateFromZip]
-        : [config.start, config.update, config.updateFromZip],
+      launchers: [
+        config.start,
+        ...(config.withTerminalStart ? [config.withTerminalStart] : []),
+        ...(config.appBundle ? [config.appBundle] : []),
+        config.update,
+        config.updateFromZip,
+      ],
       buildHash: opts.buildHash,
     },
   };
@@ -685,6 +704,18 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
   for (const launcher of bundledLaunchers) {
     await copyFileEnsured(path.join(fullStageRoot, launcher), path.join(updateStageRoot, launcher));
     await makeExecutableIfNeeded(path.join(updateStageRoot, launcher));
+  }
+  // macOS no-terminal default .app is a directory tree; re-stage it into the update
+  // bundle so updates refresh the launcher. The delta path keeps it (alwaysKeep
+  // below includes bundledLaunchers; the .app's files diff like any other tree).
+  if (config.appBundle) {
+    await copyDirEnsured(
+      path.join(fullStageRoot, config.appBundle),
+      path.join(updateStageRoot, config.appBundle),
+    );
+    await makeExecutableIfNeeded(
+      path.join(updateStageRoot, config.appBundle, 'Contents', 'MacOS', 'CubricVision'),
+    );
   }
 
   // Delta: when a previous release's manifest is supplied, prune the freshly

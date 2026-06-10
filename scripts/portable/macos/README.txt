@@ -4,10 +4,15 @@ Cubric Studio Vision - Portable (macOS)
 STARTING THE APP
 ----------------
 
-start.command
-    Double-click to launch the app. On macOS this opens a Terminal window
-    that stays open while the app runs. (The app also writes a full log to
-    logs/app.log.)
+CubricVision.app
+    Double-click to launch the app with NO Terminal window — this is the
+    normal way to start. It also gives Cubric Vision a proper Dock icon.
+    (The app still writes a full log to logs/app.log.)
+
+start-with-terminal.command
+    Same launch, but opens a Terminal window that stays open while the app
+    runs. Use this only if you want to watch the live log output for
+    troubleshooting.
 
 
 FIRST LAUNCH — "cannot be opened" / "is damaged" (macOS Gatekeeper)
@@ -16,15 +21,16 @@ FIRST LAUNCH — "cannot be opened" / "is damaged" (macOS Gatekeeper)
 This build is not signed or notarized (it is open-source and runs in place),
 so on first launch macOS may block it with a security warning. Two ways past it:
 
-  Easiest: right-click (or Control-click) start.command -> Open -> Open.
-  You only need to do this once.
+  Easiest: right-click (or Control-click) CubricVision.app -> Open -> Open.
+  You only need to do this once. (Same trick works on
+  start-with-terminal.command.)
 
   If macOS still refuses, open Terminal, drag this folder onto the window to
   get its path, then run:
       xattr -dr com.apple.quarantine "/path/to/this/folder"
-  Then double-click start.command again.
+  Then double-click CubricVision.app again.
 
-start.command also tries to clear this automatically each time it runs, so the
+Both launchers also try to clear this automatically each time they run, so the
 warning usually appears only on the very first launch.
 
 

@@ -38,6 +38,16 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.11': {
+    version: '0.0.11',
+    whatIsNew: [
+      'macOS: double-click CubricVision.app to launch with no Terminal window, and Cubric Vision now shows a proper Dock icon. A start-with-terminal.command is included if you want to watch the live log.',
+    ],
+    fixes: [],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.10': {
     version: '0.0.10',
     whatIsNew: [],

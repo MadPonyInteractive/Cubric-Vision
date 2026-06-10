@@ -3,3 +3,5 @@
 # updaters staged into Linux/mac artifacts.
 *.sh        text eol=lf
 *.command   text eol=lf
+# The macOS .app bundle launcher is an extensionless shell script — same LF rule.
+scripts/portable/macos/CubricVision.app/Contents/MacOS/CubricVision text eol=lf
