@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "C:\\AI\\Mpi\\Cubric Studio (Website)\\styles\\product.css",
+      "role": "modified",
+      "summary": "Responsive Vision hero CSS for mobile nav, status pill, headline, CTA, and overflow behavior."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.created","at":"2026-06-01T11:19:15Z","actor":"codex","summary":"Created task: Audit and fix Website hero responsiveness."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.moved","from":"todo","to":"doing","at":"2026-06-02T13:39:41Z","actor":"codex","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.updated","at":"2026-06-02T13:39:41Z","actor":"codex","summary":"Set maturity to in-progress for responsive hero implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"files.updated","at":"2026-06-02T13:39:41Z","actor":"codex","summary":"Recorded website product.css as the modified responsive hero file."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"checklist.updated","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Marked implementation complete after user verification."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"validation.updated","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Recorded viewport verification and user approval."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-45","type":"task.moved","from":"doing","to":"done","at":"2026-06-02T13:54:42Z","actor":"codex","summary":"Moved verified responsive hero fix to done."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-45","at":"2026-06-10T13:10:00.000Z","actor":"claude","summary":"Archived to .agents/mpi-kanban/tasks/_archived/MPI-45/ (board done-column cleanup, workspace preserved)"}

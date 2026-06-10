@@ -1,0 +1,30 @@
+{
+    "schema":  "mpi-kanban/task-card/v1",
+    "id":  "MPI-2",
+    "title":  "In-app error reporter - add stage/build GitHub labels",
+    "description":  "Cubric-Vision implementation slice split from the cross-repo Discord/GitHub bug-report workflow card.",
+    "column":  "done",
+    "maturity":  "complete",
+    "status":  "verified",
+    "created_at":  "2026-06-01T06:30:12Z",
+    "updated_at":  "2026-06-01T10:28:02Z",
+    "links":  {
+                  "brief":  "brief.md",
+                  "plan":  "plan.md",
+                  "checklist":  "checklist.md",
+                  "validation":  "validation.md",
+                  "files":  "files.json",
+                  "events":  "events.jsonl",
+                  "handoffs":  "handoffs/",
+                  "research":  "research/"
+              },
+    "tags":  [
+                 "feature",
+                 "telemetry",
+                 "bug-tracking",
+                 "github"
+             ],
+    "priority":  "high",
+    "defaultExpanded":  false,
+    "legacy_column":  "BACKLOG"
+}
