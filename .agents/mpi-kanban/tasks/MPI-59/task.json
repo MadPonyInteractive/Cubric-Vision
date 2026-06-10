@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-59",
-  "title": "History view (Linux only): video entry shows missing video/image link",
-  "description": "On LINUX, a video entry in the group-history list/view shows a 'missing video or image link' (broken media reference / placeholder) — the video media does not resolve. IMPORTANT: this did NOT reproduce on the macOS M4 test (2026-06-10 rentamac) — on Mac the same history re-entry showed the video correctly. So this is LINUX-SPECIFIC, unlike MPI-58 (video zoom, which is cross-platform). Strong candidate: a path/case-sensitivity or media-resolve issue specific to Linux's case-sensitive filesystem (cf. the Video.js->video.js case bug just fixed) OR a poster/thumbnail path that resolves on case-insensitive FS but not Linux. Investigate the video media-resolve path: resolveMediaUrl / extractFilenameFromPath (utils/mediaActions), the poster JPG / thumbnail generation (gallery_video_thumb_pattern), and any hardcoded-case path segment. Check on the Linux box what URL the history entry requests vs what exists on disk. Tested on 0.0.7/0.0.8 Linux. Queued after MPI-8 Mac acceptance. NOT a 1.0.0 blocker per Fabio.",
-  "column": "todo",
+  "title": "History view (Linux): video entry shows missing video/image link",
+  "description": "RESOLVED + VERIFIED on Linux (2026-06-10, 0.0.9 update). ROOT CAUSE was NOT case-sensitivity (the card's original guess) — it was an ffmpeg exec-bit EACCES. Log evidence: `[ffmpegThumb] thumb extract failed ... spawn .../resources/ffmpeg EACCES`. The bundled ffmpeg shipped/updated without the exec bit -> extractVideoThumb threw EACCES -> returned null -> thumbPath never written to the sidecar. Then MpiHistoryList._makeCard fell back to item.filePath (an MP4 URL) as the <img> src -> browser showed a broken-image icon ('missing video/image link'). Why Linux-only: pre-0.0.8 builds shipped ffmpeg non-exec AND had no runtime self-heal; macOS M4 test ran a build where ffmpeg was working. THREE-LAYER FIX (all in 0.0.9): (1) routes->services/ffmpegBinary.js runtime self-heal chmods +x at resolve (landed f168fa5, pre-existing for 0.0.9); (2) scripts/portable/apply-update.cjs restoreLauncherBits now also restores +x on resources/ffmpeg + resources/ffprobe so an update never leaves them non-exec (commit 9708459); (3) js/components/Compounds/MpiHistoryList/MpiHistoryList.js no longer puts a video URL in <img src> when thumbPath is null — shows the --surface-bar grey box instead of a broken icon (commit 685f0c2, from the investigation sub-agent). VERIFIED on real Linux via 0.0.7->0.0.9 update-from-zip + new project + imported video+image opened in history workspace: thumbnail renders, no broken link.",
+  "column": "done",
   "maturity": "idea",
-  "status": "pending",
+  "status": "validated",
   "created_at": "2026-06-10T00:00:00.000Z",
-  "updated_at": "2026-06-10T00:00:00.000Z",
+  "updated_at": "2026-06-10T12:45:00.000Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

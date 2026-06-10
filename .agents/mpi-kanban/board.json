@@ -5,14 +5,14 @@
     "todo": [
       "MPI-4",
       "MPI-50",
-      "MPI-52",
-      "MPI-58",
-      "MPI-59"
+      "MPI-52"
     ],
     "doing": [
+      "MPI-58",
       "MPI-8"
     ],
     "done": [
+      "MPI-59",
       "MPI-49",
       "MPI-54",
       "MPI-57",
