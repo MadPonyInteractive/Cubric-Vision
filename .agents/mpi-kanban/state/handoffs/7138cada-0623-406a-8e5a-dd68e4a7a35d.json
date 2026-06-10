@@ -1,0 +1,130 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7138cada-0623-406a-8e5a-dd68e4a7a35d",
+  "generated_at": "2026-06-10T10:49:27.237Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-8: macOS portable build — rentamac M4 live test + 0.0.8 acceptance build",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Produce the first macOS portable build, verify it on real Apple hardware (rentamac.io cloud Mac), then cut 1.0.0 and build all three platforms as the release.",
+    "status": "in_progress",
+    "summary": "First mac build is being validated LIVE on a rented M4 (rentamac.io, macOS 26.4.1, via DeskIn remote desktop — Fabio drives, Claude relays commands). 7 mac/build bugs found+fixed this session (5 from pre-test audit + 2 launch-blockers found only on hardware: Electron.app symlink-drop and version-display). An ACCEPTANCE 0.0.8 build (ditto symlink fix + real version bump to 0.0.8) is built + byte-verified + staged. Validated on M4 so far: app launches (after manual repair on the pre-ditto build), Apple Silicon detected as vendor 'apple', engine provisions via comfy install --m-series, history workspace works (image+video). REMAINING on the Mac: download the NEW acceptance build fresh, confirm it launches with ZERO manual repair (the ditto acceptance test), run a real generation on MPS, test offline+online update. THEN bump 1.0.0 (GATED on explicit user go)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "VERSIONING POLICY confirmed with Fabio + recorded in memory project_repo_distribution_gating: start 1.0.0; major.minor.patch as release-cadence signal; minor per planned cycle (resets patch to 0); patch for ANY fix from ANY source (Patreon/Discord/GitHub/preview/public/Fabio); public release = latest tested patch of the cycle. Resolves the old semver ambiguity (no per-tier digit bump).",
+      "5 mac bugs found by pre-test audit (3 sub-agents + source verify) + fixed: (1) --cpu launch override -> Apple-Silicon detect (vendor 'apple') + no mode flag (MPS) + --use-pytorch-cross-attention + PYTORCH_ENABLE_MPS_FALLBACK=1 + drop --fast-deps on --m-series; (2) ZIP exec-bit drop; (3) Gatekeeper quarantine strip in start.command + update-from-zip.command + README; (4) ffprobe staging key typo ffmpegRelByArch->ffprobeRelByArch; (5) ffmpeg/ffprobe shipped non-exec -> added to isExecutableEntry + runtime self-heal in services/ffmpegBinary.js. Plus generated build/icon.icns. Commits b6d46bf, f168fa5.",
+      "fix(video) case-sensitivity: MpiVideoViewer imported utils/Video.js (capital) but file is utils/video.js -> 404 on case-sensitive Linux -> history view threw for ANY card (image+video). Fixed commit 8879a34. Swept whole js/ tree (139 files): only mismatch. VALIDATED on Linux (history now opens) AND Mac.",
+      "RENTAMAC M4 TEST (macOS 26.4.1, DeskIn): VALIDATED on hardware -> app launches; Apple Silicon detected (gpu-detect 'vendor apple'); mac git branch shows xcode-select (not apt) + macOS CLT installer dialog; engine install COMPLETED end-to-end (comfy install --m-series, ComfyUI 0.19.3, custom nodes, pip deps, 'Engine provisioning complete'); history workspace works (image+video) on Mac.",
+      "TWO launch-blockers found ONLY on hardware + fixed (commit adca684): (6) macOS .app SYMLINK-DROP — hand-rolled zip/tar listFiles skips isSymbolicLink() so every framework/helper symlink was dropped -> dyld 'Library not loaded: @rpath/Electron Framework.framework/Electron Framework' -> abort. Fixed by routing darwin .zip through `ditto` (preserves symlinks+exec bits+metadata, perms survive Archive Utility/Safari). (7) VERSION DISPLAY — appVersion.js + package.json were hardcoded 0.0.7; CI -f version only names the artifact, does NOT patch appVersion.js. Bumped both to 0.0.8 + added 0.0.8 releaseNotes entry.",
+      "ACCEPTANCE 0.0.8 build (run 27270641690, all 3 platforms success) byte-verified: ditto PRESERVED framework symlinks (Electron Framework -> 35B symlink, Versions/Current -> 1B symlink for all 4 frameworks); APP_VERSION='0.0.8' + package.json 0.0.8 in shipped zip. Staged at D:/CubricStudio/Vision/Builds/mac-0.0.8-acceptance/ (full 364MB + update bundle 29MB).",
+      "Logged MPI-58 (video zoom fails in history, cross-platform) + MPI-59 (Linux-only missing video/image link in history) to the board. Committed f59db4a. Fabio has an external agent working on MPI-58."
+    ],
+    "pending": [
+      "ON THE RENTED MAC (DeskIn, Fabio drives — STILL ACTIVE this session, $15/day): download the NEW acceptance build CubricVision-macos-arm64-v0.0.8.zip from D:/CubricStudio/Vision/Builds/mac-0.0.8-acceptance/ via Google Drive, extract via Safari/Finder double-click (real-user path), and confirm it LAUNCHES WITH ZERO MANUAL REPAIR — no xattr, no chmod, no symlink recreation. This is the ditto-fix acceptance test. The PREVIOUS build needed: xattr -dr com.apple.quarantine . ; chmod +x *.command + all */Contents/MacOS/* + uv/uv + resources/ffmpeg+ffprobe ; recreate framework symlinks. If the new one needs ANY of that, ditto did not fully fix it.",
+      "REAL GENERATION on MPS (Fix #1 launch half — last unproven mac fix): Fabio was installing a model to a separate (custom) folder. Run a txt2img generation; watch the Mac Terminal for 'Apple Silicon — starting ComfyUI with Metal/MPS.' + ComfyUI 'Device: mps' (NOT cpu) + fast (not glacial). Also validates the additive/custom-models-folder path (watch for a false 'no models' popup). If image is black, that's the known FP16-VAE-on-MPS issue (note, not a blocker; --fp32-vae would fix).",
+      "MAC UPDATE FLOW: offline update-from-zip.command applying CubricVision-macos-arm64-update-v0.0.9.zip (need to build a 0.0.9), then online update.command (needs repo PUBLIC + 0.0.9 as non-prerelease 'latest'; Fabio agreed 'Drive now, public later' — flip public only for the online test). Confirm version actually moves 0.0.8->0.0.9 (the version-bump fix makes this meaningful now), launchers stay executable, data preserved.",
+      "BUMP to 1.0.0 — GATED ON EXPLICIT USER GO (Fabio: do NOT bump to 1.0.0 before talking to him). Run mpi-version-bump (it patches appVersion.js + package.json + operation registry + releaseNotes + pre-release tests) — do NOT just pass -f version to CI (that was bug #7). Refresh release-baselines to the 0.0.8 FULL manifests first; refresh the STALE darwin-arm64 baseline (0.0.3) to the first real mac full manifest before any mac delta.",
+      "BUILD all three platforms for 1.0.0 via mpi-ci dispatch (gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=1.0.0). Download all three.",
+      "DELETE throwaway test releases when done: v0.0.7 (handoff carryover) + any v0.0.8/v0.0.9 test tags. gh release delete <tag> --repo MadPonyInteractive/Cubric-Vision --yes ; git push origin :refs/tags/<tag>.",
+      "FOLLOW-UP BUGS (queued, NOT 1.0.0 blockers per Fabio): MPI-58 video zoom in history (cross-platform, MpiVideoViewer vs MpiCanvasViewer zoom; Fabio's agent is ON this); MPI-59 Linux-only missing video/image link in history (likely another case/path resolve issue — needs Linux to verify).",
+      "DEFERRED: success-path 'Press Enter to close' pause in update.sh/update.command; document the delta/--from-manifest/baseline-refresh flow in mpi-version-bump + portable-distribution-contract.md; Linux 'Run as program' (right-click) double-click launch still not working (separate exec-bit/.desktop issue, observed this session)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-8",
+    "title": "Cross-platform portable distribution (umbrella)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-8/",
+    "links": {
+      "plan": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-49/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-8/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "build", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "memory project_repo_distribution_gating updated with confirmed versioning policy",
+      "memory project_macos_cloud_test created (rentamac supersedes 'untestable')",
+      "memory project_macos_build_fixes updated with all 7 fixes + the rentamac M4 results (validated-on-hardware list + the 2 hardware-only bugs)",
+      "memory project_import_depth_gotcha extended with the case-sensitivity sibling gotcha + the sweep procedure",
+      "MEMORY.md index updated with the two new memory pointers",
+      "rentamac on-Mac test checklist at .agents/mpi-kanban/tasks/MPI-8/rentamac-test-checklist.md",
+      "MPI-58 + MPI-59 task cards created"
+    ],
+    "pending": [
+      "Record final rentamac results (clean-launch PASS/FAIL, generation MPS PASS/FAIL, update PASS/FAIL) in .agents/mpi-kanban/tasks/MPI-49/validation.md (mac section) + flip each fix UNVERIFIED->PASS in memory project_macos_build_fixes once confirmed on the acceptance build.",
+      "After 1.0.0: document the version-bump-before-build lesson (bug #7) so -f version is never mistaken for a real bump."
+    ]
+  },
+  "next_action": {
+    "description": "RESUME THE LIVE RENTAMAC TEST (Fabio is driving the rented M4 via DeskIn; SSH was beta/timing out so use DeskIn remote desktop — Fabio runs commands in the Mac Terminal and pastes output; Claude relays exact commands). STEP 1: get the NEW acceptance build onto the Mac via Google Drive (CubricVision-macos-arm64-v0.0.8.zip from D:/CubricStudio/Vision/Builds/mac-0.0.8-acceptance/) and confirm a fresh Safari-download + Finder-double-click LAUNCHES WITH ZERO MANUAL REPAIR — that is the ditto-symlink acceptance test (the prior build needed manual xattr+chmod+symlink-recreate to launch). STEP 2: run a real generation on MPS (model downloading to a custom folder) — watch the Mac Terminal for the Metal/MPS log line + Device: mps + fast generation. STEP 3: test the update flow (build 0.0.9 first; offline then online). Do NOT bump 1.0.0 until Fabio gives explicit go. Keep MPI-58/MPI-59 queued (Fabio's agent is on MPI-58).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "macOS is now CLOUD-TESTABLE via rentamac.io (Mac Mini M4, $15/day) — supersedes the prior 'untestable, depend on users' premise. Target arm64 ONLY (no Intel/x64 mac artifact). Workflow: Fabio drives the Mac (DeskIn remote desktop — SSH beta timed out), Claude relays commands, Fabio pastes output.",
+      "macOS .app bundles REQUIRE symlinks (dyld resolves @rpath via them); hand-rolled zip/tar drop them -> the bundle cannot launch. Fixed by archiving darwin with `ditto` on the mac runner. This is the single most important fix this session — source review + zip byte-checks called the zip 'correct' yet it would not run.",
+      "CI `-f version=X` ONLY names the artifact + stamps buildInfo.js/update-manifest; it does NOT patch appVersion.js/package.json. The DISPLAYED app version comes from js/core/appVersion.js. ALWAYS run mpi-version-bump (or hand-bump appVersion.js + package.json + releaseNotes.js) BEFORE building.",
+      "Versioning policy (confirmed Fabio 2026-06-10): start 1.0.0; minor per planned release cycle (resets patch to 0); patch for any bug fix from any source; public release = latest tested patch. No per-tier digit bump.",
+      "1.0.0 bump is HARD-GATED on explicit user go (Fabio said do not bump before talking to him)."
+    ],
+    "constraints": [
+      "Never touch the backend ResumableDownloader pause/abort path.",
+      "Always dispatch mpi-ci with -f ref=master explicitly (CI default is main).",
+      "Online update needs the repo PUBLIC + a non-prerelease 'latest' release (updater scripts have no auth; /releases/latest ignores prereleases). Gated windows use Discord/Patreon offline zips or a temporary public toggle ('Drive now, public later' per Fabio).",
+      "Generation-tied checks need a box that can generate — the rented M4 (this session) or Windows; the GPU-less Linux laptop cannot.",
+      "Caveman comms mode active for chat (code/commits/security written normal).",
+      "macOS Archive Utility / Safari auto-extract STRIPS exec bits + sets com.apple.quarantine even when the zip's central dir is correct — ditto-made zips survive this; plain hand-rolled zips do not.",
+      "Fabio has an external agent on MPI-58 — brief any agent touching js/components/ with components.md (mpi-brief-rule components) + the Critical Rules Snapshot."
+    ],
+    "files_modified": [
+      "routes/comfy.js",
+      "routes/engine.js",
+      "routes/platformEngine.js",
+      "scripts/build-portable.mjs",
+      "scripts/portable/macos/start.command",
+      "scripts/portable/macos/update-from-zip.command",
+      "scripts/portable/macos/README.txt",
+      "services/ffmpegBinary.js",
+      "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+      "js/core/appVersion.js",
+      "package.json",
+      "js/data/releaseNotes.js",
+      "build/icon.icns"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-8/rentamac-test-checklist.md (the on-Mac test steps)",
+      "memory project_macos_build_fixes (all 7 fixes + rentamac results + per-fix on-Mac test)",
+      "memory project_macos_cloud_test (rentamac workflow + arm64-only)",
+      "memory project_repo_distribution_gating (confirmed versioning policy)",
+      "scripts/build-portable.mjs (createMacZipWithDitto + isExecutableEntry + createZipFromDir)",
+      ".agents/mpi-kanban/tasks/MPI-49/validation.md (update-flow result; add the mac section here)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["portable-distribution", "updater", "macos", "versioning", "comfy_engine"]
+  },
+  "rules_active": [
+    "docs/versioning.md",
+    "docs/releases/portable-distribution-contract.md",
+    "docs/releases/build-experience-log.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-10T10:49:27.237Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/7138cada-0623-406a-8e5a-dd68e4a7a35d.json and use mpi-continue. You are resuming MPI-8 (cross-platform portable distribution). CONTEXT: the first macOS build is being validated LIVE on a rented Apple M4 (rentamac.io, macOS 26.4.1) via DeskIn remote desktop — Fabio drives the Mac and pastes Terminal output, you relay exact commands (SSH was beta and timed out; use DeskIn). This session found+fixed 7 mac/build bugs. The 5 from a pre-test audit: (1) every Mac launch forced --cpu instead of Metal/MPS, (2) ZIP exec bits dropped, (3) Gatekeeper quarantine unhandled, (4) ffprobe staging key typo, (5) ffmpeg/ffprobe shipped non-executable; plus a case-sensitivity import bug (MpiVideoViewer imported utils/Video.js but the file is utils/video.js — broke the history view on Linux for any card). Then TWO launch-blockers found ONLY on the real Mac: (6) the hand-rolled zip writer DROPPED every symlink in Electron.app (listFiles skips isSymbolicLink) so dyld failed 'Library not loaded: @rpath/Electron Framework.framework/Electron Framework' and the app aborted — fixed by archiving darwin .zip with `ditto` on the mac runner (preserves symlinks + exec bits + metadata, and perms survive Safari/Archive-Utility extract); and (7) appVersion.js + package.json were still 0.0.7 (CI -f version only names the artifact, it does NOT patch the displayed version) — bumped both to 0.0.8 + added a 0.0.8 releaseNotes entry. An ACCEPTANCE 0.0.8 build (run 27270641690) is built, byte-verified (ditto preserved the framework symlinks; APP_VERSION=0.0.8 in the shipped zip), and staged at D:/CubricStudio/Vision/Builds/mac-0.0.8-acceptance/. ALREADY VALIDATED on the M4: app launches (the pre-ditto build only after manual xattr+chmod+symlink repair), Apple Silicon detected as vendor 'apple', mac git branch shows xcode-select (not apt), engine install completed via comfy install --m-series, history workspace works for image+video. NEXT: (1) get the NEW acceptance build onto the Mac via Google Drive and confirm a fresh Safari-download + Finder-double-click LAUNCHES WITH ZERO MANUAL REPAIR (the ditto acceptance test). (2) Run a real generation and confirm it uses MPS (look for 'Apple Silicon — starting ComfyUI with Metal/MPS.' + Device: mps, fast not glacial) — Fabio is downloading a model to a custom folder, so also watch the additive-models path. (3) Test the update flow: build a 0.0.9, run offline update-from-zip.command then online update.command (online needs repo PUBLIC + 0.0.9 as 'latest'; Fabio agreed 'Drive now, public later'). (4) THEN bump 1.0.0 — but ONLY after Fabio gives explicit go (hard rule), and via mpi-version-bump, never via -f version alone. Constraints: never touch the backend ResumableDownloader; dispatch mpi-ci with -f ref=master; the rented M4 costs $15/day so prioritize the Mac tests while it is up. Two follow-up bugs are queued and are NOT 1.0.0 blockers: MPI-58 (video zoom fails in history, cross-platform — Fabio has an agent on it) and MPI-59 (Linux-only missing video/image link in history). master is clean and pushed (HEAD f59db4a)."
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-63",
+  "title": "macOS no-terminal launcher: ship CubricVision.app (no Terminal) + start-with-terminal.command variant",
+  "description": "macOS portable currently ships only start.command, which ALWAYS opens a Terminal window. Windows (start.vbs) and Linux (detached start.sh) both have a no-terminal default + a *-with-terminal variant; macOS does not. Fix: ship a minimal CubricVision.app bundle as the no-terminal default (double-click = no Terminal, also fixes the Dock icon via CFBundleIconFile) and rename the current start.command to start-with-terminal.command as the debug variant. The .app's Contents/MacOS/CubricVision launcher reuses start.command's body (quarantine strip + CUBRIC_* env exports + bundled Electron exec) but resolves the portable root 3 levels up from $0 (the .app sits at portable root). Build wiring: ditto on the CI mac runner already preserves the .app's symlinks + exec bits through zip/Safari-extract (no archive-writer change). Add appBundle + withTerminalStart to PLATFORM_CONFIG.darwin and dir-aware staging (copyDirEnsured + chmod inner script) in BOTH stagePortableSkeleton and the update-bundle launcher loop. Ships in 0.0.11 (new baseline). icon.icns available at build/icon.icns + media/icons/cubric-vision.icns. Verify on M4: double-click launches with NO Terminal; start-with-terminal.command still works; Dock shows the Cubric icon.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "0.0.11 baseline: macOS no-terminal .app launcher",
+  "created_at": "2026-06-10T16:40:00.000Z",
+  "updated_at": "2026-06-10T16:40:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

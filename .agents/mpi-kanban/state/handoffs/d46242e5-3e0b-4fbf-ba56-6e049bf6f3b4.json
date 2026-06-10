@@ -1,0 +1,134 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d46242e5-3e0b-4fbf-ba56-6e049bf6f3b4",
+  "generated_at": "2026-06-10T16:38:49Z",
+  "from_session": null,
+  "to_role": "orchestrator",
+  "status": "open",
+  "session": {
+    "name": "RunPod remote Cubric engine brainstorm",
+    "branch": "unknown - git state intentionally not checked during handoff"
+  },
+  "goal": {
+    "original": "Brainstorm whether Cubric Vision should support RunPod so users without strong local GPUs can run the Comfy engine remotely, using user-provided RunPod credentials rather than a Cubric auth system.",
+    "status": "in_progress",
+    "summary": "Initial investigation found that a generic remote ComfyUI URL is not sufficient because Cubric requires specific ComfyUI versions, custom nodes, workflows, lifecycle control, and reliable video support. The current direction is a Cubric-managed RunPod Pod using an approved Cubric template, persistent network volume, user-selected GPU, and app-managed start/stop lifecycle."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Read project routing docs, ComfyUI docs/rules, project knowledge index, and relevant controller/executor/settings code.",
+      "Identified the existing execution choke point: generationService -> commandExecutor -> ComfyUIController.runWorkflow.",
+      "Checked current RunPod docs for Pods, templates, pod create/start/stop, exposed ports, and storage/network volumes.",
+      "Revised the design away from arbitrary remote ComfyUI endpoints toward a Cubric-owned remote engine template."
+    ],
+    "pending": [
+      "Continue investigation of RunPod templates, network volume behavior across GPU changes, API lifecycle, secure transport/auth, and template versioning.",
+      "Investigate OneTrainer's RunPod integration as a proven open-source reference if available locally or on GitHub.",
+      "Decide whether the remote service should proxy native ComfyUI endpoints or expose a Cubric wrapper API with token auth and compatibility checks.",
+      "After design approval, create a JSON board idea task, then create a plan."
+    ]
+  },
+  "task_card": {
+    "id": null,
+    "title": null,
+    "column": null,
+    "workspace": null,
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue brainstorm",
+    "investigate RunPod docs and OneTrainer reference",
+    "propose design alternatives",
+    "create board task only after user approves design direction"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Captured the revised product constraints and current investigation findings in this handoff.",
+      "No code files were modified during the brainstorm."
+    ],
+    "pending": [
+      "If the design is approved, use mpi-brainstorm's board-capture step before asking whether to create a plan.",
+      "Consider preserving durable RunPod design decisions in project memory only after user approval or after implementation decisions are settled."
+    ]
+  },
+  "next_action": {
+    "description": "Resume the brainstorm by deepening the RunPod investigation around Cubric-owned templates, network volumes, GPU/PyTorch compatibility gating, secure connection options including HTTP proxy vs SSH/tunnel, and OneTrainer's implementation pattern.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Generic remote ComfyUI URL is not an acceptable v1 because Cubric owns specific ComfyUI version, custom nodes, workflows, and lifecycle requirements.",
+      "The preferred v1 direction is Cubric-managed RunPod Pods created from a hidden approved Cubric template; the user supplies a RunPod API key and selects a GPU.",
+      "Cubric must start/create the remote service before generation and stop/delete the Pod on app quit so the user does not keep paying for GPU time.",
+      "Persistent storage should be based on RunPod network volumes so models/custom nodes/cache survive Pod deletion and later GPU/POD changes.",
+      "Video support is a primary driver, so an image-only remote MVP is not useful for this feature."
+    ],
+    "constraints": [
+      "User does not want a Cubric auth system; user-provided RunPod API key is acceptable.",
+      "Template is hidden from normal UX; Cubric uses an approved/community template in the background when talking to RunPod.",
+      "Remote engine must match Cubric's ComfyUI version, custom nodes, workflow requirements, and likely workflow bundle/version manifest.",
+      "PyTorch/CUDA/GPU compatibility is a core design issue: a volume initialized for one GPU generation may not be compatible with another. The app likely needs to remember the installed torch/CUDA profile and gate later GPU choices with clear feedback.",
+      "Need investigate whether RunPod HTTP proxy is acceptable with auth or whether SSH/tunneling is safer/needed.",
+      "RunPod docs consulted during initial session: templates overview, Pod create/start/stop API, storage types/network volumes, exposed ports, and serverless request model. Prefer primary RunPod docs in the next session.",
+      "OneTrainer is a user-cited proven reference for similar RunPod automation; user believes it may be open source and may be installed locally."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/state/handoffs/d46242e5-3e0b-4fbf-ba56-6e049bf6f3b4.json",
+      ".agents/mpi-kanban/state/index.json",
+      "docs/handoffs/2026-06-10-16-38-runpod-remote-engine-brainstorm.json"
+    ],
+    "files_to_read_first": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/PROJECT.md",
+      ".claude/rules/dos_and_donts.md",
+      "docs/comfy.md",
+      ".claude/rules/comfy_engine.md",
+      ".claude/rules/comfy_injection.md",
+      ".agents/mpi-kanban/project-profile.md",
+      ".agents/mpi-kanban/project-knowledge-index.md",
+      "js/services/comfyController.js",
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+      "routes/comfy.js",
+      "routes/engine.js",
+      "routes/platformEngine.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI engine / backend / models",
+      "ComfyUI workflow injection",
+      "Downloads",
+      "Versioning & migrations",
+      "Application state"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-10T16:38:49Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d46242e5-3e0b-4fbf-ba56-6e049bf6f3b4.json and use mpi-continue to continue the RunPod remote Cubric engine brainstorm. Continue from the revised direction: Cubric-managed RunPod Pod from an approved hidden template, user API key, GPU selection, network volume persistence, app-managed start/stop on launch/quit, PyTorch/CUDA compatibility gating, secure connection choice, and OneTrainer as a reference to investigate."
+}

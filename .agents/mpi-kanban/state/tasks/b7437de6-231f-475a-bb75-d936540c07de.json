@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/coordination-task/v1",
+  "id": "b7437de6-231f-475a-bb75-d936540c07de",
+  "title": "MPI-60 Apple Silicon memory gauge implementation",
+  "status": "needs_verification",
+  "task_card": "MPI-60",
+  "owner_session": ".agents/mpi-kanban/state/sessions/cd592a23-ba1c-4a03-af69-c3a36066ee15.json",
+  "plan": ".agents/mpi-kanban/tasks/MPI-60/plan.md",
+  "heartbeat_at": "2026-06-10T12:21:36Z",
+  "allowed_actions": ["edit", "verify", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-06-10T12:21:36Z",
+      "event": "task_attached",
+      "summary": "Attached coordination task to MPI-60."
+    },
+    {
+      "at": "2026-06-10T12:32:53Z",
+      "event": "implementation_ready_for_validation",
+      "summary": "MPI-60 is ready for user validation on Apple Silicon."
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "7142a5b2-aa95-447e-a73d-dc232c005d12",
+  "title": "MPI-58 video history zoom",
+  "status": "needs_verification",
+  "task_card": "MPI-58",
+  "plan": ".agents/mpi-kanban/tasks/MPI-58/plan.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d55dc677-efc8-4ec8-a588-acd8c84d1f87.json",
+  "file_claims": [
+    ".agents/mpi-kanban/state/files/21c1cab6-31ae-4aca-96a0-172f57b012ab.json",
+    ".agents/mpi-kanban/state/files/2417afd7-1de7-4279-b432-d7e7ad933129.json"
+  ],
+  "allowed_actions": ["coordinate", "claim_files", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-06-10T10:51:16Z",
+      "event": "task_started"
+    },
+    {
+      "at": "2026-06-10T11:08:26Z",
+      "event": "implementation_ready_for_validation"
+    }
+  ]
+}

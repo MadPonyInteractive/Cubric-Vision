@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "8e12ce71-28d3-47f9-a93a-374b811fb7d2",
+  "path": "js/services/generationService.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/cd592a23-ba1c-4a03-af69-c3a36066ee15.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/b7437de6-231f-475a-bb75-d936540c07de.json",
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-10T12:21:36Z",
+  "allowed_actions": ["edit", "verify"],
+  "recent_events": [
+    {
+      "at": "2026-06-10T12:21:36Z",
+      "event": "claimed_for_generation_timing_display"
+    },
+    {
+      "at": "2026-06-10T12:32:53Z",
+      "event": "implementation_ready_for_validation"
+    }
+  ]
+}

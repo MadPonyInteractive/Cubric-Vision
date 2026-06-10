@@ -1,0 +1,7 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"task.moved","at":"2026-06-10T12:21:36Z","actor":"codex","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"task.updated","at":"2026-06-10T12:21:36Z","actor":"codex","summary":"Set active implementation session."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"checklist.updated","at":"2026-06-10T12:21:36Z","actor":"codex","summary":"Created compact implementation checklist."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"checklist.item_checked","at":"2026-06-10T12:32:53Z","actor":"codex","summary":"Implementation complete; user validation pending."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"validation.updated","at":"2026-06-10T12:32:53Z","actor":"codex","summary":"Recorded validation expectations for Apple Silicon memory, progress, and elapsed-time behavior."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"task.updated","at":"2026-06-10T12:32:53Z","actor":"codex","summary":"Moved task maturity to validating for next version-bump validation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-60","type":"task.moved","at":"2026-06-10T16:25:00.000Z","actor":"claude","from":"doing","to":"done","summary":"MPI-60 Apple VRAM-hide + status progress + duration + log-spam validated on M4. Closed."}

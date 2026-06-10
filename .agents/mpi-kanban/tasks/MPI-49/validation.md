@@ -316,3 +316,42 @@ arm64; Fabio drove via DeskIn, Claude relayed). Covers 0.0.8 fresh install +
 
 macOS offline acceptance (fresh install + offline update) is COMPLETE and PASSING.
 Online update on Mac remains the one untested updater path.
+
+---
+
+## 0.0.10 patched rebuild — MPI-60 + MPI-62 on-hardware PASS (2026-06-10)
+
+Rebuilt 0.0.10 in place (no bump; 0.0.10 unreleased) via mpi-ci run #21
+(27288883696) from master a2d9804 — includes 523c938 (version-first folder) +
+0484449 (VRAM-hide/spam). NOTE: an earlier rebuild (run #20, 13:20Z) was STALE —
+it predated 523c938 by 2.5h and still wrapped the long
+`CubricVision-macos-arm64-update-v0.0.10/` folder. Run #21 is the correct build.
+
+### PASS — MPI-62 folder-direct offline update (version-first folder)
+- Mac + Linux run-#21 update zips byte-verified: top level is a SINGLE short
+  `CubricVision-v0.0.10/` folder; the zip FILENAME stays long
+  (`CubricVision-macos-arm64-update-v0.0.10.zip`) so the updater asset regex
+  still matches. Both halves of the fix shipped.
+- ON THE M4: Safari auto-extracted the zip to a folder named **`CubricVision-v0.0.10`**
+  — short, full version visible, NOT truncated (the old long name truncated to
+  `...update-v0`). Pointed the installed `update-from-zip.command` at the
+  extracted FOLDER directly (no `ditto` re-zip):
+  ```
+  ./update-from-zip.command ./CubricVision-v0.0.10
+  Applied Cubric Vision update to 0.0.10.
+  ```
+  Rollback saved under `.../update/rollback/2026-06-10T16-21-35-558Z`. Installed
+  applier (folder-accept, cbe2f22) consumed the directory directly — no re-zip.
+  **MPI-62 fully validated: folder-accept (a)(b) + short version-first name (c).**
+
+### PASS — MPI-60 Apple VRAM gauge hide + status progress + duration
+- M4 status bar now shows ONLY the RAM gauge (e.g. 6.2/16 GB); the broken
+  `0.0 / 0 GB` unified-VRAM row is hidden (vendor === 'apple'). CSS
+  `.mpi-mem-monitor__item[hidden]{display:none}` confirmed effective.
+- gpu-detect cache log spam gone. Status-bar progress + generation duration
+  confirmed on hardware earlier this session.
+
+### MPI-61 — fp32-vae REVERT settled; proper fix DEFERRED
+- The fp32-vae revert is final (see FINDINGS above). The card's remaining work
+  (per-workflow VAE-node precision fix for fp16 banding on MPS) is explicitly
+  scoped as a LATER bump, NOT 1.0.0 — backlog, not closeable as shipped.

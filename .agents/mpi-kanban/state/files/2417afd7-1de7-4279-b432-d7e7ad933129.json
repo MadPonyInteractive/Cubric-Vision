@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "2417afd7-1de7-4279-b432-d7e7ad933129",
+  "path": "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d55dc677-efc8-4ec8-a588-acd8c84d1f87.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/7142a5b2-aa95-447e-a73d-dc232c005d12.json",
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-10T11:08:26Z",
+  "allowed_actions": ["edit", "verify"],
+  "recent_events": [
+    {
+      "at": "2026-06-10T10:51:16Z",
+      "event": "claimed_for_video_zoom_css"
+    },
+    {
+      "at": "2026-06-10T11:08:26Z",
+      "event": "implementation_ready_for_mac_linux_validation"
+    }
+  ]
+}

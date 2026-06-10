@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-61","type":"task.moved","at":"2026-06-10T16:25:00.000Z","actor":"claude","from":"doing","to":"done","summary":"MPI-61 closed: fp32-vae reverted; no global VAE flags (they stomp per-workflow authored precision). VAE precision is authored per-workflow already; nothing further to build."}

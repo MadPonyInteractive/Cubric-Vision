@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/system.js",
+    "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js",
+    "js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css",
+    "js/services/commandExecutor.js",
+    "js/services/generationService.js",
+    "js/shell/statusBar.js"
+  ]
+}

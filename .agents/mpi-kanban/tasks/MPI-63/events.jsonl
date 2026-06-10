@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"task.created","at":"2026-06-10T16:40:00.000Z","actor":"claude","summary":"macOS no-terminal .app launcher for 0.0.11 baseline."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"task.moved","at":"2026-06-10T16:40:00.000Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"validation.updated","at":"2026-06-10T17:00:00.000Z","actor":"claude","summary":"Local verification PASS (dry-run stage: .app in full+update bundles, manifest correct). On-hardware test pending 0.0.11 build."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"checklist.updated","at":"2026-06-10T17:00:00.000Z","actor":"claude","summary":"5/6 done; only on-M4 launch test remains."}
