@@ -5,7 +5,7 @@
   "platform": "linux",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "0.0.5",
+  "toVersion": "0.0.6",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
@@ -654,6 +654,11 @@
       "path": "app/docs/releases/2026-06-09-v0.0.5.md",
       "size": 2935,
       "sha256": "ac6caf6f5f76c7b65296699342e604a45c6d0d4e606e0f7a8f7981dde7f61ee1"
+    },
+    {
+      "path": "app/docs/releases/2026-06-10-v0.0.6.md",
+      "size": 2618,
+      "sha256": "ba3781e91f8af9a35c0d107aba94456899c0d69ef5038f1c59393cbc18803579"
     },
     {
       "path": "app/docs/releases/build-experience-log.md",
@@ -1373,12 +1378,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 786,
-      "sha256": "99d47992b18d2602a429670aeeb4e70a84b7f177c529d5ca017744ed7a89bc76"
+      "sha256": "cdc4f66c5175edb3364399af365e88be48d6e672de8e3442e3ec4c476c647fa5"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "bbe3707080378af962035d10fe1b06a45dce55301e6d7bf0ff6a45c458fb8987"
+      "sha256": "14afe9710f7a64bb59bb213cac92b7a49b246290cf36806628b8cec33b4776c3"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -1432,8 +1437,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 6572,
-      "sha256": "71319af00bd3dbb011a288b23fd3d3f8770498b3dde8c7ed02cbcc7cc88f8270"
+      "size": 7170,
+      "sha256": "a3c1d667a83dc752dfb0ae1c769c191397064a33ad77c8d22d87e7332d7cb4c8"
     },
     {
       "path": "app/js/events.js",
@@ -26283,7 +26288,7 @@
     {
       "path": "app/package.json",
       "size": 2044,
-      "sha256": "da99997ae30bbb49fa98b4114fb92a3302ebb85328eff3198a23537c008734ef"
+      "sha256": "93ac8ec5a0a693bcbbcca6ef0ce916592156a198891aa5ae4218576531f0f410"
     },
     {
       "path": "app/README.md",
@@ -26297,18 +26302,18 @@
     },
     {
       "path": "app/release-baselines/linux-x64.json",
-      "size": 970842,
-      "sha256": "2c84732158a9c6d3c34c3a590ff34ad7669fd1e87bec0d00b2f8e25692184b92"
+      "size": 971973,
+      "sha256": "a3e69df59823b5eb10d44433fbe7bc264b477bb96e7a668f67f418023dbeaf5d"
     },
     {
       "path": "app/release-baselines/README.md",
-      "size": 2580,
-      "sha256": "72a77630bb87e3f98459f35a6bfc674a735c07e380518b34484a41eece682603"
+      "size": 2583,
+      "sha256": "9528a2fb82022411dcd35bdf958908ee5d371afd98757bd1886f87126cc628b7"
     },
     {
       "path": "app/release-baselines/windows-x64.json",
-      "size": 977094,
-      "sha256": "06a7081b32ad8e4163aea0865ebc40452d1bee79f8c0f7260c59d46f1912a88e"
+      "size": 978225,
+      "sha256": "35fc869cd2ac27daafbc1d00a37bb02dc39d8c6761bafbb9ba660eb8d6fc6075"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -26542,18 +26547,23 @@
     },
     {
       "path": "update-from-zip.sh",
-      "size": 946,
-      "sha256": "ef9dd0f2080909245696f5f75878bd1983c1bfc0c88b0283c56438401aa902c8"
+      "size": 1512,
+      "sha256": "0bc3c15063f1a57a69aa9d0212f9276c646e54e1bde771bcdcbaea854794a1a3"
     },
     {
       "path": "update.sh",
-      "size": 1056,
-      "sha256": "2ac14ec9f51868ea642181db8f09b8bde71e97c703a9a33443e62e6c290fd72f"
+      "size": 2233,
+      "sha256": "ecc49fe873d3273acf0679b016836899b599ba3109e0f6ec953746436fd208c2"
     },
     {
       "path": "update/apply-update.cjs",
-      "size": 6954,
-      "sha256": "2eff3bb0373007c05dfc3351e49fb2cfa721617aa306051d2011a244506504c5"
+      "size": 8357,
+      "sha256": "180331ce175ed771f3c11f644063e2a6c5724ac47769363797f6a5e299f63961"
+    },
+    {
+      "path": "update/fetch-release.cjs",
+      "size": 5069,
+      "sha256": "6910ca5dbcd83e04404b6ef449995fa3a0b8994a7ae6334d3e869341969d17c9"
     },
     {
       "path": "update/README.md",
@@ -26574,16 +26584,16 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-06-09T20:44:55.015Z",
+  "createdAt": "2026-06-10T05:43:00.066Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-linux-x64-v0.0.5",
+    "rootName": "CubricVision-linux-x64-v0.0.6",
     "launchers": [
       "start.sh",
       "start-with-terminal.sh",
       "update.sh",
       "update-from-zip.sh"
     ],
-    "buildHash": "8bbc50e0d01d"
+    "buildHash": "9b293cffb52e"
   }
 }

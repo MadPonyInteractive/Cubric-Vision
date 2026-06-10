@@ -5,7 +5,7 @@
   "platform": "win32",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "0.0.5",
+  "toVersion": "0.0.6",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
@@ -659,6 +659,11 @@
       "path": "app/docs/releases/2026-06-09-v0.0.5.md",
       "size": 2935,
       "sha256": "ac6caf6f5f76c7b65296699342e604a45c6d0d4e606e0f7a8f7981dde7f61ee1"
+    },
+    {
+      "path": "app/docs/releases/2026-06-10-v0.0.6.md",
+      "size": 2618,
+      "sha256": "ba3781e91f8af9a35c0d107aba94456899c0d69ef5038f1c59393cbc18803579"
     },
     {
       "path": "app/docs/releases/build-experience-log.md",
@@ -1378,12 +1383,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 804,
-      "sha256": "8af62eecc5df57e7b7eedc6f6cdf847e5a723e50158d40fe5a23e5dc523e6713"
+      "sha256": "6f5a7cd6a80812a9d48ca92680f6e54b1e463d209eb9c9f192989dbc705fc2d3"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "bbe3707080378af962035d10fe1b06a45dce55301e6d7bf0ff6a45c458fb8987"
+      "sha256": "14afe9710f7a64bb59bb213cac92b7a49b246290cf36806628b8cec33b4776c3"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -1437,8 +1442,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 6572,
-      "sha256": "71319af00bd3dbb011a288b23fd3d3f8770498b3dde8c7ed02cbcc7cc88f8270"
+      "size": 7170,
+      "sha256": "a3c1d667a83dc752dfb0ae1c769c191397064a33ad77c8d22d87e7332d7cb4c8"
     },
     {
       "path": "app/js/events.js",
@@ -26493,7 +26498,7 @@
     {
       "path": "app/package.json",
       "size": 2100,
-      "sha256": "338de4b6f4e44e7ace44dca40262f18bfd890dd2a5853d79556883ddaeab66d3"
+      "sha256": "cea8b83c2dc6e3d2eb743fa36929e915bb3d7b31e718acb39ec6db32a5ed46d8"
     },
     {
       "path": "app/README.md",
@@ -26507,18 +26512,18 @@
     },
     {
       "path": "app/release-baselines/linux-x64.json",
-      "size": 970842,
-      "sha256": "2c84732158a9c6d3c34c3a590ff34ad7669fd1e87bec0d00b2f8e25692184b92"
+      "size": 971973,
+      "sha256": "a3e69df59823b5eb10d44433fbe7bc264b477bb96e7a668f67f418023dbeaf5d"
     },
     {
       "path": "app/release-baselines/README.md",
-      "size": 2580,
-      "sha256": "72a77630bb87e3f98459f35a6bfc674a735c07e380518b34484a41eece682603"
+      "size": 2583,
+      "sha256": "9528a2fb82022411dcd35bdf958908ee5d371afd98757bd1886f87126cc628b7"
     },
     {
       "path": "app/release-baselines/windows-x64.json",
-      "size": 977094,
-      "sha256": "06a7081b32ad8e4163aea0865ebc40452d1bee79f8c0f7260c59d46f1912a88e"
+      "size": 978225,
+      "sha256": "35fc869cd2ac27daafbc1d00a37bb02dc39d8c6761bafbb9ba660eb8d6fc6075"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -26752,8 +26757,13 @@
     },
     {
       "path": "update/apply-update.cjs",
-      "size": 6954,
-      "sha256": "2eff3bb0373007c05dfc3351e49fb2cfa721617aa306051d2011a244506504c5"
+      "size": 8357,
+      "sha256": "180331ce175ed771f3c11f644063e2a6c5724ac47769363797f6a5e299f63961"
+    },
+    {
+      "path": "update/fetch-release.cjs",
+      "size": 5069,
+      "sha256": "6910ca5dbcd83e04404b6ef449995fa3a0b8994a7ae6334d3e869341969d17c9"
     },
     {
       "path": "update/README.md",
@@ -26769,16 +26779,16 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-06-09T20:44:40.574Z",
+  "createdAt": "2026-06-10T05:42:43.682Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-windows-x64-v0.0.5",
+    "rootName": "CubricVision-windows-x64-v0.0.6",
     "launchers": [
       "start.vbs",
       "start-with-terminal.bat",
       "update.bat",
       "update-from-zip.bat"
     ],
-    "buildHash": "8bbc50e0d01d"
+    "buildHash": "9b293cffb52e"
   }
 }

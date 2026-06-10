@@ -43,9 +43,9 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- `windows-x64.json`, `linux-x64.json`: refreshed to the **v0.0.5 FULL
-  (portable-stage)** manifests (2026-06-10) so the 0.0.6 build deltas against
-  0.0.5. `toVersion: 0.0.5`, `fromVersion: null`, `kind: portable-stage`
-  (windows 5350 files, linux 5311 files).
+- `windows-x64.json`, `linux-x64.json`: refreshed to the **v0.0.6 FULL
+  (portable-stage)** manifests (2026-06-10) so the 0.0.7 build deltas against
+  0.0.6. `toVersion: 0.0.6`, `fromVersion: null`, `kind: portable-stage`
+  (windows 5352 files, linux 5313 files).
 - `darwin-arm64.json`: still the **v0.0.3** full manifest. macOS was skipped for
-  the 0.0.4–0.0.6 cycles; refresh it when the first mac delta is cut.
+  the 0.0.4–0.0.7 cycles; refresh it when the first mac delta is cut.

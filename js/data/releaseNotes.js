@@ -38,6 +38,16 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.7': {
+    version: '0.0.7',
+    whatIsNew: [
+      'Online-update test build — verifies the no-curl online updater end to end. No functional changes.',
+    ],
+    fixes: [],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.6': {
     version: '0.0.6',
     whatIsNew: [],
