@@ -139,12 +139,11 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         const overlayCanvas = qs('.mpi-video-viewer__overlay', el);
         const stageEl = qs('.mpi-video-viewer__stage', el);
-        const playerEl = qs('.mpi-video-viewer__player', el);
 
         // ── Pan/zoom state ───────────────────────────────────────────────
-        // Transform applied to playerEl. Reset on every loadVideo + on dblclick.
-        // Disabled while a tool mode is active (crop/upscale/interpolate) to keep
-        // overlay hit-testing aligned with the untransformed video rect.
+        // Transform applied to the video element itself. Transforming the
+        // wrapper is unreliable for hardware-video compositor paths on
+        // macOS/Linux even though it works on Windows.
         const _view = { scale: 1, tx: 0, ty: 0 };
         const MIN_SCALE = 1;
         const MAX_SCALE = 10;
@@ -156,7 +155,7 @@ export const MpiVideoViewer = ComponentFactory.create({
         let _dragMoved = false;
 
         const _applyTransform = () => {
-            playerEl.style.transform =
+            _videoElement.style.transform =
                 `translate(${_view.tx}px, ${_view.ty}px) scale(${_view.scale})`;
             stageEl.dataset.zoomed = _view.scale > 1.0001 ? 'true' : 'false';
             if (_cropTool && _isInCropMode) _syncOverlayToVideo();
@@ -168,8 +167,6 @@ export const MpiVideoViewer = ComponentFactory.create({
             _view.ty = 0;
             _applyTransform();
         };
-
-        const _toolModeActive = () => el.getAttribute('data-mode') !== 'idle';
 
         _cropTool = createCropTool({
             overlayCanvas,
@@ -208,7 +205,6 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         // ── Zoom (wheel) ────────────────────────────────────────────────
         _unsubs.push(on(stageEl, 'wheel', (e) => {
-            if (_toolModeActive()) return;
             e.preventDefault();
             const zoomSpeed = 0.0015;
             const factor = Math.exp(-e.deltaY * zoomSpeed);
@@ -220,7 +216,7 @@ export const MpiVideoViewer = ComponentFactory.create({
             const rect = stageEl.getBoundingClientRect();
             const cx = e.clientX - rect.left;
             const cy = e.clientY - rect.top;
-            // Image point under cursor (in untransformed playerEl coords).
+            // Image point under cursor (in untransformed video coords).
             const ix = (cx - _view.tx) / oldScale;
             const iy = (cy - _view.ty) / oldScale;
             _view.scale = newScale;
@@ -234,7 +230,7 @@ export const MpiVideoViewer = ComponentFactory.create({
         // ── Pan (mousedown/move/up) — only when zoomed in ───────────────
         _unsubs.push(on(stageEl, 'mousedown', (e) => {
             if (e.button !== 0) return;
-            if (_toolModeActive()) return;
+            if (_isInCropMode) return;
             if (_view.scale <= 1.0001) return; // nothing to pan
             _panning = true;
             _dragMoved = false;
@@ -276,7 +272,6 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         // ── Double-click → fit to window ────────────────────────────────
         _unsubs.push(on(stageEl, 'dblclick', (e) => {
-            if (_toolModeActive()) return;
             e.stopPropagation();
             e.preventDefault();
             _resetView();

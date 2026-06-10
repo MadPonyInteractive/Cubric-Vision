@@ -23,6 +23,9 @@
     height: 100%;
     position: relative;
     z-index: 1;
+}
+
+.mpi-video-viewer__player .mpi-video-surface__video {
     transform-origin: 0 0;
     will-change: transform;
 }
