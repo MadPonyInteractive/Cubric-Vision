@@ -84,6 +84,25 @@ async function main() {
       'make sure it is public. Drafts and prereleases are also ignored by the "latest" endpoint.'
     );
   }
+  // A 403 with X-RateLimit-Remaining: 0 is GitHub's unauthenticated rate limit
+  // (60 requests/hour per IP), not a private-repo or permission problem. This is
+  // shared-IP territory: offices/VPNs/datacenters behind one NAT address can
+  // exhaust it. Give a clear message + the manual-download fallback instead of a
+  // bare "HTTP 403".
+  if (rel.status === 403 && rel.headers['x-ratelimit-remaining'] === '0') {
+    const reset = Number(rel.headers['x-ratelimit-reset']);
+    let when = 'shortly';
+    if (Number.isFinite(reset)) {
+      const mins = Math.max(1, Math.ceil((reset * 1000 - Date.now()) / 60000));
+      when = `in about ${mins} minute${mins === 1 ? '' : 's'}`;
+    }
+    throw new Error(
+      `GitHub's hourly request limit was reached for this network (60 requests/hour per IP, shared across ` +
+      `everyone on the same connection). This is not a problem with the app. Try the update again ${when}, ` +
+      `or download the update manually from https://github.com/${opts.repo}/releases/latest and apply it with ` +
+      `update-from-zip.`
+    );
+  }
   if (rel.status !== 200) {
     throw new Error(`GitHub API returned HTTP ${rel.status} for ${apiUrl}`);
   }
