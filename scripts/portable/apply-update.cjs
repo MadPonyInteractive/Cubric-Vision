@@ -99,7 +99,10 @@ function restoreExecBit(source, target, relPath) {
 // it had. This forces +x on every known launcher + the Electron binary so the
 // file-manager "Run as program" / double-click path always survives an update,
 // even one applied by an older applier or a delta that did not ship the
-// launchers. No-op on Windows. All failures are non-fatal.
+// launchers. Also restores +x on the bundled ffmpeg/ffprobe — fs.copyFileSync
+// drops their mode on update, leaving them non-exec → `spawn ffmpeg EACCES` →
+// thumbnail extract fails → history shows a "missing video/image link" (MPI-59).
+// No-op on Windows. All failures are non-fatal.
 function restoreLauncherBits(portableRoot) {
   if (process.platform === 'win32') return;
   const launchers = [
@@ -112,6 +115,8 @@ function restoreLauncherBits(portableRoot) {
     'update.command',
     'update-from-zip.command',
     'resources/setup-desktop.sh',
+    'resources/ffmpeg',
+    'resources/ffprobe',
     'app/node_modules/electron/dist/electron',
     'app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron',
   ];
