@@ -38,6 +38,16 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '0.0.12': {
+    version: '0.0.12',
+    whatIsNew: [],
+    fixes: [
+      'macOS: first-launch is now a one-time setup.command (right-click → Open) that clears the download quarantine, after which start.command launches normally. Replaces the earlier app-bundle launcher, which did not start reliably on Apple Silicon.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '0.0.11': {
     version: '0.0.11',
     whatIsNew: [
