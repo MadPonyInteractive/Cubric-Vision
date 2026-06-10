@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-60",
+  "title": "Apple Silicon: VRAM gauge reads 0.0/0 GB (no discrete VRAM)",
+  "description": "On macOS Apple Silicon the status-bar VRAM gauge shows '0.0 / 0 GB' because Apple's unified memory has no discrete VRAM device to probe — the GPU shares system RAM. Observed on the M4 rentamac test (2026-06-10, 0.0.9). Cosmetic but looks broken to users. Fix options: (a) on Apple Silicon, hide the VRAM gauge entirely and show only the RAM gauge (which already reads correctly, e.g. 6.2/16 GB); or (b) relabel/repurpose the VRAM gauge as 'unified/shared' on Apple Silicon and feed it the MPS allocated figure (torch.mps.current_allocated_memory) if cheaply available. Where: the status-bar VRAM/RAM gauge component + whatever backend telemetry feeds vram (grep for the VRAM gauge + the system telemetry route). Gate the behavior on the already-detected vendor === 'apple'. NOT a 1.0.0 blocker — cosmetic polish.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-10T13:00:00.000Z",
+  "updated_at": "2026-06-10T13:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

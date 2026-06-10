@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+    "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css",
+    ".claude/rules/components.md",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events-organisms.md"
+  ]
+}

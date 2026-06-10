@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-61",
+  "title": "Apple Silicon: fp32 VAE batch can OOM the MPS shared pool on low-RAM Macs",
+  "description": "After enabling --fp32-vae (fixes the fp16-VAE colour-banding, MPI-8/0.0.9), a batch generation on a 16 GB M4 hit 'RuntimeError: MPS backend out of memory (MPS allocated: 8.46 GiB ... Tried to allocate 2.21 GiB ... Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit)' at the VAE decode step → 'Generation completed but no output returned.' Observed M4/16 GB, 2026-06-10, 0.0.9. fp32 VAE roughly doubles the VAE tensor footprint vs fp16, which tips a borderline batch over the MPS upper-limit watermark on small unified-memory Macs. The fp32-vae default is correct (correctness > a little memory); this is about not OOMing on low-RAM boxes. Options (investigate, do NOT ship blind): (a) set PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 in the comfy spawn env on Apple Silicon (alongside PYTORCH_ENABLE_MPS_FALLBACK=1 in routes/comfy.js) to lift the upper allocation limit — TRADEOFF: can over-allocate and destabilise the system, so test on a 16 GB box; (b) tile/chunk the VAE decode or cap default batch size on detected low-RAM Apple Silicon; (c) surface a clearer user-facing 'out of memory — reduce batch size' message instead of the silent 'no output returned'. NOT a 1.0.0 blocker per Fabio — tuning/robustness. Relates to MPI-8 fp32-vae fix.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-10T13:00:00.000Z",
+  "updated_at": "2026-06-10T13:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

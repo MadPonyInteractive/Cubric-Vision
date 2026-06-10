@@ -1,0 +1,6 @@
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-06-10T10:51:16Z","actor":"codex","id":"MPI-58","from":"todo","to":"doing","note":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","at":"2026-06-10T10:51:16Z","actor":"codex","id":"MPI-58","note":"Derived compact implementation checklist."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-06-10T10:51:16Z","actor":"codex","id":"MPI-58","note":"Recorded dev lint and Electron smoke checks; manual macOS/Linux zoom verification still needed."}
+{"schema":"mpi-kanban/event/v1","type":"docs.updated","at":"2026-06-10T10:51:16Z","actor":"codex","id":"MPI-58","note":"Updated component architecture rules for direct video-element pan/zoom transform and crop-mode pan behavior."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","at":"2026-06-10T11:08:26Z","actor":"codex","id":"MPI-58","note":"Session closed; implementation ready for Mac/Linux validation."}
+{"schema":"mpi-kanban/event/v1","type":"attention.required","at":"2026-06-10T11:08:26Z","actor":"codex","id":"MPI-58","reason":"Validate video history zoom on macOS and Linux before closing MPI-58."}
