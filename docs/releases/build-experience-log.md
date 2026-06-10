@@ -745,6 +745,71 @@ launch gesture, not just the terminal* — applies to any desktop OS.
 
 ---
 
+## Online-updater hardening — 0.0.5 → 0.0.6 (2026-06-10)
+
+Testing the online update path (`update.bat` / `update.sh`) on real hardware
+surfaced two traps and one fundamental property of self-updaters.
+
+### Trap 1 — the updater assumed `curl` exists
+`update.sh` / `update.command` called `curl` directly to hit the GitHub API and
+download the asset. On a real minimal Ubuntu box `curl` was **not installed**:
+`14: curl: not found`, exit 127. With `set -e` the script aborted instantly and,
+launched via the file manager's "Run as program", the terminal just **flashed
+and closed** — zero feedback. Windows was fine because `update.bat` uses
+PowerShell (`Invoke-RestMethod`), which is guaranteed on Windows.
+
+**Rule: a portable updater must not depend on ANY host tool.** The only runtime a
+portable install is guaranteed to have is its own **bundled Electron binary** (it
+IS the app). Fix: all network work moved into `scripts/portable/fetch-release.cjs`
+(pure Node `https`, redirect-aware, clear private-repo/no-release 404 message),
+run via `ELECTRON_RUN_AS_NODE=1 <bundled electron>` — the same trick
+`update-from-zip.sh` already used for the applier. `update.sh`/`.command` now just
+locate Electron, run the helper, apply. No curl, no wget, no system node.
+`update.bat` left on PowerShell. `build-portable.mjs` ships `fetch-release.cjs`
+in `update/`. (Electron 41 = Node 24, so native `fetch`/`https` are both present.)
+
+### Trap 2 — exec bit stripped again, and `restoreExecBit` wasn't enough alone
+After the online update the launchers lost their exec bit (no "Run as program").
+Two causes: (a) the update was applied by the install's **old** applier (the
+exec-bit fix ships *from* the new bundle, so the very update that delivers the fix
+is applied by the un-fixed applier); (b) `restoreExecBit` only touches files that
+were **in the delta**, so a launcher absent from a given update keeps its stripped
+mode. Hardened with two manifest-independent, applier-version-independent layers:
+- `restoreLauncherBits()` at the end of `apply-update.cjs` force-+x's every known
+  launcher + the Electron binary, regardless of the manifest.
+- `update-from-zip.{sh,command}` re-assert `chmod +x` on the launchers **after**
+  the applier returns — so even an OLD applier applying a NEW bundle leaves the
+  launchers runnable (the wrapper always runs).
+
+### The bootstrap trap — a broken updater can't fix itself online
+The 0.0.5 bundle shipped the OLD curl-based `update.sh`. On a curl-less box that
+updater can't run → can't pull 0.0.6 → can't receive the fixed updater. **A
+self-updater that breaks cannot deliver its own fix through the broken path.**
+The always-available escape hatch is the **offline** apply: `update-from-zip.sh`
+needs no curl (it only extracts + applies via bundled Electron), so a stuck user
+runs `sh ./update-from-zip.sh <delta.zip>` once to land the fixed updater, after
+which the online path works. **Patreon/README update instructions should lead with
+the offline `update-from-zip` step for the jump to a fixed updater.** Also: a
+manual copy of `update.sh` alone fails with "updater helper missing at
+.../fetch-release.cjs" — the new `update.sh` and its `fetch-release.cjs` companion
+must travel together (this is by-design loud failure, not a bug).
+
+### Recovery for an already-stuck Linux install
+`chmod +x start.sh start-with-terminal.sh update.sh update-from-zip.sh resources/setup-desktop.sh`
+restores "Run as program"; then offline-bridge to 0.0.6 with `update-from-zip.sh`.
+
+### Delta facts this cycle
+0.0.5→0.0.6 delta = 15 files / 0 deletes, buildHash 9b293cffb52e, win local +
+mpi-ci linux (run 27255860983) identical. Baselines must be the **FULL
+portable-stage** manifest of the previous release (fromVersion:null, ~5.3k files)
+— using the update-bundle/delta manifest produces a bogus whole-app "delta" (bit
+us on 0.0.5: 266-file baseline → 5093-file false delta; see
+`release-baselines/README.md`). Always `--clean` the stage between local builds
+(a stale stage swept a repo-local `tmp-*` dir into the bundle once). Never create
+temp dirs inside the repo root during a build.
+
+---
+
 ## Template for new entries
 
 ```

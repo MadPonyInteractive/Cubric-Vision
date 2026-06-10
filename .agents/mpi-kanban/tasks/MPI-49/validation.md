@@ -191,3 +191,63 @@ toggle PRIVATE again.
   `chmod +x start.sh start-with-terminal.sh update.sh update-from-zip.sh resources/setup-desktop.sh`.
 - NEXT: cut 0.0.6 with these fixes, then test 0.0.5 -> 0.0.6 online update and
   confirm the launchers STAY executable (the real self-heal proof).
+
+## 0.0.5 -> 0.0.6 cycle (2026-06-10)
+
+Bumped 0.0.5 -> 0.0.6 (commit 0a36ed2 fixes + 9b293cf baselines, pure patch).
+Ships the online-updater hardening (no curl/wget/system-node; 3-layer exec-bit
+self-heal). Baselines refreshed to the **0.0.5 FULL** manifests (win 5350, linux
+5311 files) the trap-aware way.
+
+### Deltas built + verified (true 0.0.5 -> 0.0.6, buildHash 9b293cffb52e)
+- Windows: local, 15 files / 0 deletes,
+  `D:/CubricStudio/Vision/Builds/CubricVision-windows-x64-update-v0.0.6.zip`.
+- Linux: mpi-ci run 27255860983 (success), 15 files / 0 deletes, same buildHash.
+  Confirmed the bundle carries `update/fetch-release.cjs`,
+  `update/apply-update.cjs` (self-heal), `update.sh`, `update-from-zip.sh`.
+  (First Linux dispatch 27255819123 was cancelled — it ran before the 0.0.5
+  baseline was pushed; re-dispatched against 9b293cf.)
+- macOS: SKIPPED again.
+
+### GitHub Release swapped v0.0.5 -> v0.0.6
+Deleted the v0.0.5 release + remote tag; created v0.0.6 (non-prerelease, latest,
+target master) with both 0.0.6 delta zips. `/releases/latest` returns v0.0.6.
+Tag v0.0.6 -> 9b293cf pushed.
+
+### ONLINE UPDATE TEST 0.0.5 -> 0.0.6 — READY (awaiting user)
+This is the real proof of both fixes. On a v0.0.5 install, with the repo PUBLIC:
+- Linux: `sh ./update.sh` from a terminal. Expect: NO curl needed (uses bundled
+  Electron), downloads + applies 0.0.6, AND the launchers REMAIN executable
+  afterwards ("Run as program" still works) — because the v0.0.5 install now has
+  the fixed applier, plus the wrapper re-chmods. Verify with `ls -l *.sh` (should
+  be -rwxr-xr-x) and that "Run as program" is still offered.
+- Windows: `update.bat` (PowerShell path, unchanged; should still work).
+Then toggle the repo PRIVATE again.
+
+### Cleanup commands (v0.0.6 fully deletable)
+- `gh release delete v0.0.6 --repo MadPonyInteractive/Cubric-Vision --yes`
+- `git push origin :refs/tags/v0.0.6`
+
+### RESULT — 0.0.5 -> 0.0.6 (2026-06-10): PASS (Linux, all verified by user)
+- **Bootstrap trap confirmed + escaped.** The 0.0.5 install shipped the OLD
+  curl-based `update.sh`; on the curl-less box it could not pull its own fix
+  online. Escaped via the offline path: `sh ./update-from-zip.sh
+  CubricVision-linux-x64-update-v0.0.6.zip` — needs NO curl (extract+apply via
+  bundled Electron only). Applied 0.0.6 cleanly.
+- **Exec-bit self-heal PROVEN.** After the offline 0.0.6 apply the launchers are
+  `-rwxr-xr-x` and "Run as program" works again — the three-layer fix
+  (restoreExecBit + restoreLauncherBits + wrapper chmod) holds.
+- App reports 0.0.6; `update/fetch-release.cjs` present.
+- A manual copy of `update.sh` alone (without its fetch-release.cjs companion)
+  correctly fails loud: "updater helper missing at .../fetch-release.cjs ... Press
+  Enter to close" — by-design, not a bug. The two files travel together.
+- Note: from 0.0.6 onward the updater has NO host-tool dependency, so this class
+  of online-update failure is ended going forward; the offline `update-from-zip`
+  path remains the permanent curl-free escape hatch (lead with it in Patreon/README
+  instructions for any jump to a fixed updater).
+
+**MPI-49 portable update-flow testing is COMPLETE** for Windows + Linux
+(0.0.3->0.0.4->0.0.5->0.0.6, offline + online, exec-bit, no-curl). macOS remains
+untested (no mac hardware/build this cycle); the updater fixes cover .command +
+the Electron.app binary but are unverified on real Apple hardware — see the macOS
+pre-build checklist.
