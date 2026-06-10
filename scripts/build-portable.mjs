@@ -970,7 +970,16 @@ async function main() {
 
   const config = PLATFORM_CONFIG[opts.platform];
   const rootName = `CubricVision-${config.label}-${opts.arch}-v${opts.version}`;
-  const updateRootName = `CubricVision-${config.label}-${opts.arch}-update-v${opts.version}`;
+  // The update ARCHIVE filename stays long so the updater's asset-name regex
+  // (^CubricVision-<platform>-update-v.*\.zip$ in update.{command,sh}) still
+  // matches. But the bundle is staged into a SHORT, VERSION-FIRST folder so the
+  // zip wraps a single short top-level dir. macOS Safari/Archive Utility then
+  // extracts to that folder name instead of the long zip basename (which it
+  // truncated to e.g. ...update-v0, losing the version — MPI-62). Version-first
+  // means even if THIS gets truncated the user still sees the version. The
+  // applier walks down to find the manifest, so the root name is transparent.
+  const updateArchiveName = `CubricVision-${config.label}-${opts.arch}-update-v${opts.version}`;
+  const updateRootName = `CubricVision-v${opts.version}`;
   const stageRoot = path.resolve(opts.stageDir, rootName);
   const updateStageRoot = path.resolve(opts.stageDir, updateRootName);
 
@@ -1007,13 +1016,16 @@ async function main() {
   if (opts.archive) {
     artifactArchive = path.resolve(opts.stageDir, `${rootName}${config.fullArchiveExt}`);
     updateArchive = opts.updateBundle
-      ? path.resolve(opts.stageDir, `${updateRootName}${config.updateArchiveExt}`)
+      ? path.resolve(opts.stageDir, `${updateArchiveName}${config.updateArchiveExt}`)
       : null;
     if (opts.clean && await pathExists(artifactArchive)) await fs.rm(artifactArchive, { force: true });
     if (opts.clean && updateArchive && await pathExists(updateArchive)) await fs.rm(updateArchive, { force: true });
     await createArchiveFromDir(stageRoot, artifactArchive, config.fullArchiveExt, { includeRoot: true });
     if (updateArchive) {
-      await createArchiveFromDir(updateStageRoot, updateArchive, config.updateArchiveExt);
+      // includeRoot wraps the bundle in the short version-first `CubricVision-v<ver>`
+      // folder so the Safari-extracted folder is short + shows the version (not the
+      // truncated long zip basename).
+      await createArchiveFromDir(updateStageRoot, updateArchive, config.updateArchiveExt, { includeRoot: true });
     }
   }
 
