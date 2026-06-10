@@ -1,0 +1,1 @@
+{"at":"2026-06-10T06:00:00Z","type":"task_completed","summary":"Portable update flow validated end-to-end Windows + Linux across 0.0.3->0.0.4->0.0.5->0.0.6: offline + online update, exec-bit self-heal, no-curl bundled-Electron updater. User-verified on Linux (offline-bridge to 0.0.6, launchers stay executable). macOS untested. Moved doing->done."}
