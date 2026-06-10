@@ -38,12 +38,15 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
-  '0.0.9': {
-    version: '0.0.9',
+  '0.0.10': {
+    version: '0.0.10',
     whatIsNew: [],
     fixes: [
       'Video zoom now works on macOS and Linux — scroll to zoom and double-click to reset in the video viewer.',
       'History thumbnails for video entries now render correctly (no more "missing video/image link").',
+      'Apple Silicon: the memory monitor now shows only RAM (your Mac shares one memory pool — there is no separate VRAM to display).',
+      'The status bar now shows generation progress reliably, and each finished generation reports how long it took.',
+      'macOS: applying an offline update now works even when Safari has already unzipped the update into a folder.',
     ],
     breakingChanges: [],
     importantChanges: [],
