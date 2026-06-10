@@ -5,7 +5,7 @@
   "platform": "linux",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "0.0.4",
+  "toVersion": "0.0.5",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "ac5a1a7c52687ccd1ae77302928e5a414827d699d6d66ceb85cdd311e6aff9ee",
@@ -81,6 +81,11 @@
       "sha256": "7790cfe2d053e0ce83ee5974a6c3b2b67754307325ab2bedccf550e9aa95f75c"
     },
     {
+      "path": "app/CODE_OF_CONDUCT.md",
+      "size": 1206,
+      "sha256": "5b496ca4ed7167e030076cf0f17620638a16acea7bcd1ee6be296abcaa2ca322"
+    },
+    {
       "path": "app/comfy_workflows/detailer_ill_anime_beauty.json",
       "size": 4871,
       "sha256": "9c5f890c24694853f9c41ebcb43f9b06797a90db9db03e9f74d3d3b75638eb4a"
@@ -106,29 +111,34 @@
       "sha256": "ac47e218f1acecd885dc41d2fa825a3240628203dbabf5552fc8bd39ae5da118"
     },
     {
-      "path": "app/comfy_workflows/display/AlchemyMix176.png",
-      "size": 2310277,
-      "sha256": "e89daaab23dd405f324cc490d2d6261674b332a643a839d902355f6a4bbcdfc7"
+      "path": "app/comfy_workflows/display/sdxl-anime-06.webp",
+      "size": 198646,
+      "sha256": "56ce571b088d99a51a9ac163713e39444645a885d7baede49126b5904295afa1"
     },
     {
-      "path": "app/comfy_workflows/display/AnimeMixV80.png",
-      "size": 2009722,
-      "sha256": "50e61a54ea2836d68f2331701bf136a6453bb70d6f5536eada9bb3e0f39cc414"
+      "path": "app/comfy_workflows/display/sdxl-anime-08.webp",
+      "size": 220812,
+      "sha256": "67bd68cbb07b5629a97f43d932ddfc283e3eb438b09f7624379c7b379f96b24e"
     },
     {
-      "path": "app/comfy_workflows/display/AnimerJeiV30.png",
-      "size": 1826460,
-      "sha256": "496e0e36110bb4d452f07de7217c065482a8135aa146fd2e0e7cb2c227f07718"
+      "path": "app/comfy_workflows/display/sdxl-pony-13.webp",
+      "size": 130806,
+      "sha256": "0ac0944028eb273aa47e4030d01dce862d5033dfd8ba460d8be8605f1c7d37a2"
     },
     {
-      "path": "app/comfy_workflows/display/Lustify7.png",
-      "size": 2173616,
-      "sha256": "c86260c51a757aefca878bc8009b492b990c4e117d79ed067a0f2727232671de"
+      "path": "app/comfy_workflows/display/sdxl-real-01.webp",
+      "size": 116200,
+      "sha256": "70d03e47757be8717b527602e6ba1618a4cda7ad24e66ebb8efa03697a67a0f7"
     },
     {
-      "path": "app/comfy_workflows/display/wan2.2_t2v.mp4",
-      "size": 3253476,
-      "sha256": "7d7c7bc8e13cef8eaf063b4b82dba3fc85e5d6e1fc32db359194fb64c99e19c5"
+      "path": "app/comfy_workflows/display/sdxl-real-05.webp",
+      "size": 80544,
+      "sha256": "159490f5a0f128ca9eeefbbd13f8ec7320b13bc234a133f8d50af1f0fdfe9050"
+    },
+    {
+      "path": "app/comfy_workflows/display/wan22_preview.mp4",
+      "size": 2336084,
+      "sha256": "921c68a4330b52ac68dc46915d248e7c61eca0e2d8a18c438db0cec1dd5be359"
     },
     {
       "path": "app/comfy_workflows/image_upscale.json",
@@ -271,6 +281,11 @@
       "sha256": "a7244f1ec67ab424397b18924d8289f9ecb1b91881b6ea59c4e64ab745ba7d60"
     },
     {
+      "path": "app/CONTRIBUTING.md",
+      "size": 5097,
+      "sha256": "a9e4067690e5490f0bb988238d5f292e2c6ea25d7def6ad59e5fe3064feb2f69"
+    },
+    {
       "path": "app/dev_configs/app_config.js",
       "size": 1163,
       "sha256": "8421ce99936875816773843913c98f6bd6a59925521aa05393fee1336cc09587"
@@ -377,8 +392,8 @@
     },
     {
       "path": "app/docs/comfy.md",
-      "size": 14737,
-      "sha256": "dc8ea1dc92743d13de8589d2094f65abc4ff444822c3b2d6227118f6dacb4d82"
+      "size": 15182,
+      "sha256": "8a5a6edb5e2b4716ebbd32f83315a43d8b3f372c549b98379465643b7f2d4a90"
     },
     {
       "path": "app/docs/data.md",
@@ -636,9 +651,14 @@
       "sha256": "e07d1ee8e64d2f5e525dbb7d9872554a53eef950d74f92db4a6dd715c647cb70"
     },
     {
+      "path": "app/docs/releases/2026-06-09-v0.0.5.md",
+      "size": 2935,
+      "sha256": "ac6caf6f5f76c7b65296699342e604a45c6d0d4e606e0f7a8f7981dde7f61ee1"
+    },
+    {
       "path": "app/docs/releases/build-experience-log.md",
-      "size": 36244,
-      "sha256": "9f05df59fd10dac3c3e1494264fc3ece0ad1eae6f0320304e1ab38e40c3a91f6"
+      "size": 42181,
+      "sha256": "1e7aecfc021f31ac8524744c2df759b16f9e56839d175cc19dffa393ea1fc85c"
     },
     {
       "path": "app/docs/releases/github-release-checklist.md",
@@ -752,8 +772,8 @@
     },
     {
       "path": "app/js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
-      "size": 23835,
-      "sha256": "dc205a38a42f4c3e942dcfe7ff65ec0756c4263e0f960ef1479447836434d450"
+      "size": 24801,
+      "sha256": "6fabbbc3fae3a875be09040dadbda0fc1aa359bccf28a3e986ee8fe155b19116"
     },
     {
       "path": "app/js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
@@ -857,13 +877,13 @@
     },
     {
       "path": "app/js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css",
-      "size": 4074,
-      "sha256": "790525aa9226012a6f61204ecc7e1e5c0ac7a9b5145ab30166f60dc61a4ece49"
+      "size": 4722,
+      "sha256": "98e6ba4a6574c96a852e5113b871319f46f7e915348cc97ecd1abc31c436f1b0"
     },
     {
       "path": "app/js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js",
-      "size": 16295,
-      "sha256": "5a36811c52edcd957b0711ec7b885fea314a1f50950435df6ad3f0b81b069273"
+      "size": 18962,
+      "sha256": "3f8652d10f80f1c92ff07c680d5610e4863b46cb08a13a106fabcfadc8b3838f"
     },
     {
       "path": "app/js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css",
@@ -1332,8 +1352,8 @@
     },
     {
       "path": "app/js/components/types.js",
-      "size": 56331,
-      "sha256": "09c4d00cc1e7fc986c1768f627104c4dfdf248aa611422d4f0a562e728edf24d"
+      "size": 56838,
+      "sha256": "d934c4c31e92b4693069bec73e92dfcf742b94f0b528c6ca55d414aca0ba3585"
     },
     {
       "path": "app/js/core/appName.cjs",
@@ -1353,12 +1373,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 786,
-      "sha256": "7ca9d8f0ea2d2dedc078f7db1e631f8a2c7f9ce42131f9f5bc44d9fa0e57c2d1"
+      "sha256": "99d47992b18d2602a429670aeeb4e70a84b7f177c529d5ca017744ed7a89bc76"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "4cd8adfd1c9d7ed9261f8f8a7be9f29549f0a7b3973f547f0145340d58b118a6"
+      "sha256": "bbe3707080378af962035d10fe1b06a45dce55301e6d7bf0ff6a45c458fb8987"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -1387,8 +1407,8 @@
     },
     {
       "path": "app/js/data/modelConstants/models.js",
-      "size": 5807,
-      "sha256": "bc9bae29fe641eac65b645625050cf50d2e4386fbfee40c646cb3a855b708111"
+      "size": 6105,
+      "sha256": "bb7a5c6a4624844efd01e9034d8dced1e81ff3dbb97b8e68cb5d820ca46bf40c"
     },
     {
       "path": "app/js/data/modelConstants/universal_workflows.js",
@@ -1397,8 +1417,8 @@
     },
     {
       "path": "app/js/data/modelRegistry.js",
-      "size": 7841,
-      "sha256": "657efec5cb71722629822228c495036716aa89c913a6872d0c83ea6356aef987"
+      "size": 8028,
+      "sha256": "e2e36d7e08329cfdc113a375428e91431ca7b0c035ef5e3f6f8aedee4b7166d7"
     },
     {
       "path": "app/js/data/projectModel.js",
@@ -1412,8 +1432,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 5786,
-      "sha256": "eb2adbdbd6b9f303d28ad38b250a2bb44d009103f9de536363f04462f787d6e1"
+      "size": 6572,
+      "sha256": "71319af00bd3dbb011a288b23fd3d3f8770498b3dde8c7ed02cbcc7cc88f8270"
     },
     {
       "path": "app/js/events.js",
@@ -1502,8 +1522,8 @@
     },
     {
       "path": "app/js/services/downloadService.js",
-      "size": 14390,
-      "sha256": "4fb0996a08110155218b531bc0b1248eda639ac0f1d6c0c95457d436a3a459bf"
+      "size": 15194,
+      "sha256": "c1b175700861e239057822ecbd18d9e75a4cc745a4fd07f413a67f66817c6d8c"
     },
     {
       "path": "app/js/services/generationService.js",
@@ -1707,8 +1727,8 @@
     },
     {
       "path": "app/main.js",
-      "size": 28380,
-      "sha256": "8064b1764429fe161dbca65246f376e319dfa2a0f1c9494e37b00a7e6209ad00"
+      "size": 30569,
+      "sha256": "965360b88b79330cf9cd6e5cf46ab716fe3795de12dd0a6ebdc1832d55865660"
     },
     {
       "path": "app/media/icons/cubric-vision.icns",
@@ -26263,7 +26283,12 @@
     {
       "path": "app/package.json",
       "size": 2044,
-      "sha256": "90649d57ec799f1f5c3deecc4b1514558aa78fc503c4046e5c6475634090e6b0"
+      "sha256": "da99997ae30bbb49fa98b4114fb92a3302ebb85328eff3198a23537c008734ef"
+    },
+    {
+      "path": "app/README.md",
+      "size": 3228,
+      "sha256": "36a933babe000980dd4bb7a9dfcc6f51e0aa1f4400edf1cc3df6966ca6d19d61"
     },
     {
       "path": "app/release-baselines/darwin-arm64.json",
@@ -26272,18 +26297,18 @@
     },
     {
       "path": "app/release-baselines/linux-x64.json",
-      "size": 969702,
-      "sha256": "b1451c9b06ab95f2a99d3e00633d674ef50e8c4a5ebe4d9af07b806d5501d202"
+      "size": 970842,
+      "sha256": "2c84732158a9c6d3c34c3a590ff34ad7669fd1e87bec0d00b2f8e25692184b92"
     },
     {
       "path": "app/release-baselines/README.md",
-      "size": 1559,
-      "sha256": "512af0ab75a6e7244fcc97f025a713d8df87f3c3c2f619006ae1c8b7cb96ea8e"
+      "size": 2580,
+      "sha256": "72a77630bb87e3f98459f35a6bfc674a735c07e380518b34484a41eece682603"
     },
     {
       "path": "app/release-baselines/windows-x64.json",
-      "size": 975601,
-      "sha256": "0ec80bd40aceea88609e96ff892e9f0fc3ced2e3a8ec997420c06e31fabd63aa"
+      "size": 977094,
+      "sha256": "06a7081b32ad8e4163aea0865ebc40452d1bee79f8c0f7260c59d46f1912a88e"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -26302,13 +26327,18 @@
     },
     {
       "path": "app/routes/comfy.js",
-      "size": 21912,
-      "sha256": "b8ba0d755a8f1f27885f3ac97a0dc84f1f3f44ec0201bf1d4ef2fa309b2014ab"
+      "size": 22133,
+      "sha256": "5b1e37470ceaeb18e797c19f9708206f3a76c7d913733a73595b3209da4faf2a"
+    },
+    {
+      "path": "app/routes/downloadCompletion.js",
+      "size": 1840,
+      "sha256": "e0c45a0d98b3c9312595632a63c977b3eed3396833c0b7ab05cca2fabe0cd7c3"
     },
     {
       "path": "app/routes/downloadManager.js",
-      "size": 43821,
-      "sha256": "929ca5ecdfcaa6aae403b5b420335b6dfc332b43199d6903e9ab6c8691f2e3e8"
+      "size": 46849,
+      "sha256": "f45a7f50a904e38349493cf29eea90775e32c09b289379660562fd63a4f92b51"
     },
     {
       "path": "app/routes/engine.js",
@@ -26337,8 +26367,8 @@
     },
     {
       "path": "app/routes/shared.js",
-      "size": 23902,
-      "sha256": "c0e67b141dcd1f0457dc2b87cf69669fff7686024f4194ecdcc1098106de058d"
+      "size": 24006,
+      "sha256": "727c8e5e53d88bd3180619b70789dfe41c1cddf7055751c48b1503729ae78a6c"
     },
     {
       "path": "app/routes/system.js",
@@ -26369,6 +26399,11 @@
       "path": "app/routes/yamlHelper.js",
       "size": 5775,
       "sha256": "d076063de0ce6154dd61dd4169f8689b6d34b88159c813e51ff196b93bf2370a"
+    },
+    {
+      "path": "app/SECURITY.md",
+      "size": 929,
+      "sha256": "0e6938fbd4bcc6d8bfd0f03b95a0d86c00f2e4638a2f4c11e2f613a574244ff9"
     },
     {
       "path": "app/server.js",
@@ -26517,8 +26552,8 @@
     },
     {
       "path": "update/apply-update.cjs",
-      "size": 5806,
-      "sha256": "924fc7d245a2b336bed24844fad9a66ae7dc09773ad29cbd403a8c20dd19de98"
+      "size": 6954,
+      "sha256": "2eff3bb0373007c05dfc3351e49fb2cfa721617aa306051d2011a244506504c5"
     },
     {
       "path": "update/README.md",
@@ -26539,16 +26574,16 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-06-09T17:30:08.057Z",
+  "createdAt": "2026-06-09T20:44:55.015Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-linux-x64-v0.0.4",
+    "rootName": "CubricVision-linux-x64-v0.0.5",
     "launchers": [
       "start.sh",
       "start-with-terminal.sh",
       "update.sh",
       "update-from-zip.sh"
     ],
-    "buildHash": "61cd926037b4"
+    "buildHash": "8bbc50e0d01d"
   }
 }
