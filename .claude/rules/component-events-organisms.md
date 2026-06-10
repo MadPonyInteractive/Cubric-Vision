@@ -46,8 +46,9 @@ API:     `attachControlBar(instance)` / `detachControlBar()` — wire an externa
          `getSurfaceInstance()` — returns MpiVideoSurface instance.
          `loadVideo(url, meta)` — `meta.fps`/`meta.frameCount`/`meta.trim` proxied to the attached control bar; `meta.trim = { in, out }` propagates as `setPendingTrim` (one-shot, applied on next `loadedmetadata`).
          `getSourceElement()` — underlying `HTMLVideoElement` for external tools (resize/snapshot).
+         `resetView()` — resets pan/zoom to fit. Pan/zoom transform is applied directly to `.mpi-video-surface__video` for macOS/Linux compositor compatibility; do not move it back to the wrapper.
          `setRangeQuiet(in, out)`, `getRange()` — proxy to attached control bar.
-NOTE:    Viewer no longer forwards `loop-change`/`range-change` — block listens directly on the control bar instance. Viewer owns display + crop overlay + chip strip state only.
+NOTE:    Viewer no longer forwards `loop-change`/`range-change` — block listens directly on the control bar instance. Viewer owns display + crop overlay + chip strip state only. Wheel zoom remains enabled in tool modes; crop mode only suppresses left-drag pan so crop handles keep priority.
 
 ### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
 EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)

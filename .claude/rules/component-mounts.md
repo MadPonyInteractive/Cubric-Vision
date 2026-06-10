@@ -107,10 +107,12 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 
 Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip. Mounted by `MpiGroupHistoryBlock` for video groups. Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer. **Control bar is NOT internal**: the parent Block mounts `MpiVideoControlBar` in its own `#controls-slot` and wires it via `viewer.el.attachControlBar(instance)`. This lets the bar span the full app window and lets non-video surfaces reuse the bar (e.g. audio-only via `showTrim: false`) without dragging the viewer along.
 
+Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `.mpi-video-viewer__player`, for cross-platform hardware-video compositor compatibility. Wheel zoom works while video tools are selected; crop mode blocks left-drag pan only so crop-handle dragging remains unambiguous.
+
 - `MpiVideoSurface`     props: `{ fps }`   slot: `[data-mount="surface"]` inside viewer stage
 - `MpiViewerCorners`    no props          slot: `#corners-mount` inside viewer stage
 
-**Instance API (on `el`):** `attachControlBar(instance)` / `detachControlBar()`, `getSurfaceInstance()`, `loadVideo(url, meta)` — `meta.fps`/`meta.frameCount`/`meta.trim` proxied to the attached control bar; `meta.trim = { in, out }` propagates as `setPendingTrim` (one-shot, applied on next `loadedmetadata`). Plus `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot({ time })`, `getSourceElement()`, `setRangeQuiet(in, out)`, `getRange()`, `setTopRight(items)`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`.
+**Instance API (on `el`):** `attachControlBar(instance)` / `detachControlBar()`, `getSurfaceInstance()`, `loadVideo(url, meta)` — `meta.fps`/`meta.frameCount`/`meta.trim` proxied to the attached control bar; `meta.trim = { in, out }` propagates as `setPendingTrim` (one-shot, applied on next `loadedmetadata`). Plus `enterCropMode(rect)`, `exitCropMode()`, `getCropRect()`, `setCropRatio(ratio)`, `captureSnapshot({ time })`, `getSourceElement()`, `resetView()`, `setRangeQuiet(in, out)`, `getRange()`, `setTopRight(items)`, `enterUpscaleMode()`, `exitUpscaleMode()`, `enterInterpolateMode()`, `exitInterpolateMode()`, `destroy()`.
 
 > Control bar lifetime is owned externally — `viewer.destroy()` only `detachSurface()` on the attached bar; it does NOT destroy it.
 

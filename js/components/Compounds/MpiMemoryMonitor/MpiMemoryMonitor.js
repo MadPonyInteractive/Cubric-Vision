@@ -42,7 +42,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
         /**
          * @param {'vram'|'ram'} type
          * @param {string} label
-         * @returns {{ barInstance: Object, valueEl: HTMLElement }}
+         * @returns {{ rowEl: HTMLElement, barInstance: Object, valueEl: HTMLElement }}
          */
         const _buildRow = (type, label) => {
             const row     = ce('div', { className: `mpi-mem-monitor__item` });
@@ -62,10 +62,10 @@ export const MpiMemoryMonitor = ComponentFactory.create({
                 interactive: false,
             });
 
-            return { barInstance, valueEl };
+            return { rowEl: row, barInstance, valueEl };
         };
 
-        const { barInstance: vramBar, valueEl: vramValue } = _buildRow('vram', 'VRAM');
+        const { rowEl: vramRow, barInstance: vramBar, valueEl: vramValue } = _buildRow('vram', 'VRAM');
         const { barInstance: ramBar,  valueEl: ramValue  } = _buildRow('ram',  'RAM');
 
         // ── Status badge ─────────────────────────────────────────────────────
@@ -151,10 +151,16 @@ export const MpiMemoryMonitor = ComponentFactory.create({
                 ramValue.textContent = `${ramGB} / ${totalRamGB} GB`;
                 _setBarValue(ramBar, data.ram.percent);
 
-                const vramGB      = (data.vram.used  / (1024 ** 3)).toFixed(1);
-                const totalVramGB = (data.vram.total / (1024 ** 3)).toFixed(0);
-                vramValue.textContent = `${vramGB} / ${totalVramGB} GB`;
-                _setBarValue(vramBar, data.vram.percent);
+                const isAppleUnified = data.gpu?.vendor === 'apple' || data.vram?.memoryModel === 'unified';
+                const hasDiscreteVram = data.vram?.available !== false && data.vram?.total > 0;
+                vramRow.hidden = isAppleUnified && !hasDiscreteVram;
+                barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
+                if (!vramRow.hidden) {
+                    const vramGB      = (data.vram.used  / (1024 ** 3)).toFixed(1);
+                    const totalVramGB = (data.vram.total / (1024 ** 3)).toFixed(0);
+                    vramValue.textContent = `${vramGB} / ${totalVramGB} GB`;
+                    _setBarValue(vramBar, data.vram.percent);
+                }
             } catch {
                 // Silently ignore — network may not be ready on boot
             }

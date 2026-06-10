@@ -9,7 +9,6 @@
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
 import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, replaceHistoryItemById } from '../data/projectModel.js';
-import { StatusBar } from '../shell/statusBar.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
@@ -432,9 +431,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         callbacks.onPreview?.(url);
     };
 
-    exec.onProgress = (value) => {
-        if (samplingStartTime) StatusBar.progress.update(value);
-    };
     exec.onSamplingStart = () => {
         samplingStartTime ??= Date.now();
     };

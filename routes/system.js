@@ -79,10 +79,20 @@ router.get('/system/stats', async (req, res) => {
         const totalMem = os.totalmem();
         const freeMem = os.freemem();
         const usedMem = totalMem - freeMem;
-        const vram = await getVramStats();
+        const [downloadConfig, vram] = await Promise.all([
+            resolveDownloadConfig(),
+            getVramStats(),
+        ]);
+        const gpuVendor = downloadConfig.gpu?.vendor || null;
+        const usesUnifiedMemory = gpuVendor === 'apple';
 
         res.json({
             success: true,
+            gpu: {
+                name: downloadConfig.gpu?.name || null,
+                vendor: gpuVendor,
+                memoryModel: usesUnifiedMemory ? 'unified' : (vram.total > 0 ? 'discrete' : null)
+            },
             ram: {
                 total: totalMem,
                 used: usedMem,
@@ -91,7 +101,9 @@ router.get('/system/stats', async (req, res) => {
             vram: {
                 total: vram.total * 1024 * 1024,
                 used: vram.used * 1024 * 1024,
-                percent: vram.total > 0 ? ((vram.used / vram.total) * 100).toFixed(1) : 0
+                percent: vram.total > 0 ? ((vram.used / vram.total) * 100).toFixed(1) : 0,
+                available: vram.total > 0,
+                memoryModel: usesUnifiedMemory ? 'unified' : (vram.total > 0 ? 'discrete' : null)
             }
         });
     } catch (err) {

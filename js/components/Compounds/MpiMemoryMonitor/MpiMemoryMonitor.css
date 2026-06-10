@@ -79,6 +79,10 @@
     margin: 0 0.35rem;
 }
 
+.mpi-mem-monitor__bars--vram-hidden .mpi-mem-monitor__item + .mpi-mem-monitor__item::before {
+    display: none;
+}
+
 /* ── Actions ────────────────────────────────────────────────────────────────── */
 .mpi-mem-monitor__actions {
     display: flex;

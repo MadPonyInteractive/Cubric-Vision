@@ -44,6 +44,7 @@ let _hoverObs     = null;
 let _currentLabel = '';
 let _queueDepth = 0;
 let _elapsedSec   = 0;
+let _activeStartedAt = null;
 let _timerInterval = null;
 let _completionToken = 0;
 const _listenUnsubs = [];
@@ -54,6 +55,13 @@ function _fmtTime(sec) {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
+}
+
+function _fmtDuration(sec) {
+    const safeSec = Math.max(0, Math.round(Number(sec) || 0));
+    const m = Math.floor(safeSec / 60);
+    const s = safeSec % 60;
+    return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
 
 function _setFill(pct) {
@@ -98,6 +106,7 @@ function _setIdle() {
     _job.className = 'shell-info__job';
     _jobLabel.textContent = 'IDLE';
     _currentLabel = '';
+    _activeStartedAt = null;
 
     _jobPct.textContent  = '';
     _jobTime.textContent = '';
@@ -196,6 +205,7 @@ export const StatusBar = {
             _beginActiveCycle();
             _stopTimer();
             _elapsedSec = 0;
+            _activeStartedAt = Date.now();
             _setFill(0);
             if (_jobPct) _jobPct.textContent = '';
             if (_jobTime) _jobTime.textContent = '';
@@ -259,13 +269,17 @@ export const StatusBar = {
             const elapsed = _elapsedSec;
             const label   = _currentLabel;
             const token   = _completionToken;
+            const totalElapsed = _activeStartedAt
+                ? Math.max(elapsed, Math.round((Date.now() - _activeStartedAt) / 1000))
+                : elapsed;
             _stopTimer();
 
             // Persist to global state for meta-card consumers and timing listeners.
-            state.lastGeneration = { label, elapsed };
-            Events.emit('generation:timing', { elapsed, label });
+            state.lastGeneration = { label, elapsed: totalElapsed };
+            Events.emit('generation:timing', { elapsed: totalElapsed, label });
 
             _setFill(100);
+            if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
 
             setTimeout(() => {
@@ -284,7 +298,7 @@ export const StatusBar = {
                     const wrapper = document.createElement('div');
                     document.body.appendChild(wrapper);
                     const t = MpiToast.mount(wrapper, {
-                        message: toastMessage,
+                        message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
                         variant: 'success',
                         duration: 3000,
                     });
@@ -302,6 +316,7 @@ export const StatusBar = {
             const elapsed = _elapsedSec;
             const label   = _currentLabel;
             _stopTimer();
+            _activeStartedAt = null;
 
             Events.emit('generation:timing', { elapsed, label, cancelled: true });
 

@@ -740,6 +740,12 @@ export function runCommand(payload) {
             }
             exec.onSamplingStart?.();
         };
+        const emitProgress = (value) => {
+            if (!_suppressLifecycleEvents && _samplingStartFired) {
+                Events.emit('tool:progress', { tool: 'groupHistory', value });
+            }
+            exec.onProgress?.(value);
+        };
         const isImmediateWorkNode = (nodeId) => IMMEDIATE_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
         const isDelayedWorkNode = (nodeId) => DELAYED_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
         const isTerminalPhaseWorkNode = (nodeId) => TERMINAL_PHASE_WORK_KINDS.has(weightMap.nodes[nodeId]?.kind);
@@ -803,37 +809,42 @@ export function runCommand(payload) {
 
             if (msg.type === 'progress_state') {
                 aggregator.onProgressState(msg);
-                if (_modelInitializing) return;
+                const nodeData = msg.data?.nodes || {};
+                const workRunning = Object.entries(nodeData).some(([id, info]) => {
+                    if (info.state !== 'running') return false;
+                    if (isTerminalPhaseWorkNode(id)) return progressFraction(info) > 0;
+                    if (isImmediateWorkNode(id)) return true;
+                    if (isDelayedWorkNode(id)) return progressFraction(info) >= ULTIMATE_START_PROGRESS;
+                    return false;
+                });
                 if (!_samplingStartFired) {
                     // Only flip badge when a work node is actually running
-                    const nodeData = msg.data?.nodes || {};
-                    const workRunning = Object.entries(nodeData).some(([id, info]) => {
-                        if (info.state !== 'running') return false;
-                        if (isTerminalPhaseWorkNode(id)) return progressFraction(info) > 0;
-                        if (isImmediateWorkNode(id)) return true;
-                        if (isDelayedWorkNode(id)) return progressFraction(info) >= ULTIMATE_START_PROGRESS;
-                        return false;
-                    });
-                    if (workRunning) emitSamplingStart();
+                    if (workRunning) {
+                        _modelInitializing = false;
+                        emitSamplingStart();
+                    }
                 }
-                exec.onProgress?.(aggregator.percent());
+                if (_modelInitializing) return;
+                emitProgress(aggregator.percent());
                 return;
             }
 
             if (msg.type === 'progress') {
                 aggregator.onProgress(msg);
-                if (_modelInitializing) return;
+                const nodeId = msg.data?.node;
+                const workRunning = (
+                    (isTerminalPhaseWorkNode(nodeId) && progressFraction(msg.data) > 0) ||
+                    (!isTerminalPhaseWorkNode(nodeId) && isImmediateWorkNode(nodeId)) ||
+                    (isDelayedWorkNode(nodeId) && progressFraction(msg.data) >= ULTIMATE_START_PROGRESS)
+                );
                 if (!_samplingStartFired) {
-                    const nodeId = msg.data?.node;
-                    if (isTerminalPhaseWorkNode(nodeId) && progressFraction(msg.data) > 0) {
-                        emitSamplingStart();
-                    } else if (!isTerminalPhaseWorkNode(nodeId) && isImmediateWorkNode(nodeId)) {
-                        emitSamplingStart();
-                    } else if (isDelayedWorkNode(nodeId) && progressFraction(msg.data) >= ULTIMATE_START_PROGRESS) {
+                    if (workRunning) {
+                        _modelInitializing = false;
                         emitSamplingStart();
                     }
                 }
-                exec.onProgress?.(aggregator.percent());
+                if (_modelInitializing) return;
+                emitProgress(aggregator.percent());
                 return;
             }
 

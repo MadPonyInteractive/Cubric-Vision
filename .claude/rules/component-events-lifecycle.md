@@ -56,3 +56,10 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - commandExecutor emits `tool:loading-model` / `tool:sampling-start` based on WS messages plus backend ComfyUI phase output for model-initialization-sensitive nodes
 - StatusBar owns all progress UI logic; blocks don't call StatusBar methods directly (except `progress.update()` for KSampler progress)
 - Generation timing saved to item sidecar starts at `tool:sampling-start`; backend receives `generationMs` field in save-generation POST body
+
+### 2026-06 StatusBar Progress Clarification
+
+- `commandExecutor` emits `tool:progress` with `{ tool: 'groupHistory', value }` after sampling has started. `value` is normalized `0..1`. Do not bypass this with direct StatusBar calls from generation services.
+- Real Comfy work-node progress is authoritative. If a platform misses the auxiliary `/comfy/events/stream` model-init-complete event, the first real sampler/work progress must clear the model-initializing phase and emit `tool:sampling-start`.
+- `StatusBar` listens to `tool:progress` and owns progress UI updates. Blocks and services should use lifecycle events: `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:progress`, `tool:idle`, and `tool:cancelled`.
+- `StatusBar.progress.complete('Generation finished')` displays elapsed whole-run seconds in the success toast. Item sidecar `generationMs` remains sampling-time metadata from `generationService`.
