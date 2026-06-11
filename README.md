@@ -66,7 +66,7 @@ No accounts. No API fees. No cloud.
 Text-to-video and image-to-video using Wan 2.2 — runs locally, staged previews
 so you spend compute only on shots worth finishing.
 
-[![Watch on YouTube](https://img.youtube.com/vi/IJ8RvDET48M/maxresdefault.jpg)](https://youtu.be/IJ8RvDET48M)
+https://github.com/user-attachments/assets/3a6277ab-554a-4d94-9af7-59c4451ec810
 
 ## Download and install
 
