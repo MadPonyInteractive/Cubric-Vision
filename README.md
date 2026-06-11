@@ -25,7 +25,7 @@ no node graphs to wire up. You type a prompt, pick a model, and refine the
 result with masking, detailing, upscaling, and video tools. Everything stays
 local: your prompts, your images, your videos, your files.
 
-Free, open source, and made by [Mad Pony Interactive](https://cubric.studio).
+Free, open source, and made by [Mad Pony Interactive](https://madponyinteractive.com).
 No accounts. No API fees. No cloud.
 
 ![Cubric Vision projects workspace](.github/readme/ui-projects.webp)
