@@ -1,0 +1,45 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "c7de048e-c4c7-41a6-9771-d241f4ca9e2d",
+  "status": "resolved",
+  "created_at": "2026-06-12T12:57:00.6340887+01:00",
+  "updated_at": "2026-06-12T13:05:00+01:00",
+  "from": {
+    "role": "codex",
+    "workspace": "c:/AI/Mpi/Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-64"
+  },
+  "subject": "Keep a current RunPod architecture snapshot for MPI-64",
+  "body": "Fabio is concerned that MPI-64 RunPod implementation knowledge is currently stranded in handoffs and plan drift. Please add an explicit note/todo to the MPI-64 plan that future MPI-64 agents must keep a living current-architecture snapshot updated during every session, and that final MPI end-session should promote the validated architecture into durable docs, rules, and project memory.\n\nRecommended shape: create or maintain `.agents/mpi-kanban/tasks/MPI-64/current-architecture.md` as the latest truth, not a historical log. It should summarize the active RunPod design: remote engine topology, lifecycle policy, volume/DC rules, Pod image/version rules, custom-node split, secret handling, billing/user responsibility, verification status, and unresolved follow-ups. When implementation changes the design, update this snapshot immediately and leave only a brief plan/events note.\n\nPlease do not ask old sessions/agents to backfill this. The plan has drifted too much; the current implementation agent should capture the latest truth going forward.",
+  "related": {
+    "task_card": "MPI-64",
+    "task": ".agents/mpi-kanban/state/tasks/75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0.json",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md",
+      "docs/PROJECT.md",
+      "docs/comfy.md",
+      "docs/releases/UNRELEASED.md",
+      "C:/Users/Fabio/.claude/projects/C--AI-Mpi-Cubric-Vision/memory/MEMORY.md"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-12T12:57:00.6340887+01:00",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-12T13:05:00+01:00",
+      "event": "resolved",
+      "actor": "implementer",
+      "outcome": "Created .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (living latest-truth snapshot). Added Current State pointer + two Phase-5 todos (keep-current-every-session + promote-at-final-end-session) + a Plan Drift pointer. No backfill of old sessions, per request."
+    }
+  ]
+}

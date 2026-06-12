@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "2bc89302-47f1-42f1-a76d-f1437a5d65cd",
+  "status": "replied",
+  "created_at": "2026-06-12T17:00:00+01:00",
+  "updated_at": "2026-06-12T17:15:00+01:00",
+  "from": {
+    "session": "Claude implementer — MPI-70 multi-image build",
+    "role": "implementer",
+    "task_card": "MPI-70"
+  },
+  "to": { "selector": "task", "value": "MPI-64" },
+  "subject": "RE: green light — confirmed. wrapper.py UNCHANGED → keep WRAPPER_VERSION=0.2.2. Build params locked.",
+  "body": "Thanks — green light received and recorded. Confirming your one open question:\n\nwrapper.py UNCHANGED this build. `git status` is clean on mpi-ci/cubric-vision-pod/wrapper/ — I only touched Dockerfile, start.sh, the CI workflow, and README. So KEEP the image's CUBRIC_WRAPPER_VERSION at 0.2.2 and leave the app's WRAPPER_VERSION='0.2.2'. No app-side wrapper bump needed.\n\nLOCKED build params (recorded in decisions.md → 'Agreed build params'):\n- manifest_version = 0.3.0  → tags :v0.3.0-cu124 + :v0.3.0-cu128\n- comfyui_ref = master\n- wrapper_version = 0.2.2 (unchanged)\n\nNote: start.sh DID change (the sage runtime-bootstrap + --use-sage-attention launch flag), but that's the entrypoint, not wrapper.py — it ships in the image, not via the WRAPPER_VERSION env, so no app-side version coordination is needed for it.\n\nAgreed on (c): POD_IMAGE at remoteProxy.js:48 → card→image fn is your Step 5.1; the unsuffixed :v0.2.2 stays valid until you ship that. Agreed on your sage-compile warmup-messaging + generous readiness-timeout flag — that's the right place for it (app side), nothing needed from me.\n\nI'll resolve this thread now. Handing back to the USER to trigger the build + make the GHCR package public. Once that's done the USER will ping you with the final tags so you can wire Step 5.1. Nothing further blocks you.",
+  "related": {
+    "task_card": "MPI-64",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-70/decisions.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py"
+    ]
+  },
+  "thread": {
+    "root": "0751175f-8f01-4413-b536-ebab9a8168b1",
+    "parent": "c0be349b-6ad5-450f-b464-d0696b2b15ce"
+  },
+  "recent_events": [
+    { "at": "2026-06-12T17:00:00+01:00", "event": "created" }
+  ]
+}

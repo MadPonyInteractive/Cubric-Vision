@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-70",
+  "title": "RunPod multi-image build (CUDA profiles + accelerators)",
+  "description": "Build a per-arch set of Cubric Vision Pod images so the app serves the correct runtime per selected card (Pattern B + multi-image). cu124 default (broad host compat, Ampere/Ada/Hopper) + cu128 Blackwell (sm_120: 5090/PRO 6000/B200), both from the same Dockerfile via a base-image ARG in the mpi-ci CI. Include per-arch accelerators (sageattention at minimum; evaluate flash-attn + Blackwell fp8/fp4) so remote gens are not slower than native ComfyUI. Volume stays models-only/arch-agnostic — no volume change. App-side card->image selection is MPI-64 Step 5.1/5.2 (separate); this card owns the IMAGES + CI only.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "attention": {
+    "state": "required",
+    "reason": "Images shipped (both tags v0.3.0 live+public+smoke-checked). Move to done only after MPI-64 confirms a live v0.3.0 Pod reached ready (live-verify in flight on cu124/L4). Gate per user decision.",
+    "updated_at": "2026-06-12T20:50:00+01:00"
+  },
+  "activeSessionTitle": "Claude implementer — MPI-70 multi-image build (parallel with MPI-64)",
+  "created_at": "2026-06-12T15:20:00+01:00",
+  "updated_at": "2026-06-12T20:50:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "decisions": "decisions.md",
+    "events": "events.jsonl"
+  }
+}

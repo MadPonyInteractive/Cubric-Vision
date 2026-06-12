@@ -156,4 +156,15 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-64","type":"task.updated","at":"2026-06-12T02:30:00.000Z","actor":"claude","summary":"Phase 3 Step 3 (wrapper /models/install) DONE + live-verified autonomously: v0.2.0 image pushed, new Pod ru3g2fsz5u34ua, 6.94GB SDXL installed onto volume, manifest persistence across stop/start proven, Pod stopped. Next: Step 4 app-wrapper download wiring + app-side token storage."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-67","at":"2026-06-12T06:16:43.997Z","actor":"vscode","summary":"Created MPI-67."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-68","at":"2026-06-12T08:06:46.737Z","actor":"vscode","summary":"Created MPI-68."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-69","at":"2026-06-12T11:12:58.596Z","actor":"vscode","summary":"Created MPI-69."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-70","at":"2026-06-12T15:20:00+01:00","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.moved","at":"2026-06-12T16:00:00+01:00","actor":"claude","from":"todo","to":"doing","summary":"MPI-70 implementation started (parallel with MPI-64)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.updated","at":"2026-06-12T16:00:00+01:00","actor":"claude","summary":"MPI-70 maturity in-progress; checklist derived."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-71","type":"task.created","at":"2026-06-12T16:57:30+01:00","actor":"codex","summary":"Created idea card for investigating Vast.ai as the leading RunPod replacement candidate, with TensorDock/Vast.ai research attached."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.updated","at":"2026-06-12T16:20:00+01:00","actor":"claude","summary":"MPI-70 accelerator decisions logged (decisions.md)."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-67","at":"2026-06-12T16:28:12.172Z","actor":"vscode","summary":"Deleted MPI-67."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.updated","at":"2026-06-12T17:00:00+01:00","actor":"claude","summary":"MPI-70 cleared to build by MPI-64; v0.3.0 tags agreed."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.updated","at":"2026-06-12T17:30:00+01:00","actor":"claude","summary":"MPI-70 build fixes pushed; rebuild #2 running."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"validation.updated","at":"2026-06-12T20:40:00+01:00","actor":"claude","summary":"MPI-70 both image tags live+public; validating."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.updated","at":"2026-06-12T20:40:00+01:00","actor":"claude","summary":"MPI-70 maturity validating."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"attention.required","at":"2026-06-12T20:50:00+01:00","actor":"claude","summary":"MPI-70 awaiting MPI-64 live-Pod confirmation before done."}
