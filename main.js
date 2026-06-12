@@ -312,6 +312,25 @@ function createWindow() {
     show: false // Show once ready to avoid white flash
   });
 
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      shell.openExternal(url).catch((err) => {
+        logger.error('system', 'open-external window handler error', err);
+      });
+      return { action: 'deny' };
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (/^https?:\/\//i.test(url) && !/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/i.test(url)) {
+      event.preventDefault();
+      shell.openExternal(url).catch((err) => {
+        logger.error('system', 'open-external navigation handler error', err);
+      });
+    }
+  });
+
   // Remove the default menu
   Menu.setApplicationMenu(null);
 

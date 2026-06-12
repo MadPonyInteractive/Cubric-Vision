@@ -270,6 +270,72 @@
     color: var(--accent-warn);
 }
 
+.mpi-settings__runpod-referral {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: var(--s-3);
+}
+
+.mpi-settings__runpod-referral-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+}
+
+.mpi-settings__runpod-referral-kicker {
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-frost);
+}
+
+.mpi-settings__runpod-referral-text {
+    font-size: var(--t-xs);
+    line-height: 1.5;
+    color: var(--ink-2);
+}
+
+.mpi-settings__runpod-referral-link {
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    background: var(--surface-3);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    line-height: 1;
+    padding: var(--s-2) var(--s-3);
+    text-decoration: none;
+    transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+    white-space: nowrap;
+}
+
+.mpi-settings__runpod-referral-link:hover,
+.mpi-settings__runpod-referral-link:focus-visible {
+    border-color: var(--accent-frost);
+    color: var(--accent-frost);
+    outline: none;
+}
+
+@media (max-width: 680px) {
+    .mpi-settings__runpod-referral {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .mpi-settings__runpod-referral-link {
+        text-align: center;
+        white-space: normal;
+    }
+}
+
 /* Network-volume row: dropdown fills, delete button hugs the right. */
 .mpi-settings__volume-row {
     display: flex;

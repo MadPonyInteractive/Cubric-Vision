@@ -556,6 +556,12 @@ function _onRemoteInstallEvent(evt) {
         depJob.status = 'complete';
         _remoteDepIds.delete(depId);
         _broadcast('download:complete', { depId, modelId: null });
+        // A per-model custom_node landed on the volume; ComfyUI only scans
+        // custom_nodes at startup, so the Pod must warm-cycle before the new
+        // node loads (Design B+). Surface it so the app can prompt/reconnect.
+        if (data.needs_comfy_restart) {
+            _broadcast('comfy:needs-restart', { depId, remote: true });
+        }
         _checkModelJobsComplete();
         _teardownRemoteEventStreamIfIdle();
     } else if (evt.type === 'models:install-error') {
@@ -611,10 +617,12 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         depJob.refCount += 1;
         if (!modelJob.deps.find(d => d.id === dep.id)) modelJob.deps.push(depJob);
 
-        // custom_nodes live in the Pod image (Design A), not the volume — never
-        // sent to the wrapper; mark complete so they count toward progress.
+        // remoteModelsCheck already reports universal (image-resident) nodes as
+        // installed and per-model nodes/weights by their real volume state, so
+        // trust `installed`: anything not present is installed via the wrapper
+        // (per-model custom_nodes now install onto the volume — Design B+).
         const alreadyInstalled = !!(statusResults[dep.id] && statusResults[dep.id].installed);
-        if (dep.type === 'custom_nodes' || alreadyInstalled) {
+        if (alreadyInstalled) {
             depJob.status = 'complete';
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);

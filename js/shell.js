@@ -242,6 +242,31 @@ async function _bootApp() {
  * it pops a "pick another GPU" dialog and creates nothing. Otherwise (enabled but
  * never connected / explicitly disconnected) it just shows the advisory.
  */
+/**
+ * Poll /remote/comfy/status until the wrapper reports ready, or until timeout.
+ * Replaces the backend's old inline long-poll (which 504'd on a long first-image
+ * pull). Fires `onSlow` once when the wait crosses `slowAfterMs` — the signal of
+ * a fresh-image cold pull (~3 GB) vs a normal ~90-120s cold create.
+ * @returns {Promise<boolean>} true once ready, false on timeout.
+ */
+async function _pollRemoteReady({ timeoutMs = 600000, intervalMs = 4000, slowAfterMs = 150000, onSlow } = {}) {
+  const start = Date.now();
+  let slowFired = false;
+  while (Date.now() - start < timeoutMs) {
+    if (!slowFired && onSlow && Date.now() - start >= slowAfterMs) {
+      slowFired = true;
+      try { onSlow(); } catch (_) { /* notify best-effort */ }
+    }
+    try {
+      const res = await fetch('/remote/comfy/status');
+      const s = res.ok ? await res.json() : null;
+      if (s && s.ready) return true;
+    } catch (_) { /* transient during cold pull / proxy 404 window */ }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return false;
+}
+
 async function _initRemoteBoot(runpod) {
   // Flag remote mode active. A saved podId is passed so status polls + teardown
   // target it; the boot gate only needs `active` to skip the local install path.
@@ -297,10 +322,21 @@ async function _initRemoteBoot(runpod) {
       const cfg = Storage.getRunpodConfig();
       Storage.setRunpodConfig({ ...cfg, podId: data.podId });
     }
-    if (res.ok && data.ready) {
+    if (!res.ok || (!data.ready && !data.starting)) {
+      throw new Error(data.message || 'reconnect did not start');
+    }
+    // The backend now returns `starting` immediately (no 504 on a long first-image
+    // pull); poll /remote/comfy/status until ready. A fresh image tag can take a
+    // few minutes the first time it is pulled onto a host.
+    const ready = await _pollRemoteReady({
+      onSlow: () => StatusBar.notify(
+        'First-time setup: downloading the engine (~3 GB, one time — faster next time)…',
+        'info', 8000),
+    });
+    if (ready) {
       StatusBar.notify('Remote engine ready', 'success', 6000);
     } else {
-      throw new Error(data.message || 'reconnect did not reach ready');
+      throw new Error('the Pod did not reach ready in time — open Settings → RunPod to retry');
     }
   } catch (err) {
     clientLogger.error('shell', 'remote auto-reconnect failed:', err);

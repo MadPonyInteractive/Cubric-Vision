@@ -107,20 +107,59 @@ async function wrapperFetch(routePath, { method = 'GET', body, retries = 4, retr
 }
 
 /**
- * True for a dep that lives in the Pod Docker image (Design A), not on the
- * network volume: custom_nodes bundles only. These are code shipped inside the
- * image (cloned at /opt/comfyui/custom_nodes), so the wrapper — which only sees
- * the /workspace volume — always reports them missing; treat them as present.
- *
- * NOTE: `installOnEngine` is NOT image-resident here. Those are model WEIGHTS
- * (upscalers, yolo/sam .pth, etc.) bundled with the LOCAL engine install only;
- * on a Pod they are real volume models the wrapper installs (e.g. 4x-NMKD-Siax,
- * verified installed-via-wrapper). Only the custom_nodes CODE ships in the image.
+ * The UNIVERSAL custom_nodes baked into the Pod image (Design B+): the
+ * `installOnEngine: true` custom_nodes from dependencies.js. These are the
+ * stable engine baseline (ComfyUI-MpiNodes, VHS, Impact, KJ, etc.) cloned into
+ * /opt/ComfyUI/custom_nodes by the image Dockerfile, so the wrapper — which only
+ * sees the /workspace volume — never finds them and they must be treated as
+ * present. PER-MODEL custom_nodes (e.g. ComfyUI-PainterI2Vadvanced) are NOT in
+ * this set: they install onto the volume via the wrapper so a new model never
+ * forces an image rebuild. Loaded once from the app dep registry.
+ * @returns {Set<string>} dep.filename folder names of the universal node packs
+ */
+let _universalNodeNames = null;
+function _universalNodeFilenames() {
+  if (_universalNodeNames) return _universalNodeNames;
+  _universalNodeNames = new Set();
+  try {
+    // CJS-friendly read of the ESM dep registry (same pattern as shared.js).
+    const path = require('path');
+    const file = path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'dependencies.js');
+    const src = require('fs').readFileSync(file, 'utf8');
+    // Split into per-dep blocks at the top-level "  'id': {" keys so the marker
+    // checks stay scoped to ONE dep (a whole-file regex leaks across deps). A
+    // dep block runs from its opening "'key': {" to the next such key.
+    const keyRe = /^\s{4}'[^']+':\s*\{/gm;
+    const starts = [];
+    let km;
+    while ((km = keyRe.exec(src)) !== null) starts.push(km.index);
+    for (let i = 0; i < starts.length; i++) {
+      const block = src.slice(starts[i], starts[i + 1] ?? src.length);
+      if (!/type:\s*'custom_nodes'/.test(block)) continue;
+      if (!/installOnEngine:\s*true/.test(block)) continue;
+      const fn = block.match(/filename:\s*'([^']+)'/);
+      if (fn && fn[1]) _universalNodeNames.add(fn[1]);
+    }
+  } catch (err) {
+    logger.warn('runpod', `universal node list load failed: ${err.message}`);
+  }
+  return _universalNodeNames;
+}
+
+/**
+ * True for a dep that lives in the Pod Docker IMAGE (universal engine nodes,
+ * Design B+), not on the network volume. Only `installOnEngine: true`
+ * custom_nodes qualify — the wrapper can't see them on the volume, so they are
+ * reported present. A per-model custom_node returns false → it routes to the
+ * wrapper for volume install.
  */
 function _isImageResident(dep) {
   const { type } = splitDepFilename(dep.filename);
   const depType = type || dep.type || '';
-  return depType === 'custom_nodes';
+  if (depType !== 'custom_nodes') return false;
+  // The node's folder name is the bare dep.filename (no subdir for nodes).
+  const name = (splitDepFilename(dep.filename).filename) || dep.filename || '';
+  return _universalNodeFilenames().has(name);
 }
 
 /**
@@ -148,6 +187,12 @@ async function remoteModelsCheck(models) {
     for (const d of (m.deps || [])) {
       if (_isImageResident(d)) {
         residentIds.push(d.id || null);
+        continue;
+      }
+      // Per-model custom_node: wrapper checks a folder, so keep type
+      // 'custom_nodes' + the bare folder name (dep.filename has no subdir).
+      if (d.type === 'custom_nodes') {
+        volumeDeps.push({ ...d, type: 'custom_nodes', filename: d.filename });
         continue;
       }
       const { type, filename } = splitDepFilename(d.filename);
@@ -188,15 +233,28 @@ async function remoteModelsCheck(models) {
  * Returns { status, id } from the wrapper ('started' | 'already_installed').
  */
 async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
-  const { type, filename } = splitDepFilename(dep.filename);
-  const body = {
-    id: dep.id,
-    type,
-    filename,
-    url: dep.url,
-    size_bytes: sizeBytes || 0,
-  };
-  if (dep.sha256) body.sha256 = dep.sha256;
+  let body;
+  if (dep.type === 'custom_nodes') {
+    // Per-model node: install a folder onto the volume. filename is the bare
+    // folder name; pass the per-pack requirements command when present.
+    body = {
+      id: dep.id,
+      type: 'custom_nodes',
+      filename: dep.filename,
+      url: dep.url,
+    };
+    if (dep.installRequirementsCommand) body.install_command = dep.installRequirementsCommand;
+  } else {
+    const { type, filename } = splitDepFilename(dep.filename);
+    body = {
+      id: dep.id,
+      type,
+      filename,
+      url: dep.url,
+      size_bytes: sizeBytes || 0,
+    };
+    if (dep.sha256) body.sha256 = dep.sha256;
+  }
   if (force) body.force = true;
 
   const res = await wrapperFetch('/wrapper/models/install', { method: 'POST', body });

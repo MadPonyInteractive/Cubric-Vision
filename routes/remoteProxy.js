@@ -45,8 +45,8 @@ const UA =
 
 // v0.2.0 Pod image spec (proven live in cubric-remote-wrapper/recreate_pod.py).
 // PyTorch + ComfyUI live in the image (Design A); the volume holds models only.
-const POD_IMAGE = 'ghcr.io/madponyinteractive/cubric-vision-pod:v0.2.0';
-const WRAPPER_VERSION = '0.2.0';
+const POD_IMAGE = 'ghcr.io/madponyinteractive/cubric-vision-pod:v0.2.2';
+const WRAPPER_VERSION = '0.2.2';
 const CONTAINER_DISK_GB = 50;
 
 // --- remote-mode state (backend-owned; Settings/boot gate flips it) ----------
@@ -204,7 +204,7 @@ async function _isGpuAvailable(key, gpuTypeId, datacenter) {
 // record it as the started Pod, and wait for the wrapper to report ready. Returns
 // { ready, podId, health } or throws/returns { ok:false, message } on a create
 // refusal. Shared by /create and the reconnect recreate-fallback.
-async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000 }) {
+async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
   const spec = {
     name: 'cubric-vision',
@@ -243,6 +243,16 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
   // (keeps this new podId). Non-blocking-best-effort but awaited so the ready-wait
   // window absorbs the (fast) list+delete instead of racing teardown. (Step 4.3.3)
   await _sweepOrphanPods(key, podId);
+
+  // wait:false — the caller (Settings Connect) returns immediately after the
+  // (fast) createPod and lets the renderer poll /remote/comfy/status for ready.
+  // This avoids holding the HTTP request open for the whole boot, which 504s when
+  // RunPod cold-pulls a fresh image tag (~3GB) past the gateway timeout. The
+  // reconnect recreate-fallback keeps wait:true (server-internal, needs the result).
+  if (!wait) {
+    logger.info('runpod', `Pod created (${podId}); renderer will poll for ready`);
+    return { ok: true, ready: false, starting: true, podId };
+  }
 
   logger.info('runpod', `waiting for wrapper ready: ${podId}`);
   const out = await waitForWrapperReady(podId, { timeoutMs });
@@ -310,20 +320,17 @@ router.post('/remote/pod/create', async (req, res) => {
     const key = await getRunPodApiKey();
     if (!key) return res.status(400).json({ error: 'no_api_key' });
     logger.info('runpod', `Pod create requested: gpu=${gpuTypeId} dc=${datacenter} vol=${volumeId || 'none'}`);
+    // wait:false — return as soon as the Pod is created; the renderer polls
+    // /remote/comfy/status for ready (no 504 on a long first-image pull).
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter,
-      timeoutMs: Number(req.query.timeoutMs) || 300000,
+      gpuTypeId, volumeId, datacenter, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `Pod create refused: ${out.message}`);
       return res.status(502).json({ error: 'pod_create_failed', message: out.message });
     }
-    if (!out.ready) {
-      logger.warn('runpod', `Pod created (${out.podId}) but wrapper not ready before timeout`);
-      return res.status(504).json({ error: 'wrapper_not_ready', podId: out.podId });
-    }
-    logger.info('runpod', `Pod create ready: ${out.podId}`);
-    res.json({ ready: true, podId: out.podId });
+    logger.info('runpod', `Pod create kicked off: ${out.podId}`);
+    res.json({ starting: true, ready: false, podId: out.podId });
   } catch (err) {
     logger.error('runpod', 'pod create failed', err);
     res.status(502).json({ error: 'pod_create_failed' });
@@ -361,33 +368,28 @@ router.post('/remote/pod/reconnect', async (req, res) => {
       return res.json({ unavailable: true, gpuTypeId });
     }
 
-    // 2. Warm resume — keeps the same podId (stored token still matches).
+    // 2. Warm resume — keeps the same podId (stored token still matches). startPod
+    //    is fast; the boot/ready wait is long, so on a successful start return
+    //    `starting` and let the renderer poll /remote/comfy/status (no 504).
     const started = await client.startPod(key, podId);
     const startOk = started.ok || started.status === 400; // 400 ~ already running
     if (startOk) {
-      const out = await waitForWrapperReady(podId, {
-        timeoutMs: Number(req.query.timeoutMs) || 300000,
-      });
-      if (out.ready) return res.json({ ready: true, podId, recreated: false });
-      // Started but never became ready — fall through to recreate.
-      logger.warn('runpod', 'resumed Pod never became ready; recreating');
-    } else {
-      const msg = (started.json && (started.json.error || started.json.message)) || `start ${started.status}`;
-      logger.warn('runpod', `Pod resume failed (${msg}); recreating fresh`);
+      logger.info('runpod', `Pod resume kicked off: ${podId}; renderer will poll for ready`);
+      return res.json({ starting: true, ready: false, podId, recreated: false });
     }
+    const msg = (started.json && (started.json.error || started.json.message)) || `start ${started.status}`;
+    logger.warn('runpod', `Pod resume failed (${msg}); recreating fresh`);
 
-    // 3. Resume failed / not-ready → delete the stuck Pod and create fresh.
+    // 3. Resume failed → delete the stuck Pod and create fresh (also poll-for-ready).
     await _deleteTrackedPod(key);
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter,
-      timeoutMs: Number(req.query.timeoutMs) || 300000,
+      gpuTypeId, volumeId, datacenter, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `recreate after failed resume refused: ${out.message}`);
       return res.status(502).json({ error: 'pod_create_failed', message: out.message });
     }
-    if (!out.ready) return res.status(504).json({ error: 'wrapper_not_ready', podId: out.podId });
-    res.json({ ready: true, podId: out.podId, recreated: true });
+    res.json({ starting: true, ready: false, podId: out.podId, recreated: true });
   } catch (err) {
     logger.error('runpod', 'pod reconnect failed', err);
     res.status(502).json({ error: 'pod_reconnect_failed' });

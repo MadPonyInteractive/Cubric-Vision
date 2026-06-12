@@ -98,6 +98,13 @@ export const MpiSettings = ComponentFactory.create({
 
                 <div class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">RunPod Remote Engine</h3>
+                    <div class="mpi-settings__runpod-referral">
+                        <div class="mpi-settings__runpod-referral-copy">
+                            <span class="mpi-settings__runpod-referral-kicker">New to RunPod?</span>
+                            <span class="mpi-settings__runpod-referral-text">Create an account with Cubric's referral link. You can get a $5 credit bonus after signing up and adding $10 for the first time, and Cubric receives referral credit too.</span>
+                        </div>
+                        <a class="mpi-settings__runpod-referral-link" href="https://runpod.io?ref=slmzn8qv" target="_blank" rel="noopener noreferrer">Create RunPod account</a>
+                    </div>
                     <div class="mpi-settings__form-group">
                         <div id="mpiSettingsRunpodToggleSlot"></div>
                         <span class="mpi-settings__hint">Run generations on your own RunPod Secure Cloud GPU. GPU and storage billing happen on your RunPod account.</span>
@@ -480,6 +487,28 @@ export const MpiSettings = ComponentFactory.create({
             }
         }
 
+        // Poll /remote/comfy/status until ready or timeout. The backend returns
+        // `starting` immediately after creating/resuming the Pod (no 504 on a long
+        // first-image pull), so the renderer owns the wait. Fires `onSlow` once when
+        // the wait crosses ~150s — the signal of a fresh image tag's first ~3 GB pull.
+        async function _pollEngineReady(onSlow, { timeoutMs = 600000, intervalMs = 4000, slowAfterMs = 150000 } = {}) {
+            const start = Date.now();
+            let slowFired = false;
+            while (Date.now() - start < timeoutMs) {
+                if (!slowFired && Date.now() - start >= slowAfterMs) {
+                    slowFired = true;
+                    try { onSlow && onSlow(); } catch (_) { /* best-effort */ }
+                }
+                try {
+                    const res = await fetch('/remote/comfy/status');
+                    const s = res.ok ? await res.json() : null;
+                    if (s && s.ready) return true;
+                } catch (_) { /* transient during cold pull / proxy 404 window */ }
+                await new Promise((r) => setTimeout(r, intervalMs));
+            }
+            return false;
+        }
+
         async function _connectEngine(root) {
             const cfg = _runpodCfg();
             if (!cfg.enabled || _engineBusy) return;
@@ -529,7 +558,8 @@ export const MpiSettings = ComponentFactory.create({
                     // Track the app-managed podId (a recreate yields a new one).
                     state.runpodConfig = { ..._runpodCfg(), podId: data.podId };
                 }
-                if (!res.ok || !data.ready) {
+                // Create/resume refused outright (out of stock, API error) — no Pod.
+                if (!res.ok || (!data.starting && !data.ready)) {
                     const msg = data.message || data.error || 'Could not connect to a Pod.';
                     const outOfStock = /not enough|unavailable|no .*available|out of stock|insufficient/i.test(msg);
                     _setEngineHint(root, outOfStock
@@ -538,20 +568,44 @@ export const MpiSettings = ComponentFactory.create({
                     _setEngineStatusText(root, data.podId ? 'creating…' : 'stopped');
                     _engineBtnLabelSet(data.podId ? 'Disconnect' : 'Connect');
                     Events.emit('ui:warning', { message: 'Could not connect to a Pod.' });
-                } else {
-                    // Connected — remember so boot can auto-reconnect (Step 4.3).
-                    state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
-                    _setEngineHint(root, data.recreated
-                        ? 'Remote engine ready (your Pod was recreated on the same GPU).'
-                        : 'Remote engine ready.');
-                    _setEngineStatusText(root, 'ready');
-                    _engineBtnLabelSet('Disconnect');
-                    Events.emit('ui:success', { message: 'Remote engine ready' });
-                    // Reap any stranded EXITED Pods from a prior session (Step 4.3.3).
-                    // A create already swept server-side; a warm resume did not, so
-                    // do it here — fire-and-forget, the live Pod is kept server-side.
-                    fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
+                    return;
                 }
+
+                // The Pod is starting — the backend returns immediately now (no 504
+                // on a long first-image pull). Poll /remote/comfy/status to ready,
+                // surfacing a "downloading the engine" message when the wait runs
+                // long (a fresh image tag's first ~3 GB pull onto a host).
+                _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
+                let _slowShown = false;
+                const ready = await _pollEngineReady(() => {
+                    if (_slowShown) return;
+                    _slowShown = true;
+                    _setEngineHint(root, 'First-time setup: downloading the engine to the GPU host (~3 GB, one time — much faster next time). Hang tight…');
+                    Events.emit('ui:info', { message: 'Downloading the engine (~3 GB, one time)…' });
+                });
+                if (!ready) {
+                    _setEngineHint(root, 'The Pod is taking longer than expected. It may still be preparing — press Connect again in a minute to resume it.', true);
+                    _setEngineStatusText(root, 'creating…');
+                    _engineBtnLabelSet('Connect');
+                    Events.emit('ui:warning', { message: 'Pod still preparing — try Connect again shortly.' });
+                    return;
+                }
+                // Connected — remember so boot can auto-reconnect (Step 4.3).
+                state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
+                _setEngineHint(root, data.recreated
+                    ? 'Remote engine ready (your Pod was recreated on the same GPU).'
+                    : 'Remote engine ready.');
+                _setEngineStatusText(root, 'ready');
+                _engineBtnLabelSet('Disconnect');
+                Events.emit('ui:success', { message: 'Remote engine ready' });
+                // Reap any stranded EXITED Pods from a prior session (Step 4.3.3).
+                // A create already swept server-side; a warm resume did not, so
+                // do it here — fire-and-forget, the live Pod is kept server-side.
+                fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
+                // Free local VRAM: a locally-running ComfyUI is redundant once
+                // we generate remotely. Stop it (no-op if not running). It lazy-
+                // starts again on the next LOCAL generation after Disconnect.
+                fetch('/comfy/stop', { method: 'POST' }).catch(() => {});
             } catch (err) {
                 _setEngineHint(root, 'Could not reach the Pod connect endpoint.', true);
                 _setEngineStatusText(root, 'stopped');
@@ -747,28 +801,7 @@ export const MpiSettings = ComponentFactory.create({
                 }));
                 return;
             }
-            const availMap = new Map(
-                (dc.gpuAvailability || [])
-                    .filter(g => g.available)
-                    .map(g => [g.gpuTypeId, g.stockStatus])
-            );
-            // Stock leads the meta so it survives truncation in narrow panels.
-            // N/A mirrors the RunPod console's label for unrated stock.
-            const gpuOptions = gpus
-                .filter(g => g.secureCloud && availMap.has(g.id))
-                .map(g => {
-                    const stock = availMap.get(g.id);
-                    const price = (typeof g.securePrice === 'number')
-                        ? ` · $${g.securePrice.toFixed(2)}/hr`
-                        : '';
-                    return {
-                        value: g.id,
-                        label: g.displayName || g.id,
-                        meta: `${stock || 'N/A'} · ${g.memoryInGb} GB${price}`,
-                        _rank: _stockRank[stock] || 0,
-                    };
-                })
-                .sort((a, b) => b._rank - a._rank);
+            const gpuOptions = _buildGpuOptions(dc.id);
             const gpuInst = MpiDropdown.mount(gpuSlot, {
                 options: gpuOptions,
                 value: cfg.gpuType || '',
@@ -793,6 +826,49 @@ export const MpiSettings = ComponentFactory.create({
                 // Connect is gated on a picked GPU (Step 4.2) — refresh its state.
                 _refreshEngineConnect(root);
             });
+            // Re-fetch live stock whenever the picker opens — RunPod availability
+            // drifts, and a stale "LOW" hint made users keep trying out-of-stock
+            // cards. Re-list the GPU options in place (keeps the panel open).
+            gpuInst.on('open', async () => {
+                const dcId = _runpodCfg().datacenter;
+                if (!dcId) return;
+                try {
+                    const res = await fetch('/runpod/gpu-availability');
+                    if (res.ok) _runpodAvailability = await res.json();
+                } catch (_) { /* keep the last options on a failed refresh */ }
+                gpuInst.el.setOptions(_buildGpuOptions(dcId), _runpodCfg().gpuType || '');
+            });
+        }
+
+        // Build the GPU picker options for a data center from the current
+        // _runpodAvailability snapshot (stock-led meta, $/hr, ranked High→Low).
+        function _buildGpuOptions(dcId) {
+            const dcs = _runpodAvailability?.dataCenters || [];
+            const gpus = _runpodAvailability?.gpuTypes || [];
+            const dc = dcs.find(d => d.id === dcId);
+            if (!dc) return [];
+            const availMap = new Map(
+                (dc.gpuAvailability || [])
+                    .filter(g => g.available)
+                    .map(g => [g.gpuTypeId, g.stockStatus])
+            );
+            // Stock leads the meta so it survives truncation in narrow panels.
+            // N/A mirrors the RunPod console's label for unrated stock.
+            return gpus
+                .filter(g => g.secureCloud && availMap.has(g.id))
+                .map(g => {
+                    const stock = availMap.get(g.id);
+                    const price = (typeof g.securePrice === 'number')
+                        ? ` · $${g.securePrice.toFixed(2)}/hr`
+                        : '';
+                    return {
+                        value: g.id,
+                        label: g.displayName || g.id,
+                        meta: `${stock || 'N/A'} · ${g.memoryInGb} GB${price}`,
+                        _rank: _stockRank[stock] || 0,
+                    };
+                })
+                .sort((a, b) => b._rank - a._rank);
         }
 
         async function _loadRunpodAvailability(root) {
