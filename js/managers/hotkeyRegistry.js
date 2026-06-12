@@ -17,9 +17,10 @@ export const KEY_TYPE = {
  * `when`            — optional fn({ state, event, activeElement, isTyping }) → bool
  * `allowWhileTyping`— if true, fires even when an input/textarea has focus
  *
- * NOTE: This registry is the runtime source of truth for binding. The help
- * page (`MpiHelp.js`) does NOT consume this file — its layout is hand-authored
- * HTML. When you add/change a hotkey here, also update `MpiHelp.js` HTML.
+ * NOTE: This registry is the runtime source of truth for binding. The hotkeys
+ * page (`mpi-hotkeys.js`) does NOT consume this file — its layout is
+ * hand-authored HTML. When you add/change a hotkey here, also update
+ * `mpi-hotkeys.js` HTML.
  */
 export const HOTKEY_REGISTRY = [
 

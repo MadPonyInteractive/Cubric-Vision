@@ -1,33 +1,33 @@
 import { ComponentFactory } from '../../../factory.js';
 
 /**
- * MpiHelp — Help content for the MpiSlideOver panel.
+ * MpiHotkeys — Hotkeys content for the MpiSlideOver panel.
  *
  * No longer owns overlay chrome. Renders body content only.
  *
  * IMPORTANT: The shortcuts list below is hand-authored static HTML — it is NOT
- * generated from `hotkeyRegistry.js`. The user maintains the visible help
+ * generated from `hotkeyRegistry.js`. The user maintains the visible hotkeys
  * surface directly here so wording, grouping, and order can be curated. When
  * a hotkey is added/changed/removed in the registry, the corresponding row
  * here MUST also be added/changed/removed.
  *
  * Usage (via slide-over event):
- *   Events.emit('slide-over:open', { title: 'Help', component: MpiHelp });
+ *   Events.emit('slide-over:open', { title: 'Hotkeys', component: MpiHotkeys });
  */
-export const MpiHelp = ComponentFactory.create({
-    name: 'MpiHelp',
-    css: ['js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css'],
+export const MpiHotkeys = ComponentFactory.create({
+    name: 'MpiHotkeys',
+    css: ['js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.css'],
 
     template: () => `
-        <div class="mpi-help">
-            <div class="mpi-help__content">
-                <div class="mpi-help__shortcuts">
-                    <h3 class="mpi-help__shortcuts-title">Keyboard Shortcuts</h3>
+        <div class="mpi-hotkeys">
+            <div class="mpi-hotkeys__content">
+                <div class="mpi-hotkeys__shortcuts">
+                    <h3 class="mpi-hotkeys__shortcuts-title">Keyboard Shortcuts</h3>
 
-                    <div class="mpi-help__shortcuts-grid">
+                    <div class="mpi-hotkeys__shortcuts-grid">
 
                         <!-- Overlay -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Dialogues + Overlays</h4>
                             <ul>
                                 <li><span>ENTER</span><span>Accept</span></li>
@@ -36,7 +36,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Focus Mode -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Focus Mode</h4>
                             <ul>
                                 <li><span>F</span><span>Toggle focus mode</span></li>
@@ -45,7 +45,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Memory -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Memory</h4>
                             <ul>
                                 <li><span>F5</span><span>Release Memory</span></li>
@@ -54,7 +54,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Image Canvas -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Image Canvas</h4>
                             <ul>
                                 <li><span>Mousewheel</span><span>Zoom</span></li>
@@ -64,7 +64,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Mask -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Mask Mode</h4>
                             <ul>
                                 <li><span>Mousewheel</span><span>Brush Size</span></li>
@@ -73,7 +73,7 @@ export const MpiHelp = ComponentFactory.create({
                             </ul>
                         </div>
 
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Mask Mode (Holding SPACE)</h4>
                             <ul>
                                 <li><span>Mousewheel</span><span>Zoom</span></li>
@@ -83,7 +83,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Gallery -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Gallery</h4>
                             <ul>
                                 <li><span>+/-</span><span>Grid size</span></li>
@@ -101,7 +101,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- History -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>History</h4>
                             <ul>
                                 <p>Item interaction</p>
@@ -114,7 +114,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Radial Menu -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Radial Menu</h4>
                             <ul>
                                 <li><span>TAB</span><span>Toggle radial menu</span></li>
@@ -124,7 +124,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Crop -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Crop</h4>
                             <ul>
                                 <li><span>Hold SHIFT</span><span>Scale from center</span></li>
@@ -132,7 +132,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Generation -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Generation</h4>
                             <ul>
                                 <li><span>CTRL+ENTER</span><span>Cue generation</span></li>
@@ -142,7 +142,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Prompt Box -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Prompt Box</h4>
                             <ul>
                                 <li><span>ESCAPE</span><span>Blur text field (restore app hotkeys)</span></li>
@@ -150,7 +150,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Video Player -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Video Player</h4>
                             <ul>
                                 <li><span>SPACE</span><span>Play / pause</span></li>
@@ -168,7 +168,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- Compare Overlay -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>Compare</h4>
                             <ul>
                                 <li><span>SPACE</span><span>Play / pause both videos</span></li>
@@ -179,7 +179,7 @@ export const MpiHelp = ComponentFactory.create({
                         </div>
 
                         <!-- System -->
-                        <div class="mpi-help__shortcut-group">
+                        <div class="mpi-hotkeys__shortcut-group">
                             <h4>System</h4>
                             <ul>
                                 <li><span>F11</span><span>Toggle fullscreen</span></li>

@@ -123,7 +123,7 @@ class HotkeyManager {
     }
 
     /**
-     * @returns {Array} full registry array (for MpiHelp)
+     * @returns {Array} full registry array
      */
     getRegistry() {
         return HOTKEY_REGISTRY;

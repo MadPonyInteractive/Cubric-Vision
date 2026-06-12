@@ -508,12 +508,12 @@
  */
 
 /**
- * @typedef {Object} MpiHelpProps (Compound — js/components/Compounds/MpiHelp)
+ * @typedef {Object} MpiHotkeysProps (Compound — js/components/Compounds/LandingPages/mpi-hotkeys)
  * No props required. Static content.
  *
  * Content component for MpiSlideOver.
  *
- * Trigger via: Events.emit('slide-over:open', { title: 'Help', component: MpiHelp })
+ * Trigger via: Events.emit('slide-over:open', { title: 'Hotkeys', component: MpiHotkeys })
  */
 
 /**
@@ -527,7 +527,7 @@
  * @typedef {Object} MpiSlideOverProps (Compound — js/components/Compounds/MpiSlideOver)
  * @property {string} title       - UPPERCASE label shown in panel header
  * @property {Object} component   - ComponentFactory blueprint to mount in the body slot
- *                                  (MpiSettings | MpiHelp | MpiAbout).
+ *                                  (MpiSettings | MpiHotkeys | MpiAbout).
  *                                  If component.el.onOpen exists, it is called on open.
  * @property {string} [extraClasses] - Optional classes added to the slide-over root.
  *                                     Queue uses this to provide its own chrome.

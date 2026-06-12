@@ -190,10 +190,10 @@ LISTENS: (none)
 API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`. Called by `MpiSlideOver.setup()` once per open.
 NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed.
 
-### MpiHelp *(content-only — body of MpiSlideOver)*
+### MpiHotkeys *(content-only — body of MpiSlideOver)*
 EMITS:   (none)
 LISTENS: (none)
-NOTE:    Static hand-authored HTML. Trigger via `Events.emit('slide-over:open', { title: 'Help', component: MpiHelp })`. Hotkey rows still hand-authored — see `docs/shell.md` and `components.md` for the registry/help-page pairing rule.
+NOTE:    Static hand-authored HTML. Trigger via `Events.emit('slide-over:open', { title: 'Hotkeys', component: MpiHotkeys })`. Hotkey rows still hand-authored — see `docs/shell.md` and `components.md` for the registry/hotkeys-page pairing rule.
 
 ### MpiAbout *(content-only — body of MpiSlideOver)*
 EMITS:   (none)
@@ -239,7 +239,7 @@ API:     `el.onOpen()` — called by MpiSlideOver on every open; re-syncs instal
          `el.destroy()` — cleans up all subscriptions
 PATTERN: Cards stored in Map by modelId for in-place updates; state polling replaced with event-driven updates
          Opened via `models:open` → shell re-emits `slide-over:open { title: 'Models', component: MpiModelManager }`
-         Also accessible from the project-page `Models` nav action (first in list before Settings · Help · About)
+         Also accessible from the project-page `Models` nav action (first in list before Settings · Hotkeys · About)
 
 ### MpiNewProject
 EMITS:   `create` `{ name: string, location: string|null }`

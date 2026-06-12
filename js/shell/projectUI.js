@@ -19,7 +19,7 @@ import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
-import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
+import { MpiHotkeys } from '../components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
 import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
@@ -48,13 +48,13 @@ export function initProjectUI() {
   const versionEl = gid('heroVersion');
   if (versionEl) versionEl.textContent = `Cubric Vision · v${APP_VERSION}`;
 
-  // ── Hero nav: plain text links (Settings · Help · About) ─────────────────
+  // ── Hero nav: plain text links (Settings · Hotkeys · About) ──────────────
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
       { label: 'Models',   handler: () => Events.emit('slide-over:open', { title: 'Models',   component: MpiModelManager }) },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
-      { label: 'Help',     handler: () => Events.emit('slide-over:open', { title: 'Help',     component: MpiHelp     }) },
+      { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
     ];
     defs.forEach(({ label, handler }) => {

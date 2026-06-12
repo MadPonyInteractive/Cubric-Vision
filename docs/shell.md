@@ -36,7 +36,7 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 - `Hotkeys.init()`: Call once at shell startup — attaches window listeners and registers builtins.
 - `Hotkeys.bind(id, fn) → unbindFn`: Bind a handler to a registry entry by stable id (e.g. `'mask.brush.toolbar'`). Returns an unbind function — store and call in `destroy()`.
 - `Hotkeys.unbind(id, fn)`: Remove a specific handler.
-- `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array (used by MpiHelp).
+- `Hotkeys.getRegistry()`: Returns the full `HOTKEY_REGISTRY` array.
 - F11 toggles native Electron fullscreen. On `enter-full-screen` / `leave-full-screen`, `windowControls.js` syncs `body.window-fullscreen`; CSS hides the custom titlebar and collapses `--titlebar-h` so the app fills the viewport.
 - Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
 - Context Menu / Shift+F10 opens the app context menu at the last hovered point when dev mode is off. In dev mode, the key is left to Electron so the native Inspect Element menu can open.
@@ -48,11 +48,11 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 2. In the component `setup()`, call `Hotkeys.bind(id, fn)` and push the returned unbind fn into `_unsubs`.
 3. `_unsubs` is called in `el.destroy()` — no manual `unbind` needed.
 
-### Help page — hand-authored HTML
+### Hotkeys page — hand-authored HTML
 
-The Help overlay (`MpiHelp`) is **not** generated from `hotkeyRegistry.js`. Its layout is hand-authored static HTML inside `js/components/Compounds/LandingPages/MpiHelp/MpiHelp.js` (the component's `template`). This is intentional: the user curates wording, grouping, ordering, and which entries appear, without writing custom display fields on every registry entry.
+The Hotkeys slide-over (`MpiHotkeys`) is **not** generated from `hotkeyRegistry.js`. Its layout is hand-authored static HTML inside `js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js` (the component's `template`). This is intentional: the user curates wording, grouping, ordering, and which entries appear, without writing custom display fields on every registry entry.
 
-**Authoring rule (mandatory):** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row in `MpiHelp.js`. Treat the two files as paired: a registry change without a help-page change is incomplete work.
+**Authoring rule (mandatory):** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row in `mpi-hotkeys.js`. Treat the two files as paired: a registry change without a hotkeys-page change is incomplete work.
 
 **Row format:**
 ```html
@@ -60,7 +60,7 @@ The Help overlay (`MpiHelp`) is **not** generated from `hotkeyRegistry.js`. Its 
 ```
 - Key text uppercase (`F5`, `CTRL+F5`, `SHIFT`, `ESCAPE`).
 - Description in concise imperative phrasing ("Release Memory", "Pan canvas (hold)").
-- Group rows under an existing `<div class="mpi-help__shortcut-group"><h4>Group Name</h4><ul>…</ul></div>`, or add a new group following the same pattern.
+- Group rows under an existing `<div class="mpi-hotkeys__shortcut-group"><h4>Group Name</h4><ul>…</ul></div>`, or add a new group following the same pattern.
 - Modifier variants of one concept become sibling rows (e.g. `F5` "Release Memory" + `CTRL+F5` "Release Memory + Cache").
 - Hold/release pairs collapse into a single "(hold)" row — do not list keyup mirrors separately.
 

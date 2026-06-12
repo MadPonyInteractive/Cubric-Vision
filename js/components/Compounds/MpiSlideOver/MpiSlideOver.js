@@ -16,7 +16,7 @@ import { on, qs } from '../../../utils/dom.js';
  *
  * Props:
  *   title     {string}  — UPPERCASE label shown in header
- *   component {Object}  — ComponentFactory blueprint (MpiSettings / MpiHelp / MpiAbout)
+ *   component {Object}  — ComponentFactory blueprint (MpiSettings / MpiHotkeys / MpiAbout)
  *
  * Instance methods (on instance.el):
  *   open()  — slide in

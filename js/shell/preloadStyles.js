@@ -36,7 +36,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiProjectCard/MpiProjectCard.css',
   'js/components/Compounds/MpiNewProject/MpiNewProject.css',
   'js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css',
-  'js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css',
+  'js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.css',
   'js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css',
   'js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css',
   'js/components/Compounds/MpiSlideOver/MpiSlideOver.css',
