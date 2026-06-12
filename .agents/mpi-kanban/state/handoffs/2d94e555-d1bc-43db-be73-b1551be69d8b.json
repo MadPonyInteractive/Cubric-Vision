@@ -1,0 +1,123 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "2d94e555-d1bc-43db-be73-b1551be69d8b",
+  "generated_at": "2026-06-12T05:18:30Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Step 4 (app↔wrapper download wiring) DONE + USER-VERIFIED live on A4000; Step 4.1 Connect/Disconnect button DONE + verified. NEXT: Step 4.2 — pivot lifecycle to create-on-Connect / delete-on-Disconnect (start/stop is host-pinned and keeps failing to resume).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from Cubric Vision via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Phase 3 Steps 1/2/2.1/3/4 all DONE and verified. Step 4 (app↔wrapper download wiring) is LIVE-VERIFIED: in remote mode the backend intercepts model-check → wrapper /models/status and the download trigger → wrapper /models/install, surfaced through the existing download UI (renderer untouched); SDXL Realistic installed end-to-end on the volume (card flipped to INSTALLED). Step 4.1 (Connect/Disconnect button + status row in Settings) DONE + verified. The user then decided the start/stop-existing-Pod lifecycle is wrong — a STOPPED Pod is host-pinned and repeatedly fails to resume — so the IMMEDIATE NEXT is Step 4.2: replace it with create-on-Connect / delete-on-Disconnect. NOTHING committed."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 design docs + Phase 2 wrapper (full contract, 38/38 local checks)",
+      "Batch #1 backend RunPod client + safeStorage secret store; Batch #2 Comfy boundary adapter; Batch #3/#3.1 Settings RunPod section + boot gate + volume-aware pickers; UI polish — all user-verified",
+      "Phase 3 Step 1 — Volume create/list/delete UX; USER-VERIFIED",
+      "Phase 3 Step 2 — Pod start/stop lifecycle + boot-UX; USER-VERIFIED on L4",
+      "Phase 3 Step 2.1 — Orphaned-Pod fix (_startedPodId); USER-VERIFIED",
+      "Phase 3 Step 3 — Wrapper POST /wrapper/models/install + cancel + active + atomic manifest; LIVE-VERIFIED; image v0.2.0 on GHCR",
+      "Phase 3 Step 4 — App↔wrapper download wiring; USER-VERIFIED live 2026-06-12 (new routes/remoteModels.js + comfy.js/downloadManager.js branches + secretsStore/secretsClient wrapper-token write path; 3 live-found bugs fixed: filename-split in models/check, do-not-send-approximate-size, download:failed carries error not 'undefined')",
+      "Phase 3 Step 4.1 — Connect/Disconnect button + status row + 5s status poll + host-full hint (MpiSettings.js/.css); USER-VERIFIED (fixed MpiButton el.setLabel/setDisabled-is-on-.el gotcha). NOTE: its start/stop lifecycle is being replaced by Step 4.2.",
+      "DESIGN A LOCKED — PyTorch/ComfyUI in the image, volume = models only (arch-agnostic)"
+    ],
+    "pending": [
+      "Step 4.2 (IMMEDIATE NEXT) — Create-on-Connect / Delete-on-Disconnect lifecycle (supersedes start/stop). Backend routes/remoteProxy.js: NEW POST /remote/pod/create ({gpuTypeId, volumeId, datacenter} → generateWrapperToken + setWrapperToken keyed to new podId + client.createPod(v0.2.0 spec, volume attached, CUBRIC_TOKEN+RUNPOD_API_KEY env, 8889/http) → record _startedPodId BEFORE ready-wait → waitForWrapperReady → {ready, podId}; GPU-unavailable returns RunPod error verbatim). NEW POST /remote/pod/delete-active (client.deletePod(_startedPodId) + clear token + _startedPodId). MpiSettings.js: Connect = create on the SELECTED GPU (block Connect until a GPU is picked) + volume + DC, status 'creating…'; Disconnect = delete-active; HIDE the manual 'Pod ID (existing)' field. main.js: quit teardown stopActiveRemotePod → deleteActiveRemotePod (/remote/pod/delete-active). js/shell.js: remote boot no longer auto-resumes a stored Pod — just set remote mode; Pod created on first Connect.",
+      "Step 5 — Manifest compatibility gate + repair/reinitialize UI (Batch #4 fold-in)",
+      "Phase 4 — input-asset transfer; remote image+video generation end-to-end; lifecycle cleanup verify",
+      "Slide-over pop-up close UX (backlog, user-deferred)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Step 4 + Step 4.1 ticked with full verify notes + the 3 Step-4 live bug fixes; Step 4.2 written as the new NEXT item (supersedes start/stop); Plan Drift 2026-06-12 records the lifecycle pivot rationale + standing test infra",
+      "Standing IDs preserved in plan drift: volume cfwqthmdrg (150GB EUR-IS-1), template ejrwtsej15, CUBRIC_TOKEN sha8 4bc82fb9 (64 hex), last Pod s7l9gu900grdjw (A4000) now EXITED; recreate_pod.py noted as NEW this session"
+    ],
+    "pending": [
+      "Fold docs/releases/UNRELEASED.md (comfy-url field removal) into release notes at next /mpi-version-bump",
+      "mpi-ci is uncommitted (cubric-vision-pod/ dir + workflow + README); cubric-remote-wrapper has new recreate_pod.py + wrapper.py install endpoints; commit when the user asks — never auto-commit",
+      "After Step 4.2 lands, the manual setWrapperToken DevTools step is obsolete (create generates+stores the token server-side) — remove any doc references"
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-64 Step 4.2 — pivot the remote engine lifecycle from start/stop-existing-Pod to CREATE-on-Connect / DELETE-on-Disconnect. Backend (routes/remoteProxy.js): add POST /remote/pod/create ({gpuTypeId, volumeId, datacenter} → generateWrapperToken + setWrapperToken keyed to the new podId + client.createPod with the v0.2.0 image spec: volume attached at /workspace, env CUBRIC_TOKEN + RUNPOD_API_KEY + CUBRIC_WRAPPER_VERSION=0.2.0, ports ['8889/http'], containerDiskInGb 50; record _startedPodId BEFORE the ready-wait; waitForWrapperReady; return {ready, podId}; on GPU-unavailable return RunPod's error verbatim) and POST /remote/pod/delete-active (client.deletePod(_startedPodId) + clear stored wrapper token + _startedPodId). MpiSettings.js: Connect now CREATES on the SELECTED GPU (BLOCK Connect until a GPU is picked) + volume + DC, status 'creating…' (~90–120s fresh boot); Disconnect calls delete-active; HIDE the manual 'Pod ID (existing)' field (created podId is app-managed). main.js: change the quit teardown from stopActiveRemotePod (/remote/pod/stop-active) to deleteActiveRemotePod (/remote/pod/delete-active). js/shell.js _initRemoteBoot: stop auto-resuming a stored Pod (none exists now) — just push remote mode; remove the host-full boot dialog. Reuse client.createPod/deletePod (routes/runpodRemote.js), generateWrapperToken/setWrapperToken (routes/remoteEngine.js fork bridge). Mirror the create spec in cubric-remote-wrapper/recreate_pod.py (already proven live). Inline-sequential, no sub-agent workers, never commit unless asked. Live test needs the user (Settings: pick a GPU, press Connect → fresh Pod; billing until Disconnect). Brief before code (mpi-continue gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "LIFECYCLE PIVOT (user, 2026-06-12): create-on-Connect / DELETE-on-Disconnect REPLACES start/stop-existing-Pod. A STOPPED Pod is host-pinned — if its host's GPU is taken while idle it can never resume ('not enough free GPUs on the host machine', hit live on both L4 and A4000 this session). Creating fresh schedules against current capacity (no pinning); deleting on teardown frees the card + kills the orphaned-billing/un-resumable bug classes. Volume persists separately; Design A means any supported card re-attaches it with no reinit/re-download.",
+      "User decisions for Step 4.2: BLOCK Connect until a GPU is picked (no auto-pick). HIDE the manual 'Pod ID (existing)' field (created podId is internal/app-managed). Fresh wrapper token generated + stored server-side on each create (removes the manual DevTools setWrapperToken step entirely).",
+      "Step 4 download wiring is backend-only — the renderer (downloadService.js posts /comfy/models/download/start, listens /comfy/downloads/stream for download:*) is UNCHANGED. The intercept lives in downloadManager.js because the download:* SSE broadcaster + client set are module-private there; models/check intercept lives in comfy.js.",
+      "Step 4 live bug fixes (all in this session): (1) remoteModelsCheck MUST split the subdir-embedded dep filename ('checkpoints/X.safetensors') into wrapper {type,filename} or status misses the file; (2) NEVER pass the app's display size ('67MB') as size_bytes — the wrapper rejects the byte-exact-correct file on done!=expected_size; sha256 (present on the dep) is the real integrity check; (3) model-level download:failed carried no error → UI 'undefined' — now surfaces the failed dep's error. custom_nodes deps are image-resident (Design A) → marked complete, never sent to the wrapper.",
+      "MpiButton imperative API (setLabel/setDisabled/setActive) lives on instance.el, NOT the mount instance — calling them on the instance throws 'setDisabled is not a function' (fixed in Step 4.1 via _engineBtnLabelSet/_engineBtnDisabled helpers that call instance.el.setX). The button label is tracked in a local _engineBtnLabel var (instance has no props getter)."
+    ],
+    "constraints": [
+      "NOTHING is committed in Cubric-Vision (never commit unless the user explicitly asks). All MPI-64 app work is uncommitted on branch RunPod. mpi-ci + cubric-remote-wrapper also uncommitted.",
+      "Last Pod s7l9gu900grdjw (A4000, EUR-IS-1) is EXITED — NO GPU billing. Volume cfwqthmdrg (150GB, EUR-IS-1) bills storage (~$10.50/mo, expected). After Step 4.2, Connect creates a FRESH Pod each session and Disconnect/quit DELETES it.",
+      "INLINE-SEQUENTIAL execution for app code — do not dispatch sub-agent workers.",
+      "RunPod secrets + standing IDs in GITIGNORED cubric-remote-wrapper/.secrets/runpod.env: CUBRIC_TOKEN sha8 4bc82fb9 (64 hex), volume cfwqthmdrg, template ejrwtsej15. NEVER paste the API key/token; NEVER read/grep runpod.env (the classifier BLOCKS reading it AND scanning %APPDATA% for the secret store AND autonomous Pod create/delete that needs the key). For live Pod ops the USER runs cubric-remote-wrapper/recreate_pod.py (it reads the env in their shell). RunPod is behind Cloudflare — always a browser User-Agent; Windows curl flakes — use Python; RunPod REST stop/delete returns an EMPTY body on success.",
+      "Step 4.2 backend: routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js (SSE intercept fall-through). routes/logger.js warn/info take only (category, message). The wrapper token in the app store is keyed by podId (getWrapperToken returns null on podId mismatch) — create MUST store the fresh token keyed to the NEW podId. The proxy 404s wrapper routes for a few seconds right after Pod ready — keep the post-restart retry tolerance (already in remoteModels.wrapperFetch).",
+      "Create spec proven live in recreate_pod.py: REST POST /pods with {name, imageName: 'ghcr.io/madponyinteractive/cubric-vision-pod:v0.2.0', gpuTypeIds:[<id>], gpuCount:1, dataCenterIds:[dc], networkVolumeId, volumeMountPath:'/workspace', containerDiskInGb:50, ports:['8889/http'], env:{CUBRIC_TOKEN, RUNPOD_API_KEY, CUBRIC_WRAPPER_VERSION:'0.2.0'}}. gpuTypeId is the exact GraphQL id string (e.g. 'NVIDIA RTX A4000', 'NVIDIA L4'). Availability join: gpuTypes carries id/displayName/securePrice (NO availability arg); dataCenters[].gpuAvailability{available,gpuTypeId,stockStatus} carries per-DC stock.",
+      "DOCS WEBSITE PUSH BLOCK still applies (never push 'Cubric Studio (Docs)')."
+    ],
+    "files_modified": [
+      "routes/remoteModels.js (NEW Step 4: wrapper model adapter — isRemoteActive, splitDepFilename, wrapperFetch w/ 404 retry, remoteModelsCheck [splits filename], remoteInstallDep, remoteCancelInstall, openInstallEventStream)",
+      "routes/comfy.js (Step 4: POST /comfy/models/check remote branch → remoteModelsCheck)",
+      "routes/downloadManager.js (Step 4: _startRemoteDownload + _onRemoteInstallEvent + shared install SSE; remote-aware cancel; pause/resume no-op remotely; custom_nodes complete-inline; download:failed now carries the failed dep error; does NOT send approximate size as size_bytes)",
+      "main/secretsStore.js (Step 4: secrets:set-wrapper-token + clear-wrapper-token IPC handlers)",
+      "js/core/secretsClient.js (Step 4: write-only setWrapperToken/clearWrapperToken)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (Step 4.1: Connect/Disconnect button + status row + _engineBtn helpers + 5s poll + destroy cleanup)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css (Step 4.1: .mpi-settings__runpod-connect-row + __runpod-status)",
+      "cubric-remote-wrapper/recreate_pod.py (NEW this session: availability query + delete-old+create-new on cheapest supported in-stock EUR-IS-1 card; user-run)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Step 4/4.1 ticked, Step 4.2 added, Plan Drift 2026-06-12)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "routes/remoteProxy.js",
+      "routes/runpodRemote.js (client.createPod/deletePod + the create spec shape)",
+      "routes/remoteEngine.js (generateWrapperToken, setWrapperToken, waitForWrapperReady, proxyUrl)",
+      "routes/remoteModels.js (wrapperFetch 404-retry pattern to reuse)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (RunPod section: _initEngineConnect/_connectEngine/_disconnectEngine, GPU picker, podId field to hide)",
+      "js/shell.js (_initRemoteBoot — stop auto-resume)",
+      "main.js (stopActiveRemotePod + mainWindow close handler — change to delete-active)",
+      "cubric-remote-wrapper/recreate_pod.py (proven create spec + availability join)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "wrapper API contract", "ComfyUI execution boundary"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T05:18:30Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (only worktree: c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/2d94e555-d1bc-43db-be73-b1551be69d8b.json and use mpi-continue. STATUS: Phase 3 Steps 1/2/2.1/3/4 are all DONE and verified. Step 4 (app↔wrapper download wiring — backend intercepts model-check → wrapper /wrapper/models/status and the download trigger → wrapper /wrapper/models/install, surfaced through the unchanged renderer download UI) is USER-VERIFIED live: SDXL Realistic installed onto the volume from the app, card flipped to INSTALLED (3 live bugs fixed: split the subdir-embedded dep filename into wrapper {type,filename}; do NOT pass the app's approximate display size as size_bytes; download:failed now carries the dep error instead of 'undefined'). Step 4.1 (Connect/Disconnect button + status row in Settings) is DONE + verified. NOTHING is committed. IMMEDIATE NEXT IS STEP 4.2 — pivot the remote engine lifecycle from start/stop-existing-Pod to CREATE-on-Connect / DELETE-on-Disconnect, because a STOPPED Pod is host-pinned and repeatedly failed to resume ('not enough free GPUs on the host machine') this session on both L4 and A4000. Build: backend routes/remoteProxy.js POST /remote/pod/create ({gpuTypeId, volumeId, datacenter} → generateWrapperToken + setWrapperToken keyed to the new podId + client.createPod with the v0.2.0 image spec proven in cubric-remote-wrapper/recreate_pod.py: volume attached at /workspace, env CUBRIC_TOKEN+RUNPOD_API_KEY+CUBRIC_WRAPPER_VERSION=0.2.0, ports ['8889/http'], containerDiskInGb 50; record _startedPodId before the ready-wait; waitForWrapperReady; return {ready, podId}; GPU-unavailable returns RunPod's error verbatim) and POST /remote/pod/delete-active (client.deletePod(_startedPodId) + clear token + _startedPodId). MpiSettings.js: Connect CREATES on the SELECTED GPU (BLOCK Connect until a GPU is picked — user decision), Disconnect deletes, HIDE the manual 'Pod ID (existing)' field (user decision). main.js: quit teardown stopActiveRemotePod → deleteActiveRemotePod (/remote/pod/delete-active). js/shell.js: remote boot stops auto-resuming a stored Pod (just set remote mode). The volume cfwqthmdrg (EUR-IS-1) persists; Design A → any supported card re-attaches with no reinit. GOTCHAS: never read/grep .secrets/runpod.env and never run autonomous Pod create/delete (classifier blocks both — the USER runs recreate_pod.py for live Pod ops); RunPod is behind Cloudflare (browser UA; Windows curl flakes — use Python); RunPod REST delete returns an empty body; routes/remoteProxy.js stays mounted before routes/comfy.js; getWrapperToken returns null on podId mismatch so create MUST store the fresh token keyed to the new podId; MpiButton setLabel/setDisabled live on instance.el not the instance; inline-sequential, no sub-agent workers, never commit unless asked. Brief before code (mpi-continue gate)."
+}

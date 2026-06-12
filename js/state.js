@@ -88,6 +88,14 @@ const _state = {
                                      // Default: all reuse parts enabled, ask disabled.
     promptReuseSource: Storage.getPromptReuseSource(),
                                      // Gallery-only source preference: 'original' | 'current'.
+
+    // ── RunPod remote engine (cross-session, localStorage-mirrored) ───────────
+    runpodConfig: Storage.getRunpodConfig(),
+                                     // { enabled, podId, datacenter, gpuType, volumeId, wasConnected } —
+                                     // NON-secret prefs only. The API key / wrapper token
+                                     // are main-process-only (secrets:* IPC via
+                                     // js/core/secretsClient.js) and must never appear
+                                     // here or in localStorage. Mirrored by subscriber below.
 };
 
 // Effective image-px → screen-px scale above which auto mode switches to nearest-neighbor.
@@ -151,4 +159,5 @@ Events.on('state:changed', ({ key, value }) => {
     else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
     else if (key === 'promptReuseOptions') Storage.setPromptReuseOptions(value);
     else if (key === 'promptReuseSource') Storage.setPromptReuseSource(value);
+    else if (key === 'runpodConfig') Storage.setRunpodConfig(value);
 });

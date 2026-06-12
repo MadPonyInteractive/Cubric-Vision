@@ -25,6 +25,30 @@ function normalizePromptReuseSource(value) {
   return value === 'current' ? 'current' : 'original';
 }
 
+export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
+  enabled: false,
+  podId: null,
+  datacenter: null,
+  gpuType: null,
+  volumeId: null,
+  // wasConnected: the user reached a connected Pod and did NOT explicitly
+  // Disconnect — boot uses this to auto-reconnect (start-or-recreate). Set on a
+  // successful Connect/reconnect, cleared on explicit Disconnect.
+  wasConnected: false,
+});
+
+// Non-secret RunPod prefs only — never the API key or wrapper token.
+function normalizeRunpodConfig(value = {}) {
+  return {
+    enabled: value?.enabled === true,
+    podId: value?.podId || null,
+    datacenter: value?.datacenter || null,
+    gpuType: value?.gpuType || null,
+    volumeId: value?.volumeId || null,
+    wasConnected: value?.wasConnected === true,
+  };
+}
+
 /** Wrap localStorage.getItem with JSON.parse + default fallback */
 function get(key, defaultValue = null) {
   try {
@@ -51,8 +75,8 @@ export const Storage = {
   setComfyRootPath:     (v) => set(STORAGE_KEYS.COMFY_ROOT_PATH, v),
   removeComfyRootPath:  () => remove(STORAGE_KEYS.COMFY_ROOT_PATH),
 
-  getComfyUrl:         () => get(STORAGE_KEYS.COMFY_URL, 'http://localhost:8188'),
-  setComfyUrl:         (v) => set(STORAGE_KEYS.COMFY_URL, v),
+  getRunpodConfig:     () => normalizeRunpodConfig(get(STORAGE_KEYS.RUNPOD_CONFIG, DEFAULT_RUNPOD_CONFIG)),
+  setRunpodConfig:     (v) => set(STORAGE_KEYS.RUNPOD_CONFIG, normalizeRunpodConfig(v)),
 
   getAutoStartComfy:   () => get(STORAGE_KEYS.AUTO_START_COMFY, false),
   setAutoStartComfy:   (v) => set(STORAGE_KEYS.AUTO_START_COMFY, v),

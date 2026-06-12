@@ -1,10 +1,11 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 const { fork } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
+const secretsStore = require('./main/secretsStore');
 
 const APP_CONFIG = loadAppConfig();
 
@@ -99,6 +100,27 @@ async function getActiveDownloadsForQuit() {
   } catch (err) {
     logger.warn('main', `Failed to query active downloads before quit: ${err.message}`);
     return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Best-effort: STOP (not delete) the active RunPod Pod on quit so GPU billing
+// ends while the Pod stays warm-resumable (MPI-64 Step 4.3 — stop-not-delete; a
+// STOPPED Pod bills no GPU, only volume + reserved container disk, and boot can
+// warm-resume it). The wrapper idle watchdog is the real backstop if this times
+// out. The network volume is unaffected.
+async function stopActiveRemotePod() {
+  if (!serverProcess || serverProcess.killed) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    await fetch('http://127.0.0.1:3000/remote/pod/stop-active', {
+      method: 'POST',
+      signal: controller.signal,
+    });
+  } catch (err) {
+    logger.warn('main', `Remote Pod stop on quit failed: ${err.message}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -314,9 +336,12 @@ function createWindow() {
     event.preventDefault();
     if (quitDownloadWarningInProgress) return;
     quitDownloadWarningInProgress = true;
-    confirmQuitWithActiveDownloads().then((shouldQuit) => {
+    confirmQuitWithActiveDownloads().then(async (shouldQuit) => {
       quitDownloadWarningInProgress = false;
       if (!shouldQuit) return;
+      // Stop the remote Pod (if any) before tearing down — best-effort, the
+      // server child is still alive at this point so the call can reach it.
+      await stopActiveRemotePod();
       quitDownloadWarningAccepted = true;
       mainWindow?.close();
     });
@@ -475,6 +500,11 @@ function startServer() {
     env: buildServerEnv(userDataPath, documentsPath)
   });
 
+  // Let the forked server request decrypted RunPod secrets on demand (MPI-64).
+  // safeStorage lives only in this main process; the key crosses the fork channel
+  // only when asked and is never persisted by the child.
+  secretsStore.registerForkBridge(serverProcess);
+
   const pipeChildStream = (stream, level) => {
     if (!stream) return;
     let buffer = '';
@@ -630,6 +660,10 @@ app.on('ready', () => {
     isFullScreen: Boolean(mainWindow?.isFullScreen()),
     isMaximized: Boolean(mainWindow?.isMaximized())
   }));
+
+  // RunPod secret storage (MPI-64): registers secrets:* IPC handlers. safeStorage
+  // when available; derived-key encrypted fallback + weakEncryption flag otherwise.
+  secretsStore.init({ app, safeStorage, ipcMain, logger });
 
   // System notification — fires only when window is minimized.
   // Renderer sends unconditionally; main gates on isMinimized().

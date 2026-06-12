@@ -65,7 +65,9 @@ export const MpiDropdown = ComponentFactory.create({
         const direction   = props.direction || 'down';
         const info        = props.info ? `data-info="${props.info}"` : '';
         const extraClasses = props.extraClasses || '';
-        const listClasses = props.wrapLabels ? 'mpi-dropdown__list--wrap' : '';
+        // Forward extraClasses to the portalled list too — it lives in document.body,
+        // so a root-only modifier can't reach its options (e.g. .mpi-dropdown--runpod).
+        const listClasses = `${props.wrapLabels ? 'mpi-dropdown__list--wrap' : ''} ${extraClasses}`.trim();
 
         const selected = options.find(o => optionValue(o) === value);
         const triggerLabel = selected

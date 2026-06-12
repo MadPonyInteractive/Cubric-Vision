@@ -64,36 +64,84 @@ function _renderSession(projects) {
     el.textContent = _formatRelative(projects[0].updatedAt);
 }
 
+// Cached local-machine GPU/VRAM/RAM line so it can be restored when the remote
+// engine disconnects (the footer flips to the Pod card while connected).
+let _localGpuFrag = null;
+let _remoteConnected = false;
+
+function _buildLocalGpuFrag({ gpu, vramTotal, ramTotal }) {
+    const gpuLabel = _stripGpuPrefix(gpu?.name);
+    const vram = _formatGB(vramTotal);
+    const ram = _formatGB(ramTotal);
+    const frag = document.createDocumentFragment();
+    const sep = () => frag.appendChild(document.createTextNode(' · '));
+    if (gpuLabel) frag.appendChild(document.createTextNode(gpuLabel));
+    if (vram) {
+        if (frag.childNodes.length) sep();
+        const accent = document.createElement('span');
+        accent.className = 'mpi-landing__stat-accent';
+        accent.textContent = `${vram} VRAM`;
+        frag.appendChild(accent);
+    }
+    if (ram) {
+        if (frag.childNodes.length) sep();
+        frag.appendChild(document.createTextNode(`${ram} RAM`));
+    }
+    return frag.childNodes.length ? frag : null;
+}
+
 async function _renderGpu() {
     const el = gid('heroStatGpu');
     if (!el) return;
     try {
         const res = await fetch('/system/gpu-info');
         if (!res.ok) return;
-        const { gpu, vramTotal, ramTotal } = await res.json();
-        const gpuLabel = _stripGpuPrefix(gpu?.name);
-        const vram = _formatGB(vramTotal);
-        const ram = _formatGB(ramTotal);
-        const frag = document.createDocumentFragment();
-        const sep = () => frag.appendChild(document.createTextNode(' · '));
-        if (gpuLabel) frag.appendChild(document.createTextNode(gpuLabel));
-        if (vram) {
-            if (frag.childNodes.length) sep();
-            const accent = document.createElement('span');
-            accent.className = 'mpi-landing__stat-accent';
-            accent.textContent = `${vram} VRAM`;
-            frag.appendChild(accent);
-        }
-        if (ram) {
-            if (frag.childNodes.length) sep();
-            frag.appendChild(document.createTextNode(`${ram} RAM`));
-        }
-        if (frag.childNodes.length) {
-            el.innerHTML = '';
-            el.appendChild(frag);
+        const info = await res.json();
+        const frag = _buildLocalGpuFrag(info);
+        if (frag) {
+            // Keep a clone so the live one can be mounted now and re-cloned later.
+            _localGpuFrag = frag.cloneNode(true);
+            if (!_remoteConnected) {
+                el.innerHTML = '';
+                el.appendChild(frag);
+            }
         }
     } catch (err) {
         clientLogger.warn('heroStats', 'gpu-info fetch failed', err);
+    }
+}
+
+// Flip the engine label + GPU stat between local hardware and the connected Pod.
+// Remote line mirrors the local format: "RTX A4000 · 16GB VRAM · 24GB RAM" (VRAM
+// accented). VRAM/RAM are best-effort — each segment is dropped if absent.
+function _renderEngine({ connected, gpuName, vramGb, ramGb }) {
+    _remoteConnected = !!connected;
+    const label = gid('heroStatEngine');
+    const gpu = gid('heroStatGpu');
+    if (label) label.textContent = connected ? 'remote · online' : 'local · offline';
+    if (!gpu) return;
+    if (connected) {
+        const frag = document.createDocumentFragment();
+        const sep = () => frag.appendChild(document.createTextNode(' · '));
+        frag.appendChild(document.createTextNode(_stripGpuPrefix(gpuName) || 'Remote GPU'));
+        if (Number(vramGb) > 0) {
+            sep();
+            const accent = document.createElement('span');
+            accent.className = 'mpi-landing__stat-accent';
+            accent.textContent = `${Math.round(vramGb)}GB VRAM`;
+            frag.appendChild(accent);
+        }
+        if (Number(ramGb) > 0) {
+            sep();
+            frag.appendChild(document.createTextNode(`${Math.round(ramGb)}GB RAM`));
+        }
+        gpu.innerHTML = '';
+        gpu.appendChild(frag);
+    } else {
+        // Restore the cached local line (re-clone so the node isn't consumed).
+        gpu.innerHTML = '';
+        if (_localGpuFrag) gpu.appendChild(_localGpuFrag.cloneNode(true));
+        else _renderGpu();
     }
 }
 
@@ -108,4 +156,6 @@ export function initHeroStats() {
 
     Events.on('models:checked', ({ installedModelIds }) => _renderModels(installedModelIds?.length ?? 0));
     Events.on('projects:listed', ({ projects }) => _renderSession(projects));
+    // Persistent remote-engine feedback (MPI-64 Step 4.4) — flip local↔remote.
+    Events.on('remote:connection', (payload) => _renderEngine(payload || {}));
 }

@@ -43,6 +43,9 @@ const videoConcatRoutes = require('./routes/videoConcat');
 const videoReverseRoutes = require('./routes/videoReverse');
 const videoTrimInputRoutes = require('./routes/videoTrimInput');
 const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
+const { router: runpodRemoteRoutes } = require('./routes/runpodRemote');
+const { router: remoteEngineRoutes } = require('./routes/remoteEngine');
+const { router: remoteProxyRoutes } = require('./routes/remoteProxy');
 const { cleanComfyUITempFiles } = require('./routes/shared');
 
 console.log('[server.js] App initialization started');
@@ -51,12 +54,17 @@ logger.info('system', 'Server initialization started');
 app.use(systemRoutes);
 app.use(projectRoutes);
 app.use(engineRoutes);
+// remoteProxy MUST mount before comfy: its /comfy/events/stream intercept
+// falls through to routes/comfy.js via next() when remote mode is inactive.
+app.use(remoteProxyRoutes);
 app.use(comfyRoutes);
 app.use(videoCropRoutes);
 app.use(videoConcatRoutes);
 app.use(videoReverseRoutes);
 app.use(videoTrimInputRoutes);
 app.use(downloadManagerRoutes);
+app.use(runpodRemoteRoutes);
+app.use(remoteEngineRoutes);
 
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 process.on('SIGINT', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });

@@ -10,8 +10,11 @@
 export const STORAGE_KEYS = {
   // Engine settings
   COMFY_ROOT_PATH:     'mpi_comfy_root_path',
-  COMFY_URL:           'mpi_comfy_url',
   AUTO_START_COMFY:    'mpi_auto_start_comfy',
+
+  // RunPod remote engine — NON-secret prefs only. The API key and wrapper
+  // token live in the main process (safeStorage via secrets:* IPC), never here.
+  RUNPOD_CONFIG:       'mpi_runpod_config',
 
   // Project management
   EXTRA_PROJECT_PATHS: 'mpi_extra_project_paths',

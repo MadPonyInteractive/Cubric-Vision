@@ -36,7 +36,7 @@ function _buildComfyViewUrl(fileInfo) {
         const value = fileInfo?.[key];
         if (value !== undefined && value !== null) params.set(key, value);
     }
-    return `http://${ComfyUIController.serverAddress}/view?${params.toString()}`;
+    return `${ComfyUIController.httpBase()}/view?${params.toString()}`;
 }
 
 function _collectComfyOutputUrls(nodeOutput, target) {

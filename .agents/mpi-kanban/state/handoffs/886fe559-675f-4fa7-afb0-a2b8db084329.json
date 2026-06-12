@@ -1,0 +1,135 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "886fe559-675f-4fa7-afb0-a2b8db084329",
+  "generated_at": "2026-06-11T16:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "accepted",
+  "accepted_by": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "accepted_at": "2026-06-11T16:45:00Z",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Phase 1 design, Phase 2 wrapper+live Pod proven, Parallel Batch #1 (backend client+secret store) done",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from the Cubric Vision desktop app, via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Phase 1 design (7 research docs) complete and decisions resolved with the user. Phase 2 wrapper built (full contract, 24/24 local verify) and PROVEN END-TO-END on a real RunPod A4000 Pod through the proxy (image pulled, ComfyUI loaded on GPU, token auth + volume upload worked). Parallel Batch #1 (backend RunPod client + safeStorage secret store) implemented inline and verified (mocked + live GraphQL). Next: smoke-test the app with npm start, then Batch #2 (Comfy boundary adapter — the risky core change)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 — all 6 design decisions: transport-topology, wrapper-api-contract, template-distribution, volume-manifest-schema, pod-lifecycle-policy, secret-storage (+ bonus gpu-availability-and-datacenter.md)",
+      "Phase 2 step 1 — wrapper prototype then FULL contract, 24/24 verify PASS local",
+      "Phase 2 step 2 — image on GHCR + RunPod template created + live Pod reached ready",
+      "Phase 2 step 3 — PARTIAL: /health proven live (stale-payload tolerant); manifest-gate + app-side polling remain",
+      "Parallel Batch #1 — backend RunPod client + secret store (NOT yet a checkbox in plan.md; tracked in events.jsonl)"
+    ],
+    "pending": [
+      "Run npm start to smoke-test secrets:* IPC + fork bridge in the real Electron app (USER is doing this now)",
+      "Parallel Batch #2 — Comfy boundary adapter: route comfyController.js/commandExecutor.js to the wrapper proxy in remote mode, local mode BYTE-IDENTICAL (the risky core change)",
+      "Parallel Batch #3 — Settings RunPod section + master toggle + advisory pop-up + API-key password field + GPU/DC availability picker + remote-mode boot gate (shell.js)",
+      "Parallel Batch #4 — compatibility/manifest validation UI",
+      "Phase 3 — model download onto volume (start with ONE SDXL checkpoint, NOT WAN), write volume manifest, bundle versioning",
+      "Phase 4 — end-to-end remote generation (SDXL image first)",
+      "Phase 5 — hardening, secret-hygiene audit (add global logger redaction hook), docs"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md updated: Phase 1 boxes ticked with decision notes; Phase 2 step 1+2 ticked, step 3 marked partial",
+      "All design decisions captured in research/*.md (7 docs) and reflected in plan",
+      "events.jsonl logs every milestone this session incl. Batch #1",
+      "Memory: project_disk_layout_c_constrained.md (C drive ~8GB free; put Docker/heavy artifacts on D:)"
+    ],
+    "pending": [
+      "Add a Parallel-Batch-#1 checkbox/section to plan.md if desired (currently only in events.jsonl)",
+      "Phase 5: add a GLOBAL redaction hook in routes/logger.js (currently redaction is per-call in runpodRemote.js only)",
+      "Push the UPDATED full-contract image to GHCR — blocked by transient GHCR 502 this session; retry: docker push ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (original live-tested image is already public on GHCR)",
+      "Consider archiving the test Pod or keeping for next test (user chose KEEP both Pod+volume)"
+    ]
+  },
+  "next_action": {
+    "description": "User is running npm start to smoke-test the app UI + the new secrets:* IPC and fork bridge (Batch #1). After confirming the app boots and IPC works, proceed to Parallel Batch #2 (Comfy boundary adapter). BRIEF BEFORE CODE per CLAUDE.md: read .claude/rules/comfy_injection.md + events.md + the transport-topology.md and wrapper-api-contract.md research docs, then brief the user and wait for 'go'. Batch #2 must keep LOCAL mode byte-identical — remote selected through a narrow adapter only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Architecture: Secure-Cloud-only RunPod Pods from a Cubric-owned PUBLIC template (option a — verified RunPod public templates deploy cross-account with any user key). Image public on GHCR. No raw ComfyUI exposed; no arbitrary remote URLs; no Community Cloud.",
+      "Wrapper runtime = Python/FastAPI (OneTrainer precedent). Permanent home = private MadPonyInteractive/mpi-ci (cloned to c:/AI/Mpi/mpi-ci). Scratch dev copy at c:/AI/Mpi/cubric-remote-wrapper (has venv + verify.py + fake_comfy.py + .secrets/runpod.env).",
+      "Transport = BACKEND PROXY: Express holds the wrapper token server-side, forwards to the RunPod proxy; the ONE exception is renderer WSS-direct for binary preview frames. Token never in renderer storage.",
+      "Secret storage = Option B: Electron safeStorage when available, AES-256-GCM derived-key file fallback + weakEncryption warning at save time otherwise. NEVER lock Linux users out (user decision). API key field = MpiInput password mode.",
+      "Lifecycle: stop-on-quit (not delete); network-volume delete is a first-class user action (needed to switch DC/GPU family, since a volume locks to one DC). Idle watchdog 15 min inference (12 min noted for future LoRA training).",
+      "Connection model: NO Connect button. Settings RunPod master toggle (off default) -> advisory pop-up on app open ('RunPod active, ComfyUI start uses your credits') -> Pod starts at the EXISTING comfy:ready boot trigger, routed to remote.",
+      "GPU availability IS fetchable via GraphQL dataCenters{gpuAvailability{available gpuTypeId stockStatus}} — beats OneTrainer's link-only. available=deploy gate, stockStatus(High/Medium/Low/null)=likelihood hint, null != unavailable.",
+      "SECURITY FIX this session: GraphQL key was in the URL query -> would leak via err.message -> app.log -> bug report. Moved to Authorization header + added redactSecret() (api_key=/rpa_/Bearer). Confirmed live."
+    ],
+    "constraints": [
+      "NEVER commit to git unless user explicitly asks (CLAUDE.md). Work is uncommitted on branch RunPod.",
+      "Branch RunPod is behind master by 3 docs-only commits (README/cleanup). Rebase onto master before the final PR; near-zero conflict risk.",
+      "Sub-agents start COLD — brief them with Critical Rules Snapshot + relevant rule briefings (use mpi-brief-rule). User chose INLINE-SEQUENTIAL execution for app code, not sub-agents.",
+      "Windows curl flakes on POST-multipart through the RunPod Cloudflare proxy (http=000) — use Python+browser-UA for remote tests. RunPod proxy + API are behind Cloudflare: default UA gets 403 error 1010, MUST send a browser User-Agent.",
+      "Docker data root moved to D: (C drive was ~8GB free). Docker engine v29.5.3. Docker bin: '/c/Program Files/Docker/Docker/resources/bin' (add to PATH).",
+      "RunPod secrets live in c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env (GITIGNORED, NOT a git repo): RUNPOD_API_KEY (existing Key1, R&W), RUNPOD_VOLUME_ID=cfwqthmdrg, RUNPOD_DATACENTER=EUR-IS-1, RUNPOD_TEMPLATE_ID=ejrwtsej15, RUNPOD_POD_ID=k8pr35yto3xy7n. NEVER paste the key in chat or logs.",
+      "Standing RunPod resources (user chose KEEP): Pod k8pr35yto3xy7n (STOPPED, A4000, EUR-IS-1) — restart for more tests; 150GB volume cubric-vision-vol cfwqthmdrg (EUR-IS-1, bills ~$10.50/mo storage); template ejrwtsej15; image ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (public).",
+      "EUR-IS-1 is the chosen DC: has RTX 5090 (real use) + A4000 + L4 (cheap test) + storage. Volume is locked to EUR-IS-1.",
+      "Batch #1 secrets:* IPC + fork bridge verified by LOGIC test only, NOT yet by a real npm start run — that is the immediate next validation (user doing it).",
+      "DOCS WEBSITE PUSH BLOCK still applies (unrelated to MPI-64). Never push c:/AI/Mpi/Cubric Studio (Docs)."
+    ],
+    "files_modified": [
+      "main/secretsStore.js (NEW — safeStorage + AES-GCM fallback + fork bridge + secrets:* IPC)",
+      "routes/runpodRemote.js (NEW — RunPod REST+GraphQL client, redactSecret)",
+      "routes/remoteEngine.js (NEW — fork-bridge key resolver, wrapper-token gen, readiness poll)",
+      "server.js (EDIT additive — mount runpodRemoteRoutes + remoteEngineRoutes)",
+      "main.js (EDIT additive — import safeStorage+secretsStore, registerForkBridge after fork, secretsStore.init for IPC)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (boxes ticked)",
+      ".agents/mpi-kanban/tasks/MPI-64/events.jsonl (milestones)",
+      ".agents/mpi-kanban/tasks/MPI-64/research/*.md (7 design docs — full set)",
+      "c:/AI/Mpi/cubric-remote-wrapper/* (NEW scratch — wrapper.py, fake_comfy.py, verify.py, requirements.txt, README.md, .secrets/)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/* (NEW — Dockerfile, start.sh, wrapper/, README) + .github/workflows/cubric-vision-pod-image.yml (separate repo, separate git)",
+      "C:/Users/Fabio/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/project_disk_layout_c_constrained.md (NEW memory)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/transport-topology.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/wrapper-api-contract.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/pod-lifecycle-policy.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/secret-storage.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/gpu-availability-and-datacenter.md",
+      "routes/runpodRemote.js",
+      "routes/remoteEngine.js",
+      "main/secretsStore.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI execution boundary", "secret storage", "Pod lifecycle", "GPU availability"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/components.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-11T16:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app. Read .agents/mpi-kanban/state/handoffs/886fe559-675f-4fa7-afb0-a2b8db084329.json and use mpi-continue. STATUS: Phase 1 design (7 research docs in .agents/mpi-kanban/tasks/MPI-64/research/) is complete with user-resolved decisions. The Python/FastAPI wrapper (full contract, 24/24 local verify) is PROVEN end-to-end on a real RunPod A4000 Pod through the proxy. Parallel Batch #1 (backend RunPod client + safeStorage secret store) is implemented inline and verified: new files main/secretsStore.js, routes/runpodRemote.js, routes/remoteEngine.js, wired additively into server.js + main.js. A real key-leak was found and fixed (GraphQL key moved from URL to Authorization header + redactSecret). NOTHING is committed (do not commit unless the user asks). THE IMMEDIATE NEXT STEP: the user is running npm start to smoke-test the UI and the new secrets:* IPC + fork bridge in the real Electron app — ask how that went. Then proceed to Parallel Batch #2 (the Comfy boundary adapter that routes comfyController.js/commandExecutor.js to the wrapper proxy in remote mode), but BRIEF BEFORE CODE per CLAUDE.md and keep LOCAL mode byte-identical. RunPod secrets + standing resource IDs are in the GITIGNORED file c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env (Pod k8pr35yto3xy7n stopped, volume cfwqthmdrg + template ejrwtsej15 in EUR-IS-1) — never paste the key in chat. Gotchas: RunPod proxy/API are behind Cloudflare (send a browser User-Agent; Windows curl flakes on POST-multipart through it, use Python). Docker data root is on D:. Test with ONE SDXL checkpoint, not WAN, when you reach generation."
+}

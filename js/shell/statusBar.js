@@ -45,6 +45,7 @@ let _currentLabel = '';
 let _queueDepth = 0;
 let _elapsedSec   = 0;
 let _activeStartedAt = null;
+let _remoteConnected = false; // MPI-64 4.4: drives the IDLE · Local/Remote scope
 let _timerInterval = null;
 let _completionToken = 0;
 const _listenUnsubs = [];
@@ -104,7 +105,7 @@ function _stopTimer() {
 function _setIdle() {
     _state = 'idle';
     _job.className = 'shell-info__job';
-    _jobLabel.textContent = 'IDLE';
+    _jobLabel.textContent = `IDLE · ${_remoteConnected ? 'Remote' : 'Local'}`;
     _currentLabel = '';
     _activeStartedAt = null;
 
@@ -335,10 +336,10 @@ export const StatusBar = {
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
      */
-    notify(message, variant = 'info') {
+    notify(message, variant = 'info', duration = 4000) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
-        const t = MpiToast.mount(wrapper, { message, variant, duration: 4000 });
+        const t = MpiToast.mount(wrapper, { message, variant, duration });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
     },
 
@@ -378,5 +379,10 @@ export const StatusBar = {
         _listenUnsubs.push(Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success')));
         _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
         _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
+        // MPI-64 4.4: idle label scope tracks the remote engine connection.
+        _listenUnsubs.push(Events.on('remote:connection', ({ connected }) => {
+            _remoteConnected = !!connected;
+            if (_state === 'idle') _setIdle();
+        }));
     },
 };

@@ -9,6 +9,7 @@
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
+import { remoteEngineClient } from './remoteEngineClient.js';
 
 // Seconds to wait for the ComfyUI server to report ready before giving up.
 // Cold start on a slow / CPU-only machine loads torch + a checkpoint and can
@@ -16,28 +17,38 @@ import { Events } from '../events.js';
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
-function _buildComfyViewUrl(serverAddress, fileInfo) {
+function _buildComfyViewUrl(httpBase, fileInfo) {
     const params = new URLSearchParams();
     for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
         const value = fileInfo?.[key];
         if (value !== undefined && value !== null) params.set(key, value);
     }
-    return `http://${serverAddress}/view?${params.toString()}`;
+    return `${httpBase}/view?${params.toString()}`;
 }
 
-function _collectComfyOutputUrls(serverAddress, nodeOutput, target) {
+function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
     if (nodeOutput?.images) {
-        for (const img of nodeOutput.images) target.push(_buildComfyViewUrl(serverAddress, img));
+        for (const img of nodeOutput.images) target.push(_buildComfyViewUrl(httpBase, img));
     }
     if (nodeOutput?.gifs) {
-        for (const gif of nodeOutput.gifs) target.push(_buildComfyViewUrl(serverAddress, gif));
+        for (const gif of nodeOutput.gifs) target.push(_buildComfyViewUrl(httpBase, gif));
     }
 }
 
 export const ComfyUIController = {
 
-    /** @type {string} Target ComfyUI WS/HTTP server address. */
+    /** @type {string} Target ComfyUI WS/HTTP server address (local mode). */
     serverAddress: "127.0.0.1:8188",
+
+    /**
+     * HTTP base for all ComfyUI-shaped calls. Local mode: the ComfyUI server
+     * directly (byte-identical to the historical hardcoded address). Remote
+     * mode: the Express proxy, which attaches the wrapper token server-side.
+     * @returns {string}
+     */
+    httpBase() {
+        return remoteEngineClient.httpBase() || `http://${this.serverAddress}`;
+    },
 
     /** @type {string} Unique client ID for this session; used in WS handshake and prompt payloads. */
     clientId: crypto.randomUUID(),
@@ -63,7 +74,13 @@ export const ComfyUIController = {
      * On failure emits `comfy:error` and `ui:error`.
      * @returns {Promise<boolean>}
      */
-    async ensureServerRunning() {
+    async ensureServerRunning(opts = {}) {
+        // Remote mode owns its own error surfacing (retry dialog in background,
+        // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
+        // try/catch so a remote failure doesn't double-emit ui:error below.
+        try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
+        if (remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts);
+
         try {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
@@ -136,6 +153,28 @@ export const ComfyUIController = {
     },
 
     /**
+     * Remote-mode readiness check. Polls the Express-side wrapper health relay
+     * until the Pod's wrapper reports ready. Pod start/stop lifecycle is owned
+     * by the backend (and, later, the Settings boot gate) — this only waits.
+     * Emits the same `comfy:starting` / `comfy:ready` events as local mode.
+     * @returns {Promise<boolean>}
+     * @private
+     */
+    async _ensureRemoteReady({ background = false } = {}) {
+        // Step 4.2 lifecycle: the Pod is created explicitly via Connect in
+        // Settings (create-on-Connect / delete-on-Disconnect), never lazily at
+        // generation — so generation does NOT auto-create a Pod (avoids a silent
+        // billing surprise and the GPU-pick requirement). If the wrapper is
+        // already healthy (Connected), proceed; otherwise tell the user to Connect.
+        const check = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
+        if (check.ready) { if (background) Events.emit('comfy:ready'); return true; }
+
+        const msg = 'Remote engine not connected. Open Settings → RunPod and press Connect to create a Pod before generating.';
+        if (!background) Events.emit('comfy:error', { message: msg });
+        throw new Error(msg);
+    },
+
+    /**
      * Generates a random 15-digit seed value for KSampler nodes.
      * @returns {number}
      */
@@ -149,7 +188,7 @@ export const ComfyUIController = {
      */
     async interrupt() {
         try {
-            await fetch(`http://${this.serverAddress}/interrupt`, {
+            await fetch(`${this.httpBase()}/interrupt`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ client_id: this.clientId })
@@ -169,7 +208,7 @@ export const ComfyUIController = {
      */
     async getQueue() {
         try {
-            const res = await fetch(`http://${this.serverAddress}/queue`);
+            const res = await fetch(`${this.httpBase()}/queue`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             return {
@@ -189,7 +228,7 @@ export const ComfyUIController = {
      */
     async clearQueue() {
         try {
-            const res = await fetch(`http://${this.serverAddress}/queue`, {
+            const res = await fetch(`${this.httpBase()}/queue`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ clear: true }),
@@ -209,7 +248,7 @@ export const ComfyUIController = {
      */
     async deleteQueueItem(promptId) {
         try {
-            const res = await fetch(`http://${this.serverAddress}/queue`, {
+            const res = await fetch(`${this.httpBase()}/queue`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ delete: [promptId] }),
@@ -288,7 +327,9 @@ export const ComfyUIController = {
             this._ws.close();
         }
 
-        this._ws = new WebSocket(`ws://${this.serverAddress}/ws?clientId=${this.clientId}`);
+        const wsUrl = remoteEngineClient.wsUrl(this.clientId)
+            || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+        this._ws = new WebSocket(wsUrl);
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
@@ -483,7 +524,7 @@ export const ComfyUIController = {
 
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
-                    _collectComfyOutputUrls(this.serverAddress, nodeOutput, outputs);
+                    _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
                 }
 
                 if (msg.type === 'executing' && msg.data.node === null) {
@@ -498,7 +539,7 @@ export const ComfyUIController = {
             this._isRunning = true;
 
             try {
-                const req = await fetch(`http://${this.serverAddress}/prompt`, {
+                const req = await fetch(`${this.httpBase()}/prompt`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: workflow, client_id: this.clientId })
@@ -555,7 +596,7 @@ export const ComfyUIController = {
         formData.append('image', blob, filename);
         formData.append('overwrite', 'true');
 
-        const uploadRes = await fetch(`http://${this.serverAddress}/upload/image`, {
+        const uploadRes = await fetch(`${this.httpBase()}/upload/image`, {
             method: 'POST',
             body: formData
         });

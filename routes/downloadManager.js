@@ -37,6 +37,7 @@ const {
     getPartialDownloadState,
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
+const remoteModels = require('./remoteModels');
 
 const _require = createRequire(__filename);
 let _extractZip = null;
@@ -362,6 +363,13 @@ router.post('/comfy/models/download/start', async (req, res) => {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
 
+    // Remote engine: install onto the Pod volume via the wrapper instead of
+    // downloading to the local filesystem. Same modelJob/SSE shape, so the
+    // renderer download UI is unchanged.
+    if (remoteModels.isRemoteActive()) {
+        return _startRemoteDownload(modelId, dependencies, res);
+    }
+
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {
         modelJob = _createModelJob(modelId, dependencies);
@@ -489,6 +497,185 @@ function _wireProgress(depJob, downloader) {
     };
 }
 
+// ── Remote (RunPod wrapper) install driver ──────────────────────────────────
+//
+// In remote mode the wrapper streams installs onto the Pod volume. We reuse the
+// same _modelJobs/_depJobs maps and _broadcast events so the renderer's download
+// UI works unchanged. One wrapper SSE stream serves all active remote installs;
+// it is torn down when no remote installs remain. There is no local .part file,
+// so pause/resume are not supported remotely (see the pause/resume routes).
+
+let _remoteEventStream = null;       // AbortController for the wrapper SSE stream
+const _remoteDepIds = new Set();     // dep ids currently installing remotely
+
+function _ensureRemoteEventStream() {
+    if (_remoteEventStream) return;
+    _remoteEventStream = remoteModels.openInstallEventStream((evt) => {
+        _onRemoteInstallEvent(evt);
+    });
+}
+
+function _teardownRemoteEventStreamIfIdle() {
+    if (_remoteDepIds.size > 0) return;
+    if (_remoteEventStream) {
+        _remoteEventStream.abort();
+        _remoteEventStream = null;
+    }
+}
+
+// Map a wrapper models:install-* event onto the dep + its model jobs.
+function _onRemoteInstallEvent(evt) {
+    const data = evt.data || {};
+    const depId = data.id;
+    if (!depId) return;
+    const depJob = _depJobs.get(depId);
+    if (!depJob) return;
+
+    if (evt.type === 'models:install-progress') {
+        const downloaded = Number(data.bytes) || 0;
+        const total = Number(data.total) || depJob.totalBytes || 0;
+        depJob.downloadedBytes = downloaded;
+        if (total) depJob.totalBytes = total;
+        for (const modelJob of _modelJobs.values()) {
+            const myDep = modelJob.deps.find(d => d.id === depId);
+            if (!myDep) continue;
+            modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
+            modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _broadcast('download:progress', {
+                modelId: modelJob.modelId,
+                depId,
+                downloadedBytes: modelJob.downloadedBytes,
+                totalBytes: modelJob.totalBytes,
+                speed: '',
+                progress: modelJob.progress,
+            });
+        }
+    } else if (evt.type === 'models:install-complete') {
+        depJob.downloadedBytes = Number(data.size_bytes) || depJob.totalBytes || 0;
+        depJob.totalBytes = depJob.downloadedBytes;
+        depJob.status = 'complete';
+        _remoteDepIds.delete(depId);
+        _broadcast('download:complete', { depId, modelId: null });
+        _checkModelJobsComplete();
+        _teardownRemoteEventStreamIfIdle();
+    } else if (evt.type === 'models:install-error') {
+        _remoteDepIds.delete(depId);
+        if (data.error === 'cancelled') {
+            depJob.status = 'cancelled';
+        } else {
+            depJob.status = 'failed';
+            depJob.error = data.message || data.error || 'remote install failed';
+            _broadcast('download:failed', { depId, error: depJob.error });
+        }
+        _checkModelJobsComplete();
+        _teardownRemoteEventStreamIfIdle();
+    }
+}
+
+async function _startRemoteDownload(modelId, dependencies, res) {
+    let modelJob = _modelJobs.get(modelId);
+    if (!modelJob) {
+        modelJob = _createModelJob(modelId, dependencies);
+        _modelJobs.set(modelId, modelJob);
+    }
+    // Remote installs never run local custom-node extraction — custom_nodes are
+    // image-resident on the Pod, so completion must not route through
+    // _runCustomNodeInstall (which extracts a local zip that does not exist).
+    modelJob.installCustomNodes = false;
+
+    // Resolve which deps are already installed on the volume up-front so the
+    // progress bar starts at the right place (matches the local path's behavior).
+    let statusResults = {};
+    try {
+        // Pass raw app deps (subdir filename) — remoteModelsCheck owns the split.
+        const checkModels = [{ id: modelId, deps: dependencies.map(d => ({ id: d.id, type: d.type, filename: d.filename })) }];
+        const out = await remoteModels.remoteModelsCheck(checkModels);
+        statusResults = (out && out.results && out.results[modelId] && out.results[modelId].deps) || [];
+        statusResults = Object.fromEntries(statusResults.map(d => [d.id, d]));
+    } catch (err) {
+        // Non-fatal: treat as nothing installed and let install dedupe handle it.
+        logger.warn('download', `remote pre-check failed: ${err.message}`);
+    }
+
+    const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
+    modelJob.totalBytes += allDepsSize;
+
+    const toInstall = [];
+    for (const dep of dependencies) {
+        let depJob = _depJobs.get(dep.id);
+        if (!depJob) {
+            depJob = _createDepJob(dep);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+            _depJobs.set(dep.id, depJob);
+        }
+        depJob.refCount += 1;
+        if (!modelJob.deps.find(d => d.id === dep.id)) modelJob.deps.push(depJob);
+
+        // custom_nodes live in the Pod image (Design A), not the volume — never
+        // sent to the wrapper; mark complete so they count toward progress.
+        const alreadyInstalled = !!(statusResults[dep.id] && statusResults[dep.id].installed);
+        if (dep.type === 'custom_nodes' || alreadyInstalled) {
+            depJob.status = 'complete';
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+        } else {
+            depJob.status = 'queued';
+            depJob.downloadedBytes = 0;
+            depJob.error = null;
+            toInstall.push(dep);
+        }
+    }
+
+    modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+    modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+    modelJob.status = 'downloading';
+    _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
+
+    // Respond before kicking off installs (matches the local path's fire-and-forget).
+    res.json({ success: true, jobId: modelId });
+
+    if (!toInstall.length) {
+        // Everything already present — settle the job state immediately.
+        _checkModelJobsComplete();
+        return;
+    }
+
+    _ensureRemoteEventStream();
+    for (const dep of toInstall) {
+        const depJob = _depJobs.get(dep.id);
+        if (depJob) depJob.status = 'downloading';
+        _remoteDepIds.add(dep.id);
+        // Do NOT pass the app's display `size` ("67MB") as size_bytes — it is
+        // approximate and the wrapper rejects an exact-correct file on a
+        // done != expected_size mismatch. The wrapper uses content-length for
+        // the progress total and the dep sha256 (when present) for integrity.
+        remoteModels.remoteInstallDep(dep)
+            .then((out) => {
+                // already_installed: the SSE will not fire — settle here.
+                if (out && out.status === 'already_installed') {
+                    const dj = _depJobs.get(dep.id);
+                    if (dj) {
+                        dj.status = 'complete';
+                        dj.downloadedBytes = dj.totalBytes || _parseSizeToBytes(dep.size);
+                    }
+                    _remoteDepIds.delete(dep.id);
+                    _broadcast('download:complete', { depId: dep.id, modelId: null });
+                    _checkModelJobsComplete();
+                    _teardownRemoteEventStreamIfIdle();
+                }
+            })
+            .catch((err) => {
+                const dj = _depJobs.get(dep.id);
+                if (dj) { dj.status = 'failed'; dj.error = err.message; }
+                _remoteDepIds.delete(dep.id);
+                logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
+                _broadcast('download:failed', { depId: dep.id, error: err.message });
+                _checkModelJobsComplete();
+                _teardownRemoteEventStreamIfIdle();
+            });
+    }
+}
+
 // ── Model Job Completion ──────────────────────────────────────────────────────
 
 function _recalculateModelJobProgress(modelJob) {
@@ -515,12 +702,15 @@ function _checkModelJobsComplete() {
         const allComplete = modelJob.deps.every(d => d.status === 'complete');
         const allDone = modelJob.deps.every(d => ['complete', 'failed', 'cancelled'].includes(d.status));
 
-        if (anyFailed) {
+        if (anyFailed || (allDone && !allComplete)) {
             modelJob.status = 'failed';
-            _broadcast('download:failed', { modelId: modelJob.modelId });
-        } else if (allDone && !allComplete) {
-            modelJob.status = 'failed';
-            _broadcast('download:failed', { modelId: modelJob.modelId });
+            // Surface the first failed dep's error so the UI shows a real reason
+            // instead of "undefined" (the model-level event carried no error).
+            const failedDep = modelJob.deps.find(d => d.status === 'failed' && d.error);
+            _broadcast('download:failed', {
+                modelId: modelJob.modelId,
+                error: failedDep ? failedDep.error : 'One or more dependencies failed to download',
+            });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {
                 modelJob.status = 'installing';
@@ -684,6 +874,11 @@ router.post('/comfy/models/download/pause', (req, res) => {
     const { modelId } = req.body;
     const job = _modelJobs.get(modelId);
     if (!job) return res.status(404).json({ error: 'Job not found' });
+    // Remote installs stream on the Pod and have no resumable .part — pause is
+    // not supported; the install keeps running rather than break the button.
+    if (remoteModels.isRemoteActive()) {
+        return res.json({ success: true, remoteUnsupported: 'pause' });
+    }
     job.status = 'paused';
     job.deps.forEach(d => {
         if (d.status === 'downloading') {
@@ -706,6 +901,9 @@ router.post('/comfy/models/download/resume', (req, res) => {
     const { modelId } = req.body;
     const job = _modelJobs.get(modelId);
     if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (remoteModels.isRemoteActive()) {
+        return res.json({ success: true, remoteUnsupported: 'resume' });
+    }
     job.status = 'downloading';
     job.deps.forEach(d => { if (d.status === 'paused') d.status = 'queued'; });
     _recalculateModelJobProgress(job);
@@ -722,6 +920,11 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
     for (const dep of job.deps) {
         dep.refCount -= 1;
         if (dep.refCount <= 0) {
+            // Remote install in flight on the Pod — cancel via the wrapper.
+            if (_remoteDepIds.has(dep.id)) {
+                _remoteDepIds.delete(dep.id);
+                await remoteModels.remoteCancelInstall(dep.id);
+            }
             const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
             if (dl) {
                 await dl.cancel();
@@ -734,6 +937,7 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
         }
     }
 
+    _teardownRemoteEventStreamIfIdle();
     _modelJobs.delete(modelId);
     _broadcast('download:cancelled', { modelId });
     res.json({ success: true });

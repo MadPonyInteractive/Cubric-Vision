@@ -21,6 +21,7 @@ import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiSta
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js';
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
+import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
 import { APP_VERSION } from './core/appVersion.js';
 import { APP_STAGE_LABEL } from './core/appStage.js';
@@ -125,6 +126,7 @@ export async function initShell() {
   // 6.5. Shell-level services
   initNotificationService();
   initFocusModeService();
+  _initRemoteConnectionFeed();
 
   // 7. Data Pre-fetching (Non-blocking)
   _initDataRegistries().catch(err => clientLogger.error('shell', 'registry failed:', err));
@@ -141,8 +143,14 @@ async function _bootApp() {
   // 1. Navigate to landing immediately (will be blocked if engine install needed)
   handleNavigation(PAGE_LANDING);
 
-  // 2. Check engine version before anything else
-  try {
+  // 2. Check engine version before anything else.
+  // Remote mode (MPI-64): RunPod-enabled boots take a parallel gate path that
+  // skips the local engine version/install gate entirely — a local engine is
+  // not required to run remotely. (`else try` keeps the local path untouched.)
+  const runpodCfg = Storage.getRunpodConfig();
+  if (runpodCfg.enabled) {
+    await _initRemoteBoot(runpodCfg);
+  } else try {
     const versionRes = await fetch('/engine/version-check');
     const versionData = await versionRes.json();
 
@@ -216,11 +224,143 @@ async function _bootApp() {
     Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
   });
 
-  // ComfyUI Auto-start (optional)
-  if (Storage.getAutoStartComfy()) {
+  // ComfyUI Auto-start (optional). Local mode only here — the remote Pod start is
+  // gated behind the "RunPod Active" advisory dismiss (see _initRemoteBoot) so the
+  // user acknowledges the credit cost before any GPU billing begins.
+  if (Storage.getAutoStartComfy() && !runpodCfg.enabled) {
     const { ComfyUIController } = await import('./services/comfyController.js');
     ComfyUIController.ensureServerRunning();
   }
+}
+
+/**
+ * Remote-mode boot path (MPI-64 Step 4.3). Marks the backend in remote mode. If
+ * the app was left CONNECTED (wasConnected + a saved podId + gpuType), it
+ * AUTO-RECONNECTS in the background — warm-resuming the stopped Pod, or, if its
+ * host is full / the GPU is gone, deleting + recreating fresh on the same GPU
+ * (the reconnect endpoint owns that fallback). If the saved GPU is unavailable,
+ * it pops a "pick another GPU" dialog and creates nothing. Otherwise (enabled but
+ * never connected / explicitly disconnected) it just shows the advisory.
+ */
+async function _initRemoteBoot(runpod) {
+  // Flag remote mode active. A saved podId is passed so status polls + teardown
+  // target it; the boot gate only needs `active` to skip the local install path.
+  try {
+    await fetch('/remote/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(runpod.podId ? { active: true, podId: runpod.podId } : { active: true }),
+    });
+  } catch (err) {
+    clientLogger.error('shell', 'remote mode sync failed:', err);
+  }
+
+  const canAutoReconnect = !!(runpod.wasConnected && runpod.podId && runpod.gpuType);
+  if (!canAutoReconnect) {
+    // No prior connection to resume — nothing to do at boot. The persistent
+    // remote-engine status feedback (Settings + status bars) tells the user it
+    // is enabled; Connect in Settings starts the Pod and acknowledges the cost.
+    return;
+  }
+
+  // Auto-reconnect in the background (UI stays usable during the resume/recreate).
+  StatusBar.notify('Reconnecting to your Pod…', 'info', 6000);
+  try {
+    const res = await fetch('/remote/pod/reconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        podId: runpod.podId,
+        gpuTypeId: runpod.gpuType,
+        volumeId: runpod.volumeId || null,
+        datacenter: runpod.datacenter || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (data.unavailable) {
+      // Saved GPU gone — the stuck Pod was deleted server-side; clear the saved
+      // intent so the next boot does not retry, and tell the user to pick another.
+      const cfg = Storage.getRunpodConfig();
+      Storage.setRunpodConfig({ ...cfg, podId: null, wasConnected: false });
+      const dlg = MpiOkCancel.mount(document.createElement('div'), {
+        title: 'Selected GPU unavailable',
+        text: 'The GPU your Pod was using is unavailable right now. Open Settings → RunPod and pick a different GPU to connect.',
+        okLabel: 'Got it',
+        showCancel: false,
+      });
+      dlg.el.show();
+      return;
+    }
+
+    if (data.podId) {
+      const cfg = Storage.getRunpodConfig();
+      Storage.setRunpodConfig({ ...cfg, podId: data.podId });
+    }
+    if (res.ok && data.ready) {
+      StatusBar.notify('Remote engine ready', 'success', 6000);
+    } else {
+      throw new Error(data.message || 'reconnect did not reach ready');
+    }
+  } catch (err) {
+    clientLogger.error('shell', 'remote auto-reconnect failed:', err);
+    const retry = MpiOkCancel.mount(document.createElement('div'), {
+      title: 'Could not reconnect to your Pod',
+      text: (err && err.message) || 'The remote engine could not be reached. Open Settings → RunPod to reconnect manually.',
+      okLabel: 'Open later',
+      showCancel: false,
+    });
+    retry.el.show();
+  }
+}
+
+/**
+ * Persistent remote-connection feed (MPI-64 Step 4.4). Polls the backend
+ * remote-engine status app-wide (not just while Settings is open) and broadcasts
+ * `remote:connection` { connected, gpuName } ONLY when the connected state flips.
+ * The landing hero footer + the gallery status bar subscribe so the user always
+ * knows whether they are running locally or on a (billing) Pod. Cheap: one poll
+ * every 5s, no-op'd entirely when RunPod is disabled.
+ */
+function _initRemoteConnectionFeed() {
+  let _last = null; // last broadcast connected bool (null = nothing sent yet)
+
+  const tick = async () => {
+    const cfg = Storage.getRunpodConfig();
+    if (!cfg.enabled) {
+      if (_last !== false) {
+        _last = false;
+        Events.emit('remote:connection', { connected: false, gpuName: null });
+      }
+      return;
+    }
+    let connected = false;
+    try {
+      const res = await fetch('/remote/comfy/status');
+      const s = res.ok ? await res.json() : null;
+      connected = !!(s && s.ready);
+    } catch (_) {
+      connected = false;
+    }
+    if (connected !== _last) {
+      _last = connected;
+      if (!connected) {
+        Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null });
+        return;
+      }
+      // Resolve GPU/VRAM/RAM for the badge (best-effort; falls back to the id).
+      let specs = { gpuName: cfg.gpuType || null, vramGb: null, ramGb: null };
+      try {
+        const qp = cfg.gpuType ? `?gpuTypeId=${encodeURIComponent(cfg.gpuType)}` : '';
+        const r = await fetch(`/remote/pod/specs${qp}`);
+        if (r.ok) specs = await r.json();
+      } catch (_) { /* keep the fallback */ }
+      Events.emit('remote:connection', { connected: true, ...specs });
+    }
+  };
+
+  tick();
+  setInterval(tick, 5000);
 }
 
 /**

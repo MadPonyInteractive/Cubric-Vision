@@ -38,7 +38,6 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 - `npm run test:desktop` — Playwright Electron tests (sets `CUBRIC_E2E_USER_DATA`)
 - `npm run lint` / `npm run lint:components` — ESLint
 - `npm run release:check` — mandatory release-health gate before bump builds, pre-release generation tests, tags, pushes, or publication
-- `Start.bat` — Windows quick launch
 - `npm run build:portable:win` — build full Windows portable artifact (single source `scripts/build-portable.mjs`; `:linux` / `:mac` target other platforms via `--platform`/`--arch`). Stages to `D:\tmp\cubric-portable` (C: is space-constrained; never stage inside the repo — the script refuses it). Windows portable is install-validated (fresh install + model download + generation). Default launchers are no-terminal (`start.vbs` / `start.sh`); `*-with-terminal` variants exist for diagnostics. Linux/macOS staging and the update path are not real-host validated (update flow tracked in MPI-49). Tracked in MPI-8.
 - Read `logs/app.log` tail (offset, never full) for runtime debugging
 - `node scripts/convert-images.cjs --prefix=<name> --out=<name>` — batch PNG/JPG → WebP for sibling website carousels (defaults: brand-assets marketing-media → website vision-media, quality 85). See [[tool-website-image-converter]] memory.

@@ -17,7 +17,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_Realistic.safetensors',
         size: '6.94GB',
         vram: '8GB',
-        sha256: null
+        sha256: '4bb646ca44e460bfc121fbcd8b7a65ae2b7a85f89c9e9ffe4d078db6e488d5ff'
     },
     'sdxl-nsfw': {
         id: 'sdxl-nsfw',
@@ -27,7 +27,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_NSFW.safetensors',
         size: '6.78GB',
         vram: '8GB',
-        sha256: null
+        sha256: '4073cbe470446d0f1806e82d560d14af5b813ec1091b26ad7a69f8162f4a7ac1'
     },
     'ill-anime': {
         id: 'ill-anime',
@@ -37,7 +37,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/ILL_Anime.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: null
+        sha256: 'f548b5b4953c3ba71f9769c98005b95a41a7f8e0b666a509bb938cedf70347fd'
     },
     'ill-anime-beauty': {
         id: 'ill-anime-beauty',
@@ -47,7 +47,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/ILL_Anime_Beauty.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: null
+        sha256: 'bbebe76d8fcc488b630d6dd74d111bb170b5d5c82a43fca0d99cd8e263766318'
     },
     'pony-mix': {
         id: 'pony-mix',
@@ -57,7 +57,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/PONY_Mix.safetensors',
         size: '6.8GB',
         vram: '8GB',
-        sha256: null
+        sha256: '455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b'
     },
     // Video Models
     'wan-22-t2v-high': {
@@ -68,7 +68,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_High.safetensors',
         size: '21GB',
         vram: '12GB',
-        sha256: null
+        sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
     },
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
@@ -78,7 +78,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_Low.safetensors',
         size: '21GB',
         vram: '12GB',
-        sha256: null
+        sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
@@ -88,7 +88,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_High.safetensors',
         size: '15GB',
         vram: '12GB',
-        sha256: null
+        sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
     },
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
@@ -98,7 +98,7 @@ export const DEPS = {
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_Low.safetensors',
         size: '15GB',
         vram: '12GB',
-        sha256: null
+        sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
     },
     // VAE
     'wan_2.1_vae': {

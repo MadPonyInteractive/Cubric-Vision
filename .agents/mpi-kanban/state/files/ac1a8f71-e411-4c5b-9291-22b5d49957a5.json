@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "ac1a8f71-e411-4c5b-9291-22b5d49957a5",
+  "path": "js/services/remoteEngineClient.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-11T17:45:00Z",
+  "allowed_actions": ["edit", "verify"],
+  "notes": "New file.",
+  "recent_events": [
+    { "at": "2026-06-11T17:00:00Z", "event": "claimed_for_mpi64_batch2_boundary_adapter" },
+    { "at": "2026-06-11T17:45:00Z", "event": "edit_complete", "note": "New narrow renderer adapter created; user-verified." }
+  ]
+}

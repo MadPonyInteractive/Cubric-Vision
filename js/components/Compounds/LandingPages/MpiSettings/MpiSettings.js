@@ -3,9 +3,13 @@ import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiOkCancel } from '../../../Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiModal } from '../../../Primitives/MpiModal/MpiModal.js';
 import { state } from '../../../../state.js';
 import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
+import { secretsClient } from '../../../../core/secretsClient.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
 import { loadAll as loadAssets } from '../../../../services/assetService.js';
 import { reSyncInstalledModels } from '../../../../data/modelRegistry.js';
@@ -62,9 +66,6 @@ export const MpiSettings = ComponentFactory.create({
                 <div class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">External Connections</h3>
                     <div class="mpi-settings__form-group">
-                        <div id="mpiSettingsComfyUrlSlot"></div>
-                    </div>
-                    <div class="mpi-settings__form-group">
                         <div class="mpi-settings__folder-row">
                             <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
                             <div id="mpiSettingsBrowseBtnSlot"></div>
@@ -92,6 +93,46 @@ export const MpiSettings = ComponentFactory.create({
                             </div>
                         </div>
                         <span class="mpi-settings__hint">Extras are read-only additive folders. Cubric only installs, updates, and removes files from the primary managed folders.</span>
+                    </div>
+                </div>
+
+                <div class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">RunPod Remote Engine</h3>
+                    <div class="mpi-settings__form-group">
+                        <div id="mpiSettingsRunpodToggleSlot"></div>
+                        <span class="mpi-settings__hint">Run generations on your own RunPod Secure Cloud GPU. GPU and storage billing happen on your RunPod account.</span>
+                    </div>
+                    <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
+                        <div class="mpi-settings__form-group">
+                            <div class="mpi-settings__folder-row">
+                                <div id="mpiSettingsRunpodKeySlot" class="mpi-settings__folder-input"></div>
+                                <div id="mpiSettingsRunpodKeySaveSlot"></div>
+                                <div id="mpiSettingsRunpodKeyClearSlot"></div>
+                            </div>
+                            <span class="mpi-settings__hint" id="mpiSettingsRunpodKeyStatus"></span>
+                        </div>
+                        <div class="mpi-settings__form-group">
+                            <label class="mpi-settings__field-label">Data Center</label>
+                            <div id="mpiSettingsRunpodDcSlot"></div>
+                            <span class="mpi-settings__hint">A network volume is locked to one data center. Switching later means deleting the volume and re-downloading models.</span>
+                        </div>
+                        <div class="mpi-settings__form-group">
+                            <label class="mpi-settings__field-label">Network Volume</label>
+                            <div id="mpiSettingsRunpodVolumeSlot"></div>
+                            <span class="mpi-settings__hint">Stores your models so they survive between Pods — one volume per data center. Connect attaches it to the new Pod.</span>
+                        </div>
+                        <div class="mpi-settings__form-group">
+                            <label class="mpi-settings__field-label">GPU</label>
+                            <div id="mpiSettingsRunpodGpuSlot"></div>
+                            <span class="mpi-settings__hint">Secure Cloud only. Stock is a live hint (High / Medium / Low / N/A) — availability drifts; the RunPod console is ground truth.</span>
+                        </div>
+                        <div class="mpi-settings__form-group">
+                            <div class="mpi-settings__runpod-connect-row">
+                                <span class="mpi-settings__runpod-status" id="mpiSettingsRunpodEngineStatus">Remote engine: —</span>
+                                <div id="mpiSettingsRunpodConnectSlot"></div>
+                            </div>
+                            <span class="mpi-settings__hint" id="mpiSettingsRunpodConnectHint"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -229,18 +270,6 @@ export const MpiSettings = ComponentFactory.create({
                 };
             }
 
-            // ── ComfyUI URL ──────────────────────────────────────────────────
-            const comfyUrlSlot = qs('#mpiSettingsComfyUrlSlot', root);
-            if (comfyUrlSlot) {
-                comfyUrlSlot.innerHTML = '';
-                const comfyUrlInst = MpiInput.mount(comfyUrlSlot, {
-                    label: 'ComfyUI API URL',
-                    placeholder: 'http://localhost:8188',
-                    value: Storage.getComfyUrl() || 'http://localhost:8188',
-                });
-                comfyUrlInst.on('change', ({ value }) => Storage.setComfyUrl(value));
-            }
-
             // ── ComfyUI root path ────────────────────────────────────────────
             const pathSlot = qs('#mpiSettingsComfyRootPathSlot', root);
             const browseSlot = qs('#mpiSettingsBrowseBtnSlot', root);
@@ -292,6 +321,792 @@ export const MpiSettings = ComponentFactory.create({
             }
 
             _hydrateExtraFolders(root);
+            _initRunpodSection(root);
+        }
+
+        // ── RunPod Remote Engine section ────────────────────────────────────
+        // Non-secret prefs live in state.runpodConfig (localStorage-mirrored);
+        // the API key is write-only through secretsClient (secrets:* IPC).
+
+        let _runpodAvailability = null; // { gpuTypes, dataCenters } cache per panel open
+        let _runpodVolumes = null;      // network volumes from the user's account, or null
+        let _engineConnectInst = null;  // Connect/Disconnect MpiButton instance
+        let _engineStatusTimer = null;  // setInterval id for the status poll
+        let _engineBusy = false;        // true while a start/stop is in flight
+        let _engineBtnLabel = 'Connect'; // tracks the button label (instance has no props getter)
+
+        // MpiButton imperative API lives on the instance's `.el`, not the
+        // instance itself (rule: callers use el.setLabel/el.setDisabled).
+        function _engineBtnLabelSet(label) {
+            _engineBtnLabel = label;
+            _engineConnectInst?.el?.setLabel?.(label);
+        }
+        function _engineBtnDisabled(disabled) {
+            _engineConnectInst?.el?.setDisabled?.(disabled);
+        }
+
+        function _runpodCfg() {
+            return { ...(state.runpodConfig || {}) };
+        }
+
+        function _findRunpodVolume(volumeId) {
+            if (!volumeId || !Array.isArray(_runpodVolumes)) return null;
+            return _runpodVolumes.find(v => v?.id === volumeId) || null;
+        }
+
+        // The cubric-vision volume living in `dcId`, if any (one volume per DC).
+        function _volumeForDc(dcId) {
+            if (!dcId || !Array.isArray(_runpodVolumes)) return null;
+            return _runpodVolumes.find(v => v?.dataCenterId === dcId) || null;
+        }
+
+        // Pull the human-readable error RunPod returns ({ error, status }) so the
+        // user sees the real reason (e.g. a volume still attached to a Pod) instead
+        // of a bare status code.
+        function _runpodErrText(data, status) {
+            const raw = (data && (data.error || data.message)) || '';
+            if (/attached|in use|in-use|nonexistent/i.test(raw)) {
+                return `${raw} — a network volume cannot be deleted while it is attached to a Pod. Delete the Pod first.`;
+            }
+            return raw || `RunPod refused the request (${status}).`;
+        }
+
+        // Re-fetch the account's network volumes into the cache. Shape is handled
+        // defensively (array | .networkVolumes | .volumes) — same as initial load.
+        async function _reloadRunpodVolumes() {
+            try {
+                const res = await fetch('/runpod/volumes');
+                const data = res.ok ? await res.json() : null;
+                const list = Array.isArray(data) ? data : (data?.networkVolumes || data?.volumes || null);
+                _runpodVolumes = Array.isArray(list) ? list : null;
+            } catch (_) {
+                _runpodVolumes = null;
+            }
+        }
+
+        async function _pushRemoteMode(cfg) {
+            try {
+                // Step 4.2: enabling remote mode no longer needs a podId — the Pod
+                // is created on Connect. Pass podId only if one is already live.
+                const body = cfg.enabled
+                    ? (cfg.podId ? { active: true, podId: cfg.podId } : { active: true })
+                    : { active: false };
+                await fetch('/remote/mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] remote mode sync failed', err);
+            }
+        }
+
+        function _setRunpodStatus(root, text) {
+            const status = qs('#mpiSettingsRunpodKeyStatus', root);
+            if (status) status.textContent = text || '';
+        }
+
+        // ── Remote engine Connect / Disconnect (Step 4.2) ───────────────────
+        // Connect CREATES a fresh Pod on the SELECTED GPU (volume + DC) — no
+        // host-pinned resume — and Disconnect DELETES it (GPU billing ends, the
+        // volume persists). Connect is blocked until a GPU is picked.
+
+        function _setEngineStatusText(root, text) {
+            const el = qs('#mpiSettingsRunpodEngineStatus', root);
+            if (el) el.textContent = `Remote engine: ${text}`;
+        }
+
+        function _setEngineHint(root, text, isWarn = false) {
+            const el = qs('#mpiSettingsRunpodConnectHint', root);
+            if (!el) return;
+            el.textContent = text || '';
+            el.classList.toggle('mpi-settings__hint--warn', !!isWarn);
+        }
+
+        // Reflect the latest known status on the button + label. `status` is the
+        // /remote/comfy/status shape ({ running, ready }) or null when we have
+        // not polled yet. Connect requires a picked GPU; once a Pod is running it
+        // tracks the live readiness so the label flips to Disconnect.
+        function _applyEngineStatus(root, status) {
+            if (!_engineConnectInst) return;
+            const cfg = _runpodCfg();
+            if (!cfg.enabled) {
+                _setEngineStatusText(root, 'disabled');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(true);
+                return;
+            }
+            if (_engineBusy) return; // a create/delete is mid-flight in THIS panel; leave the label alone
+            const ready = !!(status && status.ready);
+            const running = !!(status && status.running);
+            const connecting = !!(status && status.connecting);
+            // A create/reconnect started elsewhere (or before this panel remounted)
+            // — the backend's _connecting flag survives a panel close/reopen, so
+            // honour it: disable Connect to prevent a duplicate create (the bug
+            // where status read "stopped" + Connect enabled mid-create).
+            if (connecting && !ready) {
+                _setEngineStatusText(root, 'connecting…');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(true);
+                return;
+            }
+            if (ready) {
+                _setEngineStatusText(root, 'ready');
+                _engineBtnLabelSet('Disconnect');
+                _engineBtnDisabled(false);
+            } else if (running) {
+                _setEngineStatusText(root, 'creating…');
+                _engineBtnLabelSet('Disconnect');
+                _engineBtnDisabled(false);
+            } else {
+                // No Pod yet — Connect creates one, but only once a GPU AND a
+                // network volume are picked (a volumeless Pod cannot persist
+                // ComfyUI or models, so a volume is required, not optional).
+                _setEngineStatusText(root, 'stopped');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(!cfg.gpuType || !cfg.volumeId);
+            }
+        }
+
+        async function _pollEngineStatus(root) {
+            const cfg = _runpodCfg();
+            if (!cfg.enabled) { _applyEngineStatus(root, null); return; }
+            try {
+                const res = await fetch('/remote/comfy/status');
+                const status = res.ok ? await res.json() : null;
+                _applyEngineStatus(root, status);
+            } catch (_) {
+                _applyEngineStatus(root, { running: false, ready: false });
+            }
+        }
+
+        async function _connectEngine(root) {
+            const cfg = _runpodCfg();
+            if (!cfg.enabled || _engineBusy) return;
+            if (!cfg.gpuType) {
+                _setEngineHint(root, 'Pick a GPU first.', true);
+                return;
+            }
+            if (!cfg.volumeId) {
+                _setEngineHint(root, 'Create or select a network volume first — it stores ComfyUI and your models.', true);
+                return;
+            }
+            _engineBusy = true;
+            _engineBtnDisabled(true);
+            // A saved podId → warm-resume (reconnect) the stopped Pod; otherwise
+            // create fresh. Reconnect self-heals to delete+create if the host is
+            // full or the GPU is gone (Step 4.3).
+            const warm = !!cfg.podId;
+            clientLogger.info('settings', `[RunPod] Connect: ${warm ? 'reconnect' : 'create'} gpu=${cfg.gpuType} dc=${cfg.datacenter || 'none'} vol=${cfg.volumeId || 'none'} podId=${cfg.podId || 'none'}`);
+            _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
+            _setEngineHint(root, warm
+                ? 'Resuming your Pod — a warm resume is fast; if its host is full it recreates fresh.'
+                : 'Creating a fresh Pod on the selected GPU — first boot can take 90–120s.');
+            Events.emit('ui:info', { message: warm ? 'Connecting to your Pod…' : 'Creating a Pod…' });
+            try {
+                const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
+                const body = warm
+                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId: cfg.volumeId || null, datacenter: cfg.datacenter || null }
+                    : { gpuTypeId: cfg.gpuType, volumeId: cfg.volumeId || null, datacenter: cfg.datacenter || null };
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json().catch(() => ({}));
+                clientLogger.info('settings', `[RunPod] ${endpoint} -> http ${res.status} ready=${data.ready} podId=${data.podId || 'none'} unavailable=${!!data.unavailable}`);
+
+                // Saved GPU no longer available — the stuck Pod was deleted server-side.
+                if (data.unavailable) {
+                    state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+                    _setEngineHint(root, 'Your saved GPU is unavailable right now. Pick another card and Connect again.', true);
+                    _setEngineStatusText(root, 'stopped');
+                    _engineBtnLabelSet('Connect');
+                    Events.emit('ui:warning', { message: 'Selected GPU unavailable — pick another.' });
+                    return;
+                }
+                if (data.podId) {
+                    // Track the app-managed podId (a recreate yields a new one).
+                    state.runpodConfig = { ..._runpodCfg(), podId: data.podId };
+                }
+                if (!res.ok || !data.ready) {
+                    const msg = data.message || data.error || 'Could not connect to a Pod.';
+                    const outOfStock = /not enough|unavailable|no .*available|out of stock|insufficient/i.test(msg);
+                    _setEngineHint(root, outOfStock
+                        ? `${msg} — that GPU is out of stock right now. Pick another card and Connect again.`
+                        : msg, true);
+                    _setEngineStatusText(root, data.podId ? 'creating…' : 'stopped');
+                    _engineBtnLabelSet(data.podId ? 'Disconnect' : 'Connect');
+                    Events.emit('ui:warning', { message: 'Could not connect to a Pod.' });
+                } else {
+                    // Connected — remember so boot can auto-reconnect (Step 4.3).
+                    state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
+                    _setEngineHint(root, data.recreated
+                        ? 'Remote engine ready (your Pod was recreated on the same GPU).'
+                        : 'Remote engine ready.');
+                    _setEngineStatusText(root, 'ready');
+                    _engineBtnLabelSet('Disconnect');
+                    Events.emit('ui:success', { message: 'Remote engine ready' });
+                    // Reap any stranded EXITED Pods from a prior session (Step 4.3.3).
+                    // A create already swept server-side; a warm resume did not, so
+                    // do it here — fire-and-forget, the live Pod is kept server-side.
+                    fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
+                }
+            } catch (err) {
+                _setEngineHint(root, 'Could not reach the Pod connect endpoint.', true);
+                _setEngineStatusText(root, 'stopped');
+                _engineBtnLabelSet('Connect');
+                Events.emit('ui:warning', { message: 'Could not reach the Pod connect endpoint.' });
+            } finally {
+                _engineBusy = false;
+                _engineBtnDisabled(false);
+            }
+        }
+
+        async function _disconnectEngine(root) {
+            if (_engineBusy) return;
+            _engineBusy = true;
+            _engineBtnDisabled(true);
+            _setEngineStatusText(root, 'stopping…');
+            _setEngineHint(root, 'Stopping the Pod (GPU billing ends; the Pod stays so it resumes fast next time). Delete it to free storage and allow the volume to be deleted.');
+            try {
+                // Step 4.3: STOP, not delete — keeps the Pod warm-resumable. Clear
+                // wasConnected so boot does NOT auto-reconnect after an explicit
+                // Disconnect; KEEP the podId so a manual Connect can warm-resume it.
+                const res = await fetch('/remote/pod/stop-active', { method: 'POST' });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.stopped === false) {
+                    _setEngineHint(root, 'Could not stop the Pod — check the RunPod console.', true);
+                    Events.emit('ui:warning', { message: 'Could not terminate the Pod.' });
+                } else {
+                    _setEngineHint(root, 'Pod stopped (GPU billing ended).');
+                    Events.emit('ui:success', { message: 'Pod terminated (kept warm)' });
+                }
+                state.runpodConfig = { ..._runpodCfg(), wasConnected: false };
+            } catch (err) {
+                _setEngineHint(root, 'Could not reach the Pod stop endpoint.', true);
+            } finally {
+                _engineBusy = false;
+                _setEngineStatusText(root, 'stopped');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+            }
+        }
+
+        // Delete (not stop) the active Pod — the "Delete Pod" choice on Disconnect.
+        // Frees the GPU + reserved container disk and clears the saved podId so a
+        // later Connect creates fresh; the volume + its models persist (Step 4.3.2).
+        async function _deletePodAndDisconnect(root) {
+            if (_engineBusy) return;
+            _engineBusy = true;
+            _engineBtnDisabled(true);
+            _setEngineStatusText(root, 'deleting…');
+            _setEngineHint(root, 'Deleting the Pod (GPU + container-disk billing ends; the next Connect creates a fresh Pod). Your volume and models persist.');
+            try {
+                const res = await fetch('/remote/pod/delete-active', { method: 'POST' });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.deleted === false) {
+                    _setEngineHint(root, 'Could not delete the Pod — check the RunPod console.', true);
+                    Events.emit('ui:warning', { message: 'Could not delete the Pod.' });
+                } else {
+                    _setEngineHint(root, 'Pod deleted (all billing ended; volume kept).');
+                    Events.emit('ui:success', { message: 'Pod deleted' });
+                }
+                // Clear podId so a later Connect creates fresh, and the intent so
+                // boot does not auto-reconnect.
+                state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+            } catch (err) {
+                _setEngineHint(root, 'Could not reach the Pod delete endpoint.', true);
+            } finally {
+                _engineBusy = false;
+                _setEngineStatusText(root, 'stopped');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+            }
+        }
+
+        // Disconnect popup (Step 4.3.2): the user chooses how to release the Pod.
+        //   Terminate (primary) → STOP/EXITED, warm-resumable, bills only volume +
+        //     reserved container disk (a small fee), no GPU.
+        //   Delete → remove the Pod, frees the card + container disk, lets the
+        //     volume be deleted later; next Connect is a cold create.
+        function _openDisconnectChoice(root) {
+            if (_engineBusy) return;
+            const modal = MpiModal.mount(ce('div'), { width: 'min(460px, 92vw)' });
+            const box = ce('div', { className: 'mpi-settings__disconnect' });
+            box.appendChild(ce('div', {
+                className: 'mpi-settings__disconnect-title',
+                textContent: 'Disconnect remote engine',
+            }));
+            box.appendChild(ce('div', {
+                className: 'mpi-settings__disconnect-text',
+                textContent:
+                    'Terminate keeps the Pod ready to resume quickly and bills only storage ' +
+                    '(volume + reserved container disk) — a small fee. Delete removes the Pod, ' +
+                    'ending all billing except the volume, but the next connection is a slower ' +
+                    'cold start. Your volume and installed models are kept either way.',
+            }));
+            const actions = ce('div', { className: 'mpi-settings__disconnect-actions' });
+            box.appendChild(actions);
+            modal.el.appendChild(box);
+
+            const close = () => modal.el.hide();
+            const terminateBtn = MpiButton.mount(ce('div'), { text: 'Terminate', variant: 'primary', size: 'sm' });
+            const deleteBtn = MpiButton.mount(ce('div'), { text: 'Delete Pod', variant: 'danger', size: 'sm' });
+            const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'sm' });
+            terminateBtn.on('click', () => { close(); _disconnectEngine(root); });
+            deleteBtn.on('click', () => { close(); _deletePodAndDisconnect(root); });
+            cancelBtn.on('click', close);
+            // Enter confirms the primary (Terminate) action.
+            modal.on('confirm', () => { close(); _disconnectEngine(root); });
+            actions.appendChild(cancelBtn.el);
+            actions.appendChild(deleteBtn.el);
+            actions.appendChild(terminateBtn.el);
+            modal.el.show();
+        }
+
+        function _refreshEngineConnect(root) {
+            _applyEngineStatus(root, null);
+            _pollEngineStatus(root);
+        }
+
+        function _initEngineConnect(root) {
+            const slot = qs('#mpiSettingsRunpodConnectSlot', root);
+            if (!slot || _engineConnectInst) return;
+            slot.innerHTML = '';
+            _engineConnectInst = MpiButton.mount(slot, {
+                text: 'Connect',
+                variant: 'primary',
+                size: 'sm',
+            });
+            _engineConnectInst.on('click', () => {
+                if (_engineBtnLabel === 'Disconnect') _openDisconnectChoice(root);
+                else _connectEngine(root);
+            });
+            _refreshEngineConnect(root);
+            // Poll status while the panel is open so the label tracks reality
+            // (e.g. background boot finishing, or a quit-stop elsewhere).
+            _engineStatusTimer = setInterval(() => {
+                if (!_engineBusy) _pollEngineStatus(root);
+            }, 5000);
+        }
+
+        const _stockRank = { High: 3, Medium: 2, Low: 1 };
+
+        function _renderRunpodPickers(root) {
+            const cfg = _runpodCfg();
+            const dcSlot = qs('#mpiSettingsRunpodDcSlot', root);
+            const gpuSlot = qs('#mpiSettingsRunpodGpuSlot', root);
+            if (!dcSlot || !gpuSlot) return;
+            dcSlot.innerHTML = '';
+            gpuSlot.innerHTML = '';
+
+            const dcs = _runpodAvailability?.dataCenters || [];
+            const gpus = _runpodAvailability?.gpuTypes || [];
+            if (!dcs.length) {
+                dcSlot.appendChild(ce('div', {
+                    className: 'mpi-settings__empty-row',
+                    textContent: 'Save a valid API key to load live availability.',
+                }));
+                return;
+            }
+
+            const dcOptions = dcs
+                .filter(dc => dc.storageSupport)
+                .map(dc => {
+                    const count = (dc.gpuAvailability || []).filter(g => g.available).length;
+                    const mine = _volumeForDc(dc.id) ? ' · volume' : '';
+                    return { value: dc.id, label: dc.name || dc.id, meta: `${count} GPUs${mine}` };
+                });
+            const dcInst = MpiDropdown.mount(dcSlot, {
+                options: dcOptions,
+                value: cfg.datacenter || '',
+                placeholder: 'Select data center...',
+                extraClasses: 'mpi-dropdown--runpod',
+            });
+            dcInst.on('change', ({ value }) => {
+                // DC drives the volume: adopt the cubric-vision volume in the new DC
+                // (or None). gpuType cleared so the picker re-filters for the DC.
+                const vol = _volumeForDc(value);
+                state.runpodConfig = {
+                    ..._runpodCfg(),
+                    datacenter: value,
+                    gpuType: null,
+                    volumeId: vol ? vol.id : null,
+                };
+                _renderRunpodPickers(root);
+                _renderRunpodVolume(root);
+                _refreshEngineConnect(root);
+            });
+
+            const dc = dcs.find(d => d.id === cfg.datacenter);
+            if (!dc) {
+                gpuSlot.appendChild(ce('div', {
+                    className: 'mpi-settings__empty-row',
+                    textContent: 'Pick a data center first.',
+                }));
+                return;
+            }
+            const availMap = new Map(
+                (dc.gpuAvailability || [])
+                    .filter(g => g.available)
+                    .map(g => [g.gpuTypeId, g.stockStatus])
+            );
+            // Stock leads the meta so it survives truncation in narrow panels.
+            // N/A mirrors the RunPod console's label for unrated stock.
+            const gpuOptions = gpus
+                .filter(g => g.secureCloud && availMap.has(g.id))
+                .map(g => {
+                    const stock = availMap.get(g.id);
+                    const price = (typeof g.securePrice === 'number')
+                        ? ` · $${g.securePrice.toFixed(2)}/hr`
+                        : '';
+                    return {
+                        value: g.id,
+                        label: g.displayName || g.id,
+                        meta: `${stock || 'N/A'} · ${g.memoryInGb} GB${price}`,
+                        _rank: _stockRank[stock] || 0,
+                    };
+                })
+                .sort((a, b) => b._rank - a._rank);
+            const gpuInst = MpiDropdown.mount(gpuSlot, {
+                options: gpuOptions,
+                value: cfg.gpuType || '',
+                placeholder: 'Select GPU...',
+                extraClasses: 'mpi-dropdown--runpod',
+                // Opens upward — the GPU picker sits low in the panel and the long
+                // option list was clipped at the viewport bottom when opening down.
+                direction: 'up',
+            });
+            gpuInst.on('change', async ({ value }) => {
+                const prev = _runpodCfg();
+                // Switching GPU while a (stopped/saved) Pod exists: that Pod is
+                // pinned to the old card, so delete it — the next Connect creates
+                // fresh on the new GPU (Step 4.3 GPU-switch path).
+                if (prev.podId && value && value !== prev.gpuType) {
+                    try { await fetch('/remote/pod/delete-active', { method: 'POST' }); } catch (_) { /* best-effort */ }
+                    state.runpodConfig = { ...prev, gpuType: value, podId: null, wasConnected: false };
+                    _setEngineHint(root, 'Switched GPU — your previous Pod was deleted. Connect to create one on the new card.');
+                } else {
+                    state.runpodConfig = { ...prev, gpuType: value };
+                }
+                // Connect is gated on a picked GPU (Step 4.2) — refresh its state.
+                _refreshEngineConnect(root);
+            });
+        }
+
+        async function _loadRunpodAvailability(root) {
+            try {
+                const res = await fetch('/runpod/gpu-availability');
+                if (!res.ok) throw new Error(`availability returned ${res.status}`);
+                _runpodAvailability = await res.json();
+            } catch (err) {
+                _runpodAvailability = null;
+                clientLogger.warn('settings', '[MpiSettings] RunPod availability load failed');
+            }
+            try {
+                const res = await fetch('/runpod/volumes');
+                const data = res.ok ? await res.json() : null;
+                const list = Array.isArray(data) ? data : (data?.networkVolumes || data?.volumes || null);
+                _runpodVolumes = Array.isArray(list) ? list : null;
+            } catch (_) {
+                _runpodVolumes = null;
+            }
+
+            // Adopt the saved volume's data center when none is chosen yet.
+            const cfg = _runpodCfg();
+            const vol = _findRunpodVolume(cfg.volumeId);
+            if (vol?.dataCenterId && !cfg.datacenter) {
+                state.runpodConfig = { ...cfg, datacenter: vol.dataCenterId };
+            }
+            _renderRunpodPickers(root);
+            _renderRunpodVolume(root);
+        }
+
+        // Volume is derived from the selected data center: the cubric-vision volume
+        // in that DC (a badge), or None. No dropdown — one volume per DC. Create
+        // provisions one in the selected DC; once it exists, Create swaps to Delete.
+        function _renderRunpodVolume(root) {
+            const volumeSlot = qs('#mpiSettingsRunpodVolumeSlot', root);
+            if (!volumeSlot) return;
+            volumeSlot.innerHTML = '';
+            const cfg = _runpodCfg();
+            const vol = cfg.datacenter ? _volumeForDc(cfg.datacenter) : null;
+
+            // Keep the saved volumeId in lock-step with the derived volume so the
+            // Connect gate + create-spec always reference the DC's actual volume.
+            if ((vol ? vol.id : null) !== (cfg.volumeId || null)) {
+                state.runpodConfig = { ..._runpodCfg(), volumeId: vol ? vol.id : null };
+            }
+
+            const volRow = ce('div', { className: 'mpi-settings__volume-row' });
+            volumeSlot.appendChild(volRow);
+
+            // Badge (volume present) or None.
+            const badge = ce('div', { className: 'mpi-settings__volume-badge mpi-settings__volume-drop' });
+            if (vol) {
+                badge.textContent = `✓ ${vol.name || vol.id} · ${vol.size ? `${vol.size} GB · ` : ''}Ready`;
+            } else {
+                badge.classList.add('mpi-settings__volume-badge--none');
+                badge.textContent = cfg.datacenter
+                    ? 'None — create one to store ComfyUI + models.'
+                    : 'Pick a data center, then create a volume.';
+            }
+            volRow.appendChild(badge);
+
+            // Create (no volume in this DC) ↔ Delete (one exists). Both small.
+            if (vol) {
+                const delBtn = MpiButton.mount(ce('div'), {
+                    text: 'Delete',
+                    variant: 'secondary',
+                    size: 'sm',
+                    extraClasses: 'mpi-settings__volume-delete',
+                });
+                delBtn.on('click', () => _confirmDeleteVolume(root, vol));
+                volRow.appendChild(delBtn.el);
+            } else {
+                const createBtn = MpiButton.mount(ce('div'), {
+                    text: '+ Create',
+                    variant: 'primary',
+                    size: 'sm',
+                    extraClasses: 'mpi-settings__volume-create',
+                });
+                createBtn.on('click', () => _promptCreateVolume(root));
+                volRow.appendChild(createBtn.el);
+            }
+        }
+
+        // Prompt for size, then POST /runpod/volumes in the configured data center.
+        function _promptCreateVolume(root) {
+            const cfg = _runpodCfg();
+            if (!cfg.datacenter) {
+                Events.emit('ui:error', {
+                    title: 'Pick a data center',
+                    message: 'Choose a data center first — a network volume is locked to one.',
+                });
+                return;
+            }
+            const dc = (_runpodAvailability?.dataCenters || []).find(d => d.id === cfg.datacenter);
+            const dcName = dc?.name || cfg.datacenter;
+            const RATE = 0.07; // USD per GB per month (RunPod network-volume storage)
+
+            // Live cost line for a given size. Reads as "150 GB → $10.50/mo · $0.35/day".
+            const costLine = (raw) => {
+                const size = parseInt(String(raw || '').trim(), 10);
+                if (!Number.isInteger(size) || size <= 0) return 'Enter a size in GB to see the cost.';
+                const perMonth = size * RATE;
+                const perDay = perMonth / 30;
+                return `${size} GB → $${perMonth.toFixed(2)}/mo · $${perDay.toFixed(2)}/day`;
+            };
+
+            const baseText = `Creates a RunPod network volume in ${dcName}. Storage bills on your RunPod account until you delete it (~$${RATE.toFixed(2)}/GB per month).`;
+            const dialog = MpiOkCancel.mount(ce('div'), {
+                title: 'Create network volume',
+                text: `${baseText}\n\n${costLine('150')}`,
+                inputPlaceholder: 'Size in GB (e.g. 150)',
+                inputValue: '150',
+                okLabel: 'Create',
+            });
+            // Update the cost line live as the size changes.
+            dialog.on('input', ({ value }) => {
+                const textSlot = qs('#text-slot', dialog.el);
+                if (textSlot) textSlot.textContent = `${baseText}\n\n${costLine(value)}`;
+            });
+            dialog.on('ok', async ({ inputValue }) => {
+                const size = parseInt(String(inputValue || '').trim(), 10);
+                if (!Number.isInteger(size) || size <= 0) {
+                    Events.emit('ui:error', { title: 'Invalid size', message: 'Enter a positive whole number of GB.' });
+                    return;
+                }
+                await _createRunpodVolume(root, size, cfg.datacenter, dcName);
+            });
+            dialog.el.show();
+            // Honour the \n\n split between the base copy and the live cost line
+            // (scoped to this dialog so the shared MpiOkCancel style is untouched).
+            const textSlot = qs('#text-slot', dialog.el);
+            if (textSlot) textSlot.style.whiteSpace = 'pre-line';
+        }
+
+        async function _createRunpodVolume(root, size, dataCenterId, dcName) {
+            try {
+                const res = await fetch('/runpod/volumes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: `cubric-vision-${dataCenterId}`, size, dataCenterId }),
+                });
+                const data = await res.json().catch(() => null);
+                const newId = data?.id || data?.networkVolume?.id || null;
+                if (!res.ok || !newId) {
+                    Events.emit('ui:error', { title: 'Volume not created', message: _runpodErrText(data, res.status) });
+                    return;
+                }
+                await _reloadRunpodVolumes();
+                const next = { ..._runpodCfg(), volumeId: newId, datacenter: dataCenterId, gpuType: null };
+                state.runpodConfig = next;
+                _renderRunpodPickers(root);
+                _renderRunpodVolume(root);
+                // A volume now exists — let Connect re-evaluate its gate.
+                _refreshEngineConnect(root);
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] volume create failed', err);
+                Events.emit('ui:error', { title: 'Volume not created', message: 'Could not reach RunPod.' });
+            }
+        }
+
+        function _confirmDeleteVolume(root, vol) {
+            // A Pod we manage may be attached to this volume. RunPod refuses a
+            // volume-delete while ANY Pod is attached (even EXITED), so warn that
+            // the Pod goes too when we are about to delete it (Step 4.3.1).
+            const cfg = _runpodCfg();
+            const podAttached = !!cfg.podId;
+            const dialog = MpiOkCancel.mount(ce('div'), {
+                title: 'Delete network volume',
+                text: `Delete volume "${vol.name || vol.id}"?${podAttached
+                    ? ' Your connected Pod is attached to it and will be deleted first.'
+                    : ''} Storage billing stops, but every model stored on it must be re-downloaded. This cannot be undone.`,
+                okLabel: 'Delete',
+            });
+            dialog.on('ok', async () => {
+                try {
+                    // RunPod blocks deleting a volume with an attached Pod. Delete
+                    // the tracked Pod first, then clear its saved id + intent so a
+                    // later Connect creates fresh (Step 4.3.1).
+                    if (podAttached) {
+                        try {
+                            await fetch('/remote/pod/delete-active', { method: 'POST' });
+                        } catch (_) { /* fall through; volume-delete reports the real error */ }
+                        state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+                        _refreshEngineConnect(root);
+                    }
+                    const res = await fetch(`/runpod/volumes/${vol.id}`, { method: 'DELETE' });
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => null);
+                        Events.emit('ui:error', { title: 'Delete failed', message: _runpodErrText(data, res.status) });
+                        return;
+                    }
+                    await _reloadRunpodVolumes();
+                    if (_runpodCfg().volumeId === vol.id) {
+                        state.runpodConfig = { ..._runpodCfg(), volumeId: null };
+                    }
+                    _renderRunpodVolume(root);
+                } catch (err) {
+                    clientLogger.error('settings', '[MpiSettings] volume delete failed', err);
+                    Events.emit('ui:error', { title: 'Delete failed', message: 'Could not reach RunPod.' });
+                }
+            });
+            dialog.el.show();
+        }
+
+        async function _initRunpodSection(root) {
+            const toggleSlot = qs('#mpiSettingsRunpodToggleSlot', root);
+            const body = qs('#mpiSettingsRunpodBody', root);
+            if (!toggleSlot || !body) return;
+
+            const cfg = _runpodCfg();
+            const syncBodyVisibility = (enabled) => {
+                body.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+            };
+            syncBodyVisibility(cfg.enabled);
+
+            toggleSlot.innerHTML = '';
+            const toggleInst = MpiCheckbox.mount(toggleSlot, {
+                checked: cfg.enabled,
+                label: 'Enable RunPod remote engine',
+            });
+            toggleInst.on('change', async ({ checked }) => {
+                const next = { ..._runpodCfg(), enabled: checked === true };
+                state.runpodConfig = next;
+                syncBodyVisibility(next.enabled);
+                await _pushRemoteMode(next);
+                _refreshEngineConnect(root);
+                if (next.enabled && !_runpodAvailability && await secretsClient.hasApiKey()) {
+                    _loadRunpodAvailability(root);
+                }
+            });
+
+            // ── API key (write-only; field is cleared after save) ───────────
+            const keySlot = qs('#mpiSettingsRunpodKeySlot', root);
+            const saveSlot = qs('#mpiSettingsRunpodKeySaveSlot', root);
+            const clearSlot = qs('#mpiSettingsRunpodKeyClearSlot', root);
+            if (keySlot && saveSlot && clearSlot) {
+                keySlot.innerHTML = '';
+                saveSlot.innerHTML = '';
+                clearSlot.innerHTML = '';
+
+                const keyInst = MpiInput.mount(keySlot, {
+                    type: 'password',
+                    label: 'RunPod API Key',
+                    placeholder: secretsClient.isAvailable() ? 'rpa_...' : 'Desktop app only',
+                    disabled: !secretsClient.isAvailable(),
+                });
+
+                const saveInst = MpiButton.mount(saveSlot, {
+                    text: 'Save',
+                    variant: 'secondary',
+                    size: 'sm',
+                });
+                saveInst.on('click', async () => {
+                    const field = qs('.mpi-input__field', keyInst.el);
+                    const key = (field?.value || '').trim();
+                    if (!key) return;
+                    const res = await secretsClient.setApiKey(key);
+                    if (field) field.value = '';
+                    if (!res?.ok) {
+                        _setRunpodStatus(root, 'Failed to save the API key.');
+                        return;
+                    }
+                    if (res.weakEncryption) {
+                        Events.emit('ui:error', {
+                            title: 'Security Notice',
+                            message: 'No OS secure key store was detected (GNOME Keyring / KWallet). '
+                                + 'Your RunPod API key is saved with app-level encryption instead of '
+                                + 'OS-backed encryption. It is still encrypted on disk, but for best '
+                                + 'security enable a desktop keyring.',
+                        });
+                    }
+                    _setRunpodStatus(root, 'Key saved. Validating...');
+                    try {
+                        const check = await fetch('/runpod/account/validate').then(r => r.json());
+                        _setRunpodStatus(root, check.valid
+                            ? 'Key saved and validated with RunPod.'
+                            : 'Key saved, but RunPod rejected it — check the key.');
+                        if (check.valid) _loadRunpodAvailability(root);
+                    } catch (_) {
+                        _setRunpodStatus(root, 'Key saved. Could not reach RunPod to validate.');
+                    }
+                });
+
+                const clearInst = MpiButton.mount(clearSlot, {
+                    text: 'Clear',
+                    variant: 'secondary',
+                    size: 'sm',
+                });
+                clearInst.on('click', async () => {
+                    await secretsClient.clearApiKey();
+                    _runpodAvailability = null;
+                    _setRunpodStatus(root, 'No API key saved.');
+                    _renderRunpodPickers(root);
+                });
+            }
+
+            // ── Volume (non-secret) ──────────────────────────────────────────
+            // The Pod ID field is gone (Step 4.2): the Pod is created on Connect
+            // and its podId is app-managed, not user-entered.
+            _renderRunpodVolume(root);
+
+            // ── Remote engine Connect / Disconnect + status ──────────────────
+            _initEngineConnect(root);
+
+            // ── Initial status + availability ────────────────────────────────
+            if (!secretsClient.isAvailable()) {
+                _setRunpodStatus(root, 'RunPod settings require the desktop app.');
+                _renderRunpodPickers(root);
+                return;
+            }
+            const has = await secretsClient.hasApiKey();
+            _setRunpodStatus(root, has ? 'API key is saved.' : 'No API key saved.');
+            if (has && cfg.enabled) _loadRunpodAvailability(root);
+            else _renderRunpodPickers(root);
         }
 
         _unsubs.push(Events.onState('promptReuseOptions', (value) => {
@@ -304,6 +1119,9 @@ export const MpiSettings = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
             _clearExtraFolderControls();
+            if (_engineStatusTimer) { clearInterval(_engineStatusTimer); _engineStatusTimer = null; }
+            _engineConnectInst?.destroy?.();
+            _engineConnectInst = null;
         };
 
         async function _hydrateComfyPath(pathInst) {

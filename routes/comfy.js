@@ -37,6 +37,7 @@ const {
     writeExtraModelPathsYaml,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
+const remoteModels = require('./remoteModels');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
@@ -409,6 +410,18 @@ router.post('/comfy/extra-folders', async (req, res) => {
 router.post('/comfy/models/check', async (req, res) => {
     const { models } = req.body;
     if (!Array.isArray(models)) return res.status(400).json({ error: 'models array required' });
+
+    // Remote engine: resolve installed-state against the Pod volume via the
+    // wrapper instead of the local filesystem. Response shape is identical.
+    if (remoteModels.isRemoteActive()) {
+        try {
+            const out = await remoteModels.remoteModelsCheck(models);
+            return res.json(out);
+        } catch (err) {
+            logger.error('comfy', `remote models/check failed: ${err.message}`);
+            return res.status(502).json({ success: false, error: err.message });
+        }
+    }
 
     try {
         const customRoot = await getCustomRoot();

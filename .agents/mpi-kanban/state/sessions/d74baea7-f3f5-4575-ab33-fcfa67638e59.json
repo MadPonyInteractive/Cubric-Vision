@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "d74baea7-f3f5-4575-ab33-fcfa67638e59",
+  "status": "handoff_ready",
+  "role": "implementer",
+  "agent": "claude",
+  "name": "MPI-64 RunPod Remote Engine \u2014 Batch #1 smoke-test + Parallel Batch #2 (Comfy boundary adapter)",
+  "heartbeat_at": "2026-06-11T19:55:00Z",
+  "task": ".agents/mpi-kanban/state/tasks/75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0.json",
+  "handoff_in": ".agents/mpi-kanban/state/handoffs/886fe559-675f-4fa7-afb0-a2b8db084329.json",
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "claim_files",
+    "edit_owned_files",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-11T16:45:00Z",
+      "event": "session_started",
+      "note": "Resumed from handoff 886fe559; inline-sequential execution per user choice."
+    },
+    {
+      "at": "2026-06-11T19:55:00Z",
+      "event": "handoff_ready",
+      "note": "Batches #2/#3/#3.1 implemented + user-verified; handoff d3ac7a0f for fresh session."
+    }
+  ],
+  "handoff": ".agents/mpi-kanban/state/handoffs/d3ac7a0f-162d-4782-b2df-93eaaf6e92ab.json"
+}
