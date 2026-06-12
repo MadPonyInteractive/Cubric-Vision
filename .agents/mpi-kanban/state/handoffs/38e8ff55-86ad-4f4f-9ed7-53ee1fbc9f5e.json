@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "38e8ff55-86ad-4f4f-9ed7-53ee1fbc9f5e",
+  "generated_at": "2026-06-12T08:12:22Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Step 4.3.x (orphan sweep 4.3.3 + delete-Pod-before-volume 4.3.1 + Disconnect choice popup 4.3.2) DONE+verified; volume-required + DC-derived volume UX rework DONE+verified; double-create guard (_connecting) DONE+verified; Step 4.4 persistent connection feedback (landing badge + gallery IDLE scope + remote GPU/VRAM/RAM specs) DONE+verified. Parent Step 4.3 + 4.4 ticked. COMMITTED to branch RunPod as ebabbb9 (MPI-64 files only; the MpiHelp→hotkeys refactor + MPI-67/68 were intentionally left uncommitted). NEXT: Step 5 (manifest compatibility gate) or the big Phase 4 (real remote image/video generation end-to-end).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from Cubric Vision via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Phase 3 + the Pod-lifecycle Phase-4 slices are DONE and user-verified: create-on-Connect, stop-not-delete teardown, boot auto-reconnect with self-healing delete+recreate fallback, orphan-Pod sweep, delete-Pod-before-volume, Disconnect choice popup (Terminate vs Delete), volume-required + DC-derived volume UX, double-create guard, and persistent connection feedback (landing badge + gallery status). All committed as ebabbb9 on branch RunPod. The remaining big piece is end-to-end remote GENERATION (Phase 4) plus the manifest compatibility gate (Step 5) and fresh-volume init/bundle versioning. A real generation has NOT yet been run through the remote wrapper."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 design docs + Phase 2 wrapper (full contract, live-proven)",
+      "Phase 3 Steps 1-4 + 4.1 (Connect/Disconnect button) — user-verified",
+      "Step 4.2 create-on-Connect / 4.2.1 custom-nodes false-PARTIAL fix — user-verified",
+      "Step 4.3 stop-not-delete + boot auto-reconnect + delete-fallback (incl 4.3.0 not-a-bug) — user-verified",
+      "Step 4.3.3 orphan stopped-Pod sweep (client.listPods + _sweepOrphanPods, runs on create + Connect cleanup-orphans) — user-verified",
+      "Step 4.3.1 delete attached Pod before volume delete (MpiSettings._confirmDeleteVolume) — code in (volume-delete itself deferred to a follow-up live test)",
+      "Step 4.3.2 Disconnect choice popup: Terminate (keep warm) vs Delete Pod (inline MpiModal + 3 MpiButton) — user-verified",
+      "Volume UX rework: volume REQUIRED (Connect gated on GPU+volume), volume DERIVED from selected DC (badge or None, no dropdown), in-app Create/Delete (sm), live cost math + GB in the create dialog, Network Volume moved above GPU — user-verified",
+      "Double-create guard: backend _connecting flag (survives Settings panel remount) exposed on /remote/comfy/status; _applyEngineStatus shows 'connecting…' + disables Connect — user-verified",
+      "GPU dropdown opens upward (direction:'up'); 'RunPod Active' boot advisory popup REMOVED; connect/disconnect toasts via Events.emit('ui:*') (dropped misleading 'Pod created/recreated') — user-verified",
+      "Step 4.4 persistent connection feedback: app-wide remote:connection feed in shell.js; landing badge local·offline↔remote·online + Pod GPU/VRAM/RAM (GET /remote/pod/specs); gallery IDLE·Local/IDLE·Remote — user-verified",
+      "COMMITTED ebabbb9 on branch RunPod (MPI-64 files only)"
+    ],
+    "pending": [
+      "Step 5 — Manifest compatibility gate + repair/reinitialize UI (Batch #4 fold-in): read GET /wrapper/manifest at readiness, run the repair/reinitialize decision matrix from volume-manifest-schema.md (NOTE Design A: arch_family gate is now informational — real axis is card-arch vs available-image CUDA build), gate generation on an incompatible profile with a modal not a failed generation",
+      "Fresh-volume init + bundle versioning: a fresh volume receives the Cubric /workspace layout + first manifest (Pod-side wrapper init script); refuse to run against a stale workflow/custom-node bundle",
+      "Phase 4 (the big one) — END-TO-END REMOTE GENERATION: remote input-asset transfer (video/audio upload replacing _resolveMediaPath, trimmed-video flow, remote .latent staging replacing /comfy/stage-preview-latent); run image generation through the wrapper preserving local project save semantics; run video generation incl multi-stage preview/final; verify lifecycle cleanup on quit + simulated crash (idle watchdog). A real Pod can be spun up to test these immediately (Connect on a GPU+volume).",
+      "Phase 5 — hardening/tests/secret-hygiene audit/docs/preserve final decisions"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md fully updated: Steps 4.3.1/4.3.2/4.3.3/4.4 ticked with verify notes; parent Step 4.3 ticked; a 2026-06-12 Plan Drift entry records the volume-UX rework + advisory removal + cost math + GPU-up + toasts + double-create fix",
+      "MPI-64 work COMMITTED as ebabbb9 on branch RunPod (clean per-phase commit; MpiHelp→hotkeys refactor + MPI-67/68 intentionally left out)"
+    ],
+    "pending": [
+      "Diagnostic logging in routes/remoteProxy.js (create/reconnect/createPod/wrapper-ready) + MpiSettings._connectEngine (clientLogger 'create' vs 'reconnect') is intentional — KEEP (cheap, podId is non-secret). Note in any future cleanup that it is deliberate.",
+      "GET /remote/pod/specs reads RAM from getPod via DEFENSIVE field names (p.memoryInGb | machine.memoryInGb | p.containerMemoryInGb). VRAM (from gpuTypes catalog memoryInGb) + GPU name are confirmed; RAM was NOT explicitly confirmed against a live getPod payload this session — if the badge RAM is ever blank, grab the real field name from a live GET /pods/{id} response and fix.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) still needs folding into release notes at the next /mpi-version-bump",
+      "Old legacy handoff docs/handoffs/2026-06-11-16-30-mpi64-runpod.json is left uncommitted (superseded by the .agents/ handoffs); fold or drop later",
+      "mpi-ci + cubric-remote-wrapper repos still uncommitted; commit only when the user asks. Wrapper is at v0.2.0 (Design A: PyTorch+ComfyUI in the image, volume holds models only). A Step-4.4 RAM-from-/health or Step-5 manifest change would need a wrapper image rebuild (v0.2.1) + live re-test."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-64. The Pod-lifecycle + connection-UX work is DONE+verified+committed (ebabbb9). Pick the next plan item with the user: either (A) Phase 4 END-TO-END REMOTE GENERATION (the big remaining piece — a real Pod can be Connected on a GPU+volume and a generation tested immediately; start with remote image generation preserving local project save semantics, then input-asset transfer for video/audio/.latent, then video generation), or (B) Step 5 manifest compatibility gate (read GET /wrapper/manifest at readiness; gate incompatible profiles with a modal — remember Design A made the arch_family gate informational). Recommend confirming scope with the user first. Backend lifecycle lives in routes/remoteProxy.js; generation path is comfyController._ensureRemoteReady (Connect-only, no lazy-create) + commandExecutor + routes/comfy.js + remoteModels.js. INLINE-SEQUENTIAL, no sub-agent workers. Live Pod ops bill + the classifier BLOCKS reading .secrets/runpod.env and autonomous Pod create/delete — the USER runs live tests. Brief before code (mpi-continue gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "STOP-not-delete lifecycle (user, 2026-06-12): Quit/Disconnect STOP the Pod (EXITED bills no GPU, warm-resumes); DELETE only on GPU-switch, failed resume (host-pinned), or unavailable GPU. Self-healing delete+recreate fallback in /remote/pod/reconnect handles the host-pinning wall.",
+      "Disconnect choice popup (Step 4.3.2): Terminate (primary, keep warm = stop-active, keeps podId) vs Delete Pod (danger = delete-active, clears podId+wasConnected) vs Cancel. Built inline with MpiModal + 3 MpiButton because MpiOkCancel is 2-button only. Enter=Terminate, backdrop/Escape=cancel.",
+      "Volume is REQUIRED + DC-derived (user, 2026-06-12): a volumeless Pod has no persisted ComfyUI/models, so Connect is gated on BOTH GPU and volume. The volume dropdown was REPLACED by a badge/None derived from the selected DC (one volume per DC). Create/Delete (sm) on the Network Volume row; switching DC re-derives the volume + clears gpuType; the cross-DC mismatch warning was removed (unreachable now). _volumeForDc(dcId) helper.",
+      "Orphan sweep (Step 4.3.3): client.listPods (GET /pods; status field = desiredStatus, EXITED=stopped) + _sweepOrphanPods(key,keepPodId) deletes name==='cubric-vision' EXITED Pods not in {keepPodId,_startedPodId,_mode.podId}. Runs inside _createPodInternal (every create/recreate) + a fire-and-forget POST /remote/pod/cleanup-orphans from _connectEngine after a ready Connect (covers warm resume). The 'recreate-fallback targets saved podId' half was already satisfied (reconnect sets _startedPodId=savedPodId before _deleteTrackedPod).",
+      "Double-create guard: the renderer _engineBusy is per-mount and resets on a Settings panel close/reopen, so a create in flight could read 'stopped'+Connect-enabled → a 2nd Connect would duplicate the create. Added a BACKEND _connecting flag (set in /remote/pod/create + /remote/pod/reconnect via try/finally, exposed on /remote/comfy/status); _applyEngineStatus shows 'connecting…' + disables Connect when connecting.",
+      "Step 4.4 feed: one app-wide poller in shell.js (_initRemoteConnectionFeed, 5s, no-op when disabled) emits remote:connection {connected,gpuName,vramGb,ramGb} ONLY on a connected-flip; on connect it fetches GET /remote/pod/specs. heroStats + statusBar subscribe. Specs source: gpuTypes catalog (VRAM=memoryInGb) + getPod (RAM) — no wrapper rebuild.",
+      "Toasts via Events.emit('ui:success'|'ui:warning'|'ui:info') (StatusBar listens). Dropped the misleading 'Pod created/recreated' affirmation — a warm resume is not a create; both connect paths now say 'Remote engine ready'.",
+      "Committed MPI-64-only (ebabbb9) per the user's per-phase tracking: the MpiHelp→hotkeys refactor (MpiHelp deleted, mpi-hotkeys/ new, hotkeyManager/registry, types.js, preloadStyles.js, MpiSlideOver.js, projectUI.js, docs/shell.md, docs/workspaces.md, .claude/rules/*) + MPI-67/68 are a SEPARATE body of work left uncommitted for their own commit."
+    ],
+    "constraints": [
+      "NOTHING about the wrapper/ci repos is committed; in Cubric-Vision only MPI-64 is committed (ebabbb9). Never commit unless the user explicitly asks. The Help/hotkeys refactor + MPI-67/68 are still uncommitted on branch RunPod.",
+      "INLINE-SEQUENTIAL execution for app code — do not dispatch sub-agent workers.",
+      "RunPod secrets in GITIGNORED cubric-remote-wrapper/.secrets/runpod.env: CUBRIC_TOKEN sha8 4bc82fb9, volume cfwqthmdrg, template ejrwtsej15. NEVER paste/read/grep runpod.env (classifier BLOCKS reading it AND scanning %APPDATA% for the secret store AND autonomous Pod create/delete needing the key). For live Pod ops the USER runs cubric-remote-wrapper/recreate_pod.py. RunPod behind Cloudflare → always a browser UA; Windows curl flakes (use Python); REST stop/delete return EMPTY body on success; createPod returns 201 + {id}.",
+      "routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js (SSE intercept fall-through). routes/logger.js warn/info take only (category, message). The wrapper token is keyed by podId (create/recreate must store a fresh token keyed to the NEW podId; warm resume keeps the same podId). The proxy 404s wrapper routes for a few seconds right after Pod ready — remoteModels.wrapperFetch already retries.",
+      "PowerShell via Bash is BLOCKED by the classifier — read app.log with the Read tool (offset/limit), not Get-Content. scripts/new_uuid.py does NOT exist — generate uuids with python -c 'import uuid; print(uuid.uuid4())'.",
+      "Generation path (comfyController._ensureRemoteReady) does NOT lazy-create a Pod — it proceeds only if already Connected, else errors 'press Connect'. A generation test requires an explicit Connect first (on a GPU + a network volume).",
+      "wrapper at v0.2.0 (Design A). A getPod RAM field change is app-side only (no rebuild); a /health or manifest-content change needs a wrapper image rebuild + live re-test.",
+      "DOCS WEBSITE PUSH BLOCK still applies (never push 'Cubric Studio (Docs)')."
+    ],
+    "files_modified": [
+      "routes/remoteProxy.js (Step 4.3.3 _sweepOrphanPods + cleanup-orphans route + sweep inside _createPodInternal; _connecting flag in create+reconnect, exposed on /remote/comfy/status; NEW GET /remote/pod/specs)",
+      "routes/runpodRemote.js (Step 4.3.3 client.listPods = GET /pods)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (4.3.1 _confirmDeleteVolume deletes Pod first; 4.3.2 _openDisconnectChoice + _deletePodAndDisconnect; volume UX rework _renderRunpodVolume badge/None + _volumeForDc + DC-derived; Connect gated on volume; _applyEngineStatus connecting; GPU dropdown direction:up; create-volume live cost math; connect/disconnect toasts)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css (volume badge; disconnect-actions nowrap; volume-create sm)",
+      "js/components/Primitives/MpiDropdown/MpiDropdown.js (extraClasses forwarded onto the portalled list — for mpi-dropdown--runpod)",
+      "js/shell.js (4.4 _initRemoteConnectionFeed; removed 'RunPod Active' boot advisory popup; boot reconnect toast simplified)",
+      "js/shell/heroStats.js (4.4 _renderEngine local↔remote badge + cached local GPU line + remote GPU/VRAM/RAM)",
+      "js/shell/statusBar.js (4.4 _remoteConnected → IDLE·Local/IDLE·Remote)",
+      "index.html (#heroStatEngine id on the local·offline label span)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (ticks + Plan Drift)",
+      "(all committed as ebabbb9)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "routes/remoteProxy.js (lifecycle helpers + create/reconnect/delete-active/stop-active/cleanup-orphans/specs + _connecting)",
+      "routes/remoteModels.js (remote models/check + install wiring — relevant to Phase 4 generation)",
+      "js/services/comfyController.js (_ensureRemoteReady Connect-only, httpBase seam, WS URL)",
+      "js/services/commandExecutor.js (view URL via httpBase, event contract)",
+      "routes/comfy.js (remote models/check branch; SSE stream)",
+      ".agents/mpi-kanban/tasks/MPI-64/research/wrapper-api-contract.md (the wrapper endpoint contract for Phase 4)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "wrapper API contract", "ComfyUI execution boundary"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T08:12:22Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (only worktree: c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/38e8ff55-86ad-4f4f-9ed7-53ee1fbc9f5e.json and use mpi-continue. STATUS: the whole Pod-lifecycle + connection-UX layer is DONE, user-verified, and COMMITTED to branch RunPod as ebabbb9 — create-on-Connect, stop-not-delete teardown, boot auto-reconnect with a self-healing delete+recreate fallback, orphan stopped-Pod sweep (Step 4.3.3), delete-attached-Pod-before-volume-delete (4.3.1), the Disconnect choice popup Terminate-vs-Delete (4.3.2), a volume-REQUIRED + DC-derived volume UX (badge/None, in-app Create/Delete, live cost math, volume moved above GPU), a backend _connecting double-create guard, GPU dropdown opening upward, removal of the old 'RunPod Active' boot popup, connect/disconnect toasts, and Step 4.4 persistent connection feedback (landing badge local·offline↔remote·online with the Pod GPU/VRAM/RAM, gallery IDLE·Local/IDLE·Remote, driven by an app-wide remote:connection feed in js/shell.js + GET /remote/pod/specs). The MpiHelp→hotkeys refactor and kanban MPI-67/68 are a SEPARATE uncommitted body of work — do NOT fold them into MPI-64. NEXT (confirm scope with the user): either Phase 4 END-TO-END REMOTE GENERATION (the big remaining piece — a real Pod can be Connected on a GPU+volume and a generation tested immediately; remote image generation preserving local project save semantics first, then video/audio/.latent input-asset transfer, then video gen, then quit/crash cleanup verify), or Step 5 the manifest compatibility gate (GET /wrapper/manifest at readiness, gate incompatible profiles — Design A made the arch_family gate informational). GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env and never run autonomous Pod create/delete (the classifier blocks both — the USER runs live tests via recreate_pod.py); PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); scripts/new_uuid.py does NOT exist (python -c 'import uuid'); routes/remoteProxy.js stays mounted before routes/comfy.js; wrapper tokens are keyed by podId; comfyController._ensureRemoteReady is Connect-only (no lazy Pod create) so a generation test needs an explicit Connect first; the wrapper is v0.2.0 Design A (PyTorch+ComfyUI in the image, volume = models only); GET /remote/pod/specs reads RAM from getPod defensively (if badge RAM is blank, grab the real field name from a live getPod payload); keep the diagnostic logging in remoteProxy.js/MpiSettings (podId is non-secret); inline-sequential, no sub-agent workers, never commit unless asked. Brief before code (mpi-continue gate)."
+}

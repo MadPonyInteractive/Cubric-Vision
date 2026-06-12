@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-68",
+  "title": "Separate image-to-video and text-to-video from video models?",
+  "description": "Currently, we have WAN 2.2 that incorporates both t2v and i2v, users might want to use only one or the other, so we will create two separate ones, one just for image-to-video and one just for text-to-video. We need to keep in consideration that they support multi-stage, so let's add them as new models. In the model description, add that the big one includes everything and the other ones are just text-to-video or image-to-video. Rules and documentation should be read before implementing.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-12T08:06:46.737Z",
+  "updated_at": "2026-06-12T08:06:46.737Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
