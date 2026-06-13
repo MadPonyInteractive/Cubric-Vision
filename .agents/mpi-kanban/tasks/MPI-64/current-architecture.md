@@ -318,10 +318,27 @@ Step 4.5 delete-on-quit option). Current behavior:
   committed.
 - **Step 5 — manifest compatibility gate:** read `GET /wrapper/manifest` at
   readiness; gate an incompatible profile with a modal. **Real axis = image
-  CUDA floor vs host-driver-provided CUDA** (NOT card arch — see §5). Includes
-  Step 5.1 (CUDA-floor image strategy: cu124 default vs `NVIDIA_DISABLE_REQUIRE`
-  vs two image profiles) + Step 5.2 (auto-filter unsupported cards in the GPU
-  picker so Connect never hits the raw `nvidia-container-cli` refusal).
+  CUDA floor vs host-driver-provided CUDA** (NOT card arch — see §5). Step 5.1
+  (CUDA-floor image strategy = cu124 default + cu128 Blackwell) is SHIPPED.
+- **Step 5.2 — GPU-picker CUDA filter: DROPPED 2026-06-13 (superseded, no code).**
+  Original intent: auto-filter/warn cards whose host can't meet the image CUDA
+  floor. Now moot: (a) cu124-default (floor 12.4) eliminated the broad refusal
+  class — every non-Blackwell card runs it; (b) the only residual refusal is a
+  Blackwell card → cu128 (floor 12.8) on a host with driver <12.8, which is rare
+  (Blackwell hosts ship new drivers) AND not pre-filterable (host-driver CUDA is
+  NOT in the RunPod GPU catalog — only `gpuTypes`/`lowestPrice` fields, no host
+  driver); (c) if it ever refuses, it surfaces at connect as the
+  `nvidia-container-cli` error → the reconnect/recreate flow + message handle it.
+  An advisory "needs CUDA 12.8 host" badge was considered and REJECTED (user):
+  it would scare users for a near-zero risk. Prevention is already done by
+  cu124-default; connect-time handling covers the tail. NO picker filter/badge.
+- **cu130 Blackwell profile (FUTURE, rebuild — MPI-75 candidate):** cu128 was the
+  newest PROVEN base+torch+sage combo at MPI-70 build time (cu130 base/torch
+  wheels/sage compile were unvalidated then), NOT a deliberate floor. cu130 is
+  the speed-win direction for Blackwell (logged in the strategic notes: images
+  are a LIVING set, track the cu130 migration). Trades broader-host-compat for
+  speed (higher host-driver floor) — fine for Blackwell (new-driver hosts), bad
+  as a default. Bump the cu128 profile to cu130 when the stack is proven.
 - **GPU picker: show CONTAINER/SYSTEM RAM — ✅ SHIPPED 2026-06-13 (app-side, no
   rebuild):** `runpodRemote.js` gpuTypes query adds `lowestPrice { minMemory
   minVcpu }` (RAM is NOT a GpuType field — it rides the cheapest offering; this
