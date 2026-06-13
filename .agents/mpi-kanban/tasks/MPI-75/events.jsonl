@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-75","type":"task.created","at":"2026-06-13T09:06:48.000Z","actor":"claude","summary":"Created running card for batched Pod-image rebuild changes; first item: /wrapper/models/delete remote uninstall endpoint."}

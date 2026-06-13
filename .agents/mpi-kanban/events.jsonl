@@ -174,3 +174,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-68","type":"task.updated","at":"2026-06-13T00:00:00.000Z","actor":"claude","summary":"Maturity corrected done->complete."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.moved","at":"2026-06-13T09:30:00+01:00","actor":"claude","from":"doing","to":"done","summary":"MPI-70 done — multi-image build shipped (both tags public)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"attention.cleared","at":"2026-06-13T09:30:00+01:00","actor":"claude","summary":"MPI-70 closed."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-75","type":"task.created","at":"2026-06-13T09:06:48.000Z","actor":"claude","summary":"Created running card for batched Pod-image rebuild changes; first item: /wrapper/models/delete remote uninstall endpoint."}
