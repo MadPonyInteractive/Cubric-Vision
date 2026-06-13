@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-73","at":"2026-06-13T08:35:25+01:00","actor":"claude","summary":"Created MPI-73 from MPI-64 live testing. Two remote-engine UX bugs: (1) premature 'Connected' before the preview-WS is up -> queued jobs hang in STARTING; (2) Stop can't clear a STARTING job with no prompt_id. Connects to B4 part 2/4."}
