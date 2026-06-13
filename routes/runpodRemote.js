@@ -103,9 +103,20 @@ const client = {
   },
 
   async gpuTypes(apiKey) {
-    const q = `query { gpuTypes { id displayName memoryInGb secureCloud communityCloud securePrice } }`;
+    // `memoryInGb` is GPU VRAM. System/container RAM is NOT a GpuType field —
+    // it rides on the cheapest offering via `lowestPrice.minMemory` (GB). We
+    // flatten it to top-level `minMemory`/`minVcpu` so the picker reads it like
+    // `securePrice`. It is the FLOOR (lowest-tier listing); richer listings can
+    // have more, but the floor is the conservative number for the video warning.
+    const q = `query { gpuTypes { id displayName memoryInGb secureCloud communityCloud securePrice
+      lowestPrice(input:{gpuCount:1}) { minMemory minVcpu } } }`;
     const d = await _graphql(apiKey, q);
-    return (d.data && d.data.gpuTypes) || [];
+    const gpus = (d.data && d.data.gpuTypes) || [];
+    return gpus.map((g) => ({
+      ...g,
+      minMemory: (g.lowestPrice && typeof g.lowestPrice.minMemory === 'number') ? g.lowestPrice.minMemory : null,
+      minVcpu: (g.lowestPrice && typeof g.lowestPrice.minVcpu === 'number') ? g.lowestPrice.minVcpu : null,
+    }));
   },
 
   async dataCenters(apiKey) {

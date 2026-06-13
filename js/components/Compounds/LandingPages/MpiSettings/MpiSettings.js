@@ -880,10 +880,16 @@ export const MpiSettings = ComponentFactory.create({
                     const price = (typeof g.securePrice === 'number')
                         ? ` · $${g.securePrice.toFixed(2)}/hr`
                         : '';
+                    // System RAM (lowest-tier offering floor). Wan video needs
+                    // ≥64GB — flag low-RAM cards so the user knows video may OOM
+                    // (image gen is fine on less). No hard block.
+                    const ram = (typeof g.minMemory === 'number' && g.minMemory > 0)
+                        ? ` · ${g.minMemory}GB RAM${g.minMemory < 64 ? ' ⚠ video' : ''}`
+                        : '';
                     return {
                         value: g.id,
                         label: g.displayName || g.id,
-                        meta: `${stock || 'N/A'} · ${g.memoryInGb} GB${price}`,
+                        meta: `${stock || 'N/A'} · ${g.memoryInGb}GB VRAM${ram}${price}`,
                         _rank: _stockRank[stock] || 0,
                     };
                 })
