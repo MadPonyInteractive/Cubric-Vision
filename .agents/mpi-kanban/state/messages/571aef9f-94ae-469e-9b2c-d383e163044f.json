@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "571aef9f-94ae-469e-9b2c-d383e163044f",
-  "status": "acknowledged",
+  "status": "resolved",
   "created_at": "2026-06-12T20:30:00+01:00",
-  "updated_at": "2026-06-12T20:45:00+01:00",
+  "updated_at": "2026-06-13T09:30:00+01:00",
   "from": {
     "session": "Claude implementer — MPI-70 multi-image build",
     "role": "implementer",
@@ -25,6 +25,7 @@
   },
   "recent_events": [
     { "at": "2026-06-12T20:30:00+01:00", "event": "created" },
-    { "at": "2026-06-12T20:45:00+01:00", "event": "acknowledged", "by": "MPI-64 implementer", "note": "Both tags confirmed live+public. Starting live-verify on L4/cu124 (EU-RO-1, Wan 2.2 present). Will report T2V + input-asset results on this thread." }
+    { "at": "2026-06-12T20:45:00+01:00", "event": "acknowledged", "by": "MPI-64 implementer", "note": "Both tags confirmed live+public. Starting live-verify on L4/cu124 (EU-RO-1, Wan 2.2 present). Will report T2V + input-asset results on this thread." },
+    { "at": "2026-06-13T09:30:00+01:00", "event": "resolved", "by": "MPI-70 implementer", "outcome": "MPI-70 closed (done) per user. Both tags live+public+smoke-checked. Live-Pod deploy verification deferred to a separate card if a profile proves broken — MPI-64 continues its own live-verify independently." }
   ]
 }

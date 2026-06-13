@@ -172,3 +172,5 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-72","type":"task.updated","at":"2026-06-13T18:10:00+01:00","actor":"claude","summary":"Maturity set to validating (doing/awaiting-verification)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-74","type":"task.updated","at":"2026-06-13T00:00:00.000Z","actor":"claude","summary":"Maturity corrected backlog->idea."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-68","type":"task.updated","at":"2026-06-13T00:00:00.000Z","actor":"claude","summary":"Maturity corrected done->complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.moved","at":"2026-06-13T09:30:00+01:00","actor":"claude","from":"doing","to":"done","summary":"MPI-70 done — multi-image build shipped (both tags public)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"attention.cleared","at":"2026-06-13T09:30:00+01:00","actor":"claude","summary":"MPI-70 closed."}
