@@ -246,10 +246,13 @@ async function _bootApp() {
  * Poll /remote/comfy/status until the wrapper reports ready, or until timeout.
  * Replaces the backend's old inline long-poll (which 504'd on a long first-image
  * pull). Fires `onSlow` once when the wait crosses `slowAfterMs` — the signal of
- * a fresh-image cold pull (~3 GB) vs a normal ~90-120s cold create.
+ * a fresh-image cold pull (~3 GB) vs a normal ~90-120s cold create. Readiness is
+ * gated on ComfyUI being up only; the first boot on a fresh volume/GPU arch also
+ * pays a one-time sageattention compile (~5-15 min) that does NOT block readiness
+ * (SDPA fallback) but does extend the wait — hence the 20-min timeout.
  * @returns {Promise<boolean>} true once ready, false on timeout.
  */
-async function _pollRemoteReady({ timeoutMs = 600000, intervalMs = 4000, slowAfterMs = 150000, onSlow } = {}) {
+async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, onSlow } = {}) {
   const start = Date.now();
   let slowFired = false;
   while (Date.now() - start < timeoutMs) {
@@ -270,18 +273,36 @@ async function _pollRemoteReady({ timeoutMs = 600000, intervalMs = 4000, slowAft
 async function _initRemoteBoot(runpod) {
   // Flag remote mode active. A saved podId is passed so status polls + teardown
   // target it; the boot gate only needs `active` to skip the local install path.
+  // deleteOnQuit is synced here so quit-teardown honors the pref even if the user
+  // never opens Settings this session.
   try {
+    const body = runpod.podId ? { active: true, podId: runpod.podId } : { active: true };
+    body.deleteOnQuit = runpod.deleteOnQuit === true;
     await fetch('/remote/mode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(runpod.podId ? { active: true, podId: runpod.podId } : { active: true }),
+      body: JSON.stringify(body),
     });
   } catch (err) {
     clientLogger.error('shell', 'remote mode sync failed:', err);
   }
 
-  const canAutoReconnect = !!(runpod.wasConnected && runpod.podId && runpod.gpuType);
+  // With delete-on-quit the previous Pod was DELETED at quit, so its saved podId
+  // is dead — auto-resuming it just fails ("pod not found"), recreates fresh, and
+  // shows a misleading "resuming…" label. Skip auto-reconnect entirely; the user
+  // Connects fresh (correct "creating…" copy) from Settings.
+  const canAutoReconnect = !!(
+    runpod.wasConnected && runpod.podId && runpod.gpuType && !runpod.deleteOnQuit
+  );
   if (!canAutoReconnect) {
+    // delete-on-quit deleted the Pod at quit, so any saved podId is now dead.
+    // Clear it (via the state proxy so the in-memory copy Settings reads also
+    // updates, not just localStorage) so a manual Connect uses the create path
+    // (correct "creating…" copy) instead of a doomed "resuming…" resume of a
+    // nonexistent Pod.
+    if (runpod.deleteOnQuit && runpod.podId) {
+      state.runpodConfig = { ...runpod, podId: null, wasConnected: false };
+    }
     // No prior connection to resume — nothing to do at boot. The persistent
     // remote-engine status feedback (Settings + status bars) tells the user it
     // is enabled; Connect in Settings starts the Pod and acknowledges the cost.
@@ -330,7 +351,7 @@ async function _initRemoteBoot(runpod) {
     // few minutes the first time it is pulled onto a host.
     const ready = await _pollRemoteReady({
       onSlow: () => StatusBar.notify(
-        'First-time setup: downloading the engine (~3 GB, one time — faster next time)…',
+        'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time)…',
         'info', 8000),
     });
     if (ready) {

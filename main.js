@@ -105,22 +105,30 @@ async function getActiveDownloadsForQuit() {
   }
 }
 
-// Best-effort: STOP (not delete) the active RunPod Pod on quit so GPU billing
-// ends while the Pod stays warm-resumable (MPI-64 Step 4.3 — stop-not-delete; a
-// STOPPED Pod bills no GPU, only volume + reserved container disk, and boot can
-// warm-resume it). The wrapper idle watchdog is the real backstop if this times
-// out. The network volume is unaffected.
-async function stopActiveRemotePod() {
+// Best-effort: tear down the active RunPod Pod on quit. The backend branches on
+// the user's delete-on-quit pref (MPI-64 Step 4.3): default STOPs the Pod warm
+// (EXITED bills no GPU, only volume + reserved container disk, boot warm-resumes
+// it); with delete-on-quit checked it DELETEs the Pod (frees container disk too).
+// The wrapper idle watchdog is the real backstop if this times out. The network
+// volume is unaffected either way.
+async function teardownRemotePod() {
   if (!serverProcess || serverProcess.killed) return;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  // Delete-on-quit lists then deletes every cubric-vision Pod, and a RunPod
+  // delete REST call can take several seconds each — 8s aborted mid-delete and
+  // left the Pod running (hit live). 30s gives the sweep room to finish before
+  // the window closes and the server child dies.
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
-    await fetch('http://127.0.0.1:3000/remote/pod/stop-active', {
+    logger.info('main', 'Remote Pod teardown on quit: requesting…');
+    const res = await fetch('http://127.0.0.1:3000/remote/pod/teardown', {
       method: 'POST',
       signal: controller.signal,
     });
+    const out = await res.json().catch(() => ({}));
+    logger.info('main', `Remote Pod teardown result: action=${out.action || '?'} ok=${out.ok} reaped=${(out.reaped || []).join(',') || 'none'} podId=${out.podId || 'none'}`);
   } catch (err) {
-    logger.warn('main', `Remote Pod stop on quit failed: ${err.message}`);
+    logger.warn('main', `Remote Pod teardown on quit failed: ${err.message}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -358,9 +366,10 @@ function createWindow() {
     confirmQuitWithActiveDownloads().then(async (shouldQuit) => {
       quitDownloadWarningInProgress = false;
       if (!shouldQuit) return;
-      // Stop the remote Pod (if any) before tearing down — best-effort, the
-      // server child is still alive at this point so the call can reach it.
-      await stopActiveRemotePod();
+      // Tear down the remote Pod (if any) before quitting — best-effort, the
+      // server child is still alive at this point so the call can reach it. The
+      // backend stops-warm or deletes per the user's delete-on-quit pref.
+      await teardownRemotePod();
       quitDownloadWarningAccepted = true;
       mainWindow?.close();
     });
@@ -684,14 +693,15 @@ app.on('ready', () => {
   // when available; derived-key encrypted fallback + weakEncryption flag otherwise.
   secretsStore.init({ app, safeStorage, ipcMain, logger });
 
-  // System notification — fires only when window is minimized.
-  // Renderer sends unconditionally; main gates on isMinimized().
-  ipcMain.on('notify-generation-complete', (event, payload = {}) => {
-    if (!mainWindow || !mainWindow.isMinimized()) return;
+  // System notification — fires only when the window is not focused
+  // (minimized, behind another app, or on another workspace).
+  // Renderer sends unconditionally; main gates on isFocused().
+  const showOsNotification = (payload = {}, kind = 'notification') => {
+    if (!mainWindow || mainWindow.isFocused()) return;
     if (!Notification.isSupported()) return;
 
     const options = {
-      title: payload.title || 'Generation complete',
+      title: payload.title || 'Cubric Studio',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
       silent: false,
@@ -707,7 +717,7 @@ app.on('ready', () => {
     notif.on('close', () => activeNotifications.delete(notif));
     notif.on('failed', (_event, error) => {
       activeNotifications.delete(notif);
-      logger.warn('notification', `Generation complete notification failed: ${error}`);
+      logger.warn('notification', `${kind} notification failed: ${error}`);
     });
     notif.on('click', () => {
       if (mainWindow) {
@@ -716,6 +726,26 @@ app.on('ready', () => {
       }
     });
     notif.show();
+  };
+
+  ipcMain.on('notify-generation-complete', (event, payload = {}) => {
+    showOsNotification({
+      title: payload.title || 'Generation complete',
+      subtitle: payload.subtitle || 'Cubric Studio',
+      body: payload.body || '',
+      urgency: payload.urgency,
+      timeoutType: payload.timeoutType,
+    }, 'Generation complete');
+  });
+
+  ipcMain.on('notify-download-complete', (event, payload = {}) => {
+    showOsNotification({
+      title: payload.title || 'Download complete',
+      subtitle: payload.subtitle || 'Cubric Studio',
+      body: payload.body || '',
+      urgency: payload.urgency,
+      timeoutType: payload.timeoutType,
+    }, 'Download complete');
   });
 
   // TODO: replace platform branches with screen.setCursorScreenPoint({x,y})

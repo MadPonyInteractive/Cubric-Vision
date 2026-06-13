@@ -35,6 +35,10 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // Disconnect — boot uses this to auto-reconnect (start-or-recreate). Set on a
   // successful Connect/reconnect, cleared on explicit Disconnect.
   wasConnected: false,
+  // deleteOnQuit: when true, app-quit DELETES the Pod instead of stopping it
+  // warm (default = stop-not-delete, Step 4.3). Off keeps the Pod EXITED +
+  // warm-resumable; on frees the GPU + container disk fully (volume persists).
+  deleteOnQuit: false,
 });
 
 // Non-secret RunPod prefs only — never the API key or wrapper token.
@@ -46,6 +50,7 @@ function normalizeRunpodConfig(value = {}) {
     gpuType: value?.gpuType || null,
     volumeId: value?.volumeId || null,
     wasConnected: value?.wasConnected === true,
+    deleteOnQuit: value?.deleteOnQuit === true,
   };
 }
 

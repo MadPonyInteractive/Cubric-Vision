@@ -266,6 +266,66 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
   return json || { status: 'started', id: dep.id };
 }
 
+/**
+ * Upload a LOCAL file to the wrapper as an input asset (video/audio or .latent),
+ * landing it in the Pod volume input dir under a bare basename. Mirrors the
+ * wrapper's multipart contract: field `file` (the blob), Form `filename` (bare
+ * basename), Form `overwrite`. `endpoint` is '/wrapper/upload/media' or
+ * '/wrapper/upload/latent'. Reads the file server-side (the renderer's resolved
+ * path is meaningless on the Pod) and streams it through the RunPod proxy with
+ * auth + browser UA + the post-restart proxy-404 retry. Returns the wrapper
+ * JSON ({ name, type:'input', path? }).
+ */
+async function remoteUploadInput(localPath, filename, endpoint) {
+  const fs = require('fs-extra');
+  const path = require('path');
+  if (!localPath || typeof localPath !== 'string') throw new Error('localPath required');
+  if (!(await fs.pathExists(localPath))) throw new Error(`input asset missing: ${localPath}`);
+
+  const base = path.basename(String(filename || localPath));
+  if (!base || base === '.' || base === '..' || base.includes('/') || base.includes('\\')) {
+    throw new Error('filename must resolve to a bare basename');
+  }
+
+  const podId = _podId();
+  if (!podId) throw new Error('remote_inactive');
+  const headers = await _authHeaders();
+  if (!headers) throw new Error('wrapper_token_missing');
+
+  const buf = await fs.readFile(localPath);
+  const url = `${proxyUrl(podId)}${endpoint}`;
+
+  // Multipart is rebuilt per attempt (FormData/Blob are single-use streams).
+  const retries = 4;
+  const retryDelayMs = 2000;
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([buf]), base);
+      form.append('filename', base);
+      form.append('overwrite', 'true');
+      const res = await fetch(url, { method: 'POST', headers: { ...headers }, body: form });
+      if (res.status === 404 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) {
+        throw new Error((json && (json.message || json.error)) || `wrapper upload ${res.status}`);
+      }
+      return json;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+    }
+  }
+  throw lastErr || new Error('wrapper_upload_failed');
+}
+
 /** Cancel an in-flight wrapper install by dep id. Best-effort. */
 async function remoteCancelInstall(depId) {
   try {
@@ -339,6 +399,7 @@ module.exports = {
   wrapperFetch,
   remoteModelsCheck,
   remoteInstallDep,
+  remoteUploadInput,
   remoteCancelInstall,
   openInstallEventStream,
 };

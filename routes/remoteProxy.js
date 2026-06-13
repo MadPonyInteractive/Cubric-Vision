@@ -43,33 +43,70 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/120 Safari/537.36';
 
-// v0.2.0 Pod image spec (proven live in cubric-remote-wrapper/recreate_pod.py).
-// PyTorch + ComfyUI live in the image (Design A); the volume holds models only.
-const POD_IMAGE = 'ghcr.io/madponyinteractive/cubric-vision-pod:v0.2.2';
+// Pod image spec. PyTorch + ComfyUI live in the image (Design A); the volume
+// holds models only (arch-agnostic). MPI-70 split the single image into two
+// CUDA-floor profiles so the picked card determines the image (Step 5.1):
+//   -cu128 = Blackwell (sm_120: 5090 / RTX PRO 6000 / B200), torch 2.7.1+cu128,
+//            host-driver floor cuda>=12.8.
+//   -cu124 = everything else (Ampere/Ada/Hopper), torch 2.6.0+cu124, host-driver
+//            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
+//            nvidia-container-cli refusal (see current-architecture.md §5).
+// Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.3.0) is
+// independent of CUBRIC_WRAPPER_VERSION (0.2.2 — wrapper.py unchanged this build).
+const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
+const POD_IMAGE_VERSION = 'v0.3.0';
 const WRAPPER_VERSION = '0.2.2';
 const CONTAINER_DISK_GB = 50;
 
+// Blackwell (sm_120) cards need the cu128 image; everything else runs cu124.
+// gpuTypeId is RunPod's card id/displayName (e.g. "NVIDIA GeForce RTX 5090",
+// "NVIDIA RTX PRO 6000 Blackwell", "NVIDIA B200"). Match on the model tokens —
+// RunPod ids carry the full marketing name, so a substring test is reliable and
+// degrades safely (unknown card → cu124, the broad-compat default).
+function podImageForCard(gpuTypeId) {
+  const id = String(gpuTypeId || '').toLowerCase();
+  const isBlackwell =
+    id.includes('5090') ||
+    id.includes('rtx pro 6000') ||
+    id.includes('b200') ||
+    id.includes('blackwell');
+  const suffix = isBlackwell ? 'cu128' : 'cu124';
+  return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-${suffix}`;
+}
+
 // --- remote-mode state (backend-owned; Settings/boot gate flips it) ----------
 
-const _mode = { active: false, podId: null };
+const _mode = { active: false, podId: null, deleteOnQuit: false };
 
 // The Pod this server session actually STARTED (set on successful /remote/pod/start,
 // cleared on stop). Quit-time stop must target this — not _mode.podId, which tracks
 // the Settings field and can be changed mid-session, orphaning the running Pod.
 let _startedPodId = null;
 
-// True while a create/reconnect is in flight. Backend-owned so the in-progress
-// state survives a Settings panel close/reopen (the renderer's own _engineBusy is
-// per-mount and resets) — prevents a second Connect firing a duplicate create.
+// True while a create/reconnect ROUTE is in flight (synchronous window only).
+// Backend-owned so it survives a Settings panel close/reopen (the renderer's own
+// _engineBusy is per-mount and resets) — prevents a second Connect firing a
+// duplicate create.
 let _connecting = false;
+
+// True from the moment a create/reconnect returns `{starting:true}` until the Pod
+// reaches ready (or the attempt is abandoned). Unlike _connecting, this spans the
+// whole BACKGROUND boot/resume — the route returns fast (wait:false) but the Pod
+// keeps booting, and without this the status route would report "stopped" + the
+// Settings panel would re-enable Connect mid-boot (race: open Settings during a
+// boot auto-reconnect → "stopped" + Connect enabled → a second Connect = duplicate
+// Pod). The status route self-clears it when /health goes ready or the podId drifts.
+let _starting = false;
 
 function getRemoteMode() {
   return { ..._mode };
 }
 
-function setRemoteMode({ active, podId } = {}) {
+function setRemoteMode({ active, podId, deleteOnQuit } = {}) {
   if (podId !== undefined && podId !== null) _mode.podId = String(podId);
   _mode.active = !!active;
+  if (deleteOnQuit !== undefined) _mode.deleteOnQuit = !!deleteOnQuit;
   return getRemoteMode();
 }
 
@@ -132,8 +169,8 @@ router.post('/remote/mode', (req, res) => {
   // on Connect (create-on-Connect). The boot gate just needs the active flag to
   // skip the local-engine install path. /proxy/* routes still 503 until a Pod
   // exists (the token guard), so there is no unauthenticated remote call.
-  const { active, podId } = req.body || {};
-  const out = setRemoteMode({ active, podId });
+  const { active, podId, deleteOnQuit } = req.body || {};
+  const out = setRemoteMode({ active, podId, deleteOnQuit });
   logger.info('runpod', `Remote mode ${out.active ? 'enabled' : 'disabled'}`);
   res.json(out);
 });
@@ -158,7 +195,12 @@ router.get('/remote/ws-token', async (req, res) => {
 // --- readiness relay -------------------------------------------------------------
 
 router.get('/remote/comfy/status', async (req, res) => {
-  if (!_mode.active || !_mode.podId) return res.json({ running: false, ready: false, connecting: _connecting });
+  // `connecting` = the synchronous route window OR a background boot/resume still
+  // in progress, so the Settings panel stays "creating…" + Connect disabled for
+  // the WHOLE boot (not just the brief route call) — closes the open-Settings-
+  // during-boot race that re-enabled Connect mid-boot.
+  const inFlight = () => _connecting || _starting;
+  if (!_mode.active || !_mode.podId) return res.json({ running: false, ready: false, connecting: inFlight() });
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
@@ -167,12 +209,15 @@ router.get('/remote/comfy/status', async (req, res) => {
       signal: ctrl.signal,
     });
     clearTimeout(timer);
-    if (!r.ok) return res.json({ running: false, ready: false, connecting: _connecting });
+    if (!r.ok) return res.json({ running: false, ready: false, connecting: inFlight() });
     const health = await r.json();
-    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: _connecting });
+    // Pod is up — the background start finished; clear the spanning flag so the
+    // panel flips from "creating…" to ready/Disconnect.
+    if (health.ready) _starting = false;
+    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight() });
   } catch (_) {
     // expected during Pod cold start / stale-payload window
-    res.json({ running: false, ready: false, connecting: _connecting });
+    res.json({ running: false, ready: false, connecting: inFlight() });
   }
 });
 
@@ -206,9 +251,11 @@ async function _isGpuAvailable(key, gpuTypeId, datacenter) {
 // refusal. Shared by /create and the reconnect recreate-fallback.
 async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
+  const imageName = podImageForCard(gpuTypeId);
+  logger.info('runpod', `Pod image for ${gpuTypeId}: ${imageName}`);
   const spec = {
     name: 'cubric-vision',
-    imageName: POD_IMAGE,
+    imageName,
     gpuTypeIds: [gpuTypeId],
     gpuCount: 1,
     dataCenterIds: [datacenter],
@@ -222,6 +269,13 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
     },
   };
   if (volumeId) spec.networkVolumeId = volumeId;
+
+  // Pre-create sweep (single-Pod invariant): kill any stray 'cubric-vision' Pod
+  // BEFORE making a new one, so a Pod leaked by a prior failed Connect (created
+  // but its ready-poll never succeeded → RUNNING + billing, untracked) can never
+  // coexist with the one we are about to create. keepPodId=null reaps everything
+  // currently stray; the post-create sweep below then keeps only the fresh Pod.
+  await _sweepOrphanPods(key, null);
 
   const created = await client.createPod(key, spec);
   const podId = created.json && created.json.id;
@@ -260,12 +314,19 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
   return { ok: true, ready: !!out.ready, podId, health: out.health };
 }
 
-// Reap orphaned stopped Pods (Step 4.3.3). The stop-not-delete lifecycle plus the
-// recreate-fallback can strand EXITED Pods that nothing tracks (a prior session's
-// Pod, or a stuck Pod the fallback replaced). List the account's Pods, keep only
-// our own ('cubric-vision') that are EXITED and are NOT the Pod we want to keep
-// (the just-created/tracked one), and delete them. Best-effort: a delete failure
-// for one Pod never aborts the rest or the caller. Returns the deleted podIds.
+// Single-Pod invariant (Step 4.3.4): Cubric uses exactly ONE 'cubric-vision' Pod
+// per RunPod account (one volume, one session). Any OTHER 'cubric-vision' Pod is
+// an orphan and is DELETED regardless of status — EXITED *or* RUNNING. This is the
+// billing guardrail for the failure that stranded paid Pods live: a Connect that
+// creates a Pod then fails its ready-poll left a RUNNING orphan, and the next
+// Connect created a second one (two cards billing at once). Reaping RUNNING
+// non-keepers makes that double-billing structurally impossible instead of
+// relying on the per-Pod 15-min idle watchdog.
+//
+// `keepPodId` is the Pod we must NOT delete (the just-created/tracked one); pass
+// null to reap EVERYTHING (pre-create sweep, before a new Pod exists). The tracked
+// ids (_startedPodId/_mode.podId) are also spared. Best-effort: one delete failing
+// never aborts the rest or the caller. Returns the deleted podIds.
 async function _sweepOrphanPods(key, keepPodId) {
   const keep = new Set([keepPodId, _startedPodId, _mode.podId].filter(Boolean).map(String));
   let reaped = [];
@@ -275,11 +336,7 @@ async function _sweepOrphanPods(key, keepPodId) {
       ? listed.json
       : (listed.json && (listed.json.pods || listed.json.data)) || [];
     const orphans = pods.filter(
-      (p) =>
-        p &&
-        p.name === 'cubric-vision' &&
-        String(p.desiredStatus).toUpperCase() === 'EXITED' &&
-        !keep.has(String(p.id))
+      (p) => p && p.name === 'cubric-vision' && !keep.has(String(p.id))
     );
     for (const p of orphans) {
       try {
@@ -288,7 +345,7 @@ async function _sweepOrphanPods(key, keepPodId) {
       } catch (_) { /* best-effort, continue */ }
     }
     if (reaped.length) {
-      logger.info('runpod', `orphan sweep deleted ${reaped.length} stopped Pod(s): ${reaped.join(',')}`);
+      logger.info('runpod', `orphan sweep deleted ${reaped.length} stray Pod(s): ${reaped.join(',')}`);
     }
   } catch (err) {
     logger.warn('runpod', 'orphan Pod sweep failed (non-fatal)');
@@ -316,6 +373,7 @@ router.post('/remote/pod/create', async (req, res) => {
   if (!gpuTypeId) return res.status(422).json({ error: 'gpu_type_required' });
   if (!datacenter) return res.status(422).json({ error: 'datacenter_required' });
   _connecting = true;
+  let kicked = false; // true once a {starting} kickoff is returned — keep _starting set
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.status(400).json({ error: 'no_api_key' });
@@ -330,12 +388,15 @@ router.post('/remote/pod/create', async (req, res) => {
       return res.status(502).json({ error: 'pod_create_failed', message: out.message });
     }
     logger.info('runpod', `Pod create kicked off: ${out.podId}`);
+    kicked = true;
+    _starting = true; // spans the background boot until status sees ready
     res.json({ starting: true, ready: false, podId: out.podId });
   } catch (err) {
     logger.error('runpod', 'pod create failed', err);
     res.status(502).json({ error: 'pod_create_failed' });
   } finally {
     _connecting = false;
+    if (!kicked) _starting = false; // refused/errored — not actually booting
   }
 });
 
@@ -351,6 +412,7 @@ router.post('/remote/pod/reconnect', async (req, res) => {
   if (!podId) return res.status(422).json({ error: 'pod_id_required' });
   if (!gpuTypeId || !datacenter) return res.status(422).json({ error: 'gpu_type_required' });
   _connecting = true;
+  let kicked = false; // true once a {starting} kickoff is returned — keep _starting set
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.status(400).json({ error: 'no_api_key' });
@@ -375,6 +437,8 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     const startOk = started.ok || started.status === 400; // 400 ~ already running
     if (startOk) {
       logger.info('runpod', `Pod resume kicked off: ${podId}; renderer will poll for ready`);
+      kicked = true;
+      _starting = true; // spans the background resume until status sees ready
       return res.json({ starting: true, ready: false, podId, recreated: false });
     }
     const msg = (started.json && (started.json.error || started.json.message)) || `start ${started.status}`;
@@ -389,18 +453,22 @@ router.post('/remote/pod/reconnect', async (req, res) => {
       logger.warn('runpod', `recreate after failed resume refused: ${out.message}`);
       return res.status(502).json({ error: 'pod_create_failed', message: out.message });
     }
+    kicked = true;
+    _starting = true;
     res.json({ starting: true, ready: false, podId: out.podId, recreated: true });
   } catch (err) {
     logger.error('runpod', 'pod reconnect failed', err);
     res.status(502).json({ error: 'pod_reconnect_failed' });
   } finally {
     _connecting = false;
+    if (!kicked) _starting = false; // unavailable / refused / errored — not booting
   }
 });
 
 // Delete the tracked Pod explicitly (GPU-switch in Settings, or a user-initiated
 // teardown). The volume is unaffected.
 router.post('/remote/pod/delete-active', async (req, res) => {
+  _starting = false; // terminal action — no longer booting
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.json({ deleted: false, reason: 'no_api_key' });
@@ -416,6 +484,7 @@ router.post('/remote/pod/delete-active', async (req, res) => {
 // effort — the wrapper idle watchdog is the backstop. Token is retained (a warm
 // resume reuses the same podId, so the stored token still matches).
 router.post('/remote/pod/stop-active', async (req, res) => {
+  _starting = false; // terminal action — no longer booting
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   if (!podId) return res.json({ stopped: false, reason: 'inactive' });
   try {
@@ -427,6 +496,49 @@ router.post('/remote/pod/stop-active', async (req, res) => {
   } catch (err) {
     logger.error('runpod', 'pod stop-active failed', err);
     res.json({ stopped: false, reason: 'error' });
+  }
+});
+
+// Quit teardown — branches on the user's delete-on-quit pref (runpodConfig,
+// pushed to _mode via /remote/mode). OFF (default) = STOP warm (Step 4.3);
+// ON = DELETE the Pod (frees GPU + container disk; the volume persists). main.js
+// calls this on clean quit so it never has to know the pref itself.
+router.post('/remote/pod/teardown', async (req, res) => {
+  _starting = false; // terminal action — no longer booting
+  const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  try {
+    const key = await getRunPodApiKey();
+    if (!key) return res.json({ ok: false, action: 'none', reason: 'no_api_key' });
+
+    if (_mode.deleteOnQuit) {
+      // Delete-on-quit: delete the tracked Pod FIRST, then sweep any stray.
+      // NOTE: _sweepOrphanPods ALWAYS spares _startedPodId + _mode.podId (they
+      // point at the live Pod), so calling it alone reaps nothing — that left the
+      // running Pod alive on quit (hit live: "reaped=none"). _deleteTrackedPod
+      // kills the tracked Pod and CLEARS those ids; the follow-up sweep then has
+      // an empty keep-set and reaps any other stray 'cubric-vision' Pod. Volume
+      // persists.
+      logger.info('runpod', `teardown: delete-on-quit — deleting tracked Pod ${podId || 'none'} + sweeping`);
+      const del = await _deleteTrackedPod(key); // clears _startedPodId + _mode.podId on success
+      const reaped = await _sweepOrphanPods(key, null);
+      await clearWrapperToken().catch(() => {});
+      logger.info('runpod', `teardown delete done: tracked=${del.deleted ? podId : 'none'} reaped=${reaped.join(',') || 'none'}`);
+      return res.json({ ok: !!del.deleted || reaped.length > 0, action: 'delete', podId, reaped });
+    }
+
+    // Stop-warm (default): stop the tracked Pod, then reap any OTHER stray
+    // 'cubric-vision' Pod (a leaked one) so nothing else keeps billing GPU.
+    logger.info('runpod', `teardown: stop-warm podId=${podId || 'none'}`);
+    if (podId) {
+      const stopped = await client.stopPod(key, podId);
+      if (stopped.ok && podId === _startedPodId) _startedPodId = null;
+    }
+    const reaped = await _sweepOrphanPods(key, podId);
+    logger.info('runpod', `teardown stop done: podId=${podId || 'none'} reaped=${reaped.join(',') || 'none'}`);
+    res.json({ ok: true, action: 'stop', podId, reaped });
+  } catch (err) {
+    logger.error('runpod', 'pod teardown failed', err);
+    res.json({ ok: false, action: 'error', reason: 'error' });
   }
 });
 
@@ -584,6 +696,29 @@ router.post('/proxy/upload/image', async (req, res) => {
   } catch (err) {
     logger.error('runpod', 'proxy image upload failed', err);
     res.status(502).json({ error: 'relay_failed' });
+  }
+});
+
+// Renderer video/audio input upload — the renderer resolves a local media path
+// (meaningless on the Pod) and posts { localPath, filename } here; the backend
+// reads the local file and uploads it to the Pod volume input dir via the
+// wrapper, returning the bare filename the workflow node should load. Mirrors
+// the local path-injection seam (comfyController._resolveMediaPath) for remote.
+router.post('/remote/upload/media', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const { localPath, filename } = req.body || {};
+    if (!localPath || typeof localPath !== 'string') {
+      return res.status(400).json({ error: 'localPath required' });
+    }
+    // Lazy require — remoteModels requires this module (circular at load time).
+    const remoteModels = require('./remoteModels');
+    const out = await remoteModels.remoteUploadInput(localPath, filename || localPath, '/wrapper/upload/media');
+    res.json({ success: true, name: out.name, type: out.type || 'input' });
+  } catch (err) {
+    logger.error('runpod', `remote media upload failed: ${err.message}`);
+    res.status(502).json({ error: 'upload_failed', message: err.message });
   }
 });
 

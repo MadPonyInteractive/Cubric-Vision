@@ -136,20 +136,26 @@ router.get('/comfy/events/stream', (req, res) => {
 router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
     try {
         const sourceDir = path.join(__dirname, '..', 'comfy_workflows', 'input');
-        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
-        await fs.ensureDir(inputDir);
+        const remoteActive = remoteModels.isRemoteActive();
+        const inputDir = remoteActive ? null : getComfyPath(ENGINE_ROOT, 'input');
+        if (!remoteActive) await fs.ensureDir(inputDir);
 
         const copied = [];
         for (const filename of WORKFLOW_INPUT_DEFAULTS) {
             const source = path.join(sourceDir, filename);
-            const target = path.join(inputDir, filename);
             if (!(await fs.pathExists(source))) {
                 return res.status(500).json({
                     success: false,
                     error: `Workflow input default missing: ${filename}`,
                 });
             }
-            await fs.copy(source, target, { overwrite: true });
+            // Remote engine: upload the bundled default latent to the Pod volume
+            // input dir (idempotent, overwrite) instead of a local copy.
+            if (remoteActive) {
+                await remoteModels.remoteUploadInput(source, filename, '/wrapper/upload/latent');
+            } else {
+                await fs.copy(source, path.join(inputDir, filename), { overwrite: true });
+            }
             copied.push(filename);
         }
 
@@ -181,6 +187,13 @@ router.post('/comfy/stage-preview-latent', async (req, res) => {
         const resolvedSource = path.normalize(sourcePath);
         if (!(await fs.pathExists(resolvedSource))) {
             return res.status(404).json({ success: false, error: `Preview latent missing: ${resolvedSource}` });
+        }
+
+        // Remote engine: upload the project-owned latent to the Pod volume input
+        // dir via the wrapper instead of copying into the local ComfyUI input.
+        if (remoteModels.isRemoteActive()) {
+            await remoteModels.remoteUploadInput(resolvedSource, engineInputName, '/wrapper/upload/latent');
+            return res.json({ success: true, copied: engineInputName });
         }
 
         const inputDir = getComfyPath(ENGINE_ROOT, 'input');

@@ -167,7 +167,29 @@ export const ComfyUIController = {
         // billing surprise and the GPU-pick requirement). If the wrapper is
         // already healthy (Connected), proceed; otherwise tell the user to Connect.
         const check = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
-        if (check.ready) { if (background) Events.emit('comfy:ready'); return true; }
+        if (check.ready) {
+            // A per-model custom_node was installed onto the volume this session
+            // (comfy:needs-restart → state.comfyNeedsRestart). ComfyUI only scans
+            // custom_nodes at process start, so the already-running remote ComfyUI
+            // has NOT loaded it — proceeding would fail with a `missing_node_type`
+            // 503 (e.g. PainterI2VAdvanced for Wan I2V). The local path stop/starts
+            // ComfyUI automatically (see ensureServerRunning above); the remote
+            // equivalent needs a wrapper restart-ComfyUI endpoint that does not
+            // exist yet (deferred to the next image rebuild — a Pod reboot is the
+            // wrong mechanism). Until then, surface a clear, actionable message so
+            // the user reconnects (Disconnect → Connect restarts ComfyUI on Pod
+            // boot and loads the node) instead of hitting a cryptic node error.
+            // TODO(MPI-64): when /wrapper/restart-comfy ships, replace this gate
+            // with an automatic restart here + `state.comfyNeedsRestart = false`.
+            if (state.comfyNeedsRestart) {
+                const msg = 'New custom nodes were installed for this model. Reconnect the remote engine to load them: open Settings → RunPod, press Disconnect, then Connect, and try again.';
+                if (!background) Events.emit('comfy:error', { message: msg });
+                else Events.emit('ui:error', { title: 'Reconnect required', message: msg });
+                throw new Error(msg);
+            }
+            if (background) Events.emit('comfy:ready');
+            return true;
+        }
 
         const msg = 'Remote engine not connected. Open Settings → RunPod and press Connect to create a Pod before generating.';
         if (!background) Events.emit('comfy:error', { message: msg });
@@ -420,7 +442,16 @@ export const ComfyUIController = {
             if (!val) continue;
 
             if (mediaKind === 'video' || mediaKind === 'audio') {
-                if (typeof val === 'string') params[paramKey] = this._resolveMediaPath(val);
+                if (typeof val === 'string') {
+                    const localPath = this._resolveMediaPath(val);
+                    // Remote engine: the resolved path is local to this machine and
+                    // invisible to the Pod. Upload the file to the Pod volume input
+                    // dir via Express → wrapper and inject the bare filename, which
+                    // VHS LoadVideo/LoadAudio nodes resolve against the input dir.
+                    params[paramKey] = remoteEngineClient.isRemote()
+                        ? await this._uploadRemoteMedia(localPath)
+                        : localPath;
+                }
                 continue;
             }
 
@@ -604,6 +635,30 @@ export const ComfyUIController = {
             throw new Error(`[ComfyUIController] Comfy upload failed for ${filename}: HTTP ${uploadRes.status}`);
         }
         return await uploadRes.json();
+    },
+
+    /**
+     * Uploads a resolved local video/audio path to the Pod volume input dir via
+     * Express → wrapper and returns the bare filename for the workflow node.
+     * Remote-mode only. The Express route reads the local file server-side
+     * (the renderer cannot stream an absolute fs path as a blob) and lands it on
+     * the volume; VHS LoadVideo/LoadAudio nodes load it by basename.
+     * @param {string} localPath  Absolute local path from `_resolveMediaPath`.
+     * @returns {Promise<string>} The bare filename to inject into the workflow.
+     * @private
+     */
+    async _uploadRemoteMedia(localPath) {
+        const filename = String(localPath).split(/[\\/]/).pop();
+        const res = await fetch('/remote/upload/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ localPath, filename }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) {
+            throw new Error(`[ComfyUIController] Remote media upload failed for ${filename}: ${data?.message || `HTTP ${res.status}`}`);
+        }
+        return data.name || filename;
     },
 
     /**

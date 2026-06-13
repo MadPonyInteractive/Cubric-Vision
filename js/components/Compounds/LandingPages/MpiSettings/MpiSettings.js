@@ -140,6 +140,10 @@ export const MpiSettings = ComponentFactory.create({
                             </div>
                             <span class="mpi-settings__hint" id="mpiSettingsRunpodConnectHint"></span>
                         </div>
+                        <div class="mpi-settings__form-group">
+                            <div id="mpiSettingsRunpodDeleteOnQuitSlot"></div>
+                            <span class="mpi-settings__hint">When checked, quitting the app deletes the Pod instead of keeping it warm. Frees GPU and container disk fully; your network volume and its models are kept.</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -398,6 +402,9 @@ export const MpiSettings = ComponentFactory.create({
                 const body = cfg.enabled
                     ? (cfg.podId ? { active: true, podId: cfg.podId } : { active: true })
                     : { active: false };
+                // Carry the delete-on-quit pref so the backend quit-teardown route
+                // can choose stop vs delete (main.js can't read renderer state).
+                body.deleteOnQuit = cfg.deleteOnQuit === true;
                 await fetch('/remote/mode', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -491,7 +498,10 @@ export const MpiSettings = ComponentFactory.create({
         // `starting` immediately after creating/resuming the Pod (no 504 on a long
         // first-image pull), so the renderer owns the wait. Fires `onSlow` once when
         // the wait crosses ~150s — the signal of a fresh image tag's first ~3 GB pull.
-        async function _pollEngineReady(onSlow, { timeoutMs = 600000, intervalMs = 4000, slowAfterMs = 150000 } = {}) {
+        // The first boot on a fresh volume/GPU arch also pays a one-time
+        // sageattention compile (~5-15 min) that does not block readiness (SDPA
+        // fallback) but extends the wait — hence the 20-min timeout.
+        async function _pollEngineReady(onSlow, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000 } = {}) {
             const start = Date.now();
             let slowFired = false;
             while (Date.now() - start < timeoutMs) {
@@ -580,18 +590,27 @@ export const MpiSettings = ComponentFactory.create({
                 const ready = await _pollEngineReady(() => {
                     if (_slowShown) return;
                     _slowShown = true;
-                    _setEngineHint(root, 'First-time setup: downloading the engine to the GPU host (~3 GB, one time — much faster next time). Hang tight…');
-                    Events.emit('ui:info', { message: 'Downloading the engine (~3 GB, one time)…' });
+                    _setEngineHint(root, 'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time). Hang tight…');
+                    Events.emit('ui:info', { message: 'Setting up the engine for your GPU (one time)…' });
                 });
                 if (!ready) {
                     _setEngineHint(root, 'The Pod is taking longer than expected. It may still be preparing — press Connect again in a minute to resume it.', true);
                     _setEngineStatusText(root, 'creating…');
                     _engineBtnLabelSet('Connect');
                     Events.emit('ui:warning', { message: 'Pod still preparing — try Connect again shortly.' });
+                    // Billing guardrail: reap any STRAY Pod (a prior leaked one) now,
+                    // not just on success. The still-preparing Pod is tracked
+                    // server-side and spared; only non-keeper 'cubric-vision' Pods die.
+                    fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
                     return;
                 }
                 // Connected — remember so boot can auto-reconnect (Step 4.3).
                 state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
+                // A (re)connect restarts ComfyUI on Pod boot, so it re-scans
+                // custom_nodes and loads any per-model node installed this session
+                // — clear the pending-restart gate (comfyController._ensureRemoteReady
+                // blocks generation while it is set; see MPI-64 B1).
+                if (state.comfyNeedsRestart) state.comfyNeedsRestart = false;
                 _setEngineHint(root, data.recreated
                     ? 'Remote engine ready (your Pod was recreated on the same GPU).'
                     : 'Remote engine ready.');
@@ -1172,6 +1191,21 @@ export const MpiSettings = ComponentFactory.create({
 
             // ── Remote engine Connect / Disconnect + status ──────────────────
             _initEngineConnect(root);
+
+            // ── Delete-on-quit pref (non-secret) ─────────────────────────────
+            const deleteOnQuitSlot = qs('#mpiSettingsRunpodDeleteOnQuitSlot', root);
+            if (deleteOnQuitSlot) {
+                deleteOnQuitSlot.innerHTML = '';
+                const dqInst = MpiCheckbox.mount(deleteOnQuitSlot, {
+                    checked: cfg.deleteOnQuit === true,
+                    label: 'Delete Pod on quit',
+                });
+                dqInst.on('change', async ({ checked }) => {
+                    const next = { ..._runpodCfg(), deleteOnQuit: checked === true };
+                    state.runpodConfig = next;
+                    await _pushRemoteMode(next);
+                });
+            }
 
             // ── Initial status + availability ────────────────────────────────
             if (!secretsClient.isAvailable()) {
