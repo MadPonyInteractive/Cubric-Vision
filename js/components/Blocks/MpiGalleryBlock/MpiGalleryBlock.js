@@ -888,6 +888,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
         let installedAllModels = MODELS.filter(m => m.installed !== false);
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
+        // Fallback: the last-touched mediaType may have NO installed model (e.g.
+        // the only video model was uninstalled or went partial after a video
+        // session, leaving _lastType='video' with an empty resolve) — yet other
+        // mediaTypes ARE installed. Without this the PromptBox mounts with a
+        // populated modelList but a null active model → an empty picker the user
+        // can't generate from. Fall back to the first installed model of ANY
+        // type so the picker is always usable when ≥1 model is installed.
+        if (!activeModel && installedAllModels.length > 0) {
+            activeModel = installedAllModels[0];
+            activeModelId = activeModel.id;
+        }
         // No mount-time write-back: resolver already returned a valid id for
         // 'image'. Persisting it would clobber a sibling-type selection
         // (e.g. video model picked earlier) on every Gallery mount.
