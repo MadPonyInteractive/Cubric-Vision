@@ -11,9 +11,14 @@
 > resets `_mode.active` [fixes local `_ms` "wrapper upload 404" after Disconnect]
 > — all live-verified except B0 [code-verified]. Also verified: B1 local
 > auto-restart, B1 remote gate, remote Stop (single gen), video/I2V input-asset
-> TRANSPORT (full-res image → Start/End frame, correct injection+wiring). OPEN:
-> remote I2V ignores the input subject [reproducible, remote-only, likely an
-> MPI-68 split regression in image paths — NOT transport]; MPI-73 logged
+> TRANSPORT (full-res image → Start/End frame, correct injection+wiring).
+> RESOLVED: the "remote I2V ignores the subject" bug was a `dependencies.js`
+> url↔filename CROSS — the i2v-named UNet files downloaded T2V weights (proven:
+> i2v file = 36-channel patch_embedding, t2v = 16; HF files correctly named,
+> app url/sha were swapped). FIXED app-side (swap url+sha+size per filename);
+> NOT transport, NOT the MPI-68 split (split just triggered the remote
+> reinstall). Also explains B3 horrible-T2V + some OOMs (wrong model loaded).
+> AWAITING user re-download + remote I2V re-test. OPEN: MPI-73
 > [premature-Connected + stop-on-STARTING]. See §10 + plan.md Plan Drift.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
@@ -270,6 +275,46 @@ Step 4.5 delete-on-quit option). Current behavior:
 
 ## 10. Unresolved follow-ups
 
+- **Remote UNINSTALL — GUARDED app-side 2026-06-13, real delete DEFERRED to a
+  wrapper rebuild:** `routes/downloadManager.js` `/comfy/models/uninstall` had no
+  `isRemoteActive()` branch (install does) → in remote mode it TRASHED the user's
+  LOCAL `D:\CubricModels\*` files and never touched the Pod volume → UI desynced
+  (volume re-check still installed → Refresh useless, project still generatable).
+  FIX: uninstall now branches on `isRemoteActive()` BEFORE the local trash path,
+  routes deletion to NEW `remoteModels.remoteUninstallDep` →
+  `POST /wrapper/models/delete`; the wrapper has no such endpoint yet (only
+  status/install/cancel) → 404/501 returns `{success:false,
+  remoteUnsupported:'uninstall'}`, the route trashes NOTHING and emits no false
+  `download:uninstalled`; `downloadService.uninstall()` toasts "Remote Uninstall
+  Unavailable" (LIVE-VERIFIED 2026-06-13: modal showed, NO local files trashed).
+  **WRAPPER ENDPOINT NOW WRITTEN, AWAITING REBUILD:** `POST /wrapper/models/delete`
+  is implemented in `mpi-ci/cubric-vision-pod/wrapper/wrapper.py` (deletes a dep's
+  file/`.part`, or custom_nodes folder, by type+filename; same `_model_dest`/
+  `_node_dest` path guards as install; manifest bookkeeping) but is NOT in any
+  pushed image yet — it takes effect only after a rebuild + redeploy. Live-patch
+  test was REJECTED (start.sh `wait -n` trap: killing uvicorn tears the whole Pod
+  down, not worth the risk on a billed Pod). **At the next rebuild: bump
+  `wrapper_version` 0.2.2 → 0.2.3 (mpi-ci build arg) AND `WRAPPER_VERSION` in
+  `routes/remoteProxy.js` to match.** Documented in the mpi-ci Pod README
+  "⚠ Pending for the NEXT image rebuild" section. Until the rebuild ships, remote
+  uninstall stays a clear no-op toast (not a local-data-loss footgun).
+- **Wan UNet dep url↔filename CROSS — FIXED app-side 2026-06-13 (no rebuild,
+  AWAITING user re-download + re-test):** `js/data/modelConstants/dependencies.js`
+  had the 4 Wan UNet deps' `url`+`sha256` crossed against their `filename`.
+  `wan-22-i2v-high/low` wrote files named `Wan_22_i2v_*.safetensors` (what the i2v
+  workflow hardcodes at nodes 95/96) but fetched from the `Wan_22_t2v_*` URLs →
+  the i2v files held **T2V weights** (16-channel patch_embedding, no image-cond
+  channels) → remote I2V ignored the input subject. Proof: range-fetched
+  safetensors headers — i2v file = `patch_embedding [5120,36,…]` (36ch I2V), t2v =
+  `[5120,16,…]` (16ch T2V); HF files are correctly named, only the app's url/sha
+  were swapped. Local worked because its volume held correctly-downloaded i2v
+  files from earlier; remote was freshly pulled this session via the crossed URL.
+  Also explains B3 horrible-T2V + some L4 OOMs (t2v workflow loaded the heavier
+  36ch i2v weights). FIX: swapped url+sha+size so each filename pairs its own real
+  HF file (sha = HF `X-Linked-ETag`, per-file verified). **Verify (USER): delete
+  the 4 `Wan_22_*` files on the remote volume (or uninstall) → reinstall Wan 2.2
+  I2V + T2V → remote I2V respects the subject + T2V quality improves.** NOT
+  committed.
 - **Step 5 — manifest compatibility gate:** read `GET /wrapper/manifest` at
   readiness; gate an incompatible profile with a modal. **Real axis = image
   CUDA floor vs host-driver-provided CUDA** (NOT card arch — see §5). Includes

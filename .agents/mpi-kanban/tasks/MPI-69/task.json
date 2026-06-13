@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-69",
+  "title": "Create High VRAM usage for some models.",
+  "description": "I need to create workflows with full models with bf16, fp32, full models that only work on high-end machines so that users that use RunPod can take advantage of full quality for certain models. These models will be tagged as probably with the same name as the default model, but tagged as High VRAM or something.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-12T11:12:58.596Z",
+  "updated_at": "2026-06-12T11:12:58.596Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

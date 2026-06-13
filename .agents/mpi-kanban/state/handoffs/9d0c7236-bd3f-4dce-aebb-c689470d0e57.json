@@ -1,0 +1,127 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "9d0c7236-bd3f-4dce-aebb-c689470d0e57",
+  "generated_at": "2026-06-12T13:08:00+01:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 Phase 4 — delete-on-quit checkbox + billing/race guardrails + living architecture snapshot",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine. This session: add a Settings 'Delete Pod on quit' checkbox (app-quit deletes the Pod instead of keeping it warm), then handle a Codex coordination message asking for a living current-architecture snapshot, then handoff.",
+    "status": "in_progress",
+    "summary": "Delete-on-quit checkbox SHIPPED + USER-VERIFIED on a live A4000 Pod, along with three live-found billing/UX guardrails (single-Pod invariant, teardown-deletes-nothing fix, connect-disabled-through-boot _starting flag). Created the living current-architecture.md snapshot per Codex's message (resolved). All Cubric-Vision changes are UNCOMMITTED on branch RunPod. Remaining Phase 4: remote input-asset transfer, remote video gen, lifecycle crash verify, Step 5 manifest gate."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Step 4.5 — 'Delete Pod on quit' Settings checkbox (default OFF; governs app-quit only) — USER-VERIFIED",
+      "Single-Pod invariant: _sweepOrphanPods reaps ANY non-keeper cubric-vision Pod (was EXITED-only) + pre-and-post-create sweeps — USER-VERIFIED (a stray was reaped live)",
+      "Teardown delete-nothing fix: delete tracked Pod FIRST then sweep (the sweep always spared the live Pod's ids) + main.js teardown 8s->30s + request/result logging — USER-VERIFIED",
+      "Connect-race fix: NEW _starting flag spans the whole background boot/resume so Connect stays disabled until ready (was re-enabling mid-boot = duplicate-create) — USER-VERIFIED",
+      "delete-on-quit boot handling: skip auto-reconnect + clear stale dead podId so manual Connect shows 'creating…' not 'resuming…'",
+      "Living architecture snapshot current-architecture.md created (Codex msg c7de048e) + plan pointer/todos + message resolved"
+    ],
+    "pending": [
+      "Phase 4 — remote INPUT-ASSET transfer: video/audio upload (_resolveMediaPath -> /wrapper/upload/media), trimmed-video (trim local via /api/video/trim-input then upload), .latent staging (/comfy/stage-preview-latent -> /wrapper/upload/latent). Wrapper endpoints already exist; app-side Express intercepts NOT wired. RECOMMENDED NEXT.",
+      "Phase 4 — remote VIDEO generation (multi-stage; first exercises the UNTESTED per-model PainterI2V node install-to-volume path + a Pod warm-cycle).",
+      "Phase 4 — lifecycle cleanup verify on clean quit + simulated crash (idle watchdog backstop).",
+      "Step 5 — Manifest compatibility gate (GET /wrapper/manifest at readiness; gate incompatible card-arch/CUDA/image profile with a modal).",
+      "Fresh-volume init + bundle versioning (Pod-side wrapper init script).",
+      "Phase 5 — hardening/tests/secret-hygiene audit/docs. At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Step 4.5 item ticked (+ 4 sub-bullets) + a 2026-06-12 Plan Drift entry detailing the 3 guardrail fixes + a Plan Drift pointer for the snapshot.",
+      "current-architecture.md CREATED as the living latest-truth snapshot (topology, lifecycle, delete-on-quit plumbing, billing/race guardrails, volume/DC, image/version + custom-node split, secrets, billing/responsibility, verification table, follow-ups, maintenance contract).",
+      "plan.md Current State: added a pointer to current-architecture.md; Phase 5: added 'keep-current-every-session' + 'promote-at-final-end-session' todos.",
+      "Codex coordination message c7de048e RESOLVED (status+event set, removed from index open_messages)."
+    ],
+    "pending": [
+      "Every future MPI-64 session MUST update current-architecture.md when the design changes (Plan Drift gets only a one-line pointer). This is the anti-stranding contract Fabio asked for.",
+      "FINAL mpi-end-session: promote current-architecture.md into durable docs (docs/PROJECT.md + a RunPod subsystem doc + docs/comfy.md), rules (.claude/rules/), and project memory. Do NOT promote piecemeal mid-feature.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) folds at the next /mpi-version-bump.",
+      "MPI-67/68 + the MpiHelp->hotkeys refactor remain a SEPARATE uncommitted body of work — do NOT fold into MPI-64.",
+      "project-paths.json untracked in repo root is runtime user data — do NOT commit; consider gitignoring (separate concern)."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-64 Phase 4. Step 4.5 (delete-on-quit checkbox + billing/race guardrails) is DONE + user-verified + uncommitted. Pick the next plan item with the user; RECOMMENDED: remote INPUT-ASSET TRANSFER — wire Express intercepts for video/audio upload (-> /wrapper/upload/media replacing _resolveMediaPath), trimmed-video (trim local then upload), and .latent staging (-> /wrapper/upload/latent replacing /comfy/stage-preview-latent); the wrapper endpoints already exist (Phase 2 contract). Then remote VIDEO gen. Brief before code (mpi-continue gate). Read current-architecture.md FIRST for the live design. A live Pod can be Connected to test; the USER runs all live Pod ops (classifier blocks autonomous Pod create/delete + reading .secrets/runpod.env).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Delete-on-quit checkbox governs APP-QUIT ONLY (user decision). Disconnect keeps its 3-button popup (Step 4.3.2). Default OFF = stop-warm; ON = delete (volume always persists).",
+      "deleteOnQuit lives in runpodConfig (localStorage-mirrored), pushed to backend _mode via /remote/mode on boot + on toggle; main.js stays pref-agnostic and just calls /remote/pod/teardown which branches on _mode.deleteOnQuit.",
+      "Single-Pod invariant (user-approved): _sweepOrphanPods reaps ANY non-keeper cubric-vision Pod regardless of status (EXITED or RUNNING); _createPodInternal sweeps before AND after create. Cubric is one-Pod-per-RunPod-account.",
+      "ROOT CAUSE of 'delete-on-quit deleted nothing': _sweepOrphanPods ALWAYS spares _startedPodId + _mode.podId (the live Pod), so a keepPodId=null call reaped nothing. Fix: _deleteTrackedPod FIRST (clears those ids) THEN sweep.",
+      "ROOT CAUSE of 'Connect pressable mid-connect': _connecting only covered the synchronous route window; after {starting} returned the Pod kept booting but status reported connecting:false. NEW _starting flag spans the whole background boot; status reports connecting = _connecting || _starting.",
+      "main.js teardown timeout raised 8s->30s (a slow RunPod delete was aborting mid-call) + added request/result logging on both sides — KEEP the logging.",
+      "Living architecture snapshot is the new anti-stranding mechanism (Codex). current-architecture.md = latest truth; Plan Drift = why-changed only; promotion to durable docs deferred to final end-session (user decision)."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete (classifier BLOCKS both) — the USER runs live tests. RunPod secrets in gitignored .secrets/runpod.env: CUBRIC_TOKEN sha8 4bc82fb9, template ejrwtsej15, volume cfwqthmdrg 150GB EUR-IS-1.",
+      "PowerShell-via-Bash is BLOCKED by the classifier — read app.log with the Read tool (offset/limit), not Get-Content. Generate uuids with python -c 'import uuid; print(uuid.uuid4())'.",
+      "A POD_IMAGE bump in routes/remoteProxy.js needs an APP RESTART (the running process holds it in memory). POD_IMAGE = v0.2.2. Confirm a live Pod's image via the RunPod console Logs -> Container tab.",
+      "routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js (SSE intercept fall-through). Wrapper token keyed by podId. The proxy 404s wrapper routes for a few seconds right after Pod ready — wrapperFetch retries.",
+      "INLINE-SEQUENTIAL execution for app code — no sub-agent workers. Never commit unless the user asks.",
+      "A STOPPED Pod is host-pinned (can only resume where its GPU is free); reconnect self-heals with delete+recreate on the same GPU. A new image tag's first pull is ~3-5min/~3GB, one-time per host.",
+      "Image rebuilds run via mpi-ci: gh workflow run cubric-vision-pod-image.yml -f manifest_version=X -f wrapper_version=X -f comfyui_ref=master. A wrapper/start.sh/Dockerfile change needs rebuild + POD_IMAGE bump + app restart + fresh Pod."
+    ],
+    "files_modified": [
+      "js/core/storage.js (deleteOnQuit added to DEFAULT_RUNPOD_CONFIG + normalizeRunpodConfig)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js ('Delete Pod on quit' MpiCheckbox + slot; _pushRemoteMode carries deleteOnQuit; cleanup-orphans on the ready-poll-timeout path)",
+      "js/shell.js (boot /remote/mode push carries deleteOnQuit; boot auto-reconnect skipped + stale podId cleared via state proxy when deleteOnQuit set)",
+      "routes/remoteProxy.js (_mode.deleteOnQuit; setRemoteMode + /remote/mode accept it; NEW /remote/pod/teardown stop-vs-delete branch; _sweepOrphanPods reaps any-status non-keeper; pre-create sweep in _createPodInternal; NEW _starting flag + status reports _connecting||_starting; _starting cleared in stop-active/delete-active/teardown; teardown delete deletes tracked Pod first then sweeps)",
+      "main.js (teardownRemotePod -> /remote/pod/teardown; 8s->30s timeout; request+result logging)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Step 4.5 ticked + Plan Drift + Current State pointer + Phase 5 todos)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (NEW living snapshot)",
+      "(ALL Cubric-Vision changes UNCOMMITTED on branch RunPod)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/wrapper-api-contract.md (upload/staging endpoints for the input-asset-transfer work)",
+      "js/services/comfyController.js (_resolveMediaPath ~574-596, httpBase seam, upload/image)",
+      "js/services/commandExecutor.js (trim-input ~117-172, stage-preview-latent, view URLs)",
+      "routes/comfy.js (stage-preview-latent ~170-195, prepare-workflow-inputs)",
+      "routes/remoteProxy.js (/proxy/* forwarding + the upload/media|latent intercepts to ADD)",
+      "routes/remoteModels.js (wrapperFetch + the custom_nodes install path already wired)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "custom_nodes split", "wrapper API contract", "ComfyUI execution boundary", "input-asset transfer"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T13:08:00+01:00", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (worktree c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/9d0c7236-bd3f-4dce-aebb-c689470d0e57.json and then READ .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (the living latest-truth snapshot of the RunPod design — KEEP IT UPDATED whenever the design changes), then use mpi-continue. STATUS: this session shipped Step 4.5 — a Settings 'Delete Pod on quit' checkbox (default OFF; governs app-quit only — OFF stops the Pod warm/EXITED, ON deletes it; volume always persists) plus three live-found billing/UX guardrails, ALL USER-VERIFIED on a live A4000 Pod and ALL UNCOMMITTED: (1) single-Pod invariant — _sweepOrphanPods now reaps ANY non-keeper 'cubric-vision' Pod regardless of status (was EXITED-only) and _createPodInternal sweeps before+after create, killing the double-Pod billing leak; (2) teardown-deletes-nothing fix — delete-on-quit now deletes the tracked Pod FIRST (the sweep always spared the live Pod's ids) then sweeps, and main.js teardown timeout went 8s->30s with logging; (3) connect-race fix — a NEW backend _starting flag spans the whole background boot/resume so /remote/comfy/status reports connecting=_connecting||_starting and the Settings Connect button stays disabled until ready (it was re-enabling mid-boot = duplicate create). Also: delete-on-quit boot now skips auto-reconnect + clears the stale dead podId so a manual Connect shows 'creating…' not a doomed 'resuming…'. Separately handled a Codex coordination message (c7de048e, now RESOLVED) by creating current-architecture.md as a living snapshot + adding plan pointers/todos; the anti-stranding contract is: every session updates that snapshot on design change, and the FINAL mpi-end-session promotes it into durable docs/rules/memory. NEXT (confirm scope, brief before code): remaining Phase 4 = (A, RECOMMENDED) remote INPUT-ASSET TRANSFER — wire Express intercepts for video/audio upload (-> /wrapper/upload/media replacing _resolveMediaPath), trimmed-video (trim local via /api/video/trim-input then upload), and .latent staging (-> /wrapper/upload/latent replacing /comfy/stage-preview-latent); the wrapper endpoints already exist. (B) remote VIDEO generation (multi-stage; first exercises the UNTESTED per-model PainterI2V node install-to-volume path). (C) lifecycle quit/crash verify. (D) Step 5 manifest gate. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env, never run autonomous Pod create/delete (classifier blocks both — the USER runs live tests); POD_IMAGE=v0.2.2 and a bump needs an app restart; PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); routes/remoteProxy.js stays mounted before routes/comfy.js; inline-sequential, no sub-agent workers, never commit unless asked. Brief before code (mpi-continue gate)."
+}

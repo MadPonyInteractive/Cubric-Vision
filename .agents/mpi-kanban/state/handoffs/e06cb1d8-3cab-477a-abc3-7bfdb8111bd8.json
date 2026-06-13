@@ -1,0 +1,122 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e06cb1d8-3cab-477a-abc3-7bfdb8111bd8",
+  "generated_at": "2026-06-13T05:46:51+01:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 Phase 4/5 — v0.3.0 multi-image LIVE-VERIFIED on L4/cu124 (image+T2V+I2V+per-model node+image input-asset), Step 5.1 + B1 fix COMMITTED (e46a02b), 5 bugs logged",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64: wire Step 5.1 (card->image fn + sage warmup) against the MPI-70 v0.3.0 multi-image contract, remove TEMP-DEBUG, then live-verify remote video generation + the uncommitted input-asset code on a fresh v0.3.0 Pod.",
+    "status": "in_progress",
+    "summary": "Step 5.1 + the B1 per-model-node restart gate + input-asset transfer + lifecycle teardown are COMMITTED (e46a02b on RunPod) and LIVE-VERIFIED on an L4/cu124 Pod: image gen, remote T2V transport (ffmpeg works), remote I2V (per-model PainterI2V node loaded from the volume after reconnect), and image input-asset upload all proven. 5 bugs were found + logged + deferred (see plan.md Plan Drift). Remaining: video input-asset path (_uploadRemoteMedia) untested; the 4 deferred app bugs; the deferred remote ComfyUI-restart endpoint (next image rebuild)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Step 5.1 — routes/remoteProxy.js POD_IMAGE const -> podImageForCard(gpuTypeId): Blackwell (5090/RTX PRO 6000/B200) -> :v0.3.0-cu128, else -> :v0.3.0-cu124 (unknown card -> cu124). WRAPPER_VERSION stays 0.2.2. LIVE-VERIFIED: app.log 'Pod image for NVIDIA L4: ...:v0.3.0-cu124'. COMMITTED e46a02b.",
+      "Sage warmup: readiness-poll timeout 600s->1200s in shell.js _pollRemoteReady + MpiSettings.js _pollEngineReady; slow-message copy names the one-time GPU-optimise step. Readiness gates on ComfyUI-up only, never sage. COMMITTED.",
+      "B1 fix (remote per-model-node restart): comfyController._ensureRemoteReady gates generation with an actionable 'reconnect to load new nodes' message when state.comfyNeedsRestart is set (instead of a cryptic missing_node_type 503); MpiSettings clears the flag on a successful (re)connect. COMMITTED. VERIFIED: I2V generated a real video after app-restart+reconnect (PainterI2V loaded from volume).",
+      "Input-asset transfer (prior sessions) COMMITTED: routes/remoteModels.js remoteUploadInput + routes/comfy.js remote latent/prepare-workflow-inputs branches.",
+      "Lifecycle teardown (Step 4.3/4.5) COMMITTED: main.js teardownRemotePod + 30s timeout; js/core/storage.js deleteOnQuit.",
+      "TEMP-DEBUG logging removed from commandExecutor.js (was uncommitted; no diff vs HEAD).",
+      "LIVE-VERIFIED on L4/cu124 Pod gr47ecilyofo61 (EU-RO-1, fresh volume 2vt6992oop, Wan 2.2 + SDXL Realistic installed): image gen, remote T2V transport (ffmpeg present, video saved), remote I2V (real video), image input-asset upload (I2V consumed a dragged image), per-model custom-node install-to-volume."
+    ],
+    "pending": [
+      "Verify the VIDEO input-asset path (_uploadRemoteMedia) via a video-INPUT workflow (upscale/interpolate an uploaded video) — image input proven via I2V, VIDEO path still untested live. Backend logs /remote/upload/media so it's observable server-side.",
+      "B4 (CRITICAL, app-side, NO rebuild): no in-app recovery from an out-of-band engine/container restart (OOM/health-kill) — app stays in a broken half-state (stopped + LOCAL hero + empty projects/models + stuck 'running' gen), requires an APP RELAUNCH (Pod restart insufficient). Also: runaway status-polls while disconnected cause severe lag (6000+ requests). Fix: detect WS-drop/status-flip mid-gen, end the gen, back off polls when engine down, re-hydrate panels on reconnect.",
+      "B0 (app-side, NO rebuild): commandExecutor onMessage swallows the execution_error WS event -> generic 'no output returned'. Surface exception_type/message/node_type via Events.emit('ui:error',...) + end the gen. Catches in-process Pod crashes (missing-node, VRAM OOM torch catches) but NOT a container exit-137 OOM (see B2).",
+      "B2/B3 (engine-config, defer): Wan 2.2 T2V OOMs the L4 container RAM every time (exit 137). ROOT (user): the too-much-VRAM paradox — Wan loads 2 UNets ~12GB each; a 24GB card makes ComfyUI keep BOTH resident -> container RAM (57.74GB cap) overflows; 16GB cards offload sequentially and WORK. Fix direction: force conservative ComfyUI offload for Wan (--normalvram/--lowvram / VRAM budget) regardless of card; pick Pods by container-RAM headroom not VRAM; surface per-model RAM needs in the picker. NOT bigger card, NOT transport, NOT arch. Connects to MPI-69.",
+      "B1 remote AUTO-restart: needs a wrapper /wrapper/restart-comfy endpoint (bounce ComfyUI only, not the Pod) — DEFERRED to the next image rebuild (batch with other wrapper changes; cu128 rebuilds run on the user's local Docker box). The gate+toast is the interim; manual Disconnect->Connect is the workaround.",
+      "Then: Step 5 manifest compat gate (Step 5.1 done, 5.2 GPU-picker filter pending), Phase 5 hardening, promote current-architecture.md into durable docs/rules/memory at FINAL mpi-end-session."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift: full session logged — Step 5.1 wired+verified, B1 root cause + fix + verify, B2/B3 OOM with the user's too-much-VRAM root cause, B4 engine-restart-no-recovery + poll lag, B0 link, B3 quality.",
+      "current-architecture.md updated (§6 podImageForCard multi-image, sage runtime-to-volume + SDPA, 1200s timeout; §9 verification table; §10 follow-ups; header date).",
+      "Committed e46a02b on branch RunPod (12 files, MPI-64 only; MPI-72 notificationService.js correctly left uncommitted; main.js committed whole = carries a MPI-72 notification rider, noted in the commit msg).",
+      "MPI-70 coordination thread resolved (both v0.3.0 tags live+public; msgs 054aa3e8/77b2c477/904862f9/571aef9f)."
+    ],
+    "pending": [
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory (unchanged contract).",
+      "MPI-72 (OS notifications) is a SEPARATE card (doing/validating): notificationService.js still uncommitted; its own commit pending. Do NOT fold into MPI-64.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) folds at next /mpi-version-bump."
+    ]
+  },
+  "next_action": {
+    "description": "Pick the next MPI-64 work item (brief before code, mpi-continue gate). RECOMMENDED app-side, NO-rebuild order: (1) B4 — in-app recovery from an out-of-band engine restart + poll backoff (highest-severity UX; currently needs an app relaunch); (2) B0 — surface the execution_error WS event as a real toast. OTHER options: verify the VIDEO input-asset path (_uploadRemoteMedia) on a fresh Pod; the other-card T2V test (would confirm the too-much-VRAM theory if a different VRAM tier behaves differently — though it proves little). DEFER B2/B3 offload tuning (engine-config) and the remote ComfyUI-restart endpoint (next image rebuild). FIRST read current-architecture.md + plan.md Plan Drift.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Step 5.1 card->image proven: L4 -> :v0.3.0-cu124 (app.log confirmed). Blackwell substring match (5090/rtx pro 6000/b200/blackwell) -> cu128; unknown -> cu124 safe default.",
+      "B1 root cause: per-model custom_node (PainterI2Vadvanced) installs to the volume correctly (confirmed on Pod: /workspace/comfyui/custom_nodes/ComfyUI-PainterI2Vadvanced exists, non-empty), but ComfyUI scans custom_nodes only at start. Local auto-restarts ComfyUI; remote early-returned before that block -> node unloaded -> 503 missing_node_type. Fix = gate+reconnect-message now; auto-restart needs a wrapper endpoint (rebuild, deferred). NOT a Pod reboot.",
+      "B2/B3 OOM root (user diagnosis): the too-much-VRAM paradox. Wan 2.2 = 2 UNets ~12GB each; a 24GB-VRAM card (L4) makes ComfyUI keep BOTH models resident -> container/system RAM (57.74GB cap) overflows -> exit 137 OOM. 16GB cards (local 4060 Ti + an earlier remote 16GB card that WORKED) offload to system RAM sequentially and stay under the cap. VRAM size controls greediness; container RAM is the real wall. Bigger card can be WORSE.",
+      "Container exit-137 OOM does NOT arrive as a WS execution_error (process dies first) -> B0 fix does not cover it; B4 (WS-drop detection) does. RunPod auto-restarts the container but the app doesn't notice -> broken half-state until app relaunch.",
+      "main.js was a MIXED file (MPI-64 teardown + MPI-72 notification gating); user chose to commit it whole with MPI-64; MPI-72's notificationService.js stays uncommitted for its own commit.",
+      "Order locked by user: (1) finish verify, (2) commit [DONE e46a02b], (3) workflow-quality/SSH last."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete or image builds (classifier blocks; the USER runs all live Pod ops + builds). RunPod: template ejrwtsej15; EU-RO-1; current live Pod gr47ecilyofo61 (L4) — USER is stopping it post-session.",
+      "PowerShell-via-Bash is BLOCKED — read app.log with the Read tool (offset/limit) or wc/grep, NOT Get-Content. uuids via python -c 'import uuid; print(uuid.uuid4())'.",
+      "POD_IMAGE/WRAPPER_VERSION consts are held in the running process — a change needs an APP RESTART to take effect. routes/remoteProxy.js MUST stay mounted before routes/comfy.js.",
+      "ComfyUI direct UI is NOT browser-reachable by design (Pod exposes only wrapper 8889). RunPod web terminal does NOT auto-start with the Pod (loses OOM scrollback) — but the System/Container Logs tabs DO persist; container OOM signature = 'triggered memory limits (OOM)' + 'exit code 137 (docker kill)' + auto 'start container'.",
+      "Image rebuilds run via private mpi-ci; cu128 must be built on the user's local Docker box (the GitHub runner can't fit it — No space left on device). Don't rebuild now unless batching multiple wrapper changes.",
+      "INLINE-SEQUENTIAL for app code. Never commit unless the USER asks. Both v0.3.0 tags (cu124 CI-built, cu128 local-built) are live + public on GHCR."
+    ],
+    "files_modified": [
+      "routes/remoteProxy.js (podImageForCard fn — Step 5.1) — COMMITTED e46a02b",
+      "js/services/comfyController.js (_ensureRemoteReady B1 gate) — COMMITTED",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (clear comfyNeedsRestart on connect + 1200s poll) — COMMITTED",
+      "js/shell.js (1200s poll + sage warmup copy) — COMMITTED",
+      "routes/remoteModels.js, routes/comfy.js, main.js, js/core/storage.js (input-asset + lifecycle, prior sessions) — COMMITTED",
+      "js/services/commandExecutor.js (TEMP-DEBUG removed; no diff vs HEAD)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md + current-architecture.md — COMMITTED",
+      "js/shell/notificationService.js — UNCOMMITTED, belongs to MPI-72 (do not touch for MPI-64)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Plan Drift top — B0/B1/B2/B3/B4 entries)",
+      "js/services/comfyController.js (_ensureRemoteReady ~163 B1 gate; ensureServerRunning ~88 local restart block)",
+      "routes/downloadManager.js (_onRemoteInstallEvent ~563 comfy:needs-restart broadcast; _runCustomNodeInstall ~876 local broadcast)",
+      "routes/remoteProxy.js (podImageForCard ~52; /remote/pod/* lifecycle; no /restart route exists)",
+      "js/shell.js (_initRemoteConnectionFeed ~379 — the runaway poll for B4)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "ComfyUI execution boundary", "per-model custom-node install", "container RAM / OOM / model offload", "input-asset transfer", "engine reconnect / recovery"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/components.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-13T05:46:51+01:00", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/e06cb1d8-3cab-477a-abc3-7bfdb8111bd8.json, then READ .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (living latest-truth snapshot — KEEP IT UPDATED when the design changes) and plan.md Plan Drift, then use mpi-continue. STATUS: This session WIRED + COMMITTED (e46a02b) Step 5.1 (routes/remoteProxy.js podImageForCard: Blackwell 5090/RTX PRO 6000/B200 -> :v0.3.0-cu128, else -> :v0.3.0-cu124; WRAPPER_VERSION stays 0.2.2) + sage warmup (1200s readiness timeout, copy names the one-time GPU-optimise step, readiness gates on ComfyUI-up only never sage) + the B1 per-model-node restart gate (comfyController._ensureRemoteReady blocks generation with a 'reconnect to load new nodes' message when state.comfyNeedsRestart is set; MpiSettings clears the flag on connect) + the previously-uncommitted input-asset transfer (remoteModels.remoteUploadInput + comfy.js latent branches) + lifecycle teardown (main.js teardownRemotePod, 30s timeout; storage.js deleteOnQuit). TEMP-DEBUG was removed from commandExecutor.js. ALL LIVE-VERIFIED on an L4/cu124 Pod (EU-RO-1, fresh volume 2vt6992oop, Wan 2.2 + SDXL Realistic): the card->image fn fired (app.log 'Pod image for NVIDIA L4: ...:v0.3.0-cu124'), remote IMAGE gen, remote T2V transport (ffmpeg present, video saved), remote I2V (a REAL video — the per-model PainterI2Vadvanced node installed to the volume and loaded after a fresh Connect), and image input-asset upload. FIVE bugs were found, logged to plan.md Plan Drift, and DEFERRED: (B1-remote-auto-restart) the gate is interim — the real auto-restart needs a wrapper /wrapper/restart-comfy endpoint = next image rebuild (a Pod reboot is the wrong mechanism); (B0) commandExecutor swallows the execution_error WS event -> generic 'no output returned' (app-side, no rebuild); (B2/B3) Wan 2.2 T2V OOMs the L4 container RAM every time (exit 137) — root cause (user) is the too-much-VRAM paradox: Wan loads 2 UNets ~12GB each; a 24GB card keeps BOTH resident -> the 57.74GB container RAM cap overflows; 16GB cards offload sequentially and WORK -> fix = force conservative ComfyUI offload for Wan regardless of card, pick Pods by container-RAM not VRAM (engine-config, NOT transport/arch); (B4, CRITICAL, app-side, no rebuild) the app has NO recovery from an out-of-band engine/container restart (OOM/health-kill) — it sits in a broken half-state (stopped + LOCAL hero + empty projects/models + a stuck 'running' gen) and needs an APP RELAUNCH (a Pod restart is insufficient), plus runaway status-polls while disconnected cause severe lag (6000+ requests). STILL UNTESTED: the VIDEO input-asset path (_uploadRemoteMedia) — only the image input path is proven (via I2V). NEXT (brief before code): pick an app-side no-rebuild bug — recommended B4 (recovery + poll backoff) then B0 (execution_error toast) — or verify the video input-asset path, or the other-card T2V test. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env; never run autonomous Pod ops or image builds (the USER does all live ops; the live L4 Pod gr47ecilyofo61 is being stopped post-session); PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); POD_IMAGE/WRAPPER_VERSION consts need an app restart to take effect; ComfyUI UI is not browser-reachable (Pod exposes only wrapper 8889) and the RunPod web terminal does not auto-start with the Pod (use the Logs tab); cu128 image rebuilds run on the user's local Docker box (the GitHub runner can't fit it); MPI-72 (OS notifications) is a SEPARATE card — js/shell/notificationService.js is uncommitted and must NOT be folded into MPI-64; never commit unless the USER asks. Brief before code (mpi-continue gate)."
+}

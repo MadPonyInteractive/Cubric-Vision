@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "79328af8-74bd-4381-b7be-080f1953df03",
+  "generated_at": "2026-06-12T11:00:00Z",
+  "from_session": "MPI-64 Phase 4 remote image generation",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Phase 4 IMAGE GENERATION DONE+VERIFIED. First real remote SDXL generation ran end-to-end on a live v0.2.2 A4000 Pod (prompt->/proxy/prompt->wrapper->ComfyUI->/proxy/view->project save). Required a 3-stage Pod-IMAGE fix chain (app plumbing was already correct from Batch #2): v0.2.0 had no custom nodes (MpiInt missing) -> v0.2.1 bakes the 7 universal installOnEngine nodes -> v0.2.1 didn't wire volume MODEL dirs into ComfyUI (checkpoint installed-on-volume but ComfyUI saw []) -> v0.2.2 extra_model_paths.yaml maps every model type. Plus a stale-app-process gotcha (POD_IMAGE bump needs an app restart). Then Connect UX hardening: killed the first-image-pull 504 (create/reconnect return {starting:true} fast, renderer polls /remote/comfy/status with a 'downloading engine ~3GB one-time' message + 600s backstop), GPU dropdown re-fetches stock on open (MpiDropdown emits 'open'), stop-local-ComfyUI-on-remote-Connect. COMMITTED feff4a2 on branch RunPod (Cubric-Vision app). mpi-ci committed+pushed (image v0.2.2 live on GHCR, package linked to mpi-ci with Write). cubric-remote-wrapper edits NOT committed (synced into mpi-ci build context). NEXT: remaining Phase 4 = remote input-asset transfer (video/audio/.latent) + video generation; then lifecycle quit/crash verify; then Step 5 manifest gate.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from Cubric Vision via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Pod lifecycle + connection UX + remote IMAGE generation are all DONE and user-verified. The remote engine now runs a real SDXL image end-to-end with local project save semantics. Remaining: remote input-asset transfer (video/audio/.latent), remote VIDEO generation (multi-stage), lifecycle quit/crash cleanup verify, Step 5 manifest compatibility gate, and fresh-volume init/bundle versioning."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 design docs + Phase 2 wrapper (full contract, live-proven)",
+      "Phase 3 + Phase-4 lifecycle slices (create-on-Connect, stop-not-delete, boot auto-reconnect w/ delete-fallback, orphan sweep, Disconnect choice, volume UX, double-create guard, Step 4.4 connection feedback) — committed ebabbb9",
+      "Phase 4 IMAGE GENERATION — first remote SDXL gen end-to-end + project save, USER-VERIFIED 2026-06-12 (v0.2.2 A4000 Pod)",
+      "custom_nodes lifecycle split (Design B+): 7 universal installOnEngine nodes baked into image; per-model nodes install to volume via wrapper",
+      "Connect UX: 504 killed (create/reconnect return {starting:true}, renderer polls), first-image-pull messaging, 600s backstop, GPU re-fetch on dropdown open, stop-local-ComfyUI on remote Connect",
+      "Image builds v0.2.1 + v0.2.2 built+pushed via mpi-ci (GHCR public, package linked to mpi-ci Write)",
+      "COMMITTED feff4a2 on branch RunPod (Cubric-Vision app)"
+    ],
+    "pending": [
+      "Phase 4 — remote input-asset transfer: video/audio upload replacing _resolveMediaPath (-> wrapper POST /wrapper/upload/media), trimmed-video flow (trim locally via /api/video/trim-input then upload), remote .latent staging replacing /comfy/stage-preview-latent (-> /wrapper/upload/latent) + prepare-workflow-inputs default-latent upload. The wrapper endpoints already exist (Phase 2 contract); the app-side Express intercepts are NOT wired yet.",
+      "Phase 4 — remote VIDEO generation incl multi-stage preview/final (WAN/CogVideo). Will exercise the per-model PainterI2V node install-to-volume path (UNTESTED — first I2V gen will need PainterI2V on the volume + a Pod warm-cycle to load it).",
+      "Phase 4 — lifecycle cleanup verify on clean quit + simulated crash (idle watchdog backstop).",
+      "Step 5 — Manifest compatibility gate (GET /wrapper/manifest at readiness; Design A made arch_family informational — real axis is card-arch vs image CUDA build; gate incompatible profile with a modal).",
+      "Fresh-volume init + bundle versioning (Pod-side wrapper init script writes /workspace layout + first manifest; refuse stale bundle).",
+      "Phase 5 — hardening/tests/secret-hygiene audit/docs/preserve final decisions."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: image-gen item ticked + a 2026-06-12 Plan Drift entry records the v0.2.1->v0.2.2 image fix chain + the UX follow-ups (504, GPU refresh, queue GET).",
+      "Cubric-Vision app committed feff4a2 on branch RunPod (9 files: remoteProxy, remoteModels, downloadManager, shell.js, MpiSettings.js/.css, MpiDropdown.js, main.js external-link handler, plan.md).",
+      "mpi-ci committed+pushed: cubric-vision-pod build context (Dockerfile bakes 7 universal nodes, start.sh writes extra_model_paths.yaml w/ model dirs + custom_nodes, synced wrapper.py) + the image workflow + a free-runner-disk step. Image v0.2.2 live on GHCR (public). Package linked to mpi-ci with Write role (one-time, done by user)."
+    ],
+    "pending": [
+      "cubric-remote-wrapper/wrapper.py edits (custom_nodes install _run_node_install, GET /wrapper/queue) are NOT committed in that repo; they ARE synced into mpi-ci/cubric-vision-pod/wrapper/wrapper.py (which IS committed). Commit the wrapper repo only if the user asks.",
+      "project-paths.json appeared untracked in repo root (runtime external-project registry, user data) — do NOT commit; consider gitignoring it (separate concern).",
+      "Diagnostic logging in remoteProxy.js (create/reconnect/createPod) is intentional — KEEP.",
+      "GET /remote/pod/specs RAM still reads getPod defensively; live A4000 showed ramGb=71 OK but gpuName/vramGb returned null in one /remote/pod/specs probe (no gpuTypeId passed) — verify the badge fills on a real connected session.",
+      "MPI-67/68 + the MpiHelp->hotkeys refactor remain a SEPARATE uncommitted body of work — do NOT fold into MPI-64.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) still needs folding at the next /mpi-version-bump."
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-64 Phase 4. Image generation is DONE+verified+committed (feff4a2; image v0.2.2). Pick the next plan item with the user: (A) remote INPUT-ASSET TRANSFER — wire Express intercepts for video/audio upload (-> /wrapper/upload/media replacing _resolveMediaPath), trimmed-video (trim local then upload), and .latent staging (-> /wrapper/upload/latent replacing /comfy/stage-preview-latent + prepare-workflow-inputs); the wrapper endpoints already exist. (B) remote VIDEO generation (multi-stage; will first exercise the untested per-model PainterI2V node install-to-volume path). (C) Step 5 manifest gate. Recommend (A) then (B) — input transfer is a prerequisite for I2V/video. Brief before code (mpi-continue gate). A live Pod can be Connected (A4000+volume, v0.2.2) to test immediately — the USER runs live Pod ops (classifier blocks autonomous Pod create/delete + reading .secrets/runpod.env).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "custom_nodes lifecycle split (Design B+, user 2026-06-12, REVISES Design A 'all custom_nodes in image'): UNIVERSAL engine nodes (installOnEngine:true custom_nodes — 7 packs: ComfyUI-MpiNodes, comfyui-videohelpersuite, comfyui-impact-pack, comfyui-kjnodes, comfyui_ultimatesdupscale, comfyui-frame-interpolation, ComfyUI-Impact-Subpack) bake into the IMAGE. PER-MODEL nodes (PainterI2V + future) install onto the VOLUME at model-install time via the wrapper, so a new model NEVER forces an image rebuild (images only rebuild for ComfyUI/PyTorch/CUDA changes). ComfyUI loads both via --extra-model-paths-config (start.sh writes /workspace/cubric/extra_model_paths.yaml). Per-model node install reports needs_comfy_restart (ComfyUI scans custom_nodes only at boot) -> app warm-cycles the Pod.",
+      "Image fix chain root causes: (1) v0.2.0 baked ZERO custom nodes -> 'Node MpiInt not found'. (2) v0.2.1 start.sh wired ComfyUI to volume custom_nodes but NOT volume MODEL dirs -> a checkpoint the wrapper reported installed:true was invisible to ComfyUI (ckpt_name not in []). v0.2.2 yaml maps checkpoints/loras/vae/... -> mpi_models/<type> mirroring the wrapper's MODEL_SUBDIRS. (3) The running app held POD_IMAGE in memory from boot -> a version bump needs an app RESTART. Ground-truth image-version check = RunPod console Pod -> Logs -> Container tab 'create container ...:vX'.",
+      "Connect UX: /remote/pod/create + /remote/pod/reconnect were long-polls (held the HTTP request the whole boot) -> a fresh image tag's first ~3GB pull onto a host exceeded the gateway timeout -> 504 (reconnect always recovered). FIX: both return {starting:true} right after the fast createPod/startPod; _createPodInternal gained a wait:false arg; the renderer (MpiSettings._pollEngineReady + shell._pollRemoteReady) polls /remote/comfy/status to ready (600s, 4s interval) with a 'downloading the engine (~3GB, one time)' message after 150s.",
+      "GPU dropdown staleness: MpiDropdown now emits 'open'; MpiSettings re-fetches /runpod/gpu-availability on the GPU picker open and gpuInst.el.setOptions(_buildGpuOptions(dcId)). _buildGpuOptions extracted as a reusable helper.",
+      "stop-local-ComfyUI on remote Connect: a ready remote Connect fires POST /comfy/stop (free local VRAM); local lazy-starts again on the next LOCAL generation after Disconnect.",
+      "First remote generation proved the app-side HTTP/WS/upload-image/view/save-generation plumbing (Batch #2) was already correct — every blocker was Pod-image side."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete (classifier BLOCKS both) — the USER runs live tests (Connect button or cubric-remote-wrapper/recreate_pod.py). RunPod secrets in gitignored .secrets/runpod.env: CUBRIC_TOKEN sha8 4bc82fb9, template ejrwtsej15.",
+      "PowerShell-via-Bash is BLOCKED by the classifier — read app.log with the Read tool (offset/limit), not Get-Content. Generate uuids with python -c 'import uuid; print(uuid.uuid4())'.",
+      "A POD_IMAGE bump in routes/remoteProxy.js needs an APP RESTART to take effect (the running process holds it in memory). Confirm the live Pod's image via the RunPod console Logs -> Container tab.",
+      "A NEW image tag's first pull onto a RunPod host is slow (~3-5min for ~3GB) — one-time per host per tag, then cached. Expect the 'downloading engine' message + (pre-fix) the 504; reconnect warm-resumes.",
+      "routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js (SSE intercept fall-through). Wrapper token keyed by podId. The proxy 404s wrapper routes for a few seconds right after Pod ready — wrapperFetch retries.",
+      "INLINE-SEQUENTIAL execution for app code — no sub-agent workers. Never commit unless the user asks.",
+      "Image builds run via mpi-ci GitHub Actions: gh workflow run cubric-vision-pod-image.yml -f manifest_version=X -f wrapper_version=X -f comfyui_ref=master -f push_latest=false. The workflow file + Dockerfile/start.sh/wrapper live in mpi-ci/cubric-vision-pod/ (committed). A wrapper or start.sh or Dockerfile change needs a rebuild + the app POD_IMAGE bumped + app restart + a fresh Pod.",
+      "wrapper is at v0.2.2 (Design A image: PyTorch+ComfyUI+universal nodes in the image; volume = models + per-model nodes). DOCS WEBSITE PUSH BLOCK still applies."
+    ],
+    "files_modified": [
+      "routes/remoteProxy.js (POD_IMAGE/WRAPPER_VERSION->v0.2.2; _createPodInternal wait:false arg; /remote/pod/create + /remote/pod/reconnect return {starting:true} fast — no 504)",
+      "routes/remoteModels.js (_isImageResident = installOnEngine custom_nodes ONLY via block-scoped dependencies.js read + _universalNodeFilenames; per-model custom_nodes route to wrapper with type:'custom_nodes'+bare folder+install_command in remoteModelsCheck/remoteInstallDep)",
+      "routes/downloadManager.js (drop blanket custom_nodes=complete short-circuit, trust installed; surface comfy:needs-restart on remote node install-complete)",
+      "js/shell.js (_pollRemoteReady helper; boot auto-reconnect handles {starting} + polls with first-image-pull message)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (_connectEngine handles {starting} -> _pollEngineReady with slow message; _pollEngineReady helper; _buildGpuOptions helper; GPU dropdown 'open' -> re-fetch availability + setOptions; stop-local-ComfyUI on ready Connect)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css (prior RunPod referral-link + settings UI styling)",
+      "js/components/Primitives/MpiDropdown/MpiDropdown.js (emit 'open' when the list opens; doc updated)",
+      "main.js (external-link open handler — RunPod referral link opens in browser)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (image-gen ticked + Plan Drift)",
+      "(all committed as feff4a2 on branch RunPod)",
+      "mpi-ci/cubric-vision-pod/{Dockerfile,start.sh,wrapper/wrapper.py} + workflow (committed+pushed in mpi-ci; image v0.2.2 on GHCR)",
+      "cubric-remote-wrapper/wrapper.py (NOT committed in that repo; synced into mpi-ci)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/wrapper-api-contract.md (upload/staging endpoints for the input-asset-transfer work)",
+      "js/services/comfyController.js (_resolveMediaPath ~574-596, httpBase seam, upload/image ~558-600)",
+      "js/services/commandExecutor.js (trim-input ~117-172, stage-preview-latent ~58-106, view URLs)",
+      "routes/comfy.js (stage-preview-latent ~170-195, prepare-workflow-inputs)",
+      "routes/remoteProxy.js (/proxy/* forwarding + the upload/media|latent intercepts to ADD)",
+      "routes/remoteModels.js (wrapperFetch + the custom_nodes install path already wired)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "custom_nodes split", "wrapper API contract", "ComfyUI execution boundary", "input-asset transfer"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T11:00:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (worktree c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/79328af8-74bd-4381-b7be-080f1953df03.json and use mpi-continue. STATUS: remote IMAGE generation is DONE, user-verified, and COMMITTED (feff4a2 on branch RunPod; Pod image v0.2.2 live on GHCR via mpi-ci). The first real remote SDXL image ran end-to-end (prompt->/proxy/prompt->wrapper->ComfyUI->/proxy/view->project save). Getting there required a 3-stage Pod-IMAGE fix chain (the app plumbing from Batch #2 was already correct): v0.2.0 had no custom nodes (MpiInt missing) -> v0.2.1 bakes the 7 universal installOnEngine node packs into the image -> v0.2.1 didn't wire the volume MODEL dirs into ComfyUI (a checkpoint the wrapper reported installed:true was invisible to ComfyUI's loader) -> v0.2.2 extra_model_paths.yaml maps every model type to mpi_models/<type>. KEY DESIGN (B+, supersedes Design A custom_nodes): universal engine nodes bake into the image, per-model nodes (PainterI2V + future) install onto the /workspace volume via the wrapper so a new model never forces an image rebuild. Also shipped Connect UX: killed the first-image-pull 504 (/remote/pod/create + /remote/pod/reconnect now return {starting:true} fast and the renderer polls /remote/comfy/status to ready with a 'downloading the engine ~3GB one-time' message + 600s backstop), GPU dropdown re-fetches stock on open (MpiDropdown emits 'open'), and a ready remote Connect stops local ComfyUI. NEXT (confirm scope, brief before code): remaining Phase 4 = (A) remote INPUT-ASSET TRANSFER — wire Express intercepts for video/audio upload (-> /wrapper/upload/media replacing _resolveMediaPath), trimmed-video (trim local via /api/video/trim-input then upload), and .latent staging (-> /wrapper/upload/latent replacing /comfy/stage-preview-latent + prepare-workflow-inputs default-latent upload); the wrapper endpoints already exist. (B) remote VIDEO generation (multi-stage; first exercises the UNTESTED per-model PainterI2V node install-to-volume path). (C) lifecycle quit/crash verify. (D) Step 5 manifest gate. Recommend A then B. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env, never run autonomous Pod create/delete (classifier blocks both — the USER runs live tests); a POD_IMAGE bump in routes/remoteProxy.js needs an APP RESTART (running process holds it in memory); a new image tag's first pull is slow (~3-5min/~3GB, one-time per host); check a Pod's live image via RunPod console Logs->Container tab; PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); image rebuilds run via mpi-ci 'gh workflow run cubric-vision-pod-image.yml -f manifest_version=X -f wrapper_version=X -f comfyui_ref=master'; routes/remoteProxy.js stays mounted before routes/comfy.js; cubric-remote-wrapper repo edits are synced into mpi-ci (committed) but NOT committed in the wrapper repo; do NOT commit project-paths.json (runtime user data); MPI-67/68 + the MpiHelp->hotkeys refactor are a SEPARATE uncommitted body of work; inline-sequential, no sub-agent workers, never commit unless asked. Brief before code (mpi-continue gate)."
+}
