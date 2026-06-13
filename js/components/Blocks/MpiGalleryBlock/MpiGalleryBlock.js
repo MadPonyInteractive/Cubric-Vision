@@ -47,6 +47,12 @@ import {
     removeHistoryEntry,
 } from '../../../data/projectModel.js';
 
+// TEMP-DEBUG gate (MPI-64 Bug B — intermittent Create-From double-card/preview
+// consume; could not repro in-session). OFF by default; flip on while hunting:
+//   localStorage.setItem('MPI_DEBUG_BUGB','1')  then reload. REMOVE with Bug B.
+let _BUGB_DEBUG = false;
+try { _BUGB_DEBUG = localStorage.getItem('MPI_DEBUG_BUGB') === '1'; } catch (_) { /* no-op */ }
+
 export const MpiGalleryBlock = ComponentFactory.create({
     name: 'MpiGalleryBlock',
     css: ['js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css'],
@@ -505,6 +511,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     loadLatentName:        latentName,
                     previewLatentFilePath: latentFilePath,
                 };
+                if (_BUGB_DEBUG) clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B createFrom-dispatch previewItemId=${item.id} previewGroupId=${g.id} newTempId=${_tempId}`);
                 enqueueGeneration(stage2Config, {}, {
                     scope: 'gallery',
                     tempId: _tempId,
@@ -690,6 +697,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Finish path: queued→running overlay swap. Branching Continue uses
         // the xN badge instead and never enters these overlays.
         _unsubs.push(Events.on('generation:started', ({ scope, replaceItemId }) => {
+            if (_BUGB_DEBUG && scope === 'gallery') clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B gen-started(692) replaceItemId=${replaceItemId ?? null}`);
             if (scope !== 'gallery' || !replaceItemId) return;
             const groupId = _findGroupIdByItemId(replaceItemId);
             if (!groupId) return;
@@ -709,6 +717,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('gallery:item-updated', ({ groupId, group: updatedGroup }) => {
             if (!updatedGroup) return;
             if (_deletingGroupIds.has(groupId)) return;
+            if (_BUGB_DEBUG) clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B item-updated(709) groupId=${groupId} historyLen=${updatedGroup.history?.length ?? 0}`);
             grid.el.refreshGroup(updatedGroup);
             if (_continuingGroupIds.has(groupId)) {
                 _continuingGroupIds.delete(groupId);
@@ -1161,6 +1170,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
             const currentGroups = _visibleProjectGroups();
+            if (_BUGB_DEBUG) clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B gen-started(1160)-setGroups id=${id} placeholders=${_placeholdersForFirst().length} groups=${currentGroups.length}`);
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         }));
 
@@ -1182,6 +1192,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
             const currentGroups = _visibleProjectGroups();
+            if (_BUGB_DEBUG) clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B rebuildAfterEnd id=${id} removedTempIds=${allTempIds.join(',')} groups=${currentGroups.length}`);
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         };
 

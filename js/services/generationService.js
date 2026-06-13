@@ -20,6 +20,11 @@ import { getCommand } from '../data/commandRegistry.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
+// TEMP-DEBUG gate (MPI-64 Bug B). OFF by default; flip on while hunting:
+//   localStorage.setItem('MPI_DEBUG_BUGB','1')  then reload. REMOVE with Bug B.
+let _BUGB_DEBUG = false;
+try { _BUGB_DEBUG = localStorage.getItem('MPI_DEBUG_BUGB') === '1'; } catch (_) { /* no-op */ }
+
 // ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
 // We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
 // time so Comfy's own queue never grows beyond 1. This avoids races on the
@@ -436,6 +441,22 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     };
 
     exec.onComplete = async (urls, outputInfo = {}) => {
+        // TEMP-DEBUG (MPI-64 Bug B — intermittent: fresh Generate with preview
+        // toggle ON sometimes saved a FINISHED card duplicating the prior result
+        // instead of a stage1 preview. Could not repro in-session. Gated OFF by
+        // default — enable with localStorage.setItem('MPI_DEBUG_BUGB','1') when
+        // hunting it. REMOVE once caught + fixed.)
+        if (_BUGB_DEBUG && operation && String(operation).endsWith('_ms')) {
+            // clientLogger.warn is (category, message) only — a 3rd arg is dropped,
+            // so inline the state into the message string.
+            clientLogger.warn('generationService',
+                `TEMP-DEBUG ms-run op=${operation} model=${model?.id}` +
+                ` previewOnly=${config.previewOnly === true} isStage2=${config.isStage2 === true}` +
+                ` historyMode=${config.historyMode === true} replaceItemId=${config.replaceItemId ?? null}` +
+                ` cacheHit=${exec.cacheHit === true}` +
+                ` latents=${Array.isArray(outputInfo.latents) ? outputInfo.latents.length : 0}` +
+                ` urls=${Array.isArray(urls) ? urls.length : 0}`);
+        }
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });

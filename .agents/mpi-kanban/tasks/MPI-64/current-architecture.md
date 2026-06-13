@@ -19,8 +19,16 @@
 > per filename); NOT transport, NOT the MPI-68 split (split just triggered the
 > remote reinstall). Also explains B3 horrible-T2V + some OOMs (wrong model
 > loaded). VERIFIED 2026-06-13 on an RTX 4000 Ada Pod: after deleting the wrong
-> volume files + reinstalling, remote I2V RESPECTS the input subject. OPEN:
-> MPI-73 [premature-Connected + stop-on-STARTING]. See §10 + plan.md Plan Drift.
+> volume files + reinstalling, remote I2V RESPECTS the input subject. SESSION 3
+> (2026-06-13): RAM in GPU picker SHIPPED (lowestPrice.minMemory + ⚠ video <64GB);
+> Step 5.2 DROPPED (superseded by cu124-default); remote preview-LATENT
+> materialization FIXED + live-verified (Create-from worked); remote uninstall
+> GUARDED (no local trash) + live-verified toast; "Restarting ComfyUI" → info
+> toast; cu128 multi-stage verified on RTX PRO 6000. mpi-ci has /wrapper/models/delete
+> + aria2 fast-download WRITTEN (await rebuild). OPEN: Bug B (intermittent
+> Create-From double-card — render race, debug gated behind MPI_DEBUG_BUGB),
+> reuse-prompt broken (wrong settings + false image toast), MPI-73, model-cache
+> stacking OOM (--cache-lru 2 candidate). See §10 + plan.md Plan Drift.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
@@ -276,6 +284,42 @@ Step 4.5 delete-on-quit option). Current behavior:
 
 ## 10. Unresolved follow-ups
 
+- **Remote preview-latent materialization — ✅ FIXED + LIVE-VERIFIED 2026-06-13
+  (app-side, no rebuild):** multi-stage "Create-from / Continue" failed remotely
+  (`preview latent materialization failed`) because `routes/projects.js
+  materializePreviewAssets` resolved the stage1 SaveLatent via a LOCAL engine
+  path + `fs.move` — the latent lives on the Pod in remote mode. Now: new
+  `buildViewUrlFromBase()` derives a `/view` URL from the comfyViewUrl base (the
+  authed local proxy in remote mode) and `streamDownload`s the latent when the
+  local source is absent; local path unchanged. Verified live on an RTX 4000 Ada
+  + RTX PRO 6000 — remote Create-From produces a clean new card. Committed.
+- **Bug B — INTERMITTENT Create-From double-card / preview-consumed (OPEN, could
+  not repro 2026-06-13):** a fresh Generate (preview toggle ON) SOMETIMES saved a
+  finished card duplicating the prior result + cleared the preview card's
+  badge/buttons, instead of one clean new card. Gen-config is CORRECT (debug:
+  isStage2=true, previewOnly=false, replaceItemId=null, urls=1) → it is a GALLERY
+  RENDER/PLACEHOLDER RACE, NOT deterministic. Many clean Create-From runs
+  captured this session (healthy baseline: createFrom-dispatch → gen-started(692)
+  replaceItemId=null → gen-started(1160) placeholders=1 → ms-run isStage2=true
+  latents=0 urls=1 → rebuildAfterEnd groups+1, preview card intact). REPRO
+  HYPOTHESES (unconfirmed): clean first-action after restart; OR a SLOW (high
+  quality) gen opening a timing window (all fast/low-q runs passed). TEMP-DEBUG
+  instrumentation LEFT IN, gated OFF behind `localStorage.MPI_DEBUG_BUGB='1'`
+  (generationService.js exec.onComplete + 5 points in MpiGalleryBlock.js) — flip
+  on when hunting; remove when fixed. Diff a broken sequence vs the healthy
+  baseline to pin (watch for a 2nd rebuildAfterEnd, an item-updated on the PREVIEW
+  group, or a non-null replaceItemId on gen-started(692)).
+- **Reuse-prompt broken (OPEN, 2026-06-13):** on a VIDEO item, Reuse Prompt does
+  NOT restore the correct settings AND fires a false "model does not accept
+  images" toast even when reuse carried NO images (stale image-presence flag /
+  reuse checks the selected item's media not the reused payload; toast fires
+  whenever an image is selected). Confirmed on video; image-side unchecked.
+  Evaluate `js/utils/promptReuse.js` + the PromptBox/GroupHistory reuse handler +
+  the media-vs-compat check. NOT fixed. (CONTRADICTS the earlier session
+  retraction — re-opened.)
+- **Multi-stage video on Blackwell (RTX PRO 6000, cu128) — WORKS:** cu128 image
+  connected on a CUDA-13.0 host (driver 580.159.04); stage1 preview + Create-from
+  stage2 + T2V/I2V all generated. Confirms the cu128 Blackwell path end-to-end.
 - **Remote UNINSTALL — GUARDED app-side 2026-06-13, real delete DEFERRED to a
   wrapper rebuild:** `routes/downloadManager.js` `/comfy/models/uninstall` had no
   `isRemoteActive()` branch (install does) → in remote mode it TRASHED the user's
