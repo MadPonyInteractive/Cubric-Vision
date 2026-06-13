@@ -479,6 +479,10 @@ router.post('/remote/pod/reconnect', async (req, res) => {
 // teardown). The volume is unaffected.
 router.post('/remote/pod/delete-active', async (req, res) => {
   _starting = false; // terminal action — no longer booting
+  // Disconnect/delete → use the LOCAL engine now. Flip remote mode OFF so
+  // isRemoteActive() returns false and local _ms input-prep takes the local
+  // copy path instead of the (gone) wrapper. See stop-active for the full why.
+  setRemoteMode({ active: false });
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.json({ deleted: false, reason: 'no_api_key' });
@@ -496,6 +500,12 @@ router.post('/remote/pod/delete-active', async (req, res) => {
 router.post('/remote/pod/stop-active', async (req, res) => {
   _starting = false; // terminal action — no longer booting
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  // Disconnect means "use the LOCAL engine now". Flip remote mode OFF so
+  // isRemoteActive() (= active && podId) returns false — otherwise local _ms
+  // generations route input-prep (prepare-workflow-inputs / stage-preview-latent)
+  // to the now-stopped wrapper and fail with "wrapper upload 404". podId is kept
+  // client-side for warm-resume; a fresh Connect re-sets active=true.
+  setRemoteMode({ active: false });
   if (!podId) return res.json({ stopped: false, reason: 'inactive' });
   try {
     const key = await getRunPodApiKey();

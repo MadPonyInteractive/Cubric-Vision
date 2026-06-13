@@ -6,11 +6,16 @@
 > in handoffs again. Historical "why we changed X" belongs in Plan Drift; the
 > living "what it is now" belongs here.
 >
-> Last updated: 2026-06-13 (B4 part 1+3 LIVE-VERIFIED on an L4 OOM + a separate
-> backend-crash fix: remoteProxy stream pipes now guard `'error'` [an OOM-time
-> upstream socket drop was crashing the whole Express backend, exit 1]; B4 WS
-> reconnect cap + reject-pending-gen + connection-feed abortable backoff poll
-> all confirmed live; see §10. Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
+> Last updated: 2026-06-13 (session 2: B4 part 1+3 + backend stream-pipe crash
+> guard + B0 execution_error + gallery empty-picker fallback + Disconnect now
+> resets `_mode.active` [fixes local `_ms` "wrapper upload 404" after Disconnect]
+> — all live-verified except B0 [code-verified]. Also verified: B1 local
+> auto-restart, B1 remote gate, remote Stop (single gen), video/I2V input-asset
+> TRANSPORT (full-res image → Start/End frame, correct injection+wiring). OPEN:
+> remote I2V ignores the input subject [reproducible, remote-only, likely an
+> MPI-68 split regression in image paths — NOT transport]; MPI-73 logged
+> [premature-Connected + stop-on-STARTING]. See §10 + plan.md Plan Drift.
+> Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
 > build, 5 UI/lifecycle bugs logged. Live-verify of v0.3.0 still pending tags).
@@ -69,6 +74,12 @@ Step 4.5 delete-on-quit option). Current behavior:
   (EXITED, warm-resumable, no GPU bill); ON = delete every `cubric-vision` Pod.
 - **Disconnect** (Settings): 3-button popup — **Terminate** (stop warm),
   **Delete Pod** (delete), **Cancel**. Independent of the quit checkbox.
+  **Both `stop-active` and `delete-active` flip the backend `_mode.active = false`**
+  (via `setRemoteMode({active:false})`, podId preserved) so `isRemoteActive()`
+  returns false and local generation resumes correctly. WITHOUT this, a local
+  `_ms` gen after Disconnect routed input-prep (`/comfy/prepare-workflow-inputs`,
+  `/comfy/stage-preview-latent`) to the gone wrapper → "wrapper upload 404"
+  (fixed + live-verified 2026-06-13).
 - **Boot auto-reconnect:** persisted `wasConnected && podId && gpuType` →
   background reconnect with toasts, no Settings trip. **Skipped when
   delete-on-quit is set** (the deleted Pod can't resume; a stale podId is cleared
