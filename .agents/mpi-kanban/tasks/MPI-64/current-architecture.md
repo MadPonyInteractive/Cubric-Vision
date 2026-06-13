@@ -322,8 +322,13 @@ Step 4.5 delete-on-quit option). Current behavior:
   Step 5.1 (CUDA-floor image strategy: cu124 default vs `NVIDIA_DISABLE_REQUIRE`
   vs two image profiles) + Step 5.2 (auto-filter unsupported cards in the GPU
   picker so Connect never hits the raw `nvidia-container-cli` refusal).
-- **GPU picker: show CONTAINER/SYSTEM RAM (app-side, no rebuild, DEFERRED
-  2026-06-13) — REQUIREMENT NOW CONFIRMED LIVE:** the picker shows VRAM + $/hr +
+- **GPU picker: show CONTAINER/SYSTEM RAM — ✅ SHIPPED 2026-06-13 (app-side, no
+  rebuild):** `runpodRemote.js` gpuTypes query adds `lowestPrice { minMemory
+  minVcpu }` (RAM is NOT a GpuType field — it rides the cheapest offering; this
+  is the conservative FLOOR), flattened to top-level `minMemory`. MpiSettings GPU
+  meta is now `STOCK · NNGB VRAM · NNGB RAM[⚠ video if <64] · $X/hr`. No hard
+  block (image gen fine on low RAM). Live-verified in the picker. ORIGINAL NOTE +
+  REQUIREMENT (kept): the picker shows VRAM + $/hr +
   stock but NOT container/system RAM, which is the REAL wall for Wan video
   (B2/B3: video gen is container-RAM-bound, not VRAM-bound). CONFIRMED LIVE
   2026-06-13: a Pod with **16GB VRAM but only 31GB RAM** OOM'd a Wan I2V mid-gen
