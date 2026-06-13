@@ -959,6 +959,58 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
 
+    // Remote mode: the model files live on the Pod volume, NOT local disk. The
+    // local trash path below would destroy the user's LOCAL models and leave the
+    // volume untouched (UI then desyncs because a re-check still sees the volume
+    // files). Route deletion to the wrapper instead. The wrapper delete endpoint
+    // needs an image rebuild (deferred) — until it exists, remoteUninstallDep
+    // returns 'unsupported' and we surface that without trashing anything.
+    if (remoteModels.isRemoteActive()) {
+        const _universalIds = new Set(getUniversalWorkflowDepIds());
+        const removed = [];
+        const keptUniversal = [];
+        const keptShared = [];
+        let anyUnsupported = false;
+
+        for (const dep of dependencies) {
+            if (_universalIds.has(dep.id)) {
+                keptUniversal.push({ depId: dep.id, depName: dep.name || dep.id });
+                continue;
+            }
+            const sharedWith = _findOtherModelsUsingDep(dep.id, modelId);
+            if (sharedWith.length > 0) {
+                keptShared.push({ depId: dep.id, depName: dep.name || dep.id, sharedWith: sharedWith.map(m => m.modelName) });
+                continue;
+            }
+            try {
+                const out = await remoteModels.remoteUninstallDep(dep);
+                if (out && out.status === 'unsupported') {
+                    anyUnsupported = true;
+                } else {
+                    removed.push({ depId: dep.id, depName: dep.name || dep.id });
+                }
+            } catch (err) {
+                logger.error('download', `remote uninstall failed for ${dep.id}: ${err.message}`);
+                anyUnsupported = true;
+            }
+        }
+
+        if (anyUnsupported && removed.length === 0) {
+            logger.warn('download', `remote uninstall ${modelId}: wrapper has no delete endpoint (needs engine update)`);
+            return res.json({
+                success: false,
+                remoteUnsupported: 'uninstall',
+                message: 'Remote uninstall needs an engine update — model files remain on the Pod volume.',
+                keptUniversal, keptShared,
+            });
+        }
+
+        logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared`);
+        _modelJobs.delete(modelId);
+        _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles: [], keptPipInstalls: [], remote: true });
+        return res.json({ success: true, removed, keptUniversal, keptShared, remote: true, partialUnsupported: anyUnsupported });
+    }
+
     const customRoot = await getCustomRoot();
     const defaultModelsRoot = getDefaultModelsRoot();
     const managedModelsRoot = customRoot || defaultModelsRoot;

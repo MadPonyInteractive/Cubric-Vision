@@ -267,6 +267,43 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
 }
 
 /**
+ * Delete a single dependency from the volume through the wrapper. Mirrors the
+ * install body shape (id, type, filename). The wrapper endpoint
+ * `/wrapper/models/delete` does NOT exist yet (it needs an image rebuild — see
+ * MPI-64 deferred rebuild batch), so a 404/501 is treated as a SOFT
+ * 'unsupported' result, NOT a thrown error: the caller surfaces a toast and does
+ * NOT pretend the model was uninstalled. Returns
+ * { status: 'deleted' | 'not_found' | 'unsupported', id }.
+ */
+async function remoteUninstallDep(dep) {
+  let body;
+  if (dep.type === 'custom_nodes') {
+    body = { id: dep.id, type: 'custom_nodes', filename: dep.filename };
+  } else {
+    const { type, filename } = splitDepFilename(dep.filename);
+    body = { id: dep.id, type, filename };
+  }
+
+  let res;
+  try {
+    res = await wrapperFetch('/wrapper/models/delete', { method: 'POST', body });
+  } catch (err) {
+    // Network/proxy failure — report unsupported so the UI can explain, don't crash.
+    logger.warn('runpod', `remote uninstall ${dep.id}: wrapper unreachable (${err.message})`);
+    return { status: 'unsupported', id: dep.id };
+  }
+  // Wrapper without the endpoint answers 404 (FastAPI) or 501; both = not built yet.
+  if (res.status === 404 || res.status === 501) {
+    return { status: 'unsupported', id: dep.id };
+  }
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error((json && (json.message || json.error)) || `wrapper delete ${res.status}`);
+  }
+  return json || { status: 'deleted', id: dep.id };
+}
+
+/**
  * Upload a LOCAL file to the wrapper as an input asset (video/audio or .latent),
  * landing it in the Pod volume input dir under a bare basename. Mirrors the
  * wrapper's multipart contract: field `file` (the blob), Form `filename` (bare
@@ -399,6 +436,7 @@ module.exports = {
   wrapperFetch,
   remoteModelsCheck,
   remoteInstallDep,
+  remoteUninstallDep,
   remoteUploadInput,
   remoteCancelInstall,
   openInstallEventStream,

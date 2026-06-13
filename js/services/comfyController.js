@@ -94,9 +94,8 @@ export const ComfyUIController = {
             // ── Auto-restart if custom nodes were installed (even if ComfyUI is ready) ─
             if (state.comfyNeedsRestart && status.running) {
                 clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
-                Events.emit('ui:error', {
-                    title: 'Restarting ComfyUI',
-                    message: 'New custom nodes were installed. Restarting automatically...',
+                Events.emit('ui:info', {
+                    message: 'Restarting ComfyUI — new custom nodes were installed.',
                 });
 
                 await fetch('/comfy/stop', { method: 'POST' });

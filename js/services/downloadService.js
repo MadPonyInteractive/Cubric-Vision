@@ -89,6 +89,17 @@ const downloadService = {
             return;
         }
         const json = await res.json();
+        // Remote mode with no wrapper delete endpoint yet: backend returns
+        // success:false + remoteUnsupported. The model is still on the volume —
+        // do NOT emit download:uninstalled (it would falsely flip the UI to
+        // uninstalled). Surface the reason instead.
+        if (json.success === false && json.remoteUnsupported === 'uninstall') {
+            Events.emit('ui:error', {
+                title: 'Remote Uninstall Unavailable',
+                message: json.message || 'Remote uninstall needs an engine update — model files remain on the Pod volume.',
+            });
+            return;
+        }
         const { removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = json;
         Events.emit('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
