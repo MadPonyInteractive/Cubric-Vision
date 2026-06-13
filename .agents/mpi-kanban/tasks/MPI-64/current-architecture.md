@@ -12,14 +12,15 @@
 > — all live-verified except B0 [code-verified]. Also verified: B1 local
 > auto-restart, B1 remote gate, remote Stop (single gen), video/I2V input-asset
 > TRANSPORT (full-res image → Start/End frame, correct injection+wiring).
-> RESOLVED: the "remote I2V ignores the subject" bug was a `dependencies.js`
-> url↔filename CROSS — the i2v-named UNet files downloaded T2V weights (proven:
-> i2v file = 36-channel patch_embedding, t2v = 16; HF files correctly named,
-> app url/sha were swapped). FIXED app-side (swap url+sha+size per filename);
-> NOT transport, NOT the MPI-68 split (split just triggered the remote
-> reinstall). Also explains B3 horrible-T2V + some OOMs (wrong model loaded).
-> AWAITING user re-download + remote I2V re-test. OPEN: MPI-73
-> [premature-Connected + stop-on-STARTING]. See §10 + plan.md Plan Drift.
+> ✅ RESOLVED + LIVE-VERIFIED: the "remote I2V ignores the subject" bug was a
+> `dependencies.js` url↔filename CROSS — the i2v-named UNet files downloaded T2V
+> weights (proven: i2v file = 36-channel patch_embedding, t2v = 16; HF files
+> correctly named, app url/sha were swapped). FIXED app-side (swap url+sha+size
+> per filename); NOT transport, NOT the MPI-68 split (split just triggered the
+> remote reinstall). Also explains B3 horrible-T2V + some OOMs (wrong model
+> loaded). VERIFIED 2026-06-13 on an RTX 4000 Ada Pod: after deleting the wrong
+> volume files + reinstalling, remote I2V RESPECTS the input subject. OPEN:
+> MPI-73 [premature-Connected + stop-on-STARTING]. See §10 + plan.md Plan Drift.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
@@ -321,6 +322,20 @@ Step 4.5 delete-on-quit option). Current behavior:
   Step 5.1 (CUDA-floor image strategy: cu124 default vs `NVIDIA_DISABLE_REQUIRE`
   vs two image profiles) + Step 5.2 (auto-filter unsupported cards in the GPU
   picker so Connect never hits the raw `nvidia-container-cli` refusal).
+- **GPU picker: show CONTAINER/SYSTEM RAM (app-side, no rebuild, DEFERRED
+  2026-06-13) — REQUIREMENT NOW CONFIRMED LIVE:** the picker shows VRAM + $/hr +
+  stock but NOT container/system RAM, which is the REAL wall for Wan video
+  (B2/B3: video gen is container-RAM-bound, not VRAM-bound). CONFIRMED LIVE
+  2026-06-13: a Pod with **16GB VRAM but only 31GB RAM** OOM'd a Wan I2V mid-gen
+  (B4 fired cleanly: `_onWsDropped` → OOM modal, no backend crash, RAM hit the
+  cap). So VRAM headroom does NOT save a low-RAM Pod. The requirement for Wan
+  video is **≥64GB system RAM AND ≥12GB VRAM** (not VRAM alone). Add RAM to the
+  GPU option meta (RunPod GraphQL `gpuTypes` exposes a RAM field — verify exact
+  name live, like `securePrice` was) and warn/sort when a card's RAM is below the
+  Wan threshold. The model card UI should ALSO state "64GB RAM" alongside the
+  existing "12GB VRAM" for Wan models. Pairs with the Step 5.2 picker work (same
+  meta surface). **Verify:** each GPU option shows container RAM next to VRAM; a
+  low-RAM card is visibly flagged for video; Wan model cards list the RAM need.
 - **Remote input-asset transfer — CODE SHIPPED 2026-06-12 (uncommitted, NOT yet
   live-verified):** video/audio renderer seam = `comfyController._uploadRemoteMedia`
   → `POST /remote/upload/media` (remoteProxy) → `remoteModels.remoteUploadInput`
