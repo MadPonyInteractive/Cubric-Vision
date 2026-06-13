@@ -336,7 +336,7 @@ export const StatusBar = {
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
      */
-    notify(message, variant = 'info', duration = 4000) {
+    notify(message, variant = 'info', duration = 6000) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
         const t = MpiToast.mount(wrapper, { message, variant, duration });
