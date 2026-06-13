@@ -25,6 +25,9 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {'portrait'|'landscape'} [mediaRatio] - Preview box aspect. Defaults to 'landscape' when `video`
  *                                        is set, else 'portrait' (still art is ~4:5). Controls how the
  *                                        media slot is shaped so portrait art isn't cropped to a strip.
+ *                                        For `video`, this is only the pre-load fallback — once the clip's
+ *                                        metadata loads, the box is resized to the clip's real aspect ratio
+ *                                        (portrait clips get a 320px max-width cap).
  * @param {string} [icon='info']       - MpiIcon registry key for the info row icon
  * @param {string} [iconText='']       - Text shown alongside the icon in the info row
  * @param {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Size of the info row icon
@@ -119,6 +122,17 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             video.loop = true;
             video.playsInline = true;
             video.preload = 'metadata';
+            // Match the preview box to the clip's real aspect once metadata loads, so
+            // portrait clips (i2v) aren't letterboxed into the landscape default and
+            // landscape clips (t2v) aren't cropped to a portrait strip. Caller-set
+            // props.mediaRatio (the --landscape/--portrait class) is the pre-load
+            // fallback; the runtime measurement is authoritative and respects any clip.
+            _mediaUnsubs.push(on(video, 'loadedmetadata', () => {
+                if (video.videoWidth && video.videoHeight) {
+                    imageSlot.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+                    if (video.videoHeight > video.videoWidth) imageSlot.style.maxWidth = '320px';
+                }
+            }));
             // Failed media must not collapse the card — hide the slot if the clip can't load.
             _mediaUnsubs.push(on(video, 'error', () => { imageSlot.style.display = 'none'; }));
             _mediaUnsubs.push(on(imageSlot, 'mouseenter', () => { video.play().catch(() => {}); }));

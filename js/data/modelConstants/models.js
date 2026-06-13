@@ -133,8 +133,8 @@ export const MODELS = [
     },
     // ── Video Models ───────────────────────────────────────────────────
     {
-        id: 'wan-22',
-        name: 'Wan 2.2 Smooth',
+        id: 'wan-22-t2v',
+        name: 'Wan 2.2 T2V Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         video: 'wan22_preview.mp4',
@@ -143,16 +143,41 @@ export const MODELS = [
             { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
             { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
         ],
-        supportedOps: ['t2v_ms', 'i2v_ms'],
+        supportedOps: ['t2v_ms'],
         gen_speed: 'fast',
-        description: 'Wan 2.2 workflows for both anime and realism using the SmoothMix models.',
+        description: 'Wan 2.2 text-to-video only, for anime and realism using the SmoothMix models.',
         workflows: {
             t2v_ms: 'Wan22_t2v.json',
-            i2v_ms: 'Wan22_i2v.json',
         },
         dependencies: [
             'wan-22-t2v-high',
             'wan-22-t2v-low',
+            'wan_2.1_vae',
+            'umt5_xxl_fp8_e4m3fn_scaled',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-VideoHelperSuite',
+            'comfyui-kjnodes',
+        ],
+    },
+    {
+        id: 'wan-22-i2v',
+        name: 'Wan 2.2 I2V Smooth',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        video: 'wan22_i2v_preview.mp4',
+        mediaRatio: 'portrait',
+        type: 'wan',
+        loraStages: [
+            { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
+            { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
+        ],
+        supportedOps: ['i2v_ms'],
+        gen_speed: 'fast',
+        description: 'Wan 2.2 image-to-video only, for anime and realism using the SmoothMix models.',
+        workflows: {
+            i2v_ms: 'Wan22_i2v.json',
+        },
+        dependencies: [
             'wan-22-i2v-high',
             'wan-22-i2v-low',
             'wan_2.1_vae',
@@ -160,7 +185,7 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'ComfyUI-VideoHelperSuite',
             'comfyui-kjnodes',
-            'ComfyUI-PainterI2Vadvanced'
+            'ComfyUI-PainterI2Vadvanced',
         ],
     },
 ];

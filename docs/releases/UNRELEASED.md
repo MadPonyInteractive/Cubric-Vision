@@ -8,6 +8,18 @@
 
 ## importantChanges
 
+- **Breaking — Wan 2.2 video model split.** The combined "Wan 2.2 Smooth" model
+  (which bundled both text-to-video and image-to-video) has been removed and
+  replaced by two dedicated models: **Wan 2.2 T2V Smooth** (text-to-video only)
+  and **Wan 2.2 I2V Smooth** (image-to-video only, includes the PainterI2V
+  advanced node). Users now install only the half they need instead of the full
+  ~36 GB combined download. Existing projects that referenced the old combined
+  model auto-fall-back to the first available video model on next load; nothing
+  breaks, but anyone who installed the combined model should install whichever
+  split model(s) they actually use and can uninstall the leftover checkpoints to
+  reclaim disk. (The underlying t2v/i2v checkpoints are unchanged — only the
+  model-pack grouping changed.)
+
 - Removed the Settings → External Connections "ComfyUI API URL" field. It was
   non-functional dead config: the app never read it, and generation always used
   the built-in engine address. The 1.0.0 tutorial mentions this field — call
