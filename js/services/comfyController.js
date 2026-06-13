@@ -68,6 +68,12 @@ export const ComfyUIController = {
     /** @type {string|null} Last prompt_id reported as actively executing. Used for binary previews. */
     _activePromptId: null,
 
+    /** @type {Map<string, (err: Error) => void>} Reject hooks mirroring `_promptListeners`, used to settle a pending generation if the WS drops out-of-band (e.g. a remote container OOM-kill — B4). */
+    _promptRejectors: new Map(),
+
+    /** @type {number} Consecutive WS reconnect attempts with no successful open. Reset on `onopen`; a sustained drop trips `_onWsDropped`. */
+    _wsReconnectAttempts: 0,
+
     /**
      * Ensures the ComfyUI Python process is running and ready.
      * Emits `comfy:starting` → polls `/comfy/status` → emits `comfy:ready`.
@@ -364,15 +370,68 @@ export const ComfyUIController = {
             }
         };
 
+        this._ws.onopen = () => {
+            // A clean open clears the sustained-drop counter so a future blip
+            // gets the full reconnect budget again.
+            this._wsReconnectAttempts = 0;
+        };
+
         this._ws.onerror = (e) => {
             clientLogger.warn('comfy', 'WebSocket error (may be transient)');
         };
 
         this._ws.onclose = () => {
             if (this._promptListeners.size && this._isRunning) {
+                // A transient blip reconnects (the socket re-opens, onopen resets
+                // the counter). A SUSTAINED drop — e.g. a remote container OOM-kill
+                // (exit 137) that takes the wrapper/ComfyUI down — never re-opens,
+                // so each onclose re-schedules connect() and the pending generation
+                // would hang forever on a dead socket (B4). Cap the retries: after
+                // _WS_MAX_RECONNECTS failed opens, treat the engine as gone, settle
+                // every pending generation, and stop looping.
+                this._wsReconnectAttempts += 1;
+                if (this._wsReconnectAttempts > this._WS_MAX_RECONNECTS) {
+                    this._onWsDropped();
+                    return;
+                }
                 setTimeout(() => this.connect(), 1000);
             }
         };
+    },
+
+    /** @type {number} Failed WS reopen attempts before a drop is treated as engine-down (B4). ~6s at 1s/attempt. */
+    _WS_MAX_RECONNECTS: 6,
+
+    /**
+     * Settles every in-flight generation when the WS drops out-of-band and does
+     * not recover (B4). The remote engine can die mid-generation — a container
+     * OOM-kill (exit 137) takes the process down before any `execution_error` WS
+     * event, so the socket just closes and the generation promise would otherwise
+     * hang "running" forever. Rejecting each pending prompt flows through the
+     * existing `commandExecutor` → `generationService` onError chain, which ends
+     * the generation cleanly and surfaces a toast. The connection-feed poll
+     * (shell.js) repaints the engine status separately.
+     * @private
+     */
+    _onWsDropped() {
+        const rejectors = Array.from(this._promptRejectors.values());
+        this._promptListeners.clear();
+        this._promptRejectors.clear();
+        this._pendingPromptMessages.clear();
+        this._activePromptId = null;
+        this._isRunning = false;
+        this._wsReconnectAttempts = 0;
+        const err = new Error(
+            'The remote engine disconnected mid-generation — the Pod may have run '
+            + 'out of memory and restarted. Try a shorter or smaller generation, or '
+            + 'reconnect from Settings → RunPod.'
+        );
+        err.code = 'engine_dropped';
+        clientLogger.warn('comfy', 'Remote WS dropped mid-generation — ending pending generations');
+        Events.emit('remote:engine-dropped');
+        for (const reject of rejectors) {
+            try { reject(err); } catch (_) { /* best-effort */ }
+        }
     },
 
     /**
@@ -559,7 +618,10 @@ export const ComfyUIController = {
                 }
 
                 if (msg.type === 'executing' && msg.data.node === null) {
-                    if (promptId) this._promptListeners.delete(promptId);
+                    if (promptId) {
+                        this._promptListeners.delete(promptId);
+                        this._promptRejectors.delete(promptId);
+                    }
                     if (this._activePromptId === promptId) this._activePromptId = null;
                     this._isRunning = this._promptListeners.size > 0;
                     resolve({ success: true, images: outputs });
@@ -586,13 +648,19 @@ export const ComfyUIController = {
                 if (!promptId) throw new Error('ComfyUI did not return a prompt_id');
                 if (promptId) {
                     this._promptListeners.set(promptId, internalListener);
+                    // Register a reject hook so an out-of-band WS drop (B4) can
+                    // settle this generation instead of leaving it hung "running".
+                    this._promptRejectors.set(promptId, reject);
                     if (onMessage) onMessage({ type: 'prompt_ack', prompt_id: promptId });
                     const pending = this._pendingPromptMessages.get(promptId) || [];
                     this._pendingPromptMessages.delete(promptId);
                     for (const msg of pending) internalListener(msg);
                 }
             } catch (err) {
-                if (promptId) this._promptListeners.delete(promptId);
+                if (promptId) {
+                    this._promptListeners.delete(promptId);
+                    this._promptRejectors.delete(promptId);
+                }
                 this._isRunning = this._promptListeners.size > 0;
                 reject(err);
             }

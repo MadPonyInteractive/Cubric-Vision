@@ -377,10 +377,22 @@ async function _initRemoteBoot(runpod) {
  * `remote:connection` { connected, gpuName } ONLY when the connected state flips.
  * The landing hero footer + the gallery status bar subscribe so the user always
  * knows whether they are running locally or on a (billing) Pod. Cheap: one poll
- * every 5s, no-op'd entirely when RunPod is disabled.
+ * every 5s when healthy, no-op'd entirely when RunPod is disabled.
+ *
+ * Backoff (B4): when the engine is down/unreachable the status fetch can hang
+ * slowly against a dead/restarting proxy. A fixed 5s interval then overlaps slow
+ * requests and piles up thousands of in-flight fetches (observed 6000+), making
+ * the whole app lag. So each tick is (a) abortable with a hard timeout so a hung
+ * request can't outlive its slot, and (b) self-scheduled with an exponential
+ * backoff (5s → 30s cap) while disconnected, snapping back to 5s on recovery.
  */
 function _initRemoteConnectionFeed() {
   let _last = null; // last broadcast connected bool (null = nothing sent yet)
+
+  const HEALTHY_MS = 5000;
+  const MAX_BACKOFF_MS = 30000;
+  const FETCH_TIMEOUT_MS = 4000;
+  let _delay = HEALTHY_MS;
 
   const tick = async () => {
     const cfg = Storage.getRunpodConfig();
@@ -389,16 +401,27 @@ function _initRemoteConnectionFeed() {
         _last = false;
         Events.emit('remote:connection', { connected: false, gpuName: null });
       }
+      _delay = HEALTHY_MS; // disabled is a steady state, not an error
       return;
     }
     let connected = false;
     try {
-      const res = await fetch('/remote/comfy/status');
-      const s = res.ok ? await res.json() : null;
+      const ac = new AbortController();
+      const to = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
+      let s = null;
+      try {
+        const res = await fetch('/remote/comfy/status', { signal: ac.signal });
+        s = res.ok ? await res.json() : null;
+      } finally {
+        clearTimeout(to);
+      }
       connected = !!(s && s.ready);
     } catch (_) {
       connected = false;
     }
+    // Healthy → poll at the base cadence; down/unreachable → back off so slow
+    // requests against a dead proxy can't pile up.
+    _delay = connected ? HEALTHY_MS : Math.min(_delay * 2, MAX_BACKOFF_MS);
     if (connected !== _last) {
       _last = connected;
       if (!connected) {
@@ -416,8 +439,17 @@ function _initRemoteConnectionFeed() {
     }
   };
 
-  tick();
-  setInterval(tick, 5000);
+  // Self-scheduling loop (not setInterval): each run waits for the previous to
+  // finish, then re-arms after `_delay`, so a slow/hung tick can never overlap
+  // and pile up requests. `_delay` is updated inside tick (HEALTHY ↔ backoff).
+  const run = async () => {
+    try {
+      await tick();
+    } finally {
+      setTimeout(run, _delay);
+    }
+  };
+  run();
 }
 
 /**

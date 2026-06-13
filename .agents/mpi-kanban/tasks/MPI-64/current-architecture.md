@@ -6,7 +6,11 @@
 > in handoffs again. Historical "why we changed X" belongs in Plan Drift; the
 > living "what it is now" belongs here.
 >
-> Last updated: 2026-06-12 (Step 5.1 wired: `podImageForCard` multi-image v0.3.0
+> Last updated: 2026-06-13 (B4 part 1+3 LIVE-VERIFIED on an L4 OOM + a separate
+> backend-crash fix: remoteProxy stream pipes now guard `'error'` [an OOM-time
+> upstream socket drop was crashing the whole Express backend, exit 1]; B4 WS
+> reconnect cap + reject-pending-gen + connection-feed abortable backoff poll
+> all confirmed live; see §10. Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
 > build, 5 UI/lifecycle bugs logged. Live-verify of v0.3.0 still pending tags).
@@ -279,6 +283,44 @@ Step 4.5 delete-on-quit option). Current behavior:
   `onMessage` (commandExecutor.js) ignores it → user sees a generic "no output
   returned" instead of the real Python exception. Fix: surface it via
   `Events.emit('ui:error', ...)` + end the generation. Mode-agnostic (helps local).
+- **Remote stream pipes MUST guard `'error'` (crash fix, LIVE-VERIFIED
+  2026-06-13):** `routes/remoteProxy.js` `_streamthrough` (`/view`) and the SSE
+  relay (`/comfy/events/stream`) pipe a `Readable.fromWeb(upstream.body)` to the
+  response. When the Pod OOMs/restarts mid-gen the upstream RunPod-proxy socket
+  drops; the Readable emits `'error'`. Without a handler this is an UNCAUGHT
+  exception that kills the whole Express backend (exit 1) — observed live taking
+  the backend down, freezing the in-flight gen, and dropping the app to
+  `LOCAL · OFFLINE`. BOTH pipe sites now have `nodeStream.on('error')` (log + end
+  the response, never rethrow) + `res.on('error')` (destroy the stream). Any new
+  streaming proxy added here MUST do the same. (The manual-reader SSE in
+  `remoteModels.js` is already try/catch-guarded.)
+- **B4 part 1+3 — out-of-band engine-drop recovery LIVE-VERIFIED 2026-06-13
+  (app-side, no rebuild):** A remote container OOM-kill (exit 137) drops
+  the WS before any `execution_error` event and the process is gone, so neither
+  the existing reconnect loop nor a B0 fix catch it. Two protections shipped:
+  (1) `comfyController` WS `onclose` now caps reconnect retries
+  (`_WS_MAX_RECONNECTS=6`, ~6s) — a sustained drop trips `_onWsDropped()`, which
+  rejects every pending generation via a new `_promptRejectors` map (mirrors
+  `_promptListeners`). The rejection flows through the existing
+  `commandExecutor` catch → `ui:error` toast + `generationService` onError →
+  `activeGenerations.end()`, so the stuck "running" generation ends cleanly with
+  an OOM-aware message instead of hanging forever. `onopen` resets the retry
+  counter. Also emits `remote:engine-dropped` (no subscriber yet — reserved for
+  B4 part 2/4 re-hydrate). LIVE-VERIFIED: an I2V→T2V OOM tripped the
+  WS-reconnect cap → `_onWsDropped` (console stack confirmed) → "Generation
+  failed" modal with the OOM-aware message; status stayed `IDLE · REMOTE` (no
+  fall to LOCAL); backend survived (the crash fix above held — a clean 502 on
+  the SSE relay, no exit-1). (2) `shell.js _initRemoteConnectionFeed` replaced the
+  fixed `setInterval(tick,5000)` with a self-scheduling loop + abortable status
+  fetch (4s timeout) + exponential backoff (5s→30s while down, snap to 5s on
+  recovery) — kills the 6000+ runaway-request pile-up that came from slow status
+  fetches overlapping a fixed interval against a dead proxy. **STILL DEFERRED
+  (B4 part 2/4):** re-hydrate the project/model panels + connection feed on
+  reconnect WITHOUT an app restart, and stop painting the LOCAL hero/empty
+  panels on an out-of-band drop. **Verify:** force a container OOM on a heavy
+  video gen → the app shows an "engine disconnected / out of memory" toast,
+  the spinner ends, and request volume stays flat (no pile-up), instead of a
+  silent dead WS + runaway polling.
 - **MPI-70 multi-image (v0.3.0) — APP WIRING DONE 2026-06-12 (Step 5.1,
   uncommitted, NOT live-verified):** two tags `:v0.3.0-cu124` (base
   `pytorch/pytorch:2.6.0-cuda12.4`, torch 2.6.0+cu124, broad host compat, no

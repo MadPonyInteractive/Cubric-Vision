@@ -154,6 +154,16 @@ function _streamthrough(req, res, upstream) {
   }
   if (!upstream.body) return res.end();
   const nodeStream = Readable.fromWeb(upstream.body);
+  // A mid-stream upstream socket drop (e.g. a Pod OOM/restart, network blip, or
+  // the client aborting) makes the Readable emit 'error'. With NO handler the
+  // error is uncaught and crashes the whole Express process (exit 1) — observed
+  // live taking the backend down and freezing an in-flight remote generation.
+  // Swallow it: log + end the response, never rethrow.
+  nodeStream.on('error', (err) => {
+    logger.warn('runpod', `/view stream aborted: ${err?.message || err}`);
+    if (!res.headersSent || !res.writableEnded) res.end();
+  });
+  res.on('error', () => nodeStream.destroy());
   nodeStream.pipe(res);
   req.on('close', () => nodeStream.destroy());
 }
@@ -744,6 +754,19 @@ router.get('/comfy/events/stream', async (req, res, next) => {
     });
     res.flushHeaders();
     const nodeStream = Readable.fromWeb(upstream.body);
+    // Same crash guard as _streamthrough: the SSE relay is the live event
+    // channel during a generation, so its upstream socket drops whenever the
+    // Pod OOMs/restarts mid-gen. An unhandled 'error' here would crash the
+    // backend (exit 1) and freeze the generation. Swallow + end the SSE.
+    nodeStream.on('error', (err) => {
+      logger.warn('runpod', `remote SSE stream aborted: ${err?.message || err}`);
+      ctrl.abort();
+      if (!res.writableEnded) res.end();
+    });
+    res.on('error', () => {
+      ctrl.abort();
+      nodeStream.destroy();
+    });
     nodeStream.pipe(res);
     req.on('close', () => {
       ctrl.abort();
