@@ -278,11 +278,17 @@ Step 4.5 delete-on-quit option). Current behavior:
   is required`). Caught live 2026-06-12. Fix is in the v0.3.0 multi-image build
   (`apt-get install ffmpeg`). ALL video gen is blocked until v0.3.0 ships + the app
   is pointed at it (Step 5.1). Build #2 running at handoff time.
-- **App must handle the `execution_error` WS event (app-side, NOT yet built):** a
-  Pod-side workflow crash sends `execution_error` over the WS, but the renderer's
-  `onMessage` (commandExecutor.js) ignores it → user sees a generic "no output
-  returned" instead of the real Python exception. Fix: surface it via
-  `Events.emit('ui:error', ...)` + end the generation. Mode-agnostic (helps local).
+- **`execution_error` WS event — HANDLED 2026-06-13 (B0, app-side, no rebuild,
+  NOT yet live-verified):** an in-process node failure (missing node, a node
+  raising, a torch-caught CUDA OOM) sends `execution_error` over the WS, then an
+  `executing node===null`. Previously unhandled → resolved with empty outputs →
+  generic "no output returned". FIX: `comfyController.runWorkflow`'s
+  `internalListener` now handles `execution_error` → cleans listeners/rejectors
+  and `reject`s with `"<node_type> failed: <exception_type>: <exception_message>"`
+  → commandExecutor's existing catch surfaces a `ui:error` toast + ends the gen
+  (no empty `onComplete`). Mode-agnostic (helps local). LIMIT: a container
+  OOM-kill (exit 137) kills the process before this event sends — that is the
+  B4 WS-drop path, not B0.
 - **Remote stream pipes MUST guard `'error'` (crash fix, LIVE-VERIFIED
   2026-06-13):** `routes/remoteProxy.js` `_streamthrough` (`/view`) and the SSE
   relay (`/comfy/events/stream`) pipe a `Readable.fromWeb(upstream.body)` to the

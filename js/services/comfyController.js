@@ -617,6 +617,31 @@ export const ComfyUIController = {
                     _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
                 }
 
+                // A node raised in-process (missing node, a node throwing, a
+                // torch-caught CUDA OOM, etc). ComfyUI sends execution_error AND
+                // THEN an `executing node===null` — without handling the error we
+                // would resolve with empty outputs and the user would see a
+                // generic "no output returned" instead of the real exception
+                // (B0). Reject with a readable message; commandExecutor's catch
+                // surfaces it as a ui:error toast and ends the generation.
+                // Mode-agnostic (helps local crashes too). NOTE: a container
+                // OOM-kill (exit 137) kills the process before this event ever
+                // sends — that path is handled by the WS-drop detection (B4).
+                if (msg.type === 'execution_error') {
+                    const d = msg.data || {};
+                    const nodeType = d.node_type || d.class_type || 'a node';
+                    const exc = d.exception_type ? `${d.exception_type}: ` : '';
+                    const detail = d.exception_message || 'unknown error';
+                    if (promptId) {
+                        this._promptListeners.delete(promptId);
+                        this._promptRejectors.delete(promptId);
+                    }
+                    if (this._activePromptId === promptId) this._activePromptId = null;
+                    this._isRunning = this._promptListeners.size > 0;
+                    reject(new Error(`${nodeType} failed: ${exc}${detail}`));
+                    return;
+                }
+
                 if (msg.type === 'executing' && msg.data.node === null) {
                     if (promptId) {
                         this._promptListeners.delete(promptId);
