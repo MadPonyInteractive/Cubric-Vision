@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-74",
+  "title": "Per-model engine routing (hybrid local + cloud)",
+  "description": "Run image generation on the LOCAL engine and video generation on the CLOUD Pod within ONE project, with automatic asset handoff (image -> image-to-video) and no manual ferrying. Depends on MPI-64 (RunPod Remote Engine) shipping as a solid binary local<->cloud switch first. Replaces today's single global remote-mode flag with a per-generation engine resolver, keyed initially by model mediaType (video->cloud, image->local) with optional per-model override later. Two-instance approach was considered and REJECTED: it splits the project across two app instances (project.json cannot be safely shared by two server processes), which kills the in-project image->video handoff that is the whole point. See research/hybrid-engine-routing.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "blocked-on-MPI-64",
+  "created_at": "2026-06-13T00:00:00.000Z",
+  "updated_at": "2026-06-13T00:00:00.000Z",
+  "links": {
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}

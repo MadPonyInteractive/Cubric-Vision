@@ -1,1 +1,5 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-68","at":"2026-06-12T08:06:46.737Z","actor":"vscode","summary":"Created MPI-68."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-68","at":"2026-06-13T00:00:00.000Z","actor":"vscode","summary":"Moved MPI-68 todo → doing."}
+{"schema":"mpi-kanban/event/v1","type":"task.maturity_changed","id":"MPI-68","at":"2026-06-13T00:00:00.000Z","actor":"vscode","summary":"Maturity idea → validating. Code complete (model split + removal + card aspect fix); awaiting full generation/multi-stage/old-project validation."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-68","at":"2026-06-13T00:00:00.000Z","actor":"vscode","summary":"Moved MPI-68 doing → done. Mostly verified by user; residual issues handled separately if any surface."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-68","type":"task.updated","at":"2026-06-13T00:00:00.000Z","actor":"claude","summary":"Fixed invalid maturity: done -> complete (done column requires complete)."}
