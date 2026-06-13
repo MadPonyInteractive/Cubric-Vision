@@ -65,40 +65,40 @@ export const DEPS = {
         name: 'Wan 2.2 t2v',
         origin: 'smoothMixWan2214BI2V_t2vHighV30',
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
-        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_High.safetensors',
-        size: '21GB',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_High.safetensors',
+        size: '15GB',
         vram: '12GB',
-        sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
+        sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
     },
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
         name: 'Wan 2.2 t2v',
         origin: 'smoothMixWan2214BI2V_t2vLowV30',
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
-        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_Low.safetensors',
-        size: '21GB',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_Low.safetensors',
+        size: '15GB',
         vram: '12GB',
-        sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
+        sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
     },
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
         name: 'Wan 2.2 i2v',
         origin: 'smoothMixWan2214BI2V_i2vV20High',
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
-        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_High.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_High.safetensors',
         size: '15GB',
         vram: '12GB',
-        sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
+        sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
     },
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
         name: 'Wan 2.2 i2v',
         origin: 'smoothMixWan2214BI2V_i2vV20Low',
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
-        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_Low.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_Low.safetensors',
         size: '15GB',
         vram: '12GB',
-        sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
+        sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
     // VAE
     'wan_2.1_vae': {
