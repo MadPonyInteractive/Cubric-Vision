@@ -268,7 +268,25 @@ function resolveComfyOutputFile(fileInfo) {
     return safeJoinInside(root, fileInfo.subfolder || '', fileInfo.filename);
 }
 
-async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, frozenParams, previewAssets }) {
+// Build a ComfyUI /view URL for a given output file by reusing the proven
+// comfyViewUrl base (origin + /view path — the local proxy in remote mode, which
+// attaches the wrapper token server-side) and swapping in this file's params.
+// Returns null when there is no usable base.
+function buildViewUrlFromBase(comfyViewUrl, fileInfo) {
+    if (!comfyViewUrl || !fileInfo?.filename) return null;
+    try {
+        const base = new URL(comfyViewUrl);
+        const u = new URL(base.origin + base.pathname); // keep host + /view path
+        u.searchParams.set('filename', fileInfo.filename);
+        u.searchParams.set('type', fileInfo.type || 'output');
+        if (fileInfo.subfolder) u.searchParams.set('subfolder', fileInfo.subfolder);
+        return u.href;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, frozenParams, previewAssets, comfyViewUrl }) {
     if (stage !== 'preview' || !previewAssets) {
         return { frozenParams, previewAssets: null };
     }
@@ -289,11 +307,21 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
         const filename = `${itemId}.latent`;
         const targetPath = path.join(latentDir, filename);
         try {
-            if (!sourcePath || !(await fs.pathExists(sourcePath))) {
-                throw new Error(sourcePath ? `Latent source missing: ${sourcePath}` : 'Latent source missing');
-            }
             await fs.ensureDir(latentDir);
-            await fs.move(sourcePath, targetPath, { overwrite: true });
+            const hasLocal = sourcePath && (await fs.pathExists(sourcePath));
+            if (hasLocal) {
+                // Local engine: the SaveLatent output is on disk — move it in.
+                await fs.move(sourcePath, targetPath, { overwrite: true });
+            } else {
+                // Remote engine: the latent lives on the Pod, not local disk.
+                // Stream it from the wrapper via the same authed /view base the
+                // video output uses (mirrors line ~1398's streamDownload).
+                const latentUrl = buildViewUrlFromBase(comfyViewUrl, latentInfo);
+                if (!latentUrl) {
+                    throw new Error(sourcePath ? `Latent source missing: ${sourcePath}` : 'Latent source missing');
+                }
+                await streamDownload(latentUrl, targetPath);
+            }
             result.latent = {
                 filename,
                 relativePath: relativeProjectPath(projectRoot, targetPath),
@@ -1410,6 +1438,7 @@ router.post('/project/save-generation', async (req, res) => {
                 stage,
                 frozenParams,
                 previewAssets,
+                comfyViewUrl,
             });
             materializedFrozenParams = materialized.frozenParams;
             materializedPreviewAssets = materialized.previewAssets;
