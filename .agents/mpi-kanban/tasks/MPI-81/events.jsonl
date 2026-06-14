@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-81","type":"task.created","at":"2026-06-14T12:50:00Z","actor":"claude","summary":"Created from MPI-75 spin-off: decision-pending rebuild candidates (1 --cache-lru 2 model-cache OOM fix, 2 /wrapper/free remote memory release, 3 future cu130 Blackwell profile). MPI-75 closed after v0.4.0 shipped."}

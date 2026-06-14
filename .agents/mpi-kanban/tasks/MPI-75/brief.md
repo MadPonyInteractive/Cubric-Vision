@@ -13,8 +13,6 @@ Image **v0.4.0** built + pushed: `v0.4.0-cu124` (CI) + `v0.4.0-cu128` (local Doc
 
 Related: MPI-64 (RunPod remote engine), MPI-70 (multi-image build).
 
-## Candidates (DECISION PENDING — do NOT build until decided + tested)
+## Candidates moved → MPI-81
 
-3. **model-cache STACKING fix** — ComfyUI keeps every loaded model in RAM (no `--cache-*` flag set anywhere); switching model-type never evicts → stacks → OOM on RAM-limited Pods (CONFIRMED live: I2V completed at 46GB RAM, then switching to T2V OOM'd at 99%; T2V then worked alone after RAM cleared; RAM stayed ~92% resident after finishing = the cache holding it). TENTATIVE FIX: add ComfyUI `--cache-lru 2` to Pod start.sh (keep 2 most-recent models = Wan high+low pair; `--cache-none` is OUT, breaks 1000+ sampler workflows). Needs a controlled test before building.
-4. **wrapper `/wrapper/free` endpoint + remoteProxy `/proxy/free`** so the existing memory-monitor Release-VRAM / Ctrl-click Release-RAM (memoryOps.js → /comfy/unload, currently LOCAL-ONLY) works in remote mode; pairs with an optional app-side auto-free-on-model-switch. See MPI-64 Plan Drift 2026-06-13 'model-cache STACKING OOM' for the full investigation (incl. why deep Release-RAM under-frees even locally).
-5. **FUTURE — bump the cu128 Blackwell image profile to cu130** (speed wins on Blackwell). cu128 was the newest PROVEN base+torch+sage combo at MPI-70 build, not a deliberate floor; do this when the cu130 base + torch wheels + sageattention compile are validated. Higher host-driver floor (fine for Blackwell new-driver hosts). No urgency.
+The decision-pending rebuild candidates (`--cache-lru 2` model-cache OOM fix, `/wrapper/free` remote memory release, future cu130 Blackwell profile) were spun into **MPI-81** when this card closed (v0.4.0 shipped). They are NOT part of MPI-75 — see MPI-81 brief.
