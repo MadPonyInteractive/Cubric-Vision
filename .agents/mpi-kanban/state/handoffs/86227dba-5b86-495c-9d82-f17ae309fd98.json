@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "86227dba-5b86-495c-9d82-f17ae309fd98",
+  "generated_at": "2026-06-14T07:25:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-73 DONE + COMMITTED (6d17da0) — remote connect-readiness gate (preview-WS must be open before Connected/generation) + cancel a never-started CUE job + connecting/disconnecting feedback (hero + status bar) + Cue-disable during transitions + WS refresh/retry + models hero re-sync + boot local-GPU clear. All renderer-only, user-verified live on RTX A4500.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64 RunPod remote engine; work the open app-side items. This session: picked MPI-73 (premature 'Connected' STARTING hang + Stop can't clear) and shipped it end-to-end.",
+    "status": "in_progress",
+    "summary": "MPI-73 is DONE, user-verified, and COMMITTED (6d17da0) on RunPod; its card moved doing->done (maturity complete). MPI-64 is the active card again with its remaining open items still open. Next session picks the next MPI-64 follow-up."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "MPI-73 SHIPPED + USER-VERIFIED + COMMITTED (6d17da0): (1) Bug 1 premature 'Connected' -> STARTING hang — readiness/generation now gated on the binary-preview WS actually being OPEN, not wrapper-health alone. comfyController: _wsReady + isWsReady() + ensureWsConnected() (retries across its window AND awaits remoteEngineClient.refresh() FIRST, because boot/Settings call it directly bypassing ensureServerRunning, so without the refresh wsUrl() is null and connect() falls back to the LOCAL ws -> never opens remote -> false 'almost ready'). onopen sets _wsReady, onclose/_onWsDropped clear it. _ensureRemoteReady refuses generation until WS open. Boot (shell.js) + Settings Connect gate 'ready' on the real handshake. (2) Bug 2 — Stop on a never-started CUE job (no prompt_id, exec promise never settles): cancelRunningCueJob detects !promptId, frees the stuck dispatch via extracted _finishActiveCueDispatch({skipNext}), clears pending queue (no re-promote into another hang); gallery+groupHistory PromptBox Stop route queue-managed targets through cancelRunningCueJob. (3) Connect/disconnect feedback — remote:connection gained a 'phase' (connecting|disconnecting|null); hero 'connecting · offline' / 'disconnecting · online' no GPU card; status bar 'IDLE · Connecting' / 'IDLE · Disconnecting'; shell.js centralizes via _emitRemoteConnection + _setRemotePhase (feed never strips the phase; mirrored into state.remoteEnginePhase). _renderGpu skips the local GPU line during a transition (late gpu-info fetch was re-painting over the cleared card at boot). (4) Cue-disable during a transition — MpiPromptBox reads state.remoteEnginePhase at mount (race-free for a late-mounted box) + on state:changed; disables the Cue button, hold-to-loop gesture, and run hotkey; ensureServerRunning backstop refusal demoted to a plain ui:info toast (not the bug-reporter modal). (5) Models hero stat re-syncs on the remote connected edge (boot check ran pre-connect -> stale N/N). New state key: state.remoteEnginePhase."
+    ],
+    "pending": [
+      "Bug B (OPEN, could not repro): intermittent Create-From double-card / preview-card-consumed — gen-config is provably correct => GALLERY RENDER/PLACEHOLDER RACE, not deterministic. TEMP-DEBUG left in, GATED OFF behind localStorage.MPI_DEBUG_BUGB='1' (generationService.js exec.onComplete + 5 points in MpiGalleryBlock.js). When it recurs: flip the flag, reload, repro, diff vs the healthy baseline in plan.md (watch for a 2nd rebuildAfterEnd, an item-updated on the PREVIEW group, or non-null replaceItemId on gen-started(692)); fix; REMOVE the debug.",
+      "Model-cache STACKING OOM (decision pending, NEEDS a controlled test before building): switching model-type never evicts -> stacks -> OOM on RAM-limited Pods. --cache-none is OUT (breaks 1k-sampler workflows). Leaning --cache-lru 2. REBUILD item (MPI-75).",
+      "MPI-75 batched image rebuild (USER-run, DEFER as long as possible — hours): /wrapper/models/delete + aria2 fast-download (already WRITTEN in mpi-ci, await rebuild) + candidate --cache-lru 2 + candidate /wrapper/free + future cu130 Blackwell profile. At rebuild: bump wrapper_version 0.2.2->0.2.3 (mpi-ci build arg) AND WRAPPER_VERSION in routes/remoteProxy.js. Commit+push mpi-ci main BEFORE gh workflow run (push is USER-run).",
+      "MPI-73 residual (accepted, own follow-up if it bites): ~30s between the Pod actually being ready and the app showing connected (wrapper-health poll cadence: 4s interval + 5s fetch timeout, plus the preview-WS handshake stacking). User flagged not-a-concern; left as-is rather than risk the connect-correctness logic.",
+      "MPI-73 Bug 2 no-promptId Stop verified by code trace, NOT a live repro (the new Cue-disable largely prevents reaching that UI state). Confirm live if a fresh case appears.",
+      "Bug 4 (verify-only): confirm project.json honestly stores the shared I2V/T2V duration/quality.",
+      "At FINAL mpi-end-session for MPI-64: promote current-architecture.md into durable docs/rules/memory."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "current-architecture.md: §10 'MPI-73' entry added (full breakdown of all 5 fixes + residuals) + header session-5 summary line.",
+      "MPI-73 task workspace complete: brief.md (full long-form spec, moved out of task.json description per kanban-card-repair request), checklist.md (6 items all checked), validation.md (live-verify notes + residuals), events.jsonl (moved/updated/checklist/validation events).",
+      "MPI-73 card moved doing->done, maturity complete, status accepted; board.json updated.",
+      "Coordination messages resolved: 171bb193 + e7000a3b (kanban-card-repair) + dc08eeae (MPI-76 git-unblock). Only 45492c5e (MPI-64->MPI-68 outbound) left open (theirs to consume).",
+      "Committed 6d17da0 on RunPod (26 files; MPI-73 code + kanban; lint-staged passed warn-only)."
+    ],
+    "pending": [
+      "At FINAL mpi-end-session for MPI-64: promote current-architecture.md into durable docs/rules/memory.",
+      "docs/releases/UNRELEASED.md folds at next /mpi-version-bump (MPI-73 connect-readiness + feedback belongs in the next release notes).",
+      "Remove the Bug B TEMP-DEBUG once Bug B is fixed.",
+      "Consider a project memory note for state.remoteEnginePhase (new canonical state key driving Cue-disable + connect feedback) if it becomes load-bearing across more surfaces."
+    ]
+  },
+  "next_action": {
+    "description": "Pick the next OPEN MPI-64 item (brief before code, mpi-continue gate). Candidates: model-cache stacking OOM decision (--cache-lru 2 — needs a controlled test + a wrapper/image REBUILD via MPI-75, so likely defer unless the user wants to test now), or Bug 4 (verify-only: project.json shared I2V/T2V duration/quality). Bug B is a render race that could NOT be reproduced — leave it; if it recurs set localStorage.MPI_DEBUG_BUGB='1' and diff vs the healthy baseline in plan.md. DEFER the MPI-75 image rebuild (hours, USER-run). FIRST re-read state/index.json fresh, then current-architecture.md (header + §10 top) + plan.md Plan Drift (top entries). GIT: branch RunPod is currently SOLO (MPI-76 done), so normal staging is fine; if a parallel agent reappears on a shared file, stage only your hunk + commit --no-verify.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Connect readiness must gate on the binary-preview WS being OPEN, not wrapper-health 'ready' (ComfyUI up) alone — accepting a job before the WS handshake hangs it in STARTING with no prompt_id.",
+      "ensureWsConnected MUST await remoteEngineClient.refresh() first: boot/Settings call it directly (not via ensureServerRunning), so the remote ws token/base aren't loaded yet and connect() would fall back to the local ws -> never opens remote -> false 'almost ready' + hero stuck offline.",
+      "A never-started CUE job (no prompt_id) needs an explicit local settle: its exec promise never resolves, so the dispatcher slot is freed manually (_finishActiveCueDispatch{skipNext}) + the pending queue cleared, rather than re-promoting into another hang.",
+      "Cross-surface transition feedback uses a new canonical state key state.remoteEnginePhase (read at mount = race-free for late-mounted components) + the existing remote:connection event 'phase' field. shell.js _emitRemoteConnection is the single emitter that folds the phase into feed ticks so the feed never strips it.",
+      "Prevention > error: the Cue button is DISABLED during a transition (button + hold + hotkey); the ensureServerRunning refusal is only a backstop and now a plain info toast, never the bug-reporter modal.",
+      "Events-rules compliant: reused canonical remote:connection + state:changed; component subs stored in _unsubs + cleaned in destroy; app-lifetime singleton subs marked // eslint-disable-next-line mpi/require-destroy-on-events; top-level state assign (no sub-object mutation)."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete or image builds (USER runs all live Pod ops + builds).",
+      "Backend logger (routes/logger.js) warn/info take only (category, message); clientLogger.warn (frontend) is ALSO (category, message) only — inline state into the message string.",
+      "Backend changes (routes/, server.js, main.js) need a FULL app restart; renderer changes (js/, css/) reload with Ctrl+R.",
+      "POD_IMAGE/WRAPPER_VERSION + in-process _mode consts need an APP RESTART. routes/remoteProxy.js MUST stay mounted before routes/comfy.js.",
+      "App quit with delete-on-quit UNCHECKED = STOP-not-delete (warm-resumable, keeps podId + wasConnected). Boot auto-reconnect gate: wasConnected && podId && gpuType && !deleteOnQuit. To test boot connect feedback: Connect -> quit (not Delete) -> restart.",
+      "mpi-ci (separate repo at c:/AI/Mpi/mpi-ci, branch main) holds the wrapper + Dockerfile. Commit+push BEFORE gh workflow run. Push is USER-run.",
+      "project-paths.json (repo root) is gitignored; never commit it.",
+      "Kanban task cards use schema mpi-kanban/task-card/v1; maturity enum = idea|planned|in-progress|validating|complete.",
+      "Commit only when the USER asks (this session the user authorized the MPI-73 commit + handoff)."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js (Bug1 WS gate + ensureWsConnected refresh/retry + _remoteTransition backstop) — COMMITTED 6d17da0",
+      "js/shell.js (boot connect feedback + _emitRemoteConnection/_setRemotePhase + models re-sync on connect edge) — COMMITTED 6d17da0",
+      "js/state.js (new remoteEnginePhase key) — COMMITTED 6d17da0",
+      "js/shell/heroStats.js (connecting/disconnecting hero card + _renderGpu transition guard) — COMMITTED 6d17da0",
+      "js/shell/statusBar.js (IDLE · Connecting/Disconnecting) — COMMITTED 6d17da0",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (Connect/Disconnect phase emits + WS gate) — COMMITTED 6d17da0",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (Cue-disable via state.remoteEnginePhase) — COMMITTED 6d17da0",
+      "js/services/generationService.js (Bug2 _finishActiveCueDispatch + cancelRunningCueJob never-started handling) — COMMITTED 6d17da0",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js + MpiGroupHistoryBlock.js (Stop routes via cancelRunningCueJob) — COMMITTED 6d17da0",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md + tasks/MPI-73/* + board.json + state/* — COMMITTED 6d17da0"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/index.json (RE-READ FRESH)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (header + §10 top — latest truth)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Plan Drift top entries)",
+      ".agents/mpi-kanban/tasks/MPI-75/task.json (batched image-rebuild list)",
+      "js/services/generationService.js (gen pipeline + CUE dispatcher) if touching queue/gen",
+      "js/services/comfyController.js (remote readiness + WS) if touching remote connect"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "gallery render lifecycle", "CUE queue / generation pipeline", "ComfyUI execution boundary", "container RAM / OOM / model cache"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-14T07:25:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/86227dba-5b86-495c-9d82-f17ae309fd98.json, then RE-READ .agents/mpi-kanban/state/index.json fresh + .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (header + §10 top) + plan.md Plan Drift (top), then use mpi-continue. STATUS: the previous session shipped + user-verified + COMMITTED (6d17da0) MPI-73 in full — a separate card now DONE: (1) remote connect-readiness gate (the binary-preview WS must be OPEN before 'Connected'/generation, not just wrapper-health ready; ensureWsConnected retries AND awaits remoteEngineClient.refresh() first or connect() falls back to the local ws); (2) Stop now clears a never-started CUE job with no prompt_id (was a stuck dispatcher); (3) connecting/disconnecting feedback in the hero card ('connecting · offline' / 'disconnecting · online', no GPU card) + status bar ('IDLE · Connecting' / 'IDLE · Disconnecting'), via a new state.remoteEnginePhase key + the remote:connection 'phase' field; (4) the Cue button is disabled during transitions (button + hold + run hotkey); (5) the models hero stat re-syncs on the remote connected edge. All renderer-only. MPI-64 is the active card again with its OPEN items: Bug B (intermittent Create-From double-card — render race, could NOT repro, TEMP-DEBUG gated behind localStorage.MPI_DEBUG_BUGB), model-cache stacking OOM (--cache-lru 2 candidate, needs a controlled test + a wrapper/image REBUILD via MPI-75), Bug 4 (verify-only project.json shared I2V/T2V duration/quality). DEFER the MPI-75 image rebuild (hours, USER-run). Accepted residual: ~30s connect-display lag. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env; never run autonomous Pod ops or image builds (USER runs all); backend routes need a FULL app restart, renderer changes reload with Ctrl+R; backend AND clientLogger warn/info take only (category, message); commit+push mpi-ci main BEFORE any gh workflow run (push is USER-run); commit only when the USER asks. Branch RunPod is currently solo (MPI-76 done). Brief before code (mpi-continue gate)."
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "ccf04f9f-f727-47a2-80f5-2948ed9095e1",
+  "path": "routes/runpodRemote.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/7c05a0ac-d5fa-4e60-a7f3-3f48a1172fe1.json",
+  "status": "claimed",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-14T06:12:58Z",
+  "allowed_actions": ["edit", "verify"],
+  "notes": "MPI-77: thread dataCenterId + secureCloud:true into gpuTypes() lowestPrice input so RAM is per-DC accurate. Currently CLEAN/committed; no edit yet.",
+  "recent_events": [
+    {
+      "at": "2026-06-14T06:12:58Z",
+      "event": "claimed_for_mpi77_per_dc_ram"
+    }
+  ]
+}

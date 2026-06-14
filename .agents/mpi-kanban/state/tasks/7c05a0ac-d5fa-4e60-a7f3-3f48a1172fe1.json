@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "7c05a0ac-d5fa-4e60-a7f3-3f48a1172fe1",
+  "title": "MPI-77 RunPod card-dropdown RAM accuracy (per-DC lowestPrice)",
+  "status": "in_progress",
+  "task_card": "MPI-77",
+  "plan": ".agents/mpi-kanban/tasks/MPI-77/brief.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e.json",
+  "file_claims": [
+    ".agents/mpi-kanban/state/files/ccf04f9f-f727-47a2-80f5-2948ed9095e1.json",
+    ".agents/mpi-kanban/state/files/534c178e-8b5b-4a1f-99bf-5bf7989fa6c9.json"
+  ],
+  "allowed_actions": ["coordinate", "claim_files", "edit_owned_files", "handoff"],
+  "recent_events": [
+    {
+      "at": "2026-06-14T06:12:58Z",
+      "event": "task_started",
+      "note": "Approach A: re-query gpuTypes with dataCenterId + secureCloud:true on DC change. Investigation done, code not yet written."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "534c178e-8b5b-4a1f-99bf-5bf7989fa6c9",
+  "path": "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/7c05a0ac-d5fa-4e60-a7f3-3f48a1172fe1.json",
+  "status": "claimed",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-14T06:12:58Z",
+  "allowed_actions": ["edit", "verify"],
+  "notes": "MPI-77: card-dropdown RAM string (~L938) + DC-change re-query wiring. SHARED SURFACE — MPI-73 agent has uncommitted edits here (status bar / hero card / connect gate). Claim is future-session intent; do NOT edit until MPI-73 commits + we coordinate via message. Scope strictly to the GPU-picker RAM lines.",
+  "recent_events": [
+    {
+      "at": "2026-06-14T06:12:58Z",
+      "event": "claimed_for_mpi77_per_dc_ram",
+      "note": "Soft claim. MPI-73 mid-edit on same file; coordinate before writing."
+    }
+  ]
+}

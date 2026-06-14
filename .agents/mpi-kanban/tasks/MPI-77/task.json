@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-77",
+  "title": "RunPod card-dropdown RAM accuracy (per-DC lowestPrice)",
+  "description": "GPU-picker RAM shows a global floor (A4500 = 29GB) not the real per-DC value (62GB on EU-RO-1, matching the user's 57GB Pod). Fix: pass dataCenterId + secureCloud:true into the lowestPrice GraphQL input, re-query on DC change. See brief.md.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "MPI-77 session 1 — investigation done, per-DC fix proven, code pending coordination",
+  "created_at": "2026-06-14T06:12:58Z",
+  "updated_at": "2026-06-14T06:12:58Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
