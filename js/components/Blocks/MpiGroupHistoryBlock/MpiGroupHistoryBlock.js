@@ -834,15 +834,28 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _mountPromptBoxIfNeeded({ force: true });
             if (!_pb?.el) return;
 
+            // The reused operation is authoritative — it determines media
+            // acceptance and which controls the panel reads. Establish it BEFORE
+            // injecting media or applying settings, otherwise setModel's
+            // media-state-driven op guess (_pickOpForModel) leaves us on the
+            // wrong op and image inject is falsely rejected ("media type not
+            // supported"). Falls back to activeOperation when the payload op is
+            // not supported by the target model.
+            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                ? payload.operation
+                : activeOperation;
+
             if (use.model) _pb.el.setModel?.(targetModel);
+            _setPromptOperation(targetOperation, { remember: true });
+
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
             if (use.images) {
                 _pb.el.clearMedia?.();
                 const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && String(payload.operation || '').startsWith('i2v')) {
-                    _showToast('No saved frame images were found for this older I2V entry.', 'warning');
+                if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                    _showToast('No saved frame images were found for this older entry.', 'warning');
                 }
                 for (const item of mediaItems) {
                     _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
@@ -851,9 +864,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncBaseCtxFromPromptBox();
 
             if (use.settings) {
-                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
-                    ? payload.operation
-                    : activeOperation;
                 const settings = buildPromptReuseSettings(payload, targetModel);
                 applyPromptReuseSettings({
                     modelId: targetModel.id,
@@ -861,7 +871,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
-                _setPromptOperation(targetOperation, { remember: true });
             }
             _refreshOpOptions();
             historyTools.el.setMode?.('prompt');

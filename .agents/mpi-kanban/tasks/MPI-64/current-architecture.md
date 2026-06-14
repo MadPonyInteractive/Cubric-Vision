@@ -25,9 +25,10 @@
 > materialization FIXED + live-verified (Create-from worked); remote uninstall
 > GUARDED (no local trash) + live-verified toast; "Restarting ComfyUI" → info
 > toast; cu128 multi-stage verified on RTX PRO 6000. mpi-ci has /wrapper/models/delete
-> + aria2 fast-download WRITTEN (await rebuild). OPEN: Bug B (intermittent
-> Create-From double-card — render race, debug gated behind MPI_DEBUG_BUGB),
-> reuse-prompt broken (wrong settings + false image toast), MPI-73, model-cache
+> + aria2 fast-download WRITTEN (await rebuild). Reuse-prompt FIXED+user-verified
+> 2026-06-14 (op made authoritative before media inject; `_isI2V` → op-driven
+> `_opAcceptsImageInput`). OPEN: Bug B (intermittent Create-From double-card —
+> render race, debug gated behind MPI_DEBUG_BUGB), MPI-73, model-cache
 > stacking OOM (--cache-lru 2 candidate). See §10 + plan.md Plan Drift.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
@@ -309,14 +310,24 @@ Step 4.5 delete-on-quit option). Current behavior:
   on when hunting; remove when fixed. Diff a broken sequence vs the healthy
   baseline to pin (watch for a 2nd rebuildAfterEnd, an item-updated on the PREVIEW
   group, or a non-null replaceItemId on gen-started(692)).
-- **Reuse-prompt broken (OPEN, 2026-06-13):** on a VIDEO item, Reuse Prompt does
-  NOT restore the correct settings AND fires a false "model does not accept
-  images" toast even when reuse carried NO images (stale image-presence flag /
-  reuse checks the selected item's media not the reused payload; toast fires
-  whenever an image is selected). Confirmed on video; image-side unchecked.
-  Evaluate `js/utils/promptReuse.js` + the PromptBox/GroupHistory reuse handler +
-  the media-vs-compat check. NOT fixed. (CONTRADICTS the earlier session
-  retraction — re-opened.)
+- **Reuse-prompt broken — ✅ FIXED + USER-VERIFIED 2026-06-14 (app-side, no
+  rebuild):** on a VIDEO item, Reuse Prompt restored wrong settings + fired a
+  false "Media type not supported" toast even when reuse carried NO images. ROOT
+  CAUSE (not a stale flag): the handler derived the operation from transient
+  PromptBox media-state (`setModel`→`_pickOpForModel` reads current
+  imageCount/videoCount) instead of `payload.operation`, and in the wrong order
+  (model→images→settings) — so `_acceptsMediaType` (pure per-op
+  requiresImages/requiresVideo) was checked against the WRONG op → false toast +
+  dropped frames + wrong-op controls. The saved `generationSettings` and the
+  `applyPromptReuseSettings` write-key were always correct (data was never the
+  bug). FIX (general, future-proof): made `payload.operation` AUTHORITATIVE —
+  `setOperation(targetOperation)` BEFORE media inject + settings in BOTH handlers
+  (`MpiGalleryBlock`, `MpiGroupHistoryBlock`); replaced the hardcoded `_isI2V` in
+  `promptReuse.js` with op-driven `_opAcceptsImageInput` (`getCommandMediaInputs`)
+  gating all preview-asset resurfacing — works for any current/future no-image op
+  (t2v/t2i/…) with no model-type assumption. Files: `js/utils/promptReuse.js`,
+  `MpiGalleryBlock.js`, `MpiGroupHistoryBlock.js`. NOT committed. See plan.md
+  Plan Drift 2026-06-14.
 - **Multi-stage video on Blackwell (RTX PRO 6000, cu128) — WORKS:** cu128 image
   connected on a CUDA-13.0 host (driver 580.159.04); stage1 preview + Create-from
   stage2 + T2V/I2V all generated. Confirms the cu128 Blackwell path end-to-end.

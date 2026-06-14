@@ -177,3 +177,5 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-75","type":"task.created","at":"2026-06-13T09:06:48.000Z","actor":"claude","summary":"Created running card for batched Pod-image rebuild changes; first item: /wrapper/models/delete remote uninstall endpoint."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-75","type":"task.updated","at":"2026-06-13T09:15:00.000Z","actor":"claude","summary":"Added batch item 2: fast model download via aria2c (wrapper _run_install + Dockerfile apt aria2)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-75","type":"task.updated","at":"2026-06-13T09:30:00.000Z","actor":"claude","summary":"Added rebuild candidates 3 (--cache-lru 2) + 4 (wrapper /free)."}
+{"at":"2026-06-14T00:00:00Z","event":"checklist.updated","task":"MPI-64","note":"reuse-prompt bug FIXED + user-verified: op made authoritative before media inject; _isI2V replaced with op-driven _opAcceptsImageInput. Files: promptReuse.js, MpiGalleryBlock.js, MpiGroupHistoryBlock.js. Renderer-only, not committed."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-76","at":"2026-06-14T04:16:48.652Z","actor":"vscode","summary":"Created MPI-76."}

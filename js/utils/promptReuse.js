@@ -1,5 +1,5 @@
 import { findClosestRatio, getModelRatios, RATIO_MODES } from './ratios.js';
-import { getCommand, getCommandDefault } from '../data/commandRegistry.js';
+import { getCommand, getCommandDefault, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../data/promptControlDefaults.js';
 
 const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
@@ -39,8 +39,14 @@ function _operationOf(item = {}, source = {}) {
     return source.operation || item.operation || item.generationSettings?.operation || '';
 }
 
-function _isI2V(item = {}, source = {}) {
-    return _operationOf(item, source).startsWith('i2v');
+// True when the reused operation declares an image input slot (op-driven, via
+// commandRegistry) — NOT a hardcoded model/op family. Drives whether saved
+// frame snapshots are resurfaced for reuse, so any current/future image-input
+// op works without special-casing.
+function _opAcceptsImageInput(item = {}, source = {}) {
+    const op = _operationOf(item, source);
+    if (!op) return false;
+    return getCommandMediaInputs(op).some(slot => slot.mediaType === 'image');
 }
 
 function _mediaItemsFromPreviewAssets(item = {}) {
@@ -75,7 +81,7 @@ async function _fileExists(filePath) {
 }
 
 async function _materializedPreviewAssetMediaItems(item = {}, project = {}) {
-    if (!_isI2V(item)) return [];
+    if (!_opAcceptsImageInput(item)) return [];
     if (!item.id || !project.folderPath) return [];
 
     const base = `${project.folderPath}\\Media\\.preview-assets\\${item.id}`;
@@ -100,6 +106,7 @@ async function _materializedPreviewAssetMediaItems(item = {}, project = {}) {
 }
 
 async function _previewAssetMediaItems(item = {}, project = {}) {
+    if (!_opAcceptsImageInput(item)) return [];
     const materialized = await _materializedPreviewAssetMediaItems(item, project);
     if (materialized.length) return materialized;
     return _mediaItemsFromPreviewAssets(item);
@@ -136,7 +143,7 @@ export function buildPromptReusePayload(item = {}) {
         injectionParams.Seed = item.seed;
     }
 
-    const previewMediaItems = _isI2V(item, source) ? _mediaItemsFromPreviewAssets(item) : [];
+    const previewMediaItems = _opAcceptsImageInput(item, source) ? _mediaItemsFromPreviewAssets(item) : [];
     const savedMediaItems = _mediaItemsFrom(source);
 
     return {

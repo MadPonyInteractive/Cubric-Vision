@@ -28,7 +28,7 @@ import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveM
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
-import { getAvailableCommands } from '../../../data/commandRegistry.js';
+import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
@@ -979,6 +979,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (!targetModel) return;
             }
 
+            // The reused operation is authoritative — it determines media
+            // acceptance and which controls the panel reads. Establish it BEFORE
+            // injecting media or applying settings, otherwise setModel's
+            // media-state-driven op guess (_pickOpForModel) leaves us on the
+            // wrong op and image inject is falsely rejected ("media type not
+            // supported"). Falls back to activeOperation when the payload op is
+            // not supported by the target model.
+            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                ? payload.operation
+                : activeOperation;
+
             if (use.model) {
                 activeModel = targetModel;
                 activeModelId = targetModel.id;
@@ -986,6 +997,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 Events.emit('settings:model:select', { modelId: targetModel.id });
                 _pb.el.setModel?.(targetModel);
             }
+            activeOperation = targetOperation;
+            _pb.el.setOperation?.(targetOperation);
 
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
@@ -993,8 +1006,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (use.images) {
                 _pb.el.clearMedia?.();
                 const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && String(payload.operation || '').startsWith('i2v')) {
-                    StatusBar.notify('No saved frame images were found for this older I2V entry.', 'warning');
+                if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                    StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
                 }
                 for (const item of mediaItems) {
                     _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
@@ -1002,9 +1015,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             if (use.settings) {
-                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
-                    ? payload.operation
-                    : activeOperation;
                 const settings = buildPromptReuseSettings(payload, targetModel);
                 applyPromptReuseSettings({
                     modelId: targetModel.id,
@@ -1012,8 +1022,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
-                activeOperation = targetOperation;
-                _pb.el.setOperation?.(targetOperation);
             }
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
