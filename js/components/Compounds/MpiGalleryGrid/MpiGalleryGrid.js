@@ -966,6 +966,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _clearPreviewImage();
                 }
                 _render();
+                // In-place Finish (preview→video) replaces the entry on a card
+                // that is already in view, so the grid IntersectionObserver never
+                // re-fires to promote the hover <video>. Promote it here so the
+                // finished video plays on hover immediately (no scroll / re-nav).
+                // _promoteVideo self-guards on _videoPromoted + isVideo.
+                _promoteVideo();
             };
 
             _render();
