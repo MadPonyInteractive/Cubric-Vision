@@ -108,6 +108,9 @@ function _idleScopeLabel() {
     // scope so the status bar reflects the in-progress transition.
     if (_remotePhase === 'connecting') return 'Connecting';
     if (_remotePhase === 'disconnecting') return 'Disconnecting';
+    // MPI-64 A1: a sticky 'disconnected' phase = involuntary engine drop (OOM/WS
+    // death); show it distinctly from a user Disconnect (plain 'Local').
+    if (_remotePhase === 'disconnected') return 'Disconnected';
     return _remoteConnected ? 'Remote' : 'Local';
 }
 

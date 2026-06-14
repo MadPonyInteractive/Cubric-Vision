@@ -164,6 +164,7 @@ export async function initShell() {
   initNotificationService();
   initFocusModeService();
   _initRemoteConnectionFeed();
+  _initEngineDropRecovery();
 
   // 7. Data Pre-fetching (Non-blocking)
   _initDataRegistries().catch(err => clientLogger.error('shell', 'registry failed:', err));
@@ -531,6 +532,49 @@ function _initRemoteConnectionFeed() {
     }
   };
   run();
+}
+
+/**
+ * Engine-drop recovery (MPI-64 A1 / B4 part 2/4). `comfyController._onWsDropped`
+ * emits `remote:engine-dropped` when the remote preview WS dies mid-generation
+ * with no clean close — the classic case is a container OOM (exit 137) that
+ * RunPod auto-restarts out-of-band, so the renderer is left holding a dead WS.
+ *
+ * Before this, the connection feed independently saw `/remote/comfy/status` go
+ * not-ready and painted plain `local · offline` + the local GPU card — i.e. the
+ * app masqueraded as if the user chose to go offline, with no toast, no recovery,
+ * and empty project/model panels, requiring an app relaunch.
+ *
+ * This makes the drop a DISTINCT, recoverable signal:
+ *  - a sticky `phase:'disconnected'` (folded into every subsequent feed tick by
+ *    `_emitRemoteConnection`) so the hero shows `remote · disconnected` and the
+ *    status bar `IDLE · Disconnected`, NOT plain local;
+ *  - an actionable info toast (NOT the bug-reporter modal) telling the user to
+ *    reconnect — reconnection is MANUAL (Settings → RunPod → Connect) by design,
+ *    so we never surprise-rebill a Pod the user may have wanted stopped;
+ *  - automatic recovery on the connected edge: `_emitRemoteConnection` clears the
+ *    phase on `connected:true`, and the existing connect-edge `syncModelInstalled`
+ *    (see `_initDataRegistries`) re-hydrates the model panel — no app relaunch.
+ *
+ * The stuck in-flight generation is already ended by `_onWsDropped` (it rejects
+ * every pending prompt → the commandExecutor→generationService onError chain →
+ * spinner ends), and the feed poll backoff (B4 part 1+3) already prevents the
+ * dead-proxy request pile-up; this function is the missing user-facing half.
+ */
+function _initEngineDropRecovery() {
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('remote:engine-dropped', () => {
+    // Only meaningful in remote mode; ignore a spurious emit when RunPod is off.
+    if (!Storage.getRunpodConfig().enabled) return;
+    // Sticky disconnected state + immediate repaint (don't wait for the next 5s
+    // feed tick). The explicit phase sets `_remotePhase` so later phase-less feed
+    // ticks fold it in instead of painting plain local.
+    _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'disconnected' });
+    Events.emit('ui:warning', {
+      message: 'Remote engine disconnected — the Pod may have run out of memory and restarted. '
+        + 'Reconnect from Settings → RunPod to continue.',
+    });
+  });
 }
 
 /**

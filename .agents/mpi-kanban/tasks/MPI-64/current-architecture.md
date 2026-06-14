@@ -43,10 +43,13 @@
 > `disconnecting·online` no card + status bar `IDLE · Connecting/Disconnecting`),
 > Cue button disabled during transitions via new `state.remoteEnginePhase`, local
 > GPU line no longer lingers at boot, models hero stat re-syncs on connect edge.
-> MPI-73 moved to its own card (now `done`). See §10 "MPI-73". OPEN: Bug B
-> (intermittent Create-From double-card — render race, debug gated behind
-> MPI_DEBUG_BUGB), model-cache stacking OOM (--cache-lru 2 candidate, REBUILD),
-> MPI-75 image rebuild (defer). See §10 + plan.md Plan Drift.
+> MPI-73 moved to its own card (now `done`). See §10 "MPI-73".
+> **ALL OPEN ITEMS now live in `OPEN-ITEMS.md` (this task folder) — the consolidated
+> register (built 2026-06-14). Read it FIRST for what's left; this doc + plan.md Plan
+> Drift hold the detailed root-cause narrative.** Headline open: engine-drop/OOM
+> recovery (B4 part 2/4 + B2, app-side), remote video gen (Phase 4), remote-I2V-ignores-
+> image re-confirm (likely closed by the dep-cross fix), model-cache OOM (--cache-lru 2,
+> REBUILD), MPI-75 image rebuild (defer). See `OPEN-ITEMS.md` for the full categorized list.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image

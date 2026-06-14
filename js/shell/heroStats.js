@@ -121,6 +121,11 @@ async function _renderGpu() {
 // accented). VRAM/RAM are best-effort — each segment is dropped if absent.
 // MPI-73: a transient `phase` ('connecting'|'disconnecting') shows the in-progress
 // transition with NO GPU card below (no hardware to show mid-connect).
+// MPI-64 A1: a sticky `phase==='disconnected'` marks an INVOLUNTARY engine drop
+// (container OOM / WS death) — distinct from a user Disconnect (which paints plain
+// 'local · offline'). It keeps remote context ("remote · disconnected", no GPU
+// card) so the app doesn't masquerade as offline-by-choice, until the user
+// reconnects from Settings → RunPod (which then emits connected:true and repaints).
 function _renderEngine({ connected, gpuName, vramGb, ramGb, phase = null }) {
     _remoteConnected = !!connected;
     _remotePhase = phase || null;
@@ -128,6 +133,11 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, phase = null }) {
     const gpu = gid('heroStatGpu');
     if (phase === 'connecting' || phase === 'disconnecting') {
         if (label) label.textContent = phase === 'connecting' ? 'connecting · offline' : 'disconnecting · online';
+        if (gpu) gpu.innerHTML = '';
+        return;
+    }
+    if (phase === 'disconnected') {
+        if (label) label.textContent = 'remote · disconnected';
         if (gpu) gpu.innerHTML = '';
         return;
     }
