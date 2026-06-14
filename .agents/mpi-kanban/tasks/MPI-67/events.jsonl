@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-67","type":"task.created","at":"2026-06-14T19:45:00Z","actor":"claude","summary":"Created on master: hotfix instructions for the Windows subfolder LoRA/upscale separator bug + 1.0.0->1.0.1 bump + per-OS rebuild + release. Local-only master variant (path.sep, no remote branch)."}
