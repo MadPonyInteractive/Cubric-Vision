@@ -31,6 +31,7 @@
 - **Project JSON writes:** server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js` for per-file queued atomic writes. Do not add direct `fs.writeJson(project.json, ...)` routes.
 - **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
 - **Kanban writes are pre-authorized.** Edit `.agents/mpi-kanban/board.json` and `.agents/mpi-kanban/tasks/<id>/` freely through MPI workflows - never ask permission to add, move, or update entries.
+- **Kanban cards MUST track their real state — MOVE them.** When you pick up a `todo` card, move it to `doing` (`maturity: in-progress`) BEFORE editing files; when the work ships/commits, move it to `done` (`maturity: complete`, `status: accepted`). A card with real work passes `todo → doing → done` — never leave it parked in `todo` while you ship. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON (`todo`/`doing`/`done`) — read `<mpi-lib>/task-board-ops/mutate.md` (the JSON-board doc), NOT the legacy `kanban-ops/` Markdown doc.
 
 ---
 
