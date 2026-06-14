@@ -1,0 +1,58 @@
+.mpi-folder-drop {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface-1);
+    border: 1px dashed var(--line);
+    border-radius: var(--r-2);
+    color: var(--ink-2);
+    font-size: 0.85rem;
+    cursor: default;
+    transition: border-color 120ms var(--ease), background 120ms var(--ease);
+    box-sizing: border-box;
+}
+
+.mpi-folder-drop--primary {
+    border-style: solid;
+    color: var(--ink-1);
+}
+
+.mpi-folder-drop--drag-over {
+    border-color: var(--accent-heat);
+    border-style: dashed;
+    background: var(--surface-2);
+}
+
+.mpi-folder-drop__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--ink-3);
+}
+
+.mpi-folder-drop__label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;       /* keep the tail (basename) of long paths visible */
+    text-align: left;
+}
+
+.mpi-folder-drop__hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 0 0 auto;
+    color: var(--ink-4);
+    font-size: 0.75rem;
+    pointer-events: none;
+}
+
+.mpi-folder-drop--drag-over .mpi-folder-drop__hint {
+    color: var(--accent-heat);
+}
+
+.mpi-folder-drop__hint-icon {
+    display: inline-flex;
+}

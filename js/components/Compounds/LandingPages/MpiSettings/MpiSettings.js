@@ -4,6 +4,7 @@ import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiOkCancel } from '../../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModal } from '../../../Primitives/MpiModal/MpiModal.js';
 import { state } from '../../../../state.js';
@@ -82,6 +83,7 @@ export const MpiSettings = ComponentFactory.create({
                                 </div>
                                 <div id="mpiSettingsLoraPrimarySlot"></div>
                                 <div class="mpi-settings__extra-folder-list" id="mpiSettingsLoraFoldersSlot"></div>
+                                <div class="mpi-settings__drop-zones" id="mpiSettingsLoraDropSlot"></div>
                             </div>
                             <div class="mpi-settings__extra-folder-group">
                                 <div class="mpi-settings__extra-folder-head">
@@ -90,6 +92,7 @@ export const MpiSettings = ComponentFactory.create({
                                 </div>
                                 <div id="mpiSettingsUpscalePrimarySlot"></div>
                                 <div class="mpi-settings__extra-folder-list" id="mpiSettingsUpscaleFoldersSlot"></div>
+                                <div class="mpi-settings__drop-zones" id="mpiSettingsUpscaleDropSlot"></div>
                             </div>
                         </div>
                         <span class="mpi-settings__hint">Extras are read-only additive folders. Cubric only installs, updates, and removes files from the primary managed folders.</span>
@@ -1400,6 +1403,42 @@ export const MpiSettings = ComponentFactory.create({
             _renderPrimaryFolder(root, 'upscale_models', '#mpiSettingsUpscalePrimarySlot', 'Primary upscale folder');
             _renderExtraFolderBucket(root, 'loras', '#mpiSettingsLoraFoldersSlot', '#mpiSettingsAddLoraFolderSlot');
             _renderExtraFolderBucket(root, 'upscale_models', '#mpiSettingsUpscaleFoldersSlot', '#mpiSettingsAddUpscaleFolderSlot');
+            _renderDropZones(root, 'loras', '#mpiSettingsLoraDropSlot');
+            _renderDropZones(root, 'upscale_models', '#mpiSettingsUpscaleDropSlot');
+        }
+
+        /**
+         * Render one MpiFolderDrop per CONFIGURED folder (primary + extras),
+         * sourced from /comfy/model-folders so the absolute paths match the
+         * import route's allow-list exactly. Dropping a model file copies it in
+         * and refreshes the picker asset lists.
+         */
+        async function _renderDropZones(root, bucket, slotId) {
+            const slot = qs(slotId, root);
+            if (!slot) return;
+            slot.innerHTML = '';
+            let folders = [];
+            try {
+                const res = await fetch(`/comfy/model-folders?bucket=${bucket}`);
+                const data = await res.json();
+                folders = data.success ? (data.folders || []) : [];
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] model-folders fetch failed', err);
+                return;
+            }
+            folders.forEach(({ path: folderPath, primary }) => {
+                const inst = MpiFolderDrop.mount(ce('div'), {
+                    folderPath,
+                    bucket,
+                    primary,
+                    onImport: (filename) => {
+                        Events.emit('ui:success', { message: `Imported ${filename}.` });
+                        loadAssets();
+                    },
+                });
+                slot.appendChild(inst.el);
+                _extraFolderControls.push(inst);
+            });
         }
 
         function _renderExtraFolderBucket(root, bucket, listSelector, addSelector) {

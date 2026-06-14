@@ -396,6 +396,32 @@ router.get('/comfy/extra-folders', async (_req, res) => {
     }
 });
 
+/**
+ * GET /comfy/model-folders?bucket=loras|upscale_models
+ * Returns the full set of configured drop targets for a bucket: the primary
+ * bucket folder + each stored extra. Used by the picker modal to render one
+ * named drop zone per folder. { success, folders: [{ path, primary }] }
+ */
+router.get('/comfy/model-folders', async (req, res) => {
+    const bucket = String(req.query.bucket || '');
+    try {
+        if (bucket !== 'loras' && bucket !== 'upscale_models') {
+            return res.status(400).json({ success: false, error: 'bucket must be loras or upscale_models' });
+        }
+        const customRoot = await getCustomRoot();
+        const primaryBucket = path.join(customRoot || getDefaultModelsRoot(), bucket);
+        const extras = await getExtraModelFolders();
+        const folders = [
+            { path: primaryBucket, primary: true },
+            ...((extras[bucket]) || []).map(p => ({ path: p, primary: false })),
+        ];
+        res.json({ success: true, folders });
+    } catch (err) {
+        logger.error('comfy', 'model-folders get failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/comfy/extra-folders', async (req, res) => {
     try {
         const folders = await setExtraModelFolders(req.body || {});
@@ -514,6 +540,65 @@ async function _findFile(dir, filename) {
  * Lists all model files (.safetensors, .ckpt, .pt, .bin, .pth) in a subdirectory.
  * Returns: { success: true, files: string[] }
  */
+/**
+ * POST /comfy/import-model
+ * Copy a dropped LoRA / upscale model file from its absolute local path into one
+ * of the user's CONFIGURED folders for that bucket (primary root or a stored
+ * extra). Copies (does not move) — the original stays. Refuses to overwrite an
+ * existing same-name file unless { overwrite: true }.
+ *
+ * Body: { sourcePath, targetFolder, bucket: 'loras'|'upscale_models', overwrite? }
+ * Returns: { success, filename } | 409 { success:false, error:'exists', filename }
+ */
+const _MODEL_EXTS = new Set(['.safetensors', '.ckpt', '.pt', '.bin', '.pth']);
+
+router.post('/comfy/import-model', async (req, res) => {
+    const { sourcePath, targetFolder, bucket, overwrite } = req.body || {};
+    try {
+        if (!sourcePath || !targetFolder || !bucket) {
+            return res.status(400).json({ success: false, error: 'sourcePath, targetFolder and bucket are required' });
+        }
+        if (bucket !== 'loras' && bucket !== 'upscale_models') {
+            return res.status(400).json({ success: false, error: 'bucket must be loras or upscale_models' });
+        }
+        if (!(await fs.pathExists(sourcePath))) {
+            return res.status(400).json({ success: false, error: 'source file not found' });
+        }
+        const ext = path.extname(sourcePath).toLowerCase();
+        if (!_MODEL_EXTS.has(ext)) {
+            return res.status(400).json({ success: false, error: `unsupported file type: ${ext}` });
+        }
+
+        // Build the allow-list of configured folders for this bucket: primary
+        // bucket folder (custom root or default) + each stored extra. Reject any
+        // target outside it — no arbitrary writes / path traversal.
+        const customRoot = await getCustomRoot();
+        const primaryBucket = path.join(customRoot || getDefaultModelsRoot(), bucket);
+        const extras = await getExtraModelFolders();
+        const allowed = [primaryBucket, ...((extras[bucket]) || [])]
+            .map(p => path.resolve(p));
+        const resolvedTarget = path.resolve(targetFolder);
+        if (!allowed.includes(resolvedTarget)) {
+            return res.status(400).json({ success: false, error: 'target folder is not a configured model folder' });
+        }
+
+        await fs.ensureDir(resolvedTarget);
+        const filename = path.basename(sourcePath);
+        const dest = path.join(resolvedTarget, filename);
+
+        if (!overwrite && await fs.pathExists(dest)) {
+            return res.status(409).json({ success: false, error: 'exists', filename });
+        }
+
+        await fs.copy(sourcePath, dest, { overwrite: Boolean(overwrite) });
+        logger.info('comfy', `imported model ${filename} into ${bucket}`);
+        res.json({ success: true, filename });
+    } catch (err) {
+        logger.error('comfy', 'import-model failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.get('/comfy/list-files', async (req, res) => {
     const { subDir } = req.query;
     if (!subDir) return res.status(400).json({ success: false, error: 'subDir required' });
@@ -545,14 +630,25 @@ router.get('/comfy/list-files', async (req, res) => {
             return results;
         };
 
+        // ComfyUI builds its LoRA/upscale enum from path.relative against ITS OWN
+        // search roots, so the separator it expects matches the ENGINE's OS:
+        // local engine = this host (Windows → '\\'), remote engine = Linux Pod
+        // ('/'). We emit the engine-native separator so the dropdown value matches
+        // ComfyUI's enum exactly (forward-slash here would 400 "value not in list"
+        // for subfolder models on Windows). Dedupe key stays forward-slash so it's
+        // stable regardless of the emitted separator.
+        const remoteActive = remoteModels.isRemoteActive();
+        const engineSep = remoteActive ? '/' : path.sep;
+        const toEngineSep = (s) => engineSep === '/' ? s.replace(/\\/g, '/') : s.replace(/\//g, '\\');
+
         const addFiles = async (dirPath, relativeTo, output, seen) => {
             const files = await getAllFiles(dirPath, relativeTo);
             for (const file of files) {
-                const normalized = file.replace(/\\/g, '/');
-                const key = process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+                const fwd = file.replace(/\\/g, '/');
+                const key = process.platform === 'win32' ? fwd.toLowerCase() : fwd;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                output.push(normalized);
+                output.push(toEngineSep(fwd));
             }
         };
 

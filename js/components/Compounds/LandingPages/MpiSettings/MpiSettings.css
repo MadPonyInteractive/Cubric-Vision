@@ -229,6 +229,13 @@
     gap: var(--s-2);
 }
 
+.mpi-settings__drop-zones {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-top: var(--s-2);
+}
+
 .mpi-settings__extra-folder-row {
     display: flex;
     align-items: flex-end;

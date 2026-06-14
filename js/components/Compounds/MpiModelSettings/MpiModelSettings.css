@@ -130,3 +130,25 @@
     color: var(--ink-3);
     white-space: nowrap;
 }
+
+/* A dropdown whose selected LoRA/upscale file is missing from the configured
+   folders — warn the user it cannot be loaded. */
+.mpi-dropdown--missing .mpi-dropdown__trigger {
+    border-color: var(--accent-warn);
+    background: color-mix(in oklch, var(--accent-warn) 14%, var(--surface-1));
+    color: var(--accent-warn);
+}
+
+/* Drop areas in the picker modal (one per configured folder). */
+.mpi-model-settings__drop-zones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.mpi-model-settings__drop-title {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    margin-bottom: 4px;
+}

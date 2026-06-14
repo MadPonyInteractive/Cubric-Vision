@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-82",
+  "title": "External connections: local LoRA/upscale drag-drop + missing guard",
+  "description": "Let users drag-drop LoRA/upscale files onto their configured folder paths (each path = a drop zone, in Settings AND the picker modal), copying locally; missing models (not in any pointed-at folder) get a red dropdown item + a blocking toast on Generate. Phase 1 = local (build+test now). Phase 2 = remote upload to Pod (gated on MPI-81 rebuild). Phase 3 = remote verify. See plan.md.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-06-14T12:35:34.928Z",
+  "updated_at": "2026-06-14T22:15:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

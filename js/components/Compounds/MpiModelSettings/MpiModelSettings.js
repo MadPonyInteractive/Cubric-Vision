@@ -26,6 +26,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiFolderDrop } from '../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { qs } from '../../../utils/dom.js';
@@ -88,6 +89,61 @@ function _upscaleOptions(upscaleModels) {
     return (upscaleModels || []).map(f => ({ label: f, value: f }));
 }
 
+const _baseName = (f) => String(f || '').replace(/\\/g, '/').split('/').pop();
+/** Separator-agnostic full-path key (forward slash, lowercased). */
+const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
+
+/**
+ * Resolve a saved model name to a list entry. Returns { value, healed, ambiguous }:
+ *  - exact full-path match (separator-agnostic) → that entry, healed:false.
+ *  - exact path gone but ONE same-basename file exists (e.g. the LoRA's subfolder
+ *    was removed and the file now sits at root) → heal to it, healed:true.
+ *  - MULTIPLE same-basename files (genuinely different files) → ambiguous:true,
+ *    value unchanged (caller keeps it red so the user re-picks).
+ *  - nothing matches → value unchanged, neither healed nor ambiguous (missing).
+ */
+function _resolveInfo(value, available) {
+    if (!value) return { value, healed: false, ambiguous: false };
+    const list = available || [];
+    const want = _pathKey(value);
+    const exact = list.find(f => _pathKey(f) === want);
+    if (exact) return { value: exact, healed: false, ambiguous: false };
+    const base = _baseName(value).toLowerCase();
+    const byName = list.filter(f => _baseName(f).toLowerCase() === base);
+    if (byName.length === 1) return { value: byName[0], healed: true, ambiguous: false };
+    if (byName.length > 1) return { value, healed: false, ambiguous: true };
+    return { value, healed: false, ambiguous: false };
+}
+
+/** Back-compat: resolve to the list string (exact or unique-basename heal). */
+function _resolveToList(value, available) {
+    return _resolveInfo(value, available).value;
+}
+
+/**
+ * True when `value` is set but cannot be resolved to a loadable list entry —
+ * either nothing matches OR the basename is ambiguous (multiple folders, we won't
+ * guess). A unique-basename heal counts as PRESENT (not missing).
+ */
+function _isMissing(value, available) {
+    if (!value) return false;
+    const info = _resolveInfo(value, available);
+    if (info.ambiguous) return true;          // multiple same-name files → can't resolve
+    if (info.healed) return false;            // unique basename heal → loadable
+    // Neither healed nor ambiguous: present only if an exact entry exists.
+    return !(available || []).some(f => _pathKey(f) === _pathKey(value));
+}
+
+/**
+ * If `value` is missing from `options`, append a synthetic disabled option so the
+ * dropdown can still show what is selected-but-gone, labeled "<name> (missing)".
+ * Returns the (possibly extended) options array.
+ */
+function _withMissingOption(options, value) {
+    if (!value || options.some(o => o.value === value)) return options;
+    return [...options, { label: `${_baseName(value)} (missing)`, value, disabled: true }];
+}
+
 export const MpiModelSettings = ComponentFactory.create({
     name: 'MpiModelSettings',
     css: ['js/components/Compounds/MpiModelSettings/MpiModelSettings.css'],
@@ -103,29 +159,107 @@ export const MpiModelSettings = ComponentFactory.create({
             <div class="mpi-model-settings__upscale">
                 <p class="mpi-model-settings__section-title">Upscale Model</p>
                 <div class="mpi-model-settings__upscale-slot"></div>
+                <div class="mpi-model-settings__drop-zones" data-drop="upscale_models"></div>
             </div>
             <div class="mpi-model-settings__loras" data-section="loras">
                 <p class="mpi-model-settings__section-title">LoRA Slots</p>
                 <div class="mpi-model-settings__lora-list"></div>
+                <div class="mpi-model-settings__drop-zones" data-drop="loras"></div>
             </div>
         </div>
     `,
 
     setup: (el, _props, emit) => {
+        // ── Internal state (declared first — referenced by the subscriptions below) ─
+        /** @type {{ modelId?: string, toolKey?: string } | null} */
+        let _context = null;
+        /** True while the overlay is shown — gates live re-render on asset changes. */
+        let _isOpen = false;
+        const _unsubs = [];
+
         // ── MpiOverlay base ───────────────────────────────────────────────────
         const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
         overlay.el.appendToContainer(el);
-        overlay.on('close', () => emit('close', {}));
+        overlay.on('close', () => { _isOpen = false; emit('close', {}); });
 
-        // ── Internal state ────────────────────────────────────────────────────
-        /** @type {{ modelId?: string, toolKey?: string } | null} */
-        let _context = null;
+        // Live re-render: if the LoRA/upscale lists change while the picker is open
+        // (e.g. user removes an extra folder, or a drag-drop import lands), rebuild
+        // the dropdowns so the missing/red flags and options stay current without a
+        // close-reopen.
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
+            if (!_isOpen || !_context) return;
+            if (key === 'availableLoras' || key === 'upscaleModels') el.open(_context);
+        }));
 
         /** Per-slot LoRA tracking (mutated by input events); array or staged object */
         let _loraSlots = [];
 
         /** Currently selected upscale value (tracked from change event) */
         let _upscaleValue = '';
+
+        /** Mounted MpiFolderDrop instances, torn down on each re-render / close */
+        let _dropInstances = [];
+        /** Monotonic render token — guards against overlapping async drop-zone
+         *  renders (el.open can fire again via the state:changed live-rerender
+         *  while a previous _renderDropZones fetch is still pending → duplicates). */
+        let _dropRenderToken = 0;
+
+        function _clearDropZones() {
+            _dropInstances.forEach(inst => inst?.el?.destroy?.());
+            _dropInstances = [];
+            // Bump the token so any in-flight _renderDropZones bails before appending.
+            _dropRenderToken++;
+        }
+
+        /**
+         * Render one MpiFolderDrop per configured folder for a bucket into its
+         * [data-drop] container, sourced from /comfy/model-folders so paths match
+         * the import route's allow-list. On import, refresh asset lists + re-mount
+         * the dropdowns so the new file is selectable immediately.
+         */
+        async function _renderDropZones(bucket) {
+            const host = qs(`[data-drop="${bucket}"]`, el);
+            if (!host) return;
+            const token = _dropRenderToken;
+            let folders = [];
+            try {
+                const res = await fetch(`/comfy/model-folders?bucket=${bucket}`);
+                const data = await res.json();
+                folders = data.success ? (data.folders || []) : [];
+            } catch (err) {
+                clientLogger.error('model-settings', 'model-folders fetch failed', err);
+                return;
+            }
+            // A newer render (or a clear) started while we awaited — abandon this one
+            // so we never append a stale/duplicate set.
+            if (token !== _dropRenderToken) return;
+
+            // Clear AFTER the await (not before) so a stale in-flight render can't
+            // wipe a fresh one's content.
+            host.innerHTML = '';
+            const title = document.createElement('p');
+            title.className = 'mpi-model-settings__drop-title';
+            title.textContent = `Drop ${bucket === 'loras' ? 'LoRA' : 'upscale'} models into a folder:`;
+            host.appendChild(title);
+
+            folders.forEach(({ path: folderPath, primary }) => {
+                const inst = MpiFolderDrop.mount(document.createElement('div'), {
+                    folderPath,
+                    bucket,
+                    primary,
+                    onImport: async (filename) => {
+                        Events.emit('ui:success', { message: `Imported ${filename}.` });
+                        // loadAssets() reassigns state.availableLoras/upscaleModels →
+                        // state:changed → the live-rerender subscription rebuilds the
+                        // dropdowns (new file present, red flag cleared). No explicit
+                        // el.open() needed here.
+                        await loadAssets();
+                    },
+                });
+                host.appendChild(inst.el);
+                _dropInstances.push(inst);
+            });
+        }
 
         // ── Auto-save helper ──────────────────────────────────────────────────
 
@@ -156,21 +290,35 @@ export const MpiModelSettings = ComponentFactory.create({
             const filtered = _filterByType(state.upscaleModels, modelType);
             // SIAX is always installed with the engine → guaranteed fallback.
             const siaxFile = _depToFilename('4x-NMKD-Siax');
-            const resolved = (currentValue && filtered.includes(currentValue))
+            // A saved upscaler that's gone (folder removed) is flagged red so the
+            // user sees it's missing; selection stays on the saved value so the
+            // dropdown reflects intent. Generation falls back to the default +
+            // warns (see commandExecutor _resolveUpscaleParam) — upscale never
+            // hard-blocks the way LoRAs do.
+            const missing = _isMissing(currentValue, filtered);
+            const resolved = missing
                 ? currentValue
-                : (filtered.includes(siaxFile) ? siaxFile : (filtered[0] || ''));
+                : (_resolveToList(currentValue, filtered)
+                    || (filtered.includes(siaxFile) ? siaxFile : (filtered[0] || '')));
 
             _upscaleValue = resolved;
 
             const dd = MpiDropdown.mount(slot, {
-                options: _upscaleOptions(filtered),
+                options: _withMissingOption(_upscaleOptions(filtered), missing ? _upscaleValue : ''),
                 value: _upscaleValue,
+                extraClasses: missing ? 'mpi-dropdown--missing' : '',
             });
 
             dd.on('change', ({ value }) => {
                 _upscaleValue = value;
+                qs('.mpi-model-settings__upscale-slot .mpi-dropdown', el)?.classList.toggle('mpi-dropdown--missing', _isMissing(value, filtered));
                 _autoSave();
             });
+            // Note: a healed/relocated upscale path is NOT auto-persisted here —
+            // _mountUpscaleDropdown runs before the LoRA slots in el.open, so calling
+            // _autoSave now would write a stale _loraSlots. The dropdown shows the
+            // healed value, and injection (_resolveUpscaleParam) heals at generation;
+            // the stored value persists on the next explicit change.
         }
 
         // ── LoRA slots ────────────────────────────────────────────────────────
@@ -190,6 +338,7 @@ export const MpiModelSettings = ComponentFactory.create({
             });
 
             const loraOpts = _loraOptions(state.availableLoras);
+            let _healedAny = false;
 
             _loraSlots.forEach((slot, i) => {
                 const slotEl = document.createElement('div');
@@ -251,18 +400,33 @@ export const MpiModelSettings = ComponentFactory.create({
                 slotEl.appendChild(strengthsEl);
                 list.appendChild(slotEl);
 
+                const info = _resolveInfo(slot.name, state.availableLoras);
+                const missing = _isMissing(slot.name, state.availableLoras);
+                // Heal a moved/separator-mismatched saved value to the exact list
+                // string (unique basename or separator diff) and persist it so the
+                // stored path tracks the file's new location. Ambiguous/missing
+                // values are left as-is (shown red) for the user to re-pick.
+                if (info.value !== slot.name && (info.healed || (!missing && !info.ambiguous))) {
+                    _loraSlots[i].name = info.value;
+                    _healedAny = true;
+                }
                 const dd = MpiDropdown.mount(dropHost, {
-                    options: loraOpts,
-                    value: slot.name || '',
+                    options: _withMissingOption(loraOpts, missing ? slot.name : ''),
+                    value: missing ? (slot.name || '') : (_loraSlots[i].name || ''),
                     placeholder: `Slot ${i + 1} — None`,
+                    extraClasses: missing ? 'mpi-dropdown--missing' : '',
                 });
 
                 dd.on('change', ({ value }) => {
                     _loraSlots[i].name = value || null;
                     slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
+                    qs('.mpi-dropdown', dropHost)?.classList.toggle('mpi-dropdown--missing', _isMissing(value, state.availableLoras));
                     _autoSave();
                 });
             });
+
+            // Persist any healed paths once (path tracked the file's new location).
+            if (_healedAny) _autoSave();
         }
 
         // ── Public open() method ──────────────────────────────────────────────
@@ -287,6 +451,7 @@ export const MpiModelSettings = ComponentFactory.create({
             );
 
             const loraOpts = _loraOptions(state.availableLoras);
+            let _healedAny = false;
 
             loraStages.forEach(stage => {
                 const header = document.createElement('div');
@@ -354,19 +519,30 @@ export const MpiModelSettings = ComponentFactory.create({
                     slotEl.appendChild(strengthsEl);
                     list.appendChild(slotEl);
 
+                    const info = _resolveInfo(slot.name, state.availableLoras);
+                    const missing = _isMissing(slot.name, state.availableLoras);
+                    if (info.value !== slot.name && (info.healed || (!missing && !info.ambiguous))) {
+                        _loraSlots[stage.key][i].name = info.value;
+                        _healedAny = true;
+                    }
                     const dd = MpiDropdown.mount(dropHost, {
-                        options: loraOpts,
-                        value: slot.name || '',
+                        options: _withMissingOption(loraOpts, missing ? slot.name : ''),
+                        value: missing ? (slot.name || '') : (_loraSlots[stage.key][i].name || ''),
                         placeholder: `${stage.label} ${i + 1} - None`,
+                        extraClasses: missing ? 'mpi-dropdown--missing' : '',
                     });
 
                     dd.on('change', ({ value }) => {
                         _loraSlots[stage.key][i].name = value || null;
                         slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
+                        qs('.mpi-dropdown', dropHost)?.classList.toggle('mpi-dropdown--missing', _isMissing(value, state.availableLoras));
                         _autoSave();
                     });
                 });
             });
+
+            // Persist any healed paths once.
+            if (_healedAny) _autoSave();
         }
 
         el.open = async (ctx = {}) => {
@@ -412,18 +588,28 @@ export const MpiModelSettings = ComponentFactory.create({
                     _mountLoraSlots(settings.loras, modelType);
                 }
                 lorasSection.style.display = '';
+                _clearDropZones();
+                _renderDropZones('loras');
+                _renderDropZones('upscale_models');
             } else {
                 const settings = getToolSettings(state.currentProject, ctx.toolKey);
                 // Tool context has no model type → no filter, show all upscalers.
                 _mountUpscaleDropdown(_depToFilename(settings.upscaleModel) || settings.upscaleModel || _depToFilename('4x-NMKD-Siax'), null);
                 el.classList.remove('mpi-model-settings--staged-lora');
                 lorasSection.style.display = 'none';
+                _clearDropZones();
+                _renderDropZones('upscale_models');
             }
 
             overlay.el.show();
+            _isOpen = true;
         };
 
         // ── Cleanup ───────────────────────────────────────────────────────────
-        el.destroy = () => { };
+        el.destroy = () => {
+            _isOpen = false;
+            _clearDropZones();
+            _unsubs.forEach(fn => fn?.());
+        };
     },
 });

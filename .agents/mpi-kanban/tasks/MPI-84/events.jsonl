@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-84","type":"task.created","at":"2026-06-14T20:05:00Z","actor":"claude","summary":"Created: toast height should grow vs clamp to 2 lines; cause at MpiToast.css line-clamp."}

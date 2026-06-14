@@ -267,40 +267,81 @@ const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
  */
 function _resolveModelName(value, available) {
     if (!value) return value;
+    const list = available || [];
     const want = _pathKey(value);
-    return (available || []).find(f => _pathKey(f) === want) || value;
+    // 1) Exact full-path match (separator-agnostic) — preferred.
+    const exact = list.find(f => _pathKey(f) === want);
+    if (exact) return exact;
+    // 2) The exact path is gone but a same-BASENAME file exists elsewhere (e.g. the
+    //    LoRA's subfolder was removed and the file now sits at root). Heal to it ONLY
+    //    when unambiguous (exactly one basename match); multiple matches are genuinely
+    //    different files, so don't guess — leave the value as-is (stays "missing").
+    const base = _baseName(value).toLowerCase();
+    const byName = list.filter(f => _baseName(f).toLowerCase() === base);
+    if (byName.length === 1) return byName[0];
+    return value;
 }
 
 /**
- * Pre-generation guard. A selected LoRA / upscale model whose file is NOT in any
- * of the folders the system points at (the `/comfy/list-files` union mirrored in
- * state.availableLoras / state.upscaleModels) would fail at the loader node with
- * a cryptic "model not found". This catches it BEFORE submission so we can warn
- * the user to add the file (drag-drop in Settings → External Connections) or
- * pick another. Compared by basename to tolerate subfolder-prefixed list entries.
+ * Resolve the upscale param for injection. Unlike LoRAs (which hard-block when
+ * missing), upscale always has a guaranteed default (SIAX, bundled with the
+ * engine), so a missing custom upscaler FALLS BACK to SIAX and warns rather than
+ * 400-ing the generation. Returns the engine-correct upscale filename to inject.
+ */
+function _resolveUpscaleParam(upscaleFilename) {
+    if (!upscaleFilename) return upscaleFilename;
+    const available = state.upscaleModels;
+    if (!Array.isArray(available) || !available.length) return upscaleFilename; // engine not ready
+    // Resolvable = exact path OR unique basename heal (see _resolveModelName).
+    const resolved = _resolveModelName(upscaleFilename, available);
+    if (resolved !== upscaleFilename || available.some(f => _pathKey(f) === _pathKey(upscaleFilename))) {
+        return resolved;
+    }
+
+    // Missing / ambiguous → fall back to SIAX (engine-bundled, always present) + warn.
+    const siax = _depFilename('4x-NMKD-Siax');
+    const siaxResolved = siax ? _resolveModelName(siax, available) : null;
+    Events.emit('ui:warning', {
+        message: `Upscale model "${_baseName(upscaleFilename)}" was not found in your folders. `
+            + `Using the default (${siax || 'built-in'}) instead. Add it in Settings → External Connections, or pick another.`,
+    });
+    return siaxResolved || upscaleFilename;
+}
+
+/**
+ * Pre-generation guard for LoRAs. A selected LoRA whose file is NOT in any of the
+ * folders the system points at (the `/comfy/list-files` union mirrored in
+ * state.availableLoras) would fail at the loader node with a cryptic "model not
+ * found". This catches it BEFORE submission so we can warn the user to add the
+ * file (drag-drop in Settings → External Connections) or pick another. Compared
+ * by basename to tolerate subfolder-prefixed list entries.
  *
- * Applies in local AND remote mode (in Phase 1 the picker lists local files in
- * both; Phase 2 swaps the source to remote presence). The asset lists are loaded
- * lazily — if they are empty (engine not ready), the guard allows the run rather
- * than blocking on an unpopulated list.
- * @param {Record<string, any>} params  built workflow params (LoRA objs + Upscale_Model)
- * @returns {string|null} missing model name, or null if nothing blocks
+ * LoRAs HARD-BLOCK (a missing LoRA is an explicit user intent that must not be
+ * silently dropped). Upscale models are handled differently: they always have a
+ * guaranteed default (SIAX), so a missing upscale falls back + warns instead of
+ * blocking — see _resolveUpscaleParam.
+ *
+ * The asset lists are loaded lazily — if they are empty (engine not ready), the
+ * guard allows the run rather than blocking on an unpopulated list.
+ * @param {Record<string, any>} params  built workflow params (LoRA objs)
+ * @returns {string|null} missing LoRA name, or null if nothing blocks
  */
 function _findMissingModel(params) {
     const loras = state.availableLoras;
-    const upscalers = state.upscaleModels;
-
-    const inList = (list, name) => {
-        if (!Array.isArray(list) || !list.length) return true; // unpopulated → don't block
-        const base = _baseName(name);
-        return list.some(f => _baseName(f) === base);
+    // params.lora_name is already _resolveModelName-healed by _buildParams, so a
+    // resolvable LoRA now equals an exact list entry. Block only when the name
+    // STILL has no exact match — i.e. the file is gone, or its basename is
+    // ambiguous (multiple folders) so we refused to guess. Empty list (engine not
+    // ready) → don't block.
+    const resolvable = (name) => {
+        if (!Array.isArray(loras) || !loras.length) return true;
+        const want = _pathKey(name);
+        return loras.some(f => _pathKey(f) === want);
     };
 
-    for (const [key, value] of Object.entries(params || {})) {
+    for (const value of Object.values(params || {})) {
         if (value && typeof value === 'object' && value.lora_name) {
-            if (!inList(loras, value.lora_name)) return value.lora_name;
-        } else if (key === 'Upscale_Model' && typeof value === 'string') {
-            if (!inList(upscalers, value)) return value;
+            if (!resolvable(value.lora_name)) return value.lora_name;
         }
     }
     return null;
@@ -473,13 +514,13 @@ function _buildParams(payload) {
             // Upscale model — user selection takes priority, else model default
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel)
                 || _depFilename(modelDef?.defaultUpscale);
-            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
+            if (upscaleFilename) params['Upscale_Model'] = _resolveUpscaleParam(upscaleFilename);
 
         } else if (payload.operation) {
             // Tool/universal context: inject upscale model only
             const settings = getToolSettings(project, payload.operation);
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
-            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
+            if (upscaleFilename) params['Upscale_Model'] = _resolveUpscaleParam(upscaleFilename);
         }
     }
 

@@ -30,6 +30,35 @@
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
 
+- **Drag-and-drop model import (LoRA & upscale).** Settings → External Connections
+  and the Model Settings picker now show each of your configured model folders as a
+  drop zone — drag a `.safetensors` / `.ckpt` / `.pt` / `.bin` / `.pth` onto the
+  folder you want and Cubric copies it there (the original stays put). The picker
+  list refreshes immediately so the model is ready to select. Dropping a file that
+  already exists asks before replacing.
+
+- **Missing-model feedback.** If a project references a LoRA or upscale model whose
+  file is no longer in any of your model folders, the Model Settings dropdown now
+  flags it in red as `(missing)`. Trying to generate with a missing **LoRA** is
+  blocked with a clear toast (so a missing LoRA can't be silently dropped from your
+  result); a missing **upscale** model automatically falls back to the built-in
+  default and warns, so the generation still runs.
+
+## fixes
+
+- **LoRA/upscale models in subfolders failed to load on Windows.** Models stored in
+  a subfolder (e.g. `loras\SDXL\name.safetensors`) were sent to the engine with the
+  wrong path separator and rejected with "Prompt outputs failed validation". The
+  model list now uses the engine's native path format, so subfolder models load
+  correctly. (Also shipping as a 1.0.1 hotfix.)
+
+- **Relocated models no longer show as missing.** If a model file moves between your
+  configured folders (e.g. you remove an extra folder but the same file still lives
+  in your primary folder), Cubric now finds it by name and updates the saved path
+  automatically instead of flagging it as missing — as long as the match is
+  unambiguous. If two different folders contain a same-named file, it stays flagged
+  so you can pick the one you mean.
+
 - **Project & card notes.** Right-click a project on the Stage picker for two new
   options: **Project notes** (in-app editor backed by the project's `project.md`
   file) and **Open project folder** (reveals the project in your OS file

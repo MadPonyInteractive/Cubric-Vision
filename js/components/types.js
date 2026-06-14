@@ -1097,6 +1097,22 @@
  */
 
 /**
+ * @typedef {Object} MpiFolderDropProps (Primitive — js/components/Primitives/MpiFolderDrop)
+ * @property {string} folderPath — absolute target folder; MUST be a configured
+ *   model folder (primary root or a stored extra) — the import route rejects others.
+ * @property {'loras'|'upscale_models'} bucket — model bucket this folder holds.
+ * @property {string} [label] — display label (defaults to folderPath).
+ * @property {boolean} [primary] — mark the primary managed folder.
+ * @property {function(string): void} [onImport] — called with the imported
+ *   filename after a successful copy (use to refresh asset lists / dropdowns).
+ *
+ * A labeled folder path that is also an OS drop target for model files. On drop
+ * it resolves the file's absolute path via Electron `webUtils.getPathForFile`
+ * and POSTs /comfy/import-model to COPY it into this folder (original stays).
+ * A same-name collision triggers a confirm-then-replace. Browser dev mode (no
+ * webUtils) ignores drops. Rejects non-model extensions with a ui:warning toast.
+ *
+ *
  * @typedef {Object} MpiProjectDropOverlayProps (Primitive — js/components/Primitives/MpiProjectDropOverlay)
  * @property {function({ folderPath: string, source: 'folder'|'json' }): void} [onDrop]
  *   Called when the user drops a project folder or a project.json onto the
