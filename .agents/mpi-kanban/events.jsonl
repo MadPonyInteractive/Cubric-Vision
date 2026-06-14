@@ -182,3 +182,6 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"task.moved","at":"2026-06-14T04:27:59Z","actor":"claude","from":"todo","to":"doing","summary":"Skipped-Doing auto-correct: implementation complete, moved todo->doing."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"attention.required","at":"2026-06-14T04:27:59Z","actor":"claude","summary":"Awaiting user live validation before done; not committed (project no-commit rule)."}
 {"at":"2026-06-14T05:00:00Z","event":"checklist.updated","task":"MPI-64","note":"Bug 2 FIXED + user-verified: in-place Finish gallery card now promotes hover video (refreshGroup calls _promoteVideo); GroupHistory viewer bridge added. Files: MpiGalleryGrid.js, MpiGroupHistoryBlock.js."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"validation.updated","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"User validated project + card notes; validation.md written."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"task.moved","at":"2026-06-14T04:45:13Z","actor":"claude","from":"doing","to":"done","summary":"Validated + user-approved completion. maturity validating->complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"attention.cleared","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"Done; validation complete."}

@@ -1,3 +1,6 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-76","at":"2026-06-14T04:16:48.652Z","actor":"vscode","summary":"Created MPI-76."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"task.moved","at":"2026-06-14T04:27:59Z","actor":"claude","from":"todo","to":"doing","summary":"Skipped-Doing auto-correct: implementation complete, moved todo->doing."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"attention.required","at":"2026-06-14T04:27:59Z","actor":"claude","summary":"Awaiting user live validation before done; not committed (project no-commit rule)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"validation.updated","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"User validated project + card notes; validation.md written."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"task.moved","at":"2026-06-14T04:45:13Z","actor":"claude","from":"doing","to":"done","summary":"Validated + user-approved completion. maturity validating->complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"attention.cleared","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"Done; validation complete."}
