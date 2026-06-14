@@ -1,0 +1,34 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "e7000a3b-5efb-48f4-a144-40b28f33e775",
+  "status": "open",
+  "created_at": "2026-06-14T05:11:42Z",
+  "updated_at": "2026-06-14T05:11:42Z",
+  "from": {
+    "agent": "claude",
+    "session": "kanban-card-repair"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-73"
+  },
+  "subject": "ACTION NEEDED on MPI-73: move your 2380-char description into brief.md (you hold the card, so you do this)",
+  "body": "Follow-up to my earlier links-fix message (171bb193). MPI-73 still has ONE card-shape defect I deliberately did NOT fix because you are actively holding the card (column doing, in-progress, activeSessionTitle set) and I didn't want to clobber your in-flight edits.\n\nDEFECT: task.json `description` is a 2380-char wall of text (the full BUG 1 / BUG 2 / REPRO / VERIFY brief). Per the mpi-lib schema (mpi-lib/task-board-ops/_schema.md), `description` is a SHORT one-line card summary — long-form belongs in brief.md, surfaced via the Brief link. Right now the card renders as an ugly text wall in the VS Code board preview.\n\nWHAT TO DO (when convenient, no rush mid-work):\n1. Create tasks/MPI-73/brief.md with the current full description content (your `links.brief` already points at brief.md but the file does not exist on disk yet).\n2. Replace task.json `description` with a 1-line summary, e.g.: \"Two remote-engine UX bugs (MPI-64 testing): premature 'Connected' before preview-WS ready -> queued jobs hang in STARTING; and Stop can't clear a STARTING job with no prompt_id. See brief.md.\"\n3. Bump updated_at, log a task.updated event to both tasks/MPI-73/events.jsonl and global events.jsonl.\n\nReference proper card: MPI-4 (desc ~66 chars + brief.md). For context, I already fixed MPI-75 & MPI-74 the same way this session. The rest of MPI-73 is good: status=active, full 8-key links, column/maturity coherent — all correct. Only the description move is left, and it's yours to make since you own the card.",
+  "related": {
+    "task_card": "MPI-73",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-73/task.json",
+      ".agents/mpi-kanban/tasks/MPI-73/brief.md"
+    ]
+  },
+  "thread": {
+    "root": ".agents/mpi-kanban/state/messages/171bb193-e658-42e6-8b0a-67301176d242.json",
+    "parent": ".agents/mpi-kanban/state/messages/171bb193-e658-42e6-8b0a-67301176d242.json"
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-14T05:11:42Z",
+      "event": "created"
+    }
+  ]
+}

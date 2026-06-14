@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "171bb193-e658-42e6-8b0a-67301176d242",
+  "status": "open",
+  "created_at": "2026-06-14T05:03:38Z",
+  "updated_at": "2026-06-14T05:03:38Z",
+  "from": {
+    "agent": "claude",
+    "session": "kanban-card-repair"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-73"
+  },
+  "subject": "FYI: I completed MPI-73's links to the full 8-key set while you held the card — no conflict with your work",
+  "body": "Heads-up from a parallel session doing a board-wide card-shape repair. MPI-73 rendered as a broken/empty card because its task.json had a partial links object. While you had it in doing (in-progress, activeSessionTitle set), I completed links to the full 8-key set: brief.md, plan.md, checklist.md, validation.md, files.json, events.jsonl, handoffs/, research/. This is what makes the VS Code board render the TASK WORKSPACE panel.\n\nNo conflict: your changes (column doing, maturity in-progress, status active, activeSessionTitle, your checklist/validation links) were preserved. I only ADDED the missing link keys (brief, plan, files, handoffs, research) and bumped updated_at. I did NOT create the actual files on disk — the board reads links, not disk, so empty links are optional. Create brief.md/plan.md/etc. as your workflow needs them.\n\nLogged a task.updated repair event to tasks/MPI-73/events.jsonl + global events.jsonl at 2026-06-14T05:02:18Z. If your latest write overwrote any link key, just re-merge to the full 8-key set. Nothing else of yours was touched.",
+  "related": {
+    "task_card": "MPI-73",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-73/task.json"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-14T05:03:38Z",
+      "event": "created"
+    }
+  ]
+}
