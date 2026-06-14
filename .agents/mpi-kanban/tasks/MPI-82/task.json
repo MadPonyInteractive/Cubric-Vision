@@ -6,8 +6,13 @@
   "column": "doing",
   "maturity": "validating",
   "status": "active",
+  "attention": {
+    "state": "required",
+    "reason": "Phase 1 (local) shipped + accepted. Needs REMOTE validation (Phase 2/3 upload to Pod + live-Pod sign-off), gated on the MPI-81 image rebuild; validate alongside MPI-64.",
+    "updated_at": "2026-06-14T22:30:00Z"
+  },
   "created_at": "2026-06-14T12:35:34.928Z",
-  "updated_at": "2026-06-14T22:15:00Z",
+  "updated_at": "2026-06-14T22:30:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
