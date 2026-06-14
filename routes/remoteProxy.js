@@ -52,11 +52,12 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.3.0) is
-// independent of CUBRIC_WRAPPER_VERSION (0.2.2 — wrapper.py unchanged this build).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.0)
+// tracks CUBRIC_WRAPPER_VERSION (0.2.3 — aria2c fast download + remote uninstall
+// endpoint + Dockerfile apt aria2; MPI-75 rebuild batch).
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.3.0';
-const WRAPPER_VERSION = '0.2.2';
+const POD_IMAGE_VERSION = 'v0.4.0';
+const WRAPPER_VERSION = '0.2.3';
 const CONTAINER_DISK_GB = 50;
 
 // Blackwell (sm_120) cards need the cu128 image; everything else runs cu124.
@@ -259,6 +260,21 @@ async function _isGpuAvailable(key, gpuTypeId, datacenter) {
 // record it as the started Pod, and wait for the wrapper to report ready. Returns
 // { ready, podId, health } or throws/returns { ok:false, message } on a create
 // refusal. Shared by /create and the reconnect recreate-fallback.
+// Pull the most useful human reason out of a RunPod createPod reject body (L2).
+// Order: explicit error/message, a GraphQL-style errors[].message, then a raw
+// non-JSON body (HTML/plain that _rest stored under {raw}). Truncated so a long
+// HTML error page can't flood the log line or the failure dialog.
+function _createRejectReason(json) {
+  if (!json || typeof json !== 'object') return '';
+  let reason = json.error || json.message || '';
+  if (!reason && Array.isArray(json.errors) && json.errors.length) {
+    reason = json.errors.map((e) => (e && (e.message || e.error)) || String(e)).filter(Boolean).join('; ');
+  }
+  if (!reason && typeof json.raw === 'string') reason = json.raw.trim();
+  reason = String(reason).replace(/\s+/g, ' ').trim();
+  return reason.length > 300 ? `${reason.slice(0, 300)}…` : reason;
+}
+
 async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
   const imageName = podImageForCard(gpuTypeId);
@@ -289,13 +305,18 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
 
   const created = await client.createPod(key, spec);
   const podId = created.json && created.json.id;
-  logger.info('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=${podId || 'none'}`);
   if (!created.ok || !podId) {
-    const message =
-      (created.json && (created.json.error || created.json.message)) ||
-      `create returned ${created.status}`;
-    return { ok: false, message };
+    // Surface RunPod's actual reject reason (L2). _rest parses the body into
+    // created.json — a JSON error answers {error|message|errors}; a non-JSON
+    // body (HTML/plain) lands as {raw}. Fall back through all of them so the
+    // failure is self-diagnosing in BOTH the log line and the failure dialog,
+    // instead of a bare "create returned 400". (RunPod responses don't echo our
+    // key; truncate only to keep the log/dialog readable.)
+    const reason = _createRejectReason(created.json) || `create returned ${created.status}`;
+    logger.warn('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=none reason="${reason}"`);
+    return { ok: false, message: reason };
   }
+  logger.info('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=${podId}`);
 
   // Running (billing) from here. Token keyed to the new podId; _startedPodId set
   // BEFORE the ready-wait so a timeout still lets teardown stop/delete it.

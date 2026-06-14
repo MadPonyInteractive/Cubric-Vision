@@ -963,8 +963,9 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     // local trash path below would destroy the user's LOCAL models and leave the
     // volume untouched (UI then desyncs because a re-check still sees the volume
     // files). Route deletion to the wrapper instead. The wrapper delete endpoint
-    // needs an image rebuild (deferred) — until it exists, remoteUninstallDep
-    // returns 'unsupported' and we surface that without trashing anything.
+    // ships in image v0.4.0 / wrapper 0.2.3 (MPI-75); on an OLDER Pod image it is
+    // absent, so remoteUninstallDep returns 'unsupported' and we surface that
+    // (toast below) without trashing anything.
     if (remoteModels.isRemoteActive()) {
         const _universalIds = new Set(getUniversalWorkflowDepIds());
         const removed = [];

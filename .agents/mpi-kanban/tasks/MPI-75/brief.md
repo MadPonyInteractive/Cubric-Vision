@@ -2,16 +2,14 @@
 
 Running list of wrapper/Dockerfile changes that are WRITTEN in mpi-ci (cubric-vision-pod/) but NOT in any pushed image yet — they take effect only after a rebuild + redeploy. Batch them so the slow image build runs once. **KEEP UPDATING this card as more rebuild-needing changes accumulate.**
 
-## Current batch (2026-06-13)
+## SHIPPED in v0.4.0 (built 2026-06-14, wrapper 0.2.3)
 
-1. **POST /wrapper/models/delete** — remote model uninstall endpoint (app side already shipped in `routes/downloadManager.js` + `remoteModels.js`, currently 404s with a clear error toast).
-2. **FAST model download via aria2c** — wrapper `_run_install` rewritten to use aria2c (`-x16 -s16`, multi-connection, ~10–40x the single-stream httpx path on RunPod's NIC) with an httpx fallback when aria2c is absent/fails; Dockerfile apt now installs `aria2`. sha256 verify + SSE progress + cancel + watchdog preserved. (Model installs were minutes on httpx; this is the biggest remote-UX win.)
+Image **v0.4.0** built + pushed: `v0.4.0-cu124` (CI) + `v0.4.0-cu128` (local Docker box). App bumped: `POD_IMAGE_VERSION='v0.4.0'`, `WRAPPER_VERSION='0.2.3'` in `routes/remoteProxy.js`. Both images smoke-verified torch (cu124 / `2.7.1+cu128`).
 
-## At rebuild
+1. ✅ **POST /wrapper/models/delete** — remote model uninstall endpoint (app side already shipped in `routes/downloadManager.js` + `remoteModels.js`; was 404-toasting, now live).
+2. ✅ **FAST model download via aria2c** — wrapper `_run_install` uses aria2c (`-x16 -s16`, ~10–40x single-stream httpx on RunPod's NIC) + httpx fallback; Dockerfile apt installs `aria2`. sha256 verify + SSE progress + cancel + watchdog preserved.
 
-Bump wrapper_version 0.2.2 → 0.2.3 (mpi-ci build arg) AND `WRAPPER_VERSION` in Cubric-Vision `routes/remoteProxy.js` to match, then build + push + make GHCR public + redeploy a fresh Pod. Rebuild steps live in mpi-ci `cubric-vision-pod/README.md` 'Pending for the NEXT image rebuild'.
-
-Reminder: never autonomous Pod builds/ops — USER runs them; commit+push mpi-ci main BEFORE `gh workflow run` (dispatch builds the pushed ref).
+**STILL PENDING (USER):** redeploy a fresh Pod off v0.4.0 + live-verify aria2c install speed + remote uninstall. Live Pod ops are USER-only. Confirm both GHCR tags PUBLIC (v0.3.0 package already public → v0.4.0 tags inherit).
 
 Related: MPI-64 (RunPod remote engine), MPI-70 (multi-image build).
 

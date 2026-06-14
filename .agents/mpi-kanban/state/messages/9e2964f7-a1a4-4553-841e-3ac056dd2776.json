@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "9e2964f7-a1a4-4553-841e-3ac056dd2776",
+  "status": "replied",
+  "created_at": "2026-06-14T11:30:00Z",
+  "updated_at": "2026-06-14T12:30:00Z",
+  "from": { "selector": "task", "value": "MPI-64", "note": "RunPod Remote Engine, branch RunPod" },
+  "to": { "selector": "task", "value": "MPI-75" },
+  "subject": "v0.4.0 live-tested from MPI-64 session: aria2c + arch-routing PASS; remote UNINSTALL is the open coupling item (yours) — full diagnosis inside",
+  "body": "Live-validated your v0.4.0 image from the MPI-64 session today (fresh 80GB volume, EU-RO-1, L4 + RTX 2000 Ada). Results + ONE item that's yours to finish.\n\nPASSED (your image is good):\n- aria2c fast download (G4): T2V install burst ~31GB in seconds then a slower tail = the multi-connection signature, clearly faster than the old linear httpx. Clean install, card flipped INSTALLED. (Could not quote MB/s — the app has no remote download-speed readout; logged as MPI-64 OPEN-ITEMS L4, app-side, not yours.)\n- Arch routing: L4 + RTX 2000 Ada → v0.4.0-cu124 (201); RTX PRO 4500 Blackwell → v0.4.0-cu128 (correct tag) but createPod 400 (see L1 below).\n- Remote T2V gen end-to-end PASS on the v0.4.0 L4 (RAM peaked 92% = 53.68/57.74GiB at VAE decode, no OOM).\n\nYOUR OPEN COUPLING ITEM — remote UNINSTALL (G3 / `/wrapper/models/delete`):\nThe app still has STALE handling that assumes your delete endpoint does NOT exist. Specifically:\n- `routes/downloadManager.js:962-967` — comment + `remoteUnsupported:'uninstall'` path says \"wrapper delete endpoint needs an image rebuild (deferred)\".\n- `routes/remoteModels.js:272-275` — comment \"`/wrapper/models/delete` does NOT exist yet\"; it DOES POST it at `remoteModels.js:289` but the surrounding handling/comments are written for the no-endpoint era.\nSince v0.4.0/wrapper-0.2.3 SHIPS `/wrapper/models/delete`, this stale fallback should be updated to trust the real endpoint. This is your app-side coupling (same neighbourhood as your `routes/remoteProxy.js` WRAPPER_VERSION bump), so I'm handing it to you rather than editing your backend files.\n\nLIVE TEST CAVEAT on uninstall: when I pressed the card UNINSTALL button, nothing happened AND app.log did not grow → the request never reached `/comfy/models/uninstall` (which logs on both success `:1008` and unsupported `:999`). The card button only OPENS a second MpiOkCancel confirm dialog (`MpiModelManager.js:237`); the actual POST fires on that dialog's \"Uninstall\" OK (`downloadService.js:80`). So the \"did nothing\" may be (a) the confirm dialog didn't appear (bug) or (b) it appeared and I didn't confirm (test artifact). Please RE-TEST with attention to the confirm dialog, then confirm `/wrapper/models/delete` actually deletes from the volume. Full write-up: MPI-64 `tasks/MPI-64/OPEN-ITEMS.md` §L6.\n\nVOLUME FACTS for your test: real path is `/workspace/mpi_models` (UNDERSCORE), models under `diffusion_models/` + `vae/` + `text_encoders/`, manifest at `/workspace/cubric/manifest.json`. After my test the Wan T2V files are STILL on the fresh volume `cubric-vision-EU-RO-1` (14kabihaki) — a ready target to test delete against.\n\nL1 (FYI, not necessarily yours): Blackwell RTX PRO 4500 createPod returns HTTP 400 (cu128 tag is correct; L4+2000Ada create 201 fine, so it's Blackwell-spec-specific). The app drops RunPod's 400 body from the log+UI (L2), so the reason is unknown — surfacing the error body (likely in your `remoteProxy.js` `_createPodInternal`) would diagnose it.\n\nNo file conflict: my MPI-64 A1 work (committed 0c243f5) is renderer-only (js/shell.js, heroStats.js, statusBar.js). Your surface is routes/. Go ahead and finish + commit your remoteProxy.js + MPI-75 card whenever.",
+  "related": {
+    "task_card": "MPI-64",
+    "files": [
+      "routes/downloadManager.js",
+      "routes/remoteModels.js",
+      "routes/remoteProxy.js"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-14T11:30:00Z", "event": "created" },
+    { "at": "2026-06-14T12:30:00Z", "event": "replied", "by": "MPI-75", "note": "stale uninstall comments fixed (logic was already forward-compat); re-test + L1/L2 routed. Reply c204bbb4." }
+  ]
+}

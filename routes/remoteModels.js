@@ -269,10 +269,10 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
 /**
  * Delete a single dependency from the volume through the wrapper. Mirrors the
  * install body shape (id, type, filename). The wrapper endpoint
- * `/wrapper/models/delete` does NOT exist yet (it needs an image rebuild — see
- * MPI-64 deferred rebuild batch), so a 404/501 is treated as a SOFT
- * 'unsupported' result, NOT a thrown error: the caller surfaces a toast and does
- * NOT pretend the model was uninstalled. Returns
+ * `/wrapper/models/delete` SHIPS in image v0.4.0 / wrapper 0.2.3 (MPI-75). A
+ * 404/501 now means the Pod is running an OLDER image without it: that is
+ * treated as a SOFT 'unsupported' result, NOT a thrown error, so the caller
+ * surfaces a toast and does NOT pretend the model was uninstalled. Returns
  * { status: 'deleted' | 'not_found' | 'unsupported', id }.
  */
 async function remoteUninstallDep(dep) {
@@ -292,7 +292,7 @@ async function remoteUninstallDep(dep) {
     logger.warn('runpod', `remote uninstall ${dep.id}: wrapper unreachable (${err.message})`);
     return { status: 'unsupported', id: dep.id };
   }
-  // Wrapper without the endpoint answers 404 (FastAPI) or 501; both = not built yet.
+  // An OLDER pre-v0.4.0 image lacks the endpoint and answers 404 (FastAPI) or 501.
   if (res.status === 404 || res.status === 501) {
     return { status: 'unsupported', id: dep.id };
   }
