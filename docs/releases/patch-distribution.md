@@ -15,17 +15,48 @@ weeks between public versions.
   trigger that auto-publishes a GitHub Release. Pushing a `v1.0.x` tag would leak
   the patch publicly. Patreon patches are therefore tagless.
 - Commit the fix + version bump to **`master`** (the release trunk).
-- Build the per-OS artifacts via the private **`mpi-ci`** CI, dispatched by
-  **commit SHA + `version=` input** (`ref=<sha>`, no tag). `mpi-ci` builds the
-  *pushed* ref, so `master` must be pushed before dispatch.
+- Build the per-OS artifacts via the private **`mpi-ci`** CI. `master` must be
+  **pushed** first (`mpi-ci` builds the pushed ref). Dispatch with
+  `-f ref=master -f version=<ver>` — **NOT** a bare commit SHA: the checkout
+  action resolves `ref` as a branch/tag name and fails on a raw SHA
+  (`A branch or tag with the name '<sha>' could not be found`). No tag is pushed.
+
+  ```bash
+  gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci --ref main \
+    -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=master -f version=<ver>
+  ```
 - Per-OS artifacts **cannot be cross-built** (linux/mac `node_modules` need their
   own runner) — all three OSes come from CI, same as `1.0.0`. A Windows host can
   build `win32` locally only.
-- Built artifacts are downloaded to **`D:\CubricStudio\Vision\Builds\v<ver>\`**.
-- **Cloudflare upload + Patreon delivery happen in the separate
-  `MadPony-Identity` project** (`c:\AI\Mpi\MadPony-Identity`), NOT in
-  Cubric-Vision. A Cubric-Vision session's job ends when artifacts land in the
-  D: Builds folder; the user takes over for the Cloudflare/Patreon step.
+- Download the artifacts to **`D:\CubricStudio\Vision\Builds\v<ver>\`**. Each CI
+  artifact yields a full build **and** an `-update-<ver>.zip` delta bundle (6
+  files total for 3 OSes).
+- **Upload to Cloudflare R2 from here** — the patch loop is self-contained in
+  Cubric-Vision (see the R2 section below). MadPony-Identity owns public RELEASES
+  and announcement/comms copy, not patch-upload mechanics.
+
+## Cloudflare R2 upload (Patreon Pro)
+
+The canonical R2 reference is
+`MadPony-Identity/capabilities/cloudflare-r2/README.md` (bucket setup, approval
+gates, secrets). Secrets live in `C:\Users\Fabio\.secrets\` — never copy keys or
+tokens into any repo. For a patch:
+
+- **Stable Pro path** — reuse the existing path and swap the files behind it, so
+  the Patreon Pro post link never changes between patches:
+  `vision/pro/v1.0.0-9b3054cbac074cf4be5b/` →
+  `https://dl.cubric.studio/vision/pro/v1.0.0-9b3054cbac074cf4be5b/index.html`.
+- **Upload** the 3 full builds + an updated `index.html` with `rclone copyto`
+  (`--s3-no-check-bucket`). The Pro `index.html` lists the **3 full builds only**;
+  the `-update-*.zip` deltas are not put on this page (they feed the in-app
+  updater). Copy the prior version's `index.html`, swap version + filenames + MB
+  sizes + a one-line "what's new".
+- **Replace, don't accumulate** — delete the prior version's build files from the
+  path after the new ones upload (deletion is approval-gated; get the user's OK).
+- **Verify** — `rclone lsf` the path, then HTTP `HEAD` each public URL and confirm
+  `200` with `Content-Length` matching local bytes; confirm the old version 404s.
+- Uploading paid-member files, replacing live files, and deleting are all
+  approval-gated. Publishing the link on Patreon is the user's step.
 
 ### 2. Public GitHub release
 
@@ -56,9 +87,11 @@ archival blocks since the last public release.
 
 ## Live-op authorization
 
-`git push` and `gh workflow run` (the `mpi-ci` dispatch) are **user-authorized**.
-Prepare the fix, version bump, changelog entries, and commit; then stop and wait
-for the user before pushing or dispatching.
+`git push`, `gh workflow run` (the `mpi-ci` dispatch), and R2 uploads/deletes are
+**user-authorized**. Prepare the fix, version bump, changelog entries, and commit;
+then stop and wait for the user before pushing, dispatching, or uploading. Live
+verification of the fix (running the app, generating) is the user's call before a
+build is dispatched.
 
 **See:** `README.md` (this folder), `portable-distribution-contract.md`,
 `build-experience-log.md`, `docs/versioning.md`, `/mpi-version-bump` skill.
