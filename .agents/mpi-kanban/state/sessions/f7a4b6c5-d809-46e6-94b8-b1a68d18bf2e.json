@@ -1,7 +1,7 @@
 {
   "schema": "mpi-kanban/session/v1",
   "id": "f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e",
-  "status": "active",
+  "status": "completed",
   "role": "implementer",
   "agent": "claude",
   "name": "MPI-77 RunPod card-dropdown RAM accuracy (per-DC lowestPrice)",
@@ -20,6 +20,11 @@
       "at": "2026-06-14T06:12:58Z",
       "event": "session_started",
       "note": "Investigated RAM-floor bug; per-DC lowestPrice fix proven live (29->62 for A4500/EU-RO-1). Claiming files; code phase pending coordination with MPI-73 agent + next user session."
+    },
+    {
+      "at": "2026-06-14T07:50:00Z",
+      "event": "session_completed",
+      "note": "MPI-77 implemented, user-verified live, committed. Coordination task + file claims closed."
     }
   ]
 }

@@ -102,14 +102,22 @@ const client = {
     return { valid: r.ok, status: r.status };
   },
 
-  async gpuTypes(apiKey) {
+  async gpuTypes(apiKey, dataCenterId) {
     // `memoryInGb` is GPU VRAM. System/container RAM is NOT a GpuType field —
     // it rides on the cheapest offering via `lowestPrice.minMemory` (GB). We
     // flatten it to top-level `minMemory`/`minVcpu` so the picker reads it like
-    // `securePrice`. It is the FLOOR (lowest-tier listing); richer listings can
-    // have more, but the floor is the conservative number for the video warning.
+    // `securePrice`.
+    //
+    // Without a `dataCenterId`, `lowestPrice` returns the GLOBAL floor across all
+    // clouds/DCs — which badly under-reports RAM (e.g. A4500 reads 29GB when the
+    // EU-RO-1 Secure-Cloud listing has 62GB). When a DC is selected we scope the
+    // input to that DC + `secureCloud:true`, so the RAM matches what the user
+    // actually rents. The no-DC global call is the back-compat fallback.
+    const priceInput = dataCenterId
+      ? `input:{gpuCount:1, dataCenterId:${JSON.stringify(dataCenterId)}, secureCloud:true}`
+      : `input:{gpuCount:1}`;
     const q = `query { gpuTypes { id displayName memoryInGb secureCloud communityCloud securePrice
-      lowestPrice(input:{gpuCount:1}) { minMemory minVcpu } } }`;
+      lowestPrice(${priceInput}) { minMemory minVcpu } } }`;
     const d = await _graphql(apiKey, q);
     const gpus = (d.data && d.data.gpuTypes) || [];
     return gpus.map((g) => ({
@@ -127,8 +135,12 @@ const client = {
   },
 
   // Combined picker payload: Secure-Cloud GPUs with per-DC availability + stock.
-  async availability(apiKey) {
-    const [gpus, dcs] = await Promise.all([client.gpuTypes(apiKey), client.dataCenters(apiKey)]);
+  // Pass `dataCenterId` to get per-DC RAM (lowestPrice scoped to that DC).
+  async availability(apiKey, dataCenterId) {
+    const [gpus, dcs] = await Promise.all([
+      client.gpuTypes(apiKey, dataCenterId),
+      client.dataCenters(apiKey),
+    ]);
     return { gpuTypes: gpus, dataCenters: dcs };
   },
 
@@ -193,7 +205,12 @@ router.get('/runpod/account/validate', (req, res) =>
   _withKey(res, async (key) => res.json(await client.validate(key))));
 
 router.get('/runpod/gpu-availability', (req, res) =>
-  _withKey(res, async (key) => res.json(await client.availability(key))));
+  _withKey(res, async (key) => {
+    // Optional ?dataCenterId scopes GPU RAM (lowestPrice) to that DC; omitted =
+    // global floor (back-compat). See gpuTypes() for why this matters.
+    const dcId = typeof req.query.dataCenterId === 'string' ? req.query.dataCenterId : undefined;
+    res.json(await client.availability(key, dcId));
+  }));
 
 router.post('/runpod/pods', (req, res) =>
   _withKey(res, async (key) => {

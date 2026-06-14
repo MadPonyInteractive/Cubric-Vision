@@ -849,7 +849,7 @@ export const MpiSettings = ComponentFactory.create({
                 placeholder: 'Select data center...',
                 extraClasses: 'mpi-dropdown--runpod',
             });
-            dcInst.on('change', ({ value }) => {
+            dcInst.on('change', async ({ value }) => {
                 // DC drives the volume: adopt the cubric-vision volume in the new DC
                 // (or None). gpuType cleared so the picker re-filters for the DC.
                 const vol = _volumeForDc(value);
@@ -859,6 +859,12 @@ export const MpiSettings = ComponentFactory.create({
                     gpuType: null,
                     volumeId: vol ? vol.id : null,
                 };
+                // Re-fetch availability scoped to the new DC so GPU RAM reflects
+                // that DC (lowestPrice is per-DC), not the previous DC's snapshot.
+                try {
+                    const res = await fetch(_availabilityUrl());
+                    if (res.ok) _runpodAvailability = await res.json();
+                } catch (_) { /* keep the last snapshot on a failed refresh */ }
                 _renderRunpodPickers(root);
                 _renderRunpodVolume(root);
                 _refreshEngineConnect(root);
@@ -904,7 +910,7 @@ export const MpiSettings = ComponentFactory.create({
                 const dcId = _runpodCfg().datacenter;
                 if (!dcId) return;
                 try {
-                    const res = await fetch('/runpod/gpu-availability');
+                    const res = await fetch(_availabilityUrl());
                     if (res.ok) _runpodAvailability = await res.json();
                 } catch (_) { /* keep the last options on a failed refresh */ }
                 gpuInst.el.setOptions(_buildGpuOptions(dcId), _runpodCfg().gpuType || '');
@@ -948,9 +954,18 @@ export const MpiSettings = ComponentFactory.create({
                 .sort((a, b) => b._rank - a._rank);
         }
 
+        // Availability URL, scoped to the selected DC so GPU RAM (lowestPrice) is
+        // per-DC accurate instead of a global floor. No DC yet -> global fallback.
+        function _availabilityUrl() {
+            const dcId = _runpodCfg().datacenter;
+            return dcId
+                ? `/runpod/gpu-availability?dataCenterId=${encodeURIComponent(dcId)}`
+                : '/runpod/gpu-availability';
+        }
+
         async function _loadRunpodAvailability(root) {
             try {
-                const res = await fetch('/runpod/gpu-availability');
+                const res = await fetch(_availabilityUrl());
                 if (!res.ok) throw new Error(`availability returned ${res.status}`);
                 _runpodAvailability = await res.json();
             } catch (err) {

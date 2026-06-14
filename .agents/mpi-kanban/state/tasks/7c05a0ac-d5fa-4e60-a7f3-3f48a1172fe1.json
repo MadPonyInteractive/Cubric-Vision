@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/task/v1",
   "id": "7c05a0ac-d5fa-4e60-a7f3-3f48a1172fe1",
   "title": "MPI-77 RunPod card-dropdown RAM accuracy (per-DC lowestPrice)",
-  "status": "in_progress",
+  "status": "completed",
   "task_card": "MPI-77",
   "plan": ".agents/mpi-kanban/tasks/MPI-77/brief.md",
   "owner_session": ".agents/mpi-kanban/state/sessions/f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e.json",
@@ -16,6 +16,11 @@
       "at": "2026-06-14T06:12:58Z",
       "event": "task_started",
       "note": "Approach A: re-query gpuTypes with dataCenterId + secureCloud:true on DC change. Investigation done, code not yet written."
+    },
+    {
+      "at": "2026-06-14T07:50:00Z",
+      "event": "completed",
+      "note": "Implemented + user-verified live (A4500 EU-RO-1 = 62GB). MPI-77 card moved to done; file claims verified."
     }
   ]
 }
