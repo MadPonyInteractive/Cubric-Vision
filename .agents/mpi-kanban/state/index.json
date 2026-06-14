@@ -1,12 +1,9 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-06-14T12:30:00Z",
+  "updated_at": "2026-06-14T13:10:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
-    ".agents/mpi-kanban/state/sessions/8575ac34-838c-40e4-b4ec-26cd24777775.json",
-    ".agents/mpi-kanban/state/sessions/5de00590-13af-442e-91f6-c8618d85a5bc.json",
-    ".agents/mpi-kanban/state/sessions/6922e79b-8403-4e29-80e3-c5014ba5a55d.json",
     ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json"
   ],
   "active_tasks": [
@@ -51,7 +48,8 @@
   "open_messages": [
     ".agents/mpi-kanban/state/messages/45492c5e-96cf-44a9-8e67-7112afd6a470.json",
     ".agents/mpi-kanban/state/messages/9e2964f7-a1a4-4553-841e-3ac056dd2776.json",
-    ".agents/mpi-kanban/state/messages/c204bbb4-cd3f-45ba-a646-9b13e453e6c9.json"
+    ".agents/mpi-kanban/state/messages/c204bbb4-cd3f-45ba-a646-9b13e453e6c9.json",
+    ".agents/mpi-kanban/state/messages/9d976b3b-9315-45b4-8579-a5baaa531462.json"
   ],
   "active_handoffs": [
     ".agents/mpi-kanban/state/handoffs/f36947a0-283b-4d6e-ad7a-c3b0d84a8fd6.json",
@@ -63,22 +61,13 @@
     ".agents/mpi-kanban/state/handoffs/32fc527b-c791-481c-81e3-7bacd89b641f.json",
     ".agents/mpi-kanban/state/handoffs/9d0c7236-bd3f-4dce-aebb-c689470d0e57.json",
     ".agents/mpi-kanban/state/handoffs/886fe559-675f-4fa7-afb0-a2b8db084329.json",
-    ".agents/mpi-kanban/state/handoffs/caf0a30b-e4de-49d6-be05-35e0c83f39d7.json",
-    ".agents/mpi-kanban/state/handoffs/daab62ab-9252-480e-9bac-0db65f5eb153.json",
-    ".agents/mpi-kanban/state/handoffs/63e9bb90-f2b5-441f-a949-978a7385abcc.json",
-    ".agents/mpi-kanban/state/handoffs/c7a170ac-7972-4697-98b7-1b6b0f0c41cb.json",
-    ".agents/mpi-kanban/state/handoffs/5184d783-de51-4e7e-a888-d7690b8af644.json",
-    ".agents/mpi-kanban/state/handoffs/7253bb2f-a835-4125-a428-55699bcdcb5c.json",
-    ".agents/mpi-kanban/state/handoffs/31d54c24-d25e-4a7d-b088-b35dad1cf364.json",
-    ".agents/mpi-kanban/state/handoffs/53d3fd29-ab76-41b9-997d-868dfe2dccb1.json",
-    ".agents/mpi-kanban/state/handoffs/7138cada-0623-406a-8e5a-dd68e4a7a35d.json",
-    ".agents/mpi-kanban/state/handoffs/4a5a2243-1e54-4399-a52f-5074fa5134f0.json",
-    ".agents/mpi-kanban/state/handoffs/d46242e5-3e0b-4fbf-ba56-6e049bf6f3b4.json",
     ".agents/mpi-kanban/state/handoffs/d3ac7a0f-162d-4782-b2df-93eaaf6e92ab.json",
     ".agents/mpi-kanban/state/handoffs/1d24fd4a-3190-42b6-ae0c-fe2cad36dd59.json",
     ".agents/mpi-kanban/state/handoffs/ccd1947d-a61d-46a4-a8e4-8ea92383c06a.json",
     ".agents/mpi-kanban/state/handoffs/2d94e555-d1bc-43db-be73-b1551be69d8b.json",
     ".agents/mpi-kanban/state/handoffs/d1142879-f071-4109-b50b-aa68c9018c72.json",
-    ".agents/mpi-kanban/state/handoffs/38e8ff55-86ad-4f4f-9ed7-53ee1fbc9f5e.json"
+    ".agents/mpi-kanban/state/handoffs/38e8ff55-86ad-4f4f-9ed7-53ee1fbc9f5e.json",
+    ".agents/mpi-kanban/state/handoffs/79328af8-74bd-4381-b7be-080f1953df03.json",
+    ".agents/mpi-kanban/state/handoffs/d46242e5-3e0b-4fbf-ba56-6e049bf6f3b4.json"
   ]
 }
