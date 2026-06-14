@@ -49,7 +49,8 @@
     ".agents/mpi-kanban/state/files/71ed3ee8-74ab-453e-9ac2-7e027d688044.json"
   ],
   "open_messages": [
-    ".agents/mpi-kanban/state/messages/45492c5e-96cf-44a9-8e67-7112afd6a470.json"
+    ".agents/mpi-kanban/state/messages/45492c5e-96cf-44a9-8e67-7112afd6a470.json",
+    ".agents/mpi-kanban/state/messages/dc08eeae-dae9-4870-9682-ae609940b6b8.json"
   ],
   "active_handoffs": [
     ".agents/mpi-kanban/state/handoffs/919d9124-90cb-414e-9375-2c288ae12ca5.json",
