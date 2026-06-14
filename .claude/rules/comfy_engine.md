@@ -127,7 +127,9 @@ Backend contract:
 - `GET /comfy/extra-folders` returns `{ loras: string[], upscale_models: string[] }`.
 - `POST /comfy/extra-folders` validates that each path exists and is a directory, persists the separate config, and rewrites YAML.
 - `POST /comfy/set-path` must always re-merge stored extras when rewriting YAML; clearing the primary path removes YAML only when no extras are configured.
-- `GET /comfy/list-files` unions the primary bucket folder with matching extras and preserves `{ success: true, files: string[] }`.
+- `GET /comfy/list-files` unions the primary bucket folder with matching extras and preserves `{ success: true, files: string[] }`. Emits the ENGINE-OS path separator (local Windows `\`, remote `/`) so values match ComfyUI's loader enum; forcing forward slash 400s subfolder models on Windows.
+- `GET /comfy/model-folders?bucket=loras|upscale_models` returns `{ folders: [{ path, primary }] }` (primary bucket folder + extras) — used to render drag-drop zones.
+- `POST /comfy/import-model` `{ sourcePath, targetFolder, bucket, overwrite? }` copies a local model file into a CONFIGURED folder (allow-list = primary + extras); refuses overwrite without `overwrite:true` (409). Used by `MpiFolderDrop`.
 - `POST /comfy/models/uninstall` must only trash non-custom-node model files inside the managed primary models root; custom nodes stay guarded by the default custom-nodes root.
 
 ### 6. Download Manager Router

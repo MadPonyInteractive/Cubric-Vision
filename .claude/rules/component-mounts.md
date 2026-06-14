@@ -206,6 +206,19 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 - `MpiDropdown` (lora slot ×6)   props: `{ options: loraOptions from state.availableLoras, value, placeholder }`   slot: per-slot `dropHost` div; remounted on each `open()` call
 - `MpiInput` (model strength ×6)   props: `{ type:'number', size:'sm', value, min:-2, max:2, step:0.05, decimals:2 }`   slot: per-slot `strengthsEl`
 - `MpiInput` (clip strength ×6)   props: same pattern as model strength
+- `MpiFolderDrop` (one per configured folder)   props: `{ folderPath, bucket, primary, onImport }`   slot: `[data-drop="loras"]` / `[data-drop="upscale_models"]`; sourced from `GET /comfy/model-folders`; remounted per `open()` via render-token-guarded async `_renderDropZones` (guard prevents duplicate zones when the live-rerender fires mid-fetch). Also mounted in `MpiSettings` External Connections.
+  - Missing-model UX: a selected LoRA/upscale absent from `state.availableLoras`/`upscaleModels` shows `mpi-dropdown--missing` (red) + a synthetic `(missing)` option. A relocated file self-heals by UNIQUE basename (path updated, persisted); ambiguous same-name across folders stays red. LoRA missing → blocking `ui:warning` at generate; upscale missing → fall back to SIAX + warn. The picker live-rerenders on `state:changed` for those keys while open.
+
+---
+
+## MpiFolderDrop (Primitive: model-folder drop zone — js/components/Primitives/MpiFolderDrop)
+
+Labeled model folder that is also an OS drop target. Resolves the dropped file's
+disk path via Electron `webUtils.getPathForFile` and POSTs `/comfy/import-model`
+to COPY it into that folder (409 → `window.confirm` replace). `onImport(filename)`
+fires after success (callers call `loadAssets()`). Drop does **preventDefault only,
+NOT stopPropagation** — the gallery's window-level drop cleanup must still fire, or
+its media-drop overlay sticks open. Browser dev mode (no `webUtils`) ignores drops.
 
 ---
 

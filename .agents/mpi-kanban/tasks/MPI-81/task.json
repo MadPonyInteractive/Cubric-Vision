@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-81",
-  "title": "Next Pod-image rebuild batch (cache-lru / wrapper free / cu130)",
-  "description": "Decision-pending rebuild candidates carried over from MPI-75 (now closed). Build once when each is decided + tested. See brief.md.",
+  "title": "Next Pod-image rebuild batch",
+  "description": "Batched Pod-image rebuild candidates carried from MPI-75: --cache-lru 2 model-cache OOM fix, /wrapper/free remote memory release, future cu130 Blackwell profile. Each needs decision + controlled test before building. See brief.md.",
   "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "maturity": "idea",
+  "status": "pending",
   "created_at": "2026-06-14T12:50:00Z",
-  "updated_at": "2026-06-14T12:50:00Z",
+  "updated_at": "2026-06-14T13:50:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

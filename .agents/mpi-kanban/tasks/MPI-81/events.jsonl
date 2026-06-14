@@ -1,1 +1,3 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-81","type":"task.created","at":"2026-06-14T12:50:00Z","actor":"claude","summary":"Created from MPI-75 spin-off: decision-pending rebuild candidates (1 --cache-lru 2 model-cache OOM fix, 2 /wrapper/free remote memory release, 3 future cu130 Blackwell profile). MPI-75 closed after v0.4.0 shipped."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-81","at":"2026-06-14T12:35:34.928Z","actor":"vscode","summary":"Created MPI-81."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-81","type":"task.updated","at":"2026-06-14T13:50:00Z","actor":"claude","summary":"Title/task.json restored to rebuild-batch after ID collision; external-connections concern moved to MPI-82. brief.md already correct."}
