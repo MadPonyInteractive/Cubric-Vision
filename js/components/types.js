@@ -650,6 +650,31 @@
  */
 
 /**
+ * @typedef {Object} MpiNotesEditorProps (Compound — js/components/Compounds/MpiNotesEditor)
+ * @property {string}   [title='Notes']      - Dialog title.
+ * @property {string}   [value='']           - Initial notes text shown in the textarea.
+ * @property {string}   [placeholder='Write your notes here…'] - Textarea placeholder.
+ * @property {Function} [onSave]             - async (notes: string) => void. Persists the notes.
+ *                                             While it runs the Save button is disabled and the modal
+ *                                             stays open; on rejection the modal stays open for retry.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Usage:
+ *   const e = MpiNotesEditor.mount(document.createElement('div'), {
+ *       title: 'Card notes', value: item.notes || '',
+ *       onSave: async (notes) => { await persist(notes); },
+ *   });
+ *   e.el.show();
+ *
+ * Emits:
+ * 'save'   { value: string } — Save succeeded (after onSave resolves).
+ * 'cancel' {}                — Cancel BUTTON clicked only (NOT emitted on Escape or hide()).
+ */
+
+/**
  * @typedef {Object} MpiInstalledDisplayProps (Compound — js/components/Compounds/MpiInstalledDisplay)
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")

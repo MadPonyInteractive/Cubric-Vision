@@ -12,6 +12,8 @@
  *   DELETE /project-media/:projectId/:filename
  *   GET    /project-media/:projectId/download/:filename
  *   POST   /project-media/:projectId/update-meta
+ *   POST   /project-notes
+ *   POST   /project-notes/save
  *   POST   /project-media/:projectId/upload
  *   POST   /project-data/:projectId/upload
  *   GET    /project-file
@@ -1042,6 +1044,44 @@ router.post('/project-media/:projectId/update-meta', async (req, res) => {
         res.json({ success: true, metadata: merged });
     } catch (err) {
         logger.error('project', 'update-meta failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ── Project notes (project.md sidecar) ──────────────────────────────────────
+// project.md lives next to project.json (created at project creation). These
+// two routes read/write it for the in-app notes editor. Folder must hold a
+// project.json (same safety guard as delete-project) before we touch it.
+router.post('/project-notes', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        const notesPath = path.join(folderPath, 'project.md');
+        let notes = '';
+        if (await fs.pathExists(notesPath)) {
+            notes = await fs.readFile(notesPath, 'utf8');
+        }
+        res.json({ success: true, notes });
+    } catch (err) {
+        logger.error('project', 'read project notes failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.post('/project-notes/save', async (req, res) => {
+    try {
+        const { folderPath, notes } = req.body;
+        if (!folderPath || typeof notes !== 'string') {
+            return res.status(400).json({ success: false, error: 'folderPath and notes (string) required' });
+        }
+        // Safety: only write inside an actual project folder.
+        if (!(await fs.pathExists(path.join(folderPath, 'project.json')))) {
+            return res.status(400).json({ success: false, error: 'Refusing to write: no project.json in target folder' });
+        }
+        await fs.writeFile(path.join(folderPath, 'project.md'), notes);
+        res.json({ success: true });
+    } catch (err) {
+        logger.error('project', 'save project notes failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

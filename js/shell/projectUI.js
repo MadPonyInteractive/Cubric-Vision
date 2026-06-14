@@ -15,6 +15,7 @@ import { APP_VERSION } from '../core/appVersion.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
+import { MpiNotesEditor } from '../components/Compounds/MpiNotesEditor/MpiNotesEditor.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
@@ -233,6 +234,60 @@ function _showDeleteConfirm(projectName, onConfirm) {
 }
 
 /**
+ * Opens the project notes (project.md) in the in-app notes editor overlay.
+ * Reads current notes from the server, then persists on Save.
+ * @param {Object} project
+ */
+async function _showProjectNotes(project) {
+  let notes = '';
+  try {
+    const res = await fetch('/project-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderPath: project.folderPath }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.success) notes = data.notes || '';
+  } catch (err) {
+    clientLogger.warn('projectUI', 'read project notes failed', err);
+  }
+
+  // Fresh mount per open — factory.on() accumulates listeners with no unsub.
+  const editor = MpiNotesEditor.mount(document.createElement('div'), {
+    title: `Notes — ${project.name}`,
+    value: notes,
+    onSave: async (value) => {
+      const res = await fetch('/project-notes/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath, notes: value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'save failed');
+    },
+  });
+  editor.el.show();
+}
+
+/**
+ * Opens the project folder in the OS default file browser.
+ * @param {Object} project
+ */
+async function _openProjectFolder(project) {
+  try {
+    const res = await fetch('/open-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderPath: project.folderPath }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  } catch (err) {
+    clientLogger.warn('projectUI', 'open project folder failed', err);
+    window.MpiAlert('Could not open project folder: ' + err.message);
+  }
+}
+
+/**
  * Builds a Stage picker row for one project.
  * Layout: thumbnail | name + date | asset count + size
  * @param {Object} project
@@ -326,9 +381,13 @@ function _buildProjectRow(project) {
       x: e.clientX,
       y: e.clientY,
       items: [
-        { key: 'delete', icon: 'trash', label: 'Delete project', danger: true },
+        { key: 'notes',  icon: 'edit',   label: 'Project notes' },
+        { key: 'open',   icon: 'folder', label: 'Open project folder' },
+        { key: 'delete', icon: 'trash',  label: 'Delete project', danger: true },
       ],
       onSelect: (key) => {
+        if (key === 'notes') return void _showProjectNotes(project);
+        if (key === 'open')  return void _openProjectFolder(project);
         if (key !== 'delete') return;
         _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
           try {

@@ -1,0 +1,57 @@
+/* ── MpiNotesEditor ─────────────────────────────────────────────────────────── */
+
+.mpi-notes-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: var(--surface-1);
+    border-radius: var(--r-1);
+}
+
+.mpi-notes-editor__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    color: var(--ink-1);
+    line-height: 1.2;
+}
+
+.mpi-notes-editor__field {
+    display: flex;
+    flex-direction: column;
+}
+
+.mpi-notes-editor__field .mpi-input {
+    width: 100%;
+}
+
+.mpi-notes-editor__field .mpi-input textarea {
+    min-height: 12rem;
+    max-height: 60vh;
+    padding: 0.5rem 0.75rem;
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-size: var(--t-sm);
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.mpi-notes-editor__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+}
+
+.mpi-notes-editor__actions .mpi-button {
+    flex: 0 0 auto;
+    min-width: 6rem;
+}
+
+.mpi-notes-editor__actions .mpi-button button {
+    min-width: 5rem;
+    padding: 0.5rem 1rem;
+}

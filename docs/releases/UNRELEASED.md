@@ -29,3 +29,11 @@
 ## whatIsNew
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
+
+- **Project & card notes.** Right-click a project on the Stage picker for two new
+  options: **Project notes** (in-app editor backed by the project's `project.md`
+  file) and **Open project folder** (reveals the project in your OS file
+  browser). Right-click any gallery card for a new **Card notes** option — jot
+  notes against an individual result; they're saved into the card's metadata and
+  travel with the project. Notes editing uses a new lightweight overlay
+  (text area + Save/Cancel).

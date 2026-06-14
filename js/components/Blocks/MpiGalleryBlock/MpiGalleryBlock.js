@@ -18,6 +18,7 @@ import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
+import { MpiNotesEditor } from '../../Compounds/MpiNotesEditor/MpiNotesEditor.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -186,6 +187,36 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // ── Navigate to group history ───────────────────────────────────────────
         grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
+
+        // ── Card notes ──────────────────────────────────────────────────────────
+        // Edits notes on the card's selected history item, persisted into the
+        // item sidecar (.meta/<id>.json). grid.on listeners are torn down by
+        // grid.destroy() (factory listeners.clear()), so no separate unsub here.
+        grid.on('card-notes', ({ group }) => {
+            const project = state.currentProject;
+            const item = getSelectedItem(group);
+            if (!project?.folderPath || !item) return;
+            const editor = MpiNotesEditor.mount(document.createElement('div'), {
+                title: 'Card notes',
+                value: item.notes || '',
+                onSave: async (notes) => {
+                    const res = await fetch(
+                        `/project-media/${project.id}/update-meta?folderPath=${encodeURIComponent(project.folderPath)}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ itemId: item.id, updates: { notes } }),
+                        }
+                    );
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data.success) throw new Error(data.error || 'update-meta failed');
+                    // Mirror in memory (sidecar/in-memory parity) and notify viewers.
+                    item.notes = notes;
+                    Events.emit('gallery:item-updated', { groupId: group.id, group });
+                },
+            });
+            editor.el.show();
+        });
 
         // ── Compare ─────────────────────────────────────────────────────────────
         const _compareOverlay = MpiCompareOverlay.mount(document.createElement('div'));
