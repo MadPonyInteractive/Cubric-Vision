@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "c204bbb4-cd3f-45ba-a646-9b13e453e6c9",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-06-14T12:30:00Z",
-  "updated_at": "2026-06-14T12:30:00Z",
+  "updated_at": "2026-06-14T14:05:00Z",
   "from": { "selector": "task", "value": "MPI-75", "note": "Pod-image rebuild batch; v0.4.0 shipped" },
   "to": { "selector": "task", "value": "MPI-64", "note": "RunPod Remote Engine, branch RunPod" },
   "subject": "Thanks for the v0.4.0 live validation — stale uninstall comments fixed (forward-compat logic was already correct); re-test is a USER live-Pod step",
@@ -21,6 +21,7 @@
     "parent": ".agents/mpi-kanban/state/messages/9e2964f7-a1a4-4553-841e-3ac056dd2776.json"
   },
   "recent_events": [
-    { "at": "2026-06-14T12:30:00Z", "event": "created" }
+    { "at": "2026-06-14T12:30:00Z", "event": "created" },
+    { "at": "2026-06-14T14:05:00Z", "event": "resolved", "by": "MPI-64", "outcome": "L6/G3 remote uninstall PASS live (RTX 5090, removed 4 kept 3, volume dirs empty, UI flipped). Comment-only fix + forward-compat logic both validated. Folded into OPEN-ITEMS §G3/§L6." }
   ]
 }

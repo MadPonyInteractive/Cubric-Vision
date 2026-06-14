@@ -50,6 +50,91 @@ backoff) already SHIPPED + COMMITTED. Part 2/4 + B2 are the open half.
 
 Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
 
+- [ ] **B4 — 🔴 Interpolate 503 on remote = RIFE model WEIGHTS not baked (node code IS baked). PINNED 2026-06-14.**
+      LIVE on the RTX 5090 Pod: `/opt/ComfyUI/custom_nodes/comfyui-frame-interpolation/` exists (node code present,
+      incl. `vfi_models/rife/rife_arch.py`) BUT a `find` for `*.pth`/`*.pkl` under it returned **EMPTY** — the RIFE
+      checkpoint (e.g. `rife47.pth`) is NOT on the Pod. The Dockerfile (`cubric-vision-pod/Dockerfile:125`) runs
+      `python install.py` which installs the node's PYTHON deps only; ComfyUI-Frame-Interpolation downloads its
+      `.pth` ckpts LAZILY at first node execution (from HuggingFace). On the Pod that runtime fetch did not happen
+      (no pre-bake, and/or blocked/failed at run) → the RIFE VFI node fails at execution → `POST /proxy/prompt 503`.
+      FIX (image, no app change): **pre-download the RIFE ckpt into
+      `/opt/ComfyUI/custom_nodes/comfyui-frame-interpolation/ckpts/` at BUILD time** in the Dockerfile (so no
+      runtime HF fetch). AUDIT the same lazy-download pattern for the OTHER baked node packs (Impact-Pack/Subpack
+      yolo models, KJNodes, UltimateSDUpscale) — any node that fetches a model on first use will 503 the same way
+      remotely; bake those weights too. Also the `4x-NMKD-Siax` / `4x-AnimeSharp` upscale models (`installOnEngine`,
+      `.pth`) are NOT in the image's `upscale_models` dir either — UPSCALE will hit the same wall; either bake them
+      in the image or push them to the volume. = MPI-81 / mpi-ci image rebuild. SECONDARY (app): surface the
+      `/proxy/prompt` 503 body in log+UI (it was dropped — same class as L2; would have pinned this in one look).
+      NOTE: earlier "installOnEngine deps never reach the Pod" theory was WRONG — the Dockerfile DOES bake the
+      universal node packs at `/opt/ComfyUI/custom_nodes` (the first check `ls`'d the volume path
+      `/workspace/comfyui/custom_nodes`, which correctly holds only the per-model PainterI2V node). The build flow
+      is correct; the gap is unbaked MODEL WEIGHTS for the baked nodes. `[rebuild]` + `[app]` (503-body).
+      **Verify:** after the image pre-bakes RIFE (+ upscale) weights, remote interpolate + upscale submit + run
+      (no 503).
+      <details><summary>superseded "cause not yet pinned" note</summary>
+- [ ] **B4 — Interpolate 503 on remote — cause NOT YET PINNED (earlier "installOnEngine missing" theory was WRONG).**
+      FOUND LIVE 2026-06-14 (RTX 5090 Pod): interpolate failed 3× with `POST /proxy/prompt 503` /
+      `Workflow failed: interpolate / null — ComfyUI Error`. ⚠️ CORRECTION 2026-06-14: an initial theory said the
+      `installOnEngine: true` deps (Frame-Interpolation/RIFE, upscale models) never reach the Pod — **that theory
+      is FALSE.** The mpi-ci Dockerfile (`cubric-vision-pod/Dockerfile:110-125`) DOES bake the universal
+      `installOnEngine` node packs into the IMAGE at `/opt/ComfyUI/custom_nodes` — including
+      `comfyui-frame-interpolation` (line 117) AND runs its `python install.py` (line 125, fetches RIFE weights) —
+      and `start.sh:105` launches ComfyUI from `/opt/ComfyUI/main.py` so those baked nodes load, IN ADDITION to the
+      volume `custom_nodes` (`/workspace/comfyui/custom_nodes`, per-model nodes only, via extra_model_paths
+      `custom_nodes: comfyui/custom_nodes/`). The earlier `ls /workspace/comfyui/custom_nodes/` only saw the VOLUME
+      path (correctly just `ComfyUI-PainterI2Vadvanced`) — the baked RIFE node lives at the UNCHECKED
+      `/opt/ComfyUI/custom_nodes`. So the build flow is CORRECT and nothing was "missed." The real 503 cause is
+      still OPEN — candidates: (a) `rife47.pth` not fetched by `install.py` (RIFE downloads model weights at node
+      load or first run — may need internet/a specific path on the Pod); (b) the interpolate workflow's INPUT
+      video (local path) not transferred to the Pod (B1 video-input transport — UNVERIFIED remotely); (c) a node
+      version/param mismatch; (d) the upscale_models / interpolation model path not in extra_model_paths
+      (extra_model_paths has `upscale_models: mpi_models/upscale_models/` but NO interpolation/rife model dir).
+      NEXT: re-check the LIVE Pod at the RIGHT path — `ls /opt/ComfyUI/custom_nodes/` + `find /opt/ComfyUI -iname
+      'rife*'` + the ComfyUI stdout/stderr for the actual validation error. The `/proxy/prompt` 503 body is dropped
+      app-side (NOT logged — same class as L2 but for prompt-submit) → surfacing it would have answered this in one
+      look (still worth fixing: log+UI the 503 body). `[app]` (503-body surfacing) + investigate. **Verify:** the
+      real interpolate 503 reason is identified from the Pod-side ComfyUI log, then fixed.
+      </details>
+
+- [ ] **B3 — 🔴 NVENC video encode FAILS on the Blackwell Pod (blocks ALL remote video output).** FOUND LIVE
+      2026-06-14 (RTX 5090, v0.4.0-cu128, Pod i1lou7geshlv96). A remote I2V (`i2v_ms`/`wan-22-i2v`, minimal
+      settings) **diffused fully end-to-end** — both stages completed, RAM peaked **94% = 52.76/55.88GiB** at the
+      VAE tail with NO OOM, VRAM 61% (~19GB), then FAILED at the LAST step `VHS_VideoCombine`:
+      `[h264_nvenc] OpenEncodeSessionEx failed: unsupported device (2): (no details)` /
+      `[h264_nvenc] No capable devices found`. ROOT: every video workflow's OUTPUT node `VHS_VideoCombine` uses
+      `"format": "video/nvenc_h264-mp4"` = NVIDIA **GPU hardware** encode; the RunPod container's ffmpeg cannot
+      init NVENC on this Blackwell card (NVENC SDK / `sm_120` / container-exposure mismatch) → encode dies. The
+      diffusion result was lost because the final mux failed. Confirmed via the workflow files:
+      `comfy_workflows/Wan22_i2v_stage2.json:155,189`, `Wan22_t2v_stage2.json:103,137`, `Wan22_t2v.json`,
+      `Wan22_i2v.json`, `video_upscale.json:69`, `video_interpolate.json:62`, `resize_video.json:101` — ALL use
+      `video/nvenc_h264-mp4` on every `VHS_VideoCombine`. INPUT side is SAFE: `VHS_LoadVideoPath`
+      (`video_upscale.json:107`) uses `"format": "AnimateDiff"` = a software frame-batch loader, NOT a codec — no
+      NVENC on input, video-input ops decode fine remotely (answers the open "does the input node carry an
+      encoding?" question — it does not). FIX is OWNER-SIDE (hard rule: agents do NOT edit `comfy_workflows/*.json`;
+      the user maintains them from an external template): change the `VHS_VideoCombine` OUTPUT `format` from
+      `video/nvenc_h264-mp4` → **`video/h264-mp4`** (CPU libx264 — portable, works local + any remote GPU; CPU
+      encode of a few seconds of video is negligible vs diffusion time), OR swap to a save-video node with no
+      codec choice. WHY T2V "passed" on L4 last session but I2V failed here: the L4 container likely exposed
+      NVENC; the Blackwell container does not — NVENC is fragile per-card, CPU x264 is universal. (Re-check
+      whether the L4 T2V actually NVENC-encoded or fell back.) ALSO a B0 win: the `execution_error` WS path
+      surfaced this as a clean "VHS_VideoCombine failed: <exception>" + ended the gen (no silent empty output) —
+      B0 live-confirmed. `[owner-workflow]`. **Verify:** after the template uses CPU h264, a remote I2V/T2V mux
+      succeeds → video saves + plays on the Blackwell Pod.
+      **FIX PROVEN LIVE 2026-06-14 (same 5090 Pod):** a temporary `Wan22_i2v.json` edit
+      (`VHS_VideoCombine` Preview node 169 + Output node 201 `format` → `video/h264-mp4`) made the SAME minimal
+      I2V run **SUCCEED end-to-end** — diffusion (latents shown), RAM peaked (~94%, no OOM), then CPU libx264
+      mux completed → video SAVED + PLAYED. (Temp edits reverted immediately after; codebase matches the external
+      template — agents do NOT keep `comfy_workflows/*.json` changes.) ⇒ CPU `video/h264-mp4` works on the
+      Blackwell container; NVENC does not. This VALIDATES the chosen owner-side fix direction: the user will swap
+      `VHS_VideoCombine` → ComfyUI vanilla **`SaveVideo`** node (codec-agnostic, picks encoding per-card
+      internally) in all video workflows. SaveVideo writes to ComfyUI `output/` → APP-SIDE follow-up needed:
+      fetch + garbage-collect the SaveVideo output file (the capture-node contract in `.claude/rules/comfy_injection.md`
+      expects a `gifs[]` payload from `VHS_VideoCombine`; `SaveVideo` emits differently — the result-capture +
+      cleanup path must be updated to read SaveVideo's output). NEXT-4090-SESSION re-test: after the SaveVideo
+      template lands, run remote I2V/T2V/upscale/interpolate on a 4090 to confirm the new node + app fetch/GC.
+      Diagnosis + CPU-encode fix DONE; remaining = owner template swap (SaveVideo) + app fetch/GC wiring.
+      Diffusion + RAM-survival + B1 image-input transport all PROVEN on Blackwell this session.
+
 - [ ] **B1 — Remote input-asset transfer for non-image inputs.** Video/audio upload replacing local-path
       injection (`_resolveMediaPath`), the trimmed-video flow (trim locally via `/api/video/trim-input` then
       upload), and remote `.latent` staging replacing `/comfy/stage-preview-latent`. CODE partially SHIPPED
@@ -113,6 +198,20 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       workaround. Source: plan.md Plan Drift 2026-06-13 (B1, L167/L178). **Verify (remote):** flag-check fires +
       messages "Restarting ComfyUI" (endpoint no-op until rebuild). LOCAL auto-restart path already VERIFIED
       (plan.md L167) — local half is DONE.
+      - **E1a — Gate UX: demote the reconnect-required modal → info toast (app, NO rebuild).** OBSERVED LIVE
+        2026-06-14 (I2V install on RTX 5090): the `_ensureRemoteReady` `comfyNeedsRestart` gate
+        (comfyController.js:271-275) emits `comfy:error` → commandExecutor surfaces the FULL bug-reporter
+        modal ("Generation failed" + Report-on-GitHub) for a ROUTINE "reconnect to load new nodes" state.
+        Bad UX (same family as G1). FIX NOW (chosen 2026-06-14, option A): emit a plain `ui:warning`/`ui:info`
+        toast instead of `comfy:error`, and do NOT throw into the bug-reporter modal. Real fix = E1 proper
+        (`/wrapper/restart-comfy`, in-place, zero reconnect) on MPI-81 rebuild. `[app]` renderer-only.
+      - **E1b — Reconnect-to-load-nodes is too SLOW (user finding 2026-06-14).** In-app Disconnect→Connect to
+        reload nodes is so slow (Connect button stays disabled through the whole cycle + the ~30s UI-update lag,
+        H1) that the user FULL-APP-RESTARTED instead to avoid losing the metered Pod — app restart reconnected
+        FASTER than the in-app Disconnect→Connect path. ⇒ neither Disconnect→Connect NOR an app restart should be
+        required to load a freshly-installed custom_node. Strong argument for E1 proper (`/wrapper/restart-comfy`
+        in-place) over any reconnect-based workaround. Until then, document app-restart as the faster interim
+        workaround. Ties to H1 (connect-display lag). `[rebuild]` for the real fix.
 
 ## F. Phase 3/4/5 structured checkboxes still open  🟡  (see plan.md for full text)
 
@@ -158,8 +257,9 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       the B4-drop modal as-is; this is the restart-info one only.) Source: plan.md L167, arch §10.
 - [ ] **G2 — "Stopping…" toast** for the ~5s gap between Stop and the Pod actually interrupting. Source:
       plan.md L173.
-- [ ] **G3 — `POST /wrapper/models/delete` remote uninstall** `[rebuild]` — app side already ships a guard
-      toast (404s with a clear message until the endpoint exists). = MPI-75 #1. Source: arch L406, MPI-75 brief.
+- [x] **G3 — `POST /wrapper/models/delete` remote uninstall — PASS 2026-06-14 (live, v0.4.0).** Full end-to-end
+      verified on a live RTX 5090 Blackwell Pod (cu128, Pod dacaf7fa4f7a, vol 14kabihaki). See L6 for the proof.
+      = MPI-75 #1 shipped. Source: arch L406, MPI-75 brief.
 - [ ] **G4 — aria2c fast model download** `[rebuild]` — wrapper `_run_install` → aria2c (`-x16 -s16`, ~10-40×
       the httpx path) with httpx fallback; Dockerfile apt installs `aria2`. Biggest remote-UX win. = MPI-75 #2.
       Source: MPI-75 brief #2.
@@ -215,6 +315,18 @@ Standalone items the user directly asked an agent to log — pulled out of the P
 
 ## L. Found live 2026-06-14 (fresh-volume session)  🟡
 
+- [x] **L6 — ✅ CLOSED 2026-06-14 (live, v0.4.0): remote UNINSTALL works end-to-end.** The prior "did nothing"
+      was the TWO-STEP CONFIRM (test artifact, exactly as diagnosed), NOT a code bug. RE-TEST on a live RTX 5090
+      Blackwell Pod (cu128, Pod dacaf7fa4f7a, vol 14kabihaki): card UNINSTALL → confirm dialog APPEARED
+      ("Uninstall model", "Also delete model files from disk" checked) → OK → ✅ app.log:
+      `[INFO] [download] remote uninstall wan-22-t2v: removed 4, kept 3 universal, 0 shared` (the v0.4.0 success
+      path at downloadManager.js:1009, NOT the old `:1000` unsupported fallback — yesterday's v0.3.x press logged
+      `wrapper has no delete endpoint` at app.log:861-862, so the contrast confirms the fix is real) → ✅ POD
+      TERMINAL: `/workspace/mpi_models/diffusion_models/`, `vae/`, `text_encoders/` ALL EMPTY (`total 1`, dir
+      mtime 11:45 = the delete) → ✅ UI flipped to not-installed + Models count decremented + toast. Files truly
+      wiped from the volume (not just a UI flip). MPI-75's comment-only fix + forward-compatible logic both
+      validated. **G3 also marked PASS.** No remaining work; L6/G3 done.
+      <details><summary>original L6 FAIL report (kept for history)</summary>
 - [ ] **L6 — 🔴 Remote model UNINSTALL does NOTHING (G3 FAIL on v0.4.0).** Pressing UNINSTALL on an installed
       model in remote mode: (a) UI does NOT change (still "INSTALLED", Models still 1/7); (b) the model files
       are STILL on the volume — Pod terminal confirmed `Wan_22_t2v_High.safetensors` + `Wan_22_t2v_Low.safetensors`
@@ -223,14 +335,37 @@ Standalone items the user directly asked an agent to log — pulled out of the P
       backend remote-delete route. So the `/wrapper/models/delete` endpoint shipped in v0.4.0 is NEVER CALLED —
       the app-side UNINSTALL button does not route to the remote delete path in remote mode (or the request
       dies before the backend logger). This DEFEATS the headline MPI-75 v0.4.0 feature (G3) and the 80GB-volume
-      management story. ROOT to investigate: the renderer Uninstall handler + `routes/downloadManager.js`
-      remote-delete branch + `routes/remoteModels.js` (`/wrapper/models/delete` caller) — why no request fires
-      in remote mode. NOTE: real volume path is `/workspace/mpi_models` (UNDERSCORE), models under
-      `diffusion_models/`, `vae/`, `text_encoders/`; manifest at `/workspace/cubric/manifest.json`. `[app]`
-      (likely; confirm it's not also a wrapper-route mismatch). **Verify:** Uninstall in remote mode deletes the
-      files from the volume, flips the card to not-installed, and decrements the models count.
+      management story.
+      ROOT — DIAGNOSED 2026-06-14 (code read, re-test pending). The chain IS wired: card UNINSTALL
+      (`MpiModelManager.js:237`) → opens a SECOND MpiOkCancel confirm dialog → its OK (`:81`) →
+      `downloadService.uninstall()` (`downloadService.js:80`) → POST `/comfy/models/uninstall` → backend remote
+      branch (`downloadManager.js:968-1011`) → `remoteUninstallDep` → POST `/wrapper/models/delete`
+      (`remoteModels.js:289`). KEY EVIDENCE: app.log line count did NOT change on the Uninstall press →
+      the request NEVER reached `/comfy/models/uninstall` (which logs on BOTH the success `:1008` AND the
+      unsupported `:999` paths). ⇒ failure is BEFORE the backend — most likely the TWO-STEP confirm: the card
+      button only OPENS the dialog; the request fires on the dialog's "Uninstall" OK. So "did nothing" =
+      either the confirm dialog didn't appear (bug) OR it appeared and wasn't confirmed (test artifact).
+      RE-TEST: press card UNINSTALL → does the confirm dialog show? → click its Uninstall → THEN check app.log
+      + volume. SEPARATE, CONFIRMED stale issue regardless: `downloadManager.js:962-967` + `remoteModels.js:272-275`
+      comments/handling still say "`/wrapper/models/delete` does NOT exist yet (needs an image rebuild)" and
+      return `remoteUnsupported:'uninstall'` — but that endpoint NOW SHIPS in v0.4.0/wrapper-0.2.3, so the stale
+      fallback should be updated = MPI-75 app-side coupling (assigned to the MPI-75 agent via message, 2026-06-14).
+      NOTE: real volume path is `/workspace/mpi_models` (UNDERSCORE), models under `diffusion_models/`, `vae/`,
+      `text_encoders/`; manifest at `/workspace/cubric/manifest.json`. `[app]`. **Verify:** card Uninstall →
+      confirm dialog → OK → request logs → `/wrapper/models/delete` deletes files from the volume → card flips
+      to not-installed → count decrements.
+      </details>
 
 
+- [~] **L1 — RTX PRO 4500 `createPod` 400 = RunPod-side host/availability constraint (NOT our spec).**
+      RECLASSIFIED 2026-06-14 (MPI-75 live test, msg 9d976b3b): a live **RTX 5090 (Blackwell, sm_120) Connect
+      returned HTTP 201** (podId i1lou7geshlv96) on the SAME DC (EU-RO-1), SAME volume (`14kabihaki`), SAME
+      cu128 image the PRO 4500 got a 400 on. ⇒ the 400 is NOT a cu128 image-spec bug, NOT a v0.4.0 regression,
+      NOT an EU-RO-1/volume problem, NOT our create spec — it is **RTX PRO 4500-host-specific** (RunPod capacity/
+      host/availability for that exact card at that moment). App side is correct; root cause sits on RunPod's
+      side. L2 (now shipped) will print the exact 400 reason if it recurs. **Remaining:** retry the PRO 4500
+      later and read the surfaced reason to confirm; no app fix expected. Original "cause unknown" write-up below.
+      <details><summary>original L1 (cause unknown)</summary>
 - [ ] **L1 — Blackwell RTX PRO 4500 `createPod` returns HTTP 400 (cause unknown).** During the 2026-06-14
       validation, Connect on an RTX PRO 4500 Blackwell (EU-RO-1, fresh volume `14kabihaki`) → app.log:
       `Pod image for NVIDIA RTX PRO 4500 Blackwell: …:v0.4.0-cu128` (arch routing CORRECT) →
@@ -247,6 +382,13 @@ Standalone items the user directly asked an agent to log — pulled out of the P
       podId dddqjpujszoj06, same DC + same volume `14kabihaki`)** in the same session → the 400 is
       Blackwell-spec-specific, NOT a v0.4.0 regression and NOT a volume/DC problem. Points at either the cu128
       image spec or a Blackwell host/availability constraint on Secure Cloud in EU-RO-1.
+      </details>
+- [x] **L2 — ✅ DONE 2026-06-14 (committed `2c2fb1a`, live-confirmed): `createPod` error body surfaced.**
+      MPI-75 agent added `_createRejectReason` in `routes/remoteProxy.js` `_createPodInternal` — a 400 now logs
+      `reason="…"` (RunPod's `json.error`/`json.message`) AND shows it in the connect dialog (`data.message`,
+      MpiSettings.js:578). Verified live: the 5090 success path logged `http 201 … podId=i1lou7geshlv96` cleanly;
+      a future 400 will carry the real reason. This is what makes L1 self-diagnosing on retry.
+      <details><summary>original L2</summary>
 - [ ] **L2 — `createPod` 400/error path drops RunPod's error body (log + UI).** `routes/runpodRemote.js _rest`
       DOES capture the response body (`{status, ok, json}`), and `/runpod/pods` returns `r.json` to the caller
       — but `routes/remoteProxy.js` `_createPodInternal` logs only `create returned 400` and the UI dialog
@@ -255,6 +397,7 @@ Standalone items the user directly asked an agent to log — pulled out of the P
       `routes/remoteProxy.js` = the **build agent's MPI-75 file** (currently uncommitted v0.4.0 edits) —
       COORDINATE before editing; do not clobber their work. `[app]`. **Verify:** a failed create shows the
       actual RunPod reason in the log and the dialog.
+      </details>
 
 - [ ] **L3 — Connect ETA messaging mismatch (first-boot vs warm-resume).** During the 2026-06-14 L4 connect on
       a FRESH volume, the user-facing feedback indicated ~90-120s, but a first connect on a fresh volume + new
