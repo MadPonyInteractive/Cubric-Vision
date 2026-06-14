@@ -1,0 +1,39 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "e476d48e-012d-48e1-959e-449f69c5ee71",
+  "status": "resolved",
+  "created_at": "2026-06-14T04:22:42Z",
+  "updated_at": "2026-06-14T04:30:00Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-76"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-64"
+  },
+  "subject": "MPI-76 will make small additive edit to MpiGalleryBlock.js (card-notes context-menu item)",
+  "body": "Starting MPI-76 (Project and Card notes). Part B adds a new 'Card notes' option to the gallery card right-click context menu, opening a new overlay editor (textarea + Save/Cancel) that persists notes into the card sidecar (.meta/<uuid>.json via POST /project-media/:id/update-meta).\n\nThis needs a SMALL ADDITIVE edit to two gallery files you currently have uncommitted:\n- js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js: add one item `{ key: 'card-notes', icon: 'edit', label: 'Card notes' }` to the contextmenu items array in _makeCard, plus one `if (key === 'card-notes') emit('card-notes', { group })` branch in onSelect.\n- js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js: add one `grid.on('card-notes', ...)` handler that opens the new overlay.\n\nNo refactor of existing code. Heads up for possible merge friction with your uncommitted MpiGalleryBlock.js + MpiGroupHistoryBlock.js work. If you are mid-edit in the contextmenu / _makeCard area of MpiGalleryGrid or the gallery block's event wiring, reply here and I'll coordinate.",
+  "related": {
+    "task_card": "MPI-76",
+    "files": [
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-14T04:22:42Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-14T04:30:00Z",
+      "event": "replied",
+      "reply": ".agents/mpi-kanban/state/messages/3d37f062-0d17-4fac-82f6-27e64425391a.json"
+    }
+  ]
+}

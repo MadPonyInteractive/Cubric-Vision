@@ -531,6 +531,26 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _applyPreview(url);
         }));
 
+        // Repaint the open viewer with `item` (preview→video swap, image reload).
+        // Shared by the in-block generation:complete handler and the gallery
+        // in-place-finish bridge below.
+        function _reloadViewerWithEntry(item) {
+            if (isVideo) {
+                viewer.el.exitCropMode?.();
+                viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
+                    fps:        item.fps || _group.fps || 24,
+                    duration:   item.duration,
+                    frameCount: item.frameCount,
+                    hasAudio:   item.hasAudio,
+                    trim:       item.trim,
+                });
+            } else {
+                viewer.el.exitMode?.();
+                viewer.el.loadEntry?.(item, _currentIdx);
+                viewer.el.setMaskHidden?.(false);
+            }
+        }
+
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
             if (!_myGenIds.has(id)) return;
             _myGenIds.delete(id);
@@ -551,25 +571,32 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 historyList.el.appendEntry(item);
             }
             Events.emit('history:stats-dirty', { group: _group });
-            if (isVideo) {
-                viewer.el.exitCropMode?.();
-                viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
-                    fps:        item.fps || _group.fps || 24,
-                    duration:   item.duration,
-                    frameCount: item.frameCount,
-                    hasAudio:   item.hasAudio,
-                    trim:       item.trim,
-                });
-            } else {
-                viewer.el.exitMode?.();
-                viewer.el.loadEntry?.(item, _currentIdx);
-                viewer.el.setMaskHidden?.(false);
-            }
+            _reloadViewerWithEntry(item);
             // Resize tool stays mounted across Apply — re-target the active
             // item so its thumbnail re-extracts and the inline preview
             // refreshes on the new entry.
             if (item?.operation === 'resize' || item?.operation === 'resizeVideo') {
                 _options?.el?.setCurrentItem?.(item);
+            }
+        }));
+
+        // In-place Finish (preview→final) is dispatched scope:'gallery', so its
+        // generation:complete is not in _myGenIds and the handler above skips it.
+        // When that replace lands on the group this viewer is currently showing,
+        // the open viewer would keep painting the stale preview frame until a
+        // re-nav. Bridge it: on gallery:item-updated for the current group,
+        // re-sync _group and reload the viewer if the replaced item is the one
+        // on screen. Guard against re-handling a gen this block already owns.
+        _unsubs.push(Events.on('gallery:item-updated', ({ groupId, item, group }) => {
+            if (groupId !== _group.id || !item || !group) return;
+            const viewedId = _group.history?.[_currentIdx]?.id;
+            _group = group;
+            _currentIdx = _group.selectedIndex;
+            historyList.el.replaceEntry?.(item);
+            Events.emit('history:stats-dirty', { group: _group });
+            if (item.id === viewedId) {
+                viewer.el.setGenerating?.(false);
+                _reloadViewerWithEntry(item);
             }
         }));
 

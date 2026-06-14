@@ -285,6 +285,18 @@ Step 4.5 delete-on-quit option). Current behavior:
 
 ## 10. Unresolved follow-ups
 
+- **Bug 2 — in-place Finish leaves the GALLERY card stale (poster swaps but
+  hover `<video>` won't play) — ✅ FIXED + USER-VERIFIED 2026-06-14 (app-side, no
+  rebuild):** the gallery card's hover `<video>` is promoted lazily by the grid
+  IntersectionObserver only on scroll-into-view (`_promoteVideo`); an in-place
+  "Complete this preview" replaces the entry on an already-in-view card → the
+  observer never re-fires → `refreshGroup→_render` swaps the poster but never
+  promotes the video. FIX: `cardEl.refreshGroup` now calls `_promoteVideo()`
+  after `_render()` (idempotent self-guard). ALSO bridged the open GroupHistory
+  VIEWER (separate latent gap, NOT the user's bug): it now reloads on
+  `gallery:item-updated` for the viewed group, since an in-place finish is
+  scope:'gallery' and its `generation:complete` isn't in the viewer's `_myGenIds`.
+  Files: `MpiGalleryGrid.js`, `MpiGroupHistoryBlock.js`. Committed.
 - **Remote preview-latent materialization — ✅ FIXED + LIVE-VERIFIED 2026-06-13
   (app-side, no rebuild):** multi-stage "Create-from / Continue" failed remotely
   (`preview latent materialization failed`) because `routes/projects.js

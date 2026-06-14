@@ -840,19 +840,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     x: e.clientX,
                     y: e.clientY,
                     items: [
-                        { key: 'compare',  icon: 'compare',  label: 'Compare',  disabled: compareDisabled },
-                        { key: 'combine',  icon: 'merge',    label: 'Combine',  disabled: combineDisabled },
-                        { key: 'download', icon: 'download', label: 'Download' },
-                        { key: 'delete',   icon: 'trash',    label: 'Delete',   danger: true },
+                        { key: 'compare',    icon: 'compare',  label: 'Compare',    disabled: compareDisabled },
+                        { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
+                        { key: 'card-notes', icon: 'edit',      label: 'Card notes', disabled: targetIds.length !== 1 },
+                        { key: 'download',   icon: 'download',  label: 'Download' },
+                        { key: 'delete',     icon: 'trash',     label: 'Delete',     danger: true },
                     ],
                     onSelect: (key) => {
                         const selected = targetIds
                             .map(id => _groups.find(g => g.id === id))
                             .filter(Boolean);
-                        if (key === 'compare')  emit('compare',  { groups: selected });
-                        if (key === 'combine')  emit('combine',  { groups: selected });
-                        if (key === 'download') emit('download', { groups: selected });
-                        if (key === 'delete')   emit('delete',   { groups: selected, source: 'context' });
+                        if (key === 'compare')    emit('compare',  { groups: selected });
+                        if (key === 'combine')    emit('combine',  { groups: selected });
+                        if (key === 'card-notes') emit('card-notes', { group });
+                        if (key === 'download')   emit('download', { groups: selected });
+                        if (key === 'delete')     emit('delete',   { groups: selected, source: 'context' });
                         if (useSelection) _exitSelectionMode();
                     },
                 });
