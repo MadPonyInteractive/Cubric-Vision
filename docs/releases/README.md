@@ -26,6 +26,11 @@ broke, cross-build limits, CI, the macOS unknowns), see
 there after any build or build-tooling change — especially for macOS, which is
 maintainer-untested.
 
+For how patches reach users — **Patreon Pro patches (`1.0.x`) via Cloudflare with
+no git tag** vs **public GitHub releases that bundle accumulated patches** — see
+[`patch-distribution.md`](patch-distribution.md). Read it before cutting any
+post-`1.0.0` patch or deciding whether to push a tag.
+
 ## Naming Convention
 
 Files are named `YYYY-MM-DD-vX.Y.Z.md` where:
