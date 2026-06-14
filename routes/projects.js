@@ -34,6 +34,7 @@ const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
+const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
 
 const projectJsonQueues = new Map();
@@ -1391,7 +1392,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1464,6 +1465,29 @@ router.post('/project/save-generation', async (req, res) => {
 
         // Download from ComfyUI server-side
         await streamDownload(comfyViewUrl, filePath);
+
+        // Split video/audio output (B3): a video workflow saves VIDEO (no audio)
+        // + AUDIO as two separate files (the single "Output" VHS_VideoCombine,
+        // whose nvenc encode fails on the Blackwell Pod, is replaced by
+        // "Output_Video" SaveVideo + an optional "Output_Audio" SaveAudio). When
+        // the workflow produced audio, mux it into the just-downloaded video here
+        // (video is master, stream-copied — no re-encode, encoder/GPU-agnostic).
+        // audioViewUrl is a ready /view URL (same authed proxy base in remote
+        // mode). On any failure, keep the silent video rather than fail the save.
+        if (isVideo && audioViewUrl) {
+            const tmpAudio = path.join(mediaDir, `.tmp_audio_${id}.mp3`);
+            const tmpMuxed = path.join(mediaDir, `.tmp_muxed_${id}.${ext}`);
+            try {
+                await streamDownload(audioViewUrl, tmpAudio);
+                await muxAudioIntoVideo(filePath, tmpAudio, tmpMuxed);
+                await fs.move(tmpMuxed, filePath, { overwrite: true });
+            } catch (muxErr) {
+                logger.warn('project', `audio mux failed for ${id} — keeping silent video: ${muxErr.message}`);
+            } finally {
+                await fs.remove(tmpAudio).catch(() => {});
+                await fs.remove(tmpMuxed).catch(() => {});
+            }
+        }
 
         let materializedFrozenParams = frozenParams;
         let materializedPreviewAssets = null;

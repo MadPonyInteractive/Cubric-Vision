@@ -46,6 +46,23 @@ function _collectComfyOutputUrls(nodeOutput, target) {
     if (nodeOutput?.gifs) {
         nodeOutput.gifs.forEach(gif => target.push(_buildComfyViewUrl(gif)));
     }
+    // Vanilla ComfyUI `SaveVideo` (portable, card-agnostic encode — replaces
+    // VHS_VideoCombine whose nvenc encode fails on the Blackwell Pod, B3) emits
+    // under `videos`. Same file-dict shape as gifs, so the /view URL builds
+    // identically. Mirrors the controller copy in comfyController.js.
+    if (nodeOutput?.videos) {
+        nodeOutput.videos.forEach(vid => target.push(_buildComfyViewUrl(vid)));
+    }
+}
+
+// Native `SaveAudioMP3`/`SaveAudio` (the `Output_Audio` node in the split
+// video/audio output design — MPI-64 B3) emits its saved file under `audio`.
+// Collected separately from the video URLs so save-generation can mux the
+// pair (video is master). Returns the FIRST audio /view URL or null.
+function _collectComfyAudioUrl(nodeOutput) {
+    const a = nodeOutput?.audio;
+    if (Array.isArray(a) && a.length) return _buildComfyViewUrl(a[0]);
+    return null;
 }
 
 function _collectComfyLatents(nodeOutput, target) {
@@ -237,6 +254,58 @@ function _resolveUpscaleFilename(value) {
     return _depFilename(value) || value;
 }
 
+const _baseName = (f) => String(f || '').replace(/\\/g, '/').split('/').pop();
+const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
+
+/**
+ * Resolve a saved LoRA/upscale name to the EXACT string in the current asset
+ * list, separator-agnostically. list-files emits the engine-native separator
+ * (Windows '\\' local, '/' remote) which ComfyUI's enum expects; project.json
+ * may hold a legacy forward-slash value. Returning the list string makes the
+ * injected `lora_name`/`model_name` match ComfyUI's enum so it does not 400 with
+ * "value not in list". Falls back to the saved value when no list match exists.
+ */
+function _resolveModelName(value, available) {
+    if (!value) return value;
+    const want = _pathKey(value);
+    return (available || []).find(f => _pathKey(f) === want) || value;
+}
+
+/**
+ * Pre-generation guard. A selected LoRA / upscale model whose file is NOT in any
+ * of the folders the system points at (the `/comfy/list-files` union mirrored in
+ * state.availableLoras / state.upscaleModels) would fail at the loader node with
+ * a cryptic "model not found". This catches it BEFORE submission so we can warn
+ * the user to add the file (drag-drop in Settings → External Connections) or
+ * pick another. Compared by basename to tolerate subfolder-prefixed list entries.
+ *
+ * Applies in local AND remote mode (in Phase 1 the picker lists local files in
+ * both; Phase 2 swaps the source to remote presence). The asset lists are loaded
+ * lazily — if they are empty (engine not ready), the guard allows the run rather
+ * than blocking on an unpopulated list.
+ * @param {Record<string, any>} params  built workflow params (LoRA objs + Upscale_Model)
+ * @returns {string|null} missing model name, or null if nothing blocks
+ */
+function _findMissingModel(params) {
+    const loras = state.availableLoras;
+    const upscalers = state.upscaleModels;
+
+    const inList = (list, name) => {
+        if (!Array.isArray(list) || !list.length) return true; // unpopulated → don't block
+        const base = _baseName(name);
+        return list.some(f => _baseName(f) === base);
+    };
+
+    for (const [key, value] of Object.entries(params || {})) {
+        if (value && typeof value === 'object' && value.lora_name) {
+            if (!inList(loras, value.lora_name)) return value.lora_name;
+        } else if (key === 'Upscale_Model' && typeof value === 'string') {
+            if (!inList(upscalers, value)) return value;
+        }
+    }
+    return null;
+}
+
 /**
  * Resolves the workflow filename for a given operation + model.
  * Universal workflows (not model-tied) are checked first.
@@ -384,7 +453,7 @@ function _buildParams(payload) {
                     stageSlots.forEach((slot, i) => {
                         if (!slot.name) return;
                         params[`${stage.injectionPrefix}_${i + 1}`] = {
-                            lora_name:      slot.name,
+                            lora_name:      _resolveModelName(slot.name, state.availableLoras),
                             strength_model: slot.strengthModel ?? 1.0,
                             strength_clip:  slot.strengthClip  ?? 1.0,
                         };
@@ -394,7 +463,7 @@ function _buildParams(payload) {
                 (settings.loras || []).forEach((slot, i) => {
                     if (!slot.name) return;
                     params[`Lora_${i + 1}`] = {
-                        lora_name:      slot.name,
+                        lora_name:      _resolveModelName(slot.name, state.availableLoras),
                         strength_model: slot.strengthModel ?? 1.0,
                         strength_clip:  slot.strengthClip  ?? 1.0,
                     };
@@ -404,13 +473,13 @@ function _buildParams(payload) {
             // Upscale model — user selection takes priority, else model default
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel)
                 || _depFilename(modelDef?.defaultUpscale);
-            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
+            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
 
         } else if (payload.operation) {
             // Tool/universal context: inject upscale model only
             const settings = getToolSettings(project, payload.operation);
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
-            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
+            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
         }
     }
 
@@ -619,6 +688,20 @@ export function runCommand(payload) {
         const params = _buildParams(workingPayload);
         exec.seed = params.Seed ?? null;
 
+        // Guard: block submission if a selected LoRA/upscale model is not in any
+        // of the configured model folders — the loader would fail with a cryptic
+        // "model not found". Warn and abort cleanly instead.
+        const missingModel = _findMissingModel(params);
+        if (missingModel) {
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
+            Events.emit('ui:warning', {
+                message: `"${_baseName(missingModel)}" was not found in your LoRA/upscale folders. `
+                    + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
+            });
+            exec.onError?.(new Error('model_missing'));
+            return;
+        }
+
         // Load the workflow JSON so we can identify "Output" node ids before
         // execution — needed for filtering executed messages by title.
         let workflow;
@@ -676,13 +759,27 @@ export function runCommand(payload) {
 
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
         // — or "preview" when this is a preview-only run on a multi-stage workflow.
-        // Only images/gifs from these nodes are treated as final results.
+        // Only images/gifs/videos from these nodes are treated as final results.
+        // Split video/audio output (B3): video workflows replace the single
+        // "Output" VHS_VideoCombine (nvenc-broken on Blackwell) with a
+        // "Output_Video" SaveVideo + an optional "Output_Audio" SaveAudio node.
+        // Treat "Output_Video" as an output node too so the SAME capture path
+        // works for every video workflow; the audio node is tracked separately
+        // and muxed server-side at save time (video is master). Preview-only
+        // multi-stage runs still capture the "Preview" node.
         const _captureTitle = workingPayload.previewOnly === true && String(workingPayload.operation || '').endsWith('_ms')
             ? 'preview'
             : 'output';
+        const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : null;
         const outputNodeIds = new Set(
+            Object.keys(workflow).filter(id => {
+                const t = workflow[id]._meta?.title?.toLowerCase();
+                return t === _captureTitle || (_videoOutputTitle && t === _videoOutputTitle);
+            })
+        );
+        const outputAudioNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === _captureTitle
+                workflow[id]._meta?.title?.toLowerCase() === 'output_audio'
             )
         );
 
@@ -718,6 +815,11 @@ export function runCommand(payload) {
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
         const latentOutputs = [];
+        // First "Output_Audio" file URL, when a video workflow saved audio
+        // alongside the video (B3 split output). null when the source had no
+        // audio (the workflow's MpiHasAudio gate skips the audio save). Muxed
+        // into the video server-side at save time.
+        let audioOutputUrl = null;
         let _samplingStartFired = false;
         let _modelInitializing = hasTerminalPhaseSampler;
         // Tool-panel previews (e.g. resize thumbnail round-trip) bypass
@@ -865,7 +967,7 @@ export function runCommand(payload) {
                 // node === null: execution complete signal
                 aggregator.onExecutionSuccess();
                 closeComfyEventSource();
-                exec.onComplete?.(outputUrls, { latents: latentOutputs });
+                exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
                 return;
             }
 
@@ -877,6 +979,9 @@ export function runCommand(payload) {
                 }
                 if (outputNodeIds.has(nodeId)) {
                     _collectComfyOutputUrls(nodeOutput, outputUrls);
+                }
+                if (outputAudioNodeIds.has(nodeId)) {
+                    audioOutputUrl = _collectComfyAudioUrl(nodeOutput) || audioOutputUrl;
                 }
             }
         };

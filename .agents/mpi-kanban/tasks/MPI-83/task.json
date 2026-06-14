@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-83",
+  "title": "Imported video bugs: no prompt box on model-less imports + only first import gets fps/duration",
+  "description": "Two import-side gallery bugs found 2026-06-14 (log clean, no throw — logic/data, NOT the SaveVideo split). (1) Dragging videos into the gallery + opening in history shows NO prompt box; hovering it reports 'No prompt-driven ops available for this model' — imported media has modelId:null so prompt-driven op resolution yields none (universal video tools should still work via the tool panel). (2) Importing 3 videos (audio/no-audio/audio), only the FIRST shows length(seconds)+fps; the other two lack probed metadata — import video-probe ran once, not per-file. Both a different subsystem than gen→save→mux. See brief.md.",
+  "column": "todo",
+  "maturity": "todo",
+  "status": "open",
+  "created_at": "2026-06-14T19:25:00Z",
+  "updated_at": "2026-06-14T19:25:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

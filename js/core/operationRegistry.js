@@ -26,7 +26,7 @@ export const OPERATION_REGISTRY = {
     i2v_ms:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     extend:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     // Universal operations (not model-tied)
-    interpolate:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     videoUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },

@@ -628,6 +628,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                     const data = await saveGeneration({
                         folderPath: state.currentProject.folderPath,
                         comfyViewUrl: url,
+                        // Split video/audio output (B3): the separately-saved
+                        // "Output_Audio" file is muxed into THIS video server-side
+                        // (video is master). Only on the first/primary video item;
+                        // null when the source had no audio. Ignored for images.
+                        audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
                         itemId: thisItemId,
                         operation,
                         meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, ratioLabel, generationSettings },

@@ -44,6 +44,16 @@ function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
     if (nodeOutput?.gifs) {
         for (const gif of nodeOutput.gifs) target.push(_buildComfyViewUrl(httpBase, gif));
     }
+    // The vanilla ComfyUI `SaveVideo` node (replacing VHS_VideoCombine for
+    // portable, card-agnostic encoding — VHS's nvenc encode fails on the
+    // Blackwell Pod container, B3) emits its result under `videos` instead of
+    // `gifs`. Each entry is the same { filename, subfolder, type, format } file
+    // dict `_buildComfyViewUrl` already understands, so the /view URL is built
+    // identically. Handled here so the "Output" capture node works whether the
+    // workflow uses VHS_VideoCombine (gifs) or SaveVideo (videos).
+    if (nodeOutput?.videos) {
+        for (const vid of nodeOutput.videos) target.push(_buildComfyViewUrl(httpBase, vid));
+    }
 }
 
 export const ComfyUIController = {
@@ -596,6 +606,15 @@ export const ComfyUIController = {
         if (params.Input_Image && !mediaParamKinds.Input_Image) mediaParamKinds.Input_Image = 'image';
         if (params.Mask && !mediaParamKinds.Mask) mediaParamKinds.Mask = 'mask';
         if (params.Input_Mask && !mediaParamKinds.Input_Mask) mediaParamKinds.Input_Mask = 'mask';
+        // `Input_Video`/`Input_Audio` may now target an `MpiString` fan-out node
+        // (string field, no `video`/`audio` input) instead of the VHS loader
+        // directly — the split video/audio workflows feed one injected path into
+        // both VHS and `MpiHasAudio` via a String node (B3). The field-based
+        // detection above misses that, so the raw `/project-file?path=` URL would
+        // reach VHS unresolved ("video is not a valid path"). Force the media kind
+        // by title so `_resolveMediaPath` (and remote upload) still runs.
+        if (params.Input_Video && !mediaParamKinds.Input_Video) mediaParamKinds.Input_Video = 'video';
+        if (params.Input_Audio && !mediaParamKinds.Input_Audio) mediaParamKinds.Input_Audio = 'audio';
 
         for (const [paramKey, mediaKind] of Object.entries(mediaParamKinds)) {
             let val = params[paramKey];

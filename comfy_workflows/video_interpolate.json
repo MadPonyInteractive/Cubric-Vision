@@ -17,63 +17,13 @@
       "torch_compile": false,
       "batch_size": 1,
       "frames": [
-        "723",
+        "749",
         0
       ]
     },
     "class_type": "RIFE VFI",
     "_meta": {
-      "title": "RIFE VFI (recommend rife47 and rife49)"
-    }
-  },
-  "717": {
-    "inputs": {
-      "index": -1,
-      "images": [
-        "349",
-        0
-      ]
-    },
-    "class_type": "MpiGetImageAtIndex",
-    "_meta": {
-      "title": "Mpi Get Image At Index"
-    }
-  },
-  "718": {
-    "inputs": {
-      "images": [
-        "717",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Last_Frame"
-    }
-  },
-  "719": {
-    "inputs": {
-      "frame_rate": [
-        "724",
-        0
-      ],
-      "loop_count": 0,
-      "filename_prefix": "FinalGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "720",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Output"
+      "title": "RIFE VFI (recommend rife4.25+)"
     }
   },
   "720": {
@@ -86,22 +36,6 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
-    }
-  },
-  "723": {
-    "inputs": {
-      "video": "D:\\WORK\\Images\\Outputs\\t2v_480.mp4",
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "Input_Video"
     }
   },
   "724": {
@@ -124,7 +58,7 @@
   "725": {
     "inputs": {
       "video_info": [
-        "723",
+        "749",
         3
       ]
     },
@@ -166,6 +100,109 @@
     "class_type": "MpiConvert",
     "_meta": {
       "title": "Mpi Convert"
+    }
+  },
+  "746": {
+    "inputs": {
+      "video_path": [
+        "747",
+        0
+      ]
+    },
+    "class_type": "MpiHasAudio",
+    "_meta": {
+      "title": "Mpi Has Audio"
+    }
+  },
+  "747": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Downloads\\Video Project 6.mp4"
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Video"
+    }
+  },
+  "749": {
+    "inputs": {
+      "video": [
+        "747",
+        0
+      ],
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 100,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "754": {
+    "inputs": {
+      "boolean": [
+        "746",
+        0
+      ],
+      "input": [
+        "749",
+        2
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Has Audio"
+    }
+  },
+  "756": {
+    "inputs": {
+      "fps": [
+        "724",
+        0
+      ],
+      "images": [
+        "720",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "757": {
+    "inputs": {
+      "filename_prefix": "video/interpolate",
+      "format": "auto",
+      "codec": "auto",
+      "video-preview": "",
+      "video": [
+        "756",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "759": {
+    "inputs": {
+      "filename_prefix": "audio/interpolate",
+      "quality": "V0",
+      "audioUI": "/api/view?filename=interpolate_00001_.mp3&type=output&subfolder=audio&rand=0.16239310699745335",
+      "audio": [
+        "754",
+        1
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "Output_Audio"
     }
   }
 }
