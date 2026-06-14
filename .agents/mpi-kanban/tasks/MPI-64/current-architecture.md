@@ -44,12 +44,63 @@
 > Cue button disabled during transitions via new `state.remoteEnginePhase`, local
 > GPU line no longer lingers at boot, models hero stat re-syncs on connect edge.
 > MPI-73 moved to its own card (now `done`). See §10 "MPI-73".
+> SESSION 6 (2026-06-14, RunPod=v1.1.0 shared trunk): A1 engine-drop recovery
+> SHIPPED + COMMITTED (0c243f5) + LIVE-VERIFIED end-to-end — `remote:engine-dropped`
+> now drives a sticky `remote · disconnected` hero + `IDLE · Disconnected` status +
+> `ui:warning` toast (NOT a false `local · offline`); manual reconnect (Settings →
+> Connect) by design, re-hydrates the model panel on the connect edge; renderer-only
+> (shell.js `_initEngineDropRecovery`, heroStats.js, statusBar.js). Live fresh-volume
+> session on the new MPI-75 v0.4.0 image (wrapper 0.2.3): B-T2V PASS (RAM peaked
+> 92%=53.68/57.74GiB at VAE decode, no OOM — RAM is the wall), aria2c download PASS
+> (G4), volume-delete PASS (G5), delete-on-quit PASS (F8), cu124/cu128 arch routing
+> confirmed, Step 4.3 self-heal confirmed, D1 cache-stacking re-confirmed live (~35GiB
+> held after a completed gen). FOUND: remote UNINSTALL not yet working (L6/G3 — stale
+> "endpoint doesn't exist" fallback + 2-step-confirm question, handed to MPI-75 agent);
+> Blackwell PRO 4500 create 400 (L1, Blackwell-specific); + L2-L5 minor (error-body
+> dropped, ETA msg [downgraded], no remote dl-speed, status-poll false-negative flicker).
+> H3 slide-over-closes → promoted to card MPI-79 (parallel session).
+> SESSION 7 (2026-06-14, live RTX 5090 Blackwell Pod + local; RunPod=v1.1.0 trunk):
+> LIVE-VERIFIED on the 5090: remote model UNINSTALL works end-to-end (L6/G3 CLOSED —
+> the prior "did nothing" was the unconfirmed two-step confirm dialog, NOT a code bug;
+> `removed 4 kept 3`, volume dirs emptied); remote I2V DIFFUSES on Blackwell (latents,
+> RAM peaked ~94%=52.76/55.88GiB at VAE, no OOM) but the FINAL VHS_VideoCombine encode
+> FAILED `h264_nvenc … No capable devices found` (B3). DIAGNOSED: every video workflow's
+> output node used `format: video/nvenc_h264-mp4` (GPU HW encode) → fails on the Blackwell
+> container; CPU `video/h264-mp4` works (proven via a temp edit, reverted). L1 reclassified
+> RunPod-side PRO-4500-host constraint (5090 got HTTP 201 same DC/vol/cu128); L2 CLOSED
+> (createPod reject-reason shipped 2c2fb1a). B4 FOUND: interpolate 503 = RIFE model WEIGHTS
+> not baked in the Pod image (node code IS baked at /opt/ComfyUI/custom_nodes) → image
+> rebuild item (MPI-81); upscale models same.
+> **B3 FIX SHIPPED + LIVE-VERIFIED (local, committed 497fb89):** the single VHS_VideoCombine
+> "Output" node is replaced by the portable native pipeline — `CreateVideo` → `SaveVideo`
+> (title `Output_Video`, `output/video/` subfolder) + optional `SaveAudioMP3` (title
+> `Output_Audio`, `output/audio/`), audio gated by `MpiHasAudio` (MpiNodes v1.1.0 — ffmpeg
+> stream-probe on the input path) → `MpiIfElse` (empty audio is NEVER saved; SaveVideo/
+> SaveAudio both throw on empty audio). The app CAPTURES both nodes (SaveVideo `videos[]`,
+> SaveAudio `audio[]`; `Output_Video` treated as an output node alongside `Output`) and
+> MUXES them server-side in `/project/save-generation` via `services/ffmpegMux.js`
+> (video master: `-map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest` — stream-copy video,
+> no re-encode, no nvenc, encoder/GPU-agnostic). `audioViewUrl` threads
+> commandExecutor.`onComplete({audioUrl})` → generationService → projectService.saveGeneration
+> → the route. Audio absent → silent video, no mux, no crash; temps GC'd. FILENAME COUNTERS
+> for the two save nodes increment INDEPENDENTLY (video `_00002_` ↔ audio `_00001_`) — pairing
+> is by the SAME prompt's `executed` payloads, NEVER by counter. The `Input_Video`/`Input_Audio`
+> media-path resolution is now FORCED by title (comfyController) because the injected path now
+> feeds an `MpiString` fan-out node (one path → VHS loader AND MpiHasAudio) instead of the
+> loader's `video` field — without it the raw `/project-file?path=` URL reached VHS ("video is
+> not a valid path"). interpolate is the PROVEN template (both with-audio→muxed-synced and
+> no-audio→silent paths verified live); `latestVersion` bumped 1.0→1.1 (operationRegistry.js +
+> operation_registry.json). REMAINING: convert the other video workflows (t2v/t2v_ms/i2v/i2v_ms/
+> extend/videoUpscale/resizeVideo) to the same node setup + bump each `latestVersion`; app side
+> is DONE + workflow-agnostic. Two import bugs deferred → card MPI-83 (no prompt box on model-less
+> imports; only first of N imports gets fps/duration — separate subsystem, log clean). MpiNodes
+> downloads always-latest-main (local auto-gets v1.1.0; Pod needs MPI-81 rebuild for MpiHasAudio).
 > **ALL OPEN ITEMS now live in `OPEN-ITEMS.md` (this task folder) — the consolidated
 > register (built 2026-06-14). Read it FIRST for what's left; this doc + plan.md Plan
-> Drift hold the detailed root-cause narrative.** Headline open: engine-drop/OOM
-> recovery (B4 part 2/4 + B2, app-side), remote video gen (Phase 4), remote-I2V-ignores-
-> image re-confirm (likely closed by the dep-cross fix), model-cache OOM (--cache-lru 2,
-> REBUILD), MPI-75 image rebuild (defer). See `OPEN-ITEMS.md` for the full categorized list.
+> Drift hold the detailed root-cause narrative.** Headline open: remote UNINSTALL
+> (L6/G3, MPI-75 agent), remote VIDEO I2V (B1 input-asset transfer, unwritten),
+> model-cache OOM (D1 --cache-lru 2, REBUILD), L1-L5 minor. A1 + B-T2V now DONE.
+> See `OPEN-ITEMS.md` for the full categorized list.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image

@@ -1,0 +1,130 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "dc059656-b046-4227-9f7c-498f72c37bae",
+  "generated_at": "2026-06-14T19:45:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 SESSION 7 — live RTX 5090 Blackwell validation (uninstall PASS, I2V diffuses, B3 nvenc-fail found) + SHIPPED the B3 fix: SaveVideo+SaveAudio split output with server-side ffmpeg audio mux (committed 497fb89). interpolate proven as the template; remaining video workflows to convert.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64. Make use of the live RTX 5090 Pod ($1/hr): test uninstall + get remote video gen working. Then fix the discovered NVENC-on-Blackwell encode failure via a portable SaveVideo node design, wiring the app to combine the split video+audio outputs.",
+    "status": "in_progress",
+    "summary": "B3 (NVENC encode fails on Blackwell) is FIXED + LIVE-VERIFIED locally + COMMITTED (497fb89): video workflows now use CreateVideo -> SaveVideo(Output_Video) + optional SaveAudioMP3(Output_Audio) gated by MpiHasAudio, and the app captures both + muxes them server-side (video master, stream-copy, no nvenc). interpolate is the proven template (both with-audio and no-audio paths verified). REMAINING: convert the other video workflows (t2v/t2v_ms/i2v/i2v_ms/extend/videoUpscale/resizeVideo) to the same node setup — the app side is DONE and workflow-agnostic, so this is mostly USER workflow-template edits + a per-op latestVersion bump."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md",
+    "completed": [
+      "LIVE on RTX 5090 Blackwell Pod: remote model UNINSTALL verified end-to-end (L6/G3 CLOSED — prior 'did nothing' was the unconfirmed two-step confirm dialog, not a code bug; removed 4 kept 3, volume dirs emptied).",
+      "LIVE: remote I2V DIFFUSES on Blackwell (latents, RAM ~94%=52.76/55.88GiB at VAE, no OOM) — only the final encode failed (B3).",
+      "L1 reclassified to RunPod-side PRO-4500-host constraint (5090 got HTTP 201 same DC/vol/cu128 image); L2 CLOSED (createPod reject-reason shipped 2c2fb1a, committed earlier session). Both folded into OPEN-ITEMS §L. 3 MPI-75 coord messages resolved (kanban commit fdd8a2d).",
+      "B3 DIAGNOSED: all video workflows used VHS_VideoCombine `format: video/nvenc_h264-mp4` (GPU HW encode) → fails on the Blackwell container; CPU `video/h264-mp4` works (proven via temp edit, reverted).",
+      "B3 FIX SHIPPED + LIVE-VERIFIED (local) + COMMITTED 497fb89: SaveVideo+SaveAudio split output + server-side ffmpeg mux. interpolate is the proven template — with-audio → video+aac muxed synced; no-audio → silent video, gate skipped, no crash; temps GC'd.",
+      "App wiring (workflow-agnostic): comfyController/commandExecutor capture SaveVideo `videos` + SaveAudio `audio`; Input_Video/Input_Audio forced to media-kind by title (MpiString fan-out fix); audioViewUrl threaded onComplete→saveGeneration→route; services/ffmpegMux.js (single-source mux); interpolate latestVersion 1.0→1.1 (operationRegistry.js + operation_registry.json); comfy_injection.md documents Output_Video/Output_Audio.",
+      "Two import-side bugs deferred to NEW card MPI-83 (idea): no prompt box on model-less imports; only first of N imports gets fps/duration. Separate subsystem, log clean.",
+      "Snapshot updated: current-architecture.md §10 SESSION 7. NOTE: current-architecture.md is uncommitted in the shared tree (also touched by the parallel MPI-82 agent) — the SESSION 7 block is additive."
+    ],
+    "pending": [
+      "Convert the remaining video workflows to the SaveVideo+SaveAudio split (USER edits the workflow templates; agent does NOT edit comfy_workflows/*.json): t2v, t2v_ms, i2v, i2v_ms, extend, videoUpscale, resizeVideo. Pattern: CreateVideo -> SaveVideo titled `Output_Video` (output/video/) + optional SaveAudioMP3 titled `Output_Audio` (output/audio/) gated by MpiHasAudio -> MpiIfElse; where there is a VIDEO INPUT, fan the injected path out via an MpiString titled `Input_Video` to BOTH the VHS loader and MpiHasAudio.",
+      "Per converted op: bump latestVersion 1.0→1.1 in BOTH js/core/operationRegistry.js AND operation_registry.json (user chose this convention; agent can do these bumps on request).",
+      "Test each converted workflow locally (with-audio + no-audio source) before moving on — interpolate is the reference for what PASS looks like.",
+      "MPI-81 (SEPARATE session, mpi-ci repo): pre-bake RIFE + upscale model WEIGHTS into the Pod image (B4 — node code IS baked, weights are NOT → remote interpolate/upscale 503) + ship MpiNodes v1.1.0 to the Pod (always-main download; Pod needs rebuild for MpiHasAudio). Also surface the /proxy/prompt 503 body in log+UI.",
+      "MPI-83: fix the two import-video bugs (deferred).",
+      "At FINAL mpi-end-session: B3 already committed; commit remaining converted workflows + latestVersion bumps; promote current-architecture.md into durable docs/rules/memory; fold UNRELEASED at next version-bump."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "OPEN-ITEMS.md updated: G3/L6 CLOSED, L1 reclassified, L2 CLOSED, B3 fix-proven block, B4 pinned (RIFE weights not baked), E1a/E1b UX findings.",
+      "current-architecture.md §10 SESSION 7 entry added (SaveVideo split + mux design, all the contracts).",
+      ".claude/rules/comfy_injection.md: Output_Video/Output_Audio capture titles documented (+ Output now also reads `videos`).",
+      "MPI-83 card created (idea maturity, was wrongly 'todo'); board.json updated (next_id 84, MPI-83 in todo).",
+      "B3 feature committed 497fb89 (14 files, mine only — staged by explicit path, --no-verify)."
+    ],
+    "pending": [
+      "current-architecture.md + .agents/mpi-kanban/events.jsonl are UNCOMMITTED in the shared tree (parallel MPI-82 agent churn mixed in) — do NOT git add -A; commit current-architecture.md by explicit path with the next batch if it is yours to commit, leave the MPI-82 agent's event lines.",
+      "Promote current-architecture.md into durable docs/rules/memory at final end-session.",
+      "Project memory note: the SaveVideo split contract (Output_Video/Output_Audio + server mux + MpiHasAudio gate) may be worth a memory entry once all workflows are converted."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-64. The B3 SaveVideo fix is SHIPPED + COMMITTED (497fb89) and the app side is workflow-agnostic. FIRST re-read .agents/mpi-kanban/state/index.json + tasks/MPI-64/OPEN-ITEMS.md (§B3) + current-architecture.md §10 SESSION 7. Then: the USER converts each remaining video workflow template (t2v, t2v_ms, i2v, i2v_ms, extend, videoUpscale, resizeVideo) to the proven SaveVideo+SaveAudio split (CreateVideo -> SaveVideo `Output_Video` + optional SaveAudioMP3 `Output_Audio` gated by MpiHasAudio; MpiString `Input_Video` fan-out where there is a video input). For each converted op, bump latestVersion 1.0→1.1 in js/core/operationRegistry.js AND operation_registry.json, then test locally (with-audio + no-audio) — interpolate is the reference PASS. Agents must NOT edit comfy_workflows/*.json (user owns them). GIT: RunPod is the shared v1.1.0 trunk — stage by EXPLICIT PATH, commit only your own files, --no-verify, never git add -A.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "B3 fix = SaveVideo+SaveAudio SPLIT output, app muxes — chosen over (a) editing VHS format to CPU h264 (rejected: agents don't edit user workflows + VHS empty-audio still throws) and (b) a single SaveVideo node (rejected: empty audio throws). SaveVideo picks codec internally per-card = portable; SaveAudio is gated off when no audio (MpiHasAudio) since saving empty audio throws.",
+      "Audio presence detected by MpiHasAudio in MpiNodes v1.1.0 (ffmpeg stream-probe on the INPUT PATH, not the AUDIO object — VHS returns a lazy LazyAudioMap that is never None, so an `is None` check false-positives). ffprobe absent in ComfyUI portable → use imageio_ffmpeg/ffmpeg stream-probe; works local + Pod.",
+      "Mux is server-side in /project/save-generation (reuses ffmpegBinary + streamDownload + /view fetch). Video is MASTER: -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest (stream-copy video = no re-encode, no nvenc, encoder/GPU-agnostic). Single-source recipe in services/ffmpegMux.js — no per-workflow mux code.",
+      "Save-node filename counters increment INDEPENDENTLY (video _00002_ vs audio _00001_) → pairing is by the SAME prompt's executed payloads, NEVER by filename counter.",
+      "Input_Video/Input_Audio media-path resolution forced by TITLE in comfyController (the injected path now feeds an MpiString fan-out node, not the VHS `video` field, so field-based media detection missed it → raw /project-file URL reached VHS).",
+      "Workflow versioning: graph-changed-but-op-compatible = patch per docs/versioning.md, but user CHOSE to bump each op latestVersion 1.0→1.1 anyway (treats the output-contract change as an API version). latestVersion is informational (getOperationMeta) — does NOT break old history.",
+      "L1 is RunPod-side PRO-4500-host capacity (5090=201 same DC/vol/cu128 image proved app side correct). B4 interpolate-503 = RIFE model weights not baked (node code IS baked) → MPI-81 image rebuild."
+    ],
+    "constraints": [
+      "RunPod branch is SHARED by concurrent agents (MPI-64, MPI-82 external-connections, MPI-81 image). STAGE BY EXPLICIT PATH, commit only your own files, --no-verify, NEVER git add -A. The MPI-82 agent's uncommitted files (MpiSettings*, MpiModelSettings*, MpiFolderDrop/, routes/comfy.js, types.js, preloadStyles.js) + root events.jsonl churn sit in the tree.",
+      "Agents must NEVER edit comfy_workflows/*.json — the user owns them (maintained from an external ComfyUI template). Agents document injection-title contracts in .claude/rules/comfy_injection.md + .claude/rules/component-comfy.md and ask the user to author/re-export the workflow.",
+      "Backend changes (routes/, server.js, main.js) need a FULL app restart; renderer changes (js/) reload with location.reload() in the DevTools console (the app blocks Ctrl+R via the hotkey system). The save-generation mux is a BACKEND change — needs a restart to take effect.",
+      "USER runs ALL live Pod/volume/billing ops + image builds — Claude drives steps + observes. The 5090 Pod was deleted at session end (delete-on-quit). PowerShell-via-Bash is DENIED (use the Read tool / dedicated tools for app.log; app.log truncates/rotates on app restart).",
+      "Commit only when the USER asks (497fb89 was user-authorized).",
+      "MpiNodes custom-node download = always-latest-main (dependencies.js url = main.zip). Local auto-gets v1.1.0; the Pod IMAGE bakes a pinned clone → needs an MPI-81 rebuild for MpiHasAudio + RIFE weights.",
+      "ComfyUI version is 0.19.3 (frontend 1.42.11) — far behind current (0.24.0). The CreateVideo/SaveVideo None-audio handling improved upstream at v0.22.0 (#13879) but we did NOT upgrade; the MpiHasAudio gate is our handling. An engine upgrade is a separate decision."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js — videos capture key, _collectComfyAudioUrl absent-safe, Input_Video/Input_Audio title-forced media kind (COMMITTED 497fb89)",
+      "js/services/commandExecutor.js — _collectComfyAudioUrl, Output_Video/Output_Audio capture sets, audioOutputUrl threaded through onComplete (COMMITTED 497fb89)",
+      "js/services/generationService.js — audioViewUrl threaded into saveGeneration (first video item only) (COMMITTED 497fb89)",
+      "js/services/projectService.js — audioViewUrl param on saveGeneration (COMMITTED 497fb89)",
+      "routes/projects.js — save-generation mux block (download audio + muxAudioIntoVideo + GC, keep silent video on failure) (COMMITTED 497fb89)",
+      "services/ffmpegMux.js — NEW single-source mux recipe (COMMITTED 497fb89)",
+      "js/core/operationRegistry.js + operation_registry.json — interpolate latestVersion 1.0→1.1 (COMMITTED 497fb89)",
+      ".claude/rules/comfy_injection.md — Output_Video/Output_Audio capture titles (COMMITTED 497fb89)",
+      "comfy_workflows/video_interpolate.json — user-authored proven template (COMMITTED 497fb89, the user's file)",
+      ".agents/mpi-kanban/tasks/MPI-83/* — NEW deferred-import-bugs card (COMMITTED 497fb89 + maturity fix uncommitted)",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md — G3/L6/L1/L2/B3/B4/E1 updates (UNCOMMITTED)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md — §10 SESSION 7 (UNCOMMITTED, shared-tree churn)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/index.json (RE-READ FRESH)",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md (§B3 SaveVideo fix + §B4 + §L — the consolidated register)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (§10 SESSION 7 — the SaveVideo split contracts)",
+      ".claude/rules/comfy_injection.md (Output_Video/Output_Audio titles + the never-edit-workflow rule)",
+      "js/services/commandExecutor.js + js/services/comfyController.js (capture + media-kind, if extending the split design)",
+      "routes/projects.js /project/save-generation + services/ffmpegMux.js (the server mux)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI workflow injection + capture", "CUE queue / generation pipeline", "video output / ffmpeg mux", "Pod image build (mpi-ci)"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/components.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-14T19:45:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod (the SHARED v1.1.0 integration trunk) in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/dc059656-b046-4227-9f7c-498f72c37bae.json, then RE-READ .agents/mpi-kanban/state/index.json fresh + tasks/MPI-64/OPEN-ITEMS.md (§B3/§B4/§L) + current-architecture.md §10 SESSION 7, then use mpi-continue. STATUS: SESSION 7 ran a live RTX 5090 Blackwell Pod — remote model UNINSTALL verified end-to-end (L6/G3 CLOSED), remote I2V DIFFUSES on Blackwell (RAM ~94%, no OOM) but the final VHS_VideoCombine encode FAILED `h264_nvenc … No capable devices found` (B3). The B3 FIX is SHIPPED + LIVE-VERIFIED (local) + COMMITTED (497fb89): video workflows now use the portable native pipeline CreateVideo -> SaveVideo (title `Output_Video`, output/video/) + optional SaveAudioMP3 (title `Output_Audio`, output/audio/), with audio gated by an MpiHasAudio (MpiNodes v1.1.0, ffmpeg stream-probe on the input path) -> MpiIfElse so empty audio is never saved (SaveVideo/SaveAudio both throw on empty audio). The app CAPTURES both nodes and MUXES them server-side in /project/save-generation via services/ffmpegMux.js (video master, stream-copy video + aac audio, no nvenc); audio absent -> silent video, no crash; temps GC'd. The Input_Video path is now resolved by TITLE in comfyController because it feeds an MpiString fan-out node (one path -> VHS loader AND MpiHasAudio). interpolate is the PROVEN template (both with-audio→muxed-synced and no-audio→silent verified live); its latestVersion was bumped 1.0→1.1. NEXT: the USER converts the remaining video workflows (t2v, t2v_ms, i2v, i2v_ms, extend, videoUpscale, resizeVideo) to the SAME SaveVideo+SaveAudio split — the app side is DONE and workflow-agnostic, so this is template edits + a per-op latestVersion bump (1.0→1.1 in operationRegistry.js AND operation_registry.json) + a local with-audio/no-audio test each. GOTCHAS: agents NEVER edit comfy_workflows/*.json (user owns them — document injection-title contracts + ask the user to author/re-export); RunPod is shared by concurrent agents (MPI-82 external-connections + MPI-81 image) → stage by EXPLICIT PATH, commit your own files, --no-verify, never git add -A; backend (routes/) changes need a FULL app restart, renderer reloads with location.reload() in the console (Ctrl+R is blocked); the USER runs all live Pod/image ops; commit only when the USER asks. DEFERRED: import bugs → card MPI-83; RIFE/upscale weights not baked in the Pod image → MPI-81 rebuild (also ships MpiNodes v1.1.0 to the Pod). Brief before code (mpi-continue gate)."
+}
