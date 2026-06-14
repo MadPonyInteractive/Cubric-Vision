@@ -46,15 +46,24 @@ tokens into any repo. For a patch:
   the Patreon Pro post link never changes between patches:
   `vision/pro/v1.0.0-9b3054cbac074cf4be5b/` →
   `https://dl.cubric.studio/vision/pro/v1.0.0-9b3054cbac074cf4be5b/index.html`.
-- **Upload** the 3 full builds + an updated `index.html` with `rclone copyto`
-  (`--s3-no-check-bucket`). The Pro `index.html` lists the **3 full builds only**;
-  the `-update-*.zip` deltas are not put on this page (they feed the in-app
-  updater). Copy the prior version's `index.html`, swap version + filenames + MB
-  sizes + a one-line "what's new".
-- **Replace, don't accumulate** — delete the prior version's build files from the
-  path after the new ones upload (deletion is approval-gated; get the user's OK).
+- **Upload, with `rclone copyto` (`--s3-no-check-bucket`), BOTH:**
+  - the **3 `-update-<ver>.zip` delta bundles** — these are how Pro users update
+    from a prior version. They run their install's
+    `update-from-zip.<bat|sh|command>` and point it at the bundle (preserves
+    engine/models/projects/settings). The online `update.*` script must NOT be
+    used for a Pro patch — it pulls the latest **GitHub** release, where the patch
+    is not published; if a later public release exists it would *downgrade* the
+    user. Never describe a Pro patch as an "in-app / built-in updater" update.
+  - the **3 full builds** — for fresh/clean installs only.
+  Plus an updated `index.html` with two sections ("update from vX" listing the
+  deltas + the `update-from-zip` steps, and "fresh install" listing the fulls).
+  Copy the prior version's `index.html`, swap version + filenames + sizes + a
+  one-line "what's new".
+- **Swapping files** — replace what changes behind the stable path. Leaving the
+  prior full build available is fine (clean-install fallback); the new deltas are
+  the actual patch mechanism. Any deletion is approval-gated — get the user's OK.
 - **Verify** — `rclone lsf` the path, then HTTP `HEAD` each public URL and confirm
-  `200` with `Content-Length` matching local bytes; confirm the old version 404s.
+  `200` with `Content-Length` matching local bytes.
 - Uploading paid-member files, replacing live files, and deleting are all
   approval-gated. Publishing the link on Patreon is the user's step.
 
