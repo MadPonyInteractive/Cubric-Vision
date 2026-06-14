@@ -62,6 +62,20 @@ function _filterByType(files, modelType) {
     });
 }
 
+const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
+
+/**
+ * Resolve a saved value to the EXACT string in the asset list, separator-agnostically.
+ * list-files now emits the engine-native separator (backslash on Windows) which the
+ * dropdown options use; a saved project.json value may be legacy forward-slash. Without
+ * this the dropdown would find no matching option and show nothing selected.
+ */
+function _resolveToList(value, available) {
+    if (!value) return value;
+    const want = _pathKey(value);
+    return (available || []).find(f => _pathKey(f) === want) || value;
+}
+
 function _loraOptions(availableLoras) {
     return [
         { label: '— None —', value: '' },
@@ -156,8 +170,11 @@ export const MpiModelSettings = ComponentFactory.create({
             const filtered = _filterByType(state.upscaleModels, modelType);
             // SIAX is always installed with the engine → guaranteed fallback.
             const siaxFile = _depToFilename('4x-NMKD-Siax');
-            const resolved = (currentValue && filtered.includes(currentValue))
-                ? currentValue
+            // Match the saved value separator-agnostically and use the list's exact
+            // string, so a legacy forward-slash subfolder value still shows selected.
+            const matched = _resolveToList(currentValue, filtered);
+            const resolved = (currentValue && filtered.some(f => _pathKey(f) === _pathKey(currentValue)))
+                ? matched
                 : (filtered.includes(siaxFile) ? siaxFile : (filtered[0] || ''));
 
             _upscaleValue = resolved;
@@ -253,7 +270,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
                 const dd = MpiDropdown.mount(dropHost, {
                     options: loraOpts,
-                    value: slot.name || '',
+                    value: _resolveToList(slot.name, state.availableLoras) || '',
                     placeholder: `Slot ${i + 1} — None`,
                 });
 
@@ -356,7 +373,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
                     const dd = MpiDropdown.mount(dropHost, {
                         options: loraOpts,
-                        value: slot.name || '',
+                        value: _resolveToList(slot.name, state.availableLoras) || '',
                         placeholder: `${stage.label} ${i + 1} - None`,
                     });
 

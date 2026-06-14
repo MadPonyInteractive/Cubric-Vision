@@ -237,6 +237,21 @@ function _resolveUpscaleFilename(value) {
     return _depFilename(value) || value;
 }
 
+const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
+
+/**
+ * Resolve a saved LoRA/upscale name to the EXACT string in the current asset list,
+ * separator-agnostically. list-files now emits the engine-native separator which
+ * ComfyUI's enum expects; project.json may hold a legacy forward-slash value.
+ * Returning the list string makes the injected lora_name/model_name match
+ * ComfyUI's enum so it does not 400. Falls back to the saved value if no match.
+ */
+function _resolveModelName(value, available) {
+    if (!value) return value;
+    const want = _pathKey(value);
+    return (available || []).find(f => _pathKey(f) === want) || value;
+}
+
 /**
  * Resolves the workflow filename for a given operation + model.
  * Universal workflows (not model-tied) are checked first.
@@ -384,7 +399,7 @@ function _buildParams(payload) {
                     stageSlots.forEach((slot, i) => {
                         if (!slot.name) return;
                         params[`${stage.injectionPrefix}_${i + 1}`] = {
-                            lora_name:      slot.name,
+                            lora_name:      _resolveModelName(slot.name, state.availableLoras),
                             strength_model: slot.strengthModel ?? 1.0,
                             strength_clip:  slot.strengthClip  ?? 1.0,
                         };
@@ -394,7 +409,7 @@ function _buildParams(payload) {
                 (settings.loras || []).forEach((slot, i) => {
                     if (!slot.name) return;
                     params[`Lora_${i + 1}`] = {
-                        lora_name:      slot.name,
+                        lora_name:      _resolveModelName(slot.name, state.availableLoras),
                         strength_model: slot.strengthModel ?? 1.0,
                         strength_clip:  slot.strengthClip  ?? 1.0,
                     };
@@ -404,13 +419,13 @@ function _buildParams(payload) {
             // Upscale model — user selection takes priority, else model default
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel)
                 || _depFilename(modelDef?.defaultUpscale);
-            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
+            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
 
         } else if (payload.operation) {
             // Tool/universal context: inject upscale model only
             const settings = getToolSettings(project, payload.operation);
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
-            if (upscaleFilename) params['Upscale_Model'] = upscaleFilename;
+            if (upscaleFilename) params['Upscale_Model'] = _resolveModelName(upscaleFilename, state.upscaleModels);
         }
     }
 

@@ -519,14 +519,21 @@ router.get('/comfy/list-files', async (req, res) => {
             return results;
         };
 
+        // ComfyUI builds its LoRA/upscale enum from path.relative against its own
+        // search roots, so the separator it expects matches the engine's OS. master
+        // is local-only → emit the native separator (Windows '\\'); forcing forward
+        // slash here 400s "value not in list" for subfolder models on Windows.
+        // Dedupe key stays forward-slash so it is stable regardless of separator.
+        const toEngineSep = (s) => path.sep === '/' ? s.replace(/\\/g, '/') : s.replace(/\//g, '\\');
+
         const addFiles = async (dirPath, relativeTo, output, seen) => {
             const files = await getAllFiles(dirPath, relativeTo);
             for (const file of files) {
-                const normalized = file.replace(/\\/g, '/');
-                const key = process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+                const fwd = file.replace(/\\/g, '/');
+                const key = process.platform === 'win32' ? fwd.toLowerCase() : fwd;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                output.push(normalized);
+                output.push(toEngineSep(fwd));
             }
         };
 

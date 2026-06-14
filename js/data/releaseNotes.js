@@ -38,6 +38,16 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.0.1': {
+    version: '1.0.1',
+    whatIsNew: [],
+    fixes: [
+      'LoRA and upscale models stored in a subfolder failed to load on Windows (a path-separator mismatch made generation fail with "Prompt outputs failed validation"). All subfolder models now load and apply correctly, and projects that already referenced a subfolder model heal automatically.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '1.0.0': {
     version: '1.0.0',
     whatIsNew: [
