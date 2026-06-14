@@ -23,7 +23,7 @@ import { on, qs } from '../../../utils/dom.js';
  *   close() — slide out + cleanup
  *
  * Emits:
- *   'close' {} — panel closed (by button, outside click, or event)
+ *   'close' {} — panel closed (by button, Escape, or a dismiss event)
  */
 export const MpiSlideOver = ComponentFactory.create({
     name: 'MpiSlideOver',
@@ -69,7 +69,6 @@ export const MpiSlideOver = ComponentFactory.create({
             if (_closed) return;
             _closed = true;
             _unsubs.forEach(fn => fn());
-            document.removeEventListener('click', _onDocClick);
             el.setAttribute('aria-expanded', 'false');
             const onEnd = () => {
                 el.removeEventListener('transitionend', onEnd);
@@ -92,17 +91,14 @@ export const MpiSlideOver = ComponentFactory.create({
         // Close button
         _unsubs.push(on(closeBtn, 'click', _doClose));
 
-        // ui:close-all-popups → close
-        _unsubs.push(Events.on('ui:close-all-popups', _doClose));
-
-        // Outside click — deferred so triggering click doesn't immediately close.
-        // Skip detached targets (rerenders that remove the clicked node before bubble)
-        // so in-panel actions that swap the list don't trigger a false outside-close.
-        const _onDocClick = (e) => {
-            if (!e.target?.isConnected) return;
-            if (!el.contains(e.target)) _doClose();
-        };
-        setTimeout(() => document.addEventListener('click', _onDocClick), 0);
+        // ui:close-all-popups → close, EXCEPT when fired by an overlay/modal opening.
+        // A child pop-up (MpiOkCancel / showError / etc.) opening on top of the panel
+        // must not take the panel down with it (MPI-79). Escape and Overlays.reset()
+        // fire this bare → the panel still closes on those.
+        _unsubs.push(Events.on('ui:close-all-popups', (payload) => {
+            if (payload?.reason === 'overlay-open') return;
+            _doClose();
+        }));
     },
 });
 

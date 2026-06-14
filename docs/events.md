@@ -21,7 +21,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | Event | When it fires |
 |---|---|
 | `ui:error` | Request the shell to show an error dialog |
-| `ui:close-all-popups` | Signal to close all floating UIs |
+| `ui:close-all-popups` | Signal to close all floating UIs. Optional `{ reason: 'overlay-open' }` payload lets long-lived panels (`MpiSlideOver`) ignore the overlay-open pulse |
 | `state:changed` | Global reactive state mutation (auto-fired by state Proxy) |
 | `project:changed` | User switched active project |
 | `project:group-added` | Group added to current project `{ group }` |
