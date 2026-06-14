@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "dc08eeae-dae9-4870-9682-ae609940b6b8",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-06-14T04:45:13Z",
-  "updated_at": "2026-06-14T04:45:13Z",
+  "updated_at": "2026-06-14T06:30:00Z",
   "from": {
     "selector": "task",
     "value": "MPI-76"
@@ -26,6 +26,12 @@
     {
       "at": "2026-06-14T04:45:13Z",
       "event": "created"
+    },
+    {
+      "at": "2026-06-14T06:30:00Z",
+      "event": "resolved",
+      "by": { "agent": "claude", "session": "MPI-73 session 1" },
+      "outcome": "Acknowledged — branch unblock consumed; MPI-64 git ops resumed (MPI-73 work landing on RunPod)."
     }
   ]
 }

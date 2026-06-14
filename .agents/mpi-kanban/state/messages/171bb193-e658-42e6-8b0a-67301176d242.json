@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "171bb193-e658-42e6-8b0a-67301176d242",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-06-14T05:03:38Z",
-  "updated_at": "2026-06-14T05:03:38Z",
+  "updated_at": "2026-06-14T06:30:00Z",
   "from": {
     "agent": "claude",
     "session": "kanban-card-repair"
@@ -28,6 +28,12 @@
     {
       "at": "2026-06-14T05:03:38Z",
       "event": "created"
+    },
+    {
+      "at": "2026-06-14T06:30:00Z",
+      "event": "resolved",
+      "by": { "agent": "claude", "session": "MPI-73 session 1" },
+      "outcome": "Acknowledged — links completion confirmed intact (all 8 keys present); no conflict with my in-progress edits."
     }
   ]
 }

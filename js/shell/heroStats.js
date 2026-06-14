@@ -68,6 +68,7 @@ function _renderSession(projects) {
 // engine disconnects (the footer flips to the Pod card while connected).
 let _localGpuFrag = null;
 let _remoteConnected = false;
+let _remotePhase = null; // MPI-73: 'connecting' | 'disconnecting' — suppress the local GPU line mid-transition
 
 function _buildLocalGpuFrag({ gpu, vramTotal, ramTotal }) {
     const gpuLabel = _stripGpuPrefix(gpu?.name);
@@ -101,7 +102,11 @@ async function _renderGpu() {
         if (frag) {
             // Keep a clone so the live one can be mounted now and re-cloned later.
             _localGpuFrag = frag.cloneNode(true);
-            if (!_remoteConnected) {
+            // Don't paint the local GPU line while remote-connected OR mid-transition.
+            // At boot the gpu-info fetch resolves AFTER the "connecting" emit cleared
+            // the card; without the phase guard it re-paints the local GPU over the
+            // cleared card (MPI-73 — local GPU lingered during a boot auto-connect).
+            if (!_remoteConnected && !_remotePhase) {
                 el.innerHTML = '';
                 el.appendChild(frag);
             }
@@ -114,10 +119,18 @@ async function _renderGpu() {
 // Flip the engine label + GPU stat between local hardware and the connected Pod.
 // Remote line mirrors the local format: "RTX A4000 · 16GB VRAM · 24GB RAM" (VRAM
 // accented). VRAM/RAM are best-effort — each segment is dropped if absent.
-function _renderEngine({ connected, gpuName, vramGb, ramGb }) {
+// MPI-73: a transient `phase` ('connecting'|'disconnecting') shows the in-progress
+// transition with NO GPU card below (no hardware to show mid-connect).
+function _renderEngine({ connected, gpuName, vramGb, ramGb, phase = null }) {
     _remoteConnected = !!connected;
+    _remotePhase = phase || null;
     const label = gid('heroStatEngine');
     const gpu = gid('heroStatGpu');
+    if (phase === 'connecting' || phase === 'disconnecting') {
+        if (label) label.textContent = phase === 'connecting' ? 'connecting · offline' : 'disconnecting · online';
+        if (gpu) gpu.innerHTML = '';
+        return;
+    }
     if (label) label.textContent = connected ? 'remote · online' : 'local · offline';
     if (!gpu) return;
     if (connected) {

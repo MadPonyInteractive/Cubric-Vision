@@ -43,6 +43,43 @@ import { Hotkeys } from './managers/hotkeyManager.js';
 // Internal references for communication
 let _projectNameInstance = null;
 
+// ── Remote engine transition phase (MPI-73) ────────────────────────────────────
+// Shared between the boot auto-reconnect and the persistent connection feed so the
+// feed's phase-less status emits don't clobber the boot/Settings "connecting" /
+// "disconnecting" feedback (the hero card + status bar read this phase). Settings
+// emits its own phase directly; boot + feed go through `_emitRemoteConnection`.
+let _remotePhase = null; // 'connecting' | 'disconnecting' | null
+
+// Mirror the transition phase into global `state` so consumers can read it at
+// mount (race-free) — not only via the live event. Top-level assign fires
+// state:changed; skip a no-op write so we don't churn the bus.
+function _setRemotePhase(phase) {
+  _remotePhase = phase || null;
+  if (state.remoteEnginePhase !== _remotePhase) state.remoteEnginePhase = _remotePhase;
+}
+
+/**
+ * Emit `remote:connection`, folding in the active transition phase. A non-phase
+ * payload during a transition is suppressed for the `connected:false` case so a
+ * feed tick that sees "not ready yet" mid-connect can't wipe the "connecting"
+ * feedback. Passing an explicit `phase` (string or null) sets/clears the shared
+ * phase and always emits.
+ */
+function _emitRemoteConnection(payload = {}) {
+  const hasExplicitPhase = Object.prototype.hasOwnProperty.call(payload, 'phase');
+  if (hasExplicitPhase) {
+    _setRemotePhase(payload.phase || null);
+    Events.emit('remote:connection', payload);
+    return;
+  }
+  // No explicit phase (a feed status update). A genuine connected:true clears any
+  // active phase; otherwise FOLD the current phase into the emit so a feed tick
+  // never strips "connecting"/"disconnecting" — and so a late subscriber (e.g. a
+  // PromptBox mounted mid-connect) receives the phase on the next tick.
+  if (payload.connected === true) _setRemotePhase(null);
+  Events.emit('remote:connection', { ...payload, phase: _remotePhase });
+}
+
 // ── Global dialog singletons ──────────────────────────────────────────────────
 const _errorDialog = MpiErrorDialog.mount(document.createElement('div'));
 const _startingComfy = MpiStartingComfy.mount(document.createElement('div'));
@@ -310,7 +347,11 @@ async function _initRemoteBoot(runpod) {
   }
 
   // Auto-reconnect in the background (UI stays usable during the resume/recreate).
+  // MPI-73: surface the transition — hero "connecting · offline" (no card), status
+  // bar "IDLE · Connecting". Resolved on ready (connected:true) or failure below.
   StatusBar.notify('Reconnecting to your Pod…', 'info', 6000);
+  _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+  let _bootConnected = false; // MPI-73: resolves the 'connecting' phase
   try {
     const res = await fetch('/remote/pod/reconnect', {
       method: 'POST',
@@ -355,7 +396,30 @@ async function _initRemoteBoot(runpod) {
         'info', 8000),
     });
     if (ready) {
-      StatusBar.notify('Remote engine ready', 'success', 6000);
+      // Wrapper health is ready (ComfyUI up), but the binary-preview WS is opened
+      // lazily at generation time — so "ready" alone lets a user queue a job
+      // before the WS handshake, hanging it in STARTING (MPI-73 Bug 1). Open the
+      // WS now and only claim "ready" once it actually connects.
+      let wsOk = false;
+      try {
+        const { ComfyUIController } = await import('./services/comfyController.js');
+        wsOk = await ComfyUIController.ensureWsConnected();
+      } catch (_) { /* fall through to the not-ready notice */ }
+      if (wsOk) {
+        // MPI-73: resolve the 'connecting' phase → flip the hero to the Pod card +
+        // status bar to "IDLE · Remote". Specs best-effort for the card.
+        let specs = { gpuName: runpod.gpuType || null, vramGb: null, ramGb: null };
+        try {
+          const qp = runpod.gpuType ? `?gpuTypeId=${encodeURIComponent(runpod.gpuType)}` : '';
+          const sr = await fetch(`/remote/pod/specs${qp}`);
+          if (sr.ok) specs = await sr.json();
+        } catch (_) { /* keep the fallback */ }
+        _emitRemoteConnection({ connected: true, ...specs, phase: null });
+        _bootConnected = true;
+        StatusBar.notify('Remote engine ready', 'success', 6000);
+      } else {
+        StatusBar.notify('Almost ready — finishing the connection. Try generating in a moment.', 'info', 8000);
+      }
     } else {
       throw new Error('the Pod did not reach ready in time — open Settings → RunPod to retry');
     }
@@ -368,6 +432,13 @@ async function _initRemoteBoot(runpod) {
       showCancel: false,
     });
     retry.el.show();
+  } finally {
+    // MPI-73: clear the transient 'connecting' phase if the reconnect did not
+    // fully connect (unavailable GPU, timeout, WS never handshook, threw) so the
+    // hero/status bar fall back to local · offline instead of staying stuck.
+    if (!_bootConnected) {
+      _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+    }
   }
 }
 
@@ -389,6 +460,16 @@ async function _initRemoteBoot(runpod) {
 function _initRemoteConnectionFeed() {
   let _last = null; // last broadcast connected bool (null = nothing sent yet)
 
+  // Track the transition phase from ANY `remote:connection` emit carrying an
+  // explicit phase — including Settings Connect/Disconnect (a different module) —
+  // so this feed's phase-less status ticks don't clobber a transition the user
+  // started from the UI (MPI-73). `_emitRemoteConnection` keeps `_remotePhase` in
+  // sync for boot + feed; this covers the Settings-initiated case.
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('remote:connection', (p) => {
+    if (p && Object.prototype.hasOwnProperty.call(p, 'phase')) _setRemotePhase(p.phase || null);
+  });
+
   const HEALTHY_MS = 5000;
   const MAX_BACKOFF_MS = 30000;
   const FETCH_TIMEOUT_MS = 4000;
@@ -399,7 +480,7 @@ function _initRemoteConnectionFeed() {
     if (!cfg.enabled) {
       if (_last !== false) {
         _last = false;
-        Events.emit('remote:connection', { connected: false, gpuName: null });
+        _emitRemoteConnection({ connected: false, gpuName: null });
       }
       _delay = HEALTHY_MS; // disabled is a steady state, not an error
       return;
@@ -425,7 +506,7 @@ function _initRemoteConnectionFeed() {
     if (connected !== _last) {
       _last = connected;
       if (!connected) {
-        Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null });
+        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null });
         return;
       }
       // Resolve GPU/VRAM/RAM for the badge (best-effort; falls back to the id).
@@ -435,7 +516,7 @@ function _initRemoteConnectionFeed() {
         const r = await fetch(`/remote/pod/specs${qp}`);
         if (r.ok) specs = await r.json();
       } catch (_) { /* keep the fallback */ }
-      Events.emit('remote:connection', { connected: true, ...specs });
+      _emitRemoteConnection({ connected: true, ...specs });
     }
   };
 
@@ -488,6 +569,27 @@ async function _initDataRegistries() {
       await syncModelInstalled();
     } catch (err) {
       clientLogger.error('shell', 'model registry sync failed:', err);
+    }
+  });
+
+  // MPI-73: the boot model check (below) runs before the remote engine finishes
+  // connecting, so it reads the not-yet-connected backend → stale counts (the
+  // hero "N / N" showed local/empty until a navigation forced a re-check). Re-run
+  // the model check when the remote engine reaches CONNECTED so the volume's real
+  // installed set is read. Only on the connected edge; ignore transition phases.
+  let _wasRemoteConnected = false;
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('remote:connection', async ({ connected, phase = null } = {}) => {
+    if (phase) return; // mid-transition, not a resolved state
+    if (connected && !_wasRemoteConnected) {
+      _wasRemoteConnected = true;
+      try {
+        await syncModelInstalled();
+      } catch (err) {
+        clientLogger.error('shell', 'model registry sync on remote connect failed:', err);
+      }
+    } else if (!connected) {
+      _wasRemoteConnected = false;
     }
   });
 

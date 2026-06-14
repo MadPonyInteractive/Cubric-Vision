@@ -31,7 +31,7 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -1167,7 +1167,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             pb.on('cancel', () => {
                 const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
                 const target = active[0];
-                if (target) activeGenerations.cancel(target.id);
+                // Route a CUE-managed job through cancelRunningCueJob so a job that
+                // never got a prompt_id (e.g. remote WS down — MPI-73 Bug 2) also
+                // frees the stuck dispatcher + clears the queue instead of leaving a
+                // dead "running" slot that no repeated Stop can clear. A direct
+                // (non-queue) gen has no queueJobId and cancels in place.
+                if (target?.queueJobId) cancelRunningCueJob(target.queueJobId);
+                else if (target) activeGenerations.cancel(target.id);
                 const currentGroups = _visibleProjectGroups();
                 grid.el.setGroups(currentGroups);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');

@@ -25,11 +25,28 @@
 > materialization FIXED + live-verified (Create-from worked); remote uninstall
 > GUARDED (no local trash) + live-verified toast; "Restarting ComfyUI" → info
 > toast; cu128 multi-stage verified on RTX PRO 6000. mpi-ci has /wrapper/models/delete
-> + aria2 fast-download WRITTEN (await rebuild). Reuse-prompt FIXED+user-verified
-> 2026-06-14 (op made authoritative before media inject; `_isI2V` → op-driven
-> `_opAcceptsImageInput`). OPEN: Bug B (intermittent Create-From double-card —
-> render race, debug gated behind MPI_DEBUG_BUGB), MPI-73, model-cache
-> stacking OOM (--cache-lru 2 candidate). See §10 + plan.md Plan Drift.
+> + aria2 fast-download WRITTEN (await rebuild). SESSION 4 (2026-06-14, all
+> renderer-only + user-verified + committed): Reuse-prompt FIXED (op made
+> authoritative before media inject; `_isI2V` → op-driven `_opAcceptsImageInput`;
+> commit 5c6beac). Bug 2 FIXED (in-place "Complete this preview" left the GALLERY
+> card stale — poster swapped but hover `<video>` never promoted because the grid
+> IntersectionObserver doesn't re-fire for an in-view card; `refreshGroup` now
+> calls `_promoteVideo()`; commit e8b6a7b. Plus a separate GroupHistory-viewer
+> bridge on `gallery:item-updated`). NOTE: a PARALLEL MPI-76 agent shared
+> MpiGalleryGrid.js/MpiGalleryBlock.js — a lint-staged stash race + concurrent
+> writes caused commits 92be6da/dea0a4c to cross-attribute some MPI-76 work; net
+> code is correct + nothing lost (verified). SESSION 5 (2026-06-14, renderer-only,
+> user-verified, committed): MPI-73 DONE — remote connect-readiness gate (preview
+> WS must be open before "Connected"/generation; `ensureWsConnected` refresh+retry
+> killed the false "almost ready"), cancel-a-never-started CUE job (no queue
+> re-hang), connect/disconnect feedback (hero `connecting·offline` /
+> `disconnecting·online` no card + status bar `IDLE · Connecting/Disconnecting`),
+> Cue button disabled during transitions via new `state.remoteEnginePhase`, local
+> GPU line no longer lingers at boot, models hero stat re-syncs on connect edge.
+> MPI-73 moved to its own card (now `done`). See §10 "MPI-73". OPEN: Bug B
+> (intermittent Create-From double-card — render race, debug gated behind
+> MPI_DEBUG_BUGB), model-cache stacking OOM (--cache-lru 2 candidate, REBUILD),
+> MPI-75 image rebuild (defer). See §10 + plan.md Plan Drift.
 > Prior: Step 5.1 wired: `podImageForCard` multi-image v0.3.0
 > selection + sage-compile warmup + 1200s readiness timeout; TEMP-DEBUG removed.
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
@@ -285,6 +302,49 @@ Step 4.5 delete-on-quit option). Current behavior:
 
 ## 10. Unresolved follow-ups
 
+- **MPI-73 — remote connect-readiness gate + cancel a never-started queued job +
+  connect/disconnect feedback + Cue-disable — ✅ DONE + USER-VERIFIED 2026-06-14
+  (renderer-only, no rebuild; spun out to its own card, now `done`):**
+  - **Bug 1 (premature "Connected" → STARTING hang):** wrapper-health `ready`
+    only means ComfyUI is up, NOT that the binary-preview WS is open. Added a
+    `_wsReady` flag + `isWsReady()` + `ensureWsConnected()` in `comfyController`;
+    `onopen` sets ready, `onclose`/`_onWsDropped` clear it. `_ensureRemoteReady`
+    refuses generation until the WS is open. Boot (`shell.js`) + Settings Connect
+    gate "ready" on the real handshake. `ensureWsConnected` RETRIES across its
+    window AND `await remoteEngineClient.refresh()` FIRST (boot bypasses
+    `ensureServerRunning`, so without the refresh `wsUrl()` is null and `connect()`
+    falls back to the LOCAL `ws://127.0.0.1:8188` → never opens remote → false
+    "almost ready" + hero stuck offline).
+  - **Bug 2 (Stop can't clear a STARTING/never-started CUE job):** a job that
+    never got a `prompt_id` has an exec promise that never settles → interrupt is
+    a no-op → the dispatcher's wrapped onCancel never frees the slot → queue
+    stuck. `cancelRunningCueJob` now detects `!entry.promptId`, settles the CUE
+    dispatch via extracted `_finishActiveCueDispatch({skipNext})`, and clears the
+    pending queue (no re-promote into another hang). PromptBox Stop in
+    gallery/groupHistory routes queue-managed targets through `cancelRunningCueJob`.
+  - **Connect/disconnect feedback:** `remote:connection` gained a `phase`
+    (`connecting`|`disconnecting`|null). Hero (`heroStats.js`) shows
+    `connecting · offline` / `disconnecting · online` with NO GPU card mid-
+    transition; status bar (`statusBar.js`) shows `IDLE · Connecting` /
+    `IDLE · Disconnecting`. shell.js centralizes emits via `_emitRemoteConnection`
+    + `_setRemotePhase` (folds phase into feed ticks so the feed never strips it;
+    mirrors into `state.remoteEnginePhase`). `_renderGpu` skips painting the local
+    GPU line while a phase is active (the late `/system/gpu-info` fetch was
+    re-painting over the cleared card at boot).
+  - **Cue-disable during transition:** `state.remoteEnginePhase` (new state key)
+    is read by MpiPromptBox at mount (race-free for a PromptBox mounted mid-
+    transition) + on `state:changed` → disables the Cue button, the hold-to-loop
+    gesture, and the run hotkey. `comfyController.ensureServerRunning` has a
+    backstop refusal (plain `ui:info` toast, NOT the bug-reporter modal).
+  - **Models hero stat re-sync:** boot's `syncModelInstalled()` ran pre-connect →
+    stale `N / N`; now re-runs on the `remote:connection` connected edge.
+  - RESIDUAL (accepted, own follow-up if it bites): ~30s between the Pod actually
+    being ready and the app showing connected (wrapper-health poll cadence + WS
+    handshake stacking). Bug 2's no-promptId Stop verified by trace, not a live
+    repro (the Cue-disable now largely prevents reaching that UI state).
+  - Files: `comfyController.js`, `shell.js`, `state.js`, `heroStats.js`,
+    `statusBar.js`, `MpiSettings.js`, `MpiPromptBox.js`, `generationService.js`,
+    `MpiGalleryBlock.js`, `MpiGroupHistoryBlock.js`.
 - **Bug 2 — in-place Finish leaves the GALLERY card stale (poster swaps but
   hover `<video>` won't play) — ✅ FIXED + USER-VERIFIED 2026-06-14 (app-side, no
   rebuild):** the gallery card's hover `<video>` is promoted lazily by the grid

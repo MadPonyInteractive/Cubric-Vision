@@ -532,6 +532,10 @@ export const MpiSettings = ComponentFactory.create({
             }
             _engineBusy = true;
             _engineBtnDisabled(true);
+            // MPI-73: surface the transition app-wide (hero card → "connecting ·
+            // offline" with no card; status bar → "IDLE · Connecting"). Resolved by
+            // the connected:true emit on success or connected:false on failure.
+            Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
             // A saved podId → warm-resume (reconnect) the stopped Pod; otherwise
             // create fresh. Reconnect self-heals to delete+create if the host is
             // full or the GPU is gone (Step 4.3).
@@ -542,6 +546,7 @@ export const MpiSettings = ComponentFactory.create({
                 ? 'Resuming your Pod — a warm resume is fast; if its host is full it recreates fresh.'
                 : 'Creating a fresh Pod on the selected GPU — first boot can take 90–120s.');
             Events.emit('ui:info', { message: warm ? 'Connecting to your Pod…' : 'Creating a Pod…' });
+            let _connectSucceeded = false; // MPI-73: resolves the 'connecting' phase
             try {
                 const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
                 const body = warm
@@ -604,6 +609,25 @@ export const MpiSettings = ComponentFactory.create({
                     fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
                     return;
                 }
+                // Wrapper health is ready (ComfyUI up), but the binary-preview WS
+                // opens lazily at generation time — flipping to "ready" now lets the
+                // user queue a job before the WS handshake, hanging it in STARTING
+                // (MPI-73 Bug 1). Open the WS and gate "ready" on the real handshake.
+                _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
+                let _wsOk = false;
+                try {
+                    const { ComfyUIController } = await import('../../../../services/comfyController.js');
+                    _wsOk = await ComfyUIController.ensureWsConnected();
+                } catch (_) { /* fall through to the still-connecting notice */ }
+                if (!_wsOk) {
+                    _setEngineHint(root, 'Almost ready — finishing the connection to the engine. Give it a moment, then try generating.', true);
+                    _setEngineStatusText(root, 'creating…');
+                    _engineBtnLabelSet('Disconnect');
+                    state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
+                    Events.emit('ui:info', { message: 'Almost ready — finishing the connection.' });
+                    fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
+                    return;
+                }
                 // Connected — remember so boot can auto-reconnect (Step 4.3).
                 state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
                 // A (re)connect restarts ComfyUI on Pod boot, so it re-scans
@@ -616,6 +640,17 @@ export const MpiSettings = ComponentFactory.create({
                     : 'Remote engine ready.');
                 _setEngineStatusText(root, 'ready');
                 _engineBtnLabelSet('Disconnect');
+                // MPI-73: resolve the 'connecting' phase → flip the hero card to the
+                // Pod + the status bar to "IDLE · Remote" immediately (don't wait for
+                // the 5s connection-feed tick). Specs are best-effort for the card.
+                _connectSucceeded = true;
+                let _specs = { gpuName: cfg.gpuType || null, vramGb: null, ramGb: null };
+                try {
+                    const _qp = cfg.gpuType ? `?gpuTypeId=${encodeURIComponent(cfg.gpuType)}` : '';
+                    const _sr = await fetch(`/remote/pod/specs${_qp}`);
+                    if (_sr.ok) _specs = await _sr.json();
+                } catch (_) { /* keep the fallback */ }
+                Events.emit('remote:connection', { connected: true, ..._specs, phase: null });
                 Events.emit('ui:success', { message: 'Remote engine ready' });
                 // Reap any stranded EXITED Pods from a prior session (Step 4.3.3).
                 // A create already swept server-side; a warm resume did not, so
@@ -633,6 +668,12 @@ export const MpiSettings = ComponentFactory.create({
             } finally {
                 _engineBusy = false;
                 _engineBtnDisabled(false);
+                // MPI-73: if the connect did NOT fully succeed (refused, timed out,
+                // WS never handshook, threw), clear the transient 'connecting' phase
+                // back to local · offline so the hero/status bar don't stay stuck.
+                if (!_connectSucceeded) {
+                    Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+                }
             }
         }
 
@@ -642,6 +683,10 @@ export const MpiSettings = ComponentFactory.create({
             _engineBtnDisabled(true);
             _setEngineStatusText(root, 'stopping…');
             _setEngineHint(root, 'Stopping the Pod (GPU billing ends; the Pod stays so it resumes fast next time). Delete it to free storage and allow the volume to be deleted.');
+            // MPI-73: hero card → "disconnecting · online" (no card); status bar →
+            // "IDLE · Disconnecting". connected:true keeps the label base "online"
+            // mid-teardown. Resolved to local · offline in finally.
+            Events.emit('remote:connection', { connected: true, gpuName: null, vramGb: null, ramGb: null, phase: 'disconnecting' });
             try {
                 // Step 4.3: STOP, not delete — keeps the Pod warm-resumable. Clear
                 // wasConnected so boot does NOT auto-reconnect after an explicit
@@ -663,6 +708,8 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineStatusText(root, 'stopped');
                 _engineBtnLabelSet('Connect');
                 _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+                // MPI-73: resolve the 'disconnecting' phase → local · offline.
+                Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
             }
         }
 
@@ -675,6 +722,9 @@ export const MpiSettings = ComponentFactory.create({
             _engineBtnDisabled(true);
             _setEngineStatusText(root, 'deleting…');
             _setEngineHint(root, 'Deleting the Pod (GPU + container-disk billing ends; the next Connect creates a fresh Pod). Your volume and models persist.');
+            // MPI-73: hero → "disconnecting · online" (no card); status bar →
+            // "IDLE · Disconnecting". Resolved to local · offline in finally.
+            Events.emit('remote:connection', { connected: true, gpuName: null, vramGb: null, ramGb: null, phase: 'disconnecting' });
             try {
                 const res = await fetch('/remote/pod/delete-active', { method: 'POST' });
                 const data = await res.json().catch(() => ({}));
@@ -695,6 +745,8 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineStatusText(root, 'stopped');
                 _engineBtnLabelSet('Connect');
                 _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+                // MPI-73: resolve the 'disconnecting' phase → local · offline.
+                Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
             }
         }
 

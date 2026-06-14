@@ -15,6 +15,14 @@ const _state = {
     comfyRootPath: null,        // Custom path to an external ComfyUI installation
     allComfyWorkflows: [],      // Workflow registry used by comfyController for id→file lookup
 
+    // ── Remote engine transition phase (MPI-73) ───────────────────────────────
+    remoteEnginePhase: null,    // null | 'connecting' | 'disconnecting'. Set while the
+                               // RunPod engine is mid-transition so any consumer can read
+                               // it at mount (race-free) AND react via state:changed. The
+                               // Cue button reads this to disable generation during a
+                               // transition; comfyController gates generation on it.
+                               // Kept in sync with the remote:connection event `phase`.
+
     // ── Runtime asset lists (populated at startup / on demand) ────────────────
     upscaleModels: [],          // Available upscale model filenames from ComfyUI backend
     availableLoras: [],         // Available LoRA filenames from ComfyUI backend

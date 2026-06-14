@@ -17,6 +17,17 @@ import { remoteEngineClient } from './remoteEngineClient.js';
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
+// MPI-73: the remote engine is mid-transition (connecting/disconnecting). During
+// this window the backend remote-mode flag may not match the user's intent yet —
+// `isRemote()` can still read false mid-connect — so a generation would silently
+// fall to the LOCAL engine (spinning up local ComfyUI) instead of waiting for the
+// Pod. Track the transition from the same `remote:connection` phase the UI uses
+// and refuse generation while it is in progress. Module-scoped: one subscription
+// for the page lifetime (the controller is a singleton).
+let _remoteTransition = null; // 'connecting' | 'disconnecting' | null
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
+Events.on('remote:connection', ({ phase = null } = {}) => { _remoteTransition = phase || null; });
+
 function _buildComfyViewUrl(httpBase, fileInfo) {
     const params = new URLSearchParams();
     for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
@@ -74,6 +85,58 @@ export const ComfyUIController = {
     /** @type {number} Consecutive WS reconnect attempts with no successful open. Reset on `onopen`; a sustained drop trips `_onWsDropped`. */
     _wsReconnectAttempts: 0,
 
+    /** @type {boolean} True only while the binary-preview WS is OPEN. Wrapper-health `ready` (ComfyUI up) is NOT the same as the preview WS being connected — accepting a generation before the WS is open hangs the job in STARTING with no prompt_id (MPI-73 Bug 1). */
+    _wsReady: false,
+
+    /** @returns {boolean} Whether the preview WS is currently open. */
+    isWsReady() {
+        return this._wsReady === true
+            && !!this._ws
+            && this._ws.readyState === WebSocket.OPEN;
+    },
+
+    /**
+     * Resolves true once the binary-preview WS is OPEN, false on timeout.
+     * Opens the socket (via `connect()`) if it is not already open. Used by the
+     * boot/Settings connect flow to gate the "Connected"/ready signal on a real
+     * WS handshake, and by `_ensureRemoteReady` to refuse generation until the
+     * WS is up (MPI-73 Bug 1).
+     * @param {{ timeoutMs?: number }} [opts]
+     * @returns {Promise<boolean>}
+     */
+    async ensureWsConnected({ timeoutMs = 20000, retryMs = 1500 } = {}) {
+        if (this.isWsReady()) return true;
+        // Load the remote WS base + token BEFORE connecting. The boot/Settings flow
+        // calls ensureWsConnected directly (not via ensureServerRunning), so without
+        // this refresh `remoteEngineClient.wsUrl()` is null and connect() falls back
+        // to the LOCAL ws://127.0.0.1:8188 — which never opens in remote mode, so the
+        // handshake times out and the caller shows a false "almost ready" with the
+        // hero stuck on local·offline even though the Pod is up (MPI-73).
+        try { await remoteEngineClient.refresh(); } catch { /* fall through; connect() retries below */ }
+        const start = Date.now();
+        let lastAttempt = 0;
+        // RETRY across the whole window, don't rely on a single attempt + a passive
+        // waiter. The Pod's preview WS often is not accepting yet at the instant
+        // wrapper-health flips `ready`; the first socket errors + closes, and the
+        // pre-gen connect path doesn't auto-reconnect (that only runs while a
+        // generation is in flight). Without retrying here, ensureWsConnected gives
+        // up on that first failure and the caller shows a false "almost ready" even
+        // though the WS comes up a few seconds later (MPI-73). Re-`connect()`
+        // whenever the socket is missing/closed; `onopen` sets `_wsReady`.
+        while (Date.now() - start < timeoutMs) {
+            const st = this._ws?.readyState;
+            const connecting = st === WebSocket.CONNECTING;
+            const open = st === WebSocket.OPEN;
+            if (!open && !connecting && Date.now() - lastAttempt >= retryMs) {
+                lastAttempt = Date.now();
+                this.connect();
+            }
+            await new Promise(r => setTimeout(r, 250));
+            if (this.isWsReady()) return true;
+        }
+        return false;
+    },
+
     /**
      * Ensures the ComfyUI Python process is running and ready.
      * Emits `comfy:starting` → polls `/comfy/status` → emits `comfy:ready`.
@@ -81,6 +144,25 @@ export const ComfyUIController = {
      * @returns {Promise<boolean>}
      */
     async ensureServerRunning(opts = {}) {
+        // MPI-73: refuse to start ANY generation while the remote engine is
+        // connecting or disconnecting. Mid-transition the backend remote-mode flag
+        // may not yet reflect the user's intent, so without this guard the run
+        // would fall to the LOCAL engine (spinning up local ComfyUI) instead of
+        // waiting for the Pod — exactly the "pressed Cue while connecting and it
+        // generated locally" bug. Block BEFORE refresh()/the local-vs-remote split.
+        if (_remoteTransition) {
+            // Backstop only — the Cue button is disabled during a transition
+            // (MpiPromptBox), so this rarely fires. Surface a plain INFO toast, not
+            // the bug-reporter `comfy:error` modal: a transition refusal is expected
+            // UX, not a crash to report. The thrown error still ends the pipeline.
+            const tMsg = _remoteTransition === 'disconnecting'
+                ? 'Disconnecting the remote engine — wait for it to finish before generating.'
+                : 'Connecting to the remote engine — wait until it is ready before generating.';
+            Events.emit('ui:info', { message: tMsg });
+            const err = new Error(tMsg);
+            err.code = 'remote_transition';
+            throw err;
+        }
         // Remote mode owns its own error surfacing (retry dialog in background,
         // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
         // try/catch so a remote failure doesn't double-emit ui:error below.
@@ -191,6 +273,18 @@ export const ComfyUIController = {
                 if (!background) Events.emit('comfy:error', { message: msg });
                 else Events.emit('ui:error', { title: 'Reconnect required', message: msg });
                 throw new Error(msg);
+            }
+            // Wrapper-health `ready` only means ComfyUI is UP — it does NOT mean
+            // the binary-preview WS is connected. Accepting a generation before
+            // the WS handshake completes hangs the job in STARTING with no
+            // prompt_id (MPI-73 Bug 1). Require the WS to be open before
+            // proceeding; open it on demand and wait briefly for the handshake.
+            const wsOk = this.isWsReady() || await this.ensureWsConnected({ timeoutMs: 15000 });
+            if (!wsOk) {
+                const wsMsg = 'Still connecting to the remote engine — give it a moment, then try again. (Settings → RunPod shows the connection status.)';
+                if (!background) Events.emit('comfy:error', { message: wsMsg });
+                else Events.emit('ui:info', { message: wsMsg });
+                throw new Error(wsMsg);
             }
             if (background) Events.emit('comfy:ready');
             return true;
@@ -373,6 +467,10 @@ export const ComfyUIController = {
             // A clean open clears the sustained-drop counter so a future blip
             // gets the full reconnect budget again.
             this._wsReconnectAttempts = 0;
+            // The preview WS is now genuinely connected — only NOW is the engine
+            // safe to accept a generation (MPI-73 Bug 1). `ensureWsConnected` polls
+            // `isWsReady()`, which now returns true.
+            this._wsReady = true;
         };
 
         this._ws.onerror = (e) => {
@@ -380,6 +478,9 @@ export const ComfyUIController = {
         };
 
         this._ws.onclose = () => {
+            // Socket no longer open — drop the ready flag so a generation gated on
+            // `isWsReady()` is refused until a fresh handshake completes (MPI-73).
+            this._wsReady = false;
             if (this._promptListeners.size && this._isRunning) {
                 // A transient blip reconnects (the socket re-opens, onopen resets
                 // the counter). A SUSTAINED drop — e.g. a remote container OOM-kill
@@ -420,6 +521,7 @@ export const ComfyUIController = {
         this._activePromptId = null;
         this._isRunning = false;
         this._wsReconnectAttempts = 0;
+        this._wsReady = false;
         const err = new Error(
             'The remote engine disconnected mid-generation — the Pod may have run '
             + 'out of memory and restarted. Try a shorter or smaller generation, or '

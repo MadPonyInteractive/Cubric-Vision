@@ -46,6 +46,7 @@ let _queueDepth = 0;
 let _elapsedSec   = 0;
 let _activeStartedAt = null;
 let _remoteConnected = false; // MPI-64 4.4: drives the IDLE · Local/Remote scope
+let _remotePhase = null;      // MPI-73: 'connecting' | 'disconnecting' | null — transient connect feedback
 let _timerInterval = null;
 let _completionToken = 0;
 const _listenUnsubs = [];
@@ -102,10 +103,18 @@ function _stopTimer() {
     }
 }
 
+function _idleScopeLabel() {
+    // MPI-73: a transient connect/disconnect overrides the steady Local/Remote
+    // scope so the status bar reflects the in-progress transition.
+    if (_remotePhase === 'connecting') return 'Connecting';
+    if (_remotePhase === 'disconnecting') return 'Disconnecting';
+    return _remoteConnected ? 'Remote' : 'Local';
+}
+
 function _setIdle() {
     _state = 'idle';
     _job.className = 'shell-info__job';
-    _jobLabel.textContent = `IDLE · ${_remoteConnected ? 'Remote' : 'Local'}`;
+    _jobLabel.textContent = `IDLE · ${_idleScopeLabel()}`;
     _currentLabel = '';
     _activeStartedAt = null;
 
@@ -380,8 +389,11 @@ export const StatusBar = {
         _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
         _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
         // MPI-64 4.4: idle label scope tracks the remote engine connection.
-        _listenUnsubs.push(Events.on('remote:connection', ({ connected }) => {
+        // MPI-73: `phase` ('connecting'|'disconnecting') overrides the steady
+        // Local/Remote scope while a transition is in progress.
+        _listenUnsubs.push(Events.on('remote:connection', ({ connected, phase = null }) => {
             _remoteConnected = !!connected;
+            _remotePhase = phase || null;
             if (_state === 'idle') _setIdle();
         }));
     },

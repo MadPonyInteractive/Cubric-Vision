@@ -161,6 +161,28 @@ function _updateQueueDepth() {
     _emitQueueChanged();
 }
 
+/**
+ * Frees the in-flight CUE dispatch slot and schedules the next job. The normal
+ * exit for the active job (its wrapped onComplete/onError/onCancel call this).
+ * Also callable directly to settle a job whose exec promise will NEVER resolve
+ * — e.g. a remote job Stopped before it ever got a prompt_id, where the
+ * interrupt POST is a no-op and ComfyUI never sends a terminal event (MPI-73
+ * Bug 2). `skipNext` suppresses auto-promoting the next queued job, used when
+ * the engine is not accepting work so the next job would just hang too.
+ * @param {{ skipNext?: boolean }} [opts]
+ */
+function _finishActiveCueDispatch({ skipNext = false } = {}) {
+    if (!_cueDispatchInFlight && !_activeCueJob) return;
+    _cueDispatchInFlight = false;
+    _activeCueJob = null;
+    _updateQueueDepth();
+    if (skipNext) {
+        _emitPromptBoxGenerationEndIfIdle();
+        return;
+    }
+    setTimeout(() => _dispatchNextCue(), 0);
+}
+
 function _dispatchNextCue() {
     if (_cueDispatchInFlight) return;
     const next = _cueQueue.shift();
@@ -188,12 +210,7 @@ function _dispatchNextCue() {
     _lastJobForLoop = next;
     _updateQueueDepth();
 
-    const finishCueDispatch = () => {
-        _cueDispatchInFlight = false;
-        _activeCueJob = null;
-        _updateQueueDepth();
-        setTimeout(() => _dispatchNextCue(), 0);
-    };
+    const finishCueDispatch = () => _finishActiveCueDispatch();
 
     const wrappedCallbacks = {
         ...next.callbacks,
@@ -277,7 +294,20 @@ export function cancelRunningCueJob(queueJobId) {
     if (!queueJobId) return false;
     const entry = activeGenerations.list().find(e => e.queueJobId === queueJobId && e.status === 'running');
     if (!entry) return false;
+    // A job that never received a prompt_id never reached the engine (e.g. the
+    // remote preview WS was down — MPI-73). Its exec promise will NEVER settle,
+    // so the interrupt POST is a no-op and the wrapped onComplete/onCancel that
+    // frees the dispatcher never fires → the queue stays stuck on a dead
+    // "running" slot and repeated Stop does nothing. Detect that case and settle
+    // the CUE state locally: end the gen, free the dispatch slot WITHOUT
+    // auto-promoting the next job (the engine isn't accepting work, so the next
+    // would hang too), and drop any pending jobs.
+    const neverStarted = !entry.promptId;
     activeGenerations.cancel(entry.id);
+    if (neverStarted) {
+        clearCueQueue();
+        _finishActiveCueDispatch({ skipNext: true });
+    }
     _emitQueueChanged();
     return true;
 }

@@ -78,6 +78,7 @@ export const MpiPromptBox = ComponentFactory.create({
         let negativeValue     = props.negativeValue || '';
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
+        let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
         let _context          = props.context || {};
 
         /** @type {Map<string, Object>} */
@@ -1012,6 +1013,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Run / Stop / Loop hotkeys ──────────────────────────────────────────
         const _triggerRun = () => {
+            // MPI-73: the run hotkey bypasses the (now-disabled) Cue button — block
+            // it too while the remote engine is connecting/disconnecting.
+            if (_remoteTransitioning) return;
             if (state.loopArmed) {
                 state.loopArmed = false;
                 return;
@@ -1044,8 +1048,25 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             if (key === 'loopArmed') {
                 _refreshRunLabel();
+                return;
+            }
+            if (key === 'remoteEnginePhase') {
+                _applyRemotePhase(); // MPI-73: enable/disable Cue on transition
             }
         }));
+
+        // MPI-73: disable the Cue button while the remote engine is connecting or
+        // disconnecting. Generation mid-transition would fall to the wrong engine
+        // and surface a misleading error — prevention beats a scary popup, so block
+        // the button outright. Driven by `state.remoteEnginePhase` (not the live
+        // event) so a PromptBox mounted DURING a transition reads the current phase
+        // immediately at mount, then stays in sync via state:changed below.
+        const _applyRemotePhase = () => {
+            const phase = state.remoteEnginePhase;
+            _remoteTransitioning = phase === 'connecting' || phase === 'disconnecting';
+            runBtn?.el?.setDisabled?.(_remoteTransitioning);
+        };
+        _applyRemotePhase();
 
         // ── Initialise ─────────────────────────────────────────────────────────
         _refreshOpDropdown();

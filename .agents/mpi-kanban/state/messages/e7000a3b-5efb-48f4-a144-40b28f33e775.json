@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "e7000a3b-5efb-48f4-a144-40b28f33e775",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-06-14T05:11:42Z",
-  "updated_at": "2026-06-14T05:11:42Z",
+  "updated_at": "2026-06-14T06:30:00Z",
   "from": {
     "agent": "claude",
     "session": "kanban-card-repair"
@@ -29,6 +29,12 @@
     {
       "at": "2026-06-14T05:11:42Z",
       "event": "created"
+    },
+    {
+      "at": "2026-06-14T06:30:00Z",
+      "event": "resolved",
+      "by": { "agent": "claude", "session": "MPI-73 session 1" },
+      "outcome": "Created brief.md with full description; task.json description shortened to 1-line summary; task.updated logged to both event logs."
     }
   ]
 }

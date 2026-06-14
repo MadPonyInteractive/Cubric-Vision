@@ -27,7 +27,7 @@ import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
-import { enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
+import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -785,7 +785,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
                 const target = mode === 'queue' ? active[0] : active.at(-1);
-                if (target) activeGenerations.cancel(target.id);
+                // A CUE-managed job that never got a prompt_id (remote WS down —
+                // MPI-73 Bug 2) must free the stuck dispatcher + clear the queue, not
+                // just cancel its registry entry, or repeated Stop is a no-op.
+                if (target?.queueJobId) cancelRunningCueJob(target.queueJobId);
+                else if (target) activeGenerations.cancel(target.id);
                 else _activeExec?.cancel();
                 if (mode !== 'queue') _activeExec = null;
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');

@@ -1,0 +1,139 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "919d9124-90cb-414e-9375-2c288ae12ca5",
+  "generated_at": "2026-06-13T14:10:36+00:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 session 3 — dep-cross fix (I2V/T2V) LIVE-VERIFIED + remote latent materialize fix + RAM GPU-picker + remote-uninstall guard + restart-toast downgrade; mpi-ci wrapper delete + aria2 written (await rebuild); Bug B + reuse-prompt logged open",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64 RunPod remote engine; investigate the remote-I2V-ignores-subject bug, then keep hardening remote video.",
+    "status": "in_progress",
+    "summary": "Root-caused + FIXED + LIVE-VERIFIED the remote-I2V-wrong-subject bug (a dependencies.js url/sha CROSS — i2v-named UNet files held t2v weights; proven via safetensors patch_embedding 36ch vs 16ch). Fixed remote preview-latent materialization (Create-from now works remotely). Shipped RAM in the GPU picker. Guarded remote uninstall (no more local data-loss). Downgraded 'Restarting ComfyUI' to a toast. Wrote /wrapper/models/delete + aria2 fast-download in mpi-ci (await a batched image rebuild — MPI-75). TWO bugs left OPEN: Bug B (intermittent Create-From double-card — render race, could not repro, debug gated behind MPI_DEBUG_BUGB) and reuse-prompt (wrong settings + false image toast on video items)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "dep url/filename CROSS FIXED + LIVE-VERIFIED (commit b58142c): swapped url+sha256+size on the 4 Wan UNet deps so each filename pairs its real HF file (real sha = HF X-Linked-ETag). Remote I2V now respects the input subject + T2V is clean (closes B3 horrible-T2V). Verified on RTX 4000 Ada + RTX PRO 6000. USER must delete the 4 wrong Wan_22_*.safetensors on any pre-fix volume + reinstall to refetch correct weights.",
+      "Remote preview-LATENT materialization FIXED + LIVE-VERIFIED (committed): routes/projects.js materializePreviewAssets now streamDownloads the latent from the wrapper (buildViewUrlFromBase off the comfyViewUrl base) when the local source is absent, instead of fs.move from a local engine path. Remote multi-stage Create-from/Continue now produces a clean new card.",
+      "GPU picker now shows system RAM + low-RAM video warning (committed): runpodRemote.js gpuTypes query adds lowestPrice{minMemory minVcpu}; MpiSettings meta = 'STOCK · NNGB VRAM · NNGB RAM[⚠ video if <64] · $X/hr'. RAM is the conservative floor (lowestPrice.minMemory). Live-verified.",
+      "Remote UNINSTALL guarded (commit 1eab405) — no longer trashes LOCAL files in remote mode; toasts 'Remote Uninstall Unavailable' until the wrapper delete endpoint ships. Live-verified.",
+      "'Restarting ComfyUI' notice downgraded from the ui:error bug-reporter modal to a plain ui:info toast (comfyController.js). 'Remote Uninstall Unavailable' KEPT as error (user: should never happen post-rebuild).",
+      "mpi-ci (branch main, COMMITTED not pushed): /wrapper/models/delete endpoint (d9c7310) + aria2c fast model download with httpx fallback + Dockerfile apt aria2 (551e96d). Both await a batched image rebuild (MPI-75).",
+      "Verified: cu128 image connects + multi-stage T2V/I2V generates on RTX PRO 6000 Blackwell (CUDA-13.0 host); cu124 on Ada cards; Step 5.2 GPU-CUDA-filter DROPPED as superseded.",
+      "All session work committed on RunPod branch; mpi-ci committed (push pending — USER pushes)."
+    ],
+    "pending": [
+      "Bug B (OPEN, could not repro): intermittent Create-From → finished card duplicating the prior result + preview card's badge/buttons cleared, instead of one clean new card. Gen-config is CORRECT (debug: isStage2=true, previewOnly=false, replaceItemId=null, urls=1) → GALLERY RENDER/PLACEHOLDER RACE. TEMP-DEBUG instrumentation LEFT IN, GATED OFF behind localStorage.MPI_DEBUG_BUGB='1' (generationService.js exec.onComplete + 5 points in MpiGalleryBlock.js). Healthy baseline captured (see plan.md). Repro hypotheses: clean first-action after restart OR a slow/high-quality gen opening a timing window. When it recurs, flip the flag, diff vs the healthy baseline (watch for a 2nd rebuildAfterEnd, an item-updated on the PREVIEW group, or non-null replaceItemId on gen-started(692)), fix, then REMOVE the debug.",
+      "Reuse-prompt broken (OPEN): on a VIDEO item, Reuse Prompt does NOT restore correct settings AND fires a false 'model does not accept images' toast even when reuse carried NO images (stale image-presence flag / reuse checks selected item's media not the reused payload). Image-side unchecked. Evaluate js/utils/promptReuse.js + the PromptBox/GroupHistory reuse handler + the media-vs-compat check.",
+      "MPI-75 batched image rebuild (USER-run, DEFER as long as possible — hours): /wrapper/models/delete, aria2 fast-download, candidate --cache-lru 2 (model-cache stacking OOM), candidate /wrapper/free (remote memory release), future cu130 Blackwell profile. At rebuild: bump wrapper_version 0.2.2→0.2.3 (mpi-ci build arg) AND WRAPPER_VERSION in routes/remoteProxy.js. Commit+push mpi-ci main BEFORE gh workflow run.",
+      "Model-cache STACKING OOM (decision pending): switching model-type never evicts → stacks → OOM on RAM-limited Pods (local 62GB never hits it). --cache-none is OUT (breaks 1k-sampler workflows). Leaning --cache-lru 2. Needs a controlled test before building.",
+      "Bug 2 (own card later): 'Finish in-place' succeeds but UI doesn't repaint preview→video until re-nav (pre-existing).",
+      "Bug 4 (verify-only): confirm project.json honestly stores the shared I2V/T2V duration/quality (user accepts sharing).",
+      "MPI-73 (backlog): premature 'Connected' before preview-WS up → jobs hang STARTING; Stop can't clear a STARTING job.",
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift: full session logged (dep-cross fix + live-verify, remote latent fix, RAM-picker, uninstall guard, toast downgrade, Bug B investigation + healthy baseline, reuse-prompt specifics, model-cache OOM investigation, Step 5.2 dropped, cu130 future note).",
+      "current-architecture.md: header session-3 summary + §10 entries (remote latent fixed, Bug B open, reuse-prompt open, cu128 multi-stage verified, RAM-picker shipped, Step 5.2 dropped, cu130 future).",
+      "memory project_dep_url_filename_integrity saved (download success ≠ correct content; cross-check url/sha vs filename).",
+      "memory project_remote_route_branch_audit saved (any local-fs route needs an isRemoteActive() branch).",
+      "memory project_video_gen_ram_wall updated (16GB-VRAM/31GB-RAM Pod still OOM'd → ≥64GB RAM AND ≥12GB VRAM for Wan video).",
+      "MPI-75 card created + maintained (running batched-rebuild list).",
+      "Bug B TEMP-DEBUG gated behind localStorage.MPI_DEBUG_BUGB (committed)."
+    ],
+    "pending": [
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal + MPI-68 Wan split) folds at next /mpi-version-bump.",
+      "Remove the Bug B TEMP-DEBUG once Bug B is fixed.",
+      "USER: push mpi-ci main (git -C c:/AI/Mpi/mpi-ci push origin main) before any rebuild."
+    ]
+  },
+  "next_action": {
+    "description": "Pick the next OPEN bug (brief before code, mpi-continue gate). RECOMMENDED: reuse-prompt bug (reproducible + specific — wrong settings restored + false 'model does not accept images' toast on video items even when reuse carried no images; evaluate js/utils/promptReuse.js + the PromptBox/GroupHistory reuse handler + the media-vs-compat check). Bug B (intermittent Create-From double-card) is a render race that could NOT be reproduced — leave it; if it recurs, set localStorage.MPI_DEBUG_BUGB='1', reload, repro, and diff the B log sequence vs the healthy baseline in plan.md. Other options: model-cache stacking OOM (--cache-lru 2, decision+test pending), MPI-73, Bug 2 (Finish-in-place UI no-refresh). DEFER the MPI-75 image rebuild as long as possible (hours). FIRST read current-architecture.md + plan.md Plan Drift (top entries).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Remote-I2V-wrong-subject root cause = dependencies.js url+sha CROSS (i2v files got t2v weights), NOT transport/MPI-68-split/sage. Proven by safetensors patch_embedding in-channels: i2v=36, t2v=16. HF files correctly named; only the app pairing was wrong. The MPI-68 split was only the TRIGGER (forced a remote reinstall via the crossed URL). Same cross degraded T2V + caused some OOMs (heavier wrong model loaded).",
+      "Pattern: any backend route touching local model files MUST branch on remoteModels.isRemoteActive() (install did, uninstall + preview-latent-materialize did NOT — both fixed). See memory project_remote_route_branch_audit.",
+      "RAM is the real wall for Wan video, not VRAM: a 16GB-VRAM/31GB-RAM Pod OOM'd I2V; a 46GB-RAM Pod completed. Requirement ≥64GB RAM AND ≥12GB VRAM. Picker now shows lowestPrice.minMemory (floor) + ⚠ video <64.",
+      "Two Pod images, auto-selected by card (podImageForCard): Blackwell→cu128 (floor 12.8), everything else→cu124 (floor 12.4, broad-compat default). cu124-default eliminated the broad host-driver-CUDA refusal class, so Step 5.2 picker-filter is moot/dropped.",
+      "cu128 chosen (not cu130) only because it was the newest PROVEN base+torch+sage combo at MPI-70 build; cu130 Blackwell profile is a future speed win (MPI-75).",
+      "Model-cache stacking: ComfyUI keeps every loaded model in RAM (no --cache flag); switching model-type never evicts → OOM on low-RAM Pods. --cache-none breaks 1k-sampler workflows; leaning --cache-lru 2 (needs a test before building).",
+      "Bug B gen-config is provably correct (debug); the bug is a gallery render/placeholder race — do NOT chase it in generationService; instrument/diff the MpiGalleryBlock event sequence.",
+      "DEFER the MPI-75 image rebuild as long as possible (user — it takes hours); keep batching rebuild-needing changes onto MPI-75."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete or image builds (USER runs all live Pod ops + builds).",
+      "PowerShell-via-Bash works for read-only RunPod GraphQL probes (Authorization: Bearer header, URL https://api.runpod.io/graphql, NO ?api_key=; introspection is DISABLED by Apollo — guess fields + test). Read app.log with the Read tool.",
+      "Backend logger (routes/logger.js) warn/info take only (category, message) — 3rd arg dropped. clientLogger.warn (frontend) is ALSO (category, message) only — inline state into the message string.",
+      "POD_IMAGE/WRAPPER_VERSION + in-process _mode consts need an APP RESTART. routes/remoteProxy.js MUST stay mounted before routes/comfy.js.",
+      "Backend changes (routes/, server.js, main.js) need a FULL app restart (no nodemon); renderer changes (js/, css/) reload with Ctrl+R.",
+      "Bug B TEMP-DEBUG is GATED OFF behind localStorage.MPI_DEBUG_BUGB='1' — flip on to hunt, REMOVE when fixed.",
+      "mpi-ci (separate repo at c:/AI/Mpi/mpi-ci, branch main) holds the wrapper + Dockerfile. Commit+push BEFORE gh workflow run (dispatch builds the pushed ref). Push is USER-run.",
+      "project-paths.json (repo root) is gitignored (machine-local dev-fallback registry); never commit it.",
+      "Kanban task cards MUST use schema mpi-kanban/task-card/v1; maturity enum = idea|planned|in-progress|validating|complete (todo→idea/planned, doing→in-progress/validating, done→complete). status is free-text.",
+      "Never commit unless the USER asks (this session the user authorized commits)."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/dependencies.js (dep url/sha cross fix) — COMMITTED b58142c",
+      "routes/projects.js (remote preview-latent materialize via wrapper) — COMMITTED",
+      "routes/runpodRemote.js + js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (RAM in GPU picker) — COMMITTED",
+      "routes/downloadManager.js + routes/remoteModels.js + js/services/downloadService.js (remote uninstall guard) — COMMITTED 1eab405",
+      "js/services/comfyController.js (Restarting-ComfyUI → info toast) — COMMITTED 1eab405",
+      "js/services/generationService.js + js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (Bug B TEMP-DEBUG, gated) — COMMITTED",
+      "js/data/modelConstants/models.js + MpiModelManager.js + MpiInstalledDisplay.js + comfy_workflows/display/wan22_i2v_preview.mp4 (MPI-68 split leftovers) — COMMITTED 80020ae",
+      "js/shell/notificationService.js (MPI-72 leftover) — COMMITTED 03fad7b",
+      ".gitignore (project-paths.json) — COMMITTED b58142c",
+      "mpi-ci: cubric-vision-pod/wrapper/wrapper.py (delete endpoint + aria2) + Dockerfile (aria2) + README (rebuild notes) — COMMITTED d9c7310/551e96d, NOT PUSHED",
+      ".agents/mpi-kanban/tasks/MPI-64/{plan.md,current-architecture.md} + MPI-75 card + board.json + events — COMMITTED"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (latest-truth snapshot — KEEP UPDATED)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Plan Drift top — this session's entries)",
+      ".agents/mpi-kanban/tasks/MPI-75/task.json (batched image-rebuild list)",
+      "js/utils/promptReuse.js + js/services/projectService.js applyPromptReuseSettings (reuse-prompt bug)",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (Bug B render race; Create-from at ~494-520, gen-started/item-updated/rebuildAfterEnd handlers at ~692/709/1160/1188)",
+      "js/services/generationService.js (gen pipeline; Bug B debug at exec.onComplete ~443)",
+      "routes/projects.js (materializePreviewAssets ~271 + buildViewUrlFromBase; save-generation ~1324)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI execution boundary", "multi-stage video preview/continue", "model install/uninstall + volume", "prompt reuse", "gallery render lifecycle", "container RAM / OOM / model cache"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/components.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-13T14:10:36+00:00", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/919d9124-90cb-414e-9375-2c288ae12ca5.json, then READ .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (latest-truth snapshot — KEEP IT UPDATED) and plan.md Plan Drift (top), then use mpi-continue. STATUS: session 3 ROOT-CAUSED + FIXED + LIVE-VERIFIED the remote-I2V-wrong-subject bug — it was a dependencies.js url+sha CROSS (the i2v-named Wan UNet files downloaded T2V weights; proven via safetensors patch_embedding 36ch vs 16ch; NOT transport/MPI-68-split/sage). Swapped url+sha+size so each filename pairs its real HF file; remote I2V now respects the subject + T2V is clean. ALSO SHIPPED + VERIFIED: remote preview-LATENT materialization (Create-from works remotely — streamDownload the latent from the wrapper instead of fs.move a local path), system RAM in the GPU picker (lowestPrice.minMemory + ⚠ video <64GB), remote-uninstall guard (no more local data-loss; toast until the wrapper delete endpoint ships), and 'Restarting ComfyUI' downgraded to an info toast. In mpi-ci (separate repo, branch main, COMMITTED not pushed): /wrapper/models/delete + aria2c fast model download + Dockerfile aria2 — these AWAIT a batched image rebuild (MPI-75; bump wrapper_version 0.2.2→0.2.3 + app WRAPPER_VERSION; DEFER the rebuild as long as possible). cu128 multi-stage verified on RTX PRO 6000 Blackwell; cu124 on Ada. TWO BUGS OPEN: (A) reuse-prompt on VIDEO items restores wrong settings + fires a false 'model does not accept images' toast even when reuse carried no images — reproducible, evaluate js/utils/promptReuse.js + the reuse handler + the media-vs-compat check (RECOMMENDED next). (B) Bug B — intermittent Create-From double-card / preview-card-consumed; gen-config is provably correct so it's a GALLERY RENDER/PLACEHOLDER RACE; could NOT be reproduced; TEMP-DEBUG is left in but GATED OFF behind localStorage.MPI_DEBUG_BUGB='1' — flip on, reload, repro, diff vs the healthy baseline in plan.md, then remove. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env; never run autonomous Pod ops or image builds (USER runs all); backend routes need a FULL app restart, renderer changes reload with Ctrl+R; backend AND clientLogger warn/info take only (category, message) so inline state into the message; commit+push mpi-ci main BEFORE any gh workflow run (push is USER-run); project-paths.json is gitignored; kanban cards use schema mpi-kanban/task-card/v1 (maturity idea|planned|in-progress|validating|complete); never commit unless the USER asks. Brief before code (mpi-continue gate)."
+}

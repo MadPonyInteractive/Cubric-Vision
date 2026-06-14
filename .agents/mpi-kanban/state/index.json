@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-06-14T05:11:42Z",
+  "updated_at": "2026-06-14T06:30:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -49,10 +49,7 @@
     ".agents/mpi-kanban/state/files/71ed3ee8-74ab-453e-9ac2-7e027d688044.json"
   ],
   "open_messages": [
-    ".agents/mpi-kanban/state/messages/45492c5e-96cf-44a9-8e67-7112afd6a470.json",
-    ".agents/mpi-kanban/state/messages/dc08eeae-dae9-4870-9682-ae609940b6b8.json",
-    ".agents/mpi-kanban/state/messages/171bb193-e658-42e6-8b0a-67301176d242.json",
-    ".agents/mpi-kanban/state/messages/e7000a3b-5efb-48f4-a144-40b28f33e775.json"
+    ".agents/mpi-kanban/state/messages/45492c5e-96cf-44a9-8e67-7112afd6a470.json"
   ],
   "active_handoffs": [
     ".agents/mpi-kanban/state/handoffs/dcdb0086-cfd9-406b-b4a4-209bf0060db0.json",
