@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-78","at":"2026-06-14T07:25:02.575Z","actor":"vscode","summary":"Created MPI-78."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-78","at":"2026-06-15T07:55:00Z","actor":"vscode","summary":"Unblocked: aria2c model-download speed-up already in current Pod images; no rebuild gate. App-side work only, independent of MPI-81 rebuild batch."}

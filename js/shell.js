@@ -481,9 +481,40 @@ function _initRemoteConnectionFeed() {
   const FETCH_TIMEOUT_MS = 4000;
   let _delay = HEALTHY_MS;
 
+  // MPI-94 L5 — debounce the offline flip. A single failed/timed-out
+  // `/remote/comfy/status` poll (common under download load, when the wrapper is
+  // busy serving aria2c) used to flip the hero/status bar to `local · offline`
+  // for one tick before the next poll recovered. Require N CONSECUTIVE misses
+  // before broadcasting disconnected; the connected edge still repaints
+  // immediately (only the bad edge is debounced). The genuine engine-drop path
+  // (`_initEngineDropRecovery`, sticky `phase:'disconnected'`) is separate and
+  // unaffected. Stakes raised by MPI-85 local-fallback — a false offline now
+  // silently swaps to the local engine.
+  const MISS_THRESHOLD = 3;
+  let _misses = 0;
+
+  // Treat a known-active remote download as keep-alive: while the wrapper is
+  // downloading models it can be too busy to answer the status poll in 4s, but
+  // it is plainly still connected. Arm on `download:started`/`:progress`,
+  // disarm on the terminal edges.
+  const _activeDownloads = new Set();
+  const _armDl = ({ modelId }) => { if (modelId != null) _activeDownloads.add(modelId); };
+  const _disarmDl = ({ modelId }) => { if (modelId != null) _activeDownloads.delete(modelId); };
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('download:started', _armDl);
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('download:progress', _armDl);
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('download:complete', _disarmDl);
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('download:failed', _disarmDl);
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('download:cancelled', _disarmDl);
+
   const tick = async () => {
     const cfg = Storage.getRunpodConfig();
     if (!cfg.enabled) {
+      _misses = 0;
       if (_last !== false) {
         _last = false;
         _emitRemoteConnection({ connected: false, gpuName: null });
@@ -516,6 +547,17 @@ function _initRemoteConnectionFeed() {
     // Healthy → poll at the base cadence; down/unreachable → back off so slow
     // requests against a dead proxy can't pile up.
     _delay = connected ? HEALTHY_MS : Math.min(_delay * 2, MAX_BACKOFF_MS);
+
+    // MPI-94 L5 — debounce the offline flip. Count consecutive misses; suppress
+    // the flip while a download is active (keep-alive) or until MISS_THRESHOLD
+    // consecutive misses. A connected tick resets the counter immediately.
+    if (connected) {
+      _misses = 0;
+    } else {
+      _misses += 1;
+      const suppress = _activeDownloads.size > 0 || _misses < MISS_THRESHOLD;
+      if (suppress && _last) return; // stay shown-connected; keep backing off
+    }
     if (connected !== _last) {
       _last = connected;
       if (!connected) {

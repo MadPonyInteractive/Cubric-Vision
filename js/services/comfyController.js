@@ -350,6 +350,13 @@ export const ComfyUIController = {
      * @returns {Promise<void>}
      */
     async interrupt() {
+        // MPI-94 G2 — remote-only "Stopping…" toast. There's a ~5s gap between the
+        // interrupt POST and the Pod actually halting the running step; without a
+        // hint the user re-clicks Stop thinking nothing happened. Local interrupt
+        // is effectively instant, so skip the toast there.
+        if (remoteEngineClient.isRemote()) {
+            Events.emit('ui:info', { message: 'Stopping… the remote engine is interrupting the current step.' });
+        }
         try {
             await fetch(`${this.httpBase()}/interrupt`, {
                 method: "POST",
