@@ -60,6 +60,51 @@ function _findOtherModelsUsingDep(depId, excludeModelId) {
         .map(m => ({ modelId: m.id, modelName: m.name }));
 }
 
+// Remote variant of the shared-dep guard. `_findOtherModelsUsingDep` trusts the
+// renderer-only `MODELS[].installed` flag, which is NEVER set in the backend
+// (Node) process — `installed` is resolved at runtime by the renderer's
+// syncModelInstalled(). So in remote mode that guard always returned 0 and a
+// remote uninstall deleted SHARED deps (e.g. uninstalling Wan I2V trashed the
+// wan_2.1_vae + umt5 text-encoder that Wan T2V also needs → T2V went PARTIAL).
+// Here we resolve "other model is installed" from the actual Pod VOLUME via the
+// wrapper (remoteModelsCheck) instead of the dead flag. Returns the set of dep
+// ids that ARE still needed by another volume-installed model (must be kept).
+async function _remoteSharedDepIds(excludeModelId) {
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const others = MODELS.filter(m => m.id !== excludeModelId && Array.isArray(m.dependencies));
+    // Ask the wrapper which of those models are installed on the volume. Pass each
+    // model's deps as { id, type, filename } (remoteModelsCheck owns the split).
+    const checkModels = others.map(m => ({
+        id: m.id,
+        deps: m.dependencies.map(depId => {
+            const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+            const d = DEPS[depId] || {};
+            return { id: depId, type: d.type, filename: d.filename };
+        }),
+    }));
+    const keep = new Set();
+    try {
+        const out = await remoteModels.remoteModelsCheck(checkModels);
+        const results = (out && out.results) || {};
+        for (const m of others) {
+            const entry = results[m.id];
+            // Only an INSTALLED (complete-on-volume) other model protects its deps.
+            if (entry && entry.installed === true) {
+                for (const depId of m.dependencies) keep.add(depId);
+            }
+        }
+    } catch (err) {
+        // Fail SAFE: if we cannot confirm volume state, keep nothing extra here —
+        // the caller still falls back to the universal guard. (Better to leave an
+        // orphan dep than to delete a shared one we could not verify; see below —
+        // the caller treats an empty set as "no protection" only when the check
+        // genuinely returned, so a thrown check is surfaced, not silently trusted.)
+        logger.warn('download', `remote shared-dep check failed: ${err.message}`);
+        throw err;
+    }
+    return keep;
+}
+
 function _isInsidePath(root, target) {
     const relative = path.relative(path.resolve(root), path.resolve(target));
     return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
@@ -1025,14 +1070,29 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         const keptShared = [];
         let anyUnsupported = false;
 
+        // Resolve which deps are still needed by ANOTHER model installed on the
+        // volume (NOT the dead backend `MODELS[].installed` flag). If this check
+        // fails we ABORT rather than risk deleting a shared dep we could not
+        // verify — uninstalling Wan I2V must not trash the VAE + text-encoder that
+        // Wan T2V shares (that bug dragged T2V to PARTIAL).
+        let sharedKeep;
+        try {
+            sharedKeep = await _remoteSharedDepIds(modelId);
+        } catch (err) {
+            return res.json({
+                success: false,
+                remoteUnsupported: 'uninstall',
+                message: 'Could not verify which files are shared with other models on the Pod — uninstall aborted to avoid removing shared files. Try again in a moment.',
+            });
+        }
+
         for (const dep of dependencies) {
             if (_universalIds.has(dep.id)) {
                 keptUniversal.push({ depId: dep.id, depName: dep.name || dep.id });
                 continue;
             }
-            const sharedWith = _findOtherModelsUsingDep(dep.id, modelId);
-            if (sharedWith.length > 0) {
-                keptShared.push({ depId: dep.id, depName: dep.name || dep.id, sharedWith: sharedWith.map(m => m.modelName) });
+            if (sharedKeep.has(dep.id)) {
+                keptShared.push({ depId: dep.id, depName: dep.name || dep.id });
                 continue;
             }
             try {
