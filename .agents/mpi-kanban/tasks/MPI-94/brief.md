@@ -48,9 +48,12 @@
       RESOLVED — the CREATE-path copy is good ("First-time setup… one time, a few minutes"). The
       only residual: confirm the BOOT auto-reconnect path's flat ~90-120s ETA is accurate or make
       it distinguish first-boot-compile from warm-resume. Low priority.
-      **✅ UNBLOCKED 2026-06-15** — `_initRemoteBoot` (js/shell.js) is now committed + stable
-      (MPI-88 57f3d8e, MPI-87 7e5422d). The residual copy should key off the final `warm` /
-      `canAutoReconnect` branch. Ready to start.
+      **✅ DONE 2026-06-15 (commit 908e47b).** `_initRemoteBoot` `_pollRemoteReady` `onSlow` copy
+      now branches on the `warm` flag: warm RECONNECT → "Resuming your Pod — waking it up, this is
+      usually quick…" (no false download/compile claim); fresh CREATE → keeps "First-time setup:
+      downloading the engine…". Brings the boot path to parity with the manual Connect path's
+      resume-vs-create messaging (MpiSettings). Renderer-only, eslint clean. UNVERIFIED on a live
+      boot (cosmetic copy; low risk).
 
 - [x] **G1 — Downgrade the "Restarting ComfyUI" restart-info modal → plain info toast.**
       **ALREADY DONE — verified 2026-06-15, no code needed.** The restart-info already emits
