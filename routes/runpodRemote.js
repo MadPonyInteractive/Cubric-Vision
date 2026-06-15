@@ -66,6 +66,17 @@ function redactSecret(str) {
     .replace(/Bearer\s+[A-Za-z0-9_.-]{8,}/g, 'Bearer [REDACTED]');
 }
 
+function sanitizePodJson(pod) {
+  if (!pod || typeof pod !== 'object') return pod;
+  const out = { ...pod };
+  if (out.env && typeof out.env === 'object') {
+    out.env = Object.fromEntries(
+      Object.entries(out.env).map(([key, value]) => [key, redactSecret(String(value))])
+    );
+  }
+  return out;
+}
+
 // Wrap a fetch so a thrown error never carries the key (GraphQL passes it in the
 // URL query, which would otherwise land in err.message -> app.log -> bug report).
 async function _safeFetch(url, opts) {
@@ -239,7 +250,7 @@ router.delete('/runpod/pods/:id', (req, res) =>
 router.get('/runpod/pods/:id', (req, res) =>
   _withKey(res, async (key) => {
     const r = await client.getPod(key, req.params.id);
-    res.status(r.ok ? 200 : r.status).json(r.json);
+    res.status(r.ok ? 200 : r.status).json(sanitizePodJson(r.json));
   }));
 
 router.get('/runpod/volumes', (req, res) =>

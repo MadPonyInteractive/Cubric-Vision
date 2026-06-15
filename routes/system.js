@@ -17,6 +17,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const axios = require('axios');
 const logger = require('./logger');
+const { redactSecrets } = require('./secretRedaction');
 const { COMFY_DIR, getComfyRepoRel, resolveDownloadConfig } = require('./platformEngine');
 
 // ── VRAM Helper ───────────────────────────────────────────────────────────────
@@ -194,7 +195,9 @@ router.post('/log', (req, res) => {
     const { level = 'error', category = 'client', message = '', detail = '' } = req.body || {};
     const allowed = ['info', 'warn', 'error'];
     const safeLevel = allowed.includes(level) ? level : 'error';
-    const fullMessage = detail ? `${message} — ${detail}` : message;
+    const safeMessage = redactSecrets(message);
+    const safeDetail = redactSecrets(detail);
+    const fullMessage = safeDetail ? `${safeMessage} — ${safeDetail}` : safeMessage;
     logger[safeLevel](category, fullMessage);
     res.json({ success: true });
 });
@@ -282,14 +285,17 @@ router.post('/github/create-issue', async (req, res) => {
         const buildHash = normalizeBuildHash(build?.hash);
 
         // Trim log to last 2000 chars to stay within GitHub's 65k limit
-        let trimmedLog = log || '(no log available)';
+        const safeTitle = redactSecrets(title);
+        const safeMessage = redactSecrets(message);
+        const safeSummary = redactSecrets(summary || '');
+        let trimmedLog = redactSecrets(log || '(no log available)');
         if (trimmedLog.length > 2000) {
             trimmedLog = '...' + trimmedLog.slice(-2000);
         }
 
-        let body = `**Error:** ${message}`;
-        if (summary) {
-            body += `\n\n**What I was doing:**\n${summary}`;
+        let body = `**Error:** ${safeMessage}`;
+        if (safeSummary) {
+            body += `\n\n**What I was doing:**\n${safeSummary}`;
         }
         body += `\n\n**App version:** ${appVersion}\n**Stage:** ${stage}\n**Build:** ${buildHash || 'dev'}`;
         body += `\n\n<details>\n<summary>App Log</summary>\n\n\`\`\`\n${trimmedLog}\n\`\`\`\n\n</details>`;
@@ -307,14 +313,14 @@ router.post('/github/create-issue', async (req, res) => {
 
         let response;
         try {
-            response = await axios.post(issueUrl, { title, body, labels }, { headers: ghHeaders });
+            response = await axios.post(issueUrl, { title: safeTitle, body, labels }, { headers: ghHeaders });
         } catch (labelErr) {
             // A 422 here is usually a label problem (malformed/invalid label).
             // Degrade gracefully: report the bug anyway with only the base
             // 'bug' label rather than dropping the whole report. Log the cause.
             if (labelErr.response?.status === 422) {
                 logger.warn('system', `GitHub issue label apply failed; retrying with base label only. labels=${JSON.stringify(labels)} detail=${JSON.stringify(labelErr.response?.data)}`);
-                response = await axios.post(issueUrl, { title, body, labels: ['bug'] }, { headers: ghHeaders });
+                response = await axios.post(issueUrl, { title: safeTitle, body, labels: ['bug'] }, { headers: ghHeaders });
             } else {
                 throw labelErr;
             }

@@ -22,6 +22,7 @@
 
 const fs   = require('fs-extra');
 const path = require('path');
+const { redactSecrets } = require('./secretRedaction');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -77,8 +78,10 @@ fs.ensureDir(LOGS_DIR)
 
 function _write(level, category, message, err) {
     const ts   = new Date().toISOString();
-    const base = `[${ts}] [${level.toUpperCase()}] [${category}] ${message}`;
-    const line = err ? `${base}\n  ${err.stack || err}` : base;
+    const safeMessage = redactSecrets(message);
+    const safeErr = err ? redactSecrets(err.stack || err) : '';
+    const base = `[${ts}] [${level.toUpperCase()}] [${category}] ${safeMessage}`;
+    const line = err ? `${base}\n  ${safeErr}` : base;
 
     // Always mirror to console so dev tools still work. Guard against a dead
     // stdout/stderr: when the controlling terminal or pipe closes (app exit on
