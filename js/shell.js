@@ -294,6 +294,15 @@ async function _bootApp() {
  * (SDPA fallback) but does extend the wait — hence the 20-min timeout.
  * @returns {Promise<boolean>} true once ready, false on timeout.
  */
+// MPI-87: elapsed→% estimate for the connect window. RunPod's public API carries
+// no real image-pull/layer progress, so this maps elapsed time onto a typical
+// first-pull duration and clamps to 99 until /health reports ready (then 100).
+// Honest approximation, not a layer count. ~4 min covers a fresh ~3 GB image pull.
+const _CONNECT_EST_MS = 240000;
+function _connectPct(elapsedMs) {
+  return Math.max(0, Math.min(99, Math.round((elapsedMs / _CONNECT_EST_MS) * 100)));
+}
+
 async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, onSlow } = {}) {
   const start = Date.now();
   let slowFired = false;
@@ -302,10 +311,15 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
       slowFired = true;
       try { onSlow(); } catch (_) { /* notify best-effort */ }
     }
+    // MPI-87: surface an elapsed-based connect % (RunPod's API exposes no real
+    // image-pull progress — see docs/runpod-remote-engine.md). An estimate, not a
+    // layer count: climb 0→99 over the typical first-pull window, hold 99 until
+    // /health flips ready (heroStats paints it in the GPU slot while connecting).
+    Events.emit('remote:connect-progress', { pct: _connectPct(Date.now() - start) });
     try {
       const res = await fetch('/remote/comfy/status');
       const s = res.ok ? await res.json() : null;
-      if (s && s.ready) return true;
+      if (s && s.ready) { Events.emit('remote:connect-progress', { pct: 100 }); return true; }
     } catch (_) { /* transient during cold pull / proxy 404 window */ }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
@@ -337,37 +351,39 @@ async function _initRemoteBoot(runpod) {
   const canAutoReconnect = !!(
     runpod.wasConnected && runpod.podId && runpod.gpuType && !runpod.deleteOnQuit
   );
-  if (!canAutoReconnect) {
-    // delete-on-quit deleted the Pod at quit, so any saved podId is now dead.
-    // Clear it (via the state proxy so the in-memory copy Settings reads also
-    // updates, not just localStorage) so a manual Connect uses the create path
-    // (correct "creating…" copy) instead of a doomed "resuming…" resume of a
-    // nonexistent Pod.
-    if (runpod.deleteOnQuit && runpod.podId) {
-      state.runpodConfig = { ...runpod, podId: null, wasConnected: false };
-    }
-    // No prior connection to resume — nothing to do at boot. The persistent
-    // remote-engine status feedback (Settings + status bars) tells the user it
-    // is enabled; Connect in Settings starts the Pod and acknowledges the cost.
+  // delete-on-quit deleted the Pod at quit, so any saved podId is now dead. Clear
+  // it (via the state proxy so the in-memory copy Settings reads also updates, not
+  // just localStorage) so the create path runs with correct "creating…" copy
+  // instead of a doomed "resuming…" resume of a nonexistent Pod.
+  if (!canAutoReconnect && runpod.deleteOnQuit && runpod.podId) {
+    state.runpodConfig = { ...runpod, podId: null, wasConnected: false };
+  }
+  // MPI-85 fix: when there is no warm Pod to resume, auto-connect-on-start CREATES
+  // a fresh Pod (the checkbox means "connect at launch", which on a first/no-Pod
+  // boot must spin one up — not silently no-op). Only when there is no GPU saved is
+  // there nothing to connect with; bail then and let the user Connect from Settings.
+  if (!canAutoReconnect && !runpod.gpuType) {
     return;
   }
 
-  // Auto-reconnect in the background (UI stays usable during the resume/recreate).
+  // Auto-connect in the background (UI stays usable during the resume/create).
   // MPI-73: surface the transition — hero "connecting · offline" (no card), status
   // bar "IDLE · Connecting". Resolved on ready (connected:true) or failure below.
-  StatusBar.notify('Reconnecting to your Pod…', 'info', 6000);
+  // A warm Pod warm-resumes (reconnect); otherwise create fresh (MPI-85).
+  const warm = canAutoReconnect;
+  StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000);
   _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
   let _bootConnected = false; // MPI-73: resolves the 'connecting' phase
   try {
-    const res = await fetch('/remote/pod/reconnect', {
+    const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
+    const body = warm
+      ? { podId: runpod.podId, gpuTypeId: runpod.gpuType, volumeId: runpod.volumeId || null, datacenter: runpod.datacenter || null }
+      : { gpuTypeId: runpod.gpuType, volumeId: runpod.volumeId || null, datacenter: runpod.datacenter || null };
+    clientLogger.info('shell', `[RunPod] auto-connect-on-start: ${warm ? 'reconnect' : 'create'} gpu=${runpod.gpuType} dc=${runpod.datacenter || 'none'} vol=${runpod.volumeId || 'none'} podId=${runpod.podId || 'none'}`);
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        podId: runpod.podId,
-        gpuTypeId: runpod.gpuType,
-        volumeId: runpod.volumeId || null,
-        datacenter: runpod.datacenter || null,
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
 
@@ -402,15 +418,21 @@ async function _initRemoteBoot(runpod) {
         'info', 8000),
     });
     if (ready) {
+      // MPI-88: a no-GPU "download mode" Pod has no ComfyUI / no preview WS — skip
+      // the WS gate (wrapper-ready IS connected). Otherwise the boot auto-reconnect
+      // hangs at "Almost ready" and the hero never flips to remote.
+      const downloadMode = runpod.gpuType === '__cpu__';
       // Wrapper health is ready (ComfyUI up), but the binary-preview WS is opened
       // lazily at generation time — so "ready" alone lets a user queue a job
       // before the WS handshake, hanging it in STARTING (MPI-73 Bug 1). Open the
       // WS now and only claim "ready" once it actually connects.
-      let wsOk = false;
-      try {
-        const { ComfyUIController } = await import('./services/comfyController.js');
-        wsOk = await ComfyUIController.ensureWsConnected();
-      } catch (_) { /* fall through to the not-ready notice */ }
+      let wsOk = downloadMode;
+      if (!downloadMode) {
+        try {
+          const { ComfyUIController } = await import('./services/comfyController.js');
+          wsOk = await ComfyUIController.ensureWsConnected();
+        } catch (_) { /* fall through to the not-ready notice */ }
+      }
       if (wsOk) {
         // MPI-73: resolve the 'connecting' phase → flip the hero to the Pod card +
         // status bar to "IDLE · Remote". Specs best-effort for the card.
@@ -422,6 +444,13 @@ async function _initRemoteBoot(runpod) {
         } catch (_) { /* keep the fallback */ }
         _emitRemoteConnection({ connected: true, ...specs, phase: null });
         _bootConnected = true;
+        // Remember the connection so the NEXT boot warm-resumes this Pod instead of
+        // creating another (mirrors manual Connect). A create yields a new podId,
+        // already persisted above (data.podId branch).
+        {
+          const cfg = Storage.getRunpodConfig();
+          Storage.setRunpodConfig({ ...cfg, wasConnected: true });
+        }
         StatusBar.notify('Remote engine ready', 'success', 6000);
       } else {
         StatusBar.notify('Almost ready — finishing the connection. Try generating in a moment.', 'info', 8000);
@@ -430,20 +459,24 @@ async function _initRemoteBoot(runpod) {
       throw new Error('the Pod did not reach ready in time — open Settings → RunPod to retry');
     }
   } catch (err) {
-    clientLogger.error('shell', 'remote auto-reconnect failed:', err);
+    clientLogger.error('shell', `remote auto-${warm ? 'reconnect' : 'create'} failed:`, err);
     const retry = MpiOkCancel.mount(document.createElement('div'), {
-      title: 'Could not reconnect to your Pod',
-      text: (err && err.message) || 'The remote engine could not be reached. Open Settings → RunPod to reconnect manually.',
+      title: warm ? 'Could not reconnect to your Pod' : 'Could not create a Pod',
+      text: (err && err.message) || 'The remote engine could not be reached. Open Settings → RunPod to connect manually.',
       okLabel: 'Open later',
       showCancel: false,
     });
     retry.el.show();
   } finally {
-    // MPI-73: clear the transient 'connecting' phase if the reconnect did not
+    // MPI-73: clear the transient 'connecting' phase if the (re)connect did not
     // fully connect (unavailable GPU, timeout, WS never handshook, threw) so the
     // hero/status bar fall back to local · offline instead of staying stuck.
     if (!_bootConnected) {
       _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+      // Billing guardrail (mirrors the manual Connect path): a boot create that
+      // didn't finish may have left a STRAY Pod. Reap non-keeper 'cubric-vision'
+      // Pods now; the still-preparing tracked Pod is spared server-side.
+      fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
     }
   }
 }
@@ -540,7 +573,12 @@ function _initRemoteConnectionFeed() {
       // on recovery. `comfyReady` is undefined on older status payloads, so only
       // apply the extra gate when the field is actually present (no regression for
       // a wrapper that doesn't report it).
-      connected = !!(s && s.ready && (s.comfyReady === undefined || s.comfyReady));
+      // MPI-88: a no-GPU "download mode" Pod has NO ComfyUI by design, so
+      // `comfyReady` is always false — skip the comfyReady gate for it; the
+      // wrapper being `ready` is the real connected signal. Without this the hero
+      // painted "LOCAL · OFFLINE" while Settings showed "ready" (the feed and the
+      // panel disagreed) even though the volume models were live.
+      connected = !!(s && s.ready && (s.noGpu || s.comfyReady === undefined || s.comfyReady));
     } catch (_) {
       connected = false;
     }

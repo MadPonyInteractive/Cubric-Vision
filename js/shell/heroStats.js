@@ -133,7 +133,10 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, phase = null }) {
     const gpu = gid('heroStatGpu');
     if (phase === 'connecting' || phase === 'disconnecting') {
         if (label) label.textContent = phase === 'connecting' ? 'connecting · offline' : 'disconnecting · online';
-        if (gpu) gpu.innerHTML = '';
+        // MPI-87: while connecting, the GPU slot shows a live elapsed-based connect %
+        // (seeded at 0% here; updated by remote:connect-progress). The footer label
+        // already says "connecting", so the slot is just the bare number.
+        if (gpu) gpu.textContent = phase === 'connecting' ? '0%' : '';
         return;
     }
     if (phase === 'disconnected') {
@@ -181,4 +184,11 @@ export function initHeroStats() {
     Events.on('projects:listed', ({ projects }) => _renderSession(projects));
     // Persistent remote-engine feedback (MPI-64 Step 4.4) — flip local↔remote.
     Events.on('remote:connection', (payload) => _renderEngine(payload || {}));
+    // MPI-87: live connect % in the GPU slot, but only while the connecting phase
+    // is active — a late tick after the phase resolves must not clobber the GPU card.
+    Events.on('remote:connect-progress', ({ pct } = {}) => {
+        if (_remotePhase !== 'connecting') return;
+        const gpu = gid('heroStatGpu');
+        if (gpu && Number.isFinite(pct)) gpu.textContent = `${pct}%`;
+    });
 }

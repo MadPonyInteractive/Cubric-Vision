@@ -475,6 +475,12 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineStatusText(root, 'ready');
                 _engineBtnLabelSet('Disconnect');
                 _engineBtnDisabled(false);
+                // MPI-88: a no-GPU "download mode" Pod is ready, but only for model
+                // downloads — generation is blocked. Surface a persistent hint so
+                // the user knows to switch to a GPU before generating.
+                if (status && status.noGpu) {
+                    _setEngineHint(root, 'Download mode (no GPU): install models, then pick a GPU and Connect to generate.');
+                }
             } else if (running) {
                 _setEngineStatusText(root, 'creating…');
                 _engineBtnLabelSet('Disconnect');
@@ -511,15 +517,21 @@ export const MpiSettings = ComponentFactory.create({
         async function _pollEngineReady(onSlow, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000 } = {}) {
             const start = Date.now();
             let slowFired = false;
+            // MPI-87: elapsed→% estimate (RunPod's API has no real image-pull
+            // progress); heroStats paints it in the project-page GPU slot while
+            // connecting. ~4 min covers a fresh ~3 GB image pull; clamp 0–99 until
+            // ready, then 100. Mirrors _connectPct in shell.js.
+            const _pct = (ms) => Math.max(0, Math.min(99, Math.round((ms / 240000) * 100)));
             while (Date.now() - start < timeoutMs) {
                 if (!slowFired && Date.now() - start >= slowAfterMs) {
                     slowFired = true;
                     try { onSlow && onSlow(); } catch (_) { /* best-effort */ }
                 }
+                Events.emit('remote:connect-progress', { pct: _pct(Date.now() - start) });
                 try {
                     const res = await fetch('/remote/comfy/status');
                     const s = res.ok ? await res.json() : null;
-                    if (s && s.ready) return true;
+                    if (s && s.ready) { Events.emit('remote:connect-progress', { pct: 100 }); return true; }
                 } catch (_) { /* transient during cold pull / proxy 404 window */ }
                 await new Promise((r) => setTimeout(r, intervalMs));
             }
@@ -616,16 +628,24 @@ export const MpiSettings = ComponentFactory.create({
                     fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
                     return;
                 }
+                // MPI-88: a no-GPU "download mode" Pod runs the wrapper only — there
+                // is no ComfyUI and therefore no binary-preview WS to open. Skip the
+                // WS gate entirely; wrapper-ready IS fully connected for a download
+                // Pod. Without this the WS handshake never completes and the connect
+                // hangs in the "Almost ready" half-state below (hero stays OFFLINE).
+                const _downloadMode = cfg.gpuType === '__cpu__';
                 // Wrapper health is ready (ComfyUI up), but the binary-preview WS
                 // opens lazily at generation time — flipping to "ready" now lets the
                 // user queue a job before the WS handshake, hanging it in STARTING
                 // (MPI-73 Bug 1). Open the WS and gate "ready" on the real handshake.
                 _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
-                let _wsOk = false;
-                try {
-                    const { ComfyUIController } = await import('../../../../services/comfyController.js');
-                    _wsOk = await ComfyUIController.ensureWsConnected();
-                } catch (_) { /* fall through to the still-connecting notice */ }
+                let _wsOk = _downloadMode; // download Pods have no WS — ready == connected
+                if (!_downloadMode) {
+                    try {
+                        const { ComfyUIController } = await import('../../../../services/comfyController.js');
+                        _wsOk = await ComfyUIController.ensureWsConnected();
+                    } catch (_) { /* fall through to the still-connecting notice */ }
+                }
                 if (!_wsOk) {
                     _setEngineHint(root, 'Almost ready — finishing the connection to the engine. Give it a moment, then try generating.', true);
                     _setEngineStatusText(root, 'creating…');
@@ -936,9 +956,18 @@ export const MpiSettings = ComponentFactory.create({
                     .filter(g => g.available)
                     .map(g => [g.gpuTypeId, g.stockStatus])
             );
+            // MPI-88: first option is the no-GPU "download mode" Pod. Picking it sets
+            // gpuType to the CPU sentinel, which satisfies the Connect guard and
+            // creates a CPU-only Pod (computeType:'CPU') — install models to the
+            // volume with no GPU billing, then switch to a real card to generate.
+            const cpuOption = {
+                value: '__cpu__',
+                label: 'No GPU — download only',
+                meta: 'CPU instance · install models to the volume, no GPU billing',
+            };
             // Stock leads the meta so it survives truncation in narrow panels.
             // N/A mirrors the RunPod console's label for unrated stock.
-            return gpus
+            const gpuOptions = gpus
                 .filter(g => g.secureCloud && availMap.has(g.id))
                 .map(g => {
                     const stock = availMap.get(g.id);
@@ -959,6 +988,7 @@ export const MpiSettings = ComponentFactory.create({
                     };
                 })
                 .sort((a, b) => b._rank - a._rank);
+            return [cpuOption, ...gpuOptions];
         }
 
         // Availability URL, scoped to the selected DC so GPU RAM (lowestPrice) is
