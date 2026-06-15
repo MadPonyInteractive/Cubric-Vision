@@ -63,35 +63,17 @@ moved since v0.4.0/0.2.3.
 
 Bump `wrapper_version` — mpi-ci build arg AND `WRAPPER_VERSION` in Cubric-Vision `routes/remoteProxy.js` — only if the wrapper changed; bump the image tag. Then build + push all three profiles (cu124 + `-cpu` via CI / cu128 local) + ensure GHCR public + USER redeploys a fresh Pod.
 
-> ~~The v0.4.1 BUILD-READY PREFLIGHT (candidates #1/#4/#5 + MPI-88) lived here — that build SHIPPED 2026-06-15. See the "v0.4.1 SHIPPED" section above. Superseded by the candidate #6 preflight below.~~
+### 🔧 NEXT BUILD = v0.4.2 / wrapper 0.2.5 — candidate #6 `/wrapper/restart-comfy`
 
-### 🔧 BUILD-READY PREFLIGHT — candidate #6 `/wrapper/restart-comfy` (post-v0.4.1, the NEXT build)
-
-The next image rebuild ships **candidate #6** (the restart-ComfyUI endpoint, see §"NEXT BUILD CANDIDATES"). Wrapper DID change → version bump required.
-
-**Current values (post-v0.4.1, verified 2026-06-15):**
-- App: `Cubric-Vision/routes/remoteProxy.js` → `WRAPPER_VERSION = '0.2.4'` (bumped at v0.4.1).
-- Image tag: current shipped = `v0.4.1`. Wrapper lives in mpi-ci `cubric-vision-pod/wrapper/wrapper.py`.
-
-**Bump to (recommended — wrapper+start.sh change, no torch/CUDA shift → patch tags):**
-- `wrapper_version`: **0.2.4 → 0.2.5**
-- image tag: **v0.4.1 → v0.4.2**
-- App: set `routes/remoteProxy.js` `WRAPPER_VERSION = '0.2.5'` + tag refs to `v0.4.2` — must MATCH the build, commit on RunPod. (Search the app for `0.2.4` and `v0.4.1` to catch every ref.)
-
-**What this build must contain (candidate #6, mpi-ci side):**
-1. 🔴 Move the ComfyUI launch OUT of `start.sh` INTO `wrapper.py` as a managed `subprocess` (wrapper OWNS + supervises ComfyUI). `start.sh` then launches only the wrapper. Preserve ALL existing ComfyUI args: `--cache-lru 2`, `--preview-method taesd`, `--input-directory`, `--output-directory`, `--extra-model-paths-config`, the `--use-sage-attention` gate; and the COMFY_PID-death→container-down semantics (now: wrapper exits if ComfyUI won't relaunch). Keep the token guard.
-2. 🔴 Add `/wrapper/restart-comfy` — kills + relaunches the wrapper's ComfyUI child cleanly, reusing the arg list. + `remoteProxy.js` `/proxy/restart-comfy` passthrough (app side, may already be in flight — see below).
-3. Carry forward everything already shipped in v0.4.1 (pre-baked weights, `--cache-lru 2`, MPI-95 wrapper, MPI-88 `/health`) — it's already in `wrapper.py`/Dockerfile, just rebuild.
-
-**⚠️ APP-SIDE #6 IS ALREADY IN FLIGHT (2026-06-15):** another session is editing `js/services/comfyController.js` (the `:300` remote restart branch — `/proxy/restart-comfy` call + `comfyNeedsRestart` clear + toast) and `routes/remoteProxy.js` (passthrough), UNCOMMITTED. The app half is NOT a rebuild blocker and is being handled there — do NOT duplicate it in the build session. The build session does the mpi-ci wrapper+start.sh+image only.
+Full detail + the CODE-WRITTEN/VALIDATED status is in the **"NEXT BUILD CANDIDATES" STATUS banner above** (line ~35) and candidate **#6** itself — that is the single source of truth; don't duplicate it. In short: bump **v0.4.1→v0.4.2 / 0.2.4→0.2.5** (app refs already done), build all 3 profiles, USER live-verifies the auto-restart-on-node-install flow.
 
 **Order / mechanics (USER runs live ops):**
 - mpi-ci is a SEPARATE repo; commit + push mpi-ci `main` BEFORE `gh workflow run` (dispatch builds the pushed ref).
 - cu124 + `-cpu` via CI; cu128 local on the Windows Docker box.
-- After build: GHCR public; USER redeploys a fresh Pod; live-verify #6 (install a per-model custom_node → auto restart-comfy → node loads → gen proceeds, NO error dialog, NO Pod reboot, NO local·offline detour).
+- After build: GHCR public; USER redeploys a fresh Pod; live-verify per #6.
 
 ### NOT a build input from the parallel sessions (2026-06-15)
-- **MPI-94** (UX polish) — all shipped items app-side; **zero rebuild impact**. Unbuilt F4/L3 are app-side, NOT build inputs.
-- **MPI-80** (session-cost badge), **MPI-86** (cancel-connect) — app-side, zero rebuild impact.
+- **#7** (LOCAL·OFFLINE-while-billing desync) — app-only, **no rebuild**.
+- **MPI-94** (UX polish), **MPI-80** (session-cost badge), **MPI-86** (cancel-connect) — all app-side, **zero rebuild impact**.
 
 Related: MPI-64 (RunPod remote engine), MPI-70 (multi-image build), MPI-75 (v0.4.0), v0.4.1 ship (above), MPI-95 (#5).
