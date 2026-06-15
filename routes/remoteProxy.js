@@ -336,7 +336,20 @@ function _createRejectReason(json) {
   return reason.length > 300 ? `${reason.slice(0, 300)}…` : reason;
 }
 
-async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000, wait = true }) {
+// Idle-watchdog timeout (seconds) baked into the Pod env at create time. The
+// wrapper reads CUBRIC_IDLE_TIMEOUT_S and self-stops after that long with no
+// authenticated traffic. The UI sends a user-chosen value; clamp to a 10-min
+// FLOOR here so a bad/zero/missing value can never disable the billing backstop
+// (no "never" — a runaway GPU bill is the failure we are guarding against).
+const IDLE_TIMEOUT_DEFAULT_S = 900; // 15 min
+const IDLE_TIMEOUT_FLOOR_S = 600;   // 10 min
+function _clampIdleTimeout(s) {
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return IDLE_TIMEOUT_DEFAULT_S;
+  return Math.max(IDLE_TIMEOUT_FLOOR_S, Math.round(n));
+}
+
+async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, idleTimeoutS, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
   const noGpu = gpuTypeId === CPU_SENTINEL;
   // CPU "download mode" Pod (MPI-88): same POST /pods endpoint, computeType:'CPU' +
@@ -361,6 +374,9 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
       CUBRIC_TOKEN: token,
       RUNPOD_API_KEY: key, // watchdog self-stop backstop
       CUBRIC_WRAPPER_VERSION: WRAPPER_VERSION,
+      // User-chosen idle-watchdog length (clamped to a 10-min floor). Wrapper
+      // self-stops the Pod after this long with no authenticated traffic.
+      CUBRIC_IDLE_TIMEOUT_S: String(_clampIdleTimeout(idleTimeoutS)),
     },
   };
   if (noGpu) {
@@ -492,7 +508,7 @@ async function _deleteTrackedPod(key) {
 
 // First Connect (and GPU-switch create). Creates a fresh Pod on the picked GPU.
 router.post('/remote/pod/create', async (req, res) => {
-  const { gpuTypeId, volumeId, datacenter } = req.body || {};
+  const { gpuTypeId, volumeId, datacenter, idleTimeoutS } = req.body || {};
   if (!gpuTypeId) return res.status(422).json({ error: 'gpu_type_required' });
   if (!datacenter) return res.status(422).json({ error: 'datacenter_required' });
   _connecting = true;
@@ -504,7 +520,7 @@ router.post('/remote/pod/create', async (req, res) => {
     // wait:false — return as soon as the Pod is created; the renderer polls
     // /remote/comfy/status for ready (no 504 on a long first-image pull).
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, wait: false,
+      gpuTypeId, volumeId, datacenter, idleTimeoutS, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `Pod create refused: ${out.message}`);
@@ -531,7 +547,7 @@ router.post('/remote/pod/create', async (req, res) => {
 //   3. start fails (host-pinned / any non-already-running error) → DELETE the stuck
 //      Pod + create fresh on the same GPU (new token). Returns { ready, podId, recreated }.
 router.post('/remote/pod/reconnect', async (req, res) => {
-  const { podId, gpuTypeId, volumeId, datacenter } = req.body || {};
+  const { podId, gpuTypeId, volumeId, datacenter, idleTimeoutS } = req.body || {};
   if (!podId) return res.status(422).json({ error: 'pod_id_required' });
   if (!gpuTypeId || !datacenter) return res.status(422).json({ error: 'gpu_type_required' });
   _connecting = true;
@@ -573,7 +589,7 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     // 3. Resume failed → delete the stuck Pod and create fresh (also poll-for-ready).
     await _deleteTrackedPod(key);
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, wait: false,
+      gpuTypeId, volumeId, datacenter, idleTimeoutS, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `recreate after failed resume refused: ${out.message}`);
