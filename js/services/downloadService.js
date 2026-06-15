@@ -161,6 +161,14 @@ const downloadService = {
         this._eventSource.addEventListener('download:progress', (e) => {
             const data = JSON.parse(e.data);
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
+            // MPI-94 L4 — remote (wrapper aria2c) progress arrives without a speed
+            // string; only local downloads carry one. When it's missing, derive
+            // MB/s client-side from the byte delta between successive ticks so the
+            // remote download UI shows a rate like local does. Same format as the
+            // backend `_formatSpeed`. No-op for local (data.speed already set).
+            if (!data.speed && typeof data.downloadedBytes === 'number') {
+                data.speed = _deriveSpeed(data.modelId, data.downloadedBytes);
+            }
             if (job) {
                 job.downloadedBytes = data.downloadedBytes;
                 job.totalBytes = data.totalBytes;
@@ -178,6 +186,7 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:complete', (e) => {
             const data = JSON.parse(e.data);
+            _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
             if (job) {
                 job.status = 'complete';
@@ -225,6 +234,7 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:failed', (e) => {
             const data = JSON.parse(e.data);
+            _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
             // UW dep failures are surfaced through engine:error / install modal — skip toast here
             if (data.modelId === '__universal_workflow__') {
                 Events.emit('download:failed', data);
@@ -253,6 +263,7 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:cancelled', (e) => {
             const data = JSON.parse(e.data);
+            _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
             state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
             Events.emit('download:cancelled', data);
@@ -350,6 +361,35 @@ function _parseSizeToBytes(sizeStr) {
     const unit = match[2].toUpperCase();
     const multipliers = { 'GB': 1024 ** 3, 'MB': 1024 ** 2, 'KB': 1024, 'B': 1 };
     return val * (multipliers[unit] || 0);
+}
+
+// MPI-94 L4 — client-side download-speed derivation for remote (wrapper aria2c)
+// progress, which arrives without a speed string. Keyed by modelId; holds the
+// previous {bytes, t} sample and the last formatted rate so an uneven/zero-delta
+// tick reuses the last shown value instead of flickering to 0.
+const _speedSamples = new Map();
+
+function _deriveSpeed(modelId, downloadedBytes) {
+    if (modelId == null) return '';
+    const now = Date.now();
+    const prev = _speedSamples.get(modelId);
+    if (!prev) {
+        _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, label: '' });
+        return '';
+    }
+    const dBytes = downloadedBytes - prev.bytes;
+    const dt = (now - prev.t) / 1000;
+    // Ignore sub-200ms ticks and non-increasing byte counts — keep the last label.
+    if (dt < 0.2 || dBytes <= 0) return prev.label;
+    const label = _formatSpeed(dBytes / dt);
+    _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, label });
+    return label;
+}
+
+function _formatSpeed(bytesPerSec) {
+    if (bytesPerSec >= 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+    if (bytesPerSec >= 1024) return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+    return `${bytesPerSec.toFixed(0)} B/s`;
 }
 
 export { downloadService };

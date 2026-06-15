@@ -22,10 +22,17 @@
       **LIVE-VERIFIED 2026-06-15** on a connected Pod: status bar held `IDLE · REMOTE`, no
       false `local·offline` flip during gen/stop.
 
-- [ ] **L4 — No download-speed (MB/s) readout in remote mode.** `[app]` (+ maybe wrapper
-      `[rebuild]`). Local downloads show live MB/s; remote (wrapper aria2c) shows only the size
-      bar. Derive bytes/sec from successive `models:install-progress` ticks (no rebuild) or carry
-      a native rate in the SSE, then map onto the existing local `download:*` speed field.
+- [x] **L4 — No download-speed (MB/s) readout in remote mode.**
+      **DONE (2026-06-15) — app-only, NO rebuild.** `downloadService.js` `download:progress`
+      handler now derives MB/s client-side when `data.speed` is empty (the remote/aria2c case):
+      `_deriveSpeed(modelId, downloadedBytes)` computes byte-delta / time-delta between successive
+      ticks, formats with a local-matching `_formatSpeed` (X.X MB/s / X KB/s / X B/s), and fills
+      both `job.speed` and the emitted `data.speed` so the existing local download UI renders it
+      unchanged. Per-model samples in a module `_speedSamples` Map, dropped on
+      complete/failed/cancelled. No-op for local (speed already set). Chosen the no-rebuild path
+      (derive from ticks) over carrying a native rate in the wrapper SSE.
+      **UNVERIFIED on a live remote download** — needs a real remote model install to confirm the
+      rate renders; code-verified + eslint clean.
 
 - [ ] **L3 — Connect-ETA messaging (first-boot-compile vs warm-resume).** `[app]`. MOSTLY
       RESOLVED — the CREATE-path copy is good ("First-time setup… one time, a few minutes"). The
