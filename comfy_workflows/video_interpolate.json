@@ -116,7 +116,7 @@
   },
   "747": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\Video Project 6.mp4"
+      "string": ""
     },
     "class_type": "MpiString",
     "_meta": {
@@ -132,7 +132,7 @@
       "force_rate": 0,
       "custom_width": 0,
       "custom_height": 0,
-      "frame_load_cap": 100,
+      "frame_load_cap": 0,
       "skip_first_frames": 0,
       "select_every_nth": 1,
       "format": "AnimateDiff"
@@ -179,7 +179,6 @@
       "filename_prefix": "video/interpolate",
       "format": "auto",
       "codec": "auto",
-      "video-preview": "",
       "video": [
         "756",
         0
@@ -194,7 +193,7 @@
     "inputs": {
       "filename_prefix": "audio/interpolate",
       "quality": "V0",
-      "audioUI": "/api/view?filename=interpolate_00001_.mp3&type=output&subfolder=audio&rand=0.16239310699745335",
+      "audioUI": "/api/view?filename=interpolate_00001_.mp3&type=output&subfolder=audio&rand=0.681534115987703",
       "audio": [
         "754",
         1

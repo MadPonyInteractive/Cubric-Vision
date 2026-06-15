@@ -29,19 +29,19 @@
     "appVersionIntroduced": "0.0.1"
   },
   "t2v": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
   },
   "t2v_ms": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
   },
   "i2v": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
   },
   "i2v_ms": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
   },
   "extend": {
@@ -54,7 +54,7 @@
     "universal": true
   },
   "videoUpscale": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1",
     "universal": true
   },
@@ -74,7 +74,7 @@
     "universal": true
   },
   "resizeVideo": {
-    "latestVersion": "1.0",
+    "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1",
     "universal": true
   }

@@ -92,31 +92,6 @@
       "title": "Mpi Wan Seconds"
     }
   },
-  "637": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "PrevGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "776",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Preview"
-    }
-  },
   "717": {
     "inputs": {
       "int": 9554843544356
@@ -124,31 +99,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Seed"
-    }
-  },
-  "722": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "FinalGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Output"
     }
   },
   "723": {
@@ -797,6 +747,68 @@
     "class_type": "LoadLatent",
     "_meta": {
       "title": "LoadLatent"
+    }
+  },
+  "901": {
+    "inputs": {
+      "filename_prefix": "video/interpolate",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "902",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "902": {
+    "inputs": {
+      "fps": [
+        "635",
+        2
+      ],
+      "images": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "903": {
+    "inputs": {
+      "filename_prefix": "video/interpolate",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "904",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Preview"
+    }
+  },
+  "904": {
+    "inputs": {
+      "fps": [
+        "635",
+        2
+      ],
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
     }
   }
 }

@@ -96,6 +96,31 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       real interpolate 503 reason is identified from the Pod-side ComfyUI log, then fixed.
       </details>
 
+- [x] **B3 — ✅ DONE 2026-06-15: ALL video workflows converted off NVENC to the portable SaveVideo+SaveAudio split.**
+      The app side shipped + committed 497fb89 (workflow-agnostic capture by title + server mux). On 2026-06-15 the
+      USER converted EVERY remaining video workflow template + EVERY video output node (final AND preview) off
+      `VHS_VideoCombine`/`nvenc_h264` to the portable native pipeline `CreateVideo → SaveVideo`:
+      - **Final-output nodes** (title `Output_Video`, + optional `Output_Audio` gated by `MpiHasAudio`→`MpiIfElseInverted`
+        where the op has a video input): `video_interpolate.json` (proven template, prior), `video_upscale.json`,
+        `resize_video.json`, `Wan22_t2v.json`, `Wan22_t2v_stage2.json`, `Wan22_i2v.json`, `Wan22_i2v_stage2.json`.
+      - **Preview nodes** (title `Preview`, no audio — throwaway preview clip): the `_ms` workflows' preview-pass
+        `VHS_VideoCombine` (which ALSO used `nvenc_h264` → would have failed the remote preview stage on Blackwell)
+        swapped to `CreateVideo → SaveVideo` titled `Preview` in `Wan22_t2v.json`, `Wan22_t2v_stage2.json`,
+        `Wan22_i2v.json`, `Wan22_i2v_stage2.json`.
+      VERIFIED (JSON read, all 4 Wan files): **zero `VHS_VideoCombine` remaining anywhere**; every video node is
+      `CreateVideo`→`SaveVideo`; `Output_Video` + `Preview` titles correct. App needs NO change — `_collectComfyOutputUrls`
+      already reads `videos[]` (the `Preview` capture goes through the SAME function on preview-only runs), so both the
+      final and preview captures work unmodified. Per-op `latestVersion` bumped 1.0→1.1 in BOTH
+      `js/core/operationRegistry.js` AND `operation_registry.json` for the 6 converted ops:
+      `interpolate` (prior), `videoUpscale`, `resizeVideo`, `t2v`, `t2v_ms`, `i2v`, `i2v_ms`. **`extend` left at 1.0** —
+      it is an op with NO workflow file (defined in `commandRegistry.js:191` `requiresVideo:1` but no model maps it +
+      no `extend.json`) → not generation-active, nothing to convert; IF authored later it is the video-INPUT variant
+      (needs `Input_Video` MpiString fan-out + `MpiHasAudio` gate + `Output_Audio`). REMAINING to fully close: a LIVE
+      remote video gen on a Blackwell Pod (the whole point) — local with-audio/no-audio is the interim PASS bar
+      (interpolate already proven both paths). `[owner-workflow]` + `[app]` (registry bumps). **Verify:** remote
+      I2V/T2V/upscale/interpolate on a Blackwell Pod → video (with/without audio) saves + plays, no NVENC error.
+      <details><summary>original B3 diagnosis + fix-proven history (kept)</summary>
+
 - [ ] **B3 — 🔴 NVENC video encode FAILS on the Blackwell Pod (blocks ALL remote video output).** FOUND LIVE
       2026-06-14 (RTX 5090, v0.4.0-cu128, Pod i1lou7geshlv96). A remote I2V (`i2v_ms`/`wan-22-i2v`, minimal
       settings) **diffused fully end-to-end** — both stages completed, RAM peaked **94% = 52.76/55.88GiB** at the
@@ -134,6 +159,7 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       template lands, run remote I2V/T2V/upscale/interpolate on a 4090 to confirm the new node + app fetch/GC.
       Diagnosis + CPU-encode fix DONE; remaining = owner template swap (SaveVideo) + app fetch/GC wiring.
       Diffusion + RAM-survival + B1 image-input transport all PROVEN on Blackwell this session.
+      </details>
 
 - [ ] **B1 — Remote input-asset transfer for non-image inputs.** Video/audio upload replacing local-path
       injection (`_resolveMediaPath`), the trimmed-video flow (trim locally via `/api/video/trim-input` then
