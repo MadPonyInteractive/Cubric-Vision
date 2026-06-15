@@ -4,9 +4,17 @@
 > code or a decision (not just a live-Pod tick; those are MPI-93). Full narrative:
 > `tasks/MPI-64/OPEN-ITEMS.md` (§ F, § G, § L) + `current-architecture.md`.
 
+> **STATUS 2026-06-15 — 6/8 DONE, card parked.** L5+G2 (committed d11e628, live-verified),
+> L4 (committed feeabab, unverified on live dl), G1/G4/G6 already-done. **BLOCKED on MPI-88**:
+> the last 2 — **F4** and **L3** — both touch files MPI-88 is actively rewriting
+> (`_initRemoteBoot` in js/shell.js, MpiSettings.js, routes/remoteProxy.js). Do NOT start them
+> until MPI-88 is committed, or you build on a moving base + collide. Resume after MPI-88 lands.
+
 ## Items (app-side unless tagged [rebuild])
 
 - [ ] **F4 — Fresh-volume initialization + bundle versioning.** `[app]` + maybe `[rebuild]`.
+      **⛔ BLOCKED on MPI-88** (overlaps its volume / routes/remoteProxy.js / MpiSettings work) +
+      couples MPI-90 (read-side gate). Resume after MPI-88 commits.
       Cubric dir layout + the first manifest written Pod-side by the wrapper init script;
       refuse to run against a stale workflow/custom-node bundle + an approved repair path.
       The wrapper-coupled half pairs with the MPI-90 manifest-compat gate (read side).
@@ -38,6 +46,9 @@
       RESOLVED — the CREATE-path copy is good ("First-time setup… one time, a few minutes"). The
       only residual: confirm the BOOT auto-reconnect path's flat ~90-120s ETA is accurate or make
       it distinguish first-boot-compile from warm-resume. Low priority.
+      **⛔ BLOCKED on MPI-88** — the residual lives in `_initRemoteBoot` (js/shell.js), which
+      MPI-88 is rewriting (warm-resume vs create branch). Resume after MPI-88 commits; the copy
+      should key off MPI-88's `warm` flag.
 
 - [x] **G1 — Downgrade the "Restarting ComfyUI" restart-info modal → plain info toast.**
       **ALREADY DONE — verified 2026-06-15, no code needed.** The restart-info already emits
