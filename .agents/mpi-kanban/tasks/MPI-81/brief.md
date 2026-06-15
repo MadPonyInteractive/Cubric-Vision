@@ -44,4 +44,35 @@ moved since v0.4.0/0.2.3.
 
 Bump `wrapper_version` (next after 0.2.3) — mpi-ci build arg AND `WRAPPER_VERSION` in Cubric-Vision `routes/remoteProxy.js` — only if the wrapper changed; bump the image tag (next after v0.4.0). Then build + push both profiles (cu124 CI / cu128 local) + ensure GHCR public + USER redeploys a fresh Pod.
 
-Related: MPI-64 (RunPod remote engine), MPI-70 (multi-image build), MPI-75 (closed v0.4.0 rebuild).
+### 🔧 BUILD-READY PREFLIGHT (2026-06-15 — wrapper DID change, version bump REQUIRED)
+
+The wrapper changed since v0.4.0/0.2.3 (MPI-95 `_resolve_total`+`models:install-verifying`, MPI-88 `/health` download-mode branch), so the version bump is NOT optional this build.
+
+**Current values (verified 2026-06-15):**
+- App: `Cubric-Vision/routes/remoteProxy.js:60` → `const WRAPPER_VERSION = '0.2.3';`
+- Image tag: current `v0.4.0`. Wrapper code lives in mpi-ci `cubric-vision-pod/wrapper/wrapper.py` (`faa4187`).
+
+**Bump to (recommended — wrapper-only change, no torch/CUDA shift → patch tags):**
+- `wrapper_version`: **0.2.3 → 0.2.4** (mpi-ci dispatch input `wrapper_version` → build arg `WRAPPER_VERSION`)
+- image tag: **v0.4.0 → v0.4.1** (mpi-ci dispatch input — `manifest_version`/tag)
+- App: set `routes/remoteProxy.js` `WRAPPER_VERSION = '0.2.4'` AND `POD_IMAGE_VERSION`/tag refs to `v0.4.1` — must MATCH the build, commit on RunPod. (Search the app for `0.2.3` and `v0.4.0` to catch every ref.)
+- (If the user prefers a minor bump instead, use v0.5.0 / 0.2.4 — agent confirm the pair before dispatch.)
+
+**What this single build must contain (all code already committed; this batch only BUILDS it):**
+1. 🔴 Candidate #4 — pre-bake the unbaked weights (RIFE / yolo / SAM / 4x upscalers) into the Dockerfile. **This is the only candidate still needing Dockerfile CODE** — write the BUILD-time pre-download steps before dispatch. Source list = `comfy_workflows/` JSON + `dependencies.js` `installOnEngine`. Audit Impact-Pack/Subpack/KJNodes/UltimateSDUpscale for the same lazy pattern.
+2. Candidate #1 — `--cache-lru 2` in `start.sh` (decide + test: evicts on switch? keeps Wan high+low pair in a multi-stage gen? 1k-sampler unaffected?).
+3. Candidate #5 (MPI-95) — wrapper already committed (`faa4187`); builds automatically with the version bump. No code.
+4. MPI-88 `-cpu` image + shared `wrapper.py` `/health` change — already committed (`4664736`); the GPU images pick up the new `wrapper.py` automatically.
+5. Candidate #2 (`/wrapper/free`) + #3 (cu130) — defer unless decided this round (no urgency; #3 is FUTURE).
+
+**Order / mechanics (USER runs live ops):**
+- mpi-ci is a SEPARATE repo; `cubric-vision-pod/` is a subfolder. COMMIT + PUSH mpi-ci `main` BEFORE `gh workflow run` (dispatch builds the pushed ref, not the local tree).
+- cu124 + `-cpu` build in CI; cu128 builds locally on the Windows Docker box (runner disk ceiling).
+- Steps live in mpi-ci `cubric-vision-pod/README.md` — NOTE: that README still carries a stale "MPI-75 v0.4.0 IN PROGRESS" block; the agent should refresh it for this build (v0.4.1/0.2.4) as part of the work.
+- After build: ensure GHCR images PUBLIC; USER redeploys a fresh Pod; then live-verify MPI-95 (no 80% jump, "Verifying…" at end) per MPI-95 validation.md.
+
+### NOT a build input from the parallel sessions (2026-06-15)
+- **MPI-94** (this session's UX polish) — all shipped items are app-side; **zero rebuild impact**. Its 2 unbuilt items (F4 wrapper-manifest half, L3) are blocked + NOT build-ready — do not pull into this build.
+- **MPI-88** — already folded in (above).
+
+Related: MPI-64 (RunPod remote engine), MPI-70 (multi-image build), MPI-75 (closed v0.4.0 rebuild), MPI-95 (wrapper progress fix, candidate #5).
