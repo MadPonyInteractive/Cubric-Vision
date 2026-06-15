@@ -370,7 +370,8 @@
  * @property {string} [info] - Info bar description for the unload button
  *
  * Instance methods (on instance.el):
- *   startPolling()          — begin or resume polling /system/stats
+ *   startPolling()          — begin or resume polling the active stats source
+ *                             (/system/stats locally, remote Pod stats while connected)
  *   stopPolling()           — pause polling
  *   showStatus(text)        — show a temporary badge message (called by shell after release)
  *

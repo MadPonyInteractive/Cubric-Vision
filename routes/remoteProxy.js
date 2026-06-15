@@ -52,15 +52,17 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.2)
-// tracks CUBRIC_WRAPPER_VERSION (0.2.5 — wrapper now OWNS+supervises ComfyUI +
-// /wrapper/restart-comfy so a per-model node install restarts only ComfyUI, no
-// Pod reboot (MPI-81); plus 0.2.4's honest install progress (MPI-95) + /health
-// download-mode branch (MPI-88); image pre-bakes lazy node weights + --cache-lru
-// 2; MPI-81 rebuild batch).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.3)
+// tracks CUBRIC_WRAPPER_VERSION (0.2.6 — adds GET /wrapper/stats: truthful in-Pod
+// RAM (cgroup v2) + VRAM (nvidia-smi) for the status-bar memory monitor (MPI-98);
+// image also pre-bakes the taesd vae_approx preview decoders so live latent
+// previews aren't garbage (MPI-98). Carries forward 0.2.5's wrapper-owns-ComfyUI +
+// /wrapper/restart-comfy (MPI-81), 0.2.4's honest install progress (MPI-95) +
+// /health download-mode branch (MPI-88); image pre-bakes lazy node weights +
+// --cache-lru 2).
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.2';
-const WRAPPER_VERSION = '0.2.5';
+const POD_IMAGE_VERSION = 'v0.4.3';
+const WRAPPER_VERSION = '0.2.6';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -234,6 +236,53 @@ let _lastPodStatus = null;
 let _lastPodStatusAt = 0;
 let _lastPodStatusId = null;
 const POD_STATUS_TTL_MS = 12000;
+
+function _readPath(obj, path) {
+  if (!obj || !path) return undefined;
+  return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+}
+
+function _firstFinite(obj, paths = []) {
+  for (const path of paths) {
+    const value = Number(_readPath(obj, path));
+    if (Number.isFinite(value) && value >= 0) return value;
+  }
+  return null;
+}
+
+function _gbToBytes(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n * (1024 ** 3) : null;
+}
+
+function _metricFromPod(obj, {
+  totalGbPaths = [],
+  usedGbPaths = [],
+  usedBytePaths = [],
+  percentPaths = [],
+} = {}) {
+  const totalBytes = _gbToBytes(_firstFinite(obj, totalGbPaths));
+  let usedBytes = _firstFinite(obj, usedBytePaths);
+  if (usedBytes == null) {
+    const usedGb = _firstFinite(obj, usedGbPaths);
+    usedBytes = _gbToBytes(usedGb);
+  }
+  let percent = _firstFinite(obj, percentPaths);
+  if (percent == null && usedBytes != null && totalBytes) {
+    percent = (usedBytes / totalBytes) * 100;
+  } else if (percent != null) {
+    percent = Math.max(0, Math.min(100, percent));
+  }
+  if (usedBytes == null && percent != null && totalBytes) {
+    usedBytes = totalBytes * (percent / 100);
+  }
+  return {
+    totalBytes,
+    usedBytes,
+    percent,
+    available: totalBytes != null && (usedBytes != null || percent != null),
+  };
+}
 
 async function _podRuntimeStatus(podId) {
   if (!podId) return null;
@@ -760,6 +809,176 @@ router.get('/remote/pod/specs', async (req, res) => {
   }
 });
 
+// Live remote telemetry for the status-bar memory monitor (MPI-98). Unlike
+// /remote/pod/specs, this route is about CURRENT Pod usage, not static Pod
+// capacity. The frontend already gets authoritative capacity (gpuName/vramGb/
+// ramGb) from the existing remote:connection feed; this route supplies the live
+// usage side and is allowed to be partial/unavailable.
+//
+// SOURCE ORDER (MPI-98): the wrapper's GET /wrapper/stats is the TRUTHFUL source
+// (in-Pod cgroup-v2 RAM + nvidia-smi VRAM, v0.4.3+). Try it first. RunPod's REST
+// getPod carries NO live usage telemetry in the shapes we've seen, so the REST
+// path below is only a best-effort fallback for an OLD wrapper image (pre-stats)
+// — it almost always resolves to telemetry_unavailable. If neither source has
+// live usage we return `success:false` so the UI shows an explicit
+// remote-unavailable state ("Pod N/A") rather than silently showing LOCAL usage.
+router.get('/remote/pod/stats', async (req, res) => {
+  const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  if (!_mode.active || !podId) {
+    return res.json({ success: false, source: 'remote', unavailable: true, reason: 'remote_inactive' });
+  }
+
+  // Preferred: the wrapper's truthful in-Pod stats. A 404 means an old image
+  // without the endpoint — fall through to the RunPod REST guess. Any other
+  // failure (wrapper booting, network) also falls through; the monitor polls on
+  // an interval so a transient miss self-heals next tick.
+  try {
+    const headers = await _authHeaders();
+    if (headers) {
+      const upstream = await fetch(`${proxyUrl(podId)}/wrapper/stats`, { headers });
+      if (upstream.ok) {
+        const wrapperStats = await upstream.json();
+        if (wrapperStats && wrapperStats.success) {
+          return res.json(wrapperStats);
+        }
+      }
+      // non-ok / unsuccessful → fall through to REST fallback below
+    }
+  } catch (err) {
+    logger.warn('runpod', `wrapper /wrapper/stats unavailable, trying REST: ${err?.message || err}`);
+  }
+
+  try {
+    const key = await getRunPodApiKey();
+    if (!key) {
+      return res.json({ success: false, source: 'remote', unavailable: true, reason: 'no_api_key' });
+    }
+    const podRes = await client.getPod(key, podId);
+    const pod = (podRes && podRes.json) || {};
+
+    const ram = _metricFromPod(pod, {
+      totalGbPaths: [
+        'memoryInGb',
+        'machine.memoryInGb',
+        'containerMemoryInGb',
+      ],
+      usedGbPaths: [
+        'machine.currentStats.memoryUsedInGb',
+        'machine.currentStats.memory.usedInGb',
+        'machine.currentStats.systemMemoryUsedInGb',
+        'telemetry.memoryUsedInGb',
+        'telemetry.memory.usedInGb',
+        'runtime.telemetry.memoryUsedInGb',
+        'runtime.telemetry.memory.usedInGb',
+        'machine.telemetry.memoryUsedInGb',
+        'machine.telemetry.memory.usedInGb',
+        'machine.podHostCurrentUtilization.memoryUsedInGb',
+        'machine.podHostCurrentUtilization.memory.usedInGb',
+      ],
+      usedBytePaths: [
+        'machine.currentStats.memoryUsedBytes',
+        'machine.currentStats.memory.usedBytes',
+        'telemetry.memoryUsedBytes',
+        'telemetry.memory.usedBytes',
+        'runtime.telemetry.memoryUsedBytes',
+        'runtime.telemetry.memory.usedBytes',
+        'machine.telemetry.memoryUsedBytes',
+        'machine.telemetry.memory.usedBytes',
+        'machine.podHostCurrentUtilization.memoryUsedBytes',
+        'machine.podHostCurrentUtilization.memory.usedBytes',
+      ],
+      percentPaths: [
+        'machine.currentStats.memoryUtilPercent',
+        'machine.currentStats.memory.percent',
+        'machine.currentStats.systemMemoryUtilPercent',
+        'telemetry.memoryPercent',
+        'telemetry.memory.percent',
+        'runtime.telemetry.memoryPercent',
+        'runtime.telemetry.memory.percent',
+        'machine.telemetry.memoryPercent',
+        'machine.telemetry.memory.percent',
+        'machine.podHostCurrentUtilization.memoryUtilPercent',
+        'machine.podHostCurrentUtilization.memory.percent',
+      ],
+    });
+
+    const vram = _metricFromPod(pod, {
+      totalGbPaths: [
+        'gpu.memoryInGb',
+        'machine.gpu.memoryInGb',
+        'runtime.gpu.memoryInGb',
+      ],
+      usedGbPaths: [
+        'machine.currentStats.gpuMemoryUsedInGb',
+        'machine.currentStats.gpu.memoryUsedInGb',
+        'machine.currentStats.gpu.usedMemoryInGb',
+        'machine.currentStats.vramUsedInGb',
+        'telemetry.gpuMemoryUsedInGb',
+        'telemetry.gpu.memoryUsedInGb',
+        'telemetry.vramUsedInGb',
+        'runtime.telemetry.gpuMemoryUsedInGb',
+        'runtime.telemetry.gpu.memoryUsedInGb',
+        'machine.telemetry.gpuMemoryUsedInGb',
+        'machine.telemetry.gpu.memoryUsedInGb',
+        'machine.podHostCurrentUtilization.gpuMemoryUsedInGb',
+        'machine.podHostCurrentUtilization.gpu.memoryUsedInGb',
+      ],
+      usedBytePaths: [
+        'machine.currentStats.gpuMemoryUsedBytes',
+        'machine.currentStats.gpu.memoryUsedBytes',
+        'machine.currentStats.gpu.usedMemoryBytes',
+        'machine.currentStats.vramUsedBytes',
+        'telemetry.gpuMemoryUsedBytes',
+        'telemetry.gpu.memoryUsedBytes',
+        'telemetry.vramUsedBytes',
+        'runtime.telemetry.gpuMemoryUsedBytes',
+        'runtime.telemetry.gpu.memoryUsedBytes',
+        'machine.telemetry.gpuMemoryUsedBytes',
+        'machine.telemetry.gpu.memoryUsedBytes',
+        'machine.podHostCurrentUtilization.gpuMemoryUsedBytes',
+        'machine.podHostCurrentUtilization.gpu.memoryUsedBytes',
+      ],
+      percentPaths: [
+        'machine.currentStats.gpuMemoryUtilPercent',
+        'machine.currentStats.gpu.memoryPercent',
+        'machine.currentStats.gpu.memory.percent',
+        'machine.currentStats.vramUtilPercent',
+        'telemetry.gpuMemoryPercent',
+        'telemetry.gpu.memoryPercent',
+        'telemetry.gpu.memory.percent',
+        'telemetry.vramPercent',
+        'runtime.telemetry.gpuMemoryPercent',
+        'runtime.telemetry.gpu.memoryPercent',
+        'machine.telemetry.gpuMemoryPercent',
+        'machine.telemetry.gpu.memoryPercent',
+        'machine.podHostCurrentUtilization.gpuMemoryPercent',
+        'machine.podHostCurrentUtilization.gpu.memoryPercent',
+      ],
+    });
+
+    const anyTelemetry = ram.available || vram.available;
+    if (!anyTelemetry) {
+      return res.json({ success: false, source: 'remote', unavailable: true, reason: 'telemetry_unavailable' });
+    }
+
+    res.json({
+      success: true,
+      source: 'remote',
+      ram: {
+        used: ram.usedBytes,
+        percent: ram.percent != null ? Number(ram.percent.toFixed(1)) : null,
+      },
+      vram: {
+        used: vram.usedBytes,
+        percent: vram.percent != null ? Number(vram.percent.toFixed(1)) : null,
+      },
+    });
+  } catch (err) {
+    logger.warn('runpod', `pod stats unavailable: ${err?.message || err}`);
+    res.json({ success: false, source: 'remote', unavailable: true, reason: 'stats_failed' });
+  }
+});
+
 // Reap stranded stopped 'cubric-vision' Pods (Step 4.3.3). Settings "clean up old
 // Pods" action / Connect-time call. Keeps the currently-tracked Pod.
 router.post('/remote/pod/cleanup-orphans', async (req, res) => {
@@ -909,7 +1128,10 @@ router.post('/remote/upload/media', async (req, res) => {
     // Lazy require — remoteModels requires this module (circular at load time).
     const remoteModels = require('./remoteModels');
     const out = await remoteModels.remoteUploadInput(localPath, filename || localPath, '/wrapper/upload/media');
-    res.json({ success: true, name: out.name, type: out.type || 'input' });
+    // `path` is the absolute Pod path (e.g. /workspace/comfyui/input/<name>).
+    // VHS_LoadVideoPath resolves a literal path, NOT a bare basename against
+    // --input-directory, so the renderer must inject the full path (not name).
+    res.json({ success: true, name: out.name, path: out.path, type: out.type || 'input' });
   } catch (err) {
     logger.error('runpod', `remote media upload failed: ${err.message}`);
     res.status(502).json({ error: 'upload_failed', message: err.message });
