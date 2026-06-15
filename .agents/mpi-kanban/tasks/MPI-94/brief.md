@@ -53,9 +53,17 @@
       **LIVE-VERIFIED 2026-06-15** on a connected Pod: "Stopping… the remote engine is
       interrupting the current step." toast appeared on Stop during a remote I2V gen.
 
-- [ ] **G6 — First-connect-on-a-new-image-tag 504** (image pull > 300s timeout; reconnect
-      warm-resumes) + GPU-availability-refresh-on-dropdown-open. `[app]`. (The image-pull PROGRESS
-      display is the separate MPI-87 card; this is the 504 timeout + dropdown refresh.)
+- [x] **G6 — First-connect-on-a-new-image-tag 504 + GPU-availability-refresh-on-dropdown-open.**
+      **ALREADY DONE — verified by code read 2026-06-15, no code needed** (both halves landed in
+      the MPI-64 connect-flow rework; brief snapshot predated it).
+      (a) **504:** the create/reconnect backend now returns immediately with `starting` (no 504 on
+      a long first-image pull); the renderer owns the wait via `_pollEngineReady` in MpiSettings.js
+      (20-min timeout = 1200000ms, covers the ~3GB pull + one-time sageattention compile) with a
+      ~150s slow-signal "downloading the engine" message. Boot path mirrors this.
+      (b) **dropdown refresh:** `gpuInst.on('open', …)` (MpiSettings.js) re-fetches
+      `/runpod/gpu-availability` (DC-scoped) and rebuilds the GPU options in place every time the
+      picker opens. Both confirmed present in HEAD (not part of MPI-88's in-flight edits).
+      (The image-pull PROGRESS display is the separate MPI-87 card.)
 
 - [x] ~~**G4 — aria2c fast model download.** `[rebuild]`~~ **DONE (2026-06-15)** — shipped in
       the current Pod images as MPI-75 batch item #2 (v0.4.0). Already live; struck from this card.
