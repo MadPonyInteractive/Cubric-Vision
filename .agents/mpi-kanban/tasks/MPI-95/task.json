@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-95",
+  "title": "Remote download progress jumps to ~80% then crawls",
+  "description": "Remote (RunPod) model install bar pops to ~80% instantly then crawls; fix denominator + hold indeterminate until real totals known.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-06-15T11:05:00Z",
+  "updated_at": "2026-06-15T11:05:00Z",
+  "activeSessionTitle": "F3: HEAD true-total + indeterminate-until-ready",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

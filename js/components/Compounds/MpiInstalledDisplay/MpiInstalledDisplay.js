@@ -44,9 +44,15 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
  *   (e.g. some deps are on disk but missing others). Use with downloadState='idle' to show
  *   a progress bar while keeping the Install button.
+ * @param {boolean} [indeterminate=false] - Show an animated sweep instead of a real % (MPI-95).
+ *   Used by the remote install path while a real total isn't known yet (the gap before the
+ *   wrapper's first tick) and during the wrapper's post-download sha256 verify. Cleared by
+ *   setProgress({ indeterminate:false }).
+ * @param {'preparing'|'verifying'} [phase='preparing'] - Label for the indeterminate sweep
+ *   (MPI-95): 'preparing' before the first real-total tick, 'verifying' during the wrapper hash.
  *
  * Public APIs (on el):
- *   el.setProgress({ progress, speed, downloadedBytes, totalBytes }) — update progress bar in place
+ *   el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) — update progress bar in place
  *   el.setDownloadState(downloadState) — re-render buttons + badge for new state
  *   el.destroy() — tear down all mounted children
  *
@@ -89,6 +95,14 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             totalBytes: props.totalBytes || 0,
             hasPartialProgress: !!props.hasPartialProgress,
             installed: !!props.installed,
+            // MPI-95: indeterminate sweep + phase label instead of a fake %. The
+            // remote install shows an animated bar in two spots: 'preparing' (the
+            // gap before the wrapper's first real-total tick) and 'verifying' (the
+            // wrapper's post-download sha256 hash, which is otherwise a silent
+            // freeze at ~100%). phase drives the label only; indeterminate drives
+            // the sweep.
+            indeterminate: !!props.indeterminate,
+            phase: props.phase || 'preparing',
         };
 
         // Title
@@ -245,6 +259,8 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                     interactive: false,
                 });
                 _children.push(_progressBarInst);
+                // MPI-95: indeterminate sweep while real sizes resolve.
+                _applyIndeterminate(_current.indeterminate);
                 progressSlot.appendChild(barWrap);
 
                 _progressLabelEl = ce('div', { className: 'mpi-installed-display__progress-label' });
@@ -307,9 +323,22 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             }
         }
 
+        // MPI-95: toggle the indeterminate sweep on the live progress bar. Reuses
+        // the MpiProgressBar `--loading` shimmer (animated full-width band) so the
+        // bar reads as "working" without showing a fake %.
+        function _applyIndeterminate(on) {
+            if (!_progressBarInst) return;
+            const bar = qs('.mpi-progress', _progressBarInst.el);
+            if (bar) bar.classList.toggle('mpi-progress--loading', !!on);
+        }
+
         function _updateProgressLabel() {
             if (!_progressLabelEl) return;
-            const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes } = _current;
+            const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes, indeterminate, phase } = _current;
+            if (indeterminate) {
+                _progressLabelEl.textContent = phase === 'verifying' ? 'Verifying…' : 'Preparing…';
+                return;
+            }
             if (downloadState === 'paused') {
                 const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
                 const suffix = [downloadedText, speed].filter(Boolean).join(' - ');
@@ -326,11 +355,18 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
         // ── Public APIs ──────────────────────────────────────────────────────
 
-        el.setProgress = ({ progress, speed, downloadedBytes, totalBytes } = {}) => {
+        el.setProgress = ({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase } = {}) => {
             if (typeof progress === 'number') _current.progress = progress;
             if (typeof speed === 'string') _current.speed = speed;
             if (typeof downloadedBytes === 'number') _current.downloadedBytes = downloadedBytes;
             if (typeof totalBytes === 'number') _current.totalBytes = totalBytes;
+            // MPI-95: phase drives the indeterminate label (Preparing…/Verifying…).
+            if (typeof phase === 'string') _current.phase = phase;
+            // MPI-95: clear/set the indeterminate sweep when a real total arrives.
+            if (typeof indeterminate === 'boolean') {
+                _current.indeterminate = indeterminate;
+                _applyIndeterminate(indeterminate);
+            }
 
             if (_progressBarInst) {
                 // MpiProgressBar has no public setter — update input value + track fill directly.

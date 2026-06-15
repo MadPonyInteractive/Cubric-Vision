@@ -1,0 +1,7 @@
+{"schema":"mpi-kanban/task-files/v1","files":[
+  {"path":"routes/downloadManager.js","note":"remote path: instant indeterminate Preparing… started event; _onRemoteInstallEvent handles models:install-verifying → indeterminate Verifying…; app-side HEAD pre-seed removed (wrapper owns denominator)"},
+  {"path":"js/services/downloadService.js","note":"thread indeterminate + phase onto downloadJob in download:started / download:progress handlers"},
+  {"path":"js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js","note":"pass indeterminate + phase to card mounts + setProgress"},
+  {"path":"js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js","note":"indeterminate + phase props; Preparing…/Verifying… label; reuse --loading sweep"},
+  {"path":"[mpi-ci] cubric-vision-pod/wrapper/wrapper.py","note":"SEPARATE REPO. _resolve_total HEAD seed of rec[total] (kills 80% jump); models:install-verifying SSE before sha256 (kills 99.9% hang). Gated on MPI-81 rebuild."}
+]}

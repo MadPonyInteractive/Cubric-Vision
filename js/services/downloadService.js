@@ -153,6 +153,9 @@ const downloadService = {
             if (job) {
                 job.status = data.status;
                 job.progress = data.progress;
+                // MPI-95: carry the indeterminate (Preparing…) flag onto the job so
+                // the card re-render in MpiModelManager picks it up.
+                job.indeterminate = !!data.indeterminate;
                 state.downloadJobs = [...state.downloadJobs];
             }
             Events.emit('download:started', data);
@@ -174,6 +177,10 @@ const downloadService = {
                 job.totalBytes = data.totalBytes;
                 job.speed = data.speed;
                 job.progress = data.progress;
+                // MPI-95: a progress tick with a real total clears Preparing… state;
+                // a verifying tick sets indeterminate back on with phase='verifying'.
+                if (typeof data.indeterminate === 'boolean') job.indeterminate = data.indeterminate;
+                if (typeof data.phase === 'string') job.phase = data.phase;
                 // Throttle state writes to 1 per 5 sec; Events carries real-time progress to components
                 const now = Date.now();
                 if (!job._lastStateWrite || now - job._lastStateWrite >= 5000) {

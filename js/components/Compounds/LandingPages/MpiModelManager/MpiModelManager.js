@@ -223,6 +223,8 @@ export const MpiModelManager = ComponentFactory.create({
                         speed,
                         downloadedBytes: displayDownloadedBytes,
                         totalBytes: displayTotalBytes,
+                        indeterminate: downloadJob ? !!downloadJob.indeterminate : false,
+                        phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
                     });
 
                     if (downloadState !== 'idle') {
@@ -319,6 +321,8 @@ export const MpiModelManager = ComponentFactory.create({
                     speed,
                     downloadedBytes: displayDownloadedBytes,
                     totalBytes: displayTotalBytes,
+                    indeterminate: downloadJob ? !!downloadJob.indeterminate : false,
+                    phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
                 });
 
                 if (downloadState !== 'idle') {
@@ -346,10 +350,10 @@ export const MpiModelManager = ComponentFactory.create({
 
         // ── Download event subscriptions ─────────────────────────────────────
         // download:progress patches a single card in place — no full re-render.
-        _unsubs.push(Events.on('download:progress', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
+        _unsubs.push(Events.on('download:progress', ({ modelId, progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) => {
             const card = _cardInstances.get(modelId);
             if (!card) return;
-            card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
+            card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase });
         }));
 
         _unsubs.push(Events.on('download:started', ({ modelId }) => {
@@ -371,6 +375,8 @@ export const MpiModelManager = ComponentFactory.create({
             const speed = downloadJob ? downloadJob.speed : '';
             const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
             const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
+            const indeterminate = downloadJob ? !!downloadJob.indeterminate : false;
+            const phase = downloadJob ? (downloadJob.phase || 'preparing') : 'preparing';
 
             const model = MODELS.find(m => m.id === modelId);
             if (model) {
@@ -391,6 +397,8 @@ export const MpiModelManager = ComponentFactory.create({
                     speed,
                     downloadedBytes,
                     totalBytes,
+                    indeterminate,
+                    phase,
                 });
                 const pauseCb = () => downloadService.pause(modelId);
                 const resumeCb = () => downloadService.resume(modelId);
