@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-94",
+  "title": "RunPod UX polish + fresh-volume init",
+  "description": "Promoted from MPI-64 at close (2026-06-15). UNBUILT residue (needs code/decision, not just verification). (F4) fresh-volume initialization + bundle versioning — Cubric dir layout + first manifest written Pod-side by the wrapper init script; refuse to run against a stale workflow/custom-node bundle + approved repair path (app + maybe rebuild). (L3) connect-ETA copy first-boot-compile vs warm-resume (mostly resolved — create-path copy is good; only the boot auto-reconnect path's flat ETA remains, low pri). (L4) no download-speed MB/s readout in remote mode — derive from successive progress ticks or carry bytes/sec in the wrapper SSE. (L5) status-poll false-negative flips UI to 'local·offline' for one tick mid-download — require N consecutive failed/not-ready polls before flipping disconnected (stakes raised by MPI-85 local-fallback). (G1) downgrade 'Restarting ComfyUI' restart-info modal to a plain info toast. (G2) 'Stopping…' toast for the ~5s Stop->interrupt gap. (G4) aria2c fast model download (rebuild — MPI-75 candidate #2). (G6) first-connect-on-new-image-tag 504 + GPU-availability refresh on dropdown open. Mix of app-side + rebuild. See brief.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-06-15T07:44:32Z",
+  "updated_at": "2026-06-15T07:44:32Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

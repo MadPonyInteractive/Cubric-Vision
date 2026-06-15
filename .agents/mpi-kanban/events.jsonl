@@ -243,3 +243,6 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-90","at":"2026-06-15T07:27:46Z","actor":"claude","note":"Promoted from MPI-64 — Step 5 manifest compat gate."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-91","at":"2026-06-15T07:27:46Z","actor":"claude","note":"Promoted from MPI-64 — Step 5.2 GPU-picker CUDA filter."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-92","at":"2026-06-15T07:27:46Z","actor":"claude","note":"Promoted from MPI-64 — Phase 5 hardening (tests+secret audit+cost docs)."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-93","at":"2026-06-15T07:44:32Z","actor":"claude","note":"Promoted from MPI-64 at epic close — remote live-verification checklist (M4/M5/A3/F8/G5)."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-94","at":"2026-06-15T07:44:32Z","actor":"claude","note":"Promoted from MPI-64 at epic close — RunPod UX polish + fresh-volume init (F4/L3/L4/L5/G1/G2/G4/G6)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-64","type":"task.moved","at":"2026-06-15T07:44:32Z","actor":"claude","from":"doing","to":"done","summary":"Closed as the RunPod remote-engine epic. Core built + live-verified (remote video SaveVideo, OOM recovery); residue carded MPI-93/94; architecture promoted to docs/runpod-remote-engine.md + memory."}

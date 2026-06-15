@@ -2,6 +2,13 @@
 
 ComfyUI is the generation engine. Communication is via REST + WebSocket.
 
+> **Remote engine:** ComfyUI can run on a RunPod Pod instead of locally. The renderer
+> keeps the same controller/executor contracts; only the transport changes (Express
+> `/proxy/*` forward + a renderer-direct binary-preview WS). See
+> [runpod-remote-engine.md](runpod-remote-engine.md). Video output uses the portable
+> `CreateVideo → SaveVideo` split (titles `Output_Video`/`Output_Audio`/`Preview`),
+> captured workflow-agnostically by `_collectComfyOutputUrls` reading `videos[]`.
+
 ## comfyController (`js/services/comfyController.js`)
 
 Singleton that manages the ComfyUI server lifecycle and workflow execution.
