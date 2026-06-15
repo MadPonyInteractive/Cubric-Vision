@@ -7,8 +7,8 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-06-15T11:05:00Z",
-  "updated_at": "2026-06-15T11:05:00Z",
-  "activeSessionTitle": "F3: HEAD true-total + indeterminate-until-ready",
+  "updated_at": "2026-06-15T12:55:00Z",
+  "activeSessionTitle": "BUILD-GATED on MPI-81 — code committed (app 9124daf + mpi-ci wrapper faa4187), awaiting rebuild + live verify",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

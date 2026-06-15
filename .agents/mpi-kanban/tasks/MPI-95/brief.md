@@ -1,5 +1,18 @@
 # MPI-95 Brief — Remote download progress jumps to ~80% then crawls
 
+> **STATUS 2026-06-15 — ⛔ BUILD-GATED, parked in `doing`.** Both halves coded + committed
+> (app: `9124daf` on RunPod; wrapper: `faa4187` in mpi-ci `wrapper/wrapper.py`). Folded into
+> **MPI-81 rebuild candidate #5** (contract FROZEN — event names/shapes must not change at build
+> time). The fix is NOT live and CANNOT be verified until the USER runs the MPI-81 Pod-image
+> rebuild (bump `WRAPPER_VERSION` next after 0.2.3 in both the mpi-ci build arg and
+> Cubric-Vision `routes/remoteProxy.js`). Two checklist items remain: build + live-verify on a
+> fresh Pod. Do NOT move to done until verified live. Pre-build checks all pass (py_compile /
+> node -c / eslint / local-path-untouched). See validation.md for the live pass criteria.
+>
+> **NOTE:** the "Chosen fix" + "Scope" sections below describe the EARLIER app-only F3 plan; the
+> shipped fix PIVOTED to a wrapper-side denominator (`_resolve_total` HEAD seed) +
+> `models:install-verifying` SSE. checklist.md + validation.md are the current source of truth.
+
 ## Symptom
 In RunPod remote mode, pressing **Install** on any model makes the progress bar
 snap to ~80% in a fraction of a second, then crawl the last ~20% slowly. Feels
