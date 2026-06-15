@@ -535,20 +535,55 @@ function mountAll() {
 
     // ── MpiToast ──────────────────────────────────────────────────────────────
     mount('preview-toast-trigger', () => {
+        // Test fixtures for MPI-84 — long messages of varying length, each with a
+        // different link, so we can verify the toast grows in height to fit the
+        // full text instead of clamping to 2 lines. Cycles a new one per click.
+        const TOAST_FIXTURES = [
+            {
+                variant: 'success',
+                message: 'Notification sent successfully!'
+            },
+            {
+                variant: 'warning',
+                message: 'The LoRA <strong>detail-enhancer-xl.safetensors</strong> was not found in your LoRA/upscale folders. Add it in <a href="#settings" style="color:inherit;text-decoration:underline;">Settings → Model Folders</a> or re-download it, then reload the project so the workflow can resolve it.'
+            },
+            {
+                variant: 'info',
+                message: 'Your ComfyUI engine finished installing. The portable build, custom nodes, and base models are now in place. See the <a href="https://cubricstudio.com/docs/engine" style="color:inherit;text-decoration:underline;">engine docs</a> for what changed and how to add more models.'
+            },
+            {
+                variant: 'danger',
+                message: 'Generation failed: the system ran out of RAM while encoding the video latents. Wan video gen is system-RAM-bound — close other apps or pick a Pod with 64GB+ container RAM. Details in the <a href="#logs" style="color:inherit;text-decoration:underline;">app log</a>.'
+            },
+            {
+                variant: 'info',
+                message: 'A new update is available. This patch bundles bug fixes for the gallery slider, fixes drag-and-drop model import, and improves toast layout for long messages. Read the full <a href="#changelog" style="color:inherit;text-decoration:underline;">changelog</a> before updating, then restart the app to apply it.'
+            },
+            {
+                variant: 'success',
+                message: 'Project exported to <a href="#folder" style="color:inherit;text-decoration:underline;">Documents/Cubric Vision/Exports</a> — all 24 history items, masks, and the project.json were copied. You can share that folder or re-import it on another machine to continue exactly where you left off.'
+            }
+        ];
+
+        let _toastIdx = 0;
+
         const btn = MpiButton.mount(slot('preview-toast-trigger'), {
             icon: 'bell',
             label: 'Spawn Toast',
             variant: 'primary',
-            info: 'Click to test the toast notification'
+            info: 'Click to cycle through test toasts (MPI-84 length check)'
         });
         btn.on('click', () => {
+            const fixture = TOAST_FIXTURES[_toastIdx % TOAST_FIXTURES.length];
+            _toastIdx++;
+
             const toastWrapper = document.createElement('div');
             document.body.appendChild(toastWrapper);
 
             const t = MpiToast.mount(toastWrapper, {
-                message: 'Notification sent successfully!',
-                variant: 'success',
-                duration: 3000
+                message: fixture.message,
+                variant: fixture.variant,
+                duration: 6000
             });
 
             t.on('close', () => {

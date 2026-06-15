@@ -1,1 +1,1 @@
-{"schema":"mpi-kanban/task-files/v1","files":[]}
+{"schema":"mpi-kanban/task-files/v1","files":["js/components/Primitives/MpiToast/MpiToast.css","js/components/Primitives/MpiToast/MpiToast.js","js/pages/components.js"]}

@@ -10,15 +10,21 @@ import { qs } from '../../../utils/dom.js';
  * @param {number} [duration=3000] - Lifespan in ms (set to 0 for persistent)
  */
 
-// Module-level stack — tracks visible toasts (max 3) and a pending queue
+// Module-level stack — tracks visible toasts (max 2) and a pending queue
 const MAX_VISIBLE_TOASTS = 2;
 const _toastStack = [];   // { el, hidden }
 const _toastQueue = [];    // { el } — waiting for a slot
 
-function _reassignStackPositions() {
-    _toastStack.forEach((item, i) => {
-        item.el.style.setProperty('--toast-stack-index', i);
-    });
+// Shared fixed container. Toasts live in normal flow inside it (flex
+// column-reverse) so each grows to its own height without overlapping its
+// neighbours — see .mpi-toast-stack in MpiToast.css. Created lazily.
+let _stackContainer = null;
+function _getStackContainer() {
+    if (_stackContainer && document.contains(_stackContainer)) return _stackContainer;
+    _stackContainer = document.createElement('div');
+    _stackContainer.className = 'mpi-toast-stack';
+    document.body.appendChild(_stackContainer);
+    return _stackContainer;
 }
 
 function _startTimer(el, duration, dismiss) {
@@ -37,7 +43,9 @@ function _showToast(item) {
     item.hidden = false;
     item.el.style.removeProperty('visibility');
     item.el.style.removeProperty('opacity');
-    item.el.style.setProperty('--toast-stack-index', _toastStack.length - 1);
+
+    // Move from the hidden offscreen spot into the live stack container.
+    _getStackContainer().appendChild(item.el);
 
     // Trigger animation by forcing a reflow
     void item.el.offsetWidth;
@@ -53,14 +61,12 @@ function _drainQueue() {
     const next = _toastQueue.shift();
     next.hidden = false;
     _toastStack.push(next);
-    _reassignStackPositions();
     _showToast(next);
 }
 
 function _removeFromStack(el) {
     const idx = _toastStack.findIndex(item => item.el === el);
     if (idx !== -1) _toastStack.splice(idx, 1);
-    _reassignStackPositions();
     _drainQueue();
 }
 
@@ -118,16 +124,14 @@ export const MpiToast = ComponentFactory.create({
         };
 
         if (_toastStack.length < MAX_VISIBLE_TOASTS) {
-            // Assign a visible slot
-            const stackIndex = _toastStack.length;
+            // Assign a visible slot — move into the shared stack container.
             item = { el, hidden: false };
             _toastStack.push(item);
-            el.style.setProperty('--toast-stack-index', stackIndex);
+            _getStackContainer().appendChild(el);
         } else {
-            // Queue — mount hidden, will show when a slot frees up
+            // Queue — keep mounted but hidden, will show when a slot frees up.
             item = { el, hidden: true, _duration: duration, _dismissFn: dismiss };
             _toastQueue.push(item);
-            el.style.setProperty('--toast-stack-index', -1);
             el.style.setProperty('visibility', 'hidden');
             el.style.setProperty('opacity', '0');
         }
