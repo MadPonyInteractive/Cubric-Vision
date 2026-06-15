@@ -596,21 +596,25 @@ function _initRemoteConnectionFeed() {
       const suppress = _activeDownloads.size > 0 || _misses < MISS_THRESHOLD;
       if (suppress && _last) return; // stay shown-connected; keep backing off
     }
-    if (connected !== _last) {
-      _last = connected;
-      if (!connected) {
+    if (!connected) {
+      if (connected !== _last) {
+        _last = connected;
         _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null });
-        return;
       }
-      // Resolve GPU/VRAM/RAM for the badge (best-effort; falls back to the id).
-      let specs = { gpuName: cfg.gpuType || null, vramGb: null, ramGb: null };
-      try {
-        const qp = cfg.gpuType ? `?gpuTypeId=${encodeURIComponent(cfg.gpuType)}` : '';
-        const r = await fetch(`/remote/pod/specs${qp}`);
-        if (r.ok) specs = await r.json();
-      } catch (_) { /* keep the fallback */ }
-      _emitRemoteConnection({ connected: true, ...specs });
+      return;
     }
+    _last = connected;
+    // Resolve GPU/VRAM/RAM + the live session figures (uptime/cost — MPI-80) for
+    // the badge (best-effort; falls back to the id). Re-fetched EVERY connected
+    // tick (not just on the connect edge) so the session-cost badge climbs live;
+    // GPU/VRAM/RAM are static so re-emitting them is an idempotent repaint.
+    let specs = { gpuName: cfg.gpuType || null, vramGb: null, ramGb: null };
+    try {
+      const qp = cfg.gpuType ? `?gpuTypeId=${encodeURIComponent(cfg.gpuType)}` : '';
+      const r = await fetch(`/remote/pod/specs${qp}`);
+      if (r.ok) specs = await r.json();
+    } catch (_) { /* keep the fallback */ }
+    _emitRemoteConnection({ connected: true, ...specs });
   };
 
   // Self-scheduling loop (not setInterval): each run waits for the previous to

@@ -3,7 +3,8 @@
  *
  *   #heroStatGpu     — "RTX 4090 · 24 GB VRAM · 64 GB RAM"   (via /system/gpu-info)
  *   #heroStatModels  — "7 / 23"                              (via models:checked event)
- *   #heroStatSession — "2 days ago"                          (via projects:listed event)
+ *   #heroStatSession — "2 days ago" / "10min/$1.51"          (projects:listed; or
+ *                       remote:connection while cloud-connected — MPI-80)
  */
 
 import { gid } from '../utils/dom.js';
@@ -54,14 +55,69 @@ function _renderModels(installedCount = 0) {
     el.appendChild(document.createTextNode(` / ${MODELS.length}`));
 }
 
+// Last `projects:listed` payload, cached so the session slot can repaint the
+// local "last session" line when the remote engine disconnects (MPI-80).
+let _lastProjects = null;
+// True while the session slot is owned by the live remote session (MPI-80) —
+// declared here so _renderSession's guard reads it before _renderRemoteSession
+// is defined below.
+let _remoteSessionActive = false;
+
 function _renderSession(projects) {
+    if (projects !== undefined) _lastProjects = projects;
+    // While remote-connected with live cost data, the slot shows the current
+    // remote session instead — _renderRemoteSession owns it (MPI-80).
+    if (_remoteSessionActive) return;
+    _setSessionLabel('last session');
     const el = gid('heroStatSession');
     if (!el) return;
-    if (!projects || projects.length === 0) {
+    if (!_lastProjects || _lastProjects.length === 0) {
         el.textContent = 'No sessions yet';
         return;
     }
-    el.textContent = _formatRelative(projects[0].updatedAt);
+    el.textContent = _formatRelative(_lastProjects[0].updatedAt);
+}
+
+function _setSessionLabel(text) {
+    const lbl = gid('heroStatSessionLabel');
+    if (lbl) lbl.textContent = text;
+}
+
+// MPI-80: format billable Pod uptime as "45s" (<1min), "10min" (<1h) or "2h 5m"
+// (>=1h). Seconds matter for the first minute so the badge climbs immediately on
+// connect instead of sitting at "0min".
+function _formatDuration(secs) {
+    const total = Math.max(0, Math.floor(secs));
+    if (total < 60) return `${total}s`;
+    const mins = Math.floor(total / 60);
+    if (mins < 60) return `${mins}min`;
+    const hours = Math.floor(mins / 60);
+    return `${hours}h ${mins % 60}m`;
+}
+
+// MPI-80: paint "current session" + "10min/$1.51" when remote-connected and we
+// have billing-true uptime. Cost = uptimeHours × securePrice. Requires BOTH a
+// finite uptime and a known $/hr; otherwise the slot falls back to "last session".
+function _renderRemoteSession({ uptimeSeconds, pricePerHr }) {
+    const hasUptime = Number.isFinite(uptimeSeconds) && uptimeSeconds > 0;
+    const hasPrice = Number.isFinite(pricePerHr) && pricePerHr > 0;
+    if (!hasUptime || !hasPrice) {
+        // No usable cost data — let the project "last session" line stand.
+        _remoteSessionActive = false;
+        _renderSession(undefined);
+        return;
+    }
+    _remoteSessionActive = true;
+    _setSessionLabel('current session');
+    const el = gid('heroStatSession');
+    if (!el) return;
+    const cost = (uptimeSeconds / 3600) * pricePerHr;
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode(`${_formatDuration(uptimeSeconds)}/`));
+    const accent = document.createElement('span');
+    accent.className = 'mpi-landing__stat-accent';
+    accent.textContent = `$${cost.toFixed(2)}`;
+    el.appendChild(accent);
 }
 
 // Cached local-machine GPU/VRAM/RAM line so it can be restored when the remote
@@ -126,9 +182,17 @@ async function _renderGpu() {
 // 'local · offline'). It keeps remote context ("remote · disconnected", no GPU
 // card) so the app doesn't masquerade as offline-by-choice, until the user
 // reconnects from Settings → RunPod (which then emits connected:true and repaints).
-function _renderEngine({ connected, gpuName, vramGb, ramGb, phase = null }) {
+function _renderEngine({ connected, gpuName, vramGb, ramGb, uptimeSeconds, pricePerHr, phase = null }) {
     _remoteConnected = !!connected;
     _remotePhase = phase || null;
+    // MPI-80: session slot tracks the engine. Connected with cost data → current
+    // remote session; otherwise restore the project "last session" line.
+    if (connected && phase === null) {
+        _renderRemoteSession({ uptimeSeconds, pricePerHr });
+    } else {
+        _remoteSessionActive = false;
+        _renderSession(undefined);
+    }
     const label = gid('heroStatEngine');
     const gpu = gid('heroStatGpu');
     if (phase === 'connecting' || phase === 'disconnecting') {
