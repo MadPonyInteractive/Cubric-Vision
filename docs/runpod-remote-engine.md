@@ -236,6 +236,35 @@ is committed).
 | Image CUDA floor vs host driver | ✅ axis understood; per-card image wiring live (cu124 default) |
 | Fresh-volume init + bundle versioning | ❌ not built → **MPI-94** |
 
+## 11. No-GPU "download mode" Pod (MPI-88)
+
+Provision a CPU-only Pod purely to install models onto the volume with **no GPU billing**,
+then switch to a GPU Pod to generate (volume + models persist — Design A). Live-verified
+end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models present, no re-download).
+
+- **Trigger:** the Settings GPU dropdown's first option, "No GPU — download only", sets
+  `runpodConfig.gpuType` to the sentinel `'__cpu__'`. It rides the existing gpuType field,
+  Connect guard, persistence, and GPU-switch delete-and-recreate logic untouched.
+- **Create spec** (`_createPodInternal`, `routes/remoteProxy.js`): sentinel → `computeType:'CPU'`
+  + `cpuFlavorIds:['cpu3c']` (no `gpuTypeIds`/`gpuCount`), `containerDiskInGb:20` (CPU Pods cap
+  at 20), env `CUBRIC_DOWNLOAD_MODE=1`, and the **slim `:v<ver>-cpu` image** — NOT a GPU image.
+  The full cu124/cu128 image will NOT run on a CPU Pod (its entrypoint inits CUDA → container
+  starts with 0 processes → app hangs "connecting"), so the slim image is mandatory.
+- **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
+  only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
+  `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
+  is set (no ComfyUI to probe). See MPI-81 for the image's place in the rebuild batch.
+- **State:** `_mode.noGpu` plumbed through `/remote/mode` + `/remote/comfy/status`; the renderer
+  mirrors it via `remoteEngineClient.isDownloadOnly()`.
+- **Download mode has no ComfyUI / no preview WS**, so three "connected" gates branch on it:
+  the hero connection feed ORs `noGpu` into its `comfy_ready` gate (`js/shell.js`); both connect
+  paths (Settings + boot reconnect) skip the WS handshake. Without these the hero painted
+  `LOCAL · OFFLINE` and Connect hung at "Almost ready" even though the volume was live.
+- **Generation blocked:** `_ensureRemoteReady` throws `code:'pod_no_gpu'` + a `ui:info` toast; and
+  `js/shell/projectUI.js` blocks entering the gallery (project open) in download mode via
+  `isDownloadOnly()` → toast, no navigation.
+- **Watchdog** unchanged (the CPU Pod inherits the `RUNPOD_API_KEY` env self-stop backstop).
+
 ## Related docs / rules
 
 - `docs/comfy.md` — ComfyUI integration, controller, capture, download manager.

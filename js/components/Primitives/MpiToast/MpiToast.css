@@ -44,6 +44,12 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
 }
 
+/* Queued toasts live in the stack container but stay out of layout until a
+   slot frees up — keeps them from painting at the wrong spot before reveal. */
+.mpi-toast--queued {
+    display: none;
+}
+
 .mpi-toast--open {
     opacity: 1;
     transform: translateY(0);
