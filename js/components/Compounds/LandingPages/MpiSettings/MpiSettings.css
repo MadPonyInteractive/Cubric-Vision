@@ -273,6 +273,12 @@
     display: none;
 }
 
+/* Auto-connect sub-option — indented under the Enable toggle (MPI-85). */
+.mpi-settings__runpod-suboption {
+    padding-left: var(--s-4);
+    border-left: 2px solid var(--line);
+}
+
 .mpi-settings__hint--warn {
     color: var(--accent-warn);
 }

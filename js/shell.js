@@ -182,11 +182,14 @@ async function _bootApp() {
   handleNavigation(PAGE_LANDING);
 
   // 2. Check engine version before anything else.
-  // Remote mode (MPI-64): RunPod-enabled boots take a parallel gate path that
-  // skips the local engine version/install gate entirely — a local engine is
-  // not required to run remotely. (`else try` keeps the local path untouched.)
+  // Remote mode (MPI-64/MPI-85): only an AUTO-CONNECT-ON-START boot takes the
+  // parallel remote gate path that skips the local engine version/install gate —
+  // a local engine is not required when we are auto-spinning a Pod at launch.
+  // With auto-connect OFF (the default), boot runs LOCAL even when RunPod is
+  // `enabled` (enabled = "remote available / show panel"), so the local engine
+  // gate MUST run. (`else try` keeps the local path untouched.)
   const runpodCfg = Storage.getRunpodConfig();
-  if (runpodCfg.enabled) {
+  if (runpodCfg.autoConnectOnStart) {
     await _initRemoteBoot(runpodCfg);
   } else try {
     const versionRes = await fetch('/engine/version-check');
@@ -262,10 +265,11 @@ async function _bootApp() {
     Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
   });
 
-  // ComfyUI Auto-start (optional). Local mode only here — the remote Pod start is
-  // gated behind the "RunPod Active" advisory dismiss (see _initRemoteBoot) so the
-  // user acknowledges the credit cost before any GPU billing begins.
-  if (Storage.getAutoStartComfy() && !runpodCfg.enabled) {
+  // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a
+  // Pod at start the remote path owns engine bring-up, so skip the local auto-start.
+  // (MPI-85: gate on autoConnectOnStart, not `enabled` — an enabled-but-not-auto
+  // boot is a LOCAL boot and should honor the auto-start ComfyUI pref.)
+  if (Storage.getAutoStartComfy() && !runpodCfg.autoConnectOnStart) {
     const { ComfyUIController } = await import('./services/comfyController.js');
     ComfyUIController.ensureServerRunning();
   }
@@ -309,10 +313,11 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
 }
 
 async function _initRemoteBoot(runpod) {
-  // Flag remote mode active. A saved podId is passed so status polls + teardown
-  // target it; the boot gate only needs `active` to skip the local install path.
-  // deleteOnQuit is synced here so quit-teardown honors the pref even if the user
-  // never opens Settings this session.
+  // Reached only when `autoConnectOnStart` is ON (MPI-85) — the caller gates on it.
+  // Flag remote mode active so status polls + teardown target the saved podId; the
+  // boot gate only needs `active` to skip the local install path. deleteOnQuit is
+  // synced here so quit-teardown honors the pref even if the user never opens
+  // Settings this session.
   try {
     const body = runpod.podId ? { active: true, podId: runpod.podId } : { active: true };
     body.deleteOnQuit = runpod.deleteOnQuit === true;
@@ -497,7 +502,14 @@ function _initRemoteConnectionFeed() {
       } finally {
         clearTimeout(to);
       }
-      connected = !!(s && s.ready);
+      // Gate "connected" on BOTH the wrapper being up (`ready`) AND ComfyUI
+      // actually serving (`comfyReady`) — after an OOM container self-restart the
+      // wrapper reports ready while ComfyUI is still re-initialising (A3); reading
+      // only `ready` left the status bar painting a false ONLINE / never repainting
+      // on recovery. `comfyReady` is undefined on older status payloads, so only
+      // apply the extra gate when the field is actually present (no regression for
+      // a wrapper that doesn't report it).
+      connected = !!(s && s.ready && (s.comfyReady === undefined || s.comfyReady));
     } catch (_) {
       connected = false;
     }
@@ -632,8 +644,17 @@ async function _initDataRegistries() {
       } catch (err) {
         clientLogger.error('shell', 'model registry sync on remote connect failed:', err);
       }
-    } else if (!connected) {
+    } else if (!connected && _wasRemoteConnected) {
+      // MPI-85: re-check on the DISCONNECT edge too. The remote model set was the
+      // Pod volume's; going local must re-resolve installed-state against the local
+      // filesystem (/comfy/models/check is engine-scoped) so the model menu drops to
+      // local-only and MpiPromptBox.setModelList swaps any stale remote-only selection.
       _wasRemoteConnected = false;
+      try {
+        await syncModelInstalled();
+      } catch (err) {
+        clientLogger.error('shell', 'model registry sync on remote disconnect failed:', err);
+      }
     }
   });
 

@@ -28,6 +28,13 @@ let _remoteTransition = null; // 'connecting' | 'disconnecting' | null
 // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
 Events.on('remote:connection', ({ phase = null } = {}) => { _remoteTransition = phase || null; });
 
+// MPI-85: show the "running locally" fallback info toast only once per page so a
+// burst of generations after a disconnect doesn't stack identical toasts. Reset
+// when a remote connection is (re-)established so a later disconnect notifies again.
+let _localFallbackNoticeShown = false;
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
+Events.on('remote:connection', ({ connected = false } = {}) => { if (connected) _localFallbackNoticeShown = false; });
+
 function _buildComfyViewUrl(httpBase, fileInfo) {
     const params = new URLSearchParams();
     for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
@@ -300,9 +307,34 @@ export const ComfyUIController = {
             return true;
         }
 
-        const msg = 'Remote engine not connected. Open Settings → RunPod and press Connect to create a Pod before generating.';
-        if (!background) Events.emit('comfy:error', { message: msg });
-        throw new Error(msg);
+        // No Pod connected (auto-connect-off boot, or a mid-session disconnect/OOM).
+        // MPI-85: the LOCAL engine is still available — fall back to it instead of
+        // throwing the bug-reporter error and locking the user out. Drop the stale
+        // remote mode so httpBase()/wsUrl() resolve LOCAL, refresh the adapter, then
+        // re-enter this method's local branch. Routing follows the ACTUAL connection
+        // state, not the "Enable RunPod" toggle. Remote-only models are already absent
+        // from the local model list (/comfy/models/check is engine-scoped + the
+        // disconnect re-check in shell.js swaps any stale selection), so the requested
+        // workflow only references models present locally — no extra gate needed here.
+        try {
+            await fetch('/remote/mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: false }),
+            });
+        } catch (_) { /* best effort — the refresh below still flips local on failure */ }
+        await remoteEngineClient.refresh();
+        // Resolve the engine feed to LOCAL (hero/status bar) and trigger the
+        // disconnect-edge model re-check so the picker drops to local-only models.
+        Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+        if (!_localFallbackNoticeShown) {
+            _localFallbackNoticeShown = true;
+            Events.emit('ui:info', {
+                message: 'No Pod connected — running locally. Connect in Settings → RunPod for cloud generation.',
+            });
+        }
+        clientLogger.info('comfy', 'Remote engine not connected — falling back to the local engine.');
+        return await this.ensureServerRunning({ background });
     },
 
     /**
@@ -784,8 +816,44 @@ export const ComfyUIController = {
                 });
 
                 if (!req.ok) {
-                    const errData = await req.json();
-                    throw new Error(errData.error?.message || "ComfyUI Error");
+                    // Two distinct remote-503 shapes from the wrapper (mpi-ci
+                    // wrapper.py `_err`): the body is
+                    //   { error, message, detail: { comfy_status, comfy_body } }
+                    //
+                    //  (1) error="comfy_not_ready" (503): the ComfyUI PROCESS is
+                    //      down/re-initialising — the OOM container self-restart
+                    //      case (A3). RECOVERABLE by waiting → tag `engine_restarting`
+                    //      so the executor shows a soft "restarting, retry" toast,
+                    //      not the bug-reporter modal.
+                    //  (2) error="engine_error" (503): ComfyUI is UP but REJECTED
+                    //      the prompt — e.g. an unbaked model weight (B4: RIFE /
+                    //      SAM-yolo / upscale) or a bad node. NOT fixed by waiting.
+                    //      `detail.comfy_body` carries ComfyUI's real message (it
+                    //      names the missing file) but the app used to drop it and
+                    //      show a bare "ComfyUI Error". Surface `comfy_body` so these
+                    //      unbaked-weight 503s are self-diagnosing (L2/B4 fix).
+                    //
+                    // A non-JSON body (a bare proxy/Cloudflare 503) must not throw a
+                    // parse error and mask the real status.
+                    let errCode = null;
+                    let errMsg = 'ComfyUI Error';
+                    let comfyBody = null;
+                    try {
+                        const errData = await req.json();
+                        errCode = errData?.error || null;
+                        errMsg = errData?.message || errData?.error?.message || errMsg;
+                        comfyBody = errData?.detail?.comfy_body || null;
+                    } catch (_) { /* non-JSON proxy error body — keep the defaults */ }
+                    // The detailed ComfyUI body (when present) is the part that names
+                    // the real cause — log it and fold it into the surfaced message.
+                    if (comfyBody) {
+                        clientLogger.error('comfy', `Remote /prompt ${req.status} ${errCode || ''}: ${comfyBody}`);
+                        errMsg = `${errMsg} — ${comfyBody}`;
+                    }
+                    const err = new Error(errMsg);
+                    // Only the process-not-ready case is the recoverable restart.
+                    if (req.status === 503 && errCode === 'comfy_not_ready') err.code = 'engine_restarting';
+                    throw err;
                 }
 
                 const ack = await req.json();

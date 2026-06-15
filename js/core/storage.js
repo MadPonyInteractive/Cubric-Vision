@@ -39,6 +39,11 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // warm (default = stop-not-delete, Step 4.3). Off keeps the Pod EXITED +
   // warm-resumable; on frees the GPU + container disk fully (volume persists).
   deleteOnQuit: false,
+  // autoConnectOnStart: owns the boot auto-connect lifecycle (MPI-85), decoupled
+  // from `enabled`. Default OFF = no surprise billed Pod at launch; the app boots
+  // LOCAL and the user Connects when wanted. When ON, boot auto-reconnects a Pod.
+  // `enabled` is now purely "remote is available / show the panel", not "force remote".
+  autoConnectOnStart: false,
 });
 
 // Non-secret RunPod prefs only — never the API key or wrapper token.
@@ -51,6 +56,7 @@ function normalizeRunpodConfig(value = {}) {
     volumeId: value?.volumeId || null,
     wasConnected: value?.wasConnected === true,
     deleteOnQuit: value?.deleteOnQuit === true,
+    autoConnectOnStart: value?.autoConnectOnStart === true,
   };
 }
 

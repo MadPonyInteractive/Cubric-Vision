@@ -110,7 +110,11 @@ export const MpiSettings = ComponentFactory.create({
                     </div>
                     <div class="mpi-settings__form-group">
                         <div id="mpiSettingsRunpodToggleSlot"></div>
-                        <span class="mpi-settings__hint">Run generations on your own RunPod Secure Cloud GPU. GPU and storage billing happen on your RunPod account.</span>
+                        <span class="mpi-settings__hint">Makes the RunPod cloud GPU panel available. Generation runs on your local engine until you Connect. GPU and storage billing happen on your RunPod account.</span>
+                    </div>
+                    <div class="mpi-settings__form-group mpi-settings__runpod-suboption" id="mpiSettingsRunpodAutoConnectGroup">
+                        <div id="mpiSettingsRunpodAutoConnectSlot"></div>
+                        <span class="mpi-settings__hint">When enabled, the app connects (and starts billing) a Pod automatically at launch. Off by default — start local, Connect when you want cloud generation.</span>
                     </div>
                     <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
                         <div class="mpi-settings__form-group">
@@ -1174,8 +1178,12 @@ export const MpiSettings = ComponentFactory.create({
             if (!toggleSlot || !body) return;
 
             const cfg = _runpodCfg();
+            // The auto-connect sub-option (MPI-85) sits between the Enable toggle and
+            // the body; show/hide it with the body so it only appears when enabled.
+            const autoConnectGroup = qs('#mpiSettingsRunpodAutoConnectGroup', root);
             const syncBodyVisibility = (enabled) => {
                 body.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+                autoConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
             };
             syncBodyVisibility(cfg.enabled);
 
@@ -1194,6 +1202,22 @@ export const MpiSettings = ComponentFactory.create({
                     _loadRunpodAvailability(root);
                 }
             });
+
+            // ── Auto-connect on app start (MPI-85) ───────────────────────────
+            // Owns the boot auto-connect lifecycle, decoupled from `enabled`. Default
+            // OFF so a relaunch never spins a billed Pod by surprise. Persist-only —
+            // boot reads it via Storage.getRunpodConfig(); no remote-mode push here.
+            const autoConnectSlot = qs('#mpiSettingsRunpodAutoConnectSlot', root);
+            if (autoConnectSlot) {
+                autoConnectSlot.innerHTML = '';
+                const acInst = MpiCheckbox.mount(autoConnectSlot, {
+                    checked: cfg.autoConnectOnStart === true,
+                    label: 'Automatically connect on app start',
+                });
+                acInst.on('change', ({ checked }) => {
+                    state.runpodConfig = { ..._runpodCfg(), autoConnectOnStart: checked === true };
+                });
+            }
 
             // ── API key (write-only; field is cleared after save) ───────────
             const keySlot = qs('#mpiSettingsRunpodKeySlot', root);
