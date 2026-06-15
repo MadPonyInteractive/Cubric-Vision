@@ -106,6 +106,41 @@
 > Prior: first remote-video session — ffmpeg-missing root cause, MPI-70 multi-image
 > build, 5 UI/lifecycle bugs logged. Live-verify of v0.3.0 still pending tags).
 > Verification status per area is marked inline. Branch: `RunPod` (uncommitted).
+>
+> SESSION 8 (2026-06-15, live L4 + RTX 2000 Ada Pods; RunPod=v1.1.0 trunk): **B3 FULLY
+> DONE + LIVE-VERIFIED.** ALL video workflows converted off NVENC to the `CreateVideo`→
+> `SaveVideo` split (final `Output_Video` + preview `Preview` nodes, all 7 files: interpolate/
+> upscale/resize/Wan22_t2v(+stage2)/Wan22_i2v(+stage2)); zero `VHS_VideoCombine` remain. 6 ops
+> bumped latestVersion 1.0→1.1 (extend left 1.0 — no workflow file). App unchanged (capture reads
+> `videos[]` for both final + preview). Committed 656831f (conversion) + 7e8f0c4 (triage).
+> **LIVE-VERIFIED on an L4 Pod:** a minimal remote i2v_ms ran end-to-end → encode with NO NVENC
+> error → SaveVideo captured → video saved + PLAYS + respects the input subject (M2/M3 PASS).
+> The NVENC→SaveVideo fix is PROVEN on a real cloud GPU.
+> **A2/A3 (OOM recovery), live-forced exit-137 twice on a 28.87GiB RTX 2000 Ada container:**
+> detection (A1/B4) = clean PASS on a real OOM (modal + toast + IDLE·DISCONNECTED + WS-cap + no
+> flood). MECHANISM CONFIRMED via Telemetry — the OOM kills the ComfyUI PROCESS (Memory 98%→2%,
+> Processes 228→201) but the Pod Uptime NEVER resets ⇒ `start.sh` restarts ComfyUI in-place, Pod
+> stays alive; the app re-arms the WS on the next gen submit. So a container-OOM SELF-RECOVERS;
+> RunPod does not reconnect, no background app-reconnect — the next gen re-opens the socket. NEW
+> bug A3 (committed): a gen fired during the ComfyUI re-init window 503'd → was the bug-reporter
+> modal; now classified — `comfy_not_ready` 503 → soft "engine restarting, retry" toast
+> (commandExecutor), `engine_error` 503 → surface `detail.comfy_body` (names the missing weight,
+> L2-class fix); shell.js feed gates `connected` on `comfyReady` so the status bar auto-repaints
+> ONLINE on recovery. A3 OOM-toast live-verify DEFERRED (the weak test GPU was reclaimed). Pod-DEATH
+> recovery (whole Pod terminated, not container-OOM) NOT tracked — reactive if it recurs.
+> **M1 mask remote = B4 lazy-weight 503** (auto-mask reached ComfyUI, 503'd): `face_yolov8n.pt` +
+> `sam_vit_b_01ec64.pth` not baked in the image — added to MPI-81's bake list (with RIFE + upscale).
+> **MPI-85 (local fallback + auto-connect checkbox)** spun out + DONE by a parallel agent (committed).
+> **EPIC TRIAGE:** MPI-64 is large/multi-phase → 7 discrete features promoted to their own cards
+> (MPI-64 stays the epic/tracker): MPI-86 cancel-connect, MPI-87 image-pull progress, MPI-88
+> no-GPU download-mode, MPI-89 remote input-asset transfer (B1), MPI-90 manifest-compat gate
+> (Step 5), MPI-91 GPU-picker CUDA filter (Step 5.2), MPI-92 Phase-5 hardening (tests+secret+docs).
+> plan.md reconciled (each `[→]` points at its card). Backfilled MPI-78 (no-volume Pod) workspace.
+> **NEXT SESSION (per handoff): close MPI-64 properly** — what remains in MPI-64 is the epic-core
+> residue (Step 5.1 doc-closeout, F4 fresh-volume init, L142 full-video verify, F8 lifecycle, A2/A3
+> committed, L3/L4/L5 + G-series polish) + the FINAL promote-current-architecture.md-to-durable
+> closeout; everything else is now the spun-out cards.
+> Verification status per area is marked inline. Branch: `RunPod`.
 
 ---
 
