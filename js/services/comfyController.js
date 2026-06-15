@@ -288,20 +288,50 @@ export const ComfyUIController = {
             // (comfy:needs-restart → state.comfyNeedsRestart). ComfyUI only scans
             // custom_nodes at process start, so the already-running remote ComfyUI
             // has NOT loaded it — proceeding would fail with a `missing_node_type`
-            // 503 (e.g. PainterI2VAdvanced for Wan I2V). The local path stop/starts
-            // ComfyUI automatically (see ensureServerRunning above); the remote
-            // equivalent needs a wrapper restart-ComfyUI endpoint that does not
-            // exist yet (deferred to the next image rebuild — a Pod reboot is the
-            // wrong mechanism). Until then, surface a clear, actionable message so
-            // the user reconnects (Disconnect → Connect restarts ComfyUI on Pod
-            // boot and loads the node) instead of hitting a cryptic node error.
-            // TODO(MPI-64): when /wrapper/restart-comfy ships, replace this gate
-            // with an automatic restart here + `state.comfyNeedsRestart = false`.
+            // 503 (e.g. PainterI2VAdvanced for Wan I2V). MPI-81: the wrapper now
+            // owns ComfyUI and exposes /wrapper/restart-comfy, so restart ONLY the
+            // ComfyUI subprocess on the Pod (no Pod reboot, no local detour) and
+            // auto-retry — mirroring the local path's stop/start. On an OLDER image
+            // the endpoint is absent (404) → fall back to the manual-reconnect msg.
             if (state.comfyNeedsRestart) {
-                const msg = 'New custom nodes were installed for this model. Reconnect the remote engine to load them: open Settings → RunPod, press Disconnect, then Connect, and try again.';
-                if (!background) Events.emit('comfy:error', { message: msg });
-                else Events.emit('ui:error', { title: 'Reconnect required', message: msg });
-                throw new Error(msg);
+                Events.emit('ui:info', { message: 'Loading new nodes — restarting the remote engine…' });
+                let restarted = false;
+                try {
+                    const r = await fetch('/proxy/restart-comfy', { method: 'POST' });
+                    restarted = r.ok;
+                } catch { /* relay/network — treated as unsupported below */ }
+
+                if (restarted) {
+                    // ComfyUI is relaunching on the Pod (~15s). Mark the WS not-ready
+                    // (it points at the old process); the WS gate below calls
+                    // ensureWsConnected → connect(), which closes the stale socket and
+                    // re-handshakes against the fresh ComfyUI. Poll wrapper health
+                    // until comfy_ready first, then fall through to that gate.
+                    this._wsReady = false;
+                    let retries = COMFY_READY_TIMEOUT_S;
+                    let ready = false;
+                    while (retries-- > 0) {
+                        await new Promise(r => setTimeout(r, 1000));
+                        const s = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
+                        if (s.ready) { ready = true; break; }
+                    }
+                    if (ready) {
+                        state.comfyNeedsRestart = false;
+                        // fall through to the WS gate below — it re-opens the WS and
+                        // proceeds with the gen on the freshly-restarted ComfyUI.
+                    } else {
+                        const slow = 'The remote engine is still loading the new nodes — give it a moment, then try again.';
+                        if (!background) Events.emit('comfy:error', { message: slow });
+                        else Events.emit('ui:info', { message: slow });
+                        throw new Error(slow);
+                    }
+                } else {
+                    // Old image without /wrapper/restart-comfy — keep the manual path.
+                    const msg = 'New custom nodes were installed for this model. Reconnect the remote engine to load them: open Settings → RunPod, press Disconnect, then Connect, and try again.';
+                    if (!background) Events.emit('comfy:error', { message: msg });
+                    else Events.emit('ui:error', { title: 'Reconnect required', message: msg });
+                    throw new Error(msg);
+                }
             }
             // Wrapper-health `ready` only means ComfyUI is UP — it does NOT mean
             // the binary-preview WS is connected. Accepting a generation before

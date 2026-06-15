@@ -52,14 +52,15 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.1)
-// tracks CUBRIC_WRAPPER_VERSION (0.2.4 — honest install progress: _resolve_total
-// HEAD pre-seed + models:install-verifying SSE (MPI-95) + /health download-mode
-// branch (MPI-88); image also pre-bakes lazy node weights + --cache-lru 2;
-// MPI-81 rebuild batch).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.2)
+// tracks CUBRIC_WRAPPER_VERSION (0.2.5 — wrapper now OWNS+supervises ComfyUI +
+// /wrapper/restart-comfy so a per-model node install restarts only ComfyUI, no
+// Pod reboot (MPI-81); plus 0.2.4's honest install progress (MPI-95) + /health
+// download-mode branch (MPI-88); image pre-bakes lazy node weights + --cache-lru
+// 2; MPI-81 rebuild batch).
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.1';
-const WRAPPER_VERSION = '0.2.4';
+const POD_IMAGE_VERSION = 'v0.4.2';
+const WRAPPER_VERSION = '0.2.5';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -666,9 +667,16 @@ router.get('/remote/pod/specs', async (req, res) => {
       }
     }
 
-    // Container RAM from the live Pod. RunPod's REST Pod shape varies; read the
-    // likely fields defensively and omit RAM rather than guess.
+    // Container RAM + billable session figures from the live Pod. RunPod's REST
+    // Pod shape (rest.runpod.io/v1) has NO `runtime.uptimeInSeconds` — that field
+    // is GraphQL-only, so reading it always yielded null. The REST Pod instead
+    // exposes `lastStartedAt` (UTC ISO, when the Pod last STARTED) and `costPerHr`
+    // ($/hr, the real billed rate). MPI-80: uptime = now − lastStartedAt is
+    // billing-true and (per the OOM self-heal) survives a ComfyUI container
+    // restart — lastStartedAt only moves on a real Pod start/resume.
     let ramGb = null;
+    let uptimeSeconds = null;
+    let pricePerHr = null;
     if (podId) {
       try {
         const r = await client.getPod(key, podId);
@@ -679,10 +687,19 @@ router.get('/remote/pod/specs', async (req, res) => {
           Number(m.memoryInGb) ||
           Number(p.containerMemoryInGb) ||
           null;
+        const cost = Number(p.costPerHr ?? p.adjustedCostPerHr);
+        if (Number.isFinite(cost) && cost > 0) pricePerHr = cost;
+        if (p.lastStartedAt) {
+          const started = new Date(p.lastStartedAt).getTime();
+          if (Number.isFinite(started)) {
+            const secs = Math.floor((Date.now() - started) / 1000);
+            if (secs > 0) uptimeSeconds = secs;
+          }
+        }
       } catch (_) { /* best-effort */ }
     }
 
-    res.json({ gpuName, vramGb, ramGb });
+    res.json({ gpuName, vramGb, ramGb, uptimeSeconds, pricePerHr });
   } catch (err) {
     logger.error('runpod', 'pod specs failed', err);
     res.json({ gpuName: gpuTypeId, vramGb: null, ramGb: null });
@@ -746,6 +763,27 @@ router.post('/proxy/interrupt', async (req, res) => {
     await _passthrough(res, upstream);
   } catch (err) {
     logger.error('runpod', 'proxy interrupt failed', err);
+    res.status(502).json({ error: 'relay_failed' });
+  }
+});
+
+// MPI-81: restart ONLY the Pod's internal ComfyUI (rescan custom_nodes after a
+// per-model node install) — no Pod reboot. The app calls this on
+// state.comfyNeedsRestart instead of telling the user to Disconnect/Connect.
+// Ships in image v0.4.2 / wrapper 0.2.5; on an OLDER image the wrapper lacks the
+// endpoint and answers 404 → the app falls back to the manual-reconnect message.
+router.post('/proxy/restart-comfy', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/restart-comfy`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body || {}),
+    });
+    await _passthrough(res, upstream);
+  } catch (err) {
+    logger.error('runpod', 'proxy restart-comfy failed', err);
     res.status(502).json({ error: 'relay_failed' });
   }
 });
