@@ -1031,6 +1031,19 @@ export function runCommand(payload) {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
         } catch (err) {
             closeComfyEventSource();
+            // A recoverable remote restart (A3): the proxy 503'd because the remote
+            // ComfyUI process is re-initialising after an OOM container self-restart
+            // (the Pod stays alive — see comfyController `engine_restarting`). This
+            // is a routine transient, not a crash, so surface a soft toast and DON'T
+            // open the GitHub bug-reporter modal (same family as E1a/G1).
+            if (err?.code === 'engine_restarting') {
+                clientLogger.warn('comfy', `Remote engine restarting (503) — ${workingPayload.operation} / ${workingPayload.modelId}`);
+                Events.emit('ui:warning', {
+                    message: 'Remote engine is restarting after a memory spike — try again in a moment.',
+                });
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

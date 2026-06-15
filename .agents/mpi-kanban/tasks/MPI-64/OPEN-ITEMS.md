@@ -40,11 +40,60 @@ backoff) already SHIPPED + COMMITTED. Part 2/4 + B2 are the open half.
       the engine is known-down (the 6000+ runaway-request lag). Source: plan.md Plan Drift 2026-06-13 (B4 part
       2/4 entries L173/L175/L180), current-architecture.md §10 "B4". **Verify:** force a container OOM on a heavy
       video gen → toast + spinner ends + request volume flat + app recovers WITHOUT relaunch.
-- [ ] **A2 — B2: container-RAM-OOM detection toast.** Detect the exit-137 container OOM (WS just drops, no
-      `execution_error`) → "Remote engine restarted — the Pod ran out of memory; try a shorter/smaller
-      generation" toast + re-poll `/remote/comfy/status` to recover. Overlaps A1 (same WS-drop surface).
-      Source: plan.md Plan Drift 2026-06-13 (B2, L179). **Verify:** force a container OOM → clear OOM toast +
-      recovery, not a silent dead WS.
+- [~] **A2 — B2: container-RAM-OOM detection toast. — DETECTION HALF PASS, RECOVERY HALF = NEW BUG A3 (live 2026-06-15).**
+      LIVE-FORCED a TRUE exit-137 container OOM 2026-06-15 (RTX 2000 Ada, container RAM cap 28.87GiB, i2v_ms,
+      OOM'd at stage-2/VAE — the first real exit-137 test; A1 was only ever verified on a Pod-STOP). DETECTION
+      HALF = clean PASS, exactly as A1/B4 designed: (1) stuck gen ENDED with the OOM-aware "Generation failed"
+      modal; (2) "Remote engine disconnected — the Pod may have run out of memory and restarted…" toast; (3)
+      status bar → `IDLE · DISCONNECTED` (NOT `local · offline`); (4) WS reconnect loop CAPPED at
+      `_WS_MAX_RECONNECTS` then `_onWsDropped` fired (comfyController.js:535 / `_ws.onclose:504`); (5) no
+      request flood — one `GET /comfy/events/stream 502` then backoff. CONSOLE ground-truth matched the shipped
+      reject chain. ⇒ A1/B4 detection is VALIDATED on a real OOM. RECOVERY HALF = BROKEN → split out as **A3**
+      below (the user was trapped: no Connect button + a new gen 503'd). A2 detection-toast itself = effectively
+      done; the recovery gap is A3. Source: plan.md Plan Drift 2026-06-13 (B2, L179). **Verify (detection):** done.
+
+- [ ] **A3 — 🟡 NEW (live 2026-06-15): transient-503 + stale status-bar during an OOM container SELF-RECOVERY (NOT a trap).**
+      ⚠️ CORRECTED after fuller observation: the container OOM did NOT kill the Pod — RunPod restarted ComfyUI
+      IN-PLACE and the app SELF-RECOVERED. A new generation submitted seconds later ran fine (latents back from
+      stage 1, `GENERATING · 50%`) with NO manual reconnect. So the earlier "user trapped / false-ready" read was
+      WRONG: the Settings "ready" + DISCONNECT was CORRECT (the engine genuinely came back ready), and there was no
+      trap. KEY DISTINCTION (user, 2026-06-15): **not all OOMs kill the Pod.** This was a container-OOM that ComfyUI
+      survived by restarting in-place; a true Pod-DEATH (RunPod terminates the whole Pod) is a SEPARATE, harder-to-
+      force failure mode we have NOT tested — A1/B4 recovery against a real Pod-death is still UNVERIFIED. What
+      remains as a real (but downgraded) bug from this run:
+      (a) **Transient-503 UX:** a generation submitted DURING the ~few-second ComfyUI re-init window gets a hard
+          `POST /proxy/prompt 503` → bug-reporter "ComfyUI Error" modal (comfyController.js:788). Should be a SOFT
+          "engine is restarting after a memory spike — try again in a moment" toast + optional auto-retry, NOT the
+          GitHub-report error modal (same family as E1a/G1: a routine transient surfaced as a crash). The status
+          route already exposes `comfyReady` (remoteProxy.js:228) distinct from `ready`; a /prompt 503 while
+          `ready:true, comfyReady:false` is the recoverable-restart signal to branch on.
+      (b) **Stale status bar during recovery:** the bottom-left stayed `REMOTE · DISCONNECTED` through the
+          self-recovery until the next gen repainted it — cosmetic lag, not split-brain. When status polls back to
+          `comfyReady:true` after a drop, the status bar / hero should auto-repaint `REMOTE · ONLINE` without waiting
+          for a user action. `[app]`, renderer-only.
+      **Verify:** during an OOM container self-recovery, a gen fired in the re-init window shows a soft "restarting,
+      retry shortly" toast (not the bug-reporter modal) and/or auto-retries when `comfyReady` returns; the status
+      bar repaints ONLINE on recovery without a manual toggle. (NOTE 2026-06-15: a true Pod-DEATH — RunPod
+      terminating the whole Pod, vs the container-OOM self-restart we proved — is NOT tracked as a validation
+      item; it is hard to force and will be addressed reactively IF it ever occurs, rather than held open as a
+      perpetual validation TODO.)
+      **MECHANISM (analysis 2026-06-15, confirm via Telemetry Uptime):** the most consistent read of the evidence —
+      the OOM-killer killed the **ComfyUI PROCESS** (the RAM hog), exit 137; the container's `start.sh`/supervisor
+      restarted ComfyUI **in-place** (same Pod, same proxy URL, models reload from the volume); the **wrapper**
+      process never OOM'd so `/health` + `/remote/comfy/status` stayed reachable the whole time (= why the button
+      stayed "ready"/DISCONNECT); our app lost the **preview WS** (real disconnect — ComfyUI's WS server was gone)
+      and re-armed it OPPORTUNISTICALLY on the NEXT gen's `connect()` (NOT a background auto-reconnect). So: RunPod
+      did NOT terminate or network-reconnect the Pod; the CONTAINER self-healed ComfyUI; the APP re-armed the WS on
+      the next submit. GROUND TRUTH — ✅ CONFIRMED 2026-06-15 via Telemetry (TWO OOM cycles observed): across the
+      OOM the Pod **Uptime kept climbing 17m10s → 17m41s (NEVER reset to 0)** ⇒ the Pod did NOT restart. Memory
+      **collapsed 98% (28.48/28.87GiB) → 2% (835MiB)** in seconds and Processes dropped 228 → 201 ⇒ the ComfyUI
+      PROCESS was OOM-killed and freed all its RAM, then `start.sh` restarted it in-place. DEFINITIVE: we DID lose
+      the WS, but neither RunPod nor a background app-reconnect restored it — the CONTAINER restarted ComfyUI (Pod
+      alive throughout) and the NEXT gen re-opened the socket ("disconnected, then connected after a little while"
+      = container self-heal + app WS re-arm on next submit). REPRODUCIBLE on demand: push any gen past a small Pod's
+      container RAM cap (repeated twice this session). A true Pod-DEATH (whole Pod terminated, not the container-OOM
+      self-restart) is a different mode that OOM does not produce here — NOT tracked as a validation item; reactive
+      if it ever occurs.
 
 ## B. Remote video generation (Phase 4 core)  🔴  `[app]` (mostly)
 
@@ -63,8 +112,14 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       yolo models, KJNodes, UltimateSDUpscale) — any node that fetches a model on first use will 503 the same way
       remotely; bake those weights too. Also the `4x-NMKD-Siax` / `4x-AnimeSharp` upscale models (`installOnEngine`,
       `.pth`) are NOT in the image's `upscale_models` dir either — UPSCALE will hit the same wall; either bake them
-      in the image or push them to the volume. = MPI-81 / mpi-ci image rebuild. SECONDARY (app): surface the
+      in the image or push them to the volume. = MPI-81 / mpi-ci image rebuild. **AUTO-MASK weights ALSO unbaked
+      (CONFIRMED live 2026-06-15 via M1):** `img_auto_mask.json` needs `bbox/face_yolov8n.pt`
+      (UltralyticsDetectorProvider, ComfyUI `models/ultralytics/bbox/`) + `sam_vit_b_01ec64.pth` (SAMLoader,
+      `models/sams/`) — both lazy-download, both 503 remotely. ADD to the bake list. SECONDARY (app): surface the
       `/proxy/prompt` 503 body in log+UI (it was dropped — same class as L2; would have pinned this in one look).
+      Re-confirmed 2026-06-15: the auto-mask 503 logged only "ComfyUI Error", body dropped → could not read the
+      Pod-side missing-model name. This 503-body-surfacing is the single highest-leverage app fix for diagnosing
+      ALL of these unbaked-weight 503s.
       NOTE: earlier "installOnEngine deps never reach the Pod" theory was WRONG — the Dockerfile DOES bake the
       universal node packs at `/opt/ComfyUI/custom_nodes` (the first check `ls`'d the volume path
       `/workspace/comfyui/custom_nodes`, which correctly holds only the per-model PainterI2V node). The build flow
@@ -115,10 +170,13 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
       `interpolate` (prior), `videoUpscale`, `resizeVideo`, `t2v`, `t2v_ms`, `i2v`, `i2v_ms`. **`extend` left at 1.0** —
       it is an op with NO workflow file (defined in `commandRegistry.js:191` `requiresVideo:1` but no model maps it +
       no `extend.json`) → not generation-active, nothing to convert; IF authored later it is the video-INPUT variant
-      (needs `Input_Video` MpiString fan-out + `MpiHasAudio` gate + `Output_Audio`). REMAINING to fully close: a LIVE
-      remote video gen on a Blackwell Pod (the whole point) — local with-audio/no-audio is the interim PASS bar
-      (interpolate already proven both paths). `[owner-workflow]` + `[app]` (registry bumps). **Verify:** remote
-      I2V/T2V/upscale/interpolate on a Blackwell Pod → video (with/without audio) saves + plays, no NVENC error.
+      (needs `Input_Video` MpiString fan-out + `MpiHasAudio` gate + `Output_Audio`). ✅ LIVE-VERIFIED 2026-06-15
+      (L4 Pod zqb7ab520jb9j6): a minimal remote i2v_ms ran end-to-end → reached encode with NO NVENC error →
+      SaveVideo captured → video SAVED + PLAYS + respects the input subject (see M2/M3). The core NVENC→SaveVideo
+      fix is PROVEN on a real cloud GPU. `[owner-workflow]` + `[app]` (registry bumps). Residual remote-untested
+      (separate weights/Pods, NOT the fix itself): T2V, upscale/interpolate (B4 weights not baked), with-audio mux
+      on a Pod (this source had no audio — local with-audio already proven via interpolate). **Verify:** ✅ remote
+      I2V saves + plays, no NVENC error — DONE.
       <details><summary>original B3 diagnosis + fix-proven history (kept)</summary>
 
 - [ ] **B3 — 🔴 NVENC video encode FAILS on the Blackwell Pod (blocks ALL remote video output).** FOUND LIVE
@@ -326,6 +384,10 @@ Remote IMAGE gen is verified. Remote VIDEO is the remaining core capability.
 
 Standalone items the user directly asked an agent to log — pulled out of the Phase groups so they stay visible.
 
+- [→] **K1 — ✅ PROMOTED to card MPI-86 (2026-06-15).** Cancel-during-connect is a feature, not a validation
+      item — pulled out of MPI-64 into its own card (full spec in `tasks/MPI-86/brief.md`). No longer tracked here.
+      <details><summary>original K1 (kept for history)</summary>
+
 - [ ] **K1 — Cancel button while a connection is in progress (USER REQUEST).** A Pod can stick at RunPod's
       "Initializing your pod…" for >5 min on a bad host/volume (RunPod-side); the user is then trapped — Connect
       is disabled (the `_starting` flag spans the whole boot) with no way out but killing the app. Add: (a) a
@@ -338,6 +400,7 @@ Standalone items the user directly asked an agent to log — pulled out of the P
       2026-06-14. **Verify:** a Pod stuck initializing >threshold lets the user Cancel (Pod deleted, no orphan
       billing, Connect re-enabled) and/or switch GPU without restarting the app; a healthy fast boot is
       unaffected (no premature cancel).
+      </details>
 
 ## L. Found live 2026-06-14 (fresh-volume session)  🟡
 
@@ -464,12 +527,93 @@ Standalone items the user directly asked an agent to log — pulled out of the P
       renderer-only. **Verify:** a brief status-poll blip during a download (or any transient) does not flip the
       UI to offline; only a sustained (N-tick) loss does.
 
+- [→] **L7 — ✅ PROMOTED to card MPI-87 (2026-06-15).** Image-pull progress is a feature, not validation —
+      pulled into its own card (full spec + the RunPod-API-vs-console-websocket investigation in
+      `tasks/MPI-87/brief.md`). No longer tracked here.
+      <details><summary>original L7 (kept for history)</summary>
+
+- [ ] **L7 — Surface the Pod's container image-pull / extraction progress in the app (USER-requested 2026-06-15).** 🟡
+      First connect on a new image tag pulls + extracts the ~multi-GB Docker image (the RunPod console shows
+      `Download complete, waiting for extraction… / N/14 layers completed · 1 extracting · 40.48%`). The app
+      currently shows only a flat ETA/spinner for this whole window → on a slow first pull the user has NOTHING to
+      watch and thinks it hung (ties to L3 connect-ETA + G6 first-pull 504). PROPOSAL: capture that layer/extract
+      progress and display it in-app as a real progress bar during create/first-connect. OPEN Q (needs investigation,
+      NOT yet pinned): the console pull progress is RunPod's infra layer (their orchestrator pulling the image onto
+      the host) — is it exposed via the RunPod GraphQL/REST Pod-status API (a field on the Pod object, e.g.
+      `runtime`/`lastStatusChange`/container-state), or is it ONLY in the console's own websocket? If the API exposes
+      a pull/extract %, the app's existing connect poller (`/remote/comfy/status` path) could read + render it; if
+      it's console-only, fall back to a richer staged copy ("pulling engine image — first time on this GPU, several
+      minutes"). Until then, L3's create-path copy is the interim mitigation. `[app]` (+ maybe nothing rebuild-side).
+      **Verify:** during a real first-pull on a fresh image tag, the app shows live pull/extract progress (or at
+      minimum staged "pulling image" copy) instead of a flat spinner.
+      </details>
+
 ## J. Bug B (parked — could NOT reproduce)  🟡  `[app]`
 
 - [ ] **J1 — Intermittent Create-From double-card / preview-card-consumed.** Gen-config is provably correct →
       a GALLERY RENDER/PLACEHOLDER RACE, not deterministic. Could NOT repro. TEMP-DEBUG is LEFT IN, gated OFF
       behind `localStorage.MPI_DEBUG_BUGB='1'`. When it recurs: flip the flag, reload, repro, diff vs the
       healthy baseline captured in plan.md; fix; then do I2. Source: handoff, plan.md Plan Drift, arch §10.
+
+## M. Remote verification checklist (run when on a live Pod)  🔬
+
+> When a session has a live RunPod Pod up, work through these — each is code-done-but-not-live-verified-remotely.
+> Tick + date + Pod/GPU when it passes. Prefer a Blackwell card where the test is about NVENC/encode portability.
+
+- [ ] **M1 — Masks remote (USER-requested 2026-06-15). PRE-STAGED TEST PLAN.**
+      TWO distinct mask paths, test BOTH:
+      **(a) AUTO-mask** (`autoMaskImg`, workflow `img_auto_mask.json`) — auto-detects a subject + builds a mask.
+      **(b) MANUAL-mask image ops** (`edit`, `change`, `remove` — `commandRegistry.js:116/129/141` `requiresMask:true`,
+      inject `Input_Mask`) — user paints a mask in the Mask Tool, then runs the op.
+      🔴 **B4 LAZY-WEIGHT RISK (the thing this test is really probing):** `img_auto_mask.json` loads TWO model
+      files that are Impact-Pack lazy-downloads, NOT app-managed deps:
+      `UltralyticsDetectorProvider` → `bbox/face_yolov8n.pt` (title `sams`) and `SAMLoader` → `sam_vit_b_01ec64.pth`.
+      These are the SAME lazy-fetch-on-first-use class as RIFE (B4) — if the Pod image did not pre-bake them into
+      ComfyUI's `models/ultralytics/bbox/` + `models/sams/`, the auto-mask node fails at execution → `POST /proxy/prompt 503`,
+      identical failure shape to remote interpolate. So a 503 here is EXPECTED until MPI-81 bakes them; it is the
+      diagnostic, not a surprise.
+      **TEST STEPS (on a live Pod, remote mode):**
+      1. Load an image into a project (a photo with a clear face/subject — `face_yolov8n` is a FACE detector).
+      2. Run **auto-mask** (the Mask Tool's auto/detect action → `autoMaskImg`). WATCH:
+         - ✅ PASS: mask preview returns (detected region shown), no 503.
+         - ❌ 503 / "ComfyUI Error": the yolo/SAM weights are NOT baked → log it under B4, the fix is image-side
+           (bake `face_yolov8n.pt` + `sam_vit_b_01ec64.pth` into the Pod image, same Dockerfile pre-bake as RIFE).
+      3. If auto-mask passed (or after painting a manual mask), run a **masked `remove`/`edit`/`change`** → the masked
+         region regenerates + the result saves to the gallery. Confirms `Input_Mask` upload + injection works remotely
+         (the mask uploads like `Input_Image` — Data URI → controller upload; that path is shared with image gen which
+         is already proven remote, so the mask-upload half is LOW risk; the SAM-weights half is the HIGH risk).
+      **Verify:** remote auto-mask returns a mask preview (no 503) AND a remote masked op completes + saves. Any 503 →
+      capture which model the Pod-side ComfyUI log names as missing → feed into MPI-81/B4 weight-bake list.
+      **RESULT — FAILED 503 (live 2026-06-15, as predicted) = B4 lazy-weight, NOT a mask bug.** On a live L4 Pod
+      (podId zqb7ab520jb9j6 — RTX 2000 Ada was out of stock, `http 500 no instances available`, fell back to L4),
+      auto-mask (`autoMaskImg`) reached ComfyUI and `POST /proxy/prompt` returned **503 → "ComfyUI Error"**
+      (app.log:2265-2268). This is the EXPECTED B4 trap: `img_auto_mask.json`'s `UltralyticsDetectorProvider`
+      (`bbox/face_yolov8n.pt`) + `SAMLoader` (`sam_vit_b_01ec64.pth`) weights are NOT baked into the Pod image →
+      lazy-fetch-on-first-use fails remotely, same as RIFE. ⚠️ The app DROPS the 503 BODY (only logs "ComfyUI
+      Error") so we could not read WHICH model the Pod-side ComfyUI named as missing — this is the L2-class
+      "surface the /proxy/prompt 503 body" gap biting again (see B4 SECONDARY). ⇒ feed `face_yolov8n.pt` +
+      `sam_vit_b_01ec64.pth` into the MPI-81/B4 image weight-bake list (alongside RIFE + upscale models); and the
+      503-body-surfacing app fix would have named the exact file in one look. M1 stays OPEN pending the image
+      rebuild — the mask UPLOAD/injection half is untested (never reached) but is low-risk (shared with image gen).
+- [x] **M2 — Remote VIDEO gen — ✅ PASS 2026-06-15 (live, L4 Pod, closes B3 live).** A minimal i2v_ms (Very-Low,
+      1s) ran END-TO-END on a live L4 Pod (podId zqb7ab520jb9j6, 57.74GiB container, no OOM, peaked then settled
+      to 59%): diffused stage1+stage2 → **reached encode with NO `nvenc`/`No capable devices found` error** (the
+      whole point of the SaveVideo conversion) → `Output_Video` SaveVideo captured → video SAVED (49 assets, was
+      48) → **PLAYS correctly**. ⇒ B3 is LIVE-VERIFIED on a real cloud GPU. STILL UNTESTED remotely (separate
+      weights/Pods): T2V (needs T2V installed), videoUpscale + interpolate (need RIFE/upscale weights baked — B4),
+      resizeVideo, with-audio mux on a Pod (this source had no audio). But the core NVENC→SaveVideo fix is PROVEN.
+- [x] **M3 — Remote I2V respects input image — ✅ PASS 2026-06-15 (live, same run).** The saved video animated the
+      dragged horse-riding subject (NOT ignored) — confirms I2V subject-conditioning end-to-end remotely (the C1
+      dep-cross fix + SaveVideo capture both hold on a real Pod). B2's I2V half closed.
+- [ ] **M4 — Cancel / interrupt a remote gen mid-run** (never exercised remotely — B2 open half).
+- [ ] **M5 — Higher-res / longer T2V on a 64GB+ Pod** (minimal T2V already hit ~92-94% RAM on L4/5090 — bigger
+      WILL OOM on small Pods; confirms the RAM-wall advice + that big Pods clear it). Ties to D1 cache policy.
+- [~] **M6 — A2/B2 container-OOM detection — DETECTION PASS, recovery spawned A3 (live 2026-06-15).** Forced a TRUE
+      exit-137 on RTX 2000 Ada (28.87GiB container cap, i2v_ms, OOM at stage-2/VAE), reproduced TWICE. DETECTION =
+      clean PASS (OOM modal + toast + `IDLE·DISCONNECTED` not `local·offline` + WS-cap + no flood). CONFIRMED via
+      Telemetry the Pod self-healed (Uptime never reset; Memory 98%→2%; ComfyUI process restarted in-place) — see
+      A2/A3. NEW bug A3 (transient-503 surfaced as bug-reporter modal + stale status bar during self-recovery) —
+      coded + committed 31eb419. (Pod-DEATH recovery NOT tracked as validation — reactive if it ever recurs.)
 
 ---
 

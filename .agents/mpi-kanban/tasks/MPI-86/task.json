@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-86",
+  "title": "Cancel button during an in-progress RunPod connection + boot watchdog",
+  "description": "Promoted from MPI-64 K1 (explicit user request, re-flagged 2026-06-15). A Pod can stick at RunPod's 'Initializing your pod…' for >5 min on a bad host/volume (RunPod-side); the user is then trapped — Connect is disabled (the _starting flag spans the whole boot) with no way out but killing the app. Add: (a) a Cancel button next to Connect that aborts the in-flight create/reconnect — delete the half-started Pod, clear _starting/_connecting, re-enable Connect; and/or (b) auto-cancel the in-flight connection when the user picks a different GPU so they can immediately Connect to another card. Needs a boot watchdog/poller: while _starting, poll RunPod Pod status + wrapper /health every ~2-3 min; if no progress past a threshold, surface a 'taking too long — Cancel and try another GPU' prompt. Tie into the existing _starting flag + /remote/comfy/status poll. App-side. See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-06-15T07:17:58Z",
+  "updated_at": "2026-06-15T07:17:58Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

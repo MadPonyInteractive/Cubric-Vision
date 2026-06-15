@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-87",
+  "title": "Surface Pod container image-pull / extraction progress in the app during connect",
+  "description": "Promoted from MPI-64 L7 (user-requested 2026-06-15). First connect on a new image tag pulls + extracts the ~multi-GB Docker image; the RunPod console shows real progress ('Download complete, waiting for extraction… / N/14 layers completed · 1 extracting · 40.48%') but the app shows only a flat ETA/spinner for the whole window → on a slow first pull the user has nothing to watch and thinks it hung (ties to MPI-64 L3 connect-ETA copy + G6 first-pull 504). Proposal: capture that layer/extract progress and display it in-app as a real progress bar during create/first-connect. OPEN INVESTIGATION FIRST: is the pull/extract % exposed via the RunPod GraphQL/REST Pod-status API (a field on the Pod object), or is it ONLY in the console's own websocket? If the API exposes it, the existing connect poller can read+render it; if console-only, fall back to richer staged copy. App-side (maybe nothing rebuild-side). See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-06-15T07:17:58Z",
+  "updated_at": "2026-06-15T07:17:58Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

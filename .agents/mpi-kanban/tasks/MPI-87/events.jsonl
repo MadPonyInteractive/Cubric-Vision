@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-87","at":"2026-06-15T07:17:58Z","actor":"claude","note":"Promoted from MPI-64 (K1->MPI-86 cancel-connect, L7->MPI-87 image-pull progress) — features, not validation items."}
