@@ -23,6 +23,9 @@ export const remoteEngineClient = {
     /** @type {boolean} Mirror of the backend remote-mode flag. */
     _active: false,
 
+    /** @type {boolean} True when the active Pod is a no-GPU "download mode" Pod (MPI-88). */
+    _noGpu: false,
+
     /** @type {string|null} WSS base for the active Pod, e.g. wss://<pod>-8889.proxy.runpod.net */
     _wsBase: null,
 
@@ -39,8 +42,10 @@ export const remoteEngineClient = {
             const res = await fetch('/remote/mode');
             const mode = await res.json();
             this._active = !!mode.active;
+            this._noGpu = !!mode.noGpu;
         } catch (_) {
             this._active = false;
+            this._noGpu = false;
         }
 
         if (!this._active) {
@@ -65,6 +70,16 @@ export const remoteEngineClient = {
     /** @returns {boolean} True when the backend reports remote mode active. */
     isRemote() {
         return this._active;
+    },
+
+    /**
+     * @returns {boolean} True when a no-GPU "download mode" Pod is active (MPI-88).
+     * Generation is impossible on it — call sites use this to block entering the
+     * gallery / dispatching a generation and steer the user to connect a GPU.
+     * Reflects the last refresh(); call refresh() first if freshness matters.
+     */
+    isDownloadOnly() {
+        return this._active && this._noGpu;
     },
 
     /**

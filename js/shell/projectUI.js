@@ -8,6 +8,7 @@ import { listProjects, createProject, deleteProject, openProject, addProjectByFo
 import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
+import { remoteEngineClient } from '../services/remoteEngineClient.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
@@ -38,6 +39,26 @@ let _statsBatchAC = null;
 // Delete-confirm dialog is NOT a singleton — a fresh instance is created per
 // confirmation. The factory's .on() accumulates listeners with no unsub, so
 // reusing a singleton would fire all prior handlers on every confirmation.
+
+/**
+ * Download-mode navigation guard (MPI-88). A no-GPU "download mode" Pod can install
+ * models to the volume but CANNOT generate — so block entering the gallery and steer
+ * the user to connect a GPU first. Refreshes the remote-mode mirror so the check is
+ * live (the user may have connected the download Pod since the page loaded).
+ * @returns {Promise<boolean>} true = blocked (caller must NOT navigate).
+ */
+async function _blockedByDownloadMode() {
+  try {
+    await remoteEngineClient.refresh();
+  } catch (_) { /* refresh failed — fall through; isDownloadOnly() uses last state */ }
+  if (remoteEngineClient.isDownloadOnly()) {
+    Events.emit('ui:warning', {
+      message: 'This is a download-only Pod (no GPU). Install models, then pick a GPU in Settings → RunPod and Connect to generate.',
+    });
+    return true;
+  }
+  return false;
+}
 
 /**
  * Initializes the project management UI: trigger button and grid loading.
@@ -200,6 +221,7 @@ function _openNewProjectDialog() {
   const newProjectDialog = MpiNewProject.mount(document.createElement('div'));
   newProjectDialog.on('create', async ({ name, location }) => {
     try {
+      if (await _blockedByDownloadMode()) return;
       const project = await createProject(name || 'Untitled Project', location);
       await openProject(project);
       navigate(PAGE_GALLERY);
@@ -371,6 +393,7 @@ function _buildProjectRow(project) {
     });
 
   row.addEventListener('click', async () => {
+    if (await _blockedByDownloadMode()) return;
     await openProject(project);
     navigate(PAGE_GALLERY);
   });

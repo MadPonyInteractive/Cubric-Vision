@@ -59,6 +59,17 @@ const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 const POD_IMAGE_VERSION = 'v0.4.0';
 const WRAPPER_VERSION = '0.2.3';
 const CONTAINER_DISK_GB = 50;
+// RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
+// Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
+const CONTAINER_DISK_CPU_GB = 20;
+
+// Sentinel gpuTypeId for the no-GPU "download mode" Pod (MPI-88). The Settings GPU
+// dropdown offers this as its first option; picking it creates a CPU-only Pod
+// (computeType:'CPU') so a user can install models to the volume with NO GPU bill,
+// then switch to a real GPU to generate (volume persists — Design A). It rides the
+// existing gpuType field/guards/switch logic untouched; the only branches that care
+// are the create spec and the generation gate.
+const CPU_SENTINEL = '__cpu__';
 
 // Blackwell (sm_120) cards need the cu128 image; everything else runs cu124.
 // gpuTypeId is RunPod's card id/displayName (e.g. "NVIDIA GeForce RTX 5090",
@@ -66,6 +77,10 @@ const CONTAINER_DISK_GB = 50;
 // RunPod ids carry the full marketing name, so a substring test is reliable and
 // degrades safely (unknown card → cu124, the broad-compat default).
 function podImageForCard(gpuTypeId) {
+  // No-GPU "download mode" (MPI-88) → the SLIM wrapper-only image (no torch/ComfyUI).
+  // The full GPU image won't run on a CPU Pod (its entrypoint inits CUDA), so the
+  // -cpu tag is mandatory, not an optimization.
+  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-cpu`;
   const id = String(gpuTypeId || '').toLowerCase();
   const isBlackwell =
     id.includes('5090') ||
@@ -78,7 +93,7 @@ function podImageForCard(gpuTypeId) {
 
 // --- remote-mode state (backend-owned; Settings/boot gate flips it) ----------
 
-const _mode = { active: false, podId: null, deleteOnQuit: false };
+const _mode = { active: false, podId: null, deleteOnQuit: false, noGpu: false };
 
 // The Pod this server session actually STARTED (set on successful /remote/pod/start,
 // cleared on stop). Quit-time stop must target this — not _mode.podId, which tracks
@@ -104,10 +119,11 @@ function getRemoteMode() {
   return { ..._mode };
 }
 
-function setRemoteMode({ active, podId, deleteOnQuit } = {}) {
+function setRemoteMode({ active, podId, deleteOnQuit, noGpu } = {}) {
   if (podId !== undefined && podId !== null) _mode.podId = String(podId);
   _mode.active = !!active;
   if (deleteOnQuit !== undefined) _mode.deleteOnQuit = !!deleteOnQuit;
+  if (noGpu !== undefined) _mode.noGpu = !!noGpu;
   return getRemoteMode();
 }
 
@@ -225,7 +241,7 @@ router.get('/remote/comfy/status', async (req, res) => {
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
     if (health.ready) _starting = false;
-    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight() });
+    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window
     res.json({ running: false, ready: false, connecting: inFlight() });
@@ -266,9 +282,13 @@ async function _isGpuAvailable(key, gpuTypeId, datacenter) {
 // HTML error page can't flood the log line or the failure dialog.
 function _createRejectReason(json) {
   if (!json || typeof json !== 'object') return '';
-  let reason = json.error || json.message || '';
+  // RunPod's v1 REST error shape isn't fully documented and varies by failure
+  // class (a stock 500 answers {error}; some 400 validation rejects use {detail}
+  // or {title}, or send an EMPTY body). Read every field we've seen, then fall
+  // back to the raw text body.
+  let reason = json.error || json.message || json.detail || json.title || json.reason || '';
   if (!reason && Array.isArray(json.errors) && json.errors.length) {
-    reason = json.errors.map((e) => (e && (e.message || e.error)) || String(e)).filter(Boolean).join('; ');
+    reason = json.errors.map((e) => (e && (e.message || e.error || e.detail)) || String(e)).filter(Boolean).join('; ');
   }
   if (!reason && typeof json.raw === 'string') reason = json.raw.trim();
   reason = String(reason).replace(/\s+/g, ' ').trim();
@@ -277,16 +297,24 @@ function _createRejectReason(json) {
 
 async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
+  const noGpu = gpuTypeId === CPU_SENTINEL;
+  // CPU "download mode" Pod (MPI-88): same POST /pods endpoint, computeType:'CPU' +
+  // cpuFlavorIds; RunPod ignores the GPU fields. The SLIM -cpu image (wrapper +
+  // aria2c only, no torch/ComfyUI) is REQUIRED — the full GPU image's entrypoint
+  // inits CUDA and won't run on a CPU Pod (verified: 0 processes, eternal
+  // "connecting"). /health + /wrapper/models/install work for downloads with no GPU
+  // bill. cpu3c = cheapest flavor; a model download is network/disk-bound.
   const imageName = podImageForCard(gpuTypeId);
-  logger.info('runpod', `Pod image for ${gpuTypeId}: ${imageName}`);
+  logger.info('runpod', `Pod image for ${noGpu ? 'CPU (download mode)' : gpuTypeId}: ${imageName}`);
   const spec = {
     name: 'cubric-vision',
     imageName,
-    gpuTypeIds: [gpuTypeId],
-    gpuCount: 1,
     dataCenterIds: [datacenter],
     volumeMountPath: '/workspace',
-    containerDiskInGb: CONTAINER_DISK_GB,
+    // CPU Pods cap container disk at 20GB ("Container Disk must be <= 20"); GPU
+    // Pods allow the larger default. Models land on the network volume either way,
+    // so 20GB of container disk is plenty for the download-mode Pod.
+    containerDiskInGb: noGpu ? CONTAINER_DISK_CPU_GB : CONTAINER_DISK_GB,
     ports: ['8889/http'],
     env: {
       CUBRIC_TOKEN: token,
@@ -294,6 +322,17 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
       CUBRIC_WRAPPER_VERSION: WRAPPER_VERSION,
     },
   };
+  if (noGpu) {
+    spec.computeType = 'CPU';
+    spec.cpuFlavorIds = ['cpu3c'];
+    // Belt-and-braces: the -cpu image's start-cpu.sh already exports this, but set
+    // it on the Pod env too so the wrapper reports /health ready (no ComfyUI probe)
+    // even if the image is ever launched with a different entrypoint.
+    spec.env.CUBRIC_DOWNLOAD_MODE = '1';
+  } else {
+    spec.gpuTypeIds = [gpuTypeId];
+    spec.gpuCount = 1;
+  }
   if (volumeId) spec.networkVolumeId = volumeId;
 
   // Pre-create sweep (single-Pod invariant): kill any stray 'cubric-vision' Pod
@@ -312,7 +351,19 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
     // failure is self-diagnosing in BOTH the log line and the failure dialog,
     // instead of a bare "create returned 400". (RunPod responses don't echo our
     // key; truncate only to keep the log/dialog readable.)
-    const reason = _createRejectReason(created.json) || `create returned ${created.status}`;
+    const parsed = _createRejectReason(created.json);
+    // When RunPod gives no parseable reason (a bare 400 with an empty/odd body),
+    // dump the raw JSON body so the NEXT occurrence self-diagnoses instead of the
+    // opaque "create returned 400". Keys only (no secret echo); truncated.
+    if (!parsed) {
+      let body = '';
+      try { body = JSON.stringify(created.json); } catch (_) { body = String(created.json); }
+      logger.warn('runpod', `createPod ${created.status}: no parseable reason; raw body=${(body || '{}').slice(0, 300)}`);
+    }
+    const reason = parsed
+      || (created.status === 400
+        ? `RunPod rejected the request (400) — that GPU may be unavailable in this data center, or out of stock. Try another card or data center.`
+        : `create returned ${created.status}`);
     logger.warn('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=none reason="${reason}"`);
     return { ok: false, message: reason };
   }
@@ -322,7 +373,7 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, timeou
   // BEFORE the ready-wait so a timeout still lets teardown stop/delete it.
   await setWrapperToken(token, podId);
   _startedPodId = podId;
-  setRemoteMode({ active: true, podId });
+  setRemoteMode({ active: true, podId, noGpu });
 
   // Reap any stranded EXITED 'cubric-vision' Pods now that the fresh one is known
   // (keeps this new podId). Non-blocking-best-effort but awaited so the ready-wait
@@ -450,12 +501,15 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     logger.info('runpod', `Pod reconnect requested: podId=${podId} gpu=${gpuTypeId} dc=${datacenter}`);
 
     // Track the saved Pod so a delete-fallback / teardown targets it.
+    const noGpu = gpuTypeId === CPU_SENTINEL;
     _startedPodId = podId;
-    setRemoteMode({ active: true, podId });
+    setRemoteMode({ active: true, podId, noGpu });
 
     // 1. Availability pre-check — a STOPPED Pod can only resume where its GPU type
-    //    is free; if the saved GPU is gone, recreating on it would also fail.
-    const available = await _isGpuAvailable(key, gpuTypeId, datacenter);
+    //    is free; if the saved GPU is gone, recreating on it would also fail. A CPU
+    //    "download mode" Pod (MPI-88) has no GPU type to check — CPU capacity is
+    //    effectively always available, so skip the GPU availability gate for it.
+    const available = noGpu || await _isGpuAvailable(key, gpuTypeId, datacenter);
     if (!available) {
       await _deleteTrackedPod(key);
       return res.json({ unavailable: true, gpuTypeId });
@@ -503,7 +557,7 @@ router.post('/remote/pod/delete-active', async (req, res) => {
   // Disconnect/delete → use the LOCAL engine now. Flip remote mode OFF so
   // isRemoteActive() returns false and local _ms input-prep takes the local
   // copy path instead of the (gone) wrapper. See stop-active for the full why.
-  setRemoteMode({ active: false });
+  setRemoteMode({ active: false, noGpu: false });
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.json({ deleted: false, reason: 'no_api_key' });
@@ -526,7 +580,7 @@ router.post('/remote/pod/stop-active', async (req, res) => {
   // generations route input-prep (prepare-workflow-inputs / stage-preview-latent)
   // to the now-stopped wrapper and fail with "wrapper upload 404". podId is kept
   // client-side for warm-resume; a fresh Connect re-sets active=true.
-  setRemoteMode({ active: false });
+  setRemoteMode({ active: false, noGpu: false });
   if (!podId) return res.json({ stopped: false, reason: 'inactive' });
   try {
     const key = await getRunPodApiKey();
@@ -590,6 +644,11 @@ router.post('/remote/pod/teardown', async (req, res) => {
 router.get('/remote/pod/specs', async (req, res) => {
   const gpuTypeId = req.query.gpuTypeId ? String(req.query.gpuTypeId) : null;
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  // MPI-88: the no-GPU "download mode" Pod has no GPU to look up — label the badge
+  // "No GPU (download)" instead of leaking the raw sentinel, and skip the catalog.
+  if (gpuTypeId === CPU_SENTINEL) {
+    return res.json({ gpuName: 'No GPU (download)', vramGb: null, ramGb: null });
+  }
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.json({ gpuName: gpuTypeId, vramGb: null, ramGb: null });

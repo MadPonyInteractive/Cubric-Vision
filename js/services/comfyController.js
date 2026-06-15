@@ -272,6 +272,18 @@ export const ComfyUIController = {
         // already healthy (Connected), proceed; otherwise tell the user to Connect.
         const check = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
         if (check.ready) {
+            // MPI-88: the connected Pod is a no-GPU "download mode" Pod (CPU-only,
+            // for installing models to the volume with no GPU bill). ComfyUI is up
+            // and `ready`, but a sampler workflow would fail / crawl on CPU. Block
+            // dispatch with a clear, actionable message — the user must switch the
+            // GPU picker to a real card and Connect. Soft block (ui:info), not the
+            // bug-reporter, and thrown before the restart/WS gates below.
+            if (check.noGpu) {
+                const gpuMsg = 'This Pod has no GPU — it is for downloading models only. To generate, open Settings → RunPod, pick a GPU, then Connect.';
+                if (!background) Events.emit('comfy:error', { message: gpuMsg });
+                else Events.emit('ui:info', { message: gpuMsg });
+                throw Object.assign(new Error(gpuMsg), { code: 'pod_no_gpu' });
+            }
             // A per-model custom_node was installed onto the volume this session
             // (comfy:needs-restart → state.comfyNeedsRestart). ComfyUI only scans
             // custom_nodes at process start, so the already-running remote ComfyUI
