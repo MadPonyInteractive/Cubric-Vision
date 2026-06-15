@@ -544,11 +544,20 @@ function _buildParams(payload) {
  * @returns {AutoMaskExecution}
  */
 export function runAutoMask(payload) {
+    // `_settled` flips true once the workflow has finished (resolved or thrown).
+    // cancel() is then a no-op: there is no running ComfyUI step to interrupt, so
+    // firing interrupt() would only surface the remote "Stopping…" toast for a
+    // detect that already completed (re-DETECT re-cancels the stale exec; the
+    // "Nothing detected" path also calls cancel() after a clean finish).
+    let _settled = false;
     const exec = {
         onDetected: null,
         onMasks:    null,
         onError:    null,
-        cancel() { ComfyUIController.interrupt(); },
+        cancel() {
+            if (_settled) return;
+            ComfyUIController.interrupt();
+        },
     };
 
     (async () => {
@@ -615,6 +624,10 @@ export function runAutoMask(payload) {
 
         try {
             await ComfyUIController.runWorkflow(workflow, params, onMessage);
+            // Workflow has returned — mark settled BEFORE the synthesized empty
+            // signal so the "Nothing detected" handler's exec.cancel() is a no-op
+            // (the prompt is done; interrupt() would only flash the remote toast).
+            _settled = true;
             // ComfyUI skips the "Detected" preview node when SEGS is empty —
             // no `executed` event fires. Synthesize an empty-detection signal
             // so listeners can show "Nothing detected".
@@ -623,6 +636,8 @@ export function runAutoMask(payload) {
             clientLogger.error('comfy', `autoMask workflow failed`, err);
             Events.emit('ui:error', { title: 'Auto-mask failed', message: err.message });
             exec.onError?.(err);
+        } finally {
+            _settled = true;
         }
     })();
 

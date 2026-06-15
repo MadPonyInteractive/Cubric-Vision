@@ -969,12 +969,15 @@ export const ComfyUIController = {
 
     /**
      * Uploads a resolved local video/audio path to the Pod volume input dir via
-     * Express → wrapper and returns the bare filename for the workflow node.
+     * Express → wrapper and returns the ABSOLUTE Pod path for the workflow node.
      * Remote-mode only. The Express route reads the local file server-side
      * (the renderer cannot stream an absolute fs path as a blob) and lands it on
-     * the volume; VHS LoadVideo/LoadAudio nodes load it by basename.
+     * the volume. The split video/audio workflows feed this value through an
+     * `MpiString` node into `VHS_LoadVideoPath`, which resolves a literal path —
+     * NOT a bare basename against `--input-directory` — so the full Pod path
+     * (`/workspace/comfyui/input/<name>`) is injected, not the basename.
      * @param {string} localPath  Absolute local path from `_resolveMediaPath`.
-     * @returns {Promise<string>} The bare filename to inject into the workflow.
+     * @returns {Promise<string>} The absolute Pod path to inject into the workflow.
      * @private
      */
     async _uploadRemoteMedia(localPath) {
@@ -988,7 +991,9 @@ export const ComfyUIController = {
         if (!res.ok || !data?.success) {
             throw new Error(`[ComfyUIController] Remote media upload failed for ${filename}: ${data?.message || `HTTP ${res.status}`}`);
         }
-        return data.name || filename;
+        // Prefer the absolute Pod path (VHS_LoadVideoPath needs it); fall back to
+        // the basename only if an older wrapper/route omits `path`.
+        return data.path || data.name || filename;
     },
 
     /**
