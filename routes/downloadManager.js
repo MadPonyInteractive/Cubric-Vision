@@ -539,6 +539,14 @@ function _onRemoteInstallEvent(evt) {
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depId);
             if (!myDep) continue;
+            // MPI-95 fix: re-derive BOTH sides of the ratio from the per-dep jobs
+            // every tick. The wrapper's _resolve_total corrects each dep's real
+            // `total` (line above), but modelJob.totalBytes was seeded ONCE from
+            // rounded registry sizes and never updated — so the real bytes in the
+            // numerator outran the rounded denominator and snapped the bar to ~80%
+            // on the first tick. Summing depJob.totalBytes here keeps the
+            // denominator honest as each dep's real total arrives.
+            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + (d.totalBytes || 0), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
@@ -554,17 +562,21 @@ function _onRemoteInstallEvent(evt) {
             });
         }
     } else if (evt.type === 'models:install-verifying') {
-        // MPI-95: the wrapper finished downloading this dep and is now hashing it
-        // (sha256 re-reads the whole file — no progress in between → the bar froze
-        // at the last %). Show an honest indeterminate "Verifying…" while it runs.
-        // bytes==total here, so the dep counts as fully downloaded in the
-        // aggregate; only the visual switches to the sweep.
+        // MPI-95 (revised, post-live-test): the wrapper finished downloading this
+        // dep and is now hashing it (sha256 re-reads the whole file). The earlier
+        // fix flipped the bar to an indeterminate "Verifying…" sweep here, which
+        // read as LESS informative than the determinate bar parked at its last %.
+        // So: count the dep as fully downloaded in the aggregate (bytes==total) and
+        // re-broadcast a DETERMINATE tick — the bar holds at the real %, no sweep.
+        // The wrapper event stays emitted (useful seam) but the app no longer turns
+        // it into an indeterminate phase.
         const total = Number(data.total) || depJob.totalBytes || 0;
         if (total) depJob.totalBytes = total;
         depJob.downloadedBytes = total || depJob.downloadedBytes;
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depId);
             if (!myDep) continue;
+            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + (d.totalBytes || 0), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
@@ -574,8 +586,7 @@ function _onRemoteInstallEvent(evt) {
                 totalBytes: modelJob.totalBytes,
                 speed: '',
                 progress: modelJob.progress,
-                indeterminate: true,
-                phase: 'verifying',
+                indeterminate: false,
             });
         }
     } else if (evt.type === 'models:install-complete') {
@@ -662,17 +673,14 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         }
     }
 
-    // MPI-95: the denominator above is summed from rounded registry sizes, which
-    // the wrapper's real content-length bytes overshoot — causing the ~80% snap
-    // on press, then a long crawl. The DENOMINATOR fix lives on the wrapper now:
-    // it HEADs each dep server-side (Pod NIC, faster than HEAD over the proxy) and
-    // reports a real per-dep `total` from the first `models:install-progress`
-    // tick, so the aggregate bar is honest as soon as downloads start. Here we
-    // only show an instant indeterminate "Preparing…" so the first frame isn't a
-    // fake number in the gap before that first tick arrives; the tick (real total)
-    // clears it, and `models:install-verifying` later flips it back on for the
-    // hash phase ("Verifying…"). No app-side HEAD — it duplicated the wrapper's
-    // and added a visible pre-download pause.
+    // MPI-95: the denominator seeded above is summed from rounded registry sizes,
+    // which the wrapper's real content-length bytes overshoot — causing the ~80%
+    // snap on press. The wrapper's _resolve_total reports a real per-dep `total`
+    // from the first models:install-progress tick; _onRemoteInstallEvent then
+    // RE-DERIVES modelJob.totalBytes from the corrected per-dep totals every tick
+    // (the seed here is only the pre-first-tick placeholder). Here we show an
+    // instant indeterminate "Preparing…" so the first frame isn't a fake number in
+    // the gap before that first tick arrives; the tick clears it to a real %.
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
     modelJob.status = 'downloading';
