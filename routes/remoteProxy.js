@@ -52,12 +52,14 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.0)
-// tracks CUBRIC_WRAPPER_VERSION (0.2.3 — aria2c fast download + remote uninstall
-// endpoint + Dockerfile apt aria2; MPI-75 rebuild batch).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.1)
+// tracks CUBRIC_WRAPPER_VERSION (0.2.4 — honest install progress: _resolve_total
+// HEAD pre-seed + models:install-verifying SSE (MPI-95) + /health download-mode
+// branch (MPI-88); image also pre-bakes lazy node weights + --cache-lru 2;
+// MPI-81 rebuild batch).
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.0';
-const WRAPPER_VERSION = '0.2.3';
+const POD_IMAGE_VERSION = 'v0.4.1';
+const WRAPPER_VERSION = '0.2.4';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
