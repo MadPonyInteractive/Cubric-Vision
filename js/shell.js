@@ -303,7 +303,14 @@ function _connectPct(elapsedMs) {
   return Math.max(0, Math.min(99, Math.round((elapsedMs / _CONNECT_EST_MS) * 100)));
 }
 
-async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, onSlow } = {}) {
+// MPI-96: RunPod can accept createPod (201) but never start the container on its
+// host — the Pod sits EXITED while the wrapper /health stays silent, so this loop
+// crawled to 99% on a Pod that isn't running. The status route now reports the
+// Pod's runtime status; a terminal not-running status past a short grace = a dead
+// host, not a slow boot, so bail. Returns true (ready), false (timeout), or the
+// string 'not-running' (host failed to start the Pod). Mirrors the Settings path.
+const _BOOT_NOT_RUNNING = new Set(['EXITED', 'TERMINATED', 'DEAD']);
+async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, notRunningGraceMs = 30000, onSlow } = {}) {
   const start = Date.now();
   let slowFired = false;
   while (Date.now() - start < timeoutMs) {
@@ -320,6 +327,13 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
       const res = await fetch('/remote/comfy/status');
       const s = res.ok ? await res.json() : null;
       if (s && s.ready) { Events.emit('remote:connect-progress', { pct: 100 }); return true; }
+      // MPI-96: Pod reports a terminal not-running status after the grace window (a
+      // normal CREATED→RUNNING transition is never flagged) — the host failed.
+      if (s && s.podStatus && _BOOT_NOT_RUNNING.has(String(s.podStatus).toUpperCase())
+          && Date.now() - start >= notRunningGraceMs) {
+        Events.emit('remote:connect-progress', { pct: 0 });
+        return 'not-running';
+      }
     } catch (_) { /* transient during cold pull / proxy 404 window */ }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
@@ -417,6 +431,24 @@ async function _initRemoteBoot(runpod) {
         'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time)…',
         'info', 8000),
     });
+    // MPI-96: RunPod accepted the Pod but its host never started it (EXITED). Delete
+    // the dead Pod (an EXITED Pod still bills container disk), clear the saved podId
+    // so the next boot creates fresh, and tell the user it's a bad host — not a
+    // generic "could not reach" failure.
+    if (ready === 'not-running') {
+      clientLogger.warn('shell', '[RunPod] auto-connect: Pod not running on host (EXITED) — aborting');
+      fetch('/remote/pod/delete-active', { method: 'POST' }).catch(() => {});
+      const cfg = Storage.getRunpodConfig();
+      Storage.setRunpodConfig({ ...cfg, podId: null, wasConnected: false });
+      const dlg = MpiOkCancel.mount(document.createElement('div'), {
+        title: 'Pod failed to start on host',
+        text: 'The Pod was created but its RunPod host never started it (a bad or busy host — not a problem with your setup). Open Settings → RunPod, pick another GPU, and Connect.',
+        okLabel: 'Got it',
+        showCancel: false,
+      });
+      dlg.el.show();
+      return;
+    }
     if (ready) {
       // MPI-88: a no-GPU "download mode" Pod has no ComfyUI / no preview WS — skip
       // the WS gate (wrapper-ready IS connected). Otherwise the boot auto-reconnect

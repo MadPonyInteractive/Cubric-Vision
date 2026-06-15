@@ -224,6 +224,37 @@ router.get('/remote/ws-token', async (req, res) => {
 
 // --- readiness relay -------------------------------------------------------------
 
+// MPI-96: the wrapper /health can't distinguish "Pod booting slowly" from "Pod
+// created but never started on the host" — both fail to answer, so the renderer's
+// connect bar crawled to 99% on a phantom Pod. Fetch RunPod's Pod runtime status
+// (desiredStatus: CREATED/RUNNING/EXITED/TERMINATED/PAUSED/DEAD) as a fallback
+// signal when the wrapper isn't ready, so the renderer can bail early on a Pod
+// that isn't running. Throttled so the 4s status poll never hammers the RunPod API.
+let _lastPodStatus = null;
+let _lastPodStatusAt = 0;
+let _lastPodStatusId = null;
+const POD_STATUS_TTL_MS = 12000;
+
+async function _podRuntimeStatus(podId) {
+  if (!podId) return null;
+  const fresh =
+    _lastPodStatusId === podId &&
+    Date.now() - _lastPodStatusAt < POD_STATUS_TTL_MS;
+  if (fresh) return _lastPodStatus;
+  try {
+    const key = await getRunPodApiKey();
+    if (!key) return _lastPodStatus;
+    const r = await client.getPod(key, podId);
+    const p = (r && r.json) || {};
+    // REST shape varies; desiredStatus is the v1 field. Normalise to uppercase.
+    const raw = p.desiredStatus || p.currentStatus || p.status || null;
+    _lastPodStatus = raw ? String(raw).toUpperCase() : null;
+    _lastPodStatusId = podId;
+    _lastPodStatusAt = Date.now();
+  } catch (_) { /* best-effort — leave podStatus null, no regression */ }
+  return _lastPodStatus;
+}
+
 router.get('/remote/comfy/status', async (req, res) => {
   // `connecting` = the synchronous route window OR a background boot/resume still
   // in progress, so the Settings panel stays "creating…" + Connect disabled for
@@ -239,15 +270,22 @@ router.get('/remote/comfy/status', async (req, res) => {
       signal: ctrl.signal,
     });
     clearTimeout(timer);
-    if (!r.ok) return res.json({ running: false, ready: false, connecting: inFlight() });
+    if (!r.ok) {
+      // Wrapper not answering — surface the RunPod Pod status so the renderer can
+      // tell a slow boot from a Pod that never started (MPI-96).
+      const podStatus = await _podRuntimeStatus(_mode.podId);
+      return res.json({ running: false, ready: false, connecting: inFlight(), podStatus });
+    }
     const health = await r.json();
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
     if (health.ready) _starting = false;
     res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight(), noGpu: _mode.noGpu });
   } catch (_) {
-    // expected during Pod cold start / stale-payload window
-    res.json({ running: false, ready: false, connecting: inFlight() });
+    // expected during Pod cold start / stale-payload window — but also the window
+    // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96).
+    const podStatus = await _podRuntimeStatus(_mode.podId);
+    res.json({ running: false, ready: false, connecting: inFlight(), podStatus });
   }
 });
 

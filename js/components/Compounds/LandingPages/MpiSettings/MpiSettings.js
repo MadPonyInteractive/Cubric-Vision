@@ -110,10 +110,12 @@ export const MpiSettings = ComponentFactory.create({
                     </div>
                     <div class="mpi-settings__form-group">
                         <div id="mpiSettingsRunpodToggleSlot"></div>
+                        <span class="mpi-settings__hint">Your RunPod account, API key, GPU billing, and storage billing are your responsibility, not Cubric's.</span>
                         <span class="mpi-settings__hint">Makes the RunPod cloud GPU panel available. Generation runs on your local engine until you Connect. GPU and storage billing happen on your RunPod account.</span>
                     </div>
                     <div class="mpi-settings__form-group mpi-settings__runpod-suboption" id="mpiSettingsRunpodAutoConnectGroup">
                         <div id="mpiSettingsRunpodAutoConnectSlot"></div>
+                        <span class="mpi-settings__hint">Leave this off unless you want a billed Pod to start automatically when the app launches.</span>
                         <span class="mpi-settings__hint">When enabled, the app connects (and starts billing) a Pod automatically at launch. Off by default — start local, Connect when you want cloud generation.</span>
                     </div>
                     <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
@@ -133,11 +135,13 @@ export const MpiSettings = ComponentFactory.create({
                         <div class="mpi-settings__form-group">
                             <label class="mpi-settings__field-label">Network Volume</label>
                             <div id="mpiSettingsRunpodVolumeSlot"></div>
+                            <span class="mpi-settings__hint">Stopped Pods still leave volume storage billing on your RunPod account until you delete the volume.</span>
                             <span class="mpi-settings__hint">Stores your models so they survive between Pods — one volume per data center. Connect attaches it to the new Pod.</span>
                         </div>
                         <div class="mpi-settings__form-group">
                             <label class="mpi-settings__field-label">GPU</label>
                             <div id="mpiSettingsRunpodGpuSlot"></div>
+                            <span class="mpi-settings__hint">Community Cloud is unsupported for Cubric's remote engine.</span>
                             <span class="mpi-settings__hint">Secure Cloud only. Stock is a live hint (High / Medium / Low / N/A) — availability drifts; the RunPod console is ground truth.</span>
                         </div>
                         <div class="mpi-settings__form-group">
@@ -520,7 +524,7 @@ export const MpiSettings = ComponentFactory.create({
         // L3), so it only prompts "taking too long, Cancel and try another GPU"; it
         // never auto-cancels (a healthy slow boot must complete). The loop also
         // checks `_connectAbort` each tick so the Cancel button can break it.
-        async function _pollEngineReady(onSlow, onWatchdog, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, watchdogAfterMs = 300000 } = {}) {
+        async function _pollEngineReady(onSlow, onWatchdog, onNotRunning, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, watchdogAfterMs = 300000, notRunningGraceMs = 30000 } = {}) {
             const start = Date.now();
             let slowFired = false;
             let watchdogFired = false;
@@ -529,6 +533,13 @@ export const MpiSettings = ComponentFactory.create({
             // connecting. ~4 min covers a fresh ~3 GB image pull; clamp 0–99 until
             // ready, then 100. Mirrors _connectPct in shell.js.
             const _pct = (ms) => Math.max(0, Math.min(99, Math.round((ms / 240000) * 100)));
+            // MPI-96: RunPod can accept createPod (201) but never start the container
+            // on the host — the Pod sits EXITED/TERMINATED while the wrapper /health
+            // stays silent, so the old loop crawled to 99% on a Pod that isn't
+            // running. The status route now reports the Pod's runtime status; a
+            // terminal not-running status past a short grace = a dead host, not a
+            // slow boot, so bail early instead of faking progress.
+            const _NOT_RUNNING = new Set(['EXITED', 'TERMINATED', 'DEAD']);
             while (Date.now() - start < timeoutMs) {
                 if (_connectAbort) return false; // MPI-86: Cancel pressed — stop polling
                 if (!slowFired && Date.now() - start >= slowAfterMs) {
@@ -544,6 +555,14 @@ export const MpiSettings = ComponentFactory.create({
                     const res = await fetch('/remote/comfy/status');
                     const s = res.ok ? await res.json() : null;
                     if (s && s.ready) { Events.emit('remote:connect-progress', { pct: 100 }); return true; }
+                    // MPI-96: Pod reports a terminal not-running status after the grace
+                    // window (a normal CREATED→RUNNING transition is never flagged) —
+                    // the host failed to start it. Stop the fake bar and bail.
+                    if (s && s.podStatus && _NOT_RUNNING.has(String(s.podStatus).toUpperCase())
+                        && Date.now() - start >= notRunningGraceMs) {
+                        try { onNotRunning && onNotRunning(s.podStatus); } catch (_) { /* best-effort */ }
+                        return false;
+                    }
                 } catch (_) { /* transient during cold pull / proxy 404 window */ }
                 await new Promise((r) => setTimeout(r, intervalMs));
             }
@@ -628,6 +647,7 @@ export const MpiSettings = ComponentFactory.create({
                 // long (a fresh image tag's first ~3 GB pull onto a host).
                 _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
                 let _slowShown = false;
+                let _notRunning = false; // MPI-96: RunPod host failed to start the Pod
                 const ready = await _pollEngineReady(() => {
                     if (_slowShown) return;
                     _slowShown = true;
@@ -639,10 +659,34 @@ export const MpiSettings = ComponentFactory.create({
                     // is already live, so this only nudges; it never auto-cancels.
                     _setEngineHint(root, 'This is taking longer than usual — the Pod may be stuck on a bad host. Press Cancel to stop and try another GPU.', true);
                     Events.emit('ui:warning', { message: 'Pod taking too long — you can Cancel and try another GPU.' });
+                }, (podStatus) => {
+                    // MPI-96: RunPod reported the Pod EXITED/TERMINATED — created but
+                    // never started on the host. _pollEngineReady has already stopped;
+                    // flag it so we surface a host-failure (not "still preparing").
+                    _notRunning = true;
+                    clientLogger.warn('settings', `[RunPod] Pod not running on host (status=${podStatus}) — aborting connect`);
                 });
                 // MPI-86: user pressed Cancel mid-poll — _cancelConnect already tore
                 // down the Pod + reset the UI; bail without the "still preparing" path.
                 if (_connectAbort) return;
+                // MPI-96: the Pod never started on its host (EXITED/TERMINATED). Tell
+                // the user it's a bad host and reap the dead Pod so it stops billing
+                // container disk; leave Connect live to retry on another GPU.
+                if (_notRunning) {
+                    Events.emit('remote:connect-progress', { pct: 0 });
+                    // Delete the dead Pod — an EXITED Pod still bills container disk,
+                    // and it's the tracked Pod (delete-active targets it, unlike the
+                    // name-based orphan sweep which spares the tracked id). Clear the
+                    // saved podId + wasConnected so the next Connect creates fresh and
+                    // boot won't auto-reconnect to the dead host (mirrors _cancelConnect).
+                    fetch('/remote/pod/delete-active', { method: 'POST' }).catch(() => {});
+                    state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+                    _setEngineHint(root, 'The Pod failed to start on its RunPod host — this usually means a bad or busy host, not a problem with your setup. Pick another GPU (or try again) and Connect.', true);
+                    _setEngineStatusText(root, 'stopped');
+                    _engineBtnLabelSet('Connect');
+                    Events.emit('ui:warning', { message: 'Pod failed to start on host — pick another GPU and Connect.' });
+                    return;
+                }
                 if (!ready) {
                     _setEngineHint(root, 'The Pod is taking longer than expected. It may still be preparing — press Connect again in a minute to resume it.', true);
                     _setEngineStatusText(root, 'creating…');

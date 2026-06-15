@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/task-files/v1","files":[
+  {"path":"routes/remoteProxy.js","note":"Enriched /remote/comfy/status with throttled getPod podStatus fallback (MPI-96)."},
+  {"path":"js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js","note":"_pollEngineReady detects EXITED/TERMINATED/DEAD past grace; manual Connect bails + deletes dead Pod (MPI-96)."},
+  {"path":"js/shell.js","note":"Boot auto-connect path (_pollRemoteReady/_initRemoteBoot) bails on dead host + deletes Pod — same bug as Settings, found mid-test (MPI-96)."}
+]}
