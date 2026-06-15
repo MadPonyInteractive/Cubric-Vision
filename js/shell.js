@@ -426,9 +426,16 @@ async function _initRemoteBoot(runpod) {
     // The backend now returns `starting` immediately (no 504 on a long first-image
     // pull); poll /remote/comfy/status until ready. A fresh image tag can take a
     // few minutes the first time it is pulled onto a host.
+    // MPI-94 L3 — the slow-wait copy must match what's actually happening: a fresh
+    // CREATE pays the one-time image pull + sage compile ("First-time setup…"); a
+    // warm RECONNECT just wakes an already-provisioned Pod (engine on its volume,
+    // no download), so the create copy was misleading there. Mirrors the manual
+    // Connect path's resume-vs-create copy (MpiSettings).
     const ready = await _pollRemoteReady({
       onSlow: () => StatusBar.notify(
-        'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time)…',
+        warm
+          ? 'Resuming your Pod — waking it up, this is usually quick…'
+          : 'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time)…',
         'info', 8000),
     });
     // MPI-96: RunPod accepted the Pod but its host never started it (EXITED). Delete
