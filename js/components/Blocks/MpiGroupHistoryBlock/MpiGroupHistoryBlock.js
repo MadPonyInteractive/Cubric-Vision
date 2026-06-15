@@ -111,10 +111,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Model / operation context ─────────────────────────────────────────
 
-        const { model: activeModelInit, modelId: activeModelIdInit, installedModels } =
+        // Video history is a frame-driven workspace: its prompt toolbar (Start/End
+        // frame, Extend, Create new) only makes sense for models that accept image
+        // input. After the combined→split model change, t2v-only models carry no
+        // i2v op, so they must NOT be selectable here — gate the MODEL LIST, not the
+        // tools. Image history is unaffected.
+        const _modelSupportsI2V = (m) =>
+            Array.isArray(m?.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v'));
+        const _promptModelFilter = (m) => (isVideo ? _modelSupportsI2V(m) : true);
+
+        const { model: activeModelInit, modelId: activeModelIdInit, installedModels: _allInstalledModels } =
             resolveActiveModel(isVideo ? 'video' : 'image');
-        let activeModelId = activeModelIdInit;
-        let activeModel   = activeModelInit;
+        // Models offered in this workspace's prompt box. For video, i2v-capable only.
+        const installedModels = _allInstalledModels.filter(_promptModelFilter);
+        // If the resolver picked a model the filter excludes (e.g. last-selected was
+        // t2v), fall back to the first eligible model. May be undefined when no i2v
+        // model is installed — handled as read-only by _syncPromptToolDisabled.
+        const activeModelInitEligible = installedModels.includes(activeModelInit)
+            ? activeModelInit
+            : (installedModels[0] || null);
+        let activeModelId = activeModelInitEligible?.id ?? activeModelIdInit;
+        let activeModel   = activeModelInitEligible;
         // No mount-time write-back: resolver returns a valid id for the
         // group's mediaType. Persisting here would clobber the sibling-type
         // slot (e.g. entering image history would wipe a video selection).
@@ -714,11 +731,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
          *  even without staged media so the user can drop a frame to unlock. */
         function _syncPromptToolDisabled() {
             const has = _shouldShowPromptBox();
+            // Video history needs an Image-to-Video model (t2v is filtered out of the
+            // model list). When none is installed, surface the requirement via the
+            // tool button's hover info so it reads in the status bar.
+            const reason = has
+                ? ''
+                : (isVideo && installedModels.length === 0
+                    ? 'Install an Image-to-Video model to edit video here'
+                    : 'No prompt-driven ops available for this model');
             historyTools.el.setDisabled?.({
-                prompt: {
-                    disabled: !has,
-                    reason: has ? '' : 'No prompt-driven ops available for this model',
-                },
+                prompt: { disabled: !has, reason },
             });
             return has;
         }
@@ -1713,21 +1735,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // PromptBox mounts via the s_installedModelIds watcher (option A) when
         // models become available, not via the removed `models:closed` event.
         _unsubs.push(Events.onState('s_installedModelIds', () => {
-            const currentModels = getModelsByType(modeKind).filter(m => m.installed !== false);
-            // If activeModel was null (zero-installed on entry) and models have now
-            // become available, re-resolve so PromptBox can mount. Without this,
+            // Video history only offers i2v-capable models (frame-driven workspace).
+            const currentModels = getModelsByType(modeKind)
+                .filter(m => m.installed !== false)
+                .filter(_promptModelFilter);
+            // If activeModel was null (none eligible on entry) and an eligible model
+            // has now been installed, adopt it so PromptBox can mount. Without this,
             // activeModel stays null for the lifetime of the block even after install.
             if (!activeModel && currentModels.length > 0) {
-                const { model: resolvedModel, modelId: resolvedModelId } =
-                    resolveActiveModel(modeKind);
-                if (resolvedModel) {
-                    activeModel   = resolvedModel;
-                    activeModelId = resolvedModelId;
-                    _refreshOpOptions();
-                    const nowHas = _syncPromptToolDisabled();
-                    if (nowHas) _mountPromptBoxIfNeeded();
-                }
+                activeModel   = currentModels[0];
+                activeModelId = currentModels[0].id;
+                _refreshOpOptions();
+                const nowHas = _syncPromptToolDisabled();
+                if (nowHas) _mountPromptBoxIfNeeded();
             }
+            // Keep the read-only hint current when the last eligible model is removed.
+            _syncPromptToolDisabled();
             _pb?.el?.setModelList?.(currentModels);
         }));
 
