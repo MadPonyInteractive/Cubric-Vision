@@ -5,14 +5,14 @@
 - [x] `js/shell/notificationService.js` — added `download:complete` listener → sends `notify-download-complete` with `"<modelName> installed."`; skips UW installs (`__universal_workflow__`). `_unsub` → `_unsubs[]` for two listeners; teardown drains array.
 - [x] ESLint clean on edited files.
 
-## Verification — PENDING (status: awaiting-verification)
-- [ ] Run `npm run test:desktop` (Electron-only; focus gate cannot be verified in browser dev mode).
-- [ ] Manual: generation finishes while app unfocused-but-visible (behind another window) → OS notification fires.
-- [ ] Manual: model download finishes while app unfocused → `"<model> installed."` OS notification fires.
-- [ ] Confirm no notification when app IS focused (in-app toast only).
+## Verification — DONE (status: accepted)
+- [x] Run `npm run test:desktop` (8/8 pass; confirms no regression — focus gate itself is Electron-only and eyeballed manually).
+- [x] Manual: generation finishes while app unfocused-but-visible (behind another window) → OS notification fires.
+- [x] Manual: model download finishes while app unfocused → `"<model> installed."` OS notification fires. (User-verified 2026-06-15.)
+- [x] Confirm no notification when app IS focused (in-app toast only).
 
 ## BEFORE CLOSING THIS CARD — REQUIRED
-- [ ] **Add this change to `docs/releases/UNRELEASED.md`** (the unreleased changelog). Entry: OS notifications now fire when the app is unfocused (not only minimized); new OS notification when a model finishes downloading while the app is unfocused.
+- [x] **Add this change to `docs/releases/UNRELEASED.md`** (the unreleased changelog). Entry: OS notifications now fire when the app is unfocused (not only minimized); new OS notification when a model finishes downloading while the app is unfocused.
 
 ## Files touched
 - `main.js`

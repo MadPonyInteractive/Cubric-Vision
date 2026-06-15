@@ -30,6 +30,13 @@
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
 
+- **Smarter OS notifications.** Desktop notifications now fire whenever the app is
+  not focused — not just when it's minimized — so a generation that finishes while
+  Cubric is sitting behind another window still pops a notification. New: when a
+  model finishes downloading and the app isn't focused, you get a `"<model>
+  installed."` notification too. When the app is focused, you still get the in-app
+  toast only (no OS notification).
+
 - **Drag-and-drop model import (LoRA & upscale).** Settings → External Connections
   and the Model Settings picker now show each of your configured model folders as a
   drop zone — drag a `.safetensors` / `.ckpt` / `.pt` / `.bin` / `.pth` onto the

@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-72",
-  "title": "OS notifications...",
+  "title": "OS notifications (not-focused gate + download-complete)",
   "description": "Currently, we have a notification when a generation finishes and the app is minimized. Let's make that happen if the app is not focused. Let's also create an OS notification for when a model finishes downloading if the app is not focused.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "awaiting-verification",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-06-13T03:20:51.179Z",
-  "updated_at": "2026-06-13T18:10:00.000Z",
+  "updated_at": "2026-06-15T10:36:49.936Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
