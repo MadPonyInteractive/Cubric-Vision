@@ -351,6 +351,7 @@ export const MpiSettings = ComponentFactory.create({
         let _engineConnectInst = null;  // Connect/Disconnect MpiButton instance
         let _engineStatusTimer = null;  // setInterval id for the status poll
         let _engineBusy = false;        // true while a start/stop is in flight
+        let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
         let _engineBtnLabel = 'Connect'; // tracks the button label (instance has no props getter)
 
         // MpiButton imperative API lives on the instance's `.el`, not the
@@ -514,18 +515,29 @@ export const MpiSettings = ComponentFactory.create({
         // The first boot on a fresh volume/GPU arch also pays a one-time
         // sageattention compile (~5-15 min) that does not block readiness (SDPA
         // fallback) but extends the wait — hence the 20-min timeout.
-        async function _pollEngineReady(onSlow, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000 } = {}) {
+        // MPI-86: `onWatchdog` fires once when the wait crosses `watchdogAfterMs`
+        // (~5 min) — well past the normal first-boot sageattention compile (MPI-64
+        // L3), so it only prompts "taking too long, Cancel and try another GPU"; it
+        // never auto-cancels (a healthy slow boot must complete). The loop also
+        // checks `_connectAbort` each tick so the Cancel button can break it.
+        async function _pollEngineReady(onSlow, onWatchdog, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, watchdogAfterMs = 300000 } = {}) {
             const start = Date.now();
             let slowFired = false;
+            let watchdogFired = false;
             // MPI-87: elapsed→% estimate (RunPod's API has no real image-pull
             // progress); heroStats paints it in the project-page GPU slot while
             // connecting. ~4 min covers a fresh ~3 GB image pull; clamp 0–99 until
             // ready, then 100. Mirrors _connectPct in shell.js.
             const _pct = (ms) => Math.max(0, Math.min(99, Math.round((ms / 240000) * 100)));
             while (Date.now() - start < timeoutMs) {
+                if (_connectAbort) return false; // MPI-86: Cancel pressed — stop polling
                 if (!slowFired && Date.now() - start >= slowAfterMs) {
                     slowFired = true;
                     try { onSlow && onSlow(); } catch (_) { /* best-effort */ }
+                }
+                if (!watchdogFired && Date.now() - start >= watchdogAfterMs) {
+                    watchdogFired = true;
+                    try { onWatchdog && onWatchdog(); } catch (_) { /* best-effort */ }
                 }
                 Events.emit('remote:connect-progress', { pct: _pct(Date.now() - start) });
                 try {
@@ -550,7 +562,12 @@ export const MpiSettings = ComponentFactory.create({
                 return;
             }
             _engineBusy = true;
-            _engineBtnDisabled(true);
+            _connectAbort = false; // MPI-86: fresh attempt — clear any prior Cancel flag
+            // MPI-86: while connecting, the button becomes an enabled "Cancel" (was
+            // disabled, trapping the user when a Pod stuck initializing). Click →
+            // _cancelConnect aborts the poll + deletes the half-started Pod.
+            _engineBtnLabelSet('Cancel');
+            _engineBtnDisabled(false);
             // MPI-73: surface the transition app-wide (hero card → "connecting ·
             // offline" with no card; status bar → "IDLE · Connecting"). Resolved by
             // the connected:true emit on success or connected:false on failure.
@@ -616,7 +633,16 @@ export const MpiSettings = ComponentFactory.create({
                     _slowShown = true;
                     _setEngineHint(root, 'First-time setup: downloading the engine and optimising it for your GPU (one time, a few minutes — much faster next time). Hang tight…');
                     Events.emit('ui:info', { message: 'Setting up the engine for your GPU (one time)…' });
+                }, () => {
+                    // MPI-86 boot watchdog: past ~5 min the Pod may be stuck on a bad
+                    // RunPod host/volume. Prompt the user to bail — the Cancel button
+                    // is already live, so this only nudges; it never auto-cancels.
+                    _setEngineHint(root, 'This is taking longer than usual — the Pod may be stuck on a bad host. Press Cancel to stop and try another GPU.', true);
+                    Events.emit('ui:warning', { message: 'Pod taking too long — you can Cancel and try another GPU.' });
                 });
+                // MPI-86: user pressed Cancel mid-poll — _cancelConnect already tore
+                // down the Pod + reset the UI; bail without the "still preparing" path.
+                if (_connectAbort) return;
                 if (!ready) {
                     _setEngineHint(root, 'The Pod is taking longer than expected. It may still be preparing — press Connect again in a minute to resume it.', true);
                     _setEngineStatusText(root, 'creating…');
@@ -694,7 +720,14 @@ export const MpiSettings = ComponentFactory.create({
                 Events.emit('ui:warning', { message: 'Could not reach the Pod connect endpoint.' });
             } finally {
                 _engineBusy = false;
-                _engineBtnDisabled(false);
+                // MPI-86: when the label is back on "Connect" (failed/cancelled), gate
+                // it on a picked GPU + volume like the other reset branches — don't
+                // blanket-enable, or Cancel leaves an enabled Connect with no GPU.
+                if (_engineBtnLabel === 'Connect') {
+                    _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+                } else {
+                    _engineBtnDisabled(false);
+                }
                 // MPI-73: if the connect did NOT fully succeed (refused, timed out,
                 // WS never handshook, threw), clear the transient 'connecting' phase
                 // back to local · offline so the hero/status bar don't stay stuck.
@@ -702,6 +735,31 @@ export const MpiSettings = ComponentFactory.create({
                     Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
                 }
             }
+        }
+
+        // MPI-86: Cancel an in-flight create/reconnect. Breaks _pollEngineReady via
+        // _connectAbort, then deletes the half-started Pod through the SAME path as
+        // Disconnect's Delete (/remote/pod/delete-active → _deleteTrackedPod: stops
+        // GPU billing, clears the token + ids, flips remote mode OFF, clears the
+        // backend _starting flag) so nothing orphan-bills. Does NOT touch _engineBusy
+        // — the still-running _connectEngine owns it and its finally resets it.
+        async function _cancelConnect(root) {
+            _connectAbort = true;
+            _setEngineStatusText(root, 'cancelling…');
+            _setEngineHint(root, 'Cancelling — deleting the half-started Pod so it stops billing…');
+            try {
+                await fetch('/remote/pod/delete-active', { method: 'POST' });
+            } catch (_) { /* best-effort — the backend idle watchdog is the backstop */ }
+            // Forget any tracked podId so the next Connect creates fresh, and clear
+            // the auto-reconnect intent (a cancelled attempt is not a connection).
+            state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+            _setEngineStatusText(root, 'stopped');
+            _setEngineHint(root, 'Connection cancelled. Pick a GPU and Connect again, or try another card.');
+            _engineBtnLabelSet('Connect');
+            _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+            // Resolve the transient 'connecting' phase → local · offline.
+            Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+            Events.emit('ui:info', { message: 'Connection cancelled.' });
         }
 
         async function _disconnectEngine(root) {
@@ -832,7 +890,8 @@ export const MpiSettings = ComponentFactory.create({
                 size: 'sm',
             });
             _engineConnectInst.on('click', () => {
-                if (_engineBtnLabel === 'Disconnect') _openDisconnectChoice(root);
+                if (_engineBtnLabel === 'Cancel') _cancelConnect(root); // MPI-86: in-flight connect
+                else if (_engineBtnLabel === 'Disconnect') _openDisconnectChoice(root);
                 else _connectEngine(root);
             });
             _refreshEngineConnect(root);
@@ -917,6 +976,17 @@ export const MpiSettings = ComponentFactory.create({
             });
             gpuInst.on('change', async ({ value }) => {
                 const prev = _runpodCfg();
+                // MPI-86: switching GPU while a connect is IN FLIGHT auto-cancels it —
+                // the in-flight Pod is pinned to the old card, so kill it (stops
+                // billing) before adopting the new GPU. This is the out-of-stock /
+                // bad-host pivot (MPI-64 L1): bail and immediately Connect another.
+                if (_engineBusy && value && value !== prev.gpuType) {
+                    await _cancelConnect(root);
+                    state.runpodConfig = { ..._runpodCfg(), gpuType: value };
+                    _setEngineHint(root, 'Switched GPU — the in-flight connection was cancelled. Connect to create a Pod on the new card.');
+                    _refreshEngineConnect(root);
+                    return;
+                }
                 // Switching GPU while a (stopped/saved) Pod exists: that Pod is
                 // pinned to the old card, so delete it — the next Connect creates
                 // fresh on the new GPU (Step 4.3 GPU-switch path).
@@ -1360,6 +1430,11 @@ export const MpiSettings = ComponentFactory.create({
             _unsubs.forEach(fn => fn?.());
             _clearExtraFolderControls();
             if (_engineStatusTimer) { clearInterval(_engineStatusTimer); _engineStatusTimer = null; }
+            // MPI-86: break any in-flight _pollEngineReady loop so it doesn't keep
+            // fetching after the panel unmounts. The Pod is left booting on purpose
+            // (backend _starting tracks it; the idle watchdog backstops) — destroy is
+            // not a Cancel, so it must not delete a Pod the user may still want.
+            _connectAbort = true;
             _engineConnectInst?.destroy?.();
             _engineConnectInst = null;
         };
