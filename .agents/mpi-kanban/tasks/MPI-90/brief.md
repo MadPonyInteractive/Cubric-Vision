@@ -36,7 +36,16 @@ Each manifest field has a defined comparison rule (exact / minimum / information
   not a failed generation.
 - A compatible profile proceeds with no gate.
 
+## Inherited from MPI-94 F4 (2026-06-15)
+
+MPI-94's item **F4** ("Fresh-volume initialization + bundle versioning") was reassigned here on
+close — its app read-side half (read the manifest at readiness → repair/reinitialize/warn → gate
+generation) IS this card; no separate work. Its **manifest-WRITER half** (the first manifest
+written Pod-side by the wrapper init script + the Cubric dir layout + bundle versioning) is a
+**wrapper/image-build dependency** for the next Pod image — this gate can only read a manifest the
+wrapper actually writes, so confirm the writer ships in (or before) the build this gate targets.
+
 ## Related
 
 - MPI-64 (epic), research/volume-manifest-schema.md, MPI-91 (GPU-picker filter — folds into the same compat axis),
-  MPI-81 (CUDA floor / image rebuild).
+  MPI-81 (CUDA floor / image rebuild), MPI-94 F4 (reassigned here).

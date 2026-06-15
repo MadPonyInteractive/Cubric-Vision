@@ -4,22 +4,30 @@
 > code or a decision (not just a live-Pod tick; those are MPI-93). Full narrative:
 > `tasks/MPI-64/OPEN-ITEMS.md` (§ F, § G, § L) + `current-architecture.md`.
 
-> **STATUS 2026-06-15 — 6/8 DONE, card parked (UNBLOCKED, ready to resume).** L5+G2 (committed
-> d11e628, live-verified), L4 (committed feeabab, unverified on live dl), G1/G4/G6 already-done.
-> The last 2 — **F4** and **L3** — were blocked on MPI-88's `_initRemoteBoot`/MpiSettings/
-> remoteProxy rewrite; **MPI-88 is now DONE + committed (57f3d8e), working tree clean → base is
-> stable, F4/L3 UNBLOCKED.** Rebase L3's copy on the final `_initRemoteBoot` warm-vs-create
-> branch (the `warm`/`canAutoReconnect` flag). Both are app-side — ZERO impact on the MPI-81
-> rebuild.
+> **STATUS 2026-06-15 — ✅ DONE / CLOSED.** 7/8 items shipped, 1 reassigned:
+> - **L5** (debounce false-offline) — done + live-verified, commit `d11e628`.
+> - **L4** (remote MB/s readout) — done, commit `feeabab` (unverified on a live download).
+> - **L3** (boot resume-vs-create ETA copy) — done, commit `908e47b`.
+> - **G2** ("Stopping…" toast) — shipped then **REVERTED** per user feedback (no toast); `b425fa1`.
+> - **G1 / G4 / G6** — already-done (verified by code read; G4 shipped in the v0.4.1 image).
+> - **F4** — **REASSIGNED** (not a standalone item): app read-side gate = card **MPI-90**;
+>   manifest-writer half = the next Pod-image build. See F4 below.
+>
+> Zero MPI-81/image-build impact from any shipped item. Card moved to DONE 2026-06-15.
 
 ## Items (app-side unless tagged [rebuild])
 
-- [ ] **F4 — Fresh-volume initialization + bundle versioning.** `[app]` + maybe `[rebuild]`.
-      **✅ UNBLOCKED 2026-06-15** (MPI-88 done/committed 57f3d8e — its volume / remoteProxy /
-      MpiSettings work is in). Still couples MPI-90 (read-side gate) — coordinate that. Ready to start.
-      Cubric dir layout + the first manifest written Pod-side by the wrapper init script;
-      refuse to run against a stale workflow/custom-node bundle + an approved repair path.
-      The wrapper-coupled half pairs with the MPI-90 manifest-compat gate (read side).
+- [➡] **F4 — Fresh-volume initialization + bundle versioning. → REASSIGNED 2026-06-15 (not a standalone MPI-94 item).**
+      On inspection F4 has no standalone app work that belongs here. It splits cleanly into two
+      existing owners:
+      - **App read-side gate** (read `GET /wrapper/manifest` at readiness → repair/reinitialize/warn
+        decision matrix → gate generation on an incompatible profile) = **card MPI-90** verbatim
+        ("Manifest compatibility gate + repair/reinitialize"). That card owns this work.
+      - **Manifest-WRITER half** (the first manifest written Pod-side by the wrapper init script,
+        the Cubric dir layout, bundle versioning) = **wrapper/image work** for the next Pod-image
+        build (post-v0.4.2), needs a live Pod to verify.
+      So F4 is closed here as reassigned, NOT done. Tracked under MPI-90 (app) + the next image
+      build (wrapper). This was the last open MPI-94 item → card closes.
 
 - [x] **L5 — Status-poll false-negative flips UI to `local·offline` for one tick mid-download.**
       **DONE (2026-06-15).** `_initRemoteConnectionFeed` (js/shell.js) now debounces the offline
