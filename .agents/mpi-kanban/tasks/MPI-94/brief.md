@@ -4,17 +4,19 @@
 > code or a decision (not just a live-Pod tick; those are MPI-93). Full narrative:
 > `tasks/MPI-64/OPEN-ITEMS.md` (§ F, § G, § L) + `current-architecture.md`.
 
-> **STATUS 2026-06-15 — 6/8 DONE, card parked.** L5+G2 (committed d11e628, live-verified),
-> L4 (committed feeabab, unverified on live dl), G1/G4/G6 already-done. **BLOCKED on MPI-88**:
-> the last 2 — **F4** and **L3** — both touch files MPI-88 is actively rewriting
-> (`_initRemoteBoot` in js/shell.js, MpiSettings.js, routes/remoteProxy.js). Do NOT start them
-> until MPI-88 is committed, or you build on a moving base + collide. Resume after MPI-88 lands.
+> **STATUS 2026-06-15 — 6/8 DONE, card parked (UNBLOCKED, ready to resume).** L5+G2 (committed
+> d11e628, live-verified), L4 (committed feeabab, unverified on live dl), G1/G4/G6 already-done.
+> The last 2 — **F4** and **L3** — were blocked on MPI-88's `_initRemoteBoot`/MpiSettings/
+> remoteProxy rewrite; **MPI-88 is now DONE + committed (57f3d8e), working tree clean → base is
+> stable, F4/L3 UNBLOCKED.** Rebase L3's copy on the final `_initRemoteBoot` warm-vs-create
+> branch (the `warm`/`canAutoReconnect` flag). Both are app-side — ZERO impact on the MPI-81
+> rebuild.
 
 ## Items (app-side unless tagged [rebuild])
 
 - [ ] **F4 — Fresh-volume initialization + bundle versioning.** `[app]` + maybe `[rebuild]`.
-      **⛔ BLOCKED on MPI-88** (overlaps its volume / routes/remoteProxy.js / MpiSettings work) +
-      couples MPI-90 (read-side gate). Resume after MPI-88 commits.
+      **✅ UNBLOCKED 2026-06-15** (MPI-88 done/committed 57f3d8e — its volume / remoteProxy /
+      MpiSettings work is in). Still couples MPI-90 (read-side gate) — coordinate that. Ready to start.
       Cubric dir layout + the first manifest written Pod-side by the wrapper init script;
       refuse to run against a stale workflow/custom-node bundle + an approved repair path.
       The wrapper-coupled half pairs with the MPI-90 manifest-compat gate (read side).
@@ -46,9 +48,9 @@
       RESOLVED — the CREATE-path copy is good ("First-time setup… one time, a few minutes"). The
       only residual: confirm the BOOT auto-reconnect path's flat ~90-120s ETA is accurate or make
       it distinguish first-boot-compile from warm-resume. Low priority.
-      **⛔ BLOCKED on MPI-88** — the residual lives in `_initRemoteBoot` (js/shell.js), which
-      MPI-88 is rewriting (warm-resume vs create branch). Resume after MPI-88 commits; the copy
-      should key off MPI-88's `warm` flag.
+      **✅ UNBLOCKED 2026-06-15** — `_initRemoteBoot` (js/shell.js) is now committed + stable
+      (MPI-88 57f3d8e, MPI-87 7e5422d). The residual copy should key off the final `warm` /
+      `canAutoReconnect` branch. Ready to start.
 
 - [x] **G1 — Downgrade the "Restarting ComfyUI" restart-info modal → plain info toast.**
       **ALREADY DONE — verified 2026-06-15, no code needed.** The restart-info already emits
