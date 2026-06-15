@@ -58,13 +58,13 @@
       bug-reporter modal. `ui:error` there is reserved for genuine start FAILURE (line 254), which
       correctly stays a modal. Brief snapshot predated the MPI-64 modal→toast pass.
 
-- [x] **G2 — "Stopping…" toast** for the ~5s gap between Stop and the Pod actually interrupting.
-      **DONE (2026-06-15).** `ComfyUIController.interrupt()` (comfyController.js) now emits a
-      remote-only `ui:info` "Stopping…" toast at the start of the interrupt (gated on
-      `remoteEngineClient.isRemote()` — local interrupt is instant, no gap). Single chokepoint:
-      all Stop paths route through `interrupt()`.
-      **LIVE-VERIFIED 2026-06-15** on a connected Pod: "Stopping… the remote engine is
-      interrupting the current step." toast appeared on Stop during a remote I2V gen.
+- [x] **G2 — "Stopping…" toast** — **REVERTED 2026-06-15 (user feedback). Net result: NO toast.**
+      Originally shipped a remote-only `ui:info` "Stopping…" toast in `interrupt()` (d11e628,
+      live-verified). User then judged it noise — a user-initiated Stop should not raise a toast at
+      all. Removed at source (commit b425fa1): `interrupt()` is only ever the user-Stop path (every
+      caller is a `cancel()`), so no toast belongs there. (Other call sites had grown `_settled`
+      guards to avoid flashing it on no-op cancels — those can simplify later, left untouched.)
+      The original G2 spec — ADD a toast for the Stop→interrupt gap — is closed as "won't do".
 
 - [x] **G6 — First-connect-on-a-new-image-tag 504 + GPU-availability-refresh-on-dropdown-open.**
       **ALREADY DONE — verified by code read 2026-06-15, no code needed** (both halves landed in
