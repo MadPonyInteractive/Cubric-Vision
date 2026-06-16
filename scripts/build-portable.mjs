@@ -9,6 +9,7 @@ import zlib from 'node:zlib';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { assertApproved } from './release-notes-approval.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -984,6 +985,16 @@ async function main() {
   const packageJson = await readJson(path.join(REPO_ROOT, 'package.json'));
   await assertAppPackageVersionParity(packageJson.version);
   opts.version ??= packageJson.version;
+
+  // Release-notes review gate: a real (non-dry-run) build refuses to proceed
+  // until the user has reviewed and approved the exact notes that ship in the
+  // in-app changelog. Approval is recorded as docs/releases/.approved-<ver>.json
+  // (a hash of the rendered notes); editing the notes after approval invalidates
+  // it. Dry runs stage no shippable artifact, so they skip the gate.
+  if (!opts.dryRun) {
+    await assertApproved(opts.version);
+  }
+
   opts.buildHash = await resolveBuildHash(opts.buildHash);
 
   const config = PLATFORM_CONFIG[opts.platform];

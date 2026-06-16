@@ -23,9 +23,11 @@ you only need to edit **five** files. Skip every operation/engine/schema step.
 4. `js/data/releaseNotes.js` — add a new `RELEASE_NOTES['<newVersion>']` entry (runtime changelog overlay source).
 5. `docs/releases/YYYY-MM-DD-vX.Y.Z.md` — archival, user-facing markdown notes.
 
-Then run the release gate:
+Then review/approve the notes (required before any build — see Step 5.5) and run
+the release gate:
 
 ```bash
+npm run release:approve   # review the rendered notes, y to write the approval token
 npm run release:check
 ```
 
@@ -294,6 +296,17 @@ Release notes live in **two** places that must stay aligned:
    portable-distribution scope; the changelog overlay only describes the already-
    running version).
 
+   **The overlay renders each string as plain text** (`li.textContent`) — markdown
+   like `**bold**`, links, and parentheticals ship verbatim. Strip author asides
+   ("add notes when X ships", "Also shipping as a 1.0.1 hotfix") and editorial
+   instructions; ship only the user-facing sentence. Fold `docs/releases/UNRELEASED.md`
+   scratchpad items into these arrays and clear it back to its header.
+
+   **Section order shown to the user is fixed by the overlay** (`MpiChangelogDialog`),
+   not by your array order: Breaking changes → Important → What's new → Fixes →
+   Engine. A "**Breaking — …**" item parked in the scratchpad's `importantChanges`
+   belongs in `breakingChanges` here.
+
 2. **Archival markdown — `docs/releases/YYYY-MM-DD-vX.Y.Z.md`** (user-facing docs,
    not read by the app).
 
@@ -331,6 +344,43 @@ After publishing this release, update all parallel platforms:
 - [ ] **Patreon**: Post update announcement with changelog highlights
 - [ ] **Discord**: Post in #updates channel with release highlights and download link
 ```
+
+---
+
+## Step 5.5: Review and approve release notes (enforced build gate)
+
+The build **cannot run** until you have reviewed and approved the exact release
+notes that will ship in the in-app changelog overlay (`MpiChangelogDialog`). This
+is not a soft instruction — `scripts/build-portable.mjs` calls `assertApproved()`
+before any staging and aborts a real build if the notes are unapproved or have
+changed since approval.
+
+After writing the notes (Step 5), run:
+
+```bash
+npm run release:approve
+```
+
+This prints the notes **exactly as the overlay renders them** — kicker
+`<Stage> · v<newVersion>`, sections in the overlay's fixed order skipping empties
+(**Breaking changes → Important → What's new → Fixes → Engine**), each item as a
+plain-text bullet (no markdown processing). What you see is byte-for-byte what
+ships, so any stray `**bold**`, link syntax, or author aside is a copy bug to fix
+now. It then asks for a `y/n`.
+
+- **y** → writes an approval token `docs/releases/.approved-<newVersion>.json`
+  (a SHA256 of the rendered notes). **Commit this file with the version bump** —
+  CI reads it to unlock the headless build.
+- **n** → nothing is written. Go back to Step 5, fix the `releaseNotes.js` entry
+  (and the archival markdown to match), and re-run `npm run release:approve`.
+
+If you edit the notes *after* approving, the token's hash no longer matches and
+the build re-blocks until you re-run `release:approve`. To re-review the rendered
+notes without approving, run `npm run release:notes`.
+
+This is the last checkpoint before the build (build is a separate step — CI
+dispatch / `scripts/build-portable.mjs` — outside this skill), so the notes you
+approve here are the ones that go out.
 
 ---
 
@@ -379,6 +429,7 @@ Files edited:
 - operation_registry.json
 - js/data/releaseNotes.js
 - docs/releases/YYYY-MM-DD-vX.Y.Z.md
+- docs/releases/.approved-X.Y.Z.json (release-notes approval token — commit it)
 
 New operations: 2 (myNewOp, anotherOp)
 Deprecated: 0
