@@ -147,7 +147,7 @@ export const MpiSettings = ComponentFactory.create({
                         <div class="mpi-settings__form-group">
                             <label class="mpi-settings__field-label">Idle timeout (minutes)</label>
                             <div id="mpiSettingsRunpodIdleTimeoutSlot"></div>
-                            <span class="mpi-settings__hint" id="mpiSettingsRunpodIdleHint">Auto-stops the Pod after this long with no activity (minimum 10). Set before connecting.</span>
+                            <span class="mpi-settings__hint" id="mpiSettingsRunpodIdleHint">Auto-stops the Pod after this long with no generating, installing, or downloading (minimum 10). Editable any time — changes apply to a connected Pod immediately, with no reconnect.</span>
                         </div>
                         <div class="mpi-settings__form-group">
                             <div class="mpi-settings__runpod-connect-row">
@@ -362,7 +362,8 @@ export const MpiSettings = ComponentFactory.create({
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
         let _engineBtnLabel = 'Connect'; // tracks the button label (instance has no props getter)
-        let _idleDisabled = null;       // last rendered disabled-state of the idle-timeout input (re-render only on change)
+        let _idleMounted = false;       // idle-timeout input mounted once (always editable now — MPI-103)
+        let _idleConnected = false;     // is a Pod currently connected? (drives the live-push on change)
 
         // MpiButton imperative API lives on the instance's `.el`, not the
         // instance itself (rule: callers use el.setLabel/el.setDisabled).
@@ -372,40 +373,73 @@ export const MpiSettings = ComponentFactory.create({
         }
         // Idle-watchdog timeout. Stored in runpodConfig as SECONDS (the wrapper env
         // unit); displayed as MINUTES. Floor 10 min / default 15 min, mirrored from
-        // the backend clamp. The input is locked once a Pod exists — the value is
-        // baked into the Pod env at create time and can't change on a live Pod
-        // (Scope A); a re-mount is the only way to flip MpiInput's disabled state, so
-        // re-render only when that state actually changes (never mid-typing).
+        // the backend clamp. MPI-103: the input is EDITABLE at all times — when a Pod
+        // is connected, a change pushes the new value LIVE to the wrapper
+        // (POST /proxy/idle-timeout) so it takes effect with no recreate; when no Pod
+        // exists, the value is just stored so the next fresh create bakes it in.
+        // Mount the input ONCE (MpiInput has no imperative setter — re-mounting would
+        // clobber an in-progress edit); the live /health value is reflected in place
+        // via the raw <input> only while it isn't focused.
         const IDLE_FLOOR_MIN = 10;
         const IDLE_DEFAULT_S = 900;
         function _idleMinutesFromCfg(cfg) {
             const s = Number(cfg.idleTimeoutS);
             return Math.round((Number.isFinite(s) && s > 0 ? s : IDLE_DEFAULT_S) / 60);
         }
-        function _renderIdleTimeout(root, podExists) {
+        async function _pushIdleTimeoutLive(seconds) {
+            try {
+                const res = await fetch('/proxy/idle-timeout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seconds }),
+                });
+                if (res.ok) {
+                    Events.emit('ui:success', { message: 'Idle timeout updated.' });
+                } else if (res.status === 404) {
+                    // Older image without the live-update endpoint — the value is kept
+                    // in runpodConfig and will apply on the next fresh create.
+                    Events.emit('ui:warning', { message: 'Idle timeout saved — applies on the next new Pod.' });
+                } else {
+                    Events.emit('ui:warning', { message: 'Could not update idle timeout — saved for the next Pod.' });
+                }
+            } catch (err) {
+                clientLogger.warn('settings', '[RunPod] live idle-timeout push failed', err);
+                Events.emit('ui:warning', { message: 'Could not update idle timeout — saved for the next Pod.' });
+            }
+        }
+        function _renderIdleTimeout(root) {
             const slot = qs('#mpiSettingsRunpodIdleTimeoutSlot', root);
             if (!slot) return;
-            if (_idleDisabled === podExists) return; // no change — keep current input (and any in-progress edit)
-            _idleDisabled = podExists;
+            if (_idleMounted) return; // mount once — never clobber an in-progress edit
+            _idleMounted = true;
             slot.innerHTML = '';
             const inst = MpiInput.mount(slot, {
                 type: 'number',
                 min: IDLE_FLOOR_MIN,
                 step: 5,
                 value: _idleMinutesFromCfg(_runpodCfg()),
-                disabled: podExists,
                 size: 'sm',
             });
             inst.on('change', ({ value }) => {
                 const mins = Math.max(IDLE_FLOOR_MIN, Math.round(Number(value) || 0));
                 state.runpodConfig = { ..._runpodCfg(), idleTimeoutS: mins * 60 };
+                if (_idleConnected) _pushIdleTimeoutLive(mins * 60);
             });
             const hint = qs('#mpiSettingsRunpodIdleHint', root);
             if (hint) {
-                hint.textContent = podExists
-                    ? 'Locked while a Pod is connected — disconnect to change. Applies to the next Pod you connect.'
-                    : 'Auto-stops the Pod after this long with no activity (minimum 10). Set before connecting.';
+                hint.textContent = 'Auto-stops the Pod after this long with no generating, installing, or downloading (minimum 10). Editable any time — changes apply to a connected Pod immediately, with no reconnect.';
             }
+        }
+        // Reflect the LIVE value the wrapper reports (via /remote/comfy/status →
+        // /health) without re-mounting — write straight to the <input> while it
+        // isn't focused, so we never overwrite what the user is typing (MPI-103).
+        function _reflectLiveIdleTimeout(root, seconds) {
+            const s = Number(seconds);
+            if (!Number.isFinite(s) || s <= 0) return;
+            const input = qs('#mpiSettingsRunpodIdleTimeoutSlot .mpi-input__field', root);
+            if (!input || input === document.activeElement) return;
+            const mins = String(Math.round(s / 60));
+            if (input.value !== mins) input.value = mins;
         }
 
         function _engineBtnDisabled(disabled) {
@@ -510,11 +544,13 @@ export const MpiSettings = ComponentFactory.create({
             const ready = !!(status && status.ready);
             const running = !!(status && status.running);
             const connecting = !!(status && status.connecting);
-            // Lock the idle-timeout input whenever a Pod exists (ready / creating /
-            // connecting) — the value is baked at create time, so it's only editable
-            // before connecting. Done here (before any early return) so every status
-            // transition keeps the lock state honest.
-            _renderIdleTimeout(root, ready || running || connecting);
+            // Track whether a Pod is connected (ready / creating / connecting) so an
+            // idle-timeout edit knows to push LIVE vs. just store for the next create
+            // (MPI-103). The input stays editable in both states. Mount it once;
+            // reflect the wrapper's live value (from /health via status) in place.
+            _idleConnected = ready || running || connecting;
+            _renderIdleTimeout(root);
+            if (status && status.idleTimeoutS != null) _reflectLiveIdleTimeout(root, status.idleTimeoutS);
             // A create/reconnect started elsewhere (or before this panel remounted)
             // — the backend's _connecting flag survives a panel close/reopen, AND an
             // auto-connect-on-start boot (shell.js _initRemoteBoot) connects with no
@@ -544,12 +580,13 @@ export const MpiSettings = ComponentFactory.create({
                 _engineBtnLabelSet('Disconnect');
                 _engineBtnDisabled(false);
             } else {
-                // No Pod yet — Connect creates one, but only once a GPU AND a
-                // network volume are picked (a volumeless Pod cannot persist
-                // ComfyUI or models, so a volume is required, not optional).
+                // No Pod yet — Connect creates one once a GPU is picked. A volume-backed
+                // Pod also needs its volume (DC-locked, persists models); an "Any region"
+                // ephemeral Pod (MPI-78) needs only the GPU — the disk size has a default.
                 _setEngineStatusText(root, 'stopped');
                 _engineBtnLabelSet('Connect');
-                _engineBtnDisabled(!cfg.gpuType || !cfg.volumeId);
+                const needsVolume = !_isAnyRegion(cfg);
+                _engineBtnDisabled(!cfg.gpuType || (needsVolume && !cfg.volumeId));
             }
         }
 
@@ -629,7 +666,9 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineHint(root, 'Pick a GPU first.', true);
                 return;
             }
-            if (!cfg.volumeId) {
+            // A volume-backed Pod needs its volume; an "Any region" ephemeral Pod
+            // (MPI-78) does not — models download to the sized container disk instead.
+            if (!_isAnyRegion(cfg) && !cfg.volumeId) {
                 _setEngineHint(root, 'Create or select a network volume first — it stores ComfyUI and your models.', true);
                 return;
             }
@@ -661,9 +700,16 @@ export const MpiSettings = ComponentFactory.create({
                 // fixed on the live Pod), but a reconnect that falls through to a
                 // recreate needs it to bake the chosen timeout into the fresh Pod.
                 const idleTimeoutS = cfg.idleTimeoutS || IDLE_DEFAULT_S;
+                // MPI-78: "Any region" is a UI sentinel, not a real DC — send a null
+                // datacenter so the backend auto-places, and carry the chosen ephemeral
+                // container-disk size. A real DC sends its id and ignores containerDiskGb.
+                const anyRegion = _isAnyRegion(cfg);
+                const datacenter = anyRegion ? null : (cfg.datacenter || null);
+                const volumeId = anyRegion ? null : (cfg.volumeId || null);
+                const containerDiskGb = anyRegion ? _diskGbFromCfg(cfg) : undefined;
                 const body = warm
-                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId: cfg.volumeId || null, datacenter: cfg.datacenter || null, idleTimeoutS }
-                    : { gpuTypeId: cfg.gpuType, volumeId: cfg.volumeId || null, datacenter: cfg.datacenter || null, idleTimeoutS };
+                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, idleTimeoutS }
+                    : { gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, idleTimeoutS };
                 const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1005,6 +1051,22 @@ export const MpiSettings = ComponentFactory.create({
 
         const _stockRank = { High: 3, Medium: 2, Low: 1 };
 
+        // MPI-78: sentinel datacenter value for the no-volume "Any region" ephemeral
+        // mode. Picking it clears the volume, lets RunPod auto-place the Pod, lists
+        // GPUs DC-unbound, and exposes a container-disk size input. Distinct from a
+        // bare null (no DC chosen yet) so the UI can tell "not picked" from "Any region".
+        const ANY_REGION = '__any__';
+        function _isAnyRegion(cfg) { return (cfg || _runpodCfg()).datacenter === ANY_REGION; }
+        // Ephemeral container-disk size clamp (mirrors storage.js + remoteProxy.js).
+        const DISK_DEFAULT_GB = 100;
+        const DISK_MIN_GB = 20;
+        const DISK_MAX_GB = 500;
+        function _diskGbFromCfg(cfg) {
+            const n = Math.round(Number((cfg || _runpodCfg()).containerDiskGb));
+            if (!Number.isFinite(n)) return DISK_DEFAULT_GB;
+            return Math.min(DISK_MAX_GB, Math.max(DISK_MIN_GB, n));
+        }
+
         function _renderRunpodPickers(root) {
             const cfg = _runpodCfg();
             const dcSlot = qs('#mpiSettingsRunpodDcSlot', root);
@@ -1023,13 +1085,21 @@ export const MpiSettings = ComponentFactory.create({
                 return;
             }
 
-            const dcOptions = dcs
+            const dcRealOptions = dcs
                 .filter(dc => dc.storageSupport)
                 .map(dc => {
                     const count = (dc.gpuAvailability || []).filter(g => g.available).length;
                     const mine = _volumeForDc(dc.id) ? ' · volume' : '';
                     return { value: dc.id, label: dc.name || dc.id, meta: `${count} GPUs${mine}` };
                 });
+            // MPI-78: "Any region (no volume)" leads the list — RunPod auto-places the
+            // Pod and models download to ephemeral container disk (mirrors the console's
+            // "Any region" + Network volume "none"). Picking a real DC keeps the
+            // existing volume-backed flow.
+            const dcOptions = [
+                { value: ANY_REGION, label: 'Any region (no volume)', meta: 'Ephemeral — models download per session, no storage bill between sessions' },
+                ...dcRealOptions,
+            ];
             const dcInst = MpiDropdown.mount(dcSlot, {
                 options: dcOptions,
                 value: cfg.datacenter || '',
@@ -1037,9 +1107,10 @@ export const MpiSettings = ComponentFactory.create({
                 extraClasses: 'mpi-dropdown--runpod',
             });
             dcInst.on('change', async ({ value }) => {
-                // DC drives the volume: adopt the cubric-vision volume in the new DC
-                // (or None). gpuType cleared so the picker re-filters for the DC.
-                const vol = _volumeForDc(value);
+                // MPI-78: "Any region" → no DC-lock, no volume; gpuType cleared so the
+                // picker re-lists DC-unbound. A real DC drives its cubric-vision volume.
+                const anyRegion = value === ANY_REGION;
+                const vol = anyRegion ? null : _volumeForDc(value);
                 state.runpodConfig = {
                     ..._runpodCfg(),
                     datacenter: value,
@@ -1057,15 +1128,17 @@ export const MpiSettings = ComponentFactory.create({
                 _refreshEngineConnect(root);
             });
 
-            const dc = dcs.find(d => d.id === cfg.datacenter);
-            if (!dc) {
+            const anyRegion = _isAnyRegion(cfg);
+            const dc = anyRegion ? null : dcs.find(d => d.id === cfg.datacenter);
+            // Any-region lists DC-unbound; a real DC needs to be picked first.
+            if (!anyRegion && !dc) {
                 gpuSlot.appendChild(ce('div', {
                     className: 'mpi-settings__empty-row',
                     textContent: 'Pick a data center first.',
                 }));
                 return;
             }
-            const gpuOptions = _buildGpuOptions(dc.id);
+            const gpuOptions = _buildGpuOptions(anyRegion ? ANY_REGION : dc.id);
             const gpuInst = MpiDropdown.mount(gpuSlot, {
                 options: gpuOptions,
                 value: cfg.gpuType || '',
@@ -1120,17 +1193,36 @@ export const MpiSettings = ComponentFactory.create({
         function _buildGpuOptions(dcId) {
             const dcs = _runpodAvailability?.dataCenters || [];
             const gpus = _runpodAvailability?.gpuTypes || [];
-            const dc = dcs.find(d => d.id === dcId);
-            if (!dc) return [];
-            const availMap = new Map(
-                (dc.gpuAvailability || [])
-                    .filter(g => g.available)
-                    .map(g => [g.gpuTypeId, g.stockStatus])
-            );
+            const anyRegion = dcId === ANY_REGION;
+            // MPI-78: "Any region" aggregates availability across EVERY DC (best stock
+            // wins per GPU) so the user sees the full Secure-Cloud catalogue like the
+            // RunPod console; a real DC scopes to that DC's gpuAvailability only.
+            let availMap;
+            if (anyRegion) {
+                availMap = new Map();
+                for (const d of dcs) {
+                    for (const g of (d.gpuAvailability || [])) {
+                        if (!g.available) continue;
+                        const cur = availMap.get(g.gpuTypeId);
+                        if (!cur || (_stockRank[g.stockStatus] || 0) > (_stockRank[cur] || 0)) {
+                            availMap.set(g.gpuTypeId, g.stockStatus);
+                        }
+                    }
+                }
+            } else {
+                const dc = dcs.find(d => d.id === dcId);
+                if (!dc) return [];
+                availMap = new Map(
+                    (dc.gpuAvailability || [])
+                        .filter(g => g.available)
+                        .map(g => [g.gpuTypeId, g.stockStatus])
+                );
+            }
             // MPI-88: first option is the no-GPU "download mode" Pod. Picking it sets
             // gpuType to the CPU sentinel, which satisfies the Connect guard and
             // creates a CPU-only Pod (computeType:'CPU') — install models to the
             // volume with no GPU billing, then switch to a real card to generate.
+            // It needs a volume to download onto, so it is hidden in Any-region mode.
             const cpuOption = {
                 value: '__cpu__',
                 label: 'No GPU — download only',
@@ -1159,14 +1251,15 @@ export const MpiSettings = ComponentFactory.create({
                     };
                 })
                 .sort((a, b) => b._rank - a._rank);
-            return [cpuOption, ...gpuOptions];
+            return anyRegion ? gpuOptions : [cpuOption, ...gpuOptions];
         }
 
         // Availability URL, scoped to the selected DC so GPU RAM (lowestPrice) is
-        // per-DC accurate instead of a global floor. No DC yet -> global fallback.
+        // per-DC accurate instead of a global floor. No DC (or "Any region", MPI-78)
+        // -> global call: the un-scoped lowestPrice floor across all DCs.
         function _availabilityUrl() {
             const dcId = _runpodCfg().datacenter;
-            return dcId
+            return (dcId && dcId !== ANY_REGION)
                 ? `/runpod/gpu-availability?dataCenterId=${encodeURIComponent(dcId)}`
                 : '/runpod/gpu-availability';
         }
@@ -1207,6 +1300,40 @@ export const MpiSettings = ComponentFactory.create({
             if (!volumeSlot) return;
             volumeSlot.innerHTML = '';
             const cfg = _runpodCfg();
+
+            // MPI-78: "Any region" mode has no network volume — instead the user sizes
+            // the ephemeral container disk the models download into (lost on Terminate).
+            if (_isAnyRegion(cfg)) {
+                if (cfg.volumeId) state.runpodConfig = { ..._runpodCfg(), volumeId: null };
+                const wrap = ce('div', { className: 'mpi-settings__volume-row' });
+                const label = ce('label', {
+                    className: 'mpi-settings__field-label',
+                    textContent: 'Container disk (GB)',
+                });
+                const inputHost = ce('div');
+                wrap.appendChild(label);
+                wrap.appendChild(inputHost);
+                volumeSlot.appendChild(wrap);
+                const diskInst = MpiInput.mount(inputHost, {
+                    type: 'number',
+                    min: DISK_MIN_GB,
+                    max: DISK_MAX_GB,
+                    step: 10,
+                    value: _diskGbFromCfg(cfg),
+                    size: 'sm',
+                });
+                diskInst.on('change', ({ value }) => {
+                    const gb = Math.min(DISK_MAX_GB, Math.max(DISK_MIN_GB, Math.round(Number(value) || 0)));
+                    state.runpodConfig = { ..._runpodCfg(), containerDiskGb: gb };
+                });
+                const warn = ce('div', {
+                    className: 'mpi-settings__hint mpi-settings__hint--warn',
+                    textContent: 'Ephemeral — models download each session and are deleted when you Terminate the Pod. No storage bill between sessions. Size the disk for the models you plan to install. First generation includes a one-time accelerator compile (a few minutes).',
+                });
+                volumeSlot.appendChild(warn);
+                return;
+            }
+
             const vol = cfg.datacenter ? _volumeForDc(cfg.datacenter) : null;
 
             // Keep the saved volumeId in lock-step with the derived volume so the
@@ -1494,9 +1621,10 @@ export const MpiSettings = ComponentFactory.create({
             _initEngineConnect(root);
 
             // ── Idle-timeout input (non-secret) ──────────────────────────────
-            // Mount enabled; the first status poll locks it if a Pod is already up.
-            _idleDisabled = null;
-            _renderIdleTimeout(root, false);
+            // Always editable (MPI-103); the status poll sets _idleConnected so an
+            // edit pushes live vs. stores for the next create.
+            _idleMounted = false;
+            _renderIdleTimeout(root);
 
             // ── Delete-on-quit pref (non-secret) ─────────────────────────────
             const deleteOnQuitSlot = qs('#mpiSettingsRunpodDeleteOnQuitSlot', root);
