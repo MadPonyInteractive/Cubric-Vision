@@ -44,7 +44,17 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // LOCAL and the user Connects when wanted. When ON, boot auto-reconnects a Pod.
   // `enabled` is now purely "remote is available / show the panel", not "force remote".
   autoConnectOnStart: false,
+  // idleTimeoutS: idle-watchdog timeout baked into the Pod env at create time,
+  // stored in SECONDS (the wrapper unit), shown as minutes in Settings. Floor
+  // 10 min (600 s), default 15 min (900 s) — mirrors MpiSettings' IDLE_* clamps.
+  idleTimeoutS: 900,
 });
+
+// Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
+// IDLE_DEFAULT_S). A missing/corrupt value heals to the default; a sub-floor
+// value clamps up so the wrapper env never gets an out-of-range timeout.
+const IDLE_FLOOR_S = 600;
+const IDLE_DEFAULT_S = 900;
 
 // Non-secret RunPod prefs only — never the API key or wrapper token.
 function normalizeRunpodConfig(value = {}) {
@@ -57,7 +67,14 @@ function normalizeRunpodConfig(value = {}) {
     wasConnected: value?.wasConnected === true,
     deleteOnQuit: value?.deleteOnQuit === true,
     autoConnectOnStart: value?.autoConnectOnStart === true,
+    idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),
   };
+}
+
+function normalizeIdleTimeoutS(value) {
+  const s = Number(value);
+  if (!Number.isFinite(s) || s <= 0) return IDLE_DEFAULT_S;
+  return Math.max(IDLE_FLOOR_S, Math.round(s));
 }
 
 /** Wrap localStorage.getItem with JSON.parse + default fallback */

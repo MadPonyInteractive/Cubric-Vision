@@ -271,7 +271,10 @@ async function _bootApp() {
   // boot is a LOCAL boot and should honor the auto-start ComfyUI pref.)
   if (Storage.getAutoStartComfy() && !runpodCfg.autoConnectOnStart) {
     const { ComfyUIController } = await import('./services/comfyController.js');
-    ComfyUIController.ensureServerRunning();
+    // background: bring the engine up SILENTLY at launch — no blocking "Starting
+    // ComfyUI Engine…" overlay (auto-start is opt-in background prep; the overlay
+    // is reserved for the engine spinning up in front of a manual generation).
+    ComfyUIController.ensureServerRunning({ background: true });
   }
 }
 

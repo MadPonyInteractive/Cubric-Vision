@@ -231,7 +231,10 @@ export const ComfyUIController = {
             // Already running and ready — skip startup indicator to avoid flash.
             if (status.running && status.ready) return true;
 
-            Events.emit('comfy:starting');
+            // background: a boot auto-start brings the engine up silently — no
+            // blocking "Starting ComfyUI Engine…" overlay. Manual generation still
+            // emits it so the user sees the engine spinning up before their job.
+            if (!opts.background) Events.emit('comfy:starting');
 
             if (!status.running) {
                 clientLogger.info('comfy', 'Requesting ComfyUI server start');
