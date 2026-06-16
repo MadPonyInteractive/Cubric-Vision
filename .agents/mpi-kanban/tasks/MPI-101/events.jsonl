@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-101","at":"2026-06-16T12:50:00.000Z","actor":"claude","summary":"Build Pod image v0.4.5 all 3 profiles (cpu+cu124 CI, cu128 local) on reverted wrapper 0.2.7. App pinned v0.4.5 but only -cpu exists -> GPU connect IMAGE_NOT_FOUND. wrapper.py disk-block revert staged uncommitted in mpi-ci. Spun off MPI-100."}

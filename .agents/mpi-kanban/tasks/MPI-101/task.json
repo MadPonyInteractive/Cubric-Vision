@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-101",
+  "title": "Build Pod image v0.4.5 (all 3 profiles) — clean rebuild on wrapper 0.2.7 after MPI-100 disk-block revert",
+  "description": "The app is pinned to POD_IMAGE_VERSION v0.4.5 (routes/remoteProxy.js) but only the -cpu tag exists; -cu124 and -cu128 at v0.4.5 do NOT exist, so a GPU connect returns IMAGE_NOT_FOUND. Build all three v0.4.5 tags. CONTEXT: MPI-100 briefly added a statvfs `disk` block to wrapper.py /wrapper/stats (commit 58ff0fc, shipped as v0.4.5-cpu) but it was REVERTED — statvfs reads the multi-PB container overlay, not the RunPod network-volume QUOTA, so it was useless for a disk-full gate (disk-full is now handled reactively app-side). The wrapper.py revert is staged UNCOMMITTED in mpi-ci working tree (functionally == wrapper 0.2.7, + a 'do not re-add statvfs' warning comment). STEPS: (1) in c:\\AI\\Mpi\\mpi-ci, commit the reverted cubric-vision-pod/wrapper/wrapper.py + push main FIRST (gh workflow run builds the PUSHED ref). (2) Dispatch the CPU+cu124 CI build with only_profile BLANK: `gh workflow run cubric-vision-pod-image.yml --ref main -f manifest_version=0.4.5 -f wrapper_version=0.2.7 -f comfyui_ref=master -f push_latest=false`. (3) Build cu128 LOCALLY (Blackwell, CI-skipped — runner disk ceiling) per mpi-ci/cubric-vision-pod/README.md 'Build cu128 LOCALLY', tag v0.4.5-cu128, push, `wsl --shutdown` after. (4) Make GHCR package PUBLIC + anon-pull-verify ALL 3 tags (docker logout; docker manifest inspect v0.4.5-cpu/-cu124/-cu128). NOTE the v0.4.4 CI gotcha: only_profile=cpu SKIPS cu124 (job still 'success') — dispatch BLANK. App pin (remoteProxy.js v0.4.5 / WRAPPER_VERSION 0.2.7) is already committed by the MPI-100 owner. Image BUILDS authorized once user OKs; live Pod ops stay USER-only. See brief.md + [[project_mpi_ci_pod_build_procedure]] + [[project_pod_v043_stats_taesd]].",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-06-16T12:50:00Z",
+  "updated_at": "2026-06-16T12:50:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
