@@ -1,5 +1,7 @@
 {"schema":"mpi-kanban/task-files/v1","files":[
   {"path":"routes/remoteProxy.js","note":"Enriched /remote/comfy/status with throttled getPod podStatus fallback (MPI-96)."},
   {"path":"js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js","note":"_pollEngineReady detects EXITED/TERMINATED/DEAD past grace; manual Connect bails + deletes dead Pod (MPI-96)."},
-  {"path":"js/shell.js","note":"Boot auto-connect path (_pollRemoteReady/_initRemoteBoot) bails on dead host + deletes Pod — same bug as Settings, found mid-test (MPI-96)."}
+  {"path":"js/shell.js","note":"Boot auto-connect path (_pollRemoteReady/_initRemoteBoot) bails on dead host + deletes Pod — same bug as Settings, found mid-test (MPI-96)."},
+  {"path":"js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js","note":"ADDENDUM 2026-06-16: connecting&&!ready branch now shows an ENABLED Cancel (was disabled Connect) so an auto-connect-on-start boot Pod can be cancelled from Settings — _cancelConnect deletes the active Pod backend-side regardless of who started the connect (MPI-96 cancel follow-up)."},
+  {"path":"js/shell.js","note":"ADDENDUM 2026-06-16: _pollRemoteReady returns 'aborted' when status goes {running:false,ready:false,connecting:false,no podStatus} past grace (= user cancelled boot connect, delete-active flipped _mode off) so the boot loop stops instead of zombieing to the 20-min timeout + throwing a false 'Could not create a Pod' (MPI-96 cancel follow-up)."}
 ]}

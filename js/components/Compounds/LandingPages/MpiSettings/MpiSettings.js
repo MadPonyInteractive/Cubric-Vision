@@ -516,13 +516,17 @@ export const MpiSettings = ComponentFactory.create({
             // transition keeps the lock state honest.
             _renderIdleTimeout(root, ready || running || connecting);
             // A create/reconnect started elsewhere (or before this panel remounted)
-            // — the backend's _connecting flag survives a panel close/reopen, so
-            // honour it: disable Connect to prevent a duplicate create (the bug
-            // where status read "stopped" + Connect enabled mid-create).
+            // — the backend's _connecting flag survives a panel close/reopen, AND an
+            // auto-connect-on-start boot (shell.js _initRemoteBoot) connects with no
+            // panel involvement at all. Honour it by surfacing an ENABLED Cancel (not
+            // a dead Connect): _cancelConnect deletes the active Pod backend-side, so
+            // it aborts the boot connect just as well as a panel-started one. Without
+            // this, a boot auto-connect left the user with a disabled Connect and no
+            // way to stop a Pod that's already billing.
             if (connecting && !ready) {
                 _setEngineStatusText(root, 'connecting…');
-                _engineBtnLabelSet('Connect');
-                _engineBtnDisabled(true);
+                _engineBtnLabelSet('Cancel');
+                _engineBtnDisabled(false);
                 return;
             }
             if (ready) {

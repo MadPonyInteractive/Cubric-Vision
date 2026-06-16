@@ -337,6 +337,20 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
         Events.emit('remote:connect-progress', { pct: 0 });
         return 'not-running';
       }
+      // The user cancelled from Settings (or remote mode was otherwise turned off)
+      // mid-boot-connect: _cancelConnect → /remote/pod/delete-active flips _mode
+      // OFF, so the status route early-returns { running:false, ready:false,
+      // connecting:false } with NO podStatus. A healthy boot is never in this shape
+      // (the create window reports connecting:true, then a live podStatus once the
+      // Pod exists), so this uniquely means "deleted out from under us" — bail
+      // quietly so the boot loop doesn't zombie to the 20-min timeout and then throw
+      // a false "Could not create a Pod". Past the same grace window to skip the
+      // brief startup gap before _connecting flips on.
+      if (s && !s.running && !s.ready && !s.connecting && !s.podStatus
+          && Date.now() - start >= notRunningGraceMs) {
+        Events.emit('remote:connect-progress', { pct: 0 });
+        return 'aborted';
+      }
     } catch (_) { /* transient during cold pull / proxy 404 window */ }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
@@ -457,6 +471,15 @@ async function _initRemoteBoot(runpod) {
         showCancel: false,
       });
       dlg.el.show();
+      return;
+    }
+    // The user pressed Cancel in Settings mid-boot-connect — _cancelConnect already
+    // deleted the Pod, cleared the saved ids, and emitted local · offline + a
+    // "Connection cancelled" toast. Bail silently: no error dialog (this was
+    // deliberate), and `_bootConnected` stays false so the finally just confirms the
+    // already-resolved local · offline state.
+    if (ready === 'aborted') {
+      clientLogger.info('shell', '[RunPod] auto-connect: cancelled by user mid-boot — stopping the boot poll');
       return;
     }
     if (ready) {
