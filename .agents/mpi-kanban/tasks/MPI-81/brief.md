@@ -72,6 +72,26 @@ Full detail + the CODE-WRITTEN/VALIDATED status is in the **"NEXT BUILD CANDIDAT
 - cu124 + `-cpu` via CI; cu128 local on the Windows Docker box.
 - After build: GHCR public; USER redeploys a fresh Pod; live-verify per #6.
 
+### ✅ v0.4.2 BUILD COMPLETE — all 3 profiles on GHCR (2026-06-15)
+- `v0.4.2-cu124` — CI (live-verified L4: restart-comfy toast + I2V post-restart + `--cache-lru 2` no-OOM).
+- `v0.4.2-cpu` — CI (run 27569370330; `Dockerfile.cpu`, pushed).
+- `v0.4.2-cu128` — LOCAL Docker build (D: data root); torch 2.7.1+cu128 / cuda 12.8 smoke-passed; pushed (digest `928be15…`), pullable from GHCR.
+- WORKFLOW QUIRK to fix later: CI dispatch with `only_profile=cpu` still re-ran the cu124 matrix leg (re-push idempotent, harmless this round); `only_profile` doesn't gate the matrix. Minor follow-up, not blocking.
+
+### v0.4.1 weight-prebake LIVE TESTS (run on v0.4.2 Pods)
+- **auto-mask (yolo+SAM) — ✅ PASS (2026-06-15).** DETECT no 503, detail-with-mask worked, mask DOWNLOAD OK. Also confirmed the app-side bogus "Stopping…" toast fix (re-DETECT / empty-detect no longer fire `interrupt()` — `commandExecutor.js runAutoMask` cancel() no-ops once settled).
+- **interpolate (RIFE) — ✅ PASS (2026-06-15).** No 503 (RIFE weight baked). BUT first surfaced a remote video-input bug: `VHS_LoadVideoPath: video is not a valid path: <file>.mp4`. Root: `_uploadRemoteMedia` injected the BARE basename; VHS_LoadVideoPath resolves a literal path, not a basename against `--input-directory`. Fix (app-only, NO rebuild — wrapper already returns the path): `_uploadRemoteMedia` now injects the absolute Pod path (`/workspace/comfyui/input/<name>`) via `routes/remoteProxy.js /remote/upload/media` returning `out.path`. JS half committed **RunPod 3aad81e** (commandExecutor toast fix + comfyController path). Route half (`path: out.path`) sits UNCOMMITTED in `remoteProxy.js` alongside the Codex MPI-98 work — left for that owner (msg 70d179f8). VERIFIED LIVE: `interpolate_001` 16→32 FPS after a FULL APP RESTART (a renderer-only `location.reload` does NOT reload the Express route — server-side route change needs a process restart).
+- **upscale — ✅ PASS (2026-06-15).** `videoUpscale_001` 320×176 → 480×264 (x1.5), no 503, console clean. The video-path fix (above) covered it as predicted. **Full weight-prebake matrix verified: auto-mask + interpolate + upscale all PASS.**
+
+### 🐞 taesd preview prebake — CONFIRMED gap, batched with MPI-98 (next rebuild, NOT v0.4.2)
+CONFIRMED root cause (not a guess): the Pod image runs ComfyUI with `--preview-method taesd` (wrapper.py:162) but `git clone`s ComfyUI fresh — and the `models/vae_approx/` taesd weights are NOT in the git repo (they ship only with the portable bundle) and are NOT baked by the Dockerfile. Empty `vae_approx/` → taesd previewer falls back to latent2rgb → blocky/garbage LIVE PREVIEW. Final OUTPUT is unaffected (real VAE decode). Cosmetic only.
+**FIX (next image batch):** bake the full `vae_approx/` set into `/opt/ComfyUI/models/vae_approx/`, mirroring the local portable set — `taef1_decoder/encoder` (Wan/Flux — the one our Wan T2V previews need), plus `taesd_`, `taesdxl_`, `taesd3_` decoder/encoder pairs. ComfyUI loads encoder+decoder for preview, so bake the pairs. Source = comfyanonymous/madebyollin taesd releases. Same prebake pattern as candidate #4.
+
+> **PER USER (2026-06-15): all further IMAGE changes are batched with MPI-98.** The next Pod-image rebuild bundles (a) MPI-98 `GET /wrapper/stats` (cgroup-v2 RAM + nvidia-smi VRAM), and (b) this taesd `vae_approx/` prebake. No standalone v0.4.x build for either.
+
+### 🐞 NEW BUG (app/image, NOT a v0.4.2 blocker): latent previews look like crap on remote
+- During a remote detail/upscale gen the LATENT preview (taesd) renders blocky/garbage (final output unaffected). Likely the taesd VAE-approx decoder weights (`taesd_decoder.pth` / `taef1`/`taesdxl` variants in `models/vae_approx/`) are NOT baked into the Pod image → ComfyUI `--preview-method taesd` falls back to low-quality latent2rgb. FIX = bake the taesd decoder set into `/opt/ComfyUI/models/vae_approx/` (next image batch) — same lazy-weight pattern as candidate #4. Backlog, not v0.4.2.
+
 ### NOT a build input from the parallel sessions (2026-06-15)
 - **#7** (LOCAL·OFFLINE-while-billing desync) — app-only, **no rebuild**.
 - **MPI-94** (UX polish), **MPI-80** (session-cost badge), **MPI-86** (cancel-connect) — all app-side, **zero rebuild impact**.

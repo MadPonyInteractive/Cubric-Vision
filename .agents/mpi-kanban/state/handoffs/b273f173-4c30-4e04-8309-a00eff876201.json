@@ -1,0 +1,132 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b273f173-4c30-4e04-8309-a00eff876201",
+  "generated_at": "2026-06-15T20:00:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-81 v0.4.2 — wrapper-owns-ComfyUI + /wrapper/restart-comfy (built + live-verified on L4); GC shared-dep fix; remaining live tests + cu128/cpu builds",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-81 (Pod-image rebuild batch). This session: add the wrapper restart-ComfyUI capability so a per-model custom_node install no longer forces a manual Disconnect/Connect, then live-verify on a Pod.",
+    "status": "in_progress",
+    "summary": "v0.4.2 (wrapper 0.2.5) BUILT (cu124 public on GHCR) and LIVE-VERIFIED on an L4: the ComfyUI auto-restart toast fired (no error/GitHub dialog), I2V gen succeeded post-restart, and --cache-lru 2 was confirmed (RAM dropped to ~8% between gens instead of staying pinned ~60%; I2V->T2V switch survived with no OOM). Remaining: build cu128 (local) + cpu (CI) for v0.4.2; verify the v0.4.1 weight-prebake features (mask/interpolate/upscale 503s); fix several robustness bugs found this session."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "v0.4.2-cu124 image built + pushed + public on GHCR (wrapper now OWNS+supervises ComfyUI via ComfyManager; new POST /wrapper/restart-comfy; start.sh execs the wrapper as container main proc, exports CUBRIC_COMFY_*/CUBRIC_USE_SAGE)",
+      "App side: comfyController.js remote comfyNeedsRestart branch now calls /proxy/restart-comfy + toast 'Loading new nodes...' + auto-retry; 404 fallback for old image. remoteProxy.js /proxy/restart-comfy passthrough. Bumped v0.4.1->v0.4.2, wrapper 0.2.4->0.2.5.",
+      "LIVE VERIFIED on L4 (Pod 2ztby3j2oe0ek0, v0.4.2-cu124): restart toast fired on I2V gen after installing the Painter node onto a running ComfyUI; NO error/GitHub dialog; I2V video generated. Valid repro = node installed on a LIVE ComfyUI (a fresh-Pod boot scans nodes at startup and does NOT exercise the restart path).",
+      "--cache-lru 2 VERIFIED: RAM dropped to ~8% (4.8GiB) between gens (was pinned ~60%/35GiB before); I2V->T2V switch on L4 hit 80% during T2V load then completed — no OOM (candidate #1 proven).",
+      "GC shared-dep fix (commit 1c6b800, app-only): remote uninstall used the dead backend MODELS[].installed flag and deleted SHARED deps (uninstalling I2V trashed wan_2.1_vae + umt5 that T2V shares). New _remoteSharedDepIds resolves from the Pod volume via remoteModelsCheck; fails safe (aborts if it can't verify).",
+      "MPI-95 install-progress app fix (commit dc27f33) shipped earlier this session + user-accepted; the residual 80% snap is an aria2c -x16 preallocation artifact, not app math.",
+      "Created MPI-97 (parallel model installs) card; logged MPI-94 G2 revisit (stopping-toast is unwanted on user-initiated stop)."
+    ],
+    "pending": [
+      "Build cu128 (LOCAL Docker on D:) + cpu (CI) for v0.4.2 — app requests v0.4.2 for ALL profiles, so Blackwell cards + CPU download Pods will fail to pull until these exist. Only v0.4.2-cu124 is built.",
+      "Verify v0.4.1 weight-prebake features still pass on v0.4.2: auto-mask (yolo+SAM), interpolate (RIFE), upscale (4x) — no more 503s. User was about to test masks.",
+      "Push the RunPod app commits if/when the user wants them shared (dea1681, 1c6b800 are LOCAL on RunPod, unpushed).",
+      "Backlog robustness bugs (app-side, NOT v0.4.2): stuck _modelJobs no-op (Install/Uninstall buttons do nothing until app restart); SSE-drop hang (install event stream drops -> bar stuck at 100% though file finished -> poll /wrapper/models/install/active as fallback); MPI-97 concurrent installs; install-collision error+GitHub dialog -> toast; orphan .part cleanup (wrapper); paid-Pod-shows-LOCAL desync (#7).",
+      "When all live tests pass + cu128/cpu built: move MPI-81 to done (USER decides)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-81",
+    "title": "Next Pod-image rebuild batch",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-81/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-81/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "build images (cu128 local Docker, cpu via CI gh workflow run only_profile=cpu)",
+    "edit app code on RunPod branch (stage by explicit path, commit --no-verify)",
+    "edit mpi-ci cubric-vision-pod/ + commit+push mpi-ci main BEFORE any gh workflow run"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-81 brief.md updated: candidate #6 (restart-comfy) + #7 (pod desync) added; #1-#5 marked shipped in v0.4.1; build-ready preflight current",
+      "Memory written: project_remote_comfy_restart_v042.md (restart feature + RunPod-op truth table + GC fix + open bugs); project_remote_install_progress_truth.md; project_mpi81_pod_v041_weight_prebake.md. All indexed in MEMORY.md.",
+      "Card events logged for every step incl. the PASS"
+    ],
+    "pending": [
+      "After cu128/cpu built + all live tests pass: update mpi-ci README preflight (remove the 'v0.4.2 IN PROGRESS' block), promote durable facts, move MPI-81 to done.",
+      "Fix/route the backlog bugs (MPI-97 + the stuck-job + SSE-recover) — separate from v0.4.2."
+    ]
+  },
+  "next_action": {
+    "description": "Finish MPI-81 v0.4.2: (1) build cu128 LOCALLY on Docker (D: data root) per mpi-ci/cubric-vision-pod/README.md with CUBRIC_MANIFEST_VERSION=0.4.2 WRAPPER_VERSION=0.2.5, smoke-check, push; (2) build cpu via CI: cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref main -f manifest_version=0.4.2 -f wrapper_version=0.2.5 -f comfyui_ref=master -f push_latest=false -f only_profile=cpu; (3) help the user finish the v0.4.1 weight-prebake live tests (auto-mask/interpolate/upscale = no 503). mpi-ci is already committed+pushed (9b0a07e). USER runs all live Pod ops; image BUILDS are pre-authorized.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Wrapper OWNS+supervises ComfyUI (moved launch out of start.sh) — chosen over a start.sh supervise-loop. /wrapper/restart-comfy kills+relaunches the wrapper's own child cleanly. Unexpected ComfyUI death -> wrapper os._exit(1) -> start.sh (now execs wrapper) brings container down (preserves the old wait -n half-up-Pod guard).",
+      "Folded restart-comfy into the MPI-81 rebuild batch (one build), not a separate card/build.",
+      "RunPod console 'Restart Pod' = NO-OP for reloading ComfyUI; 'Reset Pod' wipes the container; only Stop->Start reloads ComfyUI but is a full GPU reboot — hence the wrapper endpoint. (Tested live.)",
+      "Build cu124 FIRST + live-verify before spending the big local cu128 build (user: builds block everything). cpu does NOT add restart capability (ComfyManager inert in download mode) but MUST be rebuilt at v0.4.2 so the app's v0.4.2 -cpu request resolves.",
+      "GC shared-dep guard must read volume truth (remoteModelsCheck), never the backend MODELS[].installed flag which is always undefined in Node."
+    ],
+    "constraints": [
+      "RunPod branch is the shared integration trunk (v1.1.0): stage by explicit path, commit only your own files, --no-verify per convention.",
+      "mpi-ci is a SEPARATE private repo; cubric-vision-pod/ is a subfolder. COMMIT+PUSH mpi-ci main BEFORE gh workflow run (dispatch builds the pushed ref). LF endings matter for start.sh/wrapper.py (autocrlf=true; committed blobs normalize to LF — verify 0 CR).",
+      "cu128 is LOCAL-BUILD-ONLY (GitHub runner disk ceiling); cu124+cpu build in CI. Docker data root already on D:\\DockerData (C: is space-constrained). Run wsl --shutdown after a local build to free VM RAM.",
+      "USER runs ALL live Pod create/delete/connect ops; agent triggers image BUILDS only.",
+      "Valid restart-feature repro: the node must install onto an ALREADY-RUNNING ComfyUI (auto-connect-on-start boots a fresh Pod that scans nodes at startup and skips the restart path).",
+      "L4 = 57.74GiB container RAM (the OOM-prone box); video gen is system-RAM-bound not VRAM-bound.",
+      "/proxy/restart-comfy success path is SILENT in logs/app.log (logs only on error); the on-screen toast is the proof it fired.",
+      "Several app-side robustness bugs remain (stuck-job no-op, SSE-drop hang) — a fresh app restart clears stuck _modelJobs state."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (ComfyManager + /wrapper/restart-comfy + startup spawn) — committed+pushed 9b0a07e",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (exec wrapper, export launch params) — 9b0a07e",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md (v0.4.2 preflight) — 9b0a07e",
+      "routes/remoteProxy.js (v0.4.2/0.2.5 + /proxy/restart-comfy passthrough) — committed RunPod dea1681",
+      "js/services/comfyController.js (auto-restart + toast + auto-retry + 404 fallback) — dea1681",
+      "routes/downloadManager.js (_remoteSharedDepIds GC fix) — committed RunPod 1c6b800",
+      ".agents/mpi-kanban/tasks/MPI-81/brief.md + events.jsonl (candidates #6/#7, pass log)",
+      ".agents/mpi-kanban/tasks/MPI-97/* (new parallel-installs card)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-81/brief.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "routes/remoteProxy.js",
+      "js/services/comfyController.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "project_remote_comfy_restart_v042",
+      "project_mpi81_pod_v041_weight_prebake",
+      "project_mpi_ci_pod_build_procedure",
+      "project_runpod_branch_v110",
+      "project_video_gen_ram_wall",
+      "project_remote_install_progress_truth"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-15T20:00:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-81 (Cubric-Vision Pod-image rebuild batch) on the RunPod branch. Read .agents/mpi-kanban/state/handoffs/b273f173-4c30-4e04-8309-a00eff876201.json and the MPI-81 brief, then use mpi-continue. CONTEXT: v0.4.2 (wrapper 0.2.5) is BUILT and LIVE-VERIFIED on an L4 — the wrapper now owns ComfyUI and POST /wrapper/restart-comfy lets the app auto-restart ComfyUI (toast 'Loading new nodes...', no error/GitHub dialog) when a per-model node installs; --cache-lru 2 is also confirmed (no OOM on I2V->T2V switch). Only v0.4.2-cu124 exists on GHCR. NEXT ACTION: build cu128 LOCALLY on Docker (D: root) and cpu via CI (gh workflow run ... only_profile=cpu) for v0.4.2 — both are needed because the app requests v0.4.2 for all profiles; then help the user finish the remaining v0.4.1 weight-prebake live tests (auto-mask/interpolate/upscale must not 503). mpi-ci is committed+pushed (9b0a07e); app commits dea1681 + 1c6b800 are local on RunPod (unpushed). USER runs all live Pod ops; image builds are pre-authorized. Several app-side robustness bugs are logged as backlog (stuck-job button no-op, SSE-drop install hang, MPI-97 concurrent installs, MPI-94 G2 stopping-toast, pod-shows-local desync) — do NOT pull them into v0.4.2."
+}
