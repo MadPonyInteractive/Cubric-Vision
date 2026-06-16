@@ -74,6 +74,14 @@ export const MpiModal = ComponentFactory.create({
         };
 
         el.show = () => {
+            // Reconcile the guard against real DOM. _isShown can desync to a stale
+            // `true` when this modal's backdrop was torn down by something other than
+            // el.hide() — e.g. a `ui:close-all-popups` pulse, an Overlays.reset(), or
+            // the self-cleanup observer firing during an unrelated body re-render
+            // (MpiModelManager's install-driven renderList()). Without this, a hidden
+            // singleton dialog (MpiOkCancel) silently no-ops on the next show()
+            // because the guard below early-returns. (MPI-99)
+            if (_isShown && !_backdrop) _isShown = false;
             if (_isShown) return;  // already visible — skip (idempotent)
             _overlayEntry = { show: _doShow, hide: el.hide, id: el };
             const { zIndex } = Overlays.request(_overlayEntry);
