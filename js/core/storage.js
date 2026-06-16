@@ -48,6 +48,11 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // stored in SECONDS (the wrapper unit), shown as minutes in Settings. Floor
   // 10 min (600 s), default 15 min (900 s) — mirrors MpiSettings' IDLE_* clamps.
   idleTimeoutS: 900,
+  // containerDiskGb: size (GB) of the ephemeral container disk for a no-volume
+  // "Any region" Pod (MPI-78). Only used when volumeId is null — models download
+  // here and die with the Pod. Default 100; clamped server-side. Ignored when a
+  // network volume is attached (models live on the volume).
+  containerDiskGb: 100,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
@@ -68,7 +73,17 @@ function normalizeRunpodConfig(value = {}) {
     deleteOnQuit: value?.deleteOnQuit === true,
     autoConnectOnStart: value?.autoConnectOnStart === true,
     idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),
+    containerDiskGb: normalizeContainerDiskGb(value?.containerDiskGb),
   };
+}
+
+// Ephemeral container-disk size (GB) for no-volume Pods (MPI-78). Heal a
+// missing/corrupt value to the 100GB default; clamp to the same 20–500 band the
+// backend enforces so a stored value never drives an out-of-range create.
+function normalizeContainerDiskGb(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return 100;
+  return Math.min(500, Math.max(20, n));
 }
 
 function normalizeIdleTimeoutS(value) {

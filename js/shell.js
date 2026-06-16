@@ -407,10 +407,17 @@ async function _initRemoteBoot(runpod) {
   let _bootConnected = false; // MPI-73: resolves the 'connecting' phase
   try {
     const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
+    // MPI-78: "__any__" is the UI sentinel for the no-volume "Any region" ephemeral
+    // mode — translate it to a null datacenter (backend auto-places) and carry the
+    // saved container-disk size. A real DC sends its id; containerDiskGb is ignored.
+    const anyRegion = runpod.datacenter === '__any__';
+    const datacenter = anyRegion ? null : (runpod.datacenter || null);
+    const volumeId = anyRegion ? null : (runpod.volumeId || null);
+    const containerDiskGb = anyRegion ? (runpod.containerDiskGb || 100) : undefined;
     const body = warm
-      ? { podId: runpod.podId, gpuTypeId: runpod.gpuType, volumeId: runpod.volumeId || null, datacenter: runpod.datacenter || null }
-      : { gpuTypeId: runpod.gpuType, volumeId: runpod.volumeId || null, datacenter: runpod.datacenter || null };
-    clientLogger.info('shell', `[RunPod] auto-connect-on-start: ${warm ? 'reconnect' : 'create'} gpu=${runpod.gpuType} dc=${runpod.datacenter || 'none'} vol=${runpod.volumeId || 'none'} podId=${runpod.podId || 'none'}`);
+      ? { podId: runpod.podId, gpuTypeId: runpod.gpuType, volumeId, datacenter, containerDiskGb }
+      : { gpuTypeId: runpod.gpuType, volumeId, datacenter, containerDiskGb };
+    clientLogger.info('shell', `[RunPod] auto-connect-on-start: ${warm ? 'reconnect' : 'create'} gpu=${runpod.gpuType} dc=${datacenter || 'any'} vol=${volumeId || 'none'} podId=${runpod.podId || 'none'}`);
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

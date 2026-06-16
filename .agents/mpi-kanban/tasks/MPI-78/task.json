@@ -2,12 +2,18 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-78",
   "title": "Allow the user not to use the data center.",
-  "description": "If no datacenter is selected, no network volume is set up, users should still be able to select a card and run a pod without a network volume, since we already have to download our image. The only thing left would be downloading the models. Viable for a single-model user. NOT BLOCKED (2026-06-15): the model-download speed-up (aria2c) is already in the current Pod images, so no rebuild gate — app-side work only (no-volume Secure Cloud Pod + downloads to ephemeral container storage), independent of the MPI-81 rebuild batch. We would still use a secure cloud. See brief.md.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "pending",
+  "description": "No-volume \"Any region\" ephemeral GPU Pod: user picks container-disk size, models download to ephemeral container disk, Terminate stops all spend. App-side only, NO image rebuild (start.sh works on ephemeral /workspace). See plan.md / brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Claude implementer — MPI-78 no-volume ephemeral Pod",
+  "attention": {
+    "state": "cleared",
+    "reason": "Verified live (2026-06-16): ephemeral model lands on the 60GB container disk (7GB/12%), default 20GB volume unused (0 bytes). cu124 rebuilt with the start.sh /cubric-data fix.",
+    "updated_at": "2026-06-16T16:50:00.000Z"
+  },
   "created_at": "2026-06-14T07:25:02.575Z",
-  "updated_at": "2026-06-16T07:35:33.491Z",
+  "updated_at": "2026-06-16T16:50:00.000Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
