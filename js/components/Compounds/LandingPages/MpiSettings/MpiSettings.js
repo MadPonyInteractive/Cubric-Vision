@@ -145,11 +145,6 @@ export const MpiSettings = ComponentFactory.create({
                             <span class="mpi-settings__hint">Secure Cloud only. Stock is a live hint (High / Medium / Low / N/A) — availability drifts; the RunPod console is ground truth.</span>
                         </div>
                         <div class="mpi-settings__form-group">
-                            <label class="mpi-settings__field-label">Idle timeout (minutes)</label>
-                            <div id="mpiSettingsRunpodIdleTimeoutSlot"></div>
-                            <span class="mpi-settings__hint" id="mpiSettingsRunpodIdleHint">Auto-stops the Pod after this long with no generating, installing, or downloading (minimum 10). Editable any time — changes apply to a connected Pod immediately, with no reconnect.</span>
-                        </div>
-                        <div class="mpi-settings__form-group">
                             <div class="mpi-settings__runpod-connect-row">
                                 <span class="mpi-settings__runpod-status" id="mpiSettingsRunpodEngineStatus">Remote engine: —</span>
                                 <div id="mpiSettingsRunpodConnectSlot"></div>
@@ -362,8 +357,6 @@ export const MpiSettings = ComponentFactory.create({
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
         let _engineBtnLabel = 'Connect'; // tracks the button label (instance has no props getter)
-        let _idleMounted = false;       // idle-timeout input mounted once (always editable now — MPI-103)
-        let _idleConnected = false;     // is a Pod currently connected? (drives the live-push on change)
 
         // MpiButton imperative API lives on the instance's `.el`, not the
         // instance itself (rule: callers use el.setLabel/el.setDisabled).
@@ -371,77 +364,6 @@ export const MpiSettings = ComponentFactory.create({
             _engineBtnLabel = label;
             _engineConnectInst?.el?.setLabel?.(label);
         }
-        // Idle-watchdog timeout. Stored in runpodConfig as SECONDS (the wrapper env
-        // unit); displayed as MINUTES. Floor 10 min / default 15 min, mirrored from
-        // the backend clamp. MPI-103: the input is EDITABLE at all times — when a Pod
-        // is connected, a change pushes the new value LIVE to the wrapper
-        // (POST /proxy/idle-timeout) so it takes effect with no recreate; when no Pod
-        // exists, the value is just stored so the next fresh create bakes it in.
-        // Mount the input ONCE (MpiInput has no imperative setter — re-mounting would
-        // clobber an in-progress edit); the live /health value is reflected in place
-        // via the raw <input> only while it isn't focused.
-        const IDLE_FLOOR_MIN = 10;
-        const IDLE_DEFAULT_S = 900;
-        function _idleMinutesFromCfg(cfg) {
-            const s = Number(cfg.idleTimeoutS);
-            return Math.round((Number.isFinite(s) && s > 0 ? s : IDLE_DEFAULT_S) / 60);
-        }
-        async function _pushIdleTimeoutLive(seconds) {
-            try {
-                const res = await fetch('/proxy/idle-timeout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seconds }),
-                });
-                if (res.ok) {
-                    Events.emit('ui:success', { message: 'Idle timeout updated.' });
-                } else if (res.status === 404) {
-                    // Older image without the live-update endpoint — the value is kept
-                    // in runpodConfig and will apply on the next fresh create.
-                    Events.emit('ui:warning', { message: 'Idle timeout saved — applies on the next new Pod.' });
-                } else {
-                    Events.emit('ui:warning', { message: 'Could not update idle timeout — saved for the next Pod.' });
-                }
-            } catch (err) {
-                clientLogger.warn('settings', '[RunPod] live idle-timeout push failed', err);
-                Events.emit('ui:warning', { message: 'Could not update idle timeout — saved for the next Pod.' });
-            }
-        }
-        function _renderIdleTimeout(root) {
-            const slot = qs('#mpiSettingsRunpodIdleTimeoutSlot', root);
-            if (!slot) return;
-            if (_idleMounted) return; // mount once — never clobber an in-progress edit
-            _idleMounted = true;
-            slot.innerHTML = '';
-            const inst = MpiInput.mount(slot, {
-                type: 'number',
-                min: IDLE_FLOOR_MIN,
-                step: 5,
-                value: _idleMinutesFromCfg(_runpodCfg()),
-                size: 'sm',
-            });
-            inst.on('change', ({ value }) => {
-                const mins = Math.max(IDLE_FLOOR_MIN, Math.round(Number(value) || 0));
-                state.runpodConfig = { ..._runpodCfg(), idleTimeoutS: mins * 60 };
-                if (_idleConnected) _pushIdleTimeoutLive(mins * 60);
-            });
-            const hint = qs('#mpiSettingsRunpodIdleHint', root);
-            if (hint) {
-                hint.textContent = 'Auto-stops the Pod after this long with no generating, installing, or downloading (minimum 10). Editable any time — changes apply to a connected Pod immediately, with no reconnect.';
-            }
-        }
-        // Reflect the LIVE value the wrapper reports (via /remote/comfy/status →
-        // /health) without re-mounting — write straight to the <input> while it
-        // isn't focused, so we never overwrite what the user is typing (MPI-103).
-        function _reflectLiveIdleTimeout(root, seconds) {
-            const s = Number(seconds);
-            if (!Number.isFinite(s) || s <= 0) return;
-            const input = qs('#mpiSettingsRunpodIdleTimeoutSlot .mpi-input__field', root);
-            if (!input || input === document.activeElement) return;
-            const mins = String(Math.round(s / 60));
-            if (input.value !== mins) input.value = mins;
-        }
-
         function _engineBtnDisabled(disabled) {
             _engineConnectInst?.el?.setDisabled?.(disabled);
         }
@@ -544,13 +466,6 @@ export const MpiSettings = ComponentFactory.create({
             const ready = !!(status && status.ready);
             const running = !!(status && status.running);
             const connecting = !!(status && status.connecting);
-            // Track whether a Pod is connected (ready / creating / connecting) so an
-            // idle-timeout edit knows to push LIVE vs. just store for the next create
-            // (MPI-103). The input stays editable in both states. Mount it once;
-            // reflect the wrapper's live value (from /health via status) in place.
-            _idleConnected = ready || running || connecting;
-            _renderIdleTimeout(root);
-            if (status && status.idleTimeoutS != null) _reflectLiveIdleTimeout(root, status.idleTimeoutS);
             // A create/reconnect started elsewhere (or before this panel remounted)
             // — the backend's _connecting flag survives a panel close/reopen, AND an
             // auto-connect-on-start boot (shell.js _initRemoteBoot) connects with no
@@ -696,10 +611,6 @@ export const MpiSettings = ComponentFactory.create({
             let _connectSucceeded = false; // MPI-73: resolves the 'connecting' phase
             try {
                 const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
-                // idleTimeoutS rides on both bodies: a warm resume ignores it (env is
-                // fixed on the live Pod), but a reconnect that falls through to a
-                // recreate needs it to bake the chosen timeout into the fresh Pod.
-                const idleTimeoutS = cfg.idleTimeoutS || IDLE_DEFAULT_S;
                 // MPI-78: "Any region" is a UI sentinel, not a real DC — send a null
                 // datacenter so the backend auto-places, and carry the chosen ephemeral
                 // container-disk size. A real DC sends its id and ignores containerDiskGb.
@@ -708,8 +619,8 @@ export const MpiSettings = ComponentFactory.create({
                 const volumeId = anyRegion ? null : (cfg.volumeId || null);
                 const containerDiskGb = anyRegion ? _diskGbFromCfg(cfg) : undefined;
                 const body = warm
-                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, idleTimeoutS }
-                    : { gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, idleTimeoutS };
+                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb }
+                    : { gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb };
                 const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1619,12 +1530,6 @@ export const MpiSettings = ComponentFactory.create({
 
             // ── Remote engine Connect / Disconnect + status ──────────────────
             _initEngineConnect(root);
-
-            // ── Idle-timeout input (non-secret) ──────────────────────────────
-            // Always editable (MPI-103); the status poll sets _idleConnected so an
-            // edit pushes live vs. stores for the next create.
-            _idleMounted = false;
-            _renderIdleTimeout(root);
 
             // ── Delete-on-quit pref (non-secret) ─────────────────────────────
             const deleteOnQuitSlot = qs('#mpiSettingsRunpodDeleteOnQuitSlot', root);

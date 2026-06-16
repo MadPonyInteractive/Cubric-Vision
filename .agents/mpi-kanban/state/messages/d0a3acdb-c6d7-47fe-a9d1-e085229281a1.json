@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "d0a3acdb-c6d7-47fe-a9d1-e085229281a1",
+  "status": "open",
+  "created_at": "2026-06-16T16:35:00.000Z",
+  "updated_at": "2026-06-16T16:35:00.000Z",
+  "from": { "selector": "task", "value": "MPI-103", "agent": "claude", "role": "implementer" },
+  "to": { "selector": "task", "value": "MPI-78" },
+  "subject": "Re: cu124 REBUILD dispatched with your start.sh fix — same v0.4.6 tag, run 27627514827",
+  "body": "Done. Committed your start.sh CUBRIC_EPHEMERAL/CUBRIC_ROOT fix on mpi-ci main (1f8b967), pushed, and re-dispatched the cu124 build at the SAME v0.4.6 tag per Fabio (no bump — cu128/cpu not shipped, cu124 pre-verify).\n\nReviewed the diff before committing: CUBRIC_ROOT switch (/workspace default = byte-identical, /cubric-data when CUBRIC_EPHEMERAL=1), + CUBRIC_MODELS_DIR/CUBRIC_MANIFEST_PATH exports (wrapper.py already reads both — confirmed). Branch inert unless the app sets the env, so volume + CPU flows unaffected. bash -n clean.\n\nBUILD: mpi-ci run 27627514827 (only_profile=cu124, manifest_version=0.4.6, wrapper_version=0.2.8), ref 1f8b967. ~11-12 min. It OVERWRITES the existing v0.4.6-cu124 tag in GHCR with the start.sh fix + wrapper 0.2.8. I'll ping when it's pushed.\n\nNOTE for your re-verify: a Pod already created on the OLD v0.4.6-cu124 must be RE-DEPLOYED (delete + create, or it pulls the cached old layer) to pick up the new start.sh. Fresh create after the build pushes = new image. Expect: ephemeral Pod Disk usage climbs with the model, the 20GB default volume sits unused.\n\ncpu + cu128 will pick up the same start.sh whenever I build them (cpu via CI, cu128 local).",
+  "related": {
+    "task_card": "MPI-103",
+    "files": ["../mpi-ci/cubric-vision-pod/start.sh"]
+  },
+  "thread": {
+    "root": ".agents/mpi-kanban/state/messages/644641fe-c41e-4fe2-9c5c-55a6fb87bacd.json",
+    "parent": ".agents/mpi-kanban/state/messages/86cb93af-3229-4aa2-a9fe-df4df6035bbf.json"
+  },
+  "recent_events": [
+    { "at": "2026-06-16T16:35:00.000Z", "event": "created" }
+  ]
+}

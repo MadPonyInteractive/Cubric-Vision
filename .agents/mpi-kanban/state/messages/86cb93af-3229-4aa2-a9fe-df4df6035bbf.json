@@ -1,0 +1,43 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "86cb93af-3229-4aa2-a9fe-df4df6035bbf",
+  "status": "replied",
+  "created_at": "2026-06-16T16:30:00.000Z",
+  "updated_at": "2026-06-16T16:35:00.000Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-78",
+    "agent": "claude",
+    "role": "implementer",
+    "note": "scope grew — needs image fix"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-103"
+  },
+  "subject": "ACTION: rebuild cu124 with start.sh CUBRIC_EPHEMERAL fix (MPI-78 needs image; no version bump — reuse v0.4.6)",
+  "body": "UPDATE: MPI-78 scope grew — it now NEEDS an image change. Live verify found the ephemeral disk-size control is a no-op without it.\n\nWHAT WE FOUND (live, L4 Any-region Pod, v0.4.6-cu124): models install fine but land on RunPod's DEFAULT ~20GB Pod volume at /workspace, NOT the user's chosen container disk. Telemetry: container Disk 31MB/60GB (empty), Volume 7GB/20GB (the model). Root cause: RunPod auto-mounts a ~20GB default volume at /workspace on EVERY Pod even with no networkVolumeId, and start.sh hardcodes all model/cache/node paths to /workspace. So ephemeral mode is silently capped at 20GB and the user's disk size is ignored. Omitting volumeMountPath app-side did nothing (RunPod attaches the default regardless).\n\nTHE FIX (already written — it's in the IMAGE, your domain):\n  * mpi-ci/cubric-vision-pod/start.sh: added a CUBRIC_ROOT switch. When env CUBRIC_EPHEMERAL=1, CUBRIC_ROOT=/cubric-data (a dir on the CONTAINER disk) instead of /workspace; ALL paths (COMFY_MODELS/OUTPUT/CACHE/CUSTOM_NODES/PYLIBS/TRITON + extra_model_paths.yaml base_path) now root on $CUBRIC_ROOT. Also added exports CUBRIC_MODELS_DIR + CUBRIC_MANIFEST_PATH so the wrapper's install target follows the root (wrapper.py already reads those env vars; start.sh just wasn't exporting MODELS_DIR). Normal /workspace path is byte-identical (same values) — zero risk to the volume flow.\n  * bash -n clean. Diff is start.sh only; wrapper.py unchanged (it already honors the env).\n\nAPP SIDE (mine, done, no rebuild): routes/remoteProxy.js now sends env CUBRIC_EPHEMERAL='1' on ephemeral GPU Pods. node --check clean.\n\nASK: please REDO the cu124 build with this start.sh change. Per Fabio: NO version bump needed — you haven't shipped cu128 or the cpu image yet and you're still on cu124 pre-verify, so reuse the v0.4.6 tag, just rebuild cu124 with the updated start.sh. (cu128 + cpu will pick it up whenever you build them.) start.sh is shared by all three images; the CUBRIC_EPHEMERAL branch is inert unless the app sets the env, so it won't affect volume-backed or CPU-download Pods.\n\nYou own the image + the commit. start.sh is in the mpi-ci repo (your repo), so it's cleanly yours — no shared-file overlap there. Ping when cu124 is rebuilt and I'll re-verify the Any-region telemetry (expect: Disk usage climbs with the model, the 20GB default volume sits unused).",
+  "related": {
+    "task_card": "MPI-78",
+    "files": [
+      "mpi-ci/cubric-vision-pod/start.sh",
+      "routes/remoteProxy.js"
+    ]
+  },
+  "thread": {
+    "root": ".agents/mpi-kanban/state/messages/644641fe-c41e-4fe2-9c5c-55a6fb87bacd.json",
+    "parent": ".agents/mpi-kanban/state/messages/644641fe-c41e-4fe2-9c5c-55a6fb87bacd.json"
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-16T16:30:00.000Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-16T16:35:00.000Z",
+      "event": "replied",
+      "by": "MPI-103",
+      "note": "cu124 rebuilt with start.sh fix, run 27627514827, same v0.4.6 tag"
+    }
+  ]
+}

@@ -52,21 +52,23 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.6) is
-// a rebuild of wrapper 0.2.8 across all three profiles (cpu/cu124/cu128).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.7) is
+// a rebuild of wrapper 0.2.9 across all three profiles (cpu/cu124/cu128).
 // MPI-100 briefly shipped a v0.4.5 `disk` block (statvfs) but it was REVERTED:
 // statvfs reads the multi-PB container overlay, not the RunPod network-volume
 // quota, so it was useless for a disk-full gate. Disk-full is now handled
 // reactively app-side (downloadService catches the wrapper's "[Errno 122] Disk
-// quota exceeded" → toast). Wrapper 0.2.8 adds the live idle-timeout update
-// (MPI-103: mutable Watchdog.timeout_s + POST /wrapper/idle-timeout + idle_timeout_s
-// in /health) on top of 0.2.7's cgroup-v1 RAM read + taesd preview prebake
-// (MPI-98), 0.2.5's wrapper-owns-ComfyUI + /wrapper/restart-comfy (MPI-81),
-// 0.2.4's honest install progress (MPI-95) + /health download-mode branch
-// (MPI-88); image pre-bakes lazy node weights + --cache-lru 2.
+// quota exceeded" → toast). Wrapper 0.2.9 makes the idle watchdog a FIXED 10-min
+// crash backstop (MPI-103: removed the live-update endpoint + the user-facing
+// Settings control; CUBRIC_IDLE_TIMEOUT_S defaults to 600 and isn't sent per-create)
+// and carries the MPI-78 start.sh ephemeral data-root fix, on top of 0.2.7's
+// cgroup-v1 RAM read + taesd preview prebake (MPI-98), 0.2.5's wrapper-owns-ComfyUI
+// + /wrapper/restart-comfy (MPI-81), 0.2.4's honest install progress (MPI-95) +
+// /health download-mode branch (MPI-88); image pre-bakes lazy node weights +
+// --cache-lru 2.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.6';
-const WRAPPER_VERSION = '0.2.8';
+const POD_IMAGE_VERSION = 'v0.4.7';
+const WRAPPER_VERSION = '0.2.9';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -346,9 +348,7 @@ router.get('/remote/comfy/status', async (req, res) => {
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
     if (health.ready) _starting = false;
-    // idleTimeoutS: the LIVE value the wrapper is enforcing (MPI-103), so the
-    // Settings panel can reflect what's actually on the Pod, not just localStorage.
-    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight(), noGpu: _mode.noGpu, idleTimeoutS: health.idle_timeout_s });
+    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window — but also the window
     // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96).
@@ -404,20 +404,7 @@ function _createRejectReason(json) {
   return reason.length > 300 ? `${reason.slice(0, 300)}…` : reason;
 }
 
-// Idle-watchdog timeout (seconds) baked into the Pod env at create time. The
-// wrapper reads CUBRIC_IDLE_TIMEOUT_S and self-stops after that long with no
-// authenticated traffic. The UI sends a user-chosen value; clamp to a 10-min
-// FLOOR here so a bad/zero/missing value can never disable the billing backstop
-// (no "never" — a runaway GPU bill is the failure we are guarding against).
-const IDLE_TIMEOUT_DEFAULT_S = 900; // 15 min
-const IDLE_TIMEOUT_FLOOR_S = 600;   // 10 min
-function _clampIdleTimeout(s) {
-  const n = Number(s);
-  if (!Number.isFinite(n) || n <= 0) return IDLE_TIMEOUT_DEFAULT_S;
-  return Math.max(IDLE_TIMEOUT_FLOOR_S, Math.round(n));
-}
-
-async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, containerDiskGb, idleTimeoutS, timeoutMs = 300000, wait = true }) {
+async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, containerDiskGb, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
   const noGpu = gpuTypeId === CPU_SENTINEL;
   // No-volume "Any region" ephemeral Pod (MPI-78): no network volume → models
@@ -436,7 +423,6 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   const spec = {
     name: 'cubric-vision',
     imageName,
-    volumeMountPath: '/workspace',
     // CPU Pods cap container disk at 20GB ("Container Disk must be <= 20"); a volume
     // GPU Pod uses the small default (models live on the volume); an ephemeral
     // no-volume GPU Pod (MPI-78) uses the user-chosen size since models download here.
@@ -448,9 +434,11 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
       CUBRIC_TOKEN: token,
       RUNPOD_API_KEY: key, // watchdog self-stop backstop
       CUBRIC_WRAPPER_VERSION: WRAPPER_VERSION,
-      // User-chosen idle-watchdog length (clamped to a 10-min floor). Wrapper
-      // self-stops the Pod after this long with no authenticated traffic.
-      CUBRIC_IDLE_TIMEOUT_S: String(_clampIdleTimeout(idleTimeoutS)),
+      // Idle watchdog is a fixed 10-min CRASH backstop baked into the image
+      // (wrapper CUBRIC_IDLE_TIMEOUT_S default 600). It fires only when the app
+      // stops sending authenticated traffic — i.e. crashed/closed without a clean
+      // teardown — never under a live app. Not user-configurable (MPI-103 removed
+      // the Settings control); no per-create override needed.
     },
   };
   if (noGpu) {
@@ -463,8 +451,21 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   } else {
     spec.gpuTypeIds = [gpuTypeId];
     spec.gpuCount = 1;
+    // Ephemeral "Any region" Pod (MPI-78): tell the image to root model/cache/node
+    // data on the CONTAINER disk (start.sh: CUBRIC_EPHEMERAL=1 → /cubric-data) instead
+    // of /workspace. RunPod auto-mounts a small (~20GB) default volume at /workspace on
+    // every Pod even with no networkVolumeId, so models written there are silently
+    // capped at 20GB and ignore the user-chosen container-disk size (verified live:
+    // container 31MB/60GB, default volume 7GB/20GB). Needs the image fix (v0.4.6-cu124
+    // rebuild) — the env flag alone does nothing on an old image.
+    if (ephemeral) spec.env.CUBRIC_EPHEMERAL = '1';
   }
   if (volumeId) spec.networkVolumeId = volumeId;
+  // Request the /workspace mount only for a real volume (network volume or CPU
+  // download-mode). An ephemeral Pod does NOT name it — though RunPod still attaches
+  // its own ~20GB default volume there, the image now writes models to /cubric-data on
+  // the container disk (CUBRIC_EPHEMERAL above), so that default volume just sits unused.
+  if (volumeId || noGpu) spec.volumeMountPath = '/workspace';
   // Pin the Pod to a data center only when one is given. A volume is DC-locked so a
   // volume Pod always carries a datacenter; an ephemeral no-volume Pod omits it and
   // RunPod auto-places on any region with the GPU in stock ("Any region", MPI-78).
@@ -586,7 +587,7 @@ async function _deleteTrackedPod(key) {
 
 // First Connect (and GPU-switch create). Creates a fresh Pod on the picked GPU.
 router.post('/remote/pod/create', async (req, res) => {
-  const { gpuTypeId, volumeId, datacenter, containerDiskGb, idleTimeoutS } = req.body || {};
+  const { gpuTypeId, volumeId, datacenter, containerDiskGb } = req.body || {};
   if (!gpuTypeId) return res.status(422).json({ error: 'gpu_type_required' });
   // A volume is locked to its DC, so a volume Pod must name one. An ephemeral
   // no-volume Pod (MPI-78) has no DC-lock → datacenter optional (RunPod auto-places).
@@ -600,7 +601,7 @@ router.post('/remote/pod/create', async (req, res) => {
     // wait:false — return as soon as the Pod is created; the renderer polls
     // /remote/comfy/status for ready (no 504 on a long first-image pull).
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, containerDiskGb, idleTimeoutS, wait: false,
+      gpuTypeId, volumeId, datacenter, containerDiskGb, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `Pod create refused: ${out.message}`);
@@ -627,7 +628,7 @@ router.post('/remote/pod/create', async (req, res) => {
 //   3. start fails (host-pinned / any non-already-running error) → DELETE the stuck
 //      Pod + create fresh on the same GPU (new token). Returns { ready, podId, recreated }.
 router.post('/remote/pod/reconnect', async (req, res) => {
-  const { podId, gpuTypeId, volumeId, datacenter, containerDiskGb, idleTimeoutS } = req.body || {};
+  const { podId, gpuTypeId, volumeId, datacenter, containerDiskGb } = req.body || {};
   if (!podId) return res.status(422).json({ error: 'pod_id_required' });
   // datacenter is required only for a volume Pod (DC-locked). An ephemeral no-volume
   // Pod (MPI-78) resumes / recreates with no DC — RunPod auto-places (MPI-78).
@@ -676,7 +677,7 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     // 3. Resume failed → delete the stuck Pod and create fresh (also poll-for-ready).
     await _deleteTrackedPod(key);
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, containerDiskGb, idleTimeoutS, wait: false,
+      gpuTypeId, volumeId, datacenter, containerDiskGb, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `recreate after failed resume refused: ${out.message}`);
@@ -1095,28 +1096,6 @@ router.post('/proxy/restart-comfy', async (req, res) => {
     await _passthrough(res, upstream);
   } catch (err) {
     logger.error('runpod', 'proxy restart-comfy failed', err);
-    res.status(502).json({ error: 'relay_failed' });
-  }
-});
-
-// MPI-103: live-update the Pod idle-watchdog timeout WITHOUT a recreate. The
-// CUBRIC_IDLE_TIMEOUT_S env is immutable on a live Pod, so the app forwards the
-// new value to the wrapper, which clamps to the floor + recomputes the deadline
-// in place. Ships in image v0.4.6 / wrapper 0.2.8; on an OLDER image the wrapper
-// lacks the endpoint and answers 404 → the app keeps the value in runpodConfig
-// so the next fresh create still bakes it.
-router.post('/proxy/idle-timeout', async (req, res) => {
-  const headers = await _guard(res);
-  if (!headers) return;
-  try {
-    const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/idle-timeout`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body || {}),
-    });
-    await _passthrough(res, upstream);
-  } catch (err) {
-    logger.error('runpod', 'proxy idle-timeout failed', err);
     res.status(502).json({ error: 'relay_failed' });
   }
 });
