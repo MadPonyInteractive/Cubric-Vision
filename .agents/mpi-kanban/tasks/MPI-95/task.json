@@ -7,8 +7,8 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-06-15T11:05:00Z",
-  "updated_at": "2026-06-15T12:55:00Z",
-  "activeSessionTitle": "BUILD-GATED on MPI-81 — code committed (app 9124daf + mpi-ci wrapper faa4187), awaiting rebuild + live verify",
+  "updated_at": "2026-06-16T08:20:00Z",
+  "activeSessionTitle": "Build gate CLEARED (v0.4.1+ shipped) but LIVE-VERIFY FAILED 2026-06-16: install bar still aggregates wrong + post-uninstall shows 36/36GB installed (false). Reassigned to MPI-97 owner (owns downloadManager.js progress code).",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
