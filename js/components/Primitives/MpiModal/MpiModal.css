@@ -1,9 +1,12 @@
 /* ── MpiModal ────────────────────────────────────────────────────────────────── */
 
-/* Portal backdrop — injected directly to body on show */
+/* Portal backdrop — injected directly to body on show.
+   Top inset = titlebar height so the custom OS bar (close button) stays
+   clickable behind the backdrop. --titlebar-h collapses to 0px in
+   F11 fullscreen (titlebar.css), so no gap appears when there's no bar. */
 .mpi-modal-backdrop {
     position: fixed;
-    inset: 0;
+    inset: var(--titlebar-h) 0 0 0;
     background: oklch(0.16 0.02 350 / 0.7);
     z-index: 10009; /* fallback; JS overrides via inline style */
 }
