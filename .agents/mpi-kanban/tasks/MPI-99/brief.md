@@ -30,3 +30,12 @@ During the 4-model install, `download:progress` / `models:checked` fire `renderL
 ## Repro to confirm
 
 Connect (remote or local) → install one or more models → immediately press UNINSTALL on an installed card → expect NO dialog (bug). Fixed = the confirm dialog opens every time, including right after an install.
+
+## NEXT-SESSION STATE (handoff, 2026-06-16 — left live by the user)
+
+The user is resuming THIS bug first in the next session and **left the environment exactly as-is**:
+- App is still **open**; `logs/app.log` is still **available** (note: log content timestamps are **UTC**, file mtime is **local/BST = +1h** — don't be fooled into thinking the log is an hour stale).
+- Still **connected to the no-GPU Pod** (`p3tayimai7po9t`, image `v0.4.4-cpu`), **4 models installed** (Wan I2V + T2V + PONY Mix + ill-anime), volume ~79/80GB.
+- The bug is **reproduced and live right now**: pressing UNINSTALL on the Wan 2.2 T2V card opens no dialog. You can probe the running app at `http://127.0.0.1:3000` (e.g. `/comfy/models/check` returns 200, so backend/wrapper are fine — the failure is purely renderer-side).
+- A fast DevTools-console probe is the cheapest first step: confirm whether `card.on('uninstall')` fires at all vs `_uninstallDialog.el.show()` no-opping (stale Overlays/popup state). Start there before editing.
+- MPI-97 + MPI-95 (the install/uninstall backend work) are **DONE + committed** (`2072dd3`); this card is the only open follow-up from that verify session.
