@@ -349,6 +349,25 @@
     }
 }
 
+/* Console link: subtle inline text link under the connect row (jump to the
+   live Pod or the Pods list on RunPod). */
+.mpi-settings__runpod-console-link {
+    align-self: flex-start;
+    color: var(--accent-frost);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transition: color var(--t-fast) var(--ease);
+}
+
+.mpi-settings__runpod-console-link:hover,
+.mpi-settings__runpod-console-link:focus-visible {
+    color: var(--ink-1);
+    outline: none;
+    text-decoration: underline;
+}
+
 /* Network-volume row: dropdown fills, delete button hugs the right. */
 .mpi-settings__volume-row {
     display: flex;

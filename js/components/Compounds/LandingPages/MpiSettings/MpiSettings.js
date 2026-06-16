@@ -150,6 +150,8 @@ export const MpiSettings = ComponentFactory.create({
                                 <div id="mpiSettingsRunpodConnectSlot"></div>
                             </div>
                             <span class="mpi-settings__hint" id="mpiSettingsRunpodConnectHint"></span>
+                            <a class="mpi-settings__runpod-console-link" id="mpiSettingsRunpodConsoleLink" href="https://console.runpod.io/pods" target="_blank" rel="noopener noreferrer">Open in RunPod console</a>
+                            <span class="mpi-settings__hint">Check Pod state, telemetry, logs, and spend on RunPod. Opens the active Pod when connected, otherwise your Pods list.</span>
                         </div>
                         <div class="mpi-settings__form-group">
                             <div id="mpiSettingsRunpodDeleteOnQuitSlot"></div>
@@ -449,6 +451,18 @@ export const MpiSettings = ComponentFactory.create({
             el.classList.toggle('mpi-settings__hint--warn', !!isWarn);
         }
 
+        // Point the console link at the live Pod when one is active (telemetry/logs
+        // tab is where the user looks), else the static Pods list so they can still
+        // spot/kill an orphan or stalled Pod. podId is the renderer-side app-managed id.
+        function _setConsoleLinkHref(root) {
+            const a = qs('#mpiSettingsRunpodConsoleLink', root);
+            if (!a) return;
+            const podId = _runpodCfg().podId;
+            a.href = podId
+                ? `https://console.runpod.io/pods?id=${encodeURIComponent(podId)}`
+                : 'https://console.runpod.io/pods';
+        }
+
         // Reflect the latest known status on the button + label. `status` is the
         // /remote/comfy/status shape ({ running, ready }) or null when we have
         // not polled yet. Connect requires a picked GPU; once a Pod is running it
@@ -456,6 +470,7 @@ export const MpiSettings = ComponentFactory.create({
         function _applyEngineStatus(root, status) {
             if (!_engineConnectInst) return;
             const cfg = _runpodCfg();
+            _setConsoleLinkHref(root);
             if (!cfg.enabled) {
                 _setEngineStatusText(root, 'disabled');
                 _engineBtnLabelSet('Connect');
