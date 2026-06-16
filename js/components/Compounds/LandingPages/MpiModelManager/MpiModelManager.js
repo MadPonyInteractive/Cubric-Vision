@@ -36,7 +36,6 @@ export const MpiModelManager = ComponentFactory.create({
             </div>
             <div class="mpi-model-manager__separator"></div>
             <div class="mpi-model-manager__slot" id="body-slot"></div>
-            <p class="mpi-model-manager__footer">Models are stored locally and never shared.</p>
         </div>`,
 
     setup: (el) => {
@@ -241,7 +240,18 @@ export const MpiModelManager = ComponentFactory.create({
                         phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
                     });
 
-                    if (downloadState !== 'idle') {
+                    // Wire pause/resume/cancel only while a download is genuinely
+                    // ACTIVE. A lingering 'complete' job (download:complete sets the
+                    // status but never clears the job from state.downloadJobs) is
+                    // terminal — the model is installed — so it must take the
+                    // uninstall branch. Without this, an install-then-uninstall left
+                    // the INSTALLED card with pause/cancel handlers and NO uninstall
+                    // handler, so the Uninstall click emitted but nothing called
+                    // _uninstallDialog.el.show() (the dialog never opened). (MPI-99)
+                    const isActiveDownload = downloadState === 'downloading'
+                        || downloadState === 'paused'
+                        || downloadState === 'installing';
+                    if (isActiveDownload) {
                         const pauseCb = () => downloadService.pause(model.id);
                         const resumeCb = () => downloadService.resume(model.id);
                         const cancelCb = () => downloadService.cancel(model.id);

@@ -64,11 +64,3 @@
     font-size: var(--t-md);
     text-align: center;
 }
-
-/* ── Footer text ─────────────────────────────────────────────── */
-.mpi-model-manager__footer {
-    font-size: var(--t-sm);
-    color: var(--ink-3);
-    line-height: 1.5;
-    margin: 0;
-}
