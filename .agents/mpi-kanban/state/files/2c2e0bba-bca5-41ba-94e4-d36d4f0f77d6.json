@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "2c2e0bba-bca5-41ba-94e4-d36d4f0f77d6",
+  "path": "routes/system.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "Sanitize GitHub issue payloads and log-bridge input for MPI-92 secret hygiene.",
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:48:16.4313125Z",
+      "event": "claimed_for_mpi92_system_bug_report_redaction"
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "note": "GitHub issue payloads and /log input now redact secrets."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "verified",
+      "note": "Task closed after user verification."
+    }
+  ]
+}

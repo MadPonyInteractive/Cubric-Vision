@@ -110,8 +110,10 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   container starts. A host whose driver maxes below the floor refuses the container
   (`unsatisfied condition: cuda>=12.8, please update your driver`). Decoupling torch does NOT
   fix it — the rejection is the image label, not pip torch. Lever = a lower-floor image
-  (cu124, broad host compat, no Blackwell) vs cu128 (Blackwell). The GPU picker should
-  auto-filter cards whose host/DC can't meet the floor (**MPI-91**).
+  (cu124, broad host compat, no Blackwell) vs cu128 (Blackwell). Earlier notes proposed a GPU-picker
+  auto-filter (**MPI-91**), but that card was later archived as superseded: `cu124` became the default
+  for non-Blackwell cards, which removed the broad refusal class, and the remaining Blackwell tail risk
+  is not pre-filterable from the RunPod picker data Cubric can currently read.
 
 ## 6. Pod image + custom-node split (Design B+)
 

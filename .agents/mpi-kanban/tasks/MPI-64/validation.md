@@ -43,7 +43,9 @@
 - **MPI-88** — no-GPU "download mode" Pod (was F6).
 - **MPI-89** — remote input-asset transfer for video/audio/.latent (was B1).
 - **MPI-90** — manifest compatibility gate + repair/reinitialize (was F1/Step 5).
-- **MPI-91** — GPU-picker CUDA-floor auto-filter (was F3/Step 5.2).
+- **MPI-91** — GPU-picker CUDA-floor auto-filter (was F3/Step 5.2; later archived as superseded once
+  cu124-default removed the broad refusal class and the residual tail risk proved non-filterable from
+  RunPod picker data).
 - **MPI-92** — Phase-5 hardening: tests + secret-hygiene audit + cost/responsibility docs (was F7).
 - **MPI-93** — remote live-verification checklist (M4 cancel-gen, M5 higher-res T2V, A3
   OOM-toast, F8 crash-watchdog, G5 volume-delete) — code shipped, needs a live Pod to tick.

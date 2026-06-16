@@ -5,9 +5,9 @@
   "description": "Hybrid per-generation engine routing: image gen local, video gen on cloud Pod within one project, auto image->video handoff. Blocked on MPI-64. See brief.md.",
   "column": "todo",
   "maturity": "idea",
-  "status": "active",
+  "status": "pending",
   "created_at": "2026-06-13T00:00:00.000Z",
-  "updated_at": "2026-06-14T05:05:00Z",
+  "updated_at": "2026-06-16T07:35:13.507Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

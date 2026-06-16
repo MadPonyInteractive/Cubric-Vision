@@ -5,9 +5,9 @@
   "description": "Promoted from MPI-64 Phase 3 Step 5.2 / OPEN-ITEMS F3 (user request 2026-06-12). The GPU picker must not offer cards the active image's CUDA floor can't run on the available hosts/DC. Cross-check the image CUDA floor (from POD_IMAGE/manifest) against RunPod's per-card/DC CUDA capability (RunPod's own console filters its dropdown by required CUDA, so the data exists in their GraphQL gpuTypes/availability) and gray-out or badge incompatible cards with a reason ('needs a newer-driver host / not available for this engine CUDA in {DC}'), instead of letting Connect fail at container init with the raw nvidia-container-cli error. Data axis = image CUDA floor vs host-driver-provided CUDA, per card/DC. Folds into the MPI-90 manifest-compat gate. App. See brief.md.",
   "column": "todo",
   "maturity": "idea",
-  "status": "open",
+  "status": "pending",
   "created_at": "2026-06-15T07:27:46Z",
-  "updated_at": "2026-06-15T07:27:46Z",
+  "updated_at": "2026-06-16T07:36:13.138Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

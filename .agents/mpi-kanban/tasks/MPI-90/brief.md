@@ -47,5 +47,6 @@ wrapper actually writes, so confirm the writer ships in (or before) the build th
 
 ## Related
 
-- MPI-64 (epic), research/volume-manifest-schema.md, MPI-91 (GPU-picker filter — folds into the same compat axis),
+- MPI-64 (epic), research/volume-manifest-schema.md, MPI-91 (GPU-picker filter — later archived as superseded,
+  but same compatibility axis),
   MPI-81 (CUDA floor / image rebuild), MPI-94 F4 (reassigned here).

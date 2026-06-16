@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "dbd1743c-a7a8-4285-8884-3d32c077b264",
+  "path": "routes/secretRedaction.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "New shared backend secret-redaction helper for MPI-92.",
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:48:16.4313125Z",
+      "event": "claimed_for_mpi92_backend_secret_redaction"
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "note": "Shared backend redaction helper added and covered by tests."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "verified",
+      "note": "Task closed after user verification."
+    }
+  ]
+}

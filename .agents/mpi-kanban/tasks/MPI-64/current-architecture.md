@@ -134,7 +134,8 @@
 > **EPIC TRIAGE:** MPI-64 is large/multi-phase → 7 discrete features promoted to their own cards
 > (MPI-64 stays the epic/tracker): MPI-86 cancel-connect, MPI-87 image-pull progress, MPI-88
 > no-GPU download-mode, MPI-89 remote input-asset transfer (B1), MPI-90 manifest-compat gate
-> (Step 5), MPI-91 GPU-picker CUDA filter (Step 5.2), MPI-92 Phase-5 hardening (tests+secret+docs).
+> (Step 5), MPI-91 GPU-picker CUDA filter (Step 5.2, later archived as superseded), MPI-92
+> Phase-5 hardening (tests+secret+docs).
 > plan.md reconciled (each `[→]` points at its card). Backfilled MPI-78 (no-volume Pod) workspace.
 > **NEXT SESSION (per handoff): close MPI-64 properly** — what remains in MPI-64 is the epic-core
 > residue (Step 5.1 doc-closeout, F4 fresh-volume init, L142 full-video verify, F8 lifecycle, A2/A3

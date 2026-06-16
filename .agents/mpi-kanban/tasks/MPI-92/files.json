@@ -1,1 +1,1 @@
-{"schema":"mpi-kanban/task-files/v1","files":[]}
+{"schema":"mpi-kanban/task-files/v1","files":["tests/runpod-remote-hardening.test.cjs","routes/secretRedaction.js","routes/logger.js","routes/system.js","js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js"]}

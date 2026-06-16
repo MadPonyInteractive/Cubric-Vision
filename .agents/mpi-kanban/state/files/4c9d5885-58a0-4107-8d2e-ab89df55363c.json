@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "4c9d5885-58a0-4107-8d2e-ab89df55363c",
+  "path": "tests/runpod-remote-hardening.test.cjs",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "Fresh mocked-route test file for MPI-92 RunPod hardening coverage.",
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:44:43.2469759Z",
+      "event": "claimed_for_mpi92_runpod_hardening_tests"
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "note": "13/13 node tests passing."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "verified",
+      "note": "Task closed after user verification."
+    }
+  ]
+}

@@ -1,1 +1,9 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-92","at":"2026-06-15T07:27:46Z","actor":"claude","note":"Promoted from MPI-64 — Phase 5 hardening (tests+secret audit+cost docs)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-92","at":"2026-06-15T17:41:14.4623837Z","actor":"codex","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-92","at":"2026-06-15T17:41:14.4623837Z","actor":"codex","note":"Derived initial hardening checklist for tests, secret audit, and user-facing copy."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-92","at":"2026-06-15T17:41:14.4623837Z","actor":"codex","note":"maturity idea->in-progress, status open->active, session title set."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-92","at":"2026-06-15T17:52:12.5977923Z","actor":"codex","note":"Mocked route coverage, logger/bug-report redaction hardening, and Settings copy updates complete. Automated verification passed; live UI/log verification remains user-only."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-92","at":"2026-06-15T17:52:12.5977923Z","actor":"codex","note":"maturity in-progress->validating."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-92","at":"2026-06-15T18:12:00Z","actor":"user","note":"User completed the live Settings verification and approved closing the card."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-92","at":"2026-06-15T18:12:00Z","actor":"codex","from":"doing","to":"done","summary":"Live verification complete; card closed."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-92","at":"2026-06-15T18:12:00Z","actor":"codex","note":"maturity validating->complete, status active->accepted."}

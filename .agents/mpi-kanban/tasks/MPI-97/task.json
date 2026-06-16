@@ -3,17 +3,12 @@
   "id": "MPI-97",
   "title": "Parallel model installs (no shared-dep collision)",
   "description": "User request 2026-06-15 (found while testing MPI-81 restart on a remote Pod): the user must be able to queue SEVERAL models to install at once with no conflicts. Today a second install whose dep is already downloading is REJECTED whole ('this model is already downloading' → a scary Download-Failed+GitHub dialog) instead of sharing/awaiting the in-flight dep. Root: the per-dep download guard is coarse + not refcounted across concurrent model jobs. Fix (app-side, remote + local; NO image rebuild): refcount each dep across model jobs so a model needing an already-downloading dep ATTACHES to the running download (completes when it lands) rather than failing; let independent deps download concurrently; downgrade the collision message to a non-error toast (or silent). Pairs with MPI-81 #9 (orphan .part on abort) + the SSE-recover gap (install event stream can drop mid-install and hang the card). See brief.md.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "activeSessionTitle": "Parallel install shared-dep refcount (remote attach + SSE recover)",
-  "attention": {
-    "state": "required",
-    "reason": "Code complete (4 phases). Needs USER live-verify on a remote Pod (CPU OK) before close.",
-    "updated_at": "2026-06-16T07:55:00Z"
-  },
   "created_at": "2026-06-15T18:45:00Z",
-  "updated_at": "2026-06-16T07:55:00Z",
+  "updated_at": "2026-06-16T10:05:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

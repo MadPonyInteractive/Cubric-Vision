@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "eb35c595-8561-46b2-9c53-f23e1bfeb5b1",
+  "path": "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "Tighten RunPod responsibility and billing copy for MPI-92.",
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:50:10.0630748Z",
+      "event": "claimed_for_mpi92_runpod_settings_copy"
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "note": "Additive Settings copy clarifies billing and Community Cloud limits."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "verified",
+      "note": "Task closed after user verification."
+    }
+  ]
+}
