@@ -492,6 +492,33 @@ router.post('/comfy/models/download/start', async (req, res) => {
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
 
+    // ── Disk-full pre-flight gate (MPI-99) ──────────────────────────────────
+    // Refuse a local install that won't fit on the target drive instead of
+    // starting a doomed download that fails partway with a cryptic write error.
+    // Only the deps still queued (not already complete-on-disk) need new space;
+    // a 5% margin covers temp/.part overhead. A failed statfs is non-fatal — we
+    // skip the gate rather than block a legitimate install.
+    const neededBytes = modelJob.deps
+        .filter(d => d.status === 'queued')
+        .reduce((sum, d) => sum + (d.totalBytes || 0), 0);
+    if (neededBytes > 0) {
+        const targetDir = customRoot || defaultModelsRoot;
+        const freeBytes = await _freeDiskBytes(targetDir);
+        if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
+            // Roll back the refCount bumps this call made so a later retry (after
+            // the user frees space) is not blocked by orphaned references.
+            for (const dep of dependencies) {
+                const depJob = _depJobs.get(dep.id);
+                if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
+            }
+            modelJob.status = 'idle';
+            logger.warn('download', `install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
+            return res.status(400).json({
+                error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
+            });
+        }
+    }
+
     modelJob.status = 'downloading';
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 
@@ -499,6 +526,42 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
     res.json({ success: true, jobId: modelId });
 });
+
+// Free bytes available on the filesystem holding `dir`. Returns null on any
+// failure so callers can treat "unknown" as "don't block". (MPI-99)
+async function _freeDiskBytes(dir) {
+    try {
+        const stats = await fs.statfs(dir);
+        return stats.bavail * stats.bsize;
+    } catch (err) {
+        logger.warn('download', `statfs failed for ${dir}: ${err.message}`);
+        return null;
+    }
+}
+
+function _fmtGb(bytes) {
+    return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
+// Free bytes on the Pod /workspace volume, from the wrapper's truthful in-Pod
+// statvfs (GET /wrapper/stats → disk.free, image v0.4.5+). Returns null on any
+// miss — old image without the disk block, disk.available:false, or a stats
+// failure — so the gate treats "unknown" as "don't block". (MPI-100)
+async function _remoteFreeVolumeBytes() {
+    try {
+        const res = await remoteModels.wrapperFetch('/wrapper/stats', { retries: 2 });
+        if (!res.ok) return null;  // 503 stats_unavailable / old image → don't block
+        const stats = await res.json();
+        const disk = stats && stats.disk;
+        if (disk && disk.available && typeof disk.free === 'number') {
+            return disk.free;
+        }
+        return null;
+    } catch (err) {
+        logger.warn('download', `remote /wrapper/stats disk read failed: ${err.message}`);
+        return null;
+    }
+}
 
 // ── Pending Deps Launcher ──────────────────────────────────────────────────────
 
@@ -808,9 +871,22 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // EVERY modelJob owning this dep id) fills B's bar from A's stream. B
         // settles via _checkModelJobsComplete when the shared dep lands. We do not
         // touch the dep's live status/bytes here and we do NOT add it to toInstall.
+        // MPI-100 — a cached `complete` is only trustworthy if the volume STILL
+        // has the file. After an uninstall (deleteFiles), the module-level
+        // _depJobs entry keeps its stale 'complete' from a prior install; without
+        // this, the ATTACH guard below short-circuits the re-install, toInstall
+        // ends empty, no /wrapper/models/install fires, and the card flips to a
+        // FALSE green INSTALLED while the weight is gone. The up-front
+        // remoteModelsCheck (statusResults) is fresh wrapper truth (real on-disk
+        // existence+size), so prefer it: a dep the volume reports as NOT installed
+        // must not read 'complete' from cache. statusResults absent (pre-check
+        // failed) → fall back to the cached status (install dedupe still guards).
+        const freshStatus = statusResults[dep.id];
+        const reallyComplete = depJob.status === 'complete'
+            && (freshStatus ? freshStatus.installed === true : true);
         const inFlight = _remoteDepIds.has(dep.id)
             || depJob.status === 'downloading'
-            || depJob.status === 'complete';
+            || reallyComplete;
         if (inFlight) {
             // Attach only — leave the shared dep's live state alone.
             continue;
@@ -830,6 +906,31 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             depJob.downloadedBytes = 0;
             depJob.error = null;
             toInstall.push(dep);
+        }
+    }
+
+    // ── Remote disk-full pre-flight gate (MPI-100) ──────────────────────────
+    // Mirror of the LOCAL gate above: refuse an install that won't fit on the Pod
+    // /workspace volume instead of starting a doomed wrapper download. The ONLY
+    // truthful free-space source is the in-Pod wrapper (RunPod REST getPod has no
+    // live volume usage). Only the deps about to be installed need new space; a 5%
+    // margin covers temp/.part overhead. An unknown free value (old image without
+    // the disk block, or a stats miss) is non-fatal — skip the gate, same as local.
+    const neededBytes = toInstall.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
+    if (neededBytes > 0) {
+        const freeBytes = await _remoteFreeVolumeBytes();
+        if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
+            // Roll back the refCount bumps this call made so a later retry (after
+            // the user frees Pod space) is not blocked by orphaned references.
+            for (const dep of dependencies) {
+                const depJob = _depJobs.get(dep.id);
+                if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
+            }
+            modelJob.status = 'idle';
+            logger.warn('download', `remote install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} on Pod volume`);
+            return res.status(400).json({
+                error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
+            });
         }
     }
 

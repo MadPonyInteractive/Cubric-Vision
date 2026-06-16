@@ -52,19 +52,21 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.4)
-// tracks CUBRIC_WRAPPER_VERSION (0.2.7 — GET /wrapper/stats RAM now reads cgroup
-// v1 too: RunPod Pods are v1 (memory.current/.max absent), so 0.2.6 reported RAM
-// as null. v1 path = usage_in_bytes - total_inactive_file / limit_in_bytes
-// (MPI-98); VRAM (nvidia-smi) unchanged for the status-bar memory monitor;
-// image also pre-bakes the taesd vae_approx preview decoders so live latent
-// previews aren't garbage (MPI-98). Carries forward 0.2.5's wrapper-owns-ComfyUI +
-// /wrapper/restart-comfy (MPI-81), 0.2.4's honest install progress (MPI-95) +
-// /health download-mode branch (MPI-88); image pre-bakes lazy node weights +
-// --cache-lru 2).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.5)
+// tracks CUBRIC_WRAPPER_VERSION (0.2.8 — GET /wrapper/stats now also reports a
+// `disk` block from statvfs(/workspace) so the app can gate a remote install
+// that won't fit the volume (MPI-100); RunPod REST getPod has no live volume
+// usage, so in-Pod statvfs is the only truthful free-space source). Carries
+// forward 0.2.7's cgroup-v1 RAM read + taesd preview prebake (MPI-98), 0.2.5's
+// wrapper-owns-ComfyUI + /wrapper/restart-comfy (MPI-81), 0.2.4's honest install
+// progress (MPI-95) + /health download-mode branch (MPI-88); image pre-bakes
+// lazy node weights + --cache-lru 2.
+// NOTE: only the -cpu tag is built at v0.4.5 so far; -cu124/-cu128 are rebuilt
+// after the CPU disk-gate verify (MPI-100). A GPU connect before that returns
+// IMAGE_NOT_FOUND — expected during this verify window.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.4';
-const WRAPPER_VERSION = '0.2.7';
+const POD_IMAGE_VERSION = 'v0.4.5';
+const WRAPPER_VERSION = '0.2.8';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
