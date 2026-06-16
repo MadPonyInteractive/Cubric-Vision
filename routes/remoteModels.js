@@ -68,10 +68,17 @@ function splitDepFilename(depFilename) {
 
 /**
  * Fetch a wrapper route through the RunPod proxy with auth + UA, retrying the
- * post-restart proxy-404 window. Returns the raw fetch Response (caller reads
+ * transient warm-up window. Returns the raw fetch Response (caller reads
  * status/body) or throws on network error after retries.
+ *
+ * Default budget = 15 × 2s ≈ 30s. A Pod RESUMED from warm-stop (the common case
+ * on auto-reconnect at app start) can take 20-60s before its wrapper answers —
+ * during that window the proxy returns 404 then 502. 8s (the old 4-retry budget)
+ * surfaced a failure mid-resume; ~30s rides the resume out so the op self-heals
+ * instead of aborting. A genuinely-down wrapper still fails after the budget,
+ * surfaced to the user as a TOAST (never an error+GitHub dialog — it's transient).
  */
-async function wrapperFetch(routePath, { method = 'GET', body, retries = 4, retryDelayMs = 2000 } = {}) {
+async function wrapperFetch(routePath, { method = 'GET', body, retries = 15, retryDelayMs = 2000 } = {}) {
   const podId = _podId();
   if (!podId) throw new Error('remote_inactive');
   const headers = await _authHeaders();
@@ -88,9 +95,20 @@ async function wrapperFetch(routePath, { method = 'GET', body, retries = 4, retr
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, opts);
-      // The proxy 404s wrapper routes for a few seconds right after a Pod
-      // restart even when /health is green — retry rather than fail the call.
-      if (res.status === 404 && attempt < retries) {
+      // The RunPod proxy returns a TRANSIENT gateway status while the wrapper is
+      // briefly unreachable — 404 for a few seconds right after a Pod restart even
+      // when /health is green, and 502/503/504 when the proxy has the Pod but the
+      // wrapper upstream is still warming or momentarily dropped (seen live on a
+      // no-GPU Pod: an uninstall silently did nothing because its shared-dep guard
+      // hit a 502 on /wrapper/models/status and safe-aborted; "fixed" only by an
+      // app restart that re-warmed the proxy). Retry these rather than fail the
+      // whole operation. A real wrapper 4xx/5xx (e.g. 400 bad body, 501 no
+      // endpoint) is NOT in this set and still surfaces immediately.
+      const isTransientProxyStatus = res.status === 404
+        || res.status === 502
+        || res.status === 503
+        || res.status === 504;
+      if (isTransientProxyStatus && attempt < retries) {
         await new Promise((r) => setTimeout(r, retryDelayMs));
         continue;
       }
@@ -379,8 +397,21 @@ async function remoteCancelInstall(depId) {
  * the caller's concern (installs are short-lived; the driver tears down on
  * terminal events).
  */
-function openInstallEventStream(onEvent) {
+function openInstallEventStream(onEvent, onClose) {
   const controller = new AbortController();
+  // MPI-97 — fire onClose exactly once when the stream ends WITHOUT a deliberate
+  // abort, so the driver can decide whether to reconnect (installs still
+  // outstanding) or let it go. A deliberate abort() is a clean teardown and must
+  // NOT trigger reconnect.
+  let _closed = false;
+  const _fireClose = (reason) => {
+    if (_closed) return;
+    _closed = true;
+    if (controller.signal.aborted) return;
+    if (typeof onClose === 'function') {
+      try { onClose(reason); } catch { /* driver-side */ }
+    }
+  };
   (async () => {
     let headers;
     try {
@@ -388,22 +419,22 @@ function openInstallEventStream(onEvent) {
     } catch {
       headers = null;
     }
-    if (!headers) return;
+    if (!headers) { _fireClose('no-auth'); return; }
     const podId = _podId();
-    if (!podId) return;
+    if (!podId) { _fireClose('no-pod'); return; }
     try {
       const res = await fetch(`${proxyUrl(podId)}/wrapper/events/stream`, {
         headers: { ...headers, Accept: 'text/event-stream' },
         signal: controller.signal,
       });
-      if (!res.ok || !res.body) return;
+      if (!res.ok || !res.body) { _fireClose('bad-response'); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) break;  // server closed the stream — falls through to _fireClose below
         buffer += decoder.decode(value, { stream: true });
         let sep;
         // SSE events are separated by a blank line.
@@ -422,9 +453,12 @@ function openInstallEventStream(onEvent) {
           try { onEvent({ type: evtName, data }); } catch { /* driver-side */ }
         }
       }
+      // Reader drained (server closed the stream) without an abort — recover.
+      _fireClose('stream-ended');
     } catch (err) {
       if (controller.signal.aborted) return;
       logger.warn('runpod', 'remote install SSE closed');
+      _fireClose('error');
     }
   })();
   return controller;

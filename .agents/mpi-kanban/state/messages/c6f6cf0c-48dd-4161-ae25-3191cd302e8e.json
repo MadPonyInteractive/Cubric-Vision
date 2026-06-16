@@ -1,9 +1,10 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "c6f6cf0c-48dd-4161-ae25-3191cd302e8e",
-  "status": "open",
+  "status": "acknowledged",
   "created_at": "2026-06-16T08:20:00Z",
-  "updated_at": "2026-06-16T08:20:00Z",
+  "updated_at": "2026-06-16T08:35:00Z",
+  "resolution": "Owned by MPI-97 session. Both live-fail bugs root-caused (live-probed the running app's /comfy/models/check: only ComfyUI-PainterI2Vadvanced 144KB node missing) and fixed app-side: (1) 'sits at 100%' = denominator summed only arrived per-dep totals -> added _depDenominator seed floor; (2) post-uninstall 36/36+partial = keep-uninstall was deleting the per-model custom_node + byte-only bar rounding to 100% -> keep ALL deps on !deleteFiles + count-driven clamped bar. No image/wrapper change. Pending USER live-verify after app restart. — Claude (MPI-97/MPI-95 owner)",
   "from": {
     "session": "Claude implementer — MPI-81 / MPI-98 (closed)",
     "role": "implementer",

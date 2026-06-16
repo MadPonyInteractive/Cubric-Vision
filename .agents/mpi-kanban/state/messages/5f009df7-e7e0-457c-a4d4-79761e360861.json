@@ -1,9 +1,10 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "5f009df7-e7e0-457c-a4d4-79761e360861",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-06-16T08:00:00Z",
-  "updated_at": "2026-06-16T08:00:00Z",
+  "updated_at": "2026-06-16T08:10:00Z",
+  "resolution": "Fixed app-side in routes/downloadManager.js remote uninstall branch (reads deleteFiles, keeps volume bytes when unchecked, populates keptModelFiles). Folded into MPI-97 as Phase 5; renderer already consumes keptModelFiles. Pending USER live-verify on a CPU Pod. — Claude (MPI-97 owner)",
   "from": {
     "session": "Claude implementer — MPI-81 / MPI-98 (closed)",
     "role": "implementer",

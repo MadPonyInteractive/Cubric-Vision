@@ -126,10 +126,24 @@ function _createDepJob(dep) {
         status: 'queued',
         downloadedBytes: 0,
         totalBytes: 0,
+        // MPI-95 — registry-size floor for the aggregate denominator. The wrapper
+        // reports each dep's REAL `total` only once its install emits a first tick;
+        // until then totalBytes can be 0. Summing only arrived totals shrinks the
+        // denominator so the bar hits 100% while other deps are still pending
+        // ("sits at 100%"). seedBytes keeps every dep counted at its best-known
+        // size from the moment the job is created.
+        seedBytes: _parseSizeToBytes(dep.size),
         refCount: 0,
         error: null,
         sha256Expected: dep.sha256 || null,
     };
+}
+
+// MPI-95 — a dep's best-known total for the aggregate denominator: the wrapper's
+// real total once it has arrived, else the registry seed, so a not-yet-emitting
+// dep is never counted as 0 (which would let the bar reach 100% early).
+function _depDenominator(d) {
+    return Math.max(d.totalBytes || 0, d.seedBytes || 0);
 }
 
 function _createModelJob(modelId, deps) {
@@ -552,16 +566,97 @@ function _wireProgress(depJob, downloader) {
 
 let _remoteEventStream = null;       // AbortController for the wrapper SSE stream
 const _remoteDepIds = new Set();     // dep ids currently installing remotely
+let _remoteReconnectTimer = null;    // MPI-97 — pending SSE reconnect timer
+let _remoteReconnectAttempt = 0;     // MPI-97 — backoff counter (reset on a clean open)
 
 function _ensureRemoteEventStream() {
     if (_remoteEventStream) return;
-    _remoteEventStream = remoteModels.openInstallEventStream((evt) => {
-        _onRemoteInstallEvent(evt);
+    _remoteEventStream = remoteModels.openInstallEventStream(
+        (evt) => {
+            // A live event means the stream is healthy — clear backoff.
+            _remoteReconnectAttempt = 0;
+            _onRemoteInstallEvent(evt);
+        },
+        (reason) => _onRemoteStreamClosed(reason),
+    );
+}
+
+// MPI-97 — the wrapper install SSE can drop mid-install (observed live as
+// "remote install SSE closed"); previously the stream just died and the card
+// hung at its last % with no completion event. Recover: if installs are still
+// outstanding, reconcile missed completions against the volume, then reconnect
+// the stream with backoff. Once no installs remain (or remote went inactive),
+// let it stay closed.
+function _onRemoteStreamClosed(reason) {
+    _remoteEventStream = null;
+    if (_remoteDepIds.size === 0) return;          // nothing in flight — clean close
+    if (!remoteModels.isRemoteActive()) return;    // Pod gone — nothing to recover to
+    if (_remoteReconnectTimer) return;             // a reconnect is already scheduled
+
+    logger.warn('download', `remote install SSE closed (${reason}); ${_remoteDepIds.size} dep(s) outstanding — recovering`);
+
+    // Backstop: a dep may have COMPLETED during the dead window, so its
+    // models:install-complete was missed and the card would hang forever. Settle
+    // those against the volume via the existing models/status check (no new
+    // wrapper endpoint) before/independently of the reconnect.
+    _reconcileOutstandingRemoteDeps().catch((err) =>
+        logger.warn('download', `remote dep reconcile failed: ${err.message}`));
+
+    if (_remoteDepIds.size === 0) return;          // reconcile may have settled them all
+
+    const delay = Math.min(1000 * 2 ** _remoteReconnectAttempt, 15000); // 1s,2s,4s… cap 15s
+    _remoteReconnectAttempt += 1;
+    _remoteReconnectTimer = setTimeout(() => {
+        _remoteReconnectTimer = null;
+        if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
+        _ensureRemoteEventStream();
+    }, delay);
+}
+
+// Settle outstanding remote deps against the actual volume state. Used to
+// recover completions missed while the install SSE was down. Reuses
+// remoteModelsCheck (/wrapper/models/status) — no new wrapper endpoint.
+async function _reconcileOutstandingRemoteDeps() {
+    if (_remoteDepIds.size === 0) return;
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    // Build a one-model check carrying every outstanding dep so the wrapper
+    // reports each dep's real installed state on the volume.
+    const outstanding = Array.from(_remoteDepIds);
+    const deps = outstanding.map((depId) => {
+        const d = DEPS[depId] || {};
+        return { id: depId, type: d.type, filename: d.filename };
     });
+    let results;
+    try {
+        const out = await remoteModels.remoteModelsCheck([{ id: '__reconcile__', deps }]);
+        results = (out && out.results && out.results['__reconcile__'] && out.results['__reconcile__'].deps) || [];
+    } catch (err) {
+        throw err; // surfaced by caller; reconnect still proceeds
+    }
+    const byId = Object.fromEntries(results.map((d) => [d.id, d]));
+    for (const depId of outstanding) {
+        const entry = byId[depId];
+        if (entry && entry.installed === true) {
+            const depJob = _depJobs.get(depId);
+            if (depJob) {
+                depJob.status = 'complete';
+                depJob.downloadedBytes = depJob.totalBytes || depJob.downloadedBytes;
+            }
+            _remoteDepIds.delete(depId);
+            _broadcast('download:complete', { depId, modelId: null });
+        }
+    }
+    _checkModelJobsComplete();
 }
 
 function _teardownRemoteEventStreamIfIdle() {
     if (_remoteDepIds.size > 0) return;
+    if (_remoteReconnectTimer) {
+        clearTimeout(_remoteReconnectTimer);
+        _remoteReconnectTimer = null;
+    }
+    _remoteReconnectAttempt = 0;
     if (_remoteEventStream) {
         _remoteEventStream.abort();
         _remoteEventStream = null;
@@ -586,12 +681,12 @@ function _onRemoteInstallEvent(evt) {
             if (!myDep) continue;
             // MPI-95 fix: re-derive BOTH sides of the ratio from the per-dep jobs
             // every tick. The wrapper's _resolve_total corrects each dep's real
-            // `total` (line above), but modelJob.totalBytes was seeded ONCE from
-            // rounded registry sizes and never updated — so the real bytes in the
-            // numerator outran the rounded denominator and snapped the bar to ~80%
-            // on the first tick. Summing depJob.totalBytes here keeps the
-            // denominator honest as each dep's real total arrives.
-            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + (d.totalBytes || 0), 0);
+            // `total` (line above); we sum the per-dep DENOMINATOR (real total when
+            // known, else the registry seed — _depDenominator) so the bar neither
+            // snaps to ~80% on the first tick (numerator outran a rounded
+            // denominator) NOR sits at 100% while a not-yet-emitting dep counts as 0
+            // in the denominator. Every dep is always counted at its best-known size.
+            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + _depDenominator(d), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
@@ -621,7 +716,8 @@ function _onRemoteInstallEvent(evt) {
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depId);
             if (!myDep) continue;
-            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + (d.totalBytes || 0), 0);
+            // MPI-95 — same best-known denominator as the progress branch.
+            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + _depDenominator(d), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
@@ -700,6 +796,25 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         }
         depJob.refCount += 1;
         if (!modelJob.deps.find(d => d.id === dep.id)) modelJob.deps.push(depJob);
+
+        // MPI-97 — shared-dep ATTACH. When this dep is already installing for
+        // ANOTHER model (its wrapper install is in flight: `_remoteDepIds` holds
+        // it, or its job is mid-download/already-finished this session), model B
+        // must NOT fire a second `/wrapper/models/install` — the wrapper rejects a
+        // duplicate ("this model is already downloading") and B's whole install
+        // was failing with a Download-Failed + Report-on-GitHub dialog. Instead B
+        // ATTACHES: refCount is already bumped above, the dep stays in B's
+        // modelJob.deps, and the shared install SSE (_onRemoteInstallEvent loops
+        // EVERY modelJob owning this dep id) fills B's bar from A's stream. B
+        // settles via _checkModelJobsComplete when the shared dep lands. We do not
+        // touch the dep's live status/bytes here and we do NOT add it to toInstall.
+        const inFlight = _remoteDepIds.has(dep.id)
+            || depJob.status === 'downloading'
+            || depJob.status === 'complete';
+        if (inFlight) {
+            // Attach only — leave the shared dep's live state alone.
+            continue;
+        }
 
         // remoteModelsCheck already reports universal (image-resident) nodes as
         // installed and per-model nodes/weights by their real volume state, so
@@ -785,7 +900,9 @@ async function _startRemoteDownload(modelId, dependencies, res) {
 
 function _recalculateModelJobProgress(modelJob) {
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
-    modelJob.totalBytes = modelJob.deps.reduce((sum, d) => sum + (d.totalBytes || 0), 0) || modelJob.totalBytes;
+    // MPI-95 — best-known denominator (real total or registry seed) so a dep that
+    // has not reported a real total yet never collapses the denominator to 0.
+    modelJob.totalBytes = modelJob.deps.reduce((sum, d) => sum + _depDenominator(d), 0) || modelJob.totalBytes;
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
 }
 
@@ -1024,6 +1141,11 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
 
     for (const dep of job.deps) {
         dep.refCount -= 1;
+        // MPI-97 — the refCount gate is load-bearing for shared-dep cancel: when a
+        // dep is shared with ANOTHER active model (it ATTACHED at start, so
+        // refCount >= 2), cancelling THIS model must only decrement, never
+        // wrapper-cancel or delete the dep out from under the model still using it.
+        // Do NOT collapse this `refCount <= 0` guard.
         if (dep.refCount <= 0) {
             // Remote install in flight on the Pod — cancel via the wrapper.
             if (_remoteDepIds.has(dep.id)) {
@@ -1068,6 +1190,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         const removed = [];
         const keptUniversal = [];
         const keptShared = [];
+        const keptModelFiles = [];
         let anyUnsupported = false;
 
         // Resolve which deps are still needed by ANOTHER model installed on the
@@ -1079,10 +1202,17 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         try {
             sharedKeep = await _remoteSharedDepIds(modelId);
         } catch (err) {
+            // Transient: the wrapper was unreachable (Pod still resuming from
+            // warm-stop → proxy 404/502 during warm-up) so we could not verify the
+            // shared-dep set. This is NOT a bug — it self-heals once the wrapper is
+            // ready. Surface a 'transient' reason so the renderer shows a TOAST, not
+            // an error+Report-on-GitHub dialog (which produced junk issues for a
+            // benign warm-up window).
             return res.json({
                 success: false,
                 remoteUnsupported: 'uninstall',
-                message: 'Could not verify which files are shared with other models on the Pod — uninstall aborted to avoid removing shared files. Try again in a moment.',
+                reason: 'wrapper-unreachable',
+                message: 'The Pod is still starting up — could not verify shared files yet. Try the uninstall again in a moment.',
             });
         }
 
@@ -1093,6 +1223,24 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             }
             if (sharedKeep.has(dep.id)) {
                 keptShared.push({ depId: dep.id, depName: dep.name || dep.id });
+                continue;
+            }
+            // MPI-97 — honor the "delete files from disk" checkbox in REMOTE mode.
+            // The LOCAL branch keeps the file when `deleteFiles` is false; the remote
+            // branch previously ignored the flag and ALWAYS called the wrapper delete,
+            // so unchecking the box still trashed the weights off the Pod volume (a
+            // user lost ~30GB of Wan 2.2 T2V weights this way). When the box is
+            // unchecked we KEEP every volume dep and just drop the install record —
+            // a re-install is then near-instant.
+            //
+            // This includes PER-MODEL custom_nodes (e.g. ComfyUI-PainterI2Vadvanced):
+            // they install onto the VOLUME via the wrapper (NOT image-resident — see
+            // remoteModels._isImageResident / the doc note there), so they are part of
+            // "keep files". An earlier carve-out (`dep.type !== 'custom_nodes'`) wrongly
+            // deleted the per-model node even on keep, dropping the model to PARTIALLY
+            // INSTALLED for a 144KB folder while all 36GB of weights stayed. Keep them.
+            if (!deleteFiles) {
+                keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id });
                 continue;
             }
             try {
@@ -1118,10 +1266,10 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             });
         }
 
-        logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared`);
+        logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files (deleteFiles=${deleteFiles})`);
         _modelJobs.delete(modelId);
-        _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles: [], keptPipInstalls: [], remote: true });
-        return res.json({ success: true, removed, keptUniversal, keptShared, remote: true, partialUnsupported: anyUnsupported });
+        _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls: [], remote: true });
+        return res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, remote: true, partialUnsupported: anyUnsupported });
     }
 
     const customRoot = await getCustomRoot();

@@ -89,14 +89,18 @@ const downloadService = {
             return;
         }
         const json = await res.json();
-        // Remote mode with no wrapper delete endpoint yet: backend returns
-        // success:false + remoteUnsupported. The model is still on the volume —
-        // do NOT emit download:uninstalled (it would falsely flip the UI to
-        // uninstalled). Surface the reason instead.
+        // Remote mode: backend returns success:false + remoteUnsupported when it
+        // could NOT complete the uninstall (Pod still warming up so the shared-dep
+        // set is unverifiable, or an older image lacks the delete endpoint). The
+        // model is still on the volume — do NOT emit download:uninstalled (it would
+        // falsely flip the UI to uninstalled). Surface it as a TOAST, never an
+        // error+Report-on-GitHub dialog: neither case is a bug the user should
+        // report (a warm-up window is transient + self-heals; a missing endpoint is
+        // an environment state). A scary dialog here produced junk GitHub issues.
         if (json.success === false && json.remoteUnsupported === 'uninstall') {
-            Events.emit('ui:error', {
-                title: 'Remote Uninstall Unavailable',
-                message: json.message || 'Remote uninstall needs an engine update — model files remain on the Pod volume.',
+            Events.emit('ui:warning', {
+                message: json.message
+                    || 'Remote uninstall unavailable right now — model files remain on the Pod volume. Try again in a moment.',
             });
             return;
         }
@@ -259,12 +263,22 @@ const downloadService = {
                     title: 'Download Failed',
                     message: `Failed to download ${modelName}: ${data.error}`
                 });
-            } else {
+            } else if (data.modelId) {
                 Events.emit('ui:error', {
                     title: 'Download Failed',
                     message: data.error
                 });
             }
+            // MPI-97 — a DEP-LEVEL failure (no modelId, e.g. a single dep's
+            // wrapper trigger) is NOT a user-facing model failure on its own: the
+            // dep's owning model(s) raise their OWN model-level download:failed via
+            // _checkModelJobsComplete, which carries the model context and the real
+            // user-facing reason. Surfacing the raw dep error here too produced a
+            // second scary "Download Failed" + Report-on-GitHub dialog for benign
+            // transients (the shared-dep collision was the worst case — now
+            // prevented backend-side by the attach). So: only dialog when we have a
+            // modelId; dep-only failures stay silent and let the model event own
+            // the surfacing. (MPI-81 #6 / MPI-94 G1 benign-transient-as-error family.)
             Events.emit('download:failed', data);
         });
 

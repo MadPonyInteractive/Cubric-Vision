@@ -181,19 +181,33 @@ export const MpiModelManager = ComponentFactory.create({
                         const depStatus = getModelDepStatus(model.id);
                         if (depStatus) {
                             const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                            let installedDeps = 0;
                             for (const dep of deps) {
                                 const depState = depStatus.get(dep.id);
                                 const depInstalled = depState === true || depState?.installed === true;
                                 if (depInstalled) {
                                     partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                                    installedDeps += 1;
                                 } else if (depState?.partialBytes) {
                                     partialDownloadedBytes += depState.partialBytes;
                                 }
                                 partialTotalBytes += _parseSizeToBytes(dep.size);
                             }
-                            if (partialTotalBytes > 0 && partialDownloadedBytes < partialTotalBytes) {
+                            // MPI-95 — a model is partial when ANY dep is missing, not only
+                            // when bytes are short. A missing SMALL dep (e.g. the 144KB
+                            // ComfyUI-PainterI2Vadvanced per-model node) leaves
+                            // downloaded/total at ~0.99999 of 36.5GB, which rounded to a
+                            // FULL bar while the badge said PARTIALLY INSTALLED — a
+                            // contradiction the user hit. Drive "partial" off dep COUNT,
+                            // and clamp the bar below 100% so a missing component is always
+                            // visible regardless of its byte size.
+                            const allDepsInstalled = installedDeps === deps.length;
+                            if (partialTotalBytes > 0 && !allDepsInstalled) {
                                 hasPartialProgress = true;
-                                partialProgress = partialDownloadedBytes / partialTotalBytes;
+                                partialProgress = Math.min(
+                                    partialTotalBytes > 0 ? partialDownloadedBytes / partialTotalBytes : 0,
+                                    0.99,
+                                );
                             }
                         }
                     }
@@ -282,19 +296,29 @@ export const MpiModelManager = ComponentFactory.create({
                     const depStatus = getModelDepStatus(model.id);
                     if (depStatus) {
                         const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
+                        let installedDeps = 0;
                         for (const dep of deps) {
                             const depState = depStatus.get(dep.id);
                             const depInstalled = depState === true || depState?.installed === true;
                             if (depInstalled) {
                                 partialDownloadedBytes += _parseSizeToBytes(dep.size);
+                                installedDeps += 1;
                             } else if (depState?.partialBytes) {
                                 partialDownloadedBytes += depState.partialBytes;
                             }
                             partialTotalBytes += _parseSizeToBytes(dep.size);
                         }
-                        if (partialTotalBytes > 0 && partialDownloadedBytes < partialTotalBytes) {
+                        // MPI-95 — partial is driven by dep COUNT, not bytes alone, and the
+                        // bar is clamped below 100% so a missing SMALL dep (e.g. the 144KB
+                        // ComfyUI-PainterI2Vadvanced node) can't render a FULL bar while the
+                        // badge reads PARTIALLY INSTALLED. See the matching block above.
+                        const allDepsInstalled = installedDeps === deps.length;
+                        if (partialTotalBytes > 0 && !allDepsInstalled) {
                             hasPartialProgress = true;
-                            partialProgress = partialDownloadedBytes / partialTotalBytes;
+                            partialProgress = Math.min(
+                                partialTotalBytes > 0 ? partialDownloadedBytes / partialTotalBytes : 0,
+                                0.99,
+                            );
                         }
                     }
                 }
@@ -457,8 +481,19 @@ export const MpiModelManager = ComponentFactory.create({
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} uninstalled.` });
             } else if (removed.length > 0) {
                 Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} uninstalled (some shared files kept).` });
+            } else if (keptModelFiles.length > 0) {
+                // Nothing removed because the user kept files on disk: the model's
+                // own weight stays for a fast re-install, and its other deps are
+                // engine-required (universal) or shared with another model. This is
+                // the EXPECTED outcome of "uninstall without deleting files", NOT a
+                // failure — so the model legitimately stays installed.
+                Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
             } else {
-                Events.emit('ui:warning', { title: 'Not uninstalled', message: `${modelName} — no files removed.` });
+                // Nothing removed and nothing the user chose to keep → every dep is
+                // engine-required (universal) or shared with another installed model,
+                // so there is nothing this model can remove on its own. Honest:
+                // it can't be uninstalled while those dependencies are still needed.
+                Events.emit('ui:info', { title: 'Nothing to remove', message: `${modelName} — all files are shared with other models or required by the engine.` });
             }
         }));
 

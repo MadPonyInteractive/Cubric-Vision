@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-99",
+  "title": "Uninstall confirm dialog dead after an install (no dialog opens)",
+  "description": "Live-found 2026-06-16 during MPI-97 verify. After installing model(s), pressing UNINSTALL on a card opens NO confirm dialog at all — the click is dead renderer-side (backend route never hit; app.log shows no uninstall line; DevTools console clean, no JS error; /comfy/models/check returns 200 so the wrapper is fine). NOT the MPI-97/95 backend work (that's all verified). Suspected repro: install something, then uninstall right after — the 4-model install fires repeated renderList() via download:progress/models:checked, leaving the singleton _uninstallDialog's Overlays/popup state stale (ties to the ui:close-all-popups / MpiSlideOver opt-out machinery, [[project_slideover_close_popup_optout]]) so _uninstallDialog.el.show() silently no-ops. Fix: ensure the uninstall dialog .show() works after re-renders/installs (re-arm overlay state, or don't let install-driven renderList stomp popup state). App-side, no image. See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-06-16T09:55:00Z",
+  "updated_at": "2026-06-16T09:55:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
