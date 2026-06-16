@@ -543,26 +543,6 @@ function _fmtGb(bytes) {
     return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
 }
 
-// Free bytes on the Pod /workspace volume, from the wrapper's truthful in-Pod
-// statvfs (GET /wrapper/stats → disk.free, image v0.4.5+). Returns null on any
-// miss — old image without the disk block, disk.available:false, or a stats
-// failure — so the gate treats "unknown" as "don't block". (MPI-100)
-async function _remoteFreeVolumeBytes() {
-    try {
-        const res = await remoteModels.wrapperFetch('/wrapper/stats', { retries: 2 });
-        if (!res.ok) return null;  // 503 stats_unavailable / old image → don't block
-        const stats = await res.json();
-        const disk = stats && stats.disk;
-        if (disk && disk.available && typeof disk.free === 'number') {
-            return disk.free;
-        }
-        return null;
-    } catch (err) {
-        logger.warn('download', `remote /wrapper/stats disk read failed: ${err.message}`);
-        return null;
-    }
-}
-
 // ── Pending Deps Launcher ──────────────────────────────────────────────────────
 
 async function _startPendingDeps() {
@@ -909,30 +889,14 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         }
     }
 
-    // ── Remote disk-full pre-flight gate (MPI-100) ──────────────────────────
-    // Mirror of the LOCAL gate above: refuse an install that won't fit on the Pod
-    // /workspace volume instead of starting a doomed wrapper download. The ONLY
-    // truthful free-space source is the in-Pod wrapper (RunPod REST getPod has no
-    // live volume usage). Only the deps about to be installed need new space; a 5%
-    // margin covers temp/.part overhead. An unknown free value (old image without
-    // the disk block, or a stats miss) is non-fatal — skip the gate, same as local.
-    const neededBytes = toInstall.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    if (neededBytes > 0) {
-        const freeBytes = await _remoteFreeVolumeBytes();
-        if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
-            // Roll back the refCount bumps this call made so a later retry (after
-            // the user frees Pod space) is not blocked by orphaned references.
-            for (const dep of dependencies) {
-                const depJob = _depJobs.get(dep.id);
-                if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
-            }
-            modelJob.status = 'idle';
-            logger.warn('download', `remote install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} on Pod volume`);
-            return res.status(400).json({
-                error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
-            });
-        }
-    }
+    // NOTE (MPI-100): there is NO truthful remote disk-full PRE-FLIGHT here. A
+    // RunPod network volume enforces its size as a QUOTA that statvfs cannot see
+    // (statvfs reports the multi-PB container overlay, not the 80GB volume cap),
+    // and the RunPod REST volume object exposes only the configured size, never
+    // live usage. So a doomed install can't be reliably blocked up-front; instead
+    // the wrapper's "[Errno 122] Disk quota exceeded" failure is caught REACTIVELY
+    // in downloadService and surfaced as a friendly disk-full toast (not the
+    // GitHub error dialog). The LOCAL install path keeps its real statfs gate.
 
     // MPI-95: the denominator seeded above is summed from rounded registry sizes,
     // which the wrapper's real content-length bytes overshoot — causing the ~80%

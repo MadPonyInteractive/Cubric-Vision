@@ -12,6 +12,18 @@ import { ce } from '../utils/dom.js';
 import { reSyncInstalledModels, getModelById, MODELS } from '../data/modelRegistry.js';
 import { clientLogger } from './clientLogger.js';
 
+// MPI-100 — recognise an out-of-disk-space failure from the wrapper/OS error
+// text so it can be surfaced as a friendly toast, not the GitHub error dialog.
+// Covers the RunPod network-volume quota ([Errno 122] Disk quota exceeded) and a
+// plain full disk ([Errno 28] No space left on device), plus their worded forms.
+function _isOutOfSpaceError(error) {
+    const s = String(error || '').toLowerCase();
+    return s.includes('errno 122')
+        || s.includes('disk quota exceeded')
+        || s.includes('errno 28')
+        || s.includes('no space left on device');
+}
+
 const downloadService = {
     _eventSource: null,
 
@@ -259,15 +271,35 @@ const downloadService = {
 
                 const model = getModelById(data.modelId);
                 const modelName = model?.name || data.modelId;
-                Events.emit('ui:error', {
-                    title: 'Download Failed',
-                    message: `Failed to download ${modelName}: ${data.error}`
-                });
+                // MPI-100 — out-of-space is an EXPECTED, user-actionable condition,
+                // not a bug. Route it to a friendly disk-full TOAST (ui:warning)
+                // instead of the Download-Failed + Report-on-GitHub dialog (ui:error),
+                // so the user isn't nudged to file a noise issue. The remote volume
+                // quota can't be pre-flighted truthfully (statvfs is blind to the
+                // RunPod network-volume quota; REST exposes only the configured size),
+                // so this reactive catch is the disk-full UX. See
+                // [[feedback_error_dialog_vs_toast]].
+                if (_isOutOfSpaceError(data.error)) {
+                    Events.emit('ui:warning', {
+                        message: `Not enough disk space to install ${modelName}. Free up space and try again.`
+                    });
+                } else {
+                    Events.emit('ui:error', {
+                        title: 'Download Failed',
+                        message: `Failed to download ${modelName}: ${data.error}`
+                    });
+                }
             } else if (data.modelId) {
-                Events.emit('ui:error', {
-                    title: 'Download Failed',
-                    message: data.error
-                });
+                if (_isOutOfSpaceError(data.error)) {
+                    Events.emit('ui:warning', {
+                        message: 'Not enough disk space to install this model. Free up space and try again.'
+                    });
+                } else {
+                    Events.emit('ui:error', {
+                        title: 'Download Failed',
+                        message: data.error
+                    });
+                }
             }
             // MPI-97 — a DEP-LEVEL failure (no modelId, e.g. a single dep's
             // wrapper trigger) is NOT a user-facing model failure on its own: the
