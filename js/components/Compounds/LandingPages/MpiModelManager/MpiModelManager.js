@@ -359,7 +359,18 @@ export const MpiModelManager = ComponentFactory.create({
                     phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
                 });
 
-                if (downloadState !== 'idle') {
+                // Wire pause/resume/cancel only while a download is genuinely ACTIVE.
+                // A lingering terminal job ('complete'/'cancelled' — download:complete
+                // sets the status but never clears the job from state.downloadJobs) must
+                // fall through to the Install handler. Without this whitelist, an
+                // install-then-uninstall left the UNINSTALLED card with pause/cancel
+                // handlers and NO delete handler, so the Install click emitted but
+                // nothing called _installModel → dead Install button. Mirror of the
+                // installed-branch fix above. (MPI-102; twin of MPI-99 / a28c7a8)
+                const isActiveDownload = downloadState === 'downloading'
+                    || downloadState === 'paused'
+                    || downloadState === 'installing';
+                if (isActiveDownload) {
                     const pauseCb = () => downloadService.pause(model.id);
                     const resumeCb = () => downloadService.resume(model.id);
                     const cancelCb = () => downloadService.cancel(model.id);
