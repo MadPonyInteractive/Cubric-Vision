@@ -11,6 +11,7 @@
 'use strict';
 
 import { Events } from '../events.js';
+import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { getModelById } from '../data/modelRegistry.js';
 
@@ -43,6 +44,7 @@ export function initNotificationService() {
 
     _unsubs.push(Events.on('generation:complete', ({ item, group } = {}) => {
         try {
+            if (state.notificationPrefs?.generation === false) return; // user opted out
             const op = group?.operation || item?.operation || 'Generation';
             ipcRenderer.send('notify-generation-complete', {
                 title: 'Generation complete',
@@ -56,6 +58,7 @@ export function initNotificationService() {
 
     _unsubs.push(Events.on('download:complete', (data = {}) => {
         try {
+            if (state.notificationPrefs?.downloads === false) return; // user opted out
             // UW installs surface through engine UI — skip OS notification
             if (!data.modelId || data.modelId === '__universal_workflow__') return;
             const model = getModelById(data.modelId);

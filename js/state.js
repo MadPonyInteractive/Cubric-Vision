@@ -97,6 +97,12 @@ const _state = {
     promptReuseSource: Storage.getPromptReuseSource(),
                                      // Gallery-only source preference: 'original' | 'current'.
 
+    // ── OS notification prefs (cross-session, localStorage-mirrored) ──────────
+    notificationPrefs: Storage.getNotificationPrefs(),
+                                     // { generation, downloads } — per-type OS-notification opt-out.
+                                     // Both default true. Read by notificationService at event time;
+                                     // does NOT affect in-app toasts. Mirrored by subscriber below.
+
     // ── RunPod remote engine (cross-session, localStorage-mirrored) ───────────
     runpodConfig: Storage.getRunpodConfig(),
                                      // { enabled, podId, datacenter, gpuType, volumeId, wasConnected } —
@@ -167,5 +173,6 @@ Events.on('state:changed', ({ key, value }) => {
     else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
     else if (key === 'promptReuseOptions') Storage.setPromptReuseOptions(value);
     else if (key === 'promptReuseSource') Storage.setPromptReuseSource(value);
+    else if (key === 'notificationPrefs') Storage.setNotificationPrefs(value);
     else if (key === 'runpodConfig') Storage.setRunpodConfig(value);
 });

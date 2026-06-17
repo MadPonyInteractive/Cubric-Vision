@@ -47,6 +47,12 @@ export const MpiSettings = ComponentFactory.create({
                         <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
                     </div>
                     <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Desktop Notifications</label>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyGenerationSlot"></div>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyDownloadsSlot"></div>
+                        <span class="mpi-settings__hint">Show an OS notification when these finish (only while the app is in the background). In-app messages are unaffected.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
                         <label class="mpi-settings__field-label">Pixel Rendering</label>
                         <div id="mpiSettingsPixelModeSlot"></div>
                         <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
@@ -192,6 +198,27 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 autoStartInst.on('change', ({ checked }) =>
                     Storage.setAutoStartComfy(checked));
+            }
+
+            // ── Desktop notification prefs (per-type OS opt-out) ─────────────
+            const notifyGenSlot = qs('#mpiSettingsNotifyGenerationSlot', root);
+            const notifyDlSlot = qs('#mpiSettingsNotifyDownloadsSlot', root);
+            const _saveNotifyPref = (key, checked) => {
+                state.notificationPrefs = { ...state.notificationPrefs, [key]: checked === true };
+            };
+            if (notifyGenSlot) {
+                notifyGenSlot.innerHTML = '';
+                MpiCheckbox.mount(notifyGenSlot, {
+                    checked: state.notificationPrefs?.generation !== false,
+                    label: 'Generation complete',
+                }).on('change', ({ checked }) => _saveNotifyPref('generation', checked));
+            }
+            if (notifyDlSlot) {
+                notifyDlSlot.innerHTML = '';
+                MpiCheckbox.mount(notifyDlSlot, {
+                    checked: state.notificationPrefs?.downloads !== false,
+                    label: 'Download complete',
+                }).on('change', ({ checked }) => _saveNotifyPref('downloads', checked));
             }
 
             // ── Pixel rendering mode ─────────────────────────────────────────
@@ -782,10 +809,14 @@ export const MpiSettings = ComponentFactory.create({
                 // A create already swept server-side; a warm resume did not, so
                 // do it here — fire-and-forget, the live Pod is kept server-side.
                 fetch('/remote/pod/cleanup-orphans', { method: 'POST' }).catch(() => {});
-                // Free local VRAM: a locally-running ComfyUI is redundant once
-                // we generate remotely. Stop it (no-op if not running). It lazy-
-                // starts again on the next LOCAL generation after Disconnect.
-                fetch('/comfy/stop', { method: 'POST' }).catch(() => {});
+                // MPI-74 P6: KEEP local ComfyUI warm on connect. The old behavior
+                // stopped it here to free VRAM ("redundant once we generate
+                // remotely") — but true concurrency means a per-gen "Run locally"
+                // override can run on local ComfyUI WHILE the cloud Pod generates.
+                // Killing it forced a blocking cold-boot on the first force-local
+                // gen. Leaving it up costs idle local VRAM/RAM only when local was
+                // already running; the user opted into concurrency. (Local still
+                // lazy-starts on demand if it was not running.)
             } catch (err) {
                 _setEngineHint(root, 'Could not reach the Pod connect endpoint.', true);
                 _setEngineStatusText(root, 'stopped');

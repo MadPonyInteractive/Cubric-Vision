@@ -30,6 +30,9 @@ export const STORAGE_KEYS = {
   // Viewer rendering
   PIXEL_MODE:          'mpi_pixel_mode',
 
+  // OS notification prefs (per-type opt-out)
+  NOTIFICATION_PREFS:  'mpi_notification_prefs',
+
   // PromptBox UI
   PROMPT_EXPANDED:     'mpi_prompt_expanded',
 

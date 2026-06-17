@@ -37,6 +37,13 @@
   installed."` notification too. When the app is focused, you still get the in-app
   toast only (no OS notification).
 
+- **Choose which desktop notifications you get.** Settings → App Behavior → Desktop
+  Notifications now has two toggles — **Generation complete** and **Download
+  complete** — so you can turn off the OS notification for either independently
+  (both on by default). Handy when you queue a batch of fast generations and don't
+  want a pile-up of system notifications. In-app messages are unaffected — this only
+  controls the OS-level notifications that pop while Cubric is in the background.
+
 - **Drag-and-drop model import (LoRA & upscale).** Settings → External Connections
   and the Model Settings picker now show each of your configured model folders as a
   drop zone — drag a `.safetensors` / `.ckpt` / `.pt` / `.bin` / `.pth` onto the

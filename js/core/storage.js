@@ -25,6 +25,19 @@ function normalizePromptReuseSource(value) {
   return value === 'current' ? 'current' : 'original';
 }
 
+export const DEFAULT_NOTIFICATION_PREFS = Object.freeze({
+  generation: true,
+  downloads: true,
+});
+
+// Both default ON — preserves the prior always-notify behavior on a fresh/corrupt store.
+function normalizeNotificationPrefs(value = {}) {
+  return {
+    generation: value?.generation !== false,
+    downloads: value?.downloads !== false,
+  };
+}
+
 export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   enabled: false,
   podId: null,
@@ -141,6 +154,9 @@ export const Storage = {
 
   getPixelMode:        () => get(STORAGE_KEYS.PIXEL_MODE, 'auto'),
   setPixelMode:        (v) => set(STORAGE_KEYS.PIXEL_MODE, v),
+
+  getNotificationPrefs: () => normalizeNotificationPrefs(get(STORAGE_KEYS.NOTIFICATION_PREFS, DEFAULT_NOTIFICATION_PREFS)),
+  setNotificationPrefs: (v) => set(STORAGE_KEYS.NOTIFICATION_PREFS, normalizeNotificationPrefs(v)),
 
   getPromptExpanded:   () => get(STORAGE_KEYS.PROMPT_EXPANDED, true),
   setPromptExpanded:   (v) => set(STORAGE_KEYS.PROMPT_EXPANDED, !!v),
