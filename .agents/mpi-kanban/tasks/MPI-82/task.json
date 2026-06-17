@@ -2,17 +2,17 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-82",
   "title": "External connections: local LoRA/upscale drag-drop + missing guard",
-  "description": "Let users drag-drop LoRA/upscale files onto their configured folder paths (each path = a drop zone, in Settings AND the picker modal), copying locally; missing models (not in any pointed-at folder) get a red dropdown item + a blocking toast on Generate. Phase 1 = local (build+test now). Phase 2 = remote upload to Pod (gated on MPI-81 rebuild). Phase 3 = remote verify. See plan.md.",
+  "description": "Phase 1 (local drag-drop into configured folders + local missing guard) SHIPPED + accepted. RE-SCOPED 2026-06-17: Phase 2/3 is now ON-DEMAND auto-upload, mirroring the existing latent/media upload — NOT manual drop-to-Pod. Local stays the single source of truth; at generate-time in remote mode, a selected LoRA/upscale that's local-but-not-on-Pod auto-uploads (toast 'Uploading <model> to cloud…'), then generation proceeds. Skip re-upload via /wrapper/models/status (works as-is). Phase 2A app-side builds NOW; Phase 2B = new /wrapper/models/upload endpoint, gated on MPI-81 Pod-image rebuild. See plan.md RE-SCOPE block.",
   "column": "doing",
   "maturity": "validating",
   "status": "active",
   "attention": {
     "state": "required",
-    "reason": "Phase 1 (local) shipped + accepted. Live-Pod repro 2026-06-17 confirmed the silent missing-model fail (custom local upscaler shown remotely -> Pod completed-no-output, no toast). Needs REMOTE validation (Phase 2/3 upload to Pod + live-Pod sign-off) + a remote-aware guard. Gated on the MPI-81 image rebuild; validate alongside MPI-64.",
-    "updated_at": "2026-06-17T08:50:00Z"
+    "reason": "RE-SCOPED 2026-06-17 (user) — dropped the old 'drop-zones-upload-to-Pod / remote-presence-picker' framing. New plan = on-demand auto-upload at generate-time (copies the latent/media pattern). The 'remote validation checkbox' never existed in code (confirmed) — nothing to remove. App-side Phase 2A (remote-aware guard + upload plumbing + presence via existing /wrapper/models/status) can build + test NOW; only the actual upload POST is gated on MPI-81 (new /wrapper/models/upload endpoint = Pod-image rebuild, separable to its own agent). NOTE TO CONCURRENT AGENTS: MPI-82 Phase 2A will touch routes/remoteModels.js, routes/remoteProxy.js, routes/comfy.js, js/services/comfyController.js, js/services/commandExecutor.js — coordinate before editing these.",
+    "updated_at": "2026-06-17T12:10:00Z"
   },
   "created_at": "2026-06-14T12:35:34.928Z",
-  "updated_at": "2026-06-17T08:50:00Z",
+  "updated_at": "2026-06-17T12:10:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

@@ -182,6 +182,33 @@ async function _guard(res) {
   return headers;
 }
 
+/**
+ * Resolve a model FILENAME (the dropdown value — may be subfolder-prefixed, e.g.
+ * 'style/foo.safetensors') to its absolute LOCAL path, searching the configured
+ * model folders for that bucket: the primary bucket dir (custom root or default)
+ * plus each stored extra folder, recursively, matched by BASENAME. Mirrors the
+ * union /comfy/list-files enumerates, so the file the user sees in the dropdown
+ * is the file we upload. Returns the absolute path or null if not found locally.
+ * @param {'loras'|'upscale_models'} type
+ * @param {string} filename
+ * @returns {Promise<string|null>}
+ */
+async function _resolveLocalModelPath(type, filename) {
+  const path = require('path');
+  const { getCustomRoot, getDefaultModelsRoot, getExtraModelFolders, findFileRecursive } = require('./shared');
+  const base = path.basename(String(filename || '').replace(/\\/g, '/'));
+  if (!base) return null;
+  const customRoot = await getCustomRoot();
+  const primaryBucket = path.join(customRoot || getDefaultModelsRoot(), type);
+  const extras = await getExtraModelFolders();
+  const roots = [primaryBucket, ...((extras[type]) || [])];
+  for (const root of roots) {
+    const hit = await findFileRecursive(root, base);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 // --- pre-generation health pre-check (MPI-90) --------------------------------
 //
 // Before the FIRST remote generate of a Pod session, read the volume manifest
@@ -1255,6 +1282,51 @@ router.post('/remote/upload/media', async (req, res) => {
     res.json({ success: true, name: out.name, path: out.path, type: out.type || 'input' });
   } catch (err) {
     logger.error('runpod', `remote media upload failed: ${err.message}`);
+    res.status(502).json({ error: 'upload_failed', message: err.message });
+  }
+});
+
+// MPI-82: generate-time auto-upload of a LOCAL LoRA/upscale model to the Pod
+// volume's models dir, mirroring /remote/upload/media for input assets. The
+// renderer calls /remote/model-present first to skip a redundant multi-GB
+// transfer, then /remote/upload/model only when absent. `type` is the wrapper
+// bucket ('loras' | 'upscale_models'); the Pod resolves the model by basename,
+// so unlike media there is NO path to inject back — the upload is the side effect.
+router.post('/remote/model-present', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const { type, filename } = req.body || {};
+    if (!type || !filename) return res.status(400).json({ error: 'type and filename required' });
+    const remoteModels = require('./remoteModels');
+    const present = await remoteModels.remoteModelPresent(type, filename);
+    res.json({ success: true, present });
+  } catch (err) {
+    // Presence is advisory — a failure here means "unknown", caller treats as absent.
+    logger.warn('runpod', `remote model presence failed: ${err.message}`);
+    res.json({ success: true, present: false });
+  }
+});
+
+router.post('/remote/upload/model', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const { type, filename } = req.body || {};
+    if (!type) return res.status(400).json({ error: 'type required' });
+    if (!filename) return res.status(400).json({ error: 'filename required' });
+    // The renderer only knows the model's filename (the dropdown value); resolve
+    // it to an absolute LOCAL path across the configured model folders. Local is
+    // the source of truth (MPI-82) — the user keeps weights local, we ship them up.
+    const localPath = await _resolveLocalModelPath(type, filename);
+    if (!localPath) {
+      return res.status(404).json({ error: 'not_found', message: `"${filename}" not found in your ${type} folders` });
+    }
+    const remoteModels = require('./remoteModels');
+    const out = await remoteModels.remoteUploadModel(localPath, type, filename);
+    res.json({ success: true, name: out.name, type: out.type || type, path: out.path });
+  } catch (err) {
+    logger.error('runpod', `remote model upload failed: ${err.message}`);
     res.status(502).json({ error: 'upload_failed', message: err.message });
   }
 });

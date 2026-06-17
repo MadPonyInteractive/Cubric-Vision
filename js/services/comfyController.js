@@ -158,7 +158,7 @@ export const ComfyUIController = {
      * Ensures the ComfyUI Python process is running and ready.
      * Emits `comfy:starting` → polls `/comfy/status` → emits `comfy:ready`.
      * On failure emits `comfy:error` and `ui:error`.
-     * @returns {Promise<boolean>}
+     * @returns {Promise<{ ready: boolean, remoteComfyRestarted: boolean }>}
      */
     async ensureServerRunning(opts = {}) {
         // MPI-73: refuse to start ANY generation while the remote engine is
@@ -215,7 +215,7 @@ export const ComfyUIController = {
                         if (check.ready) {
                             state.comfyNeedsRestart = false;
                             Events.emit('comfy:ready');
-                            return true;
+                            return { ready: true, remoteComfyRestarted: false };
                         }
                     } catch (e) { /* keep polling */ }
                 }
@@ -229,7 +229,7 @@ export const ComfyUIController = {
             }
 
             // Already running and ready — skip startup indicator to avoid flash.
-            if (status.running && status.ready) return true;
+            if (status.running && status.ready) return { ready: true, remoteComfyRestarted: false };
 
             // background: a boot auto-start brings the engine up silently — no
             // blocking "Starting ComfyUI Engine…" overlay. Manual generation still
@@ -246,7 +246,7 @@ export const ComfyUIController = {
                 const check = await checkRes.json();
                 if (check.ready) {
                     Events.emit('comfy:ready');
-                    return true;
+                    return { ready: true, remoteComfyRestarted: false };
                 }
                 await new Promise(r => setTimeout(r, 1000));
             }
@@ -264,7 +264,7 @@ export const ComfyUIController = {
      * until the Pod's wrapper reports ready. Pod start/stop lifecycle is owned
      * by the backend (and, later, the Settings boot gate) — this only waits.
      * Emits the same `comfy:starting` / `comfy:ready` events as local mode.
-     * @returns {Promise<boolean>}
+     * @returns {Promise<{ ready: boolean, remoteComfyRestarted: boolean }>}
      * @private
      */
     async _ensureRemoteReady({ background = false } = {}) {
@@ -287,6 +287,7 @@ export const ComfyUIController = {
             if (attempt < 2) await new Promise(r => setTimeout(r, 700));
         }
         if (check.ready) {
+            let remoteComfyRestarted = false;
             // MPI-88: the connected Pod is a no-GPU "download mode" Pod (CPU-only,
             // for installing models to the volume with no GPU bill). ComfyUI is up
             // and `ready`, but a sampler workflow would fail / crawl on CPU. Block
@@ -339,6 +340,7 @@ export const ComfyUIController = {
                     }
                     if (ready) {
                         state.comfyNeedsRestart = false;
+                        remoteComfyRestarted = true;
                         // fall through to the WS gate below — it re-opens the WS and
                         // proceeds with the gen on the freshly-restarted ComfyUI.
                     } else {
@@ -368,7 +370,7 @@ export const ComfyUIController = {
                 throw new Error(wsMsg);
             }
             if (background) Events.emit('comfy:ready');
-            return true;
+            return { ready: true, remoteComfyRestarted };
         }
 
         // No Pod connected (auto-connect-off boot, or a mid-session disconnect/OOM).
@@ -669,10 +671,11 @@ export const ComfyUIController = {
      * @param {string|object} workflowOrId  Workflow JSON object or a workflow ID string.
      * @param {object} [params={}]           Title-keyed injection params.
      * @param {((msg: object) => void)=} [onMessage]  Live WS message handler (preview, executed, executing, error).
+     * @param {{ beforePromptSubmit?: ((ctx: { serverReady: { ready: boolean, remoteComfyRestarted: boolean }, workflow: object, params: object }) => Promise<void>|void) }=} [opts]
      * @returns {Promise<{success: boolean, images: string[]}>}
      */
-    async runWorkflow(workflowOrId, params = {}, onMessage = null) {
-        await this.ensureServerRunning();
+    async runWorkflow(workflowOrId, params = {}, onMessage = null, opts = {}) {
+        const serverReady = await this.ensureServerRunning();
 
         let workflow = workflowOrId;
 
@@ -762,6 +765,21 @@ export const ComfyUIController = {
                     throw e;
                 }
             }
+        }
+
+        // 2b. Remote engine: auto-upload any selected LoRA/upscale model that is
+        // present LOCALLY but not yet on the Pod volume, mirroring the input-asset
+        // upload above. The model dropdowns list LOCAL folders (the user keeps
+        // weights local, not in the cloud — MPI-82), but a remote generation
+        // resolves them from the Pod's MODELS_DIR by basename. So before /prompt we
+        // upload the file once; the Pod then finds it by name (no param rewrite —
+        // unlike media, the filename already IS the value ComfyUI loads).
+        //
+        // GATE: `isRemote() && !forceLocal`. A force-local run (MPI-74) takes the
+        // LOCAL ComfyUI branch — the model is already on local disk and there is no
+        // Pod to upload to, so it must skip this entirely.
+        if (remoteEngineClient.isRemote() && !opts.forceLocal) {
+            await this._uploadRemoteModels(params);
         }
 
         // Defensive: Preview_Only param requested but workflow lacks the boolean
@@ -876,6 +894,9 @@ export const ComfyUIController = {
             this._isRunning = true;
 
             try {
+                if (typeof opts.beforePromptSubmit === 'function') {
+                    await opts.beforePromptSubmit({ serverReady, workflow, params });
+                }
                 const req = await fetch(`${this.httpBase()}/prompt`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1016,6 +1037,82 @@ export const ComfyUIController = {
         // Prefer the absolute Pod path (VHS_LoadVideoPath needs it); fall back to
         // the basename only if an older wrapper/route omits `path`.
         return data.path || data.name || filename;
+    },
+
+    /**
+     * Remote engine: ensure every LoRA/upscale model referenced by `params` exists
+     * on the Pod volume, auto-uploading from the user's LOCAL folders any that are
+     * missing. The user keeps weights local (MPI-82), so the dropdowns list local
+     * files; a remote run resolves them from MODELS_DIR by basename. For each
+     * distinct model we ask the Pod (presence check) and upload only when absent —
+     * a multi-GB weight must NOT re-transfer every generation.
+     *
+     * No param rewrite: ComfyUI's loader resolves the bare filename already sitting
+     * in `params`, so the upload is a pure side effect (unlike media, which needs
+     * the absolute Pod path injected back).
+     *
+     * GATING: the upload hits the NEW wrapper endpoint /wrapper/models/upload that
+     * ships in a Pod-image rebuild (MPI-81). Against an older image it 404s and the
+     * server route surfaces a clean failure — caught here as a warning toast so the
+     * generation fails loudly (the old SILENT no-output bug is what this card fixes)
+     * rather than dying mute on the Pod. The presence check (/wrapper/models/status)
+     * works on TODAY's image, so on an un-rebuilt Pod a missing model is detected and
+     * the user is told, instead of a cryptic mid-generation failure.
+     * @param {Record<string, any>} params  built workflow params (LoRA objs + Upscale_Model)
+     * @private
+     */
+    async _uploadRemoteModels(params) {
+        // Collect distinct { type, name } the workflow references.
+        const wanted = [];
+        const seen = new Set();
+        const add = (type, name) => {
+            if (!name || typeof name !== 'string') return;
+            const key = `${type}::${name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            wanted.push({ type, name });
+        };
+        for (const value of Object.values(params || {})) {
+            if (value && typeof value === 'object' && value.lora_name) add('loras', value.lora_name);
+        }
+        if (params.Upscale_Model) add('upscale_models', params.Upscale_Model);
+        if (!wanted.length) return;
+
+        for (const { type, name } of wanted) {
+            const base = String(name).split(/[\\/]/).pop();
+            // 1. Skip if the Pod already has it (works on today's image).
+            let present = false;
+            try {
+                const pres = await fetch('/remote/model-present', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, filename: base }),
+                });
+                const pjson = await pres.json().catch(() => null);
+                present = Boolean(pjson?.present);
+            } catch (_) {
+                present = false; // unknown → attempt upload
+            }
+            if (present) continue;
+
+            // 2. Upload the local file to the Pod volume. The renderer only has the
+            // filename; the server resolves the absolute local path from the model
+            // folders and streams it to the wrapper.
+            Events.emit('ui:info', { message: `Uploading "${base}" to the cloud — generation will start once it's ready…` });
+            const res = await fetch('/remote/upload/model', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, filename: name }),
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.success) {
+                // Loud, user-actionable failure (NOT the silent no-output bug). On an
+                // un-rebuilt Pod the upload endpoint 404s → surfaces here.
+                const msg = data?.message || `HTTP ${res.status}`;
+                clientLogger.error('comfy', `Remote model upload failed for ${base}: ${msg}`);
+                throw new Error(`Could not upload "${base}" to the cloud engine (${msg}). It may not be available on this Pod image yet.`);
+            }
+        }
     },
 
     /**

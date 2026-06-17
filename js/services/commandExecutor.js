@@ -123,6 +123,11 @@ async function _stagePreviewLatent(payload) {
     }
 }
 
+async function _restagePreviewLatentAfterRemoteRestart(payload, serverReady) {
+    if (!serverReady?.remoteComfyRestarted) return;
+    await _stagePreviewLatent(payload);
+}
+
 function _validTrimRange(trim) {
     const rangeIn = Number(trim?.in);
     const rangeOut = Number(trim?.out);
@@ -323,6 +328,13 @@ function _resolveUpscaleParam(upscaleFilename) {
  *
  * The asset lists are loaded lazily — if they are empty (engine not ready), the
  * guard allows the run rather than blocking on an unpopulated list.
+ *
+ * REMOTE NOTE (MPI-82): this guard is mode-AGNOSTIC by design. It blocks when a
+ * LoRA is absent from the LOCAL folders, which is exactly the precondition both
+ * local runs and remote runs need — in remote mode the file is auto-uploaded to
+ * the Pod from local disk at generate-time (comfyController._uploadRemoteModels),
+ * so "present locally" is the requirement either way. Do NOT add a remote branch
+ * here: a local-missing LoRA can't be uploaded, so it must block in both modes.
  * @param {Record<string, any>} params  built workflow params (LoRA objs)
  * @returns {string|null} missing LoRA name, or null if nothing blocks
  */
@@ -623,7 +635,7 @@ export function runAutoMask(payload) {
         };
 
         try {
-            await ComfyUIController.runWorkflow(workflow, params, onMessage);
+            await ComfyUIController.runWorkflow(workflow, params, onMessage, { forceLocal: payload.forceLocal === true });
             // Workflow has returned — mark settled BEFORE the synthesized empty
             // signal so the "Nothing detected" handler's exec.cancel() is a no-op
             // (the prompt is done; interrupt() would only flash the remote toast).
@@ -1043,7 +1055,16 @@ export function runCommand(payload) {
         };
 
         try {
-            await ComfyUIController.runWorkflow(workflow, params, onMessage);
+            await ComfyUIController.runWorkflow(workflow, params, onMessage, {
+                // MPI-74: per-generation force-local override. When true, runWorkflow
+                // routes to LOCAL ComfyUI and SKIPS the remote model auto-upload
+                // (model is already local; no Pod to upload to). Sourced from the
+                // dispatch payload; defaults false so normal runs are unaffected.
+                forceLocal: workingPayload.forceLocal === true,
+                beforePromptSubmit: async ({ serverReady }) => {
+                    await _restagePreviewLatentAfterRemoteRestart(workingPayload, serverReady);
+                },
+            });
         } catch (err) {
             closeComfyEventSource();
             // A recoverable remote restart (A3): the proxy 503'd because the remote

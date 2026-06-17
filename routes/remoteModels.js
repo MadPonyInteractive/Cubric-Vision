@@ -381,6 +381,109 @@ async function remoteUploadInput(localPath, filename, endpoint) {
   throw lastErr || new Error('wrapper_upload_failed');
 }
 
+/**
+ * Ask the Pod whether a single LoRA/upscale model file already sits on the
+ * volume, by basename, so a generate-time auto-upload can SKIP a multi-GB
+ * re-transfer. Reuses the existing `/wrapper/models/status` contract — the
+ * wrapper reads only `dep.type` + `dep.filename` and checks
+ * `os.path.exists(MODELS_DIR/<type>/<basename>) && size>0` (no url/sha/size
+ * needed). `type` is a wrapper subdir bucket ('loras' | 'upscale_models').
+ * Returns true iff present-and-complete; false on absent/partial OR any wrapper
+ * error (fail-open to upload — a needless re-upload is safe, a skipped one is
+ * not). The basename is taken from the (possibly subfolder-prefixed) filename.
+ * @param {string} type      wrapper bucket ('loras' | 'upscale_models')
+ * @param {string} filename  local filename (subfolder prefix tolerated)
+ * @returns {Promise<boolean>}
+ */
+async function remoteModelPresent(type, filename) {
+  const path = require('path');
+  const base = path.basename(String(filename || '').replace(/\\/g, '/'));
+  if (!type || !base) return false;
+  try {
+    const body = { models: [{ id: '_present', deps: [{ id: base, type, filename: base }] }] };
+    const res = await wrapperFetch('/wrapper/models/status', { method: 'POST', body });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json) return false;
+    const dep = json.results?._present?.deps?.[0];
+    return Boolean(dep && dep.installed);
+  } catch (err) {
+    // Wrapper unreachable / transient — fail open (upload). A redundant upload is
+    // cheap-ish and the overwrite is idempotent; a wrongly-skipped one breaks gen.
+    logger.warn('runpod', `remote model presence check failed for ${base} (${err.message})`);
+    return false;
+  }
+}
+
+/**
+ * Upload a LOCAL LoRA/upscale model file to the Pod volume's models dir so a
+ * remote generation can resolve it by basename. Mirrors `remoteUploadInput`
+ * (read file server-side, multipart through the RunPod proxy with auth + browser
+ * UA + post-restart 404 retry) but targets the NEW wrapper endpoint
+ * `/wrapper/models/upload`, which lands the file in `MODELS_DIR/<type>/<basename>`
+ * (via the wrapper's `_model_dest`) instead of the input dir. Adds a `type` form
+ * field (the wrapper bucket: 'loras' | 'upscale_models').
+ *
+ * GATING: `/wrapper/models/upload` ships in a Pod-image rebuild (MPI-81). Against
+ * an older image the endpoint 404s; `remoteUploadInput`'s shared retry treats a
+ * 404 as transient warm-up and exhausts its budget, then throws — so the CALLER
+ * must guard this behind a rebuilt-image check (or accept a clean failure toast)
+ * until the endpoint exists. Returns the wrapper JSON ({ name, type, path }).
+ * @param {string} localPath  absolute local model path
+ * @param {string} type       wrapper bucket ('loras' | 'upscale_models')
+ * @param {string} filename   destination basename (subfolder prefix tolerated)
+ * @returns {Promise<object>}
+ */
+async function remoteUploadModel(localPath, type, filename) {
+  const fs = require('fs-extra');
+  const path = require('path');
+  if (!localPath || typeof localPath !== 'string') throw new Error('localPath required');
+  if (!type || typeof type !== 'string') throw new Error('type required');
+  if (!(await fs.pathExists(localPath))) throw new Error(`model file missing: ${localPath}`);
+
+  const base = path.basename(String(filename || localPath).replace(/\\/g, '/'));
+  if (!base || base === '.' || base === '..') {
+    throw new Error('filename must resolve to a bare basename');
+  }
+
+  const podId = _podId();
+  if (!podId) throw new Error('remote_inactive');
+  const headers = await _authHeaders();
+  if (!headers) throw new Error('wrapper_token_missing');
+
+  const buf = await fs.readFile(localPath);
+  const url = `${proxyUrl(podId)}/wrapper/models/upload`;
+
+  const retries = 4;
+  const retryDelayMs = 2000;
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([buf]), base);
+      form.append('filename', base);
+      form.append('type', type);
+      form.append('overwrite', 'true');
+      const res = await fetch(url, { method: 'POST', headers: { ...headers }, body: form });
+      if (res.status === 404 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) {
+        throw new Error((json && (json.message || json.error)) || `wrapper model upload ${res.status}`);
+      }
+      return json;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+    }
+  }
+  throw lastErr || new Error('wrapper_model_upload_failed');
+}
+
 /** Cancel an in-flight wrapper install by dep id. Best-effort. */
 async function remoteCancelInstall(depId) {
   try {
@@ -472,6 +575,8 @@ module.exports = {
   remoteInstallDep,
   remoteUninstallDep,
   remoteUploadInput,
+  remoteModelPresent,
+  remoteUploadModel,
   remoteCancelInstall,
   openInstallEventStream,
 };
