@@ -57,6 +57,10 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // LOCAL and the user Connects when wanted. When ON, boot auto-reconnects a Pod.
   // `enabled` is now purely "remote is available / show the panel", not "force remote".
   autoConnectOnStart: false,
+  // autoRetry: when ON, the GPU picker also lists out-of-stock cards and Connect
+  // waits in the background (polling availability) for the picked GPU to free
+  // before connecting — without blocking local generation (MPI-110). Default OFF.
+  autoRetry: false,
   // idleTimeoutS: idle-watchdog timeout baked into the Pod env at create time,
   // stored in SECONDS (the wrapper unit), shown as minutes in Settings. Floor
   // 10 min (600 s), default 15 min (900 s) — mirrors MpiSettings' IDLE_* clamps.
@@ -85,6 +89,7 @@ function normalizeRunpodConfig(value = {}) {
     wasConnected: value?.wasConnected === true,
     deleteOnQuit: value?.deleteOnQuit === true,
     autoConnectOnStart: value?.autoConnectOnStart === true,
+    autoRetry: value?.autoRetry === true,
     idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),
     containerDiskGb: normalizeContainerDiskGb(value?.containerDiskGb),
   };

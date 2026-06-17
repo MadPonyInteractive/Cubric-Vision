@@ -110,6 +110,12 @@ const _state = {
                                      // are main-process-only (secrets:* IPC via
                                      // js/core/secretsClient.js) and must never appear
                                      // here or in localStorage. Mirrored by subscriber below.
+
+    // ── Auto-retry wait (MPI-110, transient — NOT persisted) ──────────────────
+    remoteWaitGpu: null,             // gpuType currently being waited-for by the
+                                     // app-wide auto-retry loop (shell-owned), or null.
+                                     // Lets any (re)mounted Settings panel reflect a
+                                     // wait that started elsewhere / before it mounted.
 };
 
 // Effective image-px → screen-px scale above which auto mode switches to nearest-neighbor.

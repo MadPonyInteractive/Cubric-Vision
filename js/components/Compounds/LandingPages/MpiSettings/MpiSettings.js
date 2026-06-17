@@ -124,6 +124,10 @@ export const MpiSettings = ComponentFactory.create({
                         <span class="mpi-settings__hint">Leave this off unless you want a billed Pod to start automatically when the app launches.</span>
                         <span class="mpi-settings__hint">When enabled, the app connects (and starts billing) a Pod automatically at launch. Off by default — start local, Connect when you want cloud generation.</span>
                     </div>
+                    <div class="mpi-settings__form-group mpi-settings__runpod-suboption" id="mpiSettingsRunpodAutoRetryGroup">
+                        <div id="mpiSettingsRunpodAutoRetrySlot"></div>
+                        <span class="mpi-settings__hint">Pick the exact GPU you want — even if it's out of stock right now — and Connect keeps checking until it frees, then connects. You can keep working locally while it waits.</span>
+                    </div>
                     <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
                         <div class="mpi-settings__form-group">
                             <div class="mpi-settings__folder-row">
@@ -385,6 +389,10 @@ export const MpiSettings = ComponentFactory.create({
         let _engineStatusTimer = null;  // setInterval id for the status poll
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
+        // MPI-110: the auto-retry wait LOOP lives in the shell (survives navigating
+        // away from Settings); the panel reads `state.remoteWaitGpu` to know if one
+        // is active. `_isWaiting()` is the single source of truth here.
+        const _isWaiting = () => !!state.remoteWaitGpu;
         let _engineBtnLabel = 'Connect'; // tracks the button label (instance has no props getter)
 
         // MpiButton imperative API lives on the instance's `.el`, not the
@@ -505,6 +513,14 @@ export const MpiSettings = ComponentFactory.create({
                 return;
             }
             if (_engineBusy) return; // a create/delete is mid-flight in THIS panel; leave the label alone
+            // MPI-110: a shell-owned auto-retry wait is live (possibly started before
+            // this panel mounted, or while it was closed) — surface waiting…/Cancel so
+            // the panel reflects reality. No Pod exists yet; the create begins when the
+            // GPU frees. Takes priority over the status shape (which is still local).
+            if (_isWaiting()) {
+                _applyWaitState(root, state.remoteWaitGpu || cfg.gpuType || 'the selected GPU');
+                return;
+            }
             const ready = !!(status && status.ready);
             const running = !!(status && status.running);
             const connecting = !!(status && status.connecting);
@@ -544,6 +560,15 @@ export const MpiSettings = ComponentFactory.create({
                 _engineBtnLabelSet('Connect');
                 const needsVolume = !_isAnyRegion(cfg);
                 _engineBtnDisabled(!cfg.gpuType || (needsVolume && !cfg.volumeId));
+                // MPI-110: clear a stale "Waiting for…/connecting…" hint left behind when
+                // a shell wait ended (won→sniped, or stopped) — otherwise the hint
+                // disagrees with the "stopped"+Connect state the user sees. Only clears
+                // the transient wait/connect hints, never a warning.
+                const hintEl = qs('#mpiSettingsRunpodConnectHint', root);
+                if (hintEl && !hintEl.classList.contains('mpi-settings__hint--warn')
+                    && /Waiting for|checking every|connect the moment/i.test(hintEl.textContent || '')) {
+                    _setEngineHint(root, '');
+                }
             }
         }
 
@@ -629,6 +654,14 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineHint(root, 'Create or select a network volume first — it stores ComfyUI and your models.', true);
                 return;
             }
+            // MPI-110: auto-retry on + the picked GPU is out of stock right now → don't
+            // attempt a doomed create. Ask the shell to wait (non-blocking, survives
+            // navigating away); it kicks the create when the GPU frees. A warm saved
+            // Pod (podId) resumes regardless — that's a reconnect, not a fresh grab.
+            if (cfg.autoRetry === true && !cfg.podId && !_isPickedGpuInStock(cfg)) {
+                _startWait(root);
+                return;
+            }
             _engineBusy = true;
             _connectAbort = false; // MPI-86: fresh attempt — clear any prior Cancel flag
             // MPI-86: while connecting, the button becomes an enabled "Cancel" (was
@@ -651,6 +684,7 @@ export const MpiSettings = ComponentFactory.create({
                 : 'Creating a fresh Pod on the selected GPU — first boot can take 90–120s.');
             Events.emit('ui:info', { message: warm ? 'Connecting to your Pod…' : 'Creating a Pod…' });
             let _connectSucceeded = false; // MPI-73: resolves the 'connecting' phase
+            let _handoffToWait = false;    // MPI-110: sniped mid-create → re-enter wait loop in finally
             try {
                 const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
                 // MPI-78: "Any region" is a UI sentinel, not a real DC — send a null
@@ -674,6 +708,13 @@ export const MpiSettings = ComponentFactory.create({
                 // Saved GPU no longer available — the stuck Pod was deleted server-side.
                 if (data.unavailable) {
                     state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+                    // MPI-110: auto-retry on → the GPU was sniped between our poll and
+                    // the create. Don't dead-end; drop back into the background wait
+                    // (kicked off in finally so its state survives the cleanup below).
+                    if (_runpodCfg().autoRetry === true) {
+                        _handoffToWait = true;
+                        return;
+                    }
                     _setEngineHint(root, 'Your saved GPU is unavailable right now. Pick another card and Connect again.', true);
                     _setEngineStatusText(root, 'stopped');
                     _engineBtnLabelSet('Connect');
@@ -688,6 +729,14 @@ export const MpiSettings = ComponentFactory.create({
                 if (!res.ok || (!data.starting && !data.ready)) {
                     const msg = data.message || data.error || 'Could not connect to a Pod.';
                     const outOfStock = /not enough|unavailable|no .*available|out of stock|insufficient/i.test(msg);
+                    // MPI-110: auto-retry on + an out-of-stock refusal with no Pod left
+                    // behind → re-enter the background wait instead of asking the user
+                    // to pick another card. A non-stock error (real API failure) still
+                    // surfaces. A partial Pod (data.podId) is left to the normal path.
+                    if (outOfStock && !data.podId && _runpodCfg().autoRetry === true) {
+                        _handoffToWait = true;
+                        return;
+                    }
                     _setEngineHint(root, outOfStock
                         ? `${msg} — that GPU is out of stock right now. Pick another card and Connect again.`
                         : msg, true);
@@ -824,19 +873,24 @@ export const MpiSettings = ComponentFactory.create({
                 Events.emit('ui:warning', { message: 'Could not reach the Pod connect endpoint.' });
             } finally {
                 _engineBusy = false;
-                // MPI-86: when the label is back on "Connect" (failed/cancelled), gate
-                // it on a picked GPU + volume like the other reset branches — don't
-                // blanket-enable, or Cancel leaves an enabled Connect with no GPU.
-                if (_engineBtnLabel === 'Connect') {
-                    _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
-                } else {
-                    _engineBtnDisabled(false);
-                }
                 // MPI-73: if the connect did NOT fully succeed (refused, timed out,
                 // WS never handshook, threw), clear the transient 'connecting' phase
                 // back to local · offline so the hero/status bar don't stay stuck.
                 if (!_connectSucceeded) {
                     Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+                }
+                // MPI-110: sniped mid-create with auto-retry on → re-enter the
+                // background wait (shell-owned) now that this attempt's state is torn
+                // down. _startWait repaints the button to Cancel, so skip the reset below.
+                if (_handoffToWait) {
+                    _startWait(root);
+                } else if (_engineBtnLabel === 'Connect') {
+                    // MPI-86: when the label is back on "Connect" (failed/cancelled), gate
+                    // it on a picked GPU + volume like the other reset branches — don't
+                    // blanket-enable, or Cancel leaves an enabled Connect with no GPU.
+                    _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+                } else {
+                    _engineBtnDisabled(false);
                 }
             }
         }
@@ -849,6 +903,20 @@ export const MpiSettings = ComponentFactory.create({
         // — the still-running _connectEngine owns it and its finally resets it.
         async function _cancelConnect(root) {
             _connectAbort = true;
+            // MPI-110: cancelling while waiting for an out-of-stock GPU — no Pod was
+            // ever created (the shell wait only polls availability), so skip the
+            // delete-active teardown and just stop the shell loop. Cheaper, and it
+            // never touched remote mode to begin with.
+            if (_isWaiting()) {
+                Events.emit('remote:wait-cancel');
+                _setEngineStatusText(root, 'stopped');
+                _setEngineHint(root, 'Stopped waiting. Pick a GPU and Connect again, or try another card.');
+                _engineBtnLabelSet('Connect');
+                _engineBtnDisabled(!_runpodCfg().gpuType || !_runpodCfg().volumeId);
+                Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+                Events.emit('ui:info', { message: 'Stopped waiting for the GPU.' });
+                return;
+            }
             _setEngineStatusText(root, 'cancelling…');
             _setEngineHint(root, 'Cancelling — deleting the half-started Pod so it stops billing…');
             try {
@@ -864,6 +932,48 @@ export const MpiSettings = ComponentFactory.create({
             // Resolve the transient 'connecting' phase → local · offline.
             Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
             Events.emit('ui:info', { message: 'Connection cancelled.' });
+        }
+
+        // ── Auto-retry wait loop (MPI-110) ───────────────────────────────────
+        // Is the picked GPU available RIGHT NOW in the current _runpodAvailability
+        // snapshot? Mirrors the availMap logic in _buildGpuOptions (Any-region =
+        // any DC has it available; a real DC = that DC's gpuAvailability). The CPU
+        // download Pod has effectively-infinite capacity → always "in stock".
+        function _isPickedGpuInStock(cfg) {
+            const gpuType = cfg.gpuType;
+            if (!gpuType) return false;
+            if (gpuType === '__cpu__') return true;
+            const dcs = _runpodAvailability?.dataCenters || [];
+            if (_isAnyRegion(cfg)) {
+                return dcs.some(d => (d.gpuAvailability || [])
+                    .some(g => g.gpuTypeId === gpuType && g.available));
+            }
+            const dc = dcs.find(d => d.id === cfg.datacenter);
+            return !!dc && (dc.gpuAvailability || [])
+                .some(g => g.gpuTypeId === gpuType && g.available);
+        }
+
+        // Start an auto-retry wait for the picked (out-of-stock) GPU. The wait LOOP
+        // lives in the shell (so it survives navigating away from Settings); this just
+        // asks it to start and paints the panel's "waiting…" state. The shell kicks the
+        // create + drives the connect when the GPU frees; `state.remoteWaitGpu` mirrors
+        // the wait so a re-mounted panel re-paints it (see _applyWaitState).
+        function _startWait(root) {
+            const gpuLabel = _runpodCfg().gpuType || 'the selected GPU';
+            Events.emit('remote:wait-start', {
+                gpuType: _runpodCfg().gpuType,
+                datacenter: _runpodCfg().datacenter,
+            });
+            _applyWaitState(root, gpuLabel);
+        }
+
+        // Paint the panel into "waiting…" mode (Cancel button + hint). Called both when
+        // the user starts a wait and when a panel re-mounts while a shell wait is live.
+        function _applyWaitState(root, gpuLabel) {
+            _setEngineStatusText(root, 'waiting…');
+            _setEngineHint(root, `Waiting for ${gpuLabel} to become available — checking every 15s. You can keep generating locally; we'll connect the moment it frees.`);
+            _engineBtnLabelSet('Cancel');
+            _engineBtnDisabled(false);
         }
 
         async function _disconnectEngine(root) {
@@ -1107,6 +1217,22 @@ export const MpiSettings = ComponentFactory.create({
             });
             gpuInst.on('change', async ({ value }) => {
                 const prev = _runpodCfg();
+                // MPI-110: switching GPU while an auto-retry WAIT is live → switch the
+                // wait to the new card. Stop the shell loop (no Pod exists yet — nothing
+                // to tear down), adopt the new GPU, and if it's also out of stock start
+                // a fresh wait for it; if it's in stock, leave Connect ready so the user
+                // connects immediately. Without this the wait kept polling the OLD GPU.
+                if (_isWaiting() && value && value !== prev.gpuType) {
+                    Events.emit('remote:wait-cancel');
+                    state.runpodConfig = { ...prev, gpuType: value };
+                    if (value !== '__cpu__' && !_isPickedGpuInStock(_runpodCfg())) {
+                        _startWait(root);
+                    } else {
+                        _setEngineHint(root, 'Switched GPU — it’s available now. Connect to create a Pod on the new card.');
+                        _refreshEngineConnect(root);
+                    }
+                    return;
+                }
                 // MPI-86: switching GPU while a connect is IN FLIGHT auto-cancels it —
                 // the in-flight Pod is pinned to the old card, so kill it (stops
                 // billing) before adopting the new GPU. This is the out-of-stock /
@@ -1151,15 +1277,21 @@ export const MpiSettings = ComponentFactory.create({
             const dcs = _runpodAvailability?.dataCenters || [];
             const gpus = _runpodAvailability?.gpuTypes || [];
             const anyRegion = dcId === ANY_REGION;
+            // MPI-110: with auto-retry on, also surface out-of-stock GPUs so the user
+            // can pick the exact card to WAIT for. `unavailSet` holds GPU type ids
+            // that exist in the scope but have no available stock right now.
+            const autoRetry = _runpodCfg().autoRetry === true;
             // MPI-78: "Any region" aggregates availability across EVERY DC (best stock
             // wins per GPU) so the user sees the full Secure-Cloud catalogue like the
             // RunPod console; a real DC scopes to that DC's gpuAvailability only.
             let availMap;
+            const unavailSet = new Set();
             if (anyRegion) {
                 availMap = new Map();
                 for (const d of dcs) {
                     for (const g of (d.gpuAvailability || [])) {
-                        if (!g.available) continue;
+                        if (!g.available) { if (!availMap.has(g.gpuTypeId)) unavailSet.add(g.gpuTypeId); continue; }
+                        unavailSet.delete(g.gpuTypeId);
                         const cur = availMap.get(g.gpuTypeId);
                         if (!cur || (_stockRank[g.stockStatus] || 0) > (_stockRank[cur] || 0)) {
                             availMap.set(g.gpuTypeId, g.stockStatus);
@@ -1174,6 +1306,9 @@ export const MpiSettings = ComponentFactory.create({
                         .filter(g => g.available)
                         .map(g => [g.gpuTypeId, g.stockStatus])
                 );
+                for (const g of (dc.gpuAvailability || [])) {
+                    if (!g.available && !availMap.has(g.gpuTypeId)) unavailSet.add(g.gpuTypeId);
+                }
             }
             // MPI-88: first option is the no-GPU "download mode" Pod. Picking it sets
             // gpuType to the CPU sentinel, which satisfies the Connect guard and
@@ -1188,8 +1323,9 @@ export const MpiSettings = ComponentFactory.create({
             // Stock leads the meta so it survives truncation in narrow panels.
             // N/A mirrors the RunPod console's label for unrated stock.
             const gpuOptions = gpus
-                .filter(g => g.secureCloud && availMap.has(g.id))
+                .filter(g => g.secureCloud && (availMap.has(g.id) || (autoRetry && unavailSet.has(g.id))))
                 .map(g => {
+                    const inStock = availMap.has(g.id);
                     const stock = availMap.get(g.id);
                     const price = (typeof g.securePrice === 'number')
                         ? ` · $${g.securePrice.toFixed(2)}/hr`
@@ -1200,11 +1336,15 @@ export const MpiSettings = ComponentFactory.create({
                     const ram = (typeof g.minMemory === 'number' && g.minMemory > 0)
                         ? ` · ${g.minMemory}GB RAM${g.minMemory < 64 ? ' ⚠ video' : ''}`
                         : '';
+                    // MPI-110: out-of-stock card shown only because auto-retry is on —
+                    // label it so the user knows Connect will wait for it. Ranked below
+                    // every in-stock card.
+                    const stockLabel = inStock ? (stock || 'N/A') : 'Unavailable — will wait';
                     return {
                         value: g.id,
                         label: g.displayName || g.id,
-                        meta: `${stock || 'N/A'} · ${g.memoryInGb}GB VRAM${ram}${price}`,
-                        _rank: _stockRank[stock] || 0,
+                        meta: `${stockLabel} · ${g.memoryInGb}GB VRAM${ram}${price}`,
+                        _rank: inStock ? (_stockRank[stock] || 0) : -1,
                     };
                 })
                 .sort((a, b) => b._rank - a._rank);
@@ -1466,9 +1606,11 @@ export const MpiSettings = ComponentFactory.create({
             // The auto-connect sub-option (MPI-85) sits between the Enable toggle and
             // the body; show/hide it with the body so it only appears when enabled.
             const autoConnectGroup = qs('#mpiSettingsRunpodAutoConnectGroup', root);
+            const autoRetryGroup = qs('#mpiSettingsRunpodAutoRetryGroup', root);
             const syncBodyVisibility = (enabled) => {
                 body.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
                 autoConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+                autoRetryGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
             };
             syncBodyVisibility(cfg.enabled);
 
@@ -1501,6 +1643,26 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 acInst.on('change', ({ checked }) => {
                     state.runpodConfig = { ..._runpodCfg(), autoConnectOnStart: checked === true };
+                });
+            }
+
+            // ── Auto-retry connection (MPI-110) ──────────────────────────────
+            // When ON: the GPU picker also lists out-of-stock cards, and Connect
+            // becomes a background availability poll that waits for the picked GPU
+            // to free, then hands off to the normal create path — WITHOUT entering
+            // the blocking "connecting" state (local generation stays usable).
+            // Persist-only; boot reads it via Storage.getRunpodConfig().
+            const autoRetrySlot = qs('#mpiSettingsRunpodAutoRetrySlot', root);
+            if (autoRetrySlot) {
+                autoRetrySlot.innerHTML = '';
+                const arInst = MpiCheckbox.mount(autoRetrySlot, {
+                    checked: cfg.autoRetry === true,
+                    label: 'Auto-retry connection (wait for an out-of-stock GPU)',
+                });
+                arInst.on('change', ({ checked }) => {
+                    state.runpodConfig = { ..._runpodCfg(), autoRetry: checked === true };
+                    // Re-list GPUs so out-of-stock cards appear/disappear immediately.
+                    _renderRunpodPickers(root);
                 });
             }
 
@@ -1609,6 +1771,15 @@ export const MpiSettings = ComponentFactory.create({
         }));
         _unsubs.push(Events.onState('promptReuseSource', (value) => {
             _syncReuseSource?.(value);
+        }));
+        // MPI-110: the shell-owned auto-retry wait flips `remoteWaitGpu` when it
+        // starts/ends (won → create, or cancelled). Repaint the engine button so the
+        // panel tracks it — e.g. wait ends → drop "waiting…" → next status poll paints
+        // connecting/stopped. Re-derives from the last known status (null = re-poll).
+        _unsubs.push(Events.onState('remoteWaitGpu', () => {
+            const r = qs('.mpi-settings', el) || el;
+            _applyEngineStatus(r, null);
+            if (!_isWaiting()) _pollEngineStatus(r);
         }));
 
         el.destroy = () => {
