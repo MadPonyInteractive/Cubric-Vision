@@ -273,7 +273,19 @@ export const ComfyUIController = {
         // generation — so generation does NOT auto-create a Pod (avoids a silent
         // billing surprise and the GPU-pick requirement). If the wrapper is
         // already healthy (Connected), proceed; otherwise tell the user to Connect.
-        const check = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
+        // MPI-107: a SINGLE probe miss here used to drop the user silently to the
+        // LOCAL engine (the fall-to-local branch below) even when the Pod was alive
+        // — a transient wrapper 503 (e.g. right after a Cancel/interrupt, or mid
+        // restart-comfy) reads identical to "Pod gone". Retry a few times before
+        // concluding not-ready, so only a PERSISTENT not-ready falls to local
+        // (genuine OOM/disconnect/delete — MPI-85). Same transient-retry posture as
+        // wrapperFetch. Connecting Pods are gated upstream (_remoteTransition).
+        let check = {};
+        for (let attempt = 0; attempt < 3; attempt++) {
+            check = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
+            if (check.ready) break;
+            if (attempt < 2) await new Promise(r => setTimeout(r, 700));
+        }
         if (check.ready) {
             // MPI-88: the connected Pod is a no-GPU "download mode" Pod (CPU-only,
             // for installing models to the volume with no GPU bill). ComfyUI is up
@@ -316,7 +328,14 @@ export const ComfyUIController = {
                     while (retries-- > 0) {
                         await new Promise(r => setTimeout(r, 1000));
                         const s = await fetch('/remote/comfy/status').then(r => r.json()).catch(() => ({}));
-                        if (s.ready) { ready = true; break; }
+                        // MPI-107: gate on comfy_ready, NOT wrapper `ready`. A
+                        // restart-comfy reloads ONLY the ComfyUI subprocess — the
+                        // wrapper stays up, so `s.ready` is true the whole time and
+                        // breaking on it accepts a gen before ComfyUI is back
+                        // (→ interrupt/gen 503, "no output"). `comfyReady` is the
+                        // signal that flips. `=== undefined` keeps old-image compat.
+                        // Mirrors the shell.js connection gate.
+                        if (s.ready && (s.comfyReady === undefined || s.comfyReady)) { ready = true; break; }
                     }
                     if (ready) {
                         state.comfyNeedsRestart = false;

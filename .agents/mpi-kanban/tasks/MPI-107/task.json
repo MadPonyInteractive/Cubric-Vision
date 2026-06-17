@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-107",
+  "title": "Remote per-model restart poll watches wrong readiness flag",
+  "description": "Remote per-model node-install restart poll (comfyController.js:319) checks s.ready (wrapper health, always up during a comfy-only restart) instead of s.comfyReady (comfy_ready = ComfyUI subprocess serving). Wrong flag means the poll either breaks too early (gen hits a not-yet-up ComfyUI -> /proxy/interrupt 503 + 'completed but no output') or never matches and times out at 240s -> line 329 'still loading new nodes' throw. Because the only remote clear path for comfyNeedsRestart (line 322) sits behind that broken poll, the flag never clears -> every i2v gen re-loops the restart. A restart-timeout then silently falls to LOCAL (line 355) flipping _mode.active=false -> 'generating locally' toast + orphaned live Pod. Fix: poll s.comfyReady (matching shell.js:653 pattern + the line-312 comment intent); don't silent-fall-to-local on a restart-timeout (keep remote, surface retry). App-side only, no Pod rebuild. Found live on L4 remote, Wan 2.2 i2v.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-17T09:15:00Z",
+  "updated_at": "2026-06-17T10:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
