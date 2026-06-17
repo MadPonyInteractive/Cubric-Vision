@@ -8,11 +8,11 @@
   "status": "active",
   "attention": {
     "state": "required",
-    "reason": "Phase 1 (local) shipped + accepted. Needs REMOTE validation (Phase 2/3 upload to Pod + live-Pod sign-off), gated on the MPI-81 image rebuild; validate alongside MPI-64.",
-    "updated_at": "2026-06-14T22:30:00Z"
+    "reason": "Phase 1 (local) shipped + accepted. Live-Pod repro 2026-06-17 confirmed the silent missing-model fail (custom local upscaler shown remotely -> Pod completed-no-output, no toast). Needs REMOTE validation (Phase 2/3 upload to Pod + live-Pod sign-off) + a remote-aware guard. Gated on the MPI-81 image rebuild; validate alongside MPI-64.",
+    "updated_at": "2026-06-17T08:50:00Z"
   },
   "created_at": "2026-06-14T12:35:34.928Z",
-  "updated_at": "2026-06-14T22:30:00Z",
+  "updated_at": "2026-06-17T08:50:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

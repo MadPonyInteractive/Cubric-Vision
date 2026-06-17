@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-108",
+  "title": "Re-stage local preview latent after an ephemeral-Pod engine restart",
+  "description": "Follow-up carved off MPI-89 (leg 3 verified). A LOCAL-origin preview .latent can go missing on a remote Continue: when the user generates a preview locally, then connects to an EPHEMERAL Pod whose ComfyUI restarts for a per-model node install between staging and stage-2, the staged latent is wiped from the ephemeral input/ dir. Stage-2 falls back to 'run stage 1 from saved snapshots', and in one observed run the rerun finished without producing a latent ('Stage 1 rerun finished but latent was not produced'). Fix = re-stage (re-upload) the preview latent to the Pod AFTER an ephemeral-Pod engine restart, before stage-2 submit, so Continue reuses the exact preview latent instead of falling back. Remote-origin previews are unaffected (verified on MPI-89). App. See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-06-17T10:35:00Z",
+  "updated_at": "2026-06-17T10:35:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

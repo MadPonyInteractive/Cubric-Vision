@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-108","at":"2026-06-17T10:35:00Z","actor":"claude","note":"Carved off MPI-89 (leg 3 verified). Local-origin preview latent wiped when an ephemeral Pod restarts ComfyUI for a node install between staging and stage-2; fix = re-stage after restart. App."}
