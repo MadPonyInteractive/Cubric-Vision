@@ -994,7 +994,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _setGenerating(true);
             const callbacks = {
-                onCancel: () => { _activeExec = null; },
+                onCancel: () => { _activeExec = null; _setGenerating(false); },
+                onError:  () => { _activeExec = null; _setGenerating(false); },
                 getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
             };
             enqueueGeneration(next.config, callbacks, next.opts);
@@ -1877,7 +1878,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (!payload) return;
                 _runGenerate({ ...payload, historyMode: true });
             }));
-            _unsubs.push(Events.on('prompt-box-tools:extend', () => {
+            _unsubs.push(Events.on('prompt-box-tools:extend', async () => {
                 if (!_pb?.el) return;
                 const payload = _pb.el.getRunPayload?.();
                 if (!payload) return;
@@ -1887,13 +1888,51 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     return;
                 }
                 const trim = currentItem.trim;
+                const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
+
+                // Extend continues the source video, so the I2V start frame defaults
+                // to the source's LAST frame (trim out-point, or full duration). The
+                // PromptBox start frame is an explicit override — only auto-fill when
+                // the user left it empty. Without this, an empty PromptBox dispatches
+                // with no image: locally the leftover workflow file masks it, but a
+                // remote Pod rejects the prompt (MPI-109 guard → toast, stuck UI).
+                let extendMedia = payload.mediaItems || [];
+                const hasStartFrame = extendMedia.some(m => m.url && m.role === 'startFrame');
+                if (!hasStartFrame) {
+                    const project = state.currentProject;
+                    if (project?.folderPath && project?.id) {
+                        try {
+                            const vid = viewer.el.getSourceElement?.();
+                            const lastTime = hasTrim ? +trim.out
+                                : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
+                            const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
+                            if (blob) {
+                                const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
+                                const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
+                                    filenamePrefix: 'frame-startFrame',
+                                    operation: 'extend-last-frame',
+                                });
+                                if (uploaded) {
+                                    extendMedia = [
+                                        { url: uploaded.filePath, mediaType: 'image', role: 'startFrame', pixelDimensions: uploaded.pixelDimensions },
+                                        ...extendMedia,
+                                    ];
+                                }
+                            }
+                        } catch (err) {
+                            clientLogger.warn('MpiGroupHistoryBlock', 'extend: last-frame capture failed; falling back to guard', err);
+                        }
+                    }
+                }
+
                 const extendCfg = {
                     ...payload,
+                    mediaItems: extendMedia,
                     historyMode: true,
                     extend: true,
                     sourceItemId: currentItem.id,
                 };
-                if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
+                if (hasTrim) {
                     extendCfg.trimIn  = +trim.in;
                     extendCfg.trimOut = +trim.out;
                 }
