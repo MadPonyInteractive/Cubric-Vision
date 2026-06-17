@@ -149,6 +149,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         itemId: uploaded.itemId,
                         thumbPath: uploaded.thumbPath,
                         pixelDimensions: uploaded.pixelDimensions,
+                        fps: uploaded.fps,
+                        duration: uploaded.duration,
+                        frameCount: uploaded.frameCount,
+                        hasAudio: uploaded.hasAudio,
+                        videoMeta: uploaded.videoMeta,
                         mediaType,
                     });
                     if (inject) {
@@ -1278,7 +1283,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio, videoMeta }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
@@ -1298,6 +1303,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },
+                    // Server-probed metadata so the card shows fps/duration on
+                    // the very first import without a reload (MPI-83 Bug 2).
+                    fps:        fps        ?? 0,
+                    duration:   duration   ?? 0,
+                    frameCount: frameCount ?? 0,
+                    hasAudio:   hasAudio   ?? false,
+                    videoMeta:  videoMeta  ?? null,
                 })
                 : createImageItem({
                     id,

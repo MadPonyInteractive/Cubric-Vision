@@ -1164,7 +1164,20 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
-        res.json({ success: true, filePath, filename: finalFileName, itemId: id, thumbPath: metaContent.thumbPath || null });
+        res.json({
+            success: true,
+            filePath,
+            filename: finalFileName,
+            itemId: id,
+            thumbPath: metaContent.thumbPath || null,
+            // Video probe results so the client shows fps/duration immediately
+            // without waiting for a reload + sidecar reconcile (MPI-83 Bug 2).
+            fps:        metaContent.fps        ?? null,
+            duration:   metaContent.duration   ?? null,
+            frameCount: metaContent.frameCount ?? null,
+            hasAudio:   metaContent.hasAudio   ?? null,
+            videoMeta:  metaContent.videoMeta  ?? null,
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
