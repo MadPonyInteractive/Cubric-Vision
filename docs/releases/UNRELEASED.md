@@ -53,6 +53,14 @@
 
 ## fixes
 
+- **Universal upscale workflows now honor each model's native scale.** `image_upscale`
+  and `video_upscale` previously assumed every upscale model was 4x, so 1x/2x/8x
+  models produced output at the wrong final size even when the requested upscale
+  factor was correct. The workflows now read the loaded upscale model's actual
+  multiplier and divide the requested factor by that value before the final
+  lanczos resize, so the result matches the requested upscale amount regardless
+  of which compatible upscale model is selected.
+
 - **LoRA/upscale models in subfolders failed to load on Windows.** Models stored in
   a subfolder (e.g. `loras\SDXL\name.safetensors`) were sent to the engine with the
   wrong path separator and rejected with "Prompt outputs failed validation". The
