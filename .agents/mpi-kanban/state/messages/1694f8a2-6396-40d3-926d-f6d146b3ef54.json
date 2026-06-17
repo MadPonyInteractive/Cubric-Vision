@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "1694f8a2-6396-40d3-926d-f6d146b3ef54",
+  "status": "open",
+  "created_at": "2026-06-17T14:05:00Z",
+  "updated_at": "2026-06-17T14:05:00Z",
+  "from": { "selector": "task", "value": "MPI-82", "note": "Phase 2B wrapper+image agent (mpi-ci)" },
+  "to": { "selector": "task", "value": "MPI-82" },
+  "subject": "Phase 2B SHIPPED — images published + public (v0.4.9 / wrapper 0.2.11); app-side gate can flip to live",
+  "body": "Phase 2B (wrapper endpoint + Pod-image rebuild) is DONE.\n\nWRAPPER: POST /wrapper/models/upload added (mpi-ci commit 249ea37). _land_on_models = twin of _land_on_volume, validates type+basename via existing _model_dest, lands at MODELS_DIR/<type>/<basename>, creates the model subdir on a fresh volume. Multipart contract matches the app exactly: file, filename (bare basename), type ('loras'|'upscale_models'), overwrite ('true'). Framework-free test green (test_models_upload.py). /wrapper/models/status + _is_complete_on_disk UNTOUCHED (already answer the presence check). Wrapper 0.2.10 -> 0.2.11.\n\nIMAGES: Pod image tag v0.4.9. THREE public tags live + anon-pullable:\n  ghcr.io/madponyinteractive/cubric-vision-pod:v0.4.9-cu124\n  ghcr.io/madponyinteractive/cubric-vision-pod:v0.4.9-cu128\n  ghcr.io/madponyinteractive/cubric-vision-pod:v0.4.9-cpu\ncu124+cpu via mpi-ci CI; cu128 built local + pushed. ComfyUI layer was CACHE-REUSED from v0.4.8, so NO ComfyUI master drift despite comfyui_ref=master. torch 2.7.1+cu128 verified on cu128.\n\nAPP-SIDE GATE (flip to live, app-only edit — NOT done by this agent): in routes/remoteProxy.js bump POD_IMAGE_VERSION 'v0.4.8' -> 'v0.4.9' AND WRAPPER_VERSION '0.2.10' -> '0.2.11', then RESTART THE APP (the Express child bakes both at boot; a live app keeps sending v0.4.8 until restart). Verify: app-log image line shows v0.4.9 + GET /health wrapper_version=0.2.11. Until restart the upload POST 404s against the old image (app handles 404 as a clean failure toast, not a crash).\n\nTHEN Phase 3 live-verify (USER, live Pod): (1) remote gen with a Pod-absent local LoRA -> 'Uploading...' toast -> file lands /workspace/mpi_models/loras/ -> gen uses it. (2) repro that opened this card: custom upscaler 1xDeNoise_realplksr_otf.pth -> now uploads + produces output. (3) re-gen same model -> presence true -> NO re-upload. (4) Pod reset (volume wiped) -> next gen re-uploads.\n\nHousekeeping: 2 junk tags vv0.4.9-cu124 / vv0.4.9-cpu exist on GHCR (double-v from a first bad dispatch; app never requests them, harmless). Delete via GHCR web UI when convenient — CLI token lacks delete:packages scope.",
+  "related": {
+    "task_card": "MPI-82",
+    "handoff": ".agents/mpi-kanban/tasks/MPI-82/handoffs/phase-2b-wrapper-models-upload.md",
+    "files": [
+      "routes/remoteProxy.js"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-17T14:05:00Z", "event": "created" }
+  ]
+}
