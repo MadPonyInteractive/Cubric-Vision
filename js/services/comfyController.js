@@ -901,6 +901,10 @@ export const ComfyUIController = {
                     const err = new Error(errMsg);
                     // Only the process-not-ready case is the recoverable restart.
                     if (req.status === 503 && errCode === 'comfy_not_ready') err.code = 'engine_restarting';
+                    // MPI-90: incompatible-Pod pre-check block (409). Expected +
+                    // user-actionable ("update the app / reinitialize") → a warning
+                    // toast, not the bug-reporter dialog.
+                    if (req.status === 409 && errCode === 'manifest_schema_incompatible') err.code = 'pod_incompatible';
                     throw err;
                 }
 

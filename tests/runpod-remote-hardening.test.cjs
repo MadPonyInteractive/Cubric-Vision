@@ -379,6 +379,84 @@ test('remoteProxy interrupt route returns 409 when remote mode is inactive', { c
     }
 });
 
+// --- MPI-90: pre-generation Pod health pre-check ----------------------------
+
+function healthCheckHarness(manifest) {
+    const originalFetch = global.fetch;
+    return loadRemoteProxyHarness({
+        remoteEngine: {
+            getWrapperToken: async () => 'wrapper-token',
+            proxyUrl: () => 'https://proxy.test',
+        },
+        fetch: async (url, options) => {
+            const u = String(url);
+            if (u.startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+            if (u.endsWith('/wrapper/manifest')) {
+                if (manifest === 404) return responseOf({ status: 404, json: { error: 'manifest_missing' } });
+                return responseOf({ status: 200, json: manifest });
+            }
+            if (u.endsWith('/wrapper/prompt')) return responseOf({ status: 200, json: { prompt_id: 'p-1' } });
+            throw new Error(`unexpected url ${u}`);
+        },
+    });
+}
+
+test('MPI-90 health pre-check: a compatible manifest lets the prompt through', { concurrency: false }, async () => {
+    const harness = healthCheckHarness({ manifest_schema_version: 1, models: [] });
+    try {
+        harness.remoteProxy.setRemoteMode({ active: true, podId: 'pod-compat' });
+        await withServer(harness.remoteProxy.router, async (baseUrl) => {
+            const res = await fetch(`${baseUrl}/proxy/prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: {} }),
+            });
+            assert.equal(res.status, 200);
+            assert.deepEqual(await res.json(), { prompt_id: 'p-1' });
+        });
+    } finally {
+        harness.cleanup();
+    }
+});
+
+test('MPI-90 health pre-check: an unknown schema version blocks with 409 before dispatch', { concurrency: false }, async () => {
+    const harness = healthCheckHarness({ manifest_schema_version: 999, models: [] });
+    try {
+        harness.remoteProxy.setRemoteMode({ active: true, podId: 'pod-future' });
+        await withServer(harness.remoteProxy.router, async (baseUrl) => {
+            const res = await fetch(`${baseUrl}/proxy/prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: {} }),
+            });
+            assert.equal(res.status, 409);
+            const body = await res.json();
+            assert.equal(body.error, 'manifest_schema_incompatible');
+            assert.match(body.message, /newer version/i);
+        });
+    } finally {
+        harness.cleanup();
+    }
+});
+
+test('MPI-90 health pre-check: a missing manifest (fresh volume) is not a block', { concurrency: false }, async () => {
+    const harness = healthCheckHarness(404);
+    try {
+        harness.remoteProxy.setRemoteMode({ active: true, podId: 'pod-fresh' });
+        await withServer(harness.remoteProxy.router, async (baseUrl) => {
+            const res = await fetch(`${baseUrl}/proxy/prompt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: {} }),
+            });
+            assert.equal(res.status, 200);
+            assert.deepEqual(await res.json(), { prompt_id: 'p-1' });
+        });
+    } finally {
+        harness.cleanup();
+    }
+});
+
 test('remoteProxy interrupt route returns relay_failed when the upstream call drops mid-flight', { concurrency: false }, async () => {
     const originalFetch = global.fetch;
     const harness = loadRemoteProxyHarness({

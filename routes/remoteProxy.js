@@ -52,8 +52,9 @@ const UA =
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
 // Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.7) is
-// a rebuild of wrapper 0.2.9 across all three profiles (cpu/cu124/cu128).
+// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.8) is
+// a rebuild of wrapper 0.2.10 across all three profiles (cpu/cu124/cu128). 0.4.8
+// adds the first-boot manifest provenance stamp (MPI-90) the app compat gate reads.
 // MPI-100 briefly shipped a v0.4.5 `disk` block (statvfs) but it was REVERTED:
 // statvfs reads the multi-PB container overlay, not the RunPod network-volume
 // quota, so it was useless for a disk-full gate. Disk-full is now handled
@@ -67,8 +68,8 @@ const UA =
 // /health download-mode branch (MPI-88); image pre-bakes lazy node weights +
 // --cache-lru 2.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.7';
-const WRAPPER_VERSION = '0.2.9';
+const POD_IMAGE_VERSION = 'v0.4.8';
+const WRAPPER_VERSION = '0.2.10';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -144,7 +145,11 @@ function getRemoteMode() {
 }
 
 function setRemoteMode({ active, podId, deleteOnQuit, noGpu } = {}) {
-  if (podId !== undefined && podId !== null) _mode.podId = String(podId);
+  if (podId !== undefined && podId !== null) {
+    const next = String(podId);
+    if (next !== _mode.podId) _clearHealthVerdict(); // MPI-90: stale verdict on Pod swap
+    _mode.podId = next;
+  }
   _mode.active = !!active;
   if (deleteOnQuit !== undefined) _mode.deleteOnQuit = !!deleteOnQuit;
   if (noGpu !== undefined) _mode.noGpu = !!noGpu;
@@ -175,6 +180,77 @@ async function _guard(res) {
     return null;
   }
   return headers;
+}
+
+// --- pre-generation health pre-check (MPI-90) --------------------------------
+//
+// Before the FIRST remote generate of a Pod session, read the volume manifest
+// (GET /wrapper/manifest) and refuse to dispatch if the Pod is set up by an
+// incompatible Cubric version — a clear block up front instead of a mid-generation
+// crash. The check is intentionally THIN: the live wrapper writes only
+// { manifest_schema_version, initialized_at, models[], last_written_at }, so the
+// only real block today is an unknown schema version. Richer blocks (workflow-bundle
+// mismatch) and version-drift warns land when the wrapper writer stamps those fields
+// (MPI-90 D0, next Pod image). A missing manifest (404) is NOT a failure — a fresh /
+// pre-init volume is valid and proceeds.
+//
+// The highest manifest_schema_version this app build understands. Bump in lockstep
+// with the wrapper when the manifest shape changes incompatibly.
+const MANIFEST_SCHEMA_MAX = 1;
+
+// Cache the verdict per podId so the manifest is fetched once per connection, not on
+// every prompt. Cleared when the active Pod changes.
+let _healthVerdict = null;
+let _healthVerdictPodId = null;
+
+function _clearHealthVerdict() {
+  _healthVerdict = null;
+  _healthVerdictPodId = null;
+}
+
+/**
+ * Fetch + evaluate the Pod manifest. Returns { ok, block } where `block`, when
+ * present, is { code, message } for a user-facing modal. Best-effort: any fetch /
+ * parse failure resolves to ok:true (never block a generate on the check itself —
+ * the wrapper's own gates remain the backstop).
+ */
+async function _evaluatePodHealth(podId) {
+  if (_healthVerdictPodId === podId && _healthVerdict) return _healthVerdict;
+  let verdict = { ok: true };
+  try {
+    // Lazy require: remoteModels requires this module (getRemoteMode), so a
+    // top-level require here would be a cycle.
+    const { wrapperFetch } = require('./remoteModels');
+    // Low retry budget: a missing manifest is a LEGITIMATE persistent 404 (fresh /
+    // pre-init volume), not the transient post-restart 404 wrapperFetch's default
+    // 15×2s budget is for. A few retries still ride out a real warm-up blip without
+    // making every first-generate on a fresh volume wait ~30s.
+    const res = await wrapperFetch('/wrapper/manifest', { retries: 1 });
+    if (res.status === 404) {
+      verdict = { ok: true }; // fresh / pre-init volume — valid
+    } else if (res.ok) {
+      const manifest = await res.json();
+      const ver = Number(manifest && manifest.manifest_schema_version);
+      if (Number.isFinite(ver) && ver > MANIFEST_SCHEMA_MAX) {
+        verdict = {
+          ok: false,
+          block: {
+            code: 'manifest_schema_incompatible',
+            message:
+              'This Pod was set up by a newer version of Cubric Vision than this app ' +
+              'understands. Update the app, or reinitialize the Pod, before generating.',
+          },
+        };
+      }
+    }
+    // Any other status (5xx after retries, etc.): leave ok:true, let the prompt
+    // path surface the real error.
+  } catch (err) {
+    logger.warn('runpod', `pod health pre-check skipped: ${err?.message || err}`);
+  }
+  _healthVerdict = verdict;
+  _healthVerdictPodId = podId;
+  return verdict;
 }
 
 /** Forwards a wrapper response (status + content-type + body) verbatim. */
@@ -1037,6 +1113,12 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
 router.post('/proxy/prompt', async (req, res) => {
   const headers = await _guard(res);
   if (!headers) return;
+  // MPI-90: block an incompatible Pod up front instead of a mid-generation crash.
+  // Cached per connection, so this is one manifest fetch per Pod, not per prompt.
+  const health = await _evaluatePodHealth(_mode.podId);
+  if (!health.ok) {
+    return res.status(409).json({ error: health.block.code, message: health.block.message });
+  }
   try {
     const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/prompt`, {
       method: 'POST',

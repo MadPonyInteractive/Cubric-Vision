@@ -1059,6 +1059,15 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // MPI-90: the Pod failed the pre-generation compatibility pre-check
+            // (409). Expected + user-actionable — a warning toast with the backend's
+            // own guidance, not the bug-reporter dialog.
+            if (err?.code === 'pod_incompatible') {
+                clientLogger.warn('comfy', `Pod incompatible — generation blocked: ${err.message}`);
+                Events.emit('ui:warning', { title: 'Pod not compatible', message: err.message });
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

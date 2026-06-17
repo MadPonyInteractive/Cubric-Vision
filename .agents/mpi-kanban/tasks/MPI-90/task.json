@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-90",
-  "title": "Manifest compatibility gate + repair/reinitialize (remote engine)",
-  "description": "Promoted from MPI-64 Phase 3 Step 5 / OPEN-ITEMS F1. Read GET /wrapper/manifest at readiness and run the repair/reinitialize decision matrix from research/volume-manifest-schema.md: arch-family/CUDA/image-digest mismatch → Reinitialize; ComfyUI/PyTorch/bundle mismatch → Repair; VRAM/DC/model-missing → Warn. Gate generation on an incompatible profile with a clear modal + a repair/reinitialize action, instead of letting it fail mid-generation. The manifest is written Pod-side (Phase 3 Step 3 wrapper) and survives Pod stop/start. App + backend. See brief.md.",
-  "column": "todo",
-  "maturity": "idea",
+  "title": "Remote compatibility pre-check (manifest gate)",
+  "description": "Re-scoped 2026-06-17 to Design A: pre-generation compat pre-check that reads GET /wrapper/manifest and blocks the first remote generate on unknown schema-version or workflow-bundle mismatch (clear modal, not a mid-gen crash), warns on incomplete models + version drift. Reinitialize/Repair matrix withdrawn (engine in image, volume = models only). Blocked on wrapper writer half (manifest must stamp version/bundle fields). See brief.md / plan.md.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "open",
   "created_at": "2026-06-15T07:27:46Z",
-  "updated_at": "2026-06-15T07:27:46Z",
+  "updated_at": "2026-06-17T03:00:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
