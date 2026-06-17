@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-109",
+  "files": [
+    {
+      "path": "js/services/generationService.js",
+      "change": "Added required-media guard at top of startGeneration: imports getCommandMediaInputs; if any required slot has no matching media item, emit ui:warning toast + onError + return null (aborts dispatch). Covers Q/Cue/loop."
+    }
+  ]
+}

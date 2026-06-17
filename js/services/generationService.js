@@ -16,7 +16,7 @@ import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
-import { getCommand } from '../data/commandRegistry.js';
+import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -417,6 +417,26 @@ async function _deleteSavedItems(items) {
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
     const { operation, model, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
+
+    // Guard: don't dispatch when a REQUIRED media slot has no asset. The Comfy
+    // workflow ships baked-in default filenames on its LoadImage/LoadVideo nodes;
+    // an empty dispatch leaves those stale names in place. Locally the leftover
+    // files happen to exist so the run "works", but a remote Pod has a clean
+    // volume and ComfyUI rejects the whole prompt (prompt_outputs_failed_validation
+    // → bug-reporter dialog). Empty + user-actionable → warning toast, not a bug.
+    const missingSlot = getCommandMediaInputs(operation).find(slot => {
+        if (slot.required === false) return false;
+        const hasRoleMatch = mediaItems.some(m => m.url && m.role === slot.key && m.mediaType === slot.mediaType);
+        const hasTypeMatch = mediaItems.some(m => m.url && m.mediaType === slot.mediaType);
+        return !hasRoleMatch && !hasTypeMatch;
+    });
+    if (missingSlot) {
+        const noun = missingSlot.mediaType === 'video' ? 'video' : missingSlot.mediaType === 'audio' ? 'audio file' : 'image';
+        Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this workflow needs one.` });
+        callbacks.onError?.(new Error(`Missing required ${missingSlot.mediaType} for ${operation}`));
+        return null;
+    }
+
     let samplingStartTime = null;
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
