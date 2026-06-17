@@ -330,7 +330,7 @@ export const MpiQueuePanel = ComponentFactory.create({
             depthEl.textContent = items.length
                 ? `${snapshot.runningCount || 0} running / ${pendingCount} queued`
                 : 'Idle';
-            nextEl.textContent = pendingCount ? `Next up · ${String((snapshot.running ? 2 : 1)).padStart(2, '0')}` : '';
+            nextEl.textContent = pendingCount ? `Next up · ${String((snapshot.runningCount || 0) + 1).padStart(2, '0')}` : '';
 
             const sig = _signature(items);
             if (sig === _lastSig && _cardByJobId.size === items.length) {

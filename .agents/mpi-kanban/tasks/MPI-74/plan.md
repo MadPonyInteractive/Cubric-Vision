@@ -143,9 +143,53 @@ force-local `_ms` gen + missing-local-model abort).
 
 # Phase 6 — TRUE CONCURRENCY (cloud + local at the same time)
 
-> **Status: DESIGNED, not started.** This is the next session's work. Phases 1–5
-> ship a SEQUENTIAL force-local (one engine at a time, verified). Phase 6 makes a
-> cloud gen and a local gen run SIMULTANEOUSLY. Confirmed required by user.
+> **Status: CODE COMPLETE (Steps 1–4), lint+syntax clean, NOT yet live-verified.**
+> Phases 1–5 ship a SEQUENTIAL force-local (one engine at a time, verified).
+> Phase 6 makes a cloud gen and a local gen run SIMULTANEOUSLY. Confirmed required
+> by user. Pending: USER live-verify on a connected Pod (enqueue cloud + local →
+> both run at once; Stop one keeps the other; previews don't cross; local cold-boot
+> doesn't freeze a running cloud gen).
+
+## What shipped (2026-06-17, Steps 1–4)
+
+- **Step 1 — per-engine controller** (`comfyController.js`). Object literal →
+  `createEngine({engine, alwaysLocal})` factory. TWO instances exported:
+  `remoteEngine` (alwaysLocal:false, resolves remote-or-local via remoteEngineClient
+  = old singleton behavior) + `localEngine` (alwaysLocal:true, pinned local). Each
+  owns its own `_ws`, `clientId`, `_promptListeners`, `_activePromptId`, etc. →
+  resolves A1/A2/A3/A4 (no socket thrash, no preview cross-talk). Added
+  `getEngine(forceLocal)` resolver + `ComfyUIController` default export aliases
+  `remoteEngine` (back-compat: shell.js/MpiSettings boot gates unchanged).
+  **Dropped the `_wsForceLocal` single-socket hack** + the per-call `forceLocal`
+  param on httpBase/ensureWsConnected/_uploadImage/connect (engine selection now
+  happens at the call site via getEngine; `_alwaysLocal` drives in-instance routing).
+- **Step 4 — per-engine clientId**: each instance gets its own `crypto.randomUUID()`
+  (free from Step 1; lets ComfyUI demux the two concurrent sockets).
+- **commandExecutor.js**: `getEngine(forceLocal).runWorkflow/.interrupt(...)` at the
+  3 runWorkflow + 3 cancel/interrupt sites; `_buildComfyViewUrl` →
+  `getEngine(forceLocal).httpBase()`. Stop now routes per-engine (Stop cloud leaves
+  local running, and vice versa).
+- **Step 2 — two queue lanes** (`generationService.js`). `_activeCueJob`/
+  `_cueDispatchInFlight` → `_lanes = {remote, local}` each with {active, inFlight,
+  lastJobForLoop}. `_laneOf(job)` routes by opts.forceLocal. `_dispatchNextCue`
+  fills any idle lane with that lane's next pending job (findIndex by lane) →
+  concurrent drain. `_finishActiveCueDispatch(lane, …)` frees ONE lane.
+  `cancelRunningCueJob` settles only the stuck job's lane (other lane untouched).
+  Snapshot returns up to 2 running (`runningItems` + back-compat `running`/`runningCount`).
+  Loop re-fire is per-lane. MpiQueuePanel "Next up" index = runningCount+1.
+- **Step 3 — engine-tagged non-blocking boot overlay**. `comfy:starting/ready/error`
+  now carry `{engine}` (via `_emitLifecycle`). shell.js: blocking MpiStartingComfy
+  modal is SUPPRESSED when the OTHER engine is mid-gen (`_otherEngineRunning` via
+  `engine._isRunning`) → a local cold-boot can't freeze a running cloud gen (the
+  live-test freeze). Modal owner tracked (`_comfyModalEngine`) so a side-engine
+  ready/error never dismisses the other's modal. `loadAssets()` on ready gated to
+  the engine matching current app mode (`remoteEngineClient.isRemote()`) so a local
+  side-gen ready doesn't reload the remote model list mid-cloud-gen.
+- **Backend: NO changes** (verified concurrency-safe in design).
+
+Files touched: `js/services/comfyController.js`, `js/services/commandExecutor.js`,
+`js/services/generationService.js`, `js/shell.js`,
+`js/components/Compounds/MpiQueuePanel/MpiQueuePanel.js`.
 
 ## The problem (verified by investigation 2026-06-17)
 

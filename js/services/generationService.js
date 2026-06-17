@@ -25,23 +25,35 @@ import { ce } from '../utils/dom.js';
 let _BUGB_DEBUG = false;
 try { _BUGB_DEBUG = localStorage.getItem('MPI_DEBUG_BUGB') === '1'; } catch (_) { /* no-op */ }
 
-// ── Cue queue (in-app, single-dispatch) ─────────────────────────────────────
-// We own the pending array. Only ONE prompt is ever submitted to ComfyUI at a
-// time so Comfy's own queue never grows beyond 1. This avoids races on the
-// asset upload step (shared static filenames) and gives us full control over
-// pending mutation (clear, reorder).
+// ── Cue queue (in-app, TWO-LANE dispatch) ───────────────────────────────────
+// We own the pending array. MPI-74 P6: there are now TWO dispatch lanes — a
+// 'remote' lane (cloud Pod) and a 'local' lane (local ComfyUI, the per-gen "Run
+// locally" toggle). Each lane runs AT MOST one prompt at a time (so neither
+// engine's Comfy queue grows past 1, preserving the static-filename + asset-
+// upload race protection per engine), but the two lanes run CONCURRENTLY: a
+// local gen no longer waits behind a running cloud gen. The pending `_cueQueue`
+// is a single array; each job carries a lane tag and the dispatcher fills any
+// idle lane with the next pending job for that lane.
 //
-// Loop mode: when state.loopArmed is true and the dispatcher drains to empty,
-// we ask the last-dispatched job's `getNextGeneration` callback for a fresh
-// payload (live PromptBox state — model/op/prompt/media at re-fire time) and
-// enqueue it. Re-fire triggers on complete, cancel, AND error. Only flipping
+// Loop mode: when state.loopArmed is true and a lane drains, we ask that lane's
+// last-dispatched job's `getNextGeneration` callback for a fresh payload (live
+// PromptBox state — model/op/prompt/media at re-fire time) and enqueue it.
+// Re-fire triggers on complete, cancel, AND error. Only flipping
 // state.loopArmed = false halts re-fire.
-/** @type {Array<{ config: Object, callbacks: Object, opts: Object }>} */
+/** @type {Array<{ queueJobId: string, config: Object, callbacks: Object, opts: Object, display: Object, source: string, isLoop: boolean }>} */
 const _cueQueue = [];
-let _activeCueJob = null;
-let _cueDispatchInFlight = false;
-/** Most-recent dispatched job — used by loop re-fire to fetch fresh payloads. */
-let _lastJobForLoop = null;
+
+/** Lane state: each lane holds its in-flight job + most-recent job (for loop re-fire). */
+const _lanes = {
+    remote: { active: null, inFlight: false, lastJobForLoop: null },
+    local:  { active: null, inFlight: false, lastJobForLoop: null },
+};
+
+/** @returns {'local'|'remote'} The lane a job (or its opts) dispatches on. */
+function _laneOf(jobOrOpts) {
+    const opts = jobOrOpts?.opts || jobOrOpts || {};
+    return opts.forceLocal === true ? 'local' : 'remote';
+}
 
 const PROMPT_EXCERPT_MAX = 140;
 
@@ -158,8 +170,12 @@ function _emitQueueChanged() {
     Events.emit('generation-queue:changed', getGenerationQueueSnapshot());
 }
 
+function _runningCount() {
+    return (_lanes.remote.inFlight ? 1 : 0) + (_lanes.local.inFlight ? 1 : 0);
+}
+
 function _updateQueueDepth() {
-    const depth = _cueQueue.length + (_cueDispatchInFlight ? 1 : 0);
+    const depth = _cueQueue.length + _runningCount();
     if (state.generationQueueCount !== depth) {
         state.generationQueueCount = depth;
     }
@@ -167,78 +183,104 @@ function _updateQueueDepth() {
 }
 
 /**
- * Frees the in-flight CUE dispatch slot and schedules the next job. The normal
- * exit for the active job (its wrapped onComplete/onError/onCancel call this).
- * Also callable directly to settle a job whose exec promise will NEVER resolve
- * — e.g. a remote job Stopped before it ever got a prompt_id, where the
- * interrupt POST is a no-op and ComfyUI never sends a terminal event (MPI-73
- * Bug 2). `skipNext` suppresses auto-promoting the next queued job, used when
- * the engine is not accepting work so the next job would just hang too.
+ * Frees ONE lane's in-flight dispatch slot and schedules that lane's next job.
+ * The normal exit for an active job (its wrapped onComplete/onError/onCancel
+ * call this with its lane). Also callable directly to settle a job whose exec
+ * promise will NEVER resolve — e.g. a remote job Stopped before it ever got a
+ * prompt_id, where the interrupt POST is a no-op and ComfyUI never sends a
+ * terminal event (MPI-73 Bug 2). `skipNext` suppresses auto-promoting that
+ * lane's next queued job, used when the engine is not accepting work so the next
+ * job would just hang too. The OTHER lane is untouched — Stopping the cloud lane
+ * never disturbs a concurrent local gen, and vice versa (MPI-74 P6).
+ * @param {'local'|'remote'} lane
  * @param {{ skipNext?: boolean }} [opts]
  */
-function _finishActiveCueDispatch({ skipNext = false } = {}) {
-    if (!_cueDispatchInFlight && !_activeCueJob) return;
-    _cueDispatchInFlight = false;
-    _activeCueJob = null;
+function _finishActiveCueDispatch(lane, { skipNext = false } = {}) {
+    const L = _lanes[lane];
+    if (!L || (!L.inFlight && !L.active)) return;
+    L.inFlight = false;
+    L.active = null;
     _updateQueueDepth();
     if (skipNext) {
         _emitPromptBoxGenerationEndIfIdle();
         return;
     }
+    // Loop re-fire belongs HERE (a lane just drained), NOT inside the dispatch
+    // pass. If this lane has no real pending job and loop is armed, enqueue ONE
+    // fresh iteration from this lane's last job (live PromptBox payload). Doing it
+    // here — once per completion — avoids the storm where re-fire lived inside
+    // _dispatchNextCue and every pass re-fired both lanes against the GLOBAL
+    // loopArmed flag, re-arming the rerun forever (the UI-freeze bug).
+    const hasPending = _cueQueue.some(job => _laneOf(job) === lane);
+    if (!hasPending && state.loopArmed && L.lastJobForLoop) {
+        const fresh = L.lastJobForLoop.callbacks?.getNextGeneration?.();
+        if (fresh && fresh.config) {
+            // Keep the lane consistent: a re-fire of THIS lane's loop must stay on
+            // THIS lane regardless of what getNextGeneration reports, or a stale
+            // forceLocal would route it to the other lane and this lane would
+            // re-fire again next completion → ping-pong. Pin the lane explicitly.
+            enqueueGeneration(fresh.config, L.lastJobForLoop.callbacks, {
+                ...(fresh.opts || L.lastJobForLoop.opts),
+                forceLocal: lane === 'local',
+                source: 'loop',
+                isLoop: true,
+            });
+            return; // enqueueGeneration dispatches; don't double-dispatch below.
+        }
+    }
     setTimeout(() => _dispatchNextCue(), 0);
 }
 
+/**
+ * Fills every IDLE lane with the next PENDING job for that lane. Pure promotion —
+ * NO loop re-fire here (that lives in `_finishActiveCueDispatch`, fired once per
+ * completion). Because this pass never enqueues, it never recurses: each call
+ * consumes at most one job per lane and returns. Called after an enqueue and
+ * after a lane frees. Each lane drains independently, so a busy remote lane never
+ * blocks a free local lane from starting its next job.
+ */
 function _dispatchNextCue() {
-    if (_cueDispatchInFlight) return;
-    const next = _cueQueue.shift();
-    if (!next) {
+    for (const lane of ['remote', 'local']) {
+        const L = _lanes[lane];
+        if (L.inFlight) continue;
+
+        const idx = _cueQueue.findIndex(job => _laneOf(job) === lane);
+        if (idx === -1) continue; // nothing pending for this lane (loop re-fire handled on finish)
+
+        const next = _cueQueue.splice(idx, 1)[0];
+        L.inFlight = true;
+        L.active = next;
+        L.lastJobForLoop = next;
         _updateQueueDepth();
-        // Loop re-fire: when armed and queue just drained, ask the last job
-        // for a fresh payload (live PromptBox state) and re-enqueue. Halts
-        // when state.loopArmed flips false or callback returns nothing.
-        if (state.loopArmed && _lastJobForLoop) {
-            const fresh = _lastJobForLoop.callbacks?.getNextGeneration?.();
-            if (fresh && fresh.config) {
-                enqueueGeneration(fresh.config, _lastJobForLoop.callbacks, {
-                    ...(fresh.opts || _lastJobForLoop.opts),
-                    source: 'loop',
-                    isLoop: true,
-                });
-                return;
-            }
-        }
-        _emitPromptBoxGenerationEndIfIdle();
-        return;
+
+        const finishCueDispatch = () => _finishActiveCueDispatch(lane);
+
+        const wrappedCallbacks = {
+            ...next.callbacks,
+            onComplete: (data) => {
+                try { next.callbacks.onComplete?.(data); }
+                finally { finishCueDispatch(); }
+            },
+            onError: () => {
+                try { next.callbacks.onError?.(); }
+                finally { finishCueDispatch(); }
+            },
+            onCancel: () => {
+                try { next.callbacks.onCancel?.(); }
+                finally { finishCueDispatch(); }
+            },
+        };
+        startGeneration(next.config, wrappedCallbacks, {
+            ...next.opts,
+            queueJobId: next.queueJobId,
+            queueDisplay: next.display,
+            queueSource: next.source,
+            isLoop: next.isLoop,
+        });
     }
-    _cueDispatchInFlight = true;
-    _activeCueJob = next;
-    _lastJobForLoop = next;
+
     _updateQueueDepth();
-
-    const finishCueDispatch = () => _finishActiveCueDispatch();
-
-    const wrappedCallbacks = {
-        ...next.callbacks,
-        onComplete: (data) => {
-            try { next.callbacks.onComplete?.(data); }
-            finally { finishCueDispatch(); }
-        },
-        onError: () => {
-            try { next.callbacks.onError?.(); }
-            finally { finishCueDispatch(); }
-        },
-        onCancel: () => {
-            try { next.callbacks.onCancel?.(); }
-            finally { finishCueDispatch(); }
-        },
-    };
-    startGeneration(next.config, wrappedCallbacks, {
-        ...next.opts,
-        queueJobId: next.queueJobId,
-        queueDisplay: next.display,
-        queueSource: next.source,
-        isLoop: next.isLoop,
-    });
+    _emitPromptBoxGenerationEndIfIdle();
 }
 
 /**
@@ -299,19 +341,38 @@ export function cancelRunningCueJob(queueJobId) {
     if (!queueJobId) return false;
     const entry = activeGenerations.list().find(e => e.queueJobId === queueJobId && e.status === 'running');
     if (!entry) return false;
-    // A job that never received a prompt_id never reached the engine (e.g. the
-    // remote preview WS was down — MPI-73). Its exec promise will NEVER settle,
-    // so the interrupt POST is a no-op and the wrapped onComplete/onCancel that
-    // frees the dispatcher never fires → the queue stays stuck on a dead
-    // "running" slot and repeated Stop does nothing. Detect that case and settle
-    // the CUE state locally: end the gen, free the dispatch slot WITHOUT
-    // auto-promoting the next job (the engine isn't accepting work, so the next
-    // would hang too), and drop any pending jobs.
-    const neverStarted = !entry.promptId;
+
+    // Interrupt the engine + end the activeGenerations entry. interrupt() targets
+    // the right engine (the exec's cancel() resolves getEngine(forceLocal)).
     activeGenerations.cancel(entry.id);
-    if (neverStarted) {
-        clearCueQueue();
-        _finishActiveCueDispatch({ skipNext: true });
+
+    // ALWAYS free this job's lane on an explicit Stop — do NOT gate on
+    // `entry.promptId` (the old `neverStarted` test). A remote job that received a
+    // prompt_id and THEN lost its engine channel (Pod mid-failover, WS/SSE drop)
+    // never gets a terminal WS event, so its exec promise never settles and the
+    // wrapped onComplete/onCancel that frees the lane never fires → the lane stays
+    // inFlight forever and repeated Stop does nothing (the stuck-card bug). The
+    // user pressed Stop; we settle the lane locally rather than wait for an engine
+    // event that may never arrive.
+    //
+    // `_finishActiveCueDispatch` is idempotent (guards on !inFlight && !active), so
+    // if the exec promise DOES still settle later (healthy gen, interrupt produced
+    // a terminal event), its wrapped callback is a harmless no-op — no double-free,
+    // no double-promote.
+    const lane = _lanes.remote.active?.queueJobId === queueJobId ? 'remote'
+        : _lanes.local.active?.queueJobId === queueJobId ? 'local'
+        : null;
+    if (lane) {
+        // Free the lane + dispatch its next work (skipNext:false). User choice:
+        // Stop = "skip THIS job, keep going":
+        //   • Loop armed  → the lane re-fires a fresh loop iteration (lastJobForLoop
+        //     is intentionally KEPT, so Stop behaves like "regenerate this one" and
+        //     the loop continues; the toggle stays ON and matches reality).
+        //   • Loop off    → the lane promotes the next REAL pending job, or goes idle
+        //     if none.
+        // The other lane is untouched — Stopping one lane never disturbs a
+        // concurrent gen on the other (MPI-74 P6).
+        _finishActiveCueDispatch(lane, { skipNext: false });
     }
     _emitQueueChanged();
     return true;
@@ -334,22 +395,28 @@ export function peekCueQueue() {
 
 /** Read-only snapshot for user-facing queue panels. */
 export function getGenerationQueueSnapshot() {
-    const running = _activeCueJob ? _queueSnapshotItem(_activeCueJob, 'running') : null;
+    // Up to two running jobs (one per lane). Remote first so a mixed queue reads
+    // cloud-then-local top-down. The panel renders the flat `items` list and
+    // tags each with its LOCAL/REMOTE chip (MPI-74 P5), so two running rows just
+    // work — no panel change beyond a 2-running index fix.
+    const runningJobs = [_lanes.remote.active, _lanes.local.active].filter(Boolean);
+    const running = runningJobs.map(job => _queueSnapshotItem(job, 'running'));
     const pending = _cueQueue.map(job => _queueSnapshotItem(job, 'pending'));
     return {
-        running,
+        running: running[0] || null,
+        runningItems: running,
         pending,
-        items: [...(running ? [running] : []), ...pending],
-        depth: pending.length + (running ? 1 : 0),
+        items: [...running, ...pending],
+        depth: pending.length + running.length,
         pendingCount: pending.length,
-        runningCount: running ? 1 : 0,
+        runningCount: running.length,
         loopArmed: !!state.loopArmed,
     };
 }
 
 function _emitPromptBoxGenerationEndIfIdle() {
     if (activeGenerations.list().some(entry => entry.status === 'running')) return;
-    if (_cueDispatchInFlight || _cueQueue.length > 0) return;
+    if (_lanes.remote.inFlight || _lanes.local.inFlight || _cueQueue.length > 0) return;
     if (state.loopArmed) return;
     Events.emit('promptbox:generation-end');
 }

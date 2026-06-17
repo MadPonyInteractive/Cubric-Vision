@@ -1,9 +1,19 @@
 /**
- * ComfyUIController — ComfyUI WebSocket and workflow execution service.
+ * comfyController.js — ComfyUI WebSocket and workflow execution service.
  *
- * Single public API: {@link runWorkflow}. All other members are internal.
+ * MPI-74 Phase 6 (true concurrency): this module exports TWO engine instances —
+ * `localEngine` and `remoteEngine` — produced by {@link createEngine}. Each owns
+ * its OWN socket, clientId, prompt listeners, and `_activePromptId`, so a cloud
+ * gen and a local gen run AT THE SAME TIME without cross-talk. Pick an engine
+ * with {@link getEngine}(forceLocal). The default export `ComfyUIController`
+ * aliases `remoteEngine` for back-compat (boot/Settings connect gates resolve
+ * remote-or-local via `remoteEngineClient`, exactly as the old singleton did).
  *
- * @see commandExecutor.js for the execution layer that calls this service.
+ * `_alwaysLocal` on an instance pins it to LOCAL ComfyUI (httpBase, WS, /prompt,
+ * uploads) and skips the remote model auto-upload — replacing the per-call
+ * `forceLocal` flag the single-socket Phase 1 hack threaded through every method.
+ *
+ * @see commandExecutor.js for the execution layer that calls these engines.
  */
 
 import { state } from '../state.js';
@@ -23,7 +33,7 @@ const COMFY_READY_TIMEOUT_S = 240;
 // fall to the LOCAL engine (spinning up local ComfyUI) instead of waiting for the
 // Pod. Track the transition from the same `remote:connection` phase the UI uses
 // and refuse generation while it is in progress. Module-scoped: one subscription
-// for the page lifetime (the controller is a singleton).
+// for the page lifetime (shared by both engine instances).
 let _remoteTransition = null; // 'connecting' | 'disconnecting' | null
 // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
 Events.on('remote:connection', ({ phase = null } = {}) => { _remoteTransition = phase || null; });
@@ -63,35 +73,44 @@ function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
     }
 }
 
-export const ComfyUIController = {
+/**
+ * Builds one ComfyUI engine instance. Two are created at module load:
+ * `remoteEngine` (`alwaysLocal:false`) and `localEngine` (`alwaysLocal:true`).
+ * Each instance is fully self-contained — its own WS socket, clientId, prompt
+ * registries, and `_activePromptId` — so two can run concurrently (MPI-74 P6).
+ *
+ * @param {{ engine: 'local'|'remote', alwaysLocal: boolean }} cfg
+ */
+function createEngine({ engine, alwaysLocal }) {
+    return {
+
+    /** @type {'local'|'remote'} This engine's identity (used in comfy:* event tags). */
+    engine,
+
+    /** @type {boolean} When true this engine ALWAYS targets local ComfyUI (httpBase/WS/uploads/skip-remote), regardless of remote-connection state. */
+    _alwaysLocal: alwaysLocal,
 
     /** @type {string} Target ComfyUI WS/HTTP server address (local mode). */
     serverAddress: "127.0.0.1:8188",
 
     /**
-     * HTTP base for all ComfyUI-shaped calls. Local mode: the ComfyUI server
-     * directly (byte-identical to the historical hardcoded address). Remote
-     * mode: the Express proxy, which attaches the wrapper token server-side.
+     * HTTP base for all ComfyUI-shaped calls. Local-pinned engine: the ComfyUI
+     * server directly. Remote engine: the Express proxy (token attached server-
+     * side) when remote-connected, else the local address.
      * @returns {string}
      */
-    httpBase(forceLocal = false) {
-        // MPI-74: a force-local run resolves the LOCAL ComfyUI base even while the
-        // app is remote-connected, so its asset uploads + /prompt POST hit local
-        // ComfyUI instead of the Express /proxy. Default false = normal routing.
-        if (forceLocal) return `http://${this.serverAddress}`;
+    httpBase() {
+        if (this._alwaysLocal) return `http://${this.serverAddress}`;
         return remoteEngineClient.httpBase() || `http://${this.serverAddress}`;
     },
 
-    /** @type {string} Unique client ID for this session; used in WS handshake and prompt payloads. */
+    /** @type {string} Unique client ID for THIS engine's session; used in WS handshake and prompt payloads. Per-engine so ComfyUI can demux two concurrent sockets (MPI-74 P6 Step 4). */
     clientId: crypto.randomUUID(),
 
     /** @type {WebSocket|null} */
     _ws: null,
 
-    /** @type {boolean} MPI-74: engine target the current `_ws` was opened for (true = force-local). Lets `connect()`/`ensureWsConnected()` detect a wrong-engine socket and reopen. */
-    _wsForceLocal: false,
-
-    /** @type {boolean} True while a workflow is actively executing. */
+    /** @type {boolean} True while a workflow is actively executing on THIS engine. */
     _isRunning: false,
 
     /** @type {Map<string, (msg: object) => void>} Active WS listeners keyed by ComfyUI prompt_id. */
@@ -128,17 +147,18 @@ export const ComfyUIController = {
      * @param {{ timeoutMs?: number }} [opts]
      * @returns {Promise<boolean>}
      */
-    async ensureWsConnected({ timeoutMs = 20000, retryMs = 1500, forceLocal = false } = {}) {
-        // MPI-74: a force-local run needs the LOCAL preview WS. If a socket is already
-        // ready but points at the wrong engine, fall through and reconnect local.
-        if (this.isWsReady() && (this._wsForceLocal === true) === (forceLocal === true)) return true;
+    async ensureWsConnected({ timeoutMs = 20000, retryMs = 1500 } = {}) {
+        if (this.isWsReady()) return true;
         // Load the remote WS base + token BEFORE connecting. The boot/Settings flow
         // calls ensureWsConnected directly (not via ensureServerRunning), so without
         // this refresh `remoteEngineClient.wsUrl()` is null and connect() falls back
         // to the LOCAL ws://127.0.0.1:8188 — which never opens in remote mode, so the
         // handshake times out and the caller shows a false "almost ready" with the
-        // hero stuck on local·offline even though the Pod is up (MPI-73).
-        try { await remoteEngineClient.refresh(); } catch { /* fall through; connect() retries below */ }
+        // hero stuck on local·offline even though the Pod is up (MPI-73). A
+        // local-pinned engine skips the refresh (it always wants the local socket).
+        if (!this._alwaysLocal) {
+            try { await remoteEngineClient.refresh(); } catch { /* fall through; connect() retries below */ }
+        }
         const start = Date.now();
         let lastAttempt = 0;
         // RETRY across the whole window, don't rely on a single attempt + a passive
@@ -155,7 +175,7 @@ export const ComfyUIController = {
             const open = st === WebSocket.OPEN;
             if (!open && !connecting && Date.now() - lastAttempt >= retryMs) {
                 lastAttempt = Date.now();
-                this.connect(forceLocal);
+                this.connect();
             }
             await new Promise(r => setTimeout(r, 250));
             if (this.isWsReady()) return true;
@@ -170,13 +190,14 @@ export const ComfyUIController = {
      * @returns {Promise<{ ready: boolean, remoteComfyRestarted: boolean }>}
      */
     async ensureServerRunning(opts = {}) {
-        // MPI-73: refuse to start ANY generation while the remote engine is
+        // MPI-73: refuse to start ANY remote generation while the remote engine is
         // connecting or disconnecting. Mid-transition the backend remote-mode flag
         // may not yet reflect the user's intent, so without this guard the run
         // would fall to the LOCAL engine (spinning up local ComfyUI) instead of
         // waiting for the Pod — exactly the "pressed Cue while connecting and it
-        // generated locally" bug. Block BEFORE refresh()/the local-vs-remote split.
-        if (_remoteTransition) {
+        // generated locally" bug. A local-pinned engine is unaffected: it always
+        // wants local ComfyUI, so a remote transition never mis-routes it.
+        if (_remoteTransition && !this._alwaysLocal) {
             // Backstop only — the Cue button is disabled during a transition
             // (MpiPromptBox), so this rarely fires. Surface a plain INFO toast, not
             // the bug-reporter `comfy:error` modal: a transition refusal is expected
@@ -191,11 +212,15 @@ export const ComfyUIController = {
         }
         // Remote mode owns its own error surfacing (retry dialog in background,
         // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
-        // try/catch so a remote failure doesn't double-emit ui:error below.
-        try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
-        // MPI-74: a force-local run skips the remote-ready path entirely and falls
-        // through to the LOCAL ComfyUI branch below, even while remote-connected.
-        if (!opts.forceLocal && remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts);
+        // try/catch so a remote failure doesn't double-emit ui:error below. A
+        // local-pinned engine skips the remote refresh entirely.
+        if (!this._alwaysLocal) {
+            try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
+        }
+        // A local-pinned engine ALWAYS takes the local branch below, even while
+        // remote-connected; the remote engine takes the remote-ready path when a
+        // Pod is connected.
+        if (!this._alwaysLocal && remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts);
 
         try {
             const statusRes = await fetch('/comfy/status');
@@ -225,7 +250,7 @@ export const ComfyUIController = {
                         const check = await fetch('/comfy/status').then(r => r.json());
                         if (check.ready) {
                             state.comfyNeedsRestart = false;
-                            Events.emit('comfy:ready');
+                            this._emitLifecycle('comfy:ready');
                             return { ready: true, remoteComfyRestarted: false };
                         }
                     } catch (e) { /* keep polling */ }
@@ -245,7 +270,7 @@ export const ComfyUIController = {
             // background: a boot auto-start brings the engine up silently — no
             // blocking "Starting ComfyUI Engine…" overlay. Manual generation still
             // emits it so the user sees the engine spinning up before their job.
-            if (!opts.background) Events.emit('comfy:starting');
+            if (!opts.background) this._emitLifecycle('comfy:starting');
 
             if (!status.running) {
                 clientLogger.info('comfy', 'Requesting ComfyUI server start');
@@ -256,18 +281,30 @@ export const ComfyUIController = {
                 const checkRes = await fetch('/comfy/status');
                 const check = await checkRes.json();
                 if (check.ready) {
-                    Events.emit('comfy:ready');
+                    this._emitLifecycle('comfy:ready');
                     return { ready: true, remoteComfyRestarted: false };
                 }
                 await new Promise(r => setTimeout(r, 1000));
             }
             throw new Error('ComfyUI server failed to become ready in time.');
         } catch (e) {
-            Events.emit('comfy:error', { message: e.message });
+            this._emitLifecycle('comfy:error', { message: e.message });
             clientLogger.error('comfy', 'ComfyUI failed to start', e);
             Events.emit('ui:error', { title: 'ComfyUI failed to start', message: e.message });
             throw e;
         }
+    },
+
+    /**
+     * Emits an engine-tagged ComfyUI lifecycle event (MPI-74 P6 Step 3). The
+     * `engine` tag lets the shell show a NON-blocking per-engine boot status so a
+     * local cold-boot never freezes a running cloud gen (and vice versa).
+     * @param {'comfy:starting'|'comfy:ready'|'comfy:error'} name
+     * @param {object} [detail]
+     * @private
+     */
+    _emitLifecycle(name, detail = {}) {
+        Events.emit(name, { ...detail, engine: this.engine });
     },
 
     /**
@@ -307,7 +344,7 @@ export const ComfyUIController = {
             // bug-reporter, and thrown before the restart/WS gates below.
             if (check.noGpu) {
                 const gpuMsg = 'This Pod has no GPU — it is for downloading models only. To generate, open Settings → RunPod, pick a GPU, then Connect.';
-                if (!background) Events.emit('comfy:error', { message: gpuMsg });
+                if (!background) this._emitLifecycle('comfy:error', { message: gpuMsg });
                 else Events.emit('ui:info', { message: gpuMsg });
                 throw Object.assign(new Error(gpuMsg), { code: 'pod_no_gpu' });
             }
@@ -356,14 +393,14 @@ export const ComfyUIController = {
                         // proceeds with the gen on the freshly-restarted ComfyUI.
                     } else {
                         const slow = 'The remote engine is still loading the new nodes — give it a moment, then try again.';
-                        if (!background) Events.emit('comfy:error', { message: slow });
+                        if (!background) this._emitLifecycle('comfy:error', { message: slow });
                         else Events.emit('ui:info', { message: slow });
                         throw new Error(slow);
                     }
                 } else {
                     // Old image without /wrapper/restart-comfy — keep the manual path.
                     const msg = 'New custom nodes were installed for this model. Reconnect the remote engine to load them: open Settings → RunPod, press Disconnect, then Connect, and try again.';
-                    if (!background) Events.emit('comfy:error', { message: msg });
+                    if (!background) this._emitLifecycle('comfy:error', { message: msg });
                     else Events.emit('ui:error', { title: 'Reconnect required', message: msg });
                     throw new Error(msg);
                 }
@@ -376,11 +413,11 @@ export const ComfyUIController = {
             const wsOk = this.isWsReady() || await this.ensureWsConnected({ timeoutMs: 15000 });
             if (!wsOk) {
                 const wsMsg = 'Still connecting to the remote engine — give it a moment, then try again. (Settings → RunPod shows the connection status.)';
-                if (!background) Events.emit('comfy:error', { message: wsMsg });
+                if (!background) this._emitLifecycle('comfy:error', { message: wsMsg });
                 else Events.emit('ui:info', { message: wsMsg });
                 throw new Error(wsMsg);
             }
-            if (background) Events.emit('comfy:ready');
+            if (background) this._emitLifecycle('comfy:ready');
             return { ready: true, remoteComfyRestarted };
         }
 
@@ -411,7 +448,8 @@ export const ComfyUIController = {
             });
         }
         clientLogger.info('comfy', 'Remote engine not connected — falling back to the local engine.');
-        return await this.ensureServerRunning({ background });
+        // Fall to the LOCAL engine instance — it always takes the local branch.
+        return await localEngine.ensureServerRunning({ background });
     },
 
     /**
@@ -423,7 +461,9 @@ export const ComfyUIController = {
     },
 
     /**
-     * Sends an interrupt signal to the ComfyUI WS server to abort the running pipeline.
+     * Sends an interrupt signal to THIS engine's ComfyUI server to abort its
+     * running pipeline. Per-engine (MPI-74 P6): Stopping a cloud job interrupts
+     * only the cloud engine; a concurrent local job keeps running, and vice versa.
      * @returns {Promise<void>}
      */
     async interrupt() {
@@ -504,15 +544,13 @@ export const ComfyUIController = {
     },
 
     /**
-     * Opens (or reuses) a WebSocket connection to the ComfyUI WS server.
+     * Opens (or reuses) a WebSocket connection to THIS engine's ComfyUI WS server.
      *
      * - Binary ArrayBuffer messages are decoded as JPEG preview blobs and
      *   forwarded to the listener as `{ type: 'preview', url: blobURL }`.
      * - JSON messages are forwarded as-is.
      * - If the socket closes unexpectedly while `_isRunning` is true, it
      *   auto-reconnects once after 1 second.
-     *
-     * @param {(msg: object) => void} [onMessage]  Message handler to register as the active listener.
      */
     _routeMessage(msg) {
         if (msg instanceof ArrayBuffer || (msg && msg.type === 'preview')) {
@@ -546,12 +584,11 @@ export const ComfyUIController = {
         activeListener?.(msg);
     },
 
-    connect(forceLocal = false) {
-        // MPI-74: don't reuse a live socket that points at the WRONG engine. If the
-        // current socket was opened for a different engine target than this call
-        // wants (remote-vs-force-local), fall through and reopen it below.
-        const engineMatches = (this._wsForceLocal === true) === (forceLocal === true);
-        if (engineMatches && this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+    connect() {
+        // Reuse a live socket (this engine owns exactly one; it always points at
+        // this engine's target, so no wrong-engine check is needed — that was the
+        // single-socket `_wsForceLocal` hack, dead now that sockets are per-engine).
+        if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
@@ -574,13 +611,12 @@ export const ComfyUIController = {
             this._ws.close();
         }
 
-        // MPI-74: a force-local run uses the LOCAL preview WS even while remote-
-        // connected, so previews + the completion event come from the engine that
-        // actually ran the prompt. Default (no arg) = normal remote-or-local routing.
-        const wsUrl = (!forceLocal && remoteEngineClient.wsUrl(this.clientId))
+        // A local-pinned engine ALWAYS uses the local preview WS, even while remote-
+        // connected, so its previews + completion events come from local ComfyUI.
+        // The remote engine uses the proxy WS when connected, else local.
+        const wsUrl = (!this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId))
             || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
         this._ws = new WebSocket(wsUrl);
-        this._wsForceLocal = forceLocal;
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
@@ -694,11 +730,10 @@ export const ComfyUIController = {
      * @returns {Promise<{success: boolean, images: string[]}>}
      */
     async runWorkflow(workflowOrId, params = {}, onMessage = null, opts = {}) {
-        // MPI-74: when true, force this single run onto LOCAL ComfyUI even while
-        // remote-connected — engine target, asset uploads, WS, and /prompt all
-        // resolve local; MPI-82's model auto-upload is skipped (already gated).
-        const forceLocal = opts.forceLocal === true;
-        const serverReady = await this.ensureServerRunning({ forceLocal });
+        // MPI-74 P6: engine selection now happens at the CALL SITE — the dispatch
+        // path picks getEngine(forceLocal) and calls .runWorkflow on it. So `this`
+        // is already the correct engine; `this._alwaysLocal` drives all routing.
+        const serverReady = await this.ensureServerRunning(opts);
 
         let workflow = workflowOrId;
 
@@ -751,8 +786,9 @@ export const ComfyUIController = {
                     // Remote engine: the resolved path is local to this machine and
                     // invisible to the Pod. Upload the file to the Pod volume input
                     // dir via Express → wrapper and inject the bare filename, which
-                    // VHS LoadVideo/LoadAudio nodes resolve against the input dir.
-                    params[paramKey] = (remoteEngineClient.isRemote() && !forceLocal)
+                    // VHS LoadVideo/LoadAudio nodes resolve against the input dir. A
+                    // local-pinned engine keeps the local path.
+                    params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
                         ? await this._uploadRemoteMedia(localPath)
                         : localPath;
                 }
@@ -779,7 +815,7 @@ export const ComfyUIController = {
                  val.includes('project-file') || val.includes('/project-media/'))
             ) {
                 try {
-                    const uploadRes = await this._uploadImage(val, staticName, forceLocal);
+                    const uploadRes = await this._uploadImage(val, staticName);
                     if (uploadRes && uploadRes.name) {
                         params[paramKey] = uploadRes.name;
                     }
@@ -798,10 +834,10 @@ export const ComfyUIController = {
         // upload the file once; the Pod then finds it by name (no param rewrite —
         // unlike media, the filename already IS the value ComfyUI loads).
         //
-        // GATE: `isRemote() && !forceLocal`. A force-local run (MPI-74) takes the
-        // LOCAL ComfyUI branch — the model is already on local disk and there is no
-        // Pod to upload to, so it must skip this entirely.
-        if (remoteEngineClient.isRemote() && !opts.forceLocal) {
+        // GATE: remote engine + remote-connected. A local-pinned engine (MPI-74)
+        // takes the LOCAL ComfyUI path — the model is already on local disk and
+        // there is no Pod to upload to, so it must skip this entirely.
+        if (!this._alwaysLocal && remoteEngineClient.isRemote()) {
             await this._uploadRemoteModels(params);
         }
 
@@ -874,7 +910,7 @@ export const ComfyUIController = {
 
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
-                    _collectComfyOutputUrls(this.httpBase(forceLocal), nodeOutput, outputs);
+                    _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
                 }
 
                 // A node raised in-process (missing node, a node throwing, a
@@ -913,14 +949,14 @@ export const ComfyUIController = {
                 }
             };
 
-            this.connect(forceLocal);
+            this.connect();
             this._isRunning = true;
 
             try {
                 if (typeof opts.beforePromptSubmit === 'function') {
                     await opts.beforePromptSubmit({ serverReady, workflow, params });
                 }
-                const req = await fetch(`${this.httpBase(forceLocal)}/prompt`, {
+                const req = await fetch(`${this.httpBase()}/prompt`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: workflow, client_id: this.clientId })
@@ -998,13 +1034,13 @@ export const ComfyUIController = {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Uploads an image or mask asset to the ComfyUI server.
+     * Uploads an image or mask asset to THIS engine's ComfyUI server.
      * @param {string} dataUrlOrPath
      * @param {string} filename
      * @returns {Promise<object>}
      * @private
      */
-    async _uploadImage(dataUrlOrPath, filename, forceLocal = false) {
+    async _uploadImage(dataUrlOrPath, filename) {
         let blob;
         try {
             const res = await fetch(dataUrlOrPath);
@@ -1023,7 +1059,7 @@ export const ComfyUIController = {
         formData.append('image', blob, filename);
         formData.append('overwrite', 'true');
 
-        const uploadRes = await fetch(`${this.httpBase(forceLocal)}/upload/image`, {
+        const uploadRes = await fetch(`${this.httpBase()}/upload/image`, {
             method: 'POST',
             body: formData
         });
@@ -1167,4 +1203,29 @@ export const ComfyUIController = {
 
         return mediaPathOrUrl;
     }
-};
+    };
+}
+
+// ── Two engine instances (MPI-74 P6) ─────────────────────────────────────────
+// `remoteEngine` resolves remote-or-local via `remoteEngineClient` (the historical
+// singleton behavior); `localEngine` is pinned to local ComfyUI always. Each owns
+// its own socket + clientId so both can run concurrently.
+export const remoteEngine = createEngine({ engine: 'remote', alwaysLocal: false });
+export const localEngine  = createEngine({ engine: 'local',  alwaysLocal: true });
+
+/**
+ * Resolves the engine instance for a dispatch. `forceLocal` (the MPI-74 per-gen
+ * "Run locally" toggle) picks the local-pinned engine; otherwise the remote
+ * engine (which itself falls to local when no Pod is connected).
+ * @param {boolean} [forceLocal=false]
+ * @returns {ReturnType<typeof createEngine>}
+ */
+export function getEngine(forceLocal = false) {
+    return forceLocal ? localEngine : remoteEngine;
+}
+
+// Back-compat default export: the boot/Settings connect gates (shell.js,
+// MpiSettings) and `interrupt()` callers historically used a single
+// `ComfyUIController`. Alias it to `remoteEngine`, which preserves the old
+// remote-or-local resolution exactly.
+export const ComfyUIController = remoteEngine;

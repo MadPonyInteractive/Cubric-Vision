@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-111",
+  "title": "Gallery: stale thumbnail sticks on card after Stop-at-completion",
+  "description": "A gallery card shows the WRONG thumbnail (a latent-preview blob or final image from a DIFFERENT earlier generation) while its own metadata (filename, dimensions) is correct. Triggered by pressing STOP on a Cue job right as it completes (surfaced by MPI-74 P6 two-lane concurrency, but the bug is in the gallery render-reuse diff, NOT in the concurrency code). The stale image is sticky: it does NOT refresh on size-slider resize, new generation, project reopen, or opening a DIFFERENT card's history and returning. It ONLY clears when the user opens THAT card's OWN history workspace and returns to the gallery. Root cause is in MpiGalleryGrid card caching/signature-diff (_cardMap keyed by group.id + _getGroupRenderKey + the _swapThumbToImage early-return + _stabilizedIds), or a preview blob leaking across the placeholder->saved-card transition. App-only, frontend, no backend/image change. READ rules + docs + memory BEFORE grepping (see brief.md). See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-06-17T18:10:00Z",
+  "updated_at": "2026-06-17T18:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

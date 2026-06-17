@@ -19,7 +19,7 @@
 
 'use strict';
 
-import { ComfyUIController } from './comfyController.js';
+import { ComfyUIController, getEngine } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
 import { COMMANDS, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
@@ -37,9 +37,10 @@ function _buildComfyViewUrl(fileInfo, forceLocal = false) {
         if (value !== undefined && value !== null) params.set(key, value);
     }
     // MPI-74: a force-local run's output lives on LOCAL ComfyUI — build the /view
-    // URL against the local base so save-generation downloads from the right engine
-    // (otherwise a remote-mode save would 404 against the Pod and lose the gen).
-    return `${ComfyUIController.httpBase(forceLocal)}/view?${params.toString()}`;
+    // URL against the local engine's base so save-generation downloads from the
+    // right engine (otherwise a remote-mode save would 404 against the Pod and
+    // lose the gen). getEngine(forceLocal) picks the local-pinned instance.
+    return `${getEngine(forceLocal).httpBase()}/view?${params.toString()}`;
 }
 
 function _collectComfyOutputUrls(nodeOutput, target, forceLocal = false) {
@@ -607,7 +608,7 @@ export function runAutoMask(payload) {
         onError:    null,
         cancel() {
             if (_settled) return;
-            ComfyUIController.interrupt();
+            getEngine(payload.forceLocal === true).interrupt();
         },
     };
 
@@ -674,7 +675,7 @@ export function runAutoMask(payload) {
         };
 
         try {
-            await ComfyUIController.runWorkflow(workflow, params, onMessage, { forceLocal: payload.forceLocal === true });
+            await getEngine(payload.forceLocal === true).runWorkflow(workflow, params, onMessage);
             // Workflow has returned — mark settled BEFORE the synthesized empty
             // signal so the "Nothing detected" handler's exec.cancel() is a no-op
             // (the prompt is done; interrupt() would only flash the remote toast).
@@ -765,7 +766,7 @@ export function runCommand(payload) {
         onPromptAck:     null,
         onComplete:      null,
         onError:         null,
-        cancel() { ComfyUIController.interrupt(); },
+        cancel() { getEngine(workingPayload.forceLocal === true).interrupt(); },
     };
 
     (async () => {
@@ -989,7 +990,7 @@ export function runCommand(payload) {
         };
         exec.cancel = () => {
             closeComfyEventSource();
-            ComfyUIController.interrupt();
+            getEngine(workingPayload.forceLocal === true).interrupt();
         };
         if (hasTerminalPhaseSampler && typeof EventSource !== 'undefined') {
             comfyEventSource = new EventSource('/comfy/events/stream');
@@ -1112,12 +1113,12 @@ export function runCommand(payload) {
         };
 
         try {
-            await ComfyUIController.runWorkflow(workflow, params, onMessage, {
-                // MPI-74: per-generation force-local override. When true, runWorkflow
-                // routes to LOCAL ComfyUI and SKIPS the remote model auto-upload
-                // (model is already local; no Pod to upload to). Sourced from the
-                // dispatch payload; defaults false so normal runs are unaffected.
-                forceLocal: workingPayload.forceLocal === true,
+            // MPI-74 P6: per-generation force-local override selects the engine at
+            // the call site. getEngine(true) is the LOCAL-pinned instance (own
+            // socket/clientId — runs concurrently with a cloud gen) and skips the
+            // remote model auto-upload (model already local). Defaults to the remote
+            // engine so normal runs are unaffected.
+            await getEngine(workingPayload.forceLocal === true).runWorkflow(workflow, params, onMessage, {
                 beforePromptSubmit: async ({ serverReady }) => {
                     await _restagePreviewLatentAfterRemoteRestart(workingPayload, serverReady);
                 },

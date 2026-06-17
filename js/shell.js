@@ -248,14 +248,48 @@ async function _bootApp() {
   // competes with mandatory engine provisioning. Not an updater (MPI-46).
   _maybeShowChangelog();
 
-  // Wire startup modal to comfy engine events.
-  // comfyController emits these events; shell owns the component reference.
+  // Wire startup modal to comfy engine events (MPI-74 P6: engine-tagged + non-
+  // blocking when the OTHER engine is mid-gen). comfyController emits these with
+  // an `engine` tag; shell owns the component reference + the modal-owner gate.
+  //
+  // The blocking "Starting ComfyUI Engine…" overlay is the right UX for a cold
+  // boot the user is waiting on, but it must NOT freeze a concurrent generation
+  // on the other engine — a force-local gen's local cold-boot would otherwise pop
+  // a global modal OVER a running cloud gen (the live-test freeze). Rule: show the
+  // modal only when the OTHER engine is NOT currently running; record which engine
+  // owns it so a later ready/error from the other engine doesn't dismiss it.
+  const { localEngine, remoteEngine } = await import('./services/comfyController.js');
+  const { remoteEngineClient } = await import('./services/remoteEngineClient.js');
+  const _otherEngineRunning = (engine) =>
+    engine === 'local' ? remoteEngine._isRunning === true : localEngine._isRunning === true;
+  let _comfyModalEngine = null; // which engine the visible modal belongs to (or null)
+
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('comfy:starting', () => _startingComfy.el.show());
+  Events.on('comfy:starting', ({ engine = 'remote' } = {}) => {
+    // Suppress the blocking modal if the other engine is mid-gen — that engine's
+    // UI (Cue card, previews) must stay live. The booting engine still comes up;
+    // its own job tracks progress on its Cue card.
+    if (_otherEngineRunning(engine)) return;
+    if (_comfyModalEngine && _comfyModalEngine !== engine) return; // other engine owns the modal
+    _comfyModalEngine = engine;
+    _startingComfy.el.show();
+  });
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('comfy:ready',    () => { _startingComfy.el.hide(); loadAssets(); });
+  Events.on('comfy:ready', ({ engine = 'remote' } = {}) => {
+    if (_comfyModalEngine === engine) { _startingComfy.el.hide(); _comfyModalEngine = null; }
+    // The asset list (models/workflows) reflects the app's PRIMARY engine — the
+    // connection state. A force-local LOCAL ready while remote-connected is a side
+    // gen; reloading assets there would swap the remote model list mid-cloud-gen.
+    // Reload only when the readied engine matches the current app mode.
+    const isRemoteMode = remoteEngineClient.isRemote();
+    if ((engine === 'remote') === isRemoteMode) loadAssets();
+  });
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('comfy:error',    ({ message }) => _startingComfy.el.setError(message));
+  Events.on('comfy:error', ({ engine = 'remote', message } = {}) => {
+    // Only surface the error on the modal if THIS engine owns it; a background
+    // side-engine error never hijacks a modal the other engine is showing.
+    if (_comfyModalEngine === engine || _comfyModalEngine === null) _startingComfy.el.setError(message);
+  });
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
