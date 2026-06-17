@@ -67,9 +67,15 @@ const UA =
 // + /wrapper/restart-comfy (MPI-81), 0.2.4's honest install progress (MPI-95) +
 // /health download-mode branch (MPI-88); image pre-bakes lazy node weights +
 // --cache-lru 2.
+// v0.4.9 / wrapper 0.2.11 (MPI-82 Phase 2B): adds POST /wrapper/models/upload —
+// lands a user's LOCAL LoRA/upscale model on the volume at MODELS_DIR/<type>/ so a
+// remote generation auto-uploads it on demand (presence-checked via the existing
+// /wrapper/models/status). ComfyUI layer cache-reused from v0.4.8 (no master drift).
+// EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
+// at boot; a live app keeps sending the old tag until restarted.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.8';
-const WRAPPER_VERSION = '0.2.10';
+const POD_IMAGE_VERSION = 'v0.4.9';
+const WRAPPER_VERSION = '0.2.11';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
