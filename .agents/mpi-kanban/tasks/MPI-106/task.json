@@ -1,0 +1,21 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-106",
+ "title": "Cubric Vision Builder image — standalone ComfyUI workflow-authoring Pod",
+ "description": "Shipped a standalone ComfyUI authoring image (ghcr.io/madponyinteractive/cubric-vision-builder:v0.1.2-cu128, public) so the user can build workflows on high-end/Blackwell RunPod Pods they can't run locally, then test the exports in the app. Same ComfyUI SHA + 7 universal node packs as the product image (parity), plus ComfyUI-Manager + sageattention + JupyterLab. cu128/Blackwell, LOCAL docker build (no CI). Volume/ephemeral data root (start-builder.sh roots models at /workspace when a >=40GB volume is attached, else /cubric-data; symlinks /opt/ComfyUI/{models,output,input}) so Stop/resume persists models. Fixed two deploy bugs: (1) ComfyUI 8188 403 behind RunPod proxy -> --enable-cors-header (host/origin CSRF middleware, ComfyUI #4865); (2) template {} start-command override -> cleared. Tokens via Pod env (HF_TOKEN/CIVITAI_TOKEN), never in scripts. Live-verified on RTX 5090: ComfyUI 8188 loads, Jupyter file UI works (RunPod's own Jupyter on 8888; run scripts in Web Terminal), volume symlink -> /workspace/models confirmed. mpi-ci d5f2c85. Durable ref: mpi-ci/cubric-vision-builder/README.md. Companion follow-up MPI-105 (app NVMe request).",
+ "column": "done",
+ "maturity": "complete",
+ "status": "accepted",
+ "created_at": "2026-06-17T01:30:00Z",
+ "updated_at": "2026-06-17T01:30:00Z",
+ "links": {
+  "brief": "brief.md",
+  "plan": "plan.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "files": "files.json",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/",
+  "research": "research/"
+ }
+}
