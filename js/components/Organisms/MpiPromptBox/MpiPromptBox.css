@@ -1,7 +1,7 @@
 /* BEM Block naming — mpi-prompt-box */
 .mpi-prompt-box {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr auto auto auto;
     align-items: end;
     gap: var(--s-2);
     background: var(--surface-bar);
@@ -45,6 +45,10 @@
 }
 
 .mpi-prompt-box__col--settings {
+    flex-shrink: 0;
+}
+
+.mpi-prompt-box__col--engine {
     flex-shrink: 0;
 }
 

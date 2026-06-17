@@ -589,7 +589,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const refreshedItem = updatedGroup?.history?.find(h => h.id === item.id);
                 const newLatent = refreshedItem?.previewAssets?.latent;
                 if (!newLatent || newLatent.status !== 'available' || !newLatent.engineInputName || !newLatent.filePath) {
-                    StatusBar.notify('Stage 1 rerun finished but latent was not produced.', 'warning');
+                    StatusBar.notify('Stage 1 rerun finished but did not rebuild the preview latent. Continue cannot resume this preview.', 'warning');
                     _settle();
                     _chainUnsub();
                     return;
@@ -1150,12 +1150,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 };
             };
 
-            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false }) => {
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
                 if (!activeModel) return;
                 const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
-                    opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType, mediaItems),
+                    // MPI-74: forceLocal rides in opts (a routing hint, not gen config).
+                    opts: { ..._galleryGenerationOptions(injectionParams, activeModel.mediaType, mediaItems), forceLocal },
                 };
             };
 

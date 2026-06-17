@@ -136,7 +136,9 @@ router.get('/comfy/events/stream', (req, res) => {
 router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
     try {
         const sourceDir = path.join(__dirname, '..', 'comfy_workflows', 'input');
-        const remoteActive = remoteModels.isRemoteActive();
+        // MPI-74: a force-local run stages defaults into the LOCAL ComfyUI input dir
+        // even while remote-active, so the local _ms run finds them.
+        const remoteActive = remoteModels.isRemoteActive() && req.body?.forceLocal !== true;
         const inputDir = remoteActive ? null : getComfyPath(ENGINE_ROOT, 'input');
         if (!remoteActive) await fs.ensureDir(inputDir);
 
@@ -176,7 +178,7 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
  */
 router.post('/comfy/stage-preview-latent', async (req, res) => {
     try {
-        const { sourcePath, engineInputName } = req.body || {};
+        const { sourcePath, engineInputName, forceLocal } = req.body || {};
         if (!sourcePath || typeof sourcePath !== 'string') {
             return res.status(400).json({ success: false, error: 'sourcePath required' });
         }
@@ -191,7 +193,8 @@ router.post('/comfy/stage-preview-latent', async (req, res) => {
 
         // Remote engine: upload the project-owned latent to the Pod volume input
         // dir via the wrapper instead of copying into the local ComfyUI input.
-        if (remoteModels.isRemoteActive()) {
+        // MPI-74: a force-local run skips the upload and copies into local input below.
+        if (remoteModels.isRemoteActive() && forceLocal !== true) {
             await remoteModels.remoteUploadInput(resolvedSource, engineInputName, '/wrapper/upload/latent');
             return res.json({ success: true, copied: engineInputName });
         }
@@ -463,59 +466,88 @@ router.post('/comfy/models/check', async (req, res) => {
     }
 
     try {
-        const customRoot = await getCustomRoot();
-        const defaultModelsRoot = getDefaultModelsRoot();
-        const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
-
-        const results = {};
-
-        for (const model of models) {
-            if (!model.id || !Array.isArray(model.deps)) { results[model.id] = { installed: false, deps: [] }; continue; }
-
-            let allPresent = true;
-            const depResults = [];
-
-            for (const dep of model.deps) {
-                if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
-                let depPath;
-                if (dep.type === 'custom_nodes') {
-                    // custom_nodes: YAML does not remap this type — always use engine default
-                    depPath = path.join(defaultCustomNodesRoot, dep.filename);
-                } else if (customRoot) {
-                    const baseFilename = path.basename(dep.filename);
-                    const subDir = path.dirname(dep.filename);
-                    const directPath = path.join(customRoot, dep.filename);
-                    if (await isCompleteOnDisk(directPath)) {
-                        depPath = directPath;
-                    } else {
-                        // Search the custom root, then fall back to the default root:
-                        // the YAML keeps the default folder searchable, so engine deps
-                        // installed there before a path change must still count as present.
-                        const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
-                        depPath = found
-                            || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
-                                ? path.join(defaultModelsRoot, dep.filename)
-                                : directPath);
-                    }
-                } else {
-                    depPath = path.join(defaultModelsRoot, dep.filename);
-                }
-
-                const isInstalled = await isCompleteOnDisk(depPath);
-                const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
-                if (!isInstalled) allPresent = false;
-                depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });
-            }
-
-            results[model.id] = { installed: allPresent, deps: depResults };
-        }
-
+        const results = await _localModelsCheck(models);
         res.json({ success: true, results });
     } catch (err) {
         logger.error('comfy', 'models/check failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+/**
+ * MPI-74: local-filesystem model presence, IGNORING remote mode. The normal
+ * /comfy/models/check forks to the Pod wrapper when remote-active; a force-local
+ * run needs to know whether the model is on LOCAL disk (the engine that will run
+ * it) regardless of the remote connection. Same response shape as the local
+ * branch of /comfy/models/check.
+ */
+router.post('/comfy/models/check-local', async (req, res) => {
+    const { models } = req.body;
+    if (!Array.isArray(models)) return res.status(400).json({ error: 'models array required' });
+    try {
+        const results = await _localModelsCheck(models);
+        res.json({ success: true, results });
+    } catch (err) {
+        logger.error('comfy', 'models/check-local failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * Resolve installed-state for each model's deps against the LOCAL filesystem
+ * (primary/custom root + default root + engine custom_nodes). Shared by
+ * /comfy/models/check (local branch) and /comfy/models/check-local.
+ */
+async function _localModelsCheck(models) {
+    const customRoot = await getCustomRoot();
+    const defaultModelsRoot = getDefaultModelsRoot();
+    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
+
+    const results = {};
+
+    for (const model of models) {
+        if (!model.id || !Array.isArray(model.deps)) { results[model.id] = { installed: false, deps: [] }; continue; }
+
+        let allPresent = true;
+        const depResults = [];
+
+        for (const dep of model.deps) {
+            if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
+            let depPath;
+            if (dep.type === 'custom_nodes') {
+                // custom_nodes: YAML does not remap this type — always use engine default
+                depPath = path.join(defaultCustomNodesRoot, dep.filename);
+            } else if (customRoot) {
+                const baseFilename = path.basename(dep.filename);
+                const subDir = path.dirname(dep.filename);
+                const directPath = path.join(customRoot, dep.filename);
+                if (await isCompleteOnDisk(directPath)) {
+                    depPath = directPath;
+                } else {
+                    // Search the custom root, then fall back to the default root:
+                    // the YAML keeps the default folder searchable, so engine deps
+                    // installed there before a path change must still count as present.
+                    const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
+                    depPath = found
+                        || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
+                            ? path.join(defaultModelsRoot, dep.filename)
+                            : directPath);
+                }
+            } else {
+                depPath = path.join(defaultModelsRoot, dep.filename);
+            }
+
+            const isInstalled = await isCompleteOnDisk(depPath);
+            const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
+            if (!isInstalled) allPresent = false;
+            depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });
+        }
+
+        results[model.id] = { installed: allPresent, deps: depResults };
+    }
+
+    return results;
+}
 
 async function _findFile(dir, filename) {
     if (!(await fs.pathExists(dir))) return null;

@@ -74,7 +74,11 @@ export const ComfyUIController = {
      * mode: the Express proxy, which attaches the wrapper token server-side.
      * @returns {string}
      */
-    httpBase() {
+    httpBase(forceLocal = false) {
+        // MPI-74: a force-local run resolves the LOCAL ComfyUI base even while the
+        // app is remote-connected, so its asset uploads + /prompt POST hit local
+        // ComfyUI instead of the Express /proxy. Default false = normal routing.
+        if (forceLocal) return `http://${this.serverAddress}`;
         return remoteEngineClient.httpBase() || `http://${this.serverAddress}`;
     },
 
@@ -83,6 +87,9 @@ export const ComfyUIController = {
 
     /** @type {WebSocket|null} */
     _ws: null,
+
+    /** @type {boolean} MPI-74: engine target the current `_ws` was opened for (true = force-local). Lets `connect()`/`ensureWsConnected()` detect a wrong-engine socket and reopen. */
+    _wsForceLocal: false,
 
     /** @type {boolean} True while a workflow is actively executing. */
     _isRunning: false,
@@ -121,8 +128,10 @@ export const ComfyUIController = {
      * @param {{ timeoutMs?: number }} [opts]
      * @returns {Promise<boolean>}
      */
-    async ensureWsConnected({ timeoutMs = 20000, retryMs = 1500 } = {}) {
-        if (this.isWsReady()) return true;
+    async ensureWsConnected({ timeoutMs = 20000, retryMs = 1500, forceLocal = false } = {}) {
+        // MPI-74: a force-local run needs the LOCAL preview WS. If a socket is already
+        // ready but points at the wrong engine, fall through and reconnect local.
+        if (this.isWsReady() && (this._wsForceLocal === true) === (forceLocal === true)) return true;
         // Load the remote WS base + token BEFORE connecting. The boot/Settings flow
         // calls ensureWsConnected directly (not via ensureServerRunning), so without
         // this refresh `remoteEngineClient.wsUrl()` is null and connect() falls back
@@ -146,7 +155,7 @@ export const ComfyUIController = {
             const open = st === WebSocket.OPEN;
             if (!open && !connecting && Date.now() - lastAttempt >= retryMs) {
                 lastAttempt = Date.now();
-                this.connect();
+                this.connect(forceLocal);
             }
             await new Promise(r => setTimeout(r, 250));
             if (this.isWsReady()) return true;
@@ -184,7 +193,9 @@ export const ComfyUIController = {
         // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
         // try/catch so a remote failure doesn't double-emit ui:error below.
         try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
-        if (remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts);
+        // MPI-74: a force-local run skips the remote-ready path entirely and falls
+        // through to the LOCAL ComfyUI branch below, even while remote-connected.
+        if (!opts.forceLocal && remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts);
 
         try {
             const statusRes = await fetch('/comfy/status');
@@ -535,8 +546,12 @@ export const ComfyUIController = {
         activeListener?.(msg);
     },
 
-    connect() {
-        if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+    connect(forceLocal = false) {
+        // MPI-74: don't reuse a live socket that points at the WRONG engine. If the
+        // current socket was opened for a different engine target than this call
+        // wants (remote-vs-force-local), fall through and reopen it below.
+        const engineMatches = (this._wsForceLocal === true) === (forceLocal === true);
+        if (engineMatches && this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
@@ -559,9 +574,13 @@ export const ComfyUIController = {
             this._ws.close();
         }
 
-        const wsUrl = remoteEngineClient.wsUrl(this.clientId)
+        // MPI-74: a force-local run uses the LOCAL preview WS even while remote-
+        // connected, so previews + the completion event come from the engine that
+        // actually ran the prompt. Default (no arg) = normal remote-or-local routing.
+        const wsUrl = (!forceLocal && remoteEngineClient.wsUrl(this.clientId))
             || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
         this._ws = new WebSocket(wsUrl);
+        this._wsForceLocal = forceLocal;
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
@@ -675,7 +694,11 @@ export const ComfyUIController = {
      * @returns {Promise<{success: boolean, images: string[]}>}
      */
     async runWorkflow(workflowOrId, params = {}, onMessage = null, opts = {}) {
-        const serverReady = await this.ensureServerRunning();
+        // MPI-74: when true, force this single run onto LOCAL ComfyUI even while
+        // remote-connected — engine target, asset uploads, WS, and /prompt all
+        // resolve local; MPI-82's model auto-upload is skipped (already gated).
+        const forceLocal = opts.forceLocal === true;
+        const serverReady = await this.ensureServerRunning({ forceLocal });
 
         let workflow = workflowOrId;
 
@@ -729,7 +752,7 @@ export const ComfyUIController = {
                     // invisible to the Pod. Upload the file to the Pod volume input
                     // dir via Express → wrapper and inject the bare filename, which
                     // VHS LoadVideo/LoadAudio nodes resolve against the input dir.
-                    params[paramKey] = remoteEngineClient.isRemote()
+                    params[paramKey] = (remoteEngineClient.isRemote() && !forceLocal)
                         ? await this._uploadRemoteMedia(localPath)
                         : localPath;
                 }
@@ -756,7 +779,7 @@ export const ComfyUIController = {
                  val.includes('project-file') || val.includes('/project-media/'))
             ) {
                 try {
-                    const uploadRes = await this._uploadImage(val, staticName);
+                    const uploadRes = await this._uploadImage(val, staticName, forceLocal);
                     if (uploadRes && uploadRes.name) {
                         params[paramKey] = uploadRes.name;
                     }
@@ -851,7 +874,7 @@ export const ComfyUIController = {
 
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
-                    _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
+                    _collectComfyOutputUrls(this.httpBase(forceLocal), nodeOutput, outputs);
                 }
 
                 // A node raised in-process (missing node, a node throwing, a
@@ -890,14 +913,14 @@ export const ComfyUIController = {
                 }
             };
 
-            this.connect();
+            this.connect(forceLocal);
             this._isRunning = true;
 
             try {
                 if (typeof opts.beforePromptSubmit === 'function') {
                     await opts.beforePromptSubmit({ serverReady, workflow, params });
                 }
-                const req = await fetch(`${this.httpBase()}/prompt`, {
+                const req = await fetch(`${this.httpBase(forceLocal)}/prompt`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ prompt: workflow, client_id: this.clientId })
@@ -981,7 +1004,7 @@ export const ComfyUIController = {
      * @returns {Promise<object>}
      * @private
      */
-    async _uploadImage(dataUrlOrPath, filename) {
+    async _uploadImage(dataUrlOrPath, filename, forceLocal = false) {
         let blob;
         try {
             const res = await fetch(dataUrlOrPath);
@@ -1000,7 +1023,7 @@ export const ComfyUIController = {
         formData.append('image', blob, filename);
         formData.append('overwrite', 'true');
 
-        const uploadRes = await fetch(`${this.httpBase()}/upload/image`, {
+        const uploadRes = await fetch(`${this.httpBase(forceLocal)}/upload/image`, {
             method: 'POST',
             body: formData
         });

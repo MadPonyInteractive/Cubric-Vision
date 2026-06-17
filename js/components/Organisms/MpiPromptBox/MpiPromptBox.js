@@ -15,6 +15,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -67,6 +68,7 @@ export const MpiPromptBox = ComponentFactory.create({
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
     `,
@@ -79,6 +81,7 @@ export const MpiPromptBox = ComponentFactory.create({
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
         let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
+        let _runLocal         = false; // MPI-74: force this generation onto local ComfyUI while remote-connected. Sticky within a remote session, reset on disconnect. UI-only until MPI-82 spine reads it.
         let _context          = props.context || {};
 
         /** @type {Map<string, Object>} */
@@ -878,6 +881,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 injectionParams,
                 previewOnly,
                 historyMode,
+                forceLocal: _runLocal, // MPI-74: per-gen local override (inert until spine lands)
             };
         };
 
@@ -1067,6 +1071,34 @@ export const MpiPromptBox = ComponentFactory.create({
             runBtn?.el?.setDisabled?.(_remoteTransitioning);
         };
         _applyRemotePhase();
+
+        // MPI-74: "Run locally" toggle. Shown ONLY while the app is remote-connected;
+        // when ON, the next Cue/Q dispatch is force-routed onto the LOCAL ComfyUI
+        // (forceLocal in getRunPayload). Sticky within a remote session, reset to OFF
+        // on disconnect. UI-only for now — the flag is inert until MPI-82's spine
+        // reads opts.forceLocal. Mount-time visibility reads the cached remote flag;
+        // live show/hide follows the `remote:connection` event (same source the
+        // landing/status bar already use).
+        const engineToggleSlot = qs('#engine-toggle-slot', el);
+        const engineToggleBtn = MpiButton.mount(engineToggleSlot, {
+            icon: 'cloud',
+            iconActive: 'laptop',
+            toggleable: true,
+            active: _runLocal,
+            size: 'sm',
+            info: 'Run this generation on your local engine instead of the cloud Pod.',
+            extraClasses: 'mpi-prompt-box__engine-toggle',
+        });
+        engineToggleBtn.on('toggle', ({ active }) => { _runLocal = !!active; });
+        const _showEngineToggle = (connected) => {
+            engineToggleSlot?.classList.toggle('hide', !connected);
+            if (!connected) {
+                _runLocal = false; // reset on disconnect
+                engineToggleBtn.el.setActive(false);
+            }
+        };
+        _showEngineToggle(remoteEngineClient.isRemote());
+        _unsubs.push(Events.on('remote:connection', ({ connected }) => _showEngineToggle(!!connected)));
 
         // ── Initialise ─────────────────────────────────────────────────────────
         _refreshOpDropdown();

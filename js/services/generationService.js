@@ -103,6 +103,10 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
         scope: opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
         replaceItemId: config.replaceItemId ?? null,
         sourceGroupId: opts.sourceGroupId ?? null,
+        // MPI-74: per-job engine label for the Cue badge. Only meaningful while
+        // the app is remote-connected; a force-local run shows 'local'. UI-only
+        // until MPI-82's spine reads opts.forceLocal — inert on routing for now.
+        engine: opts.forceLocal ? 'local' : 'remote',
     };
 }
 
@@ -146,6 +150,7 @@ function _queueSnapshotItem(job, status) {
         scope: job.display?.scope || job.opts?.scope || 'gallery',
         replaceItemId: job.display?.replaceItemId ?? job.config?.replaceItemId ?? null,
         sourceGroupId: job.display?.sourceGroupId ?? job.opts?.sourceGroupId ?? null,
+        engine: job.display?.engine || (job.opts?.forceLocal ? 'local' : 'remote'),
     };
 }
 
@@ -456,6 +461,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         isStage2: config.isStage2 === true,
         loadLatentName: config.loadLatentName,
         previewLatentFilePath: config.previewLatentFilePath,
+        forceLocal: opts.forceLocal === true, // MPI-74: per-gen local override → runCommand reads payload.forceLocal
     });
 
     const { id: _regId } = activeGenerations.start({

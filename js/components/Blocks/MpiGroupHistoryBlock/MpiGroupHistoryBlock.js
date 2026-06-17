@@ -953,7 +953,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return { in: rangeIn, out: rangeOut };
         }
 
-        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null }) {
+        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -984,7 +984,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             return {
                 config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
-                opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id },
+                opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id, forceLocal },
             };
         }
 

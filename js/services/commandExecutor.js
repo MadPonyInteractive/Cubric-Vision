@@ -30,28 +30,31 @@ import { DEPS } from '../data/modelConstants/dependencies.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
 import { INJECTORS } from './workflowInjectors/index.js';
 
-function _buildComfyViewUrl(fileInfo) {
+function _buildComfyViewUrl(fileInfo, forceLocal = false) {
     const params = new URLSearchParams();
     for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
         const value = fileInfo?.[key];
         if (value !== undefined && value !== null) params.set(key, value);
     }
-    return `${ComfyUIController.httpBase()}/view?${params.toString()}`;
+    // MPI-74: a force-local run's output lives on LOCAL ComfyUI — build the /view
+    // URL against the local base so save-generation downloads from the right engine
+    // (otherwise a remote-mode save would 404 against the Pod and lose the gen).
+    return `${ComfyUIController.httpBase(forceLocal)}/view?${params.toString()}`;
 }
 
-function _collectComfyOutputUrls(nodeOutput, target) {
+function _collectComfyOutputUrls(nodeOutput, target, forceLocal = false) {
     if (nodeOutput?.images) {
-        nodeOutput.images.forEach(img => target.push(_buildComfyViewUrl(img)));
+        nodeOutput.images.forEach(img => target.push(_buildComfyViewUrl(img, forceLocal)));
     }
     if (nodeOutput?.gifs) {
-        nodeOutput.gifs.forEach(gif => target.push(_buildComfyViewUrl(gif)));
+        nodeOutput.gifs.forEach(gif => target.push(_buildComfyViewUrl(gif, forceLocal)));
     }
     // Vanilla ComfyUI `SaveVideo` (portable, card-agnostic encode — replaces
     // VHS_VideoCombine whose nvenc encode fails on the Blackwell Pod, B3) emits
     // under `videos`. Same file-dict shape as gifs, so the /view URL builds
     // identically. Mirrors the controller copy in comfyController.js.
     if (nodeOutput?.videos) {
-        nodeOutput.videos.forEach(vid => target.push(_buildComfyViewUrl(vid)));
+        nodeOutput.videos.forEach(vid => target.push(_buildComfyViewUrl(vid, forceLocal)));
     }
 }
 
@@ -59,9 +62,9 @@ function _collectComfyOutputUrls(nodeOutput, target) {
 // video/audio output design — MPI-64 B3) emits its saved file under `audio`.
 // Collected separately from the video URLs so save-generation can mux the
 // pair (video is master). Returns the FIRST audio /view URL or null.
-function _collectComfyAudioUrl(nodeOutput) {
+function _collectComfyAudioUrl(nodeOutput, forceLocal = false) {
     const a = nodeOutput?.audio;
-    if (Array.isArray(a) && a.length) return _buildComfyViewUrl(a[0]);
+    if (Array.isArray(a) && a.length) return _buildComfyViewUrl(a[0], forceLocal);
     return null;
 }
 
@@ -77,7 +80,7 @@ async function _prepareWorkflowInputs(payload) {
     const res = await fetch('/comfy/prepare-workflow-inputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ operation: payload.operation }),
+        body: JSON.stringify({ operation: payload.operation, forceLocal: payload.forceLocal === true }),
     });
     if (!res.ok) {
         let message = `prepare-workflow-inputs returned ${res.status}`;
@@ -111,7 +114,7 @@ async function _stagePreviewLatent(payload) {
     const res = await fetch('/comfy/stage-preview-latent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourcePath, engineInputName }),
+        body: JSON.stringify({ sourcePath, engineInputName, forceLocal: payload.forceLocal === true }),
     });
     if (!res.ok) {
         let message = `stage-preview-latent returned ${res.status}`;
@@ -357,6 +360,42 @@ function _findMissingModel(params) {
         }
     }
     return null;
+}
+
+/**
+ * MPI-74: for a force-local run, verify the selected model's deps are present on
+ * LOCAL disk (the engine that will actually run it), independent of remote mode.
+ * Hits /comfy/models/check-local (which ignores remote-active). Returns the model
+ * display name when NOT fully installed locally, else null. On a check error,
+ * returns null (fail-open) — the run then surfaces any real failure itself rather
+ * than blocking on a flaky check.
+ * @param {string} modelId
+ * @returns {Promise<string|null>}
+ */
+async function _findModelNotLocal(modelId) {
+    const model = getModelById(modelId);
+    if (!model || !Array.isArray(model.dependencies)) return null;
+    const deps = model.dependencies
+        .map(depId => {
+            const dep = DEPS[depId];
+            return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
+        })
+        .filter(Boolean);
+    if (!deps.length) return null;
+    try {
+        const res = await fetch('/comfy/models/check-local', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ models: [{ id: model.id, deps }] }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const installed = data?.results?.[model.id]?.installed;
+        return installed ? null : (model.name || model.id);
+    } catch (e) {
+        clientLogger.warn('commandExecutor', `local model check failed for ${modelId}: ${e.message}`);
+        return null;
+    }
 }
 
 /**
@@ -622,14 +661,14 @@ export function runAutoMask(payload) {
             const nodeOutput = msg.data?.output;
 
             if (detectedNodeIds.has(nodeId) && nodeOutput?.images) {
-                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img));
+                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img, payload.forceLocal === true));
                 _detectedFired = true;
                 exec.onDetected?.(urls);
             }
 
             if (outputNodeIds.has(nodeId) && nodeOutput?.images) {
                 if (!payload.picks?.size) return;
-                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img));
+                const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img, payload.forceLocal === true));
                 exec.onMasks?.(urls);
             }
         };
@@ -768,6 +807,24 @@ export function runCommand(payload) {
             });
             exec.onError?.(new Error('model_missing'));
             return;
+        }
+
+        // MPI-74: a force-local run sends this generation to LOCAL ComfyUI even while
+        // remote-connected. The model dropdowns reflect the Pod when remote, so the
+        // selected checkpoint may live ONLY on the Pod volume and not on local disk —
+        // the local run would then fail mid-prompt. Pre-check local presence and abort
+        // with a clear toast (mirrors the missing-slot/LoRA guards) before dispatch.
+        if (workingPayload.forceLocal === true) {
+            const notLocal = await _findModelNotLocal(workingPayload.modelId);
+            if (notLocal) {
+                await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
+                Events.emit('ui:warning', {
+                    message: `"${notLocal}" is not installed on your local engine. `
+                        + 'Install it locally, or turn off "Run locally" to generate on the cloud.',
+                });
+                exec.onError?.(new Error('model_not_local'));
+                return;
+            }
         }
 
         // Load the workflow JSON so we can identify "Output" node ids before
@@ -1046,10 +1103,10 @@ export function runCommand(payload) {
                     _collectComfyLatents(nodeOutput, latentOutputs);
                 }
                 if (outputNodeIds.has(nodeId)) {
-                    _collectComfyOutputUrls(nodeOutput, outputUrls);
+                    _collectComfyOutputUrls(nodeOutput, outputUrls, workingPayload.forceLocal === true);
                 }
                 if (outputAudioNodeIds.has(nodeId)) {
-                    audioOutputUrl = _collectComfyAudioUrl(nodeOutput) || audioOutputUrl;
+                    audioOutputUrl = _collectComfyAudioUrl(nodeOutput, workingPayload.forceLocal === true) || audioOutputUrl;
                 }
             }
         };
