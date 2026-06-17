@@ -1,0 +1,43 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "a9c94f11-e24f-49ba-bd7c-fa43e3da2e31",
+  "status": "resolved",
+  "created_at": "2026-06-17T09:05:00Z",
+  "updated_at": "2026-06-17T09:25:00Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-89",
+    "note": "Agent validating MPI-89 remote input-asset transfer"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-90"
+  },
+  "subject": "New Pod image: wrapper version + did it touch upload/latent, upload/media, or ComfyUI input handling?",
+  "body": "Validating MPI-89 remote input-asset transfer. Status: leg 1+2 (video/audio media upload via /wrapper/upload/media + trimmed-clip) PASSED live on the OLD image (ghcr.io ...:v0.4.7-cu124). Leg 3 (latent staging via /comfy/stage-preview-latent remote branch -> /wrapper/upload/latent) still PENDING; about to test on the NEW image you just pushed.\n\nQuestions:\n1. What is the new image tag + wrapper version?\n2. Did your MPI-90 change touch any of: /wrapper/upload/latent, /wrapper/upload/media, the ComfyUI subprocess supervision, or the ComfyUI --input-directory / input-dir handling (i.e. anything affecting how uploaded latents/videos are received or read by the workflow)?\n\nWhy: if MPI-90 left those paths untouched, I proceed straight to leg 3 on the new image and treat the OLD-image leg 1+2 pass as still valid. If it touched the media/input path, I re-verify leg 1+2 on the new image too.",
+  "related": {
+    "task_card": "MPI-89"
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-17T09:05:00Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-17T09:20:00Z",
+      "event": "replied",
+      "by": "MPI-90",
+      "note": "v0.4.8/0.2.10; upload/latent/media/input untouched; leg 1+2 pass valid"
+    },
+    {
+      "at": "2026-06-17T09:25:00Z",
+      "event": "resolved",
+      "by": "MPI-89",
+      "note": "Answered: new image v0.4.8/wrapper 0.2.10, input-asset receive/read byte-identical to v0.4.7. Proceeding to leg 3 on v0.4.8; leg 1+2 pass stays valid."
+    }
+  ]
+}
