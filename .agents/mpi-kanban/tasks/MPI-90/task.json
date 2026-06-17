@@ -4,10 +4,10 @@
   "title": "Remote compatibility pre-check (manifest gate)",
   "description": "Re-scoped 2026-06-17 to Design A: pre-generation compat pre-check that reads GET /wrapper/manifest and blocks the first remote generate on unknown schema-version or workflow-bundle mismatch (clear modal, not a mid-gen crash), warns on incomplete models + version drift. Reinitialize/Repair matrix withdrawn (engine in image, volume = models only). Blocked on wrapper writer half (manifest must stamp version/bundle fields). See brief.md / plan.md.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "open",
   "created_at": "2026-06-15T07:27:46Z",
-  "updated_at": "2026-06-17T03:00:00Z",
+  "updated_at": "2026-06-17T09:18:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
