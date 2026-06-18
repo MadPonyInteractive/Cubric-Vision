@@ -747,6 +747,19 @@ function createEngine({ engine, alwaysLocal }) {
             const res = await fetch(`/comfy_workflows/${file}`);
             if (!res.ok) throw new Error(`Failed to load workflow: ${file}`);
             workflow = await res.json();
+            // MPI-116: node-naming-law load-time check. Capture nodes carry a
+            // reserved/`Output_*` title; without one, the run reports "no output
+            // returned". Warn (no hard fail) so an authoring slip surfaces in the
+            // log instead of as a silent dead generation. ponytail: capture-node
+            // presence is the only unambiguous violation; bare legacy input titles
+            // (Positive/Seed/...) are valid by design, so we don't flag those.
+            const _hasCapture = Object.values(workflow).some(n => {
+                const t = (n?._meta?.title || '').toLowerCase();
+                return t === 'output' || t.startsWith('output_') || t === 'preview' || t === 'detected';
+            });
+            if (!_hasCapture) {
+                clientLogger.warn('comfy', `Workflow "${file}" has no capture node (Output / Output_* / Preview / Detected) — run will report no output. Node naming law: every workflow needs a capture node.`);
+            }
         }
 
         // 2. Handle media inputs by inspecting the matching workflow node input.

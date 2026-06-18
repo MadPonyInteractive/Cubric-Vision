@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-116", "at": "2026-06-18T09:35:00.000Z", "actor": "claude", "column": "todo", "summary": "Two-tier ComfyUI node naming law: legacy reserved titles kept; new workflows prefix agent nodes Input_*/Output_* for self-serve inject/capture contract + load-time validator warn."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-116", "at": "2026-06-18T09:40:00.000Z", "actor": "claude", "from": "todo", "to": "done", "summary": "Shipped + user-accepted; see validation.md."}

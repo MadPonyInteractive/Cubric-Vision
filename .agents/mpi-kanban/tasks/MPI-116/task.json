@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-116",
+  "title": "Workflow node naming law",
+  "description": "Two-tier ComfyUI node naming convention: keep legacy reserved titles; new workflows MUST prefix agent-relevant nodes Input_*/Output_* so agents self-serve the inject/capture contract without per-workflow dictation. Doc in comfy_injection.md + load-time validator warn.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-18T09:30:00.000Z",
+  "updated_at": "2026-06-18T09:40:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -7,6 +7,12 @@
 
 **Title-based injection:** Target nodes exclusively by `_meta.title` (case-insensitive). Never hardcode node IDs. Use `filter` not `find` when locating nodes — multiple nodes can share a title.
 
+**Node naming law (two-tier) — MPI-116.** Agent-relevant node titles follow two tiers:
+- **Tier 1 — legacy reserved vocabulary (unchanged):** the documented Standard Node Title Map titles (`Positive`, `Negative`, `Seed`, `Width`, `Height`, `Lora_1`…`Lora_6`, `Duration`, `Steps`, `Checkpoint`, `Output`, `Preview`, `Detected`, etc.). These keep their existing bare titles. Known title → look it up in the Standard Node Title Map below.
+- **Tier 2 — all NEW workflows authored from now on:** every node the app reads from or writes into MUST be titled with an `Input_*` prefix (app injects INTO it) or `Output_*` prefix (app reads FROM it). This makes a new workflow self-describing: an agent reads the API JSON and infers direction + role from the prefix with no per-workflow dictation. A genuinely new `inputs.*` field type still needs a one-line note from the user (the prefix gives direction, not which field to write).
+
+**Enforce the law when handed new nodes.** When the user supplies a NEW ComfyUI workflow / new injection nodes whose titles are NOT in the Tier-1 reserved vocabulary AND are not prefixed `Input_*` / `Output_*`, do NOT silently invent a contract. Tell the user the node-naming law requires the `Input_*` / `Output_*` prefix on new agent-relevant nodes, name the offending node titles, and ask them to re-title in their edit-version workflow and re-export the API JSON. (Tier-1 reserved titles are exempt — never flag `Positive`, `Seed`, `Lora_N`, `Output`, etc.)
+
 **Never edit workflow JSON. EVER.** Files under `comfy_workflows/` are owned by the user — strict read-only for agents. Do not add, rename, rewire, or change baked default values in any node there. If a new injection target is required, document the contract (title + expected `inputs.*` field) in this file and in `.claude/rules/component-comfy.md`, then ask the user to author the node in the ComfyUI graph editor and re-export the API JSON. The same rule applies even when the change looks trivial (e.g. flipping a baked default value). Agents only write injection params on the frontend side.
 
 **Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
