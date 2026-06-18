@@ -549,6 +549,16 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         isLoop:            opts.isLoop === true,
     });
 
+    // Stable tempId snapshot. The empty-output / cacheHit branches below emit a
+    // late `generation:cancelled` AFTER the registry entry may already be gone
+    // (a user Stop ends it first, then the interrupted gen returns empty). Reading
+    // tempId from the registry at that point yields null, so the gallery block —
+    // which keys placeholder teardown on tempId — swallows the event and the
+    // placeholder card is never reconciled (MPI-111). Snapshot from opts, which
+    // lives for the whole call regardless of registry state.
+    const _stableTempId = opts.tempId ?? null;
+    const _stableExtraTempIds = opts.extraTempIds ?? [];
+
     exec.onPromptAck = (promptId) => {
         activeGenerations.setPromptId(_regId, promptId);
     };
@@ -583,11 +593,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
-            const _cancelEntry = activeGenerations.get(_regId);
-            const _cancelTempId = _cancelEntry?.tempId ?? null;
-            const _cancelExtraTempIds = _cancelEntry?.extraTempIds ?? [];
             activeGenerations.end(_regId, { revokePreview: true });
-            Events.emit('generation:cancelled', { id: _regId, tempId: _cancelTempId, extraTempIds: _cancelExtraTempIds });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
             _emitPromptBoxGenerationEndIfIdle();
             callbacks.onCancel?.();
             return;
@@ -598,9 +605,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // history entry / gallery card. Replace mode (preview → final) is
         // explicit user intent and bypasses this guard.
         if (exec.cacheHit === true && !config.replaceItemId) {
-            const _cacheEntry = activeGenerations.get(_regId);
-            const _cacheTempId = _cacheEntry?.tempId ?? null;
-            const _cacheExtraTempIds = _cacheEntry?.extraTempIds ?? [];
             activeGenerations.end(_regId, { revokePreview: true });
             const _toastWrap = ce('div');
             document.body.appendChild(_toastWrap);
@@ -611,7 +615,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             });
             _toast.on('close', () => _toastWrap.remove());
             Events.emit('tool:cancelled', { tool: 'groupHistory' });
-            Events.emit('generation:cancelled', { id: _regId, tempId: _cacheTempId, extraTempIds: _cacheExtraTempIds });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
             Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
             _emitPromptBoxGenerationEndIfIdle();
             callbacks.onCancel?.();
@@ -975,11 +979,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
     exec.onError = (err) => {
         Events.emit('tool:cancelled', { tool: 'groupHistory' });
-        const _errEntry = activeGenerations.get(_regId);
-        const _errTempId = _errEntry?.tempId ?? null;
-        const _errExtraTempIds = _errEntry?.extraTempIds ?? [];
         activeGenerations.end(_regId, { revokePreview: true });
-        Events.emit('generation:error', { id: _regId, tempId: _errTempId, extraTempIds: _errExtraTempIds });
+        Events.emit('generation:error', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
         _emitPromptBoxGenerationEndIfIdle();
         callbacks.onError?.();
     };

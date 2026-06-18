@@ -116,6 +116,12 @@ function _idleScopeLabel() {
 
 function _setIdle() {
     _state = 'idle';
+    // Idle is the single funnel for "no job running". A rapid Cue Stop→promote
+    // sequence can bump _completionToken so a superseded job's complete()/cancel()
+    // early-returns (state already stole by the newer cycle) without clearing its
+    // interval, stranding a ticking timer that reads as a frozen mm:ss at idle
+    // (MPI-111 timer symptom). Hard-stop here so reaching idle ALWAYS kills it.
+    _stopTimer();
     _job.className = 'shell-info__job';
     _jobLabel.textContent = `IDLE · ${_idleScopeLabel()}`;
     _currentLabel = '';
