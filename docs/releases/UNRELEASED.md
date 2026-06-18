@@ -30,6 +30,15 @@
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
 
+- **Your prompt drafts now survive navigation.** Prompt text (positive + negative)
+  and staged input media (start/end frames, input video) typed into a prompt box no
+  longer vanish when you switch between the gallery and a card's history view — come
+  back and your draft is still there. Drafts are kept separate per surface: what you
+  compose in the **gallery** stays in the gallery, and what you set up against a
+  **card** stays with that card. Opening a different card shows a clean prompt box,
+  never the previous card's text or images. (Drafts are session-only and clear on app
+  restart; dragged-in files that weren't saved into the project can't be restored.)
+
 - **Smarter OS notifications.** Desktop notifications now fire whenever the app is
   not focused — not just when it's minimized — so a generation that finishes while
   Cubric is sitting behind another window still pops a notification. New: when a
@@ -59,6 +68,12 @@
   default and warns, so the generation still runs.
 
 ## fixes
+
+- **Stop now works from a card's prompt box.** Running an op (e.g. Extend) against a
+  card in the history view left the prompt box's **Stop** button greyed out, forcing
+  you to go back to the gallery and stop from the queue panel. The history prompt box
+  now enables inline Stop while one of its jobs is running, so you can cancel right
+  where you started it.
 
 - **Universal upscale workflows now honor each model's native scale.** `image_upscale`
   and `video_upscale` previously assumed every upscale model was 4x, so 1x/2x/8x

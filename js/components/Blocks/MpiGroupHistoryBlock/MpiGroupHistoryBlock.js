@@ -488,6 +488,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.setGenerating?.(flag);
         };
 
+        // MPI-113: mirror this group's running jobs into the PromptBox so its
+        // inline Stop/Clear enable when an op (e.g. extend) is dispatched from
+        // outside the Cue button. Gallery does the same via _refreshPbGenerating;
+        // history previously left Stop disabled, forcing a trip to the gallery queue.
+        const _syncPbGenerating = () => {
+            const busy = activeGenerations.listFor('groupHistory', _group.id)
+                .some(e => e.status === 'running');
+            _pb?.el?.setGenerating?.(busy);
+        };
+
         for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
             if (entry.status !== 'running') continue;
             _myGenIds.add(entry.id);
@@ -536,6 +546,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             } else {
                 _setGenerating(true);
             }
+            _syncPbGenerating();
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
@@ -595,6 +606,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (item?.operation === 'resize' || item?.operation === 'resizeVideo') {
                 _options?.el?.setCurrentItem?.(item);
             }
+            _syncPbGenerating();
         }));
 
         // In-place Finish (preview→final) is dispatched scope:'gallery', so its
@@ -623,6 +635,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
             }
+            _syncPbGenerating();
         }));
         _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
             if (_myGenIds.delete(id)) {
@@ -630,6 +643,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
             }
+            _syncPbGenerating();
         }));
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
@@ -760,6 +774,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 modelList: installedModels,
                 operation: activeOperation,
                 includeNegative: true,
+                workspaceKey: 'history',
+                workspaceId: _group.id,
             });
             _pb?.el?.hide();
 
@@ -826,6 +842,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(_pb.on('queue-clear', () => {
                 clearPendingQueue();
             }));
+            // PromptBox may have restored persisted chips during mount (before the
+            // media-change handler above was wired), so its counts can already be
+            // non-zero. Re-sync block context + op gating from the live box.
+            _syncBaseCtxFromPromptBox();
+            _refreshOpOptions();
+            _syncPromptToolDisabled();
             return true;
         }
 
@@ -942,6 +964,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Initial tool: prompt if available (including frame-drop unlock), else crop.
         if (_shouldShowPromptBox()) historyTools.el.setMode('prompt');
         else                        historyTools.el.setMode('crop');
+
+        // Nav'd into history while a job for this group is already running:
+        // enable the inline Stop on the freshly-mounted PromptBox.
+        _syncPbGenerating();
 
         // ── Generation runners ───────────────────────────────────────────────
 
@@ -1430,7 +1456,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:        ext.duration ?? 0,
                     frameCount:      ext.frameCount ?? 0,
                     hasAudio:        ext.hasAudio ?? false,
-                    videoMeta:       ext.videoMeta ?? null,
                 });
                 // History workspace: append to current group (video group only).
                 _group = appendToHistory(_group, newItem);

@@ -76,8 +76,45 @@ export const MpiPromptBox = ComponentFactory.create({
     setup: (el, props, emit) => {
         let isExpansionLocked = state.promptExpanded === false;
         let isNegativeMode    = false;
-        let positiveValue     = props.value || '';
-        let negativeValue     = props.negativeValue || '';
+        // Drafts (text + chips) are localized PER WORKSPACE — the gallery box and
+        // history box never share. Keyed on props.workspaceKey; defaults to
+        // 'gallery'. Explicit props (e.g. a recall) win over the restored draft.
+        const _wsKey = props.workspaceKey === 'history' ? 'history' : 'gallery';
+        // History reuses ONE slot for every card, so each saved draft is tagged
+        // with its card id (props.workspaceId). On mount we restore only when the
+        // tag matches the card being opened — otherwise the previous card's draft
+        // would leak onto a different card. Gallery has no card (id null) so it
+        // always matches and stays persistent. ponytail: single tagged slot, not a
+        // per-card map — no growth/cleanup; only the last-touched card round-trips.
+        const _wsId = props.workspaceId ?? null;
+        const _matchesSlot = (saved) => (saved?.id ?? null) === _wsId;
+
+        const _draftSlot = state.promptDraft?.[_wsKey] || {};
+        const _draft = _matchesSlot(_draftSlot) ? _draftSlot : {};
+        let positiveValue     = props.value || _draft.positive || '';
+        let negativeValue     = props.negativeValue || _draft.negative || '';
+
+        function _saveDraft() {
+            state.promptDraft = {
+                ...state.promptDraft,
+                [_wsKey]: { id: _wsId, positive: positiveValue, negative: negativeValue },
+            };
+        }
+
+        // True while re-injecting restored chips at mount — suppresses the
+        // snapshot write so the restore doesn't clobber the source it reads from.
+        let _restoringMedia = false;
+
+        // Persist staged chips per-workspace so they survive nav. Only durable
+        // (non-blob) urls are kept — blob: urls are revoked on unmount and would
+        // 404 if restored.
+        function _saveMedia() {
+            if (_restoringMedia) return;
+            const items = el.getMediaItems()
+                .filter(m => typeof m.url === 'string' && !m.url.startsWith('blob:'))
+                .map(({ url, mediaType, role }) => ({ url, mediaType, role }));
+            state.promptMedia = { ...state.promptMedia, [_wsKey]: { id: _wsId, items } };
+        }
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
         let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
@@ -208,6 +245,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             const renderedItems = _withAssignedRoles();
             _renderStrip(renderedItems);
+            _saveMedia();
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
@@ -526,8 +564,9 @@ export const MpiPromptBox = ComponentFactory.create({
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
-            if (!isNegativeMode) textareaEl.value = positiveValue;
+            textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
             updateHeight();
+            _saveDraft();
         };
         const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
 
@@ -595,6 +634,7 @@ export const MpiPromptBox = ComponentFactory.create({
             updateHeight();
             if (isNegativeMode) negativeValue = textareaEl.value;
             else positiveValue = textareaEl.value;
+            _saveDraft();
             emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
         }));
 
@@ -1112,6 +1152,26 @@ export const MpiPromptBox = ComponentFactory.create({
         _refreshOpDropdown();
         _refreshOpSlot();
         _renderBadge();
+
+        // Restore staged chips persisted by a prior mount of this mediaType, so
+        // start/end-frame (and input-video) media survive nav. _acceptsMediaType
+        // scans all of the model's supported ops, so a frame chip is accepted
+        // even if the initial op is text-only — adding it then auto-switches to a
+        // media op via _emitMediaChange. Reuse Prompt clears+replaces these after
+        // mount, so it always wins over a restore.
+        {
+            const _mediaSlot = state.promptMedia?.[_wsKey];
+            const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
+            if (_saved.length) {
+                _restoringMedia = true;
+                try {
+                    for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role });
+                } finally {
+                    _restoringMedia = false;
+                }
+                _saveMedia(); // re-sync snapshot to what actually landed (capacity/role eviction)
+            }
+        }
 
         // ── Portaled popup teardown on el removal ──────────────────────────────
         const domObserver = new MutationObserver(() => {

@@ -74,6 +74,22 @@ const _state = {
     generationQueueCount: 0,         // Local Cue queue depth (active dispatch + pending jobs).
                                      // Maintained synchronously by generationService.
 
+    // ── Prompt draft (session-only, not persisted) ─────────────────────────────
+    promptDraft: { gallery: { id: null, positive: '', negative: '' }, history: { id: null, positive: '', negative: '' } },
+                                     // Per-WORKSPACE prompt text so a draft survives nav and does
+                                     // NOT bleed across surfaces — gallery box and history box are
+                                     // independent. Each slot is TAGGED with the workspace's card id
+                                     // (`id`): history reuses one slot for every card, so MpiPromptBox
+                                     // restores only when id matches the card being opened (else the
+                                     // previous card's draft would leak). Gallery has no card (id null).
+                                     // Keyed on props.workspaceKey + props.workspaceId. Session-only.
+    promptMedia: { gallery: { id: null, items: [] }, history: { id: null, items: [] } },
+                                     // Per-WORKSPACE staged prompt-media chips (start/end frame, input
+                                     // video), same tagged-slot scheme as promptDraft. items[] =
+                                     // { url, mediaType, role? } with a DURABLE url (blob: chips are
+                                     // dropped — they die on nav). Written by MpiPromptBox on
+                                     // media-change, re-injected on a matching-id mount. Session-only.
+
     // ── Last generation (session-only, not persisted) ──────────────────────────
     lastGeneration: null,            // { label: string, elapsed: number } — set by StatusBar on
                                      // complete(). Read by status bar idle display and future

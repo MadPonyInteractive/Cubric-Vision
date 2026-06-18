@@ -3,16 +3,17 @@
   "next_id": 116,
   "columns": {
     "todo": [
-      "MPI-115",
-      "MPI-113",
       "MPI-105",
       "MPI-71",
       "MPI-69",
       "MPI-4",
       "MPI-114"
     ],
-    "doing": [],
+    "doing": [
+      "MPI-115"
+    ],
     "done": [
+      "MPI-113",
       "MPI-112",
       "MPI-111",
       "MPI-110",
@@ -54,5 +55,5 @@
       "MPI-104"
     ]
   },
-  "updated_at": "2026-06-18T06:15:00Z"
+  "updated_at": "2026-06-18T08:30:00.000Z"
 }

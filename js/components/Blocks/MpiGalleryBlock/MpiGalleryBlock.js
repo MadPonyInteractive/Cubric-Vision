@@ -153,7 +153,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         duration: uploaded.duration,
                         frameCount: uploaded.frameCount,
                         hasAudio: uploaded.hasAudio,
-                        videoMeta: uploaded.videoMeta,
                         mediaType,
                     });
                     if (inject) {
@@ -274,7 +273,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     duration:        ext.duration ?? 0,
                     frameCount:      ext.frameCount ?? 0,
                     hasAudio:        ext.hasAudio ?? false,
-                    videoMeta:       ext.videoMeta ?? null,
                 });
                 const newGroup = createItemGroup('video', {
                     name: newItem.displayName,
@@ -1202,7 +1200,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         function _mountPb(props) {
             _pb?.el?.destroy?.();
-            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), props);
+            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), { ...props, workspaceKey: 'gallery' });
             return _pb;
         }
 
@@ -1278,6 +1276,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
             _pb?.el?.show();
             _wirePromptBox(_pb);
+            // PromptBox may have restored persisted chips during mount (before
+            // _wirePromptBox subscribed to media-change), so sync counts + radial
+            // from the live box.
+            imageCount = Number(_pb.el.imageCount) || 0;
+            videoCount = Number(_pb.el.videoCount) || 0;
+            _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
+            refreshRadial({ imageCount, videoCount, modelId: activeModelId });
             // Restore Stop/Clear enabled state when remounting into a
             // workspace that still has gallery-scoped jobs in flight (e.g.
             // returning from history mid-video) or block-owned busy state
@@ -1288,7 +1293,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio, videoMeta }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
@@ -1314,7 +1319,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     duration:   duration   ?? 0,
                     frameCount: frameCount ?? 0,
                     hasAudio:   hasAudio   ?? false,
-                    videoMeta:  videoMeta  ?? null,
                 })
                 : createImageItem({
                     id,

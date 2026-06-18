@@ -389,3 +389,6 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-114","at":"2026-06-18T05:42:48.622Z","actor":"vscode","summary":"Created MPI-114."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-115","at":"2026-06-18T06:00:00.000Z","actor":"claude","summary":"Created MPI-115 in To do."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T06:15:00.000Z","actor":"claude","from":"doing","to":"done","summary":"Moved MPI-112 from Doing to Done."}
+{"ts":"2026-06-18T07:00:00.000Z","type":"task.moved","id":"MPI-113","from":"todo","to":"doing","maturity":"in-progress"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-115", "at": "2026-06-18T08:00:00.000Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Moved MPI-115 to Doing; investigation complete (writer/reader/duplicate field map), designing clean schema + migration."}
+{"ts":"2026-06-18T08:30:00.000Z","type":"task.moved","id":"MPI-113","from":"doing","to":"done","maturity":"complete","status":"accepted"}
