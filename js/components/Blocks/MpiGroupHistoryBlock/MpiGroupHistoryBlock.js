@@ -1981,12 +1981,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 MpiContextMenu.show({
                     x, y,
                     items: [
+                        { key: 'snapshot',  icon: 'camera',       label: 'Create snapshot',    info: 'Save current frame as image' },
                         { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
                         { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
                         { key: 'reverse',   icon: 'reverse',      label: 'Reverse video' },
                     ],
                     onSelect: (key) => {
-                        if (key === 'set-start') _setFrameFromVideo('startFrame');
+                        if (key === 'snapshot') _handleCropSnapshot();
+                        else if (key === 'set-start') _setFrameFromVideo('startFrame');
                         else if (key === 'set-end') _setFrameFromVideo('endFrame');
                         else if (key === 'reverse') _handleReverseVideo();
                     },

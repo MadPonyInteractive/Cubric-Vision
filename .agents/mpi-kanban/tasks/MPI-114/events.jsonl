@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-114","at":"2026-06-18T05:42:48.622Z","actor":"vscode","summary":"Created MPI-114."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-114", "at": "2026-06-18T00:00:00.000Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Add Create snapshot to video right-click context menu (reuses _handleCropSnapshot)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-114", "at": "2026-06-18T00:00:00.000Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Shipped + user-verified: Create snapshot item in video right-click context menu reuses _handleCropSnapshot."}
