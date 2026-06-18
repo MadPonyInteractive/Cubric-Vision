@@ -374,3 +374,5 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-68", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived MPI-68 to docs/archive/mpi-kanban/tasks/MPI-68/ (pre-1.1.0 shipped work) (no validation.md on archive)."}
 {"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-70", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived MPI-70 to docs/archive/mpi-kanban/tasks/MPI-70/ (pre-1.1.0 shipped work)."}
 {"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-76", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived MPI-76 to docs/archive/mpi-kanban/tasks/MPI-76/ (pre-1.1.0 shipped work)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-80", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Normalized status \"active\" -> \"accepted\" (schema-valid enum)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-77", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Normalized status \"active\" -> \"accepted\" (schema-valid enum)."}
