@@ -1,1 +1,8 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-108","at":"2026-06-17T10:35:00Z","actor":"claude","note":"Carved off MPI-89 (leg 3 verified). Local-origin preview latent wiped when an ephemeral Pod restarts ComfyUI for a node install between staging and stage-2; fix = re-stage after restart. App."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-108","at":"2026-06-17T10:45:29.974Z","actor":"codex","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-108","at":"2026-06-17T10:45:29.974Z","actor":"codex","summary":"Task entered active implementation with compact plan, checklist, and validation workspace files."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-108","at":"2026-06-17T10:45:29.974Z","actor":"codex","summary":"Created compact-plan checklist with one Implementation item."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.item_checked","id":"MPI-108","at":"2026-06-17T11:09:46.883Z","actor":"codex","summary":"Implementation checklist item verified complete."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-108","at":"2026-06-17T11:09:46.883Z","actor":"codex","summary":"Validation notes updated with explicit user verification and acceptance."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-108","at":"2026-06-17T11:09:46.883Z","actor":"codex","from":"doing","to":"done","summary":"User verified the fix and approved final completion."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-108","at":"2026-06-17T11:09:46.883Z","actor":"codex","summary":"Marked accepted after validation and moved to done."}
