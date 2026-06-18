@@ -1058,6 +1058,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
+                // Settings written after controls mounted (setModel/setOperation
+                // above) — re-mount so controls re-read the recalled ratio/quality/
+                // duration. Without this the live PromptBox lags until next nav.
+                _pb.el.refreshControls?.();
             }
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;

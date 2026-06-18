@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-115","at":"2026-06-18T06:00:00.000Z","actor":"claude","summary":"Created MPI-115: sidecar schema redesign (kill field duplication, single source per field, migrate + patch master)."}

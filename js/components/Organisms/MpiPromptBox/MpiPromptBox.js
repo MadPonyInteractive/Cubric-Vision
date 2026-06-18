@@ -347,6 +347,14 @@ export const MpiPromptBox = ComponentFactory.create({
             clearBtn?.el?.setDisabled?.(!active);
         };
 
+        // Re-mount the active op's controls so each re-reads its persisted value.
+        // Used by Reuse Prompt: applyPromptReuseSettings writes the recalled
+        // settings to project state AFTER setModel/setOperation already mounted
+        // the controls (which read the pre-reuse value), so without this refresh
+        // the live PromptBox keeps showing the old ratio/quality/duration until
+        // the next navigation re-mount.
+        el.refreshControls = () => _refreshOpSlot();
+
         function _pickOpForModel(candidate) {
             if (!candidate?.supportedOps?.length) return activeOperation;
             const supported = candidate.supportedOps;

@@ -301,6 +301,22 @@ export const StatusBar = {
             if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
 
+            // Fire the completion toast NOW, before the deferred fill/idle animation.
+            // The toast reports a job that genuinely finished, so it must NOT be gated
+            // by the supersession token: when a second queued job starts within the
+            // 400ms defer window it bumps _completionToken, which previously swallowed
+            // the first job's toast entirely (back-to-back queue → only one toast).
+            if (!silent) {
+                const wrapper = document.createElement('div');
+                document.body.appendChild(wrapper);
+                const t = MpiToast.mount(wrapper, {
+                    message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
+                    variant: 'success',
+                    duration: 3000,
+                });
+                t.on('close', () => { t.destroy(); wrapper.remove(); });
+            }
+
             setTimeout(() => {
                 if (token !== _completionToken) return;
                 _fill.classList.remove('shell-info__fill--flash');
@@ -312,17 +328,6 @@ export const StatusBar = {
                     _fill.classList.remove('shell-info__fill--fade');
                     _setIdle();
                 }, 600);
-
-                if (!silent) {
-                    const wrapper = document.createElement('div');
-                    document.body.appendChild(wrapper);
-                    const t = MpiToast.mount(wrapper, {
-                        message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
-                        variant: 'success',
-                        duration: 3000,
-                    });
-                    t.on('close', () => { t.destroy(); wrapper.remove(); });
-                }
             }, 400);
         },
 

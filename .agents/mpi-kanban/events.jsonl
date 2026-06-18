@@ -376,3 +376,16 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-76", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived MPI-76 to docs/archive/mpi-kanban/tasks/MPI-76/ (pre-1.1.0 shipped work)."}
 {"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-80", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Normalized status \"active\" -> \"accepted\" (schema-valid enum)."}
 {"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-77", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Normalized status \"active\" -> \"accepted\" (schema-valid enum)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-111", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "todo -> doing (gallery stale-thumbnail bug, starting investigation)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-111", "at": "2026-06-18T04:20:00Z", "actor": "claude", "summary": "doing -> done (complete/accepted). Fixed null-tempId swallowed cancelled + stuck timer; original stale-thumb not reproducible, documented-open."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-112","at":"2026-06-18T04:31:31.386Z","actor":"vscode","summary":"Created MPI-112."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-112","at":"2026-06-18T04:39:36.888Z","actor":"vscode","summary":"Updated MPI-112."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:41.434Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:43.914Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:48.154Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:50.514Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T05:00:00.000Z","actor":"claude","from":"todo","to":"doing","summary":"Moved MPI-112 from To do to Doing."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-113","at":"2026-06-18T05:10:00.000Z","actor":"claude","summary":"Created MPI-113 in To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-114","at":"2026-06-18T05:42:48.622Z","actor":"vscode","summary":"Created MPI-114."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-115","at":"2026-06-18T06:00:00.000Z","actor":"claude","summary":"Created MPI-115 in To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T06:15:00.000Z","actor":"claude","from":"doing","to":"done","summary":"Moved MPI-112 from Doing to Done."}

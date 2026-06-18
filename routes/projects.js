@@ -2154,3 +2154,4 @@ router.get('/project-stats/:projectId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameSnapshots;

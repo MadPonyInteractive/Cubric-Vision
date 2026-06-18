@@ -924,6 +924,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
+                // Settings were written AFTER the controls mounted (via setModel/
+                // setOperation above), so the live controls still show the old
+                // values. Re-mount them to re-read the recalled ratio/quality/
+                // duration. Without this the PromptBox only updates on next nav.
+                _pb.el.refreshControls?.();
             }
             _refreshOpOptions();
             historyTools.el.setMode?.('prompt');
@@ -1872,11 +1877,51 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Toolbar emits semantic events on the global bus; this block is
             // the only listener (single video-history mount at a time, since
             // mountOptions('prompt') guards mount on isVideo + I2V model).
-            _unsubs.push(Events.on('prompt-box-tools:create-new', () => {
+            // Both Create New and Extend seed the I2V chunk from the current clip's
+            // LAST frame (trim out-point, or full duration). Any startFrame already
+            // in the PromptBox (e.g. populated by Reuse Prompt, which recalls the
+            // ORIGINAL gen's start frame) is the wrong frame for a continuation, so
+            // it's dropped and the current clip's end frame is re-captured. Returns
+            // the rebuilt mediaItems (startFrame first), or null on capture failure.
+            async function _captureLastFrameMedia(payload, hasTrim, trim) {
+                const baseMedia = (payload.mediaItems || []).filter(m => m.role !== 'startFrame');
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) return baseMedia;
+                try {
+                    const vid = viewer.el.getSourceElement?.();
+                    const lastTime = hasTrim ? +trim.out
+                        : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
+                    const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
+                    if (blob) {
+                        const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
+                        const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
+                            filenamePrefix: 'frame-startFrame',
+                            operation: 'extend-last-frame',
+                        });
+                        if (uploaded) {
+                            return [
+                                { url: uploaded.filePath, mediaType: 'image', role: 'startFrame', pixelDimensions: uploaded.pixelDimensions },
+                                ...baseMedia,
+                            ];
+                        }
+                    }
+                } catch (err) {
+                    clientLogger.warn('MpiGroupHistoryBlock', 'last-frame capture failed; falling back to guard', err);
+                }
+                return baseMedia;
+            }
+
+            // Create New = same as Extend (seed from current clip's last frame) but
+            // WITHOUT the concat — the generated video lands as a standalone entry.
+            _unsubs.push(Events.on('prompt-box-tools:create-new', async () => {
                 if (!_pb?.el) return;
                 const payload = _pb.el.getRunPayload?.();
                 if (!payload) return;
-                _runGenerate({ ...payload, historyMode: true });
+                const currentItem = _group.history[_currentIdx];
+                const trim = currentItem?.trim;
+                const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
+                const mediaItems = await _captureLastFrameMedia(payload, hasTrim, trim);
+                _runGenerate({ ...payload, mediaItems, historyMode: true });
             }));
             _unsubs.push(Events.on('prompt-box-tools:extend', async () => {
                 if (!_pb?.el) return;
@@ -1889,41 +1934,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 }
                 const trim = currentItem.trim;
                 const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
-
-                // Extend continues the source video, so the I2V start frame defaults
-                // to the source's LAST frame (trim out-point, or full duration). The
-                // PromptBox start frame is an explicit override — only auto-fill when
-                // the user left it empty. Without this, an empty PromptBox dispatches
-                // with no image: locally the leftover workflow file masks it, but a
-                // remote Pod rejects the prompt (MPI-109 guard → toast, stuck UI).
-                let extendMedia = payload.mediaItems || [];
-                const hasStartFrame = extendMedia.some(m => m.url && m.role === 'startFrame');
-                if (!hasStartFrame) {
-                    const project = state.currentProject;
-                    if (project?.folderPath && project?.id) {
-                        try {
-                            const vid = viewer.el.getSourceElement?.();
-                            const lastTime = hasTrim ? +trim.out
-                                : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
-                            const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
-                            if (blob) {
-                                const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
-                                const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
-                                    filenamePrefix: 'frame-startFrame',
-                                    operation: 'extend-last-frame',
-                                });
-                                if (uploaded) {
-                                    extendMedia = [
-                                        { url: uploaded.filePath, mediaType: 'image', role: 'startFrame', pixelDimensions: uploaded.pixelDimensions },
-                                        ...extendMedia,
-                                    ];
-                                }
-                            }
-                        } catch (err) {
-                            clientLogger.warn('MpiGroupHistoryBlock', 'extend: last-frame capture failed; falling back to guard', err);
-                        }
-                    }
-                }
+                const extendMedia = await _captureLastFrameMedia(payload, hasTrim, trim);
 
                 const extendCfg = {
                     ...payload,

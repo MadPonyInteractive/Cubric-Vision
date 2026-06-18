@@ -811,7 +811,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             } else {
                 const jobId = `extend-${_regId}-${Date.now()}`;
                 try {
-                    const concatPromise = trackConcatJob({ jobId, label: 'Concatenating videos' });
+                    // silentComplete: the i2v gen already emits one "Generation
+                    // finished" toast; the concat is an internal extend sub-step,
+                    // so suppress its duplicate completion toast (MPI-112).
+                    const concatPromise = trackConcatJob({ jobId, label: 'Concatenating videos', silentComplete: true });
                     const extendBody = {
                         jobId,
                         folderPath: state.currentProject.folderPath,
@@ -822,6 +825,13 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         negativePrompt: negative,
                         seed: exec.seed ?? -1,
                         op: operation,
+                        // Carry the underlying i2v generation snapshot so the extended
+                        // sidecar owns Reuse Prompt metadata (Duration param + start-frame
+                        // image). Without this the extended item only has the combined
+                        // clip length, so Reuse Prompt drifts duration and finds no image.
+                        // `operation` here IS the i2v op the extend chunk ran with; the
+                        // server uses it to materialize the start-frame snapshot.
+                        generationSettings,
                     };
                     if (Number.isFinite(+config.trimIn) && Number.isFinite(+config.trimOut)
                         && +config.trimOut > +config.trimIn) {
@@ -876,6 +886,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         hasAudio:        ext.hasAudio ?? false,
                         videoMeta:       ext.videoMeta ?? null,
                         extendedFrom:    ext.extendedFrom ?? null,
+                        // Reuse Prompt metadata: server returns the materialized
+                        // generationSettings (mediaItems rewritten to project-owned
+                        // snapshots) + previewAssets. Falls back to the client-side
+                        // snapshot if the server didn't materialize.
+                        generationSettings: ext.generationSettings ?? generationSettings,
+                        previewAssets:   ext.previewAssets ?? null,
                     });
                     builtItems[0] = extendedItem;
                 } catch (extErr) {

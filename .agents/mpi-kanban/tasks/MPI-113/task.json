@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-113",
+  "title": "History-mode prompt-box UX: inline Stop + prompt draft persistence",
+  "description": "Two prompt-box UX gaps surfaced during MPI-112. (1) STOP BLOCKED: running an extend (or any prompt-box op) in the history workspace leaves the prompt-box Stop button disabled, forcing the user to go to the gallery, open the queue, and Stop from there. The history-mode prompt box should enable inline Stop for these ops. (2) PROMPT DRAFT NOT PERSISTED: typed prompt text is lost when navigating history<->gallery (and reportedly cleared by other actions). Expectation: a draft typed in either workspace survives nav back. Needs a state key holding the prompt draft (positive/negative) so PromptBox re-hydrates on mount. Both are prompt-box/state concerns, NOT the MPI-112 extend reuse-data fix. See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-18T05:10:00.000Z",
+  "updated_at": "2026-06-18T05:10:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

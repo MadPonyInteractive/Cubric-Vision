@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-115",
+  "title": "Sidecar schema redesign — kill field duplication, single source of truth per field",
+  "description": "The .meta/<uuid>.json sidecars are duplicated and inconsistent (surfaced during MPI-112). Same data stored 2-3x with sometimes DISAGREEING values: (1) ratioLabel (top-level) vs generationSettings.injectionParams.Ratio_Label; (2) pixelDimensions vs injectionParams.Width/Height; (3) top-level fps/duration/frameCount/hasAudio vs videoMeta.{...} (exact copy); (4) startFrame media stored in generationSettings.mediaItems AND previewAssets.snapshots; (5) generationSettings.modelSettings.operations is ALWAYS {} (per-op UI state never written there — shared controls live in project.shared.video, never captured in the sidecar at all). Worse: a single video gen saved project.shared.video.ratioSelector.qualityTier='very_low' while injectionParams.Width/Height=368x640='low' tier — the two quality sources disagree within one item. INVESTIGATE FIRST: map every sidecar field, its writer (save-generation / crop / upload / extend / reconciler / projectModel defaults), every reader (gallery, history, reuse), and which duplicates are deliberate (per integrity doc: videoMeta=raw probe, previewAssets=durable snapshots) vs accidental. Then design a clean schema with ONE source per field + a migration for existing projects. MUST be patched into master too (no users yet, per Fabio 2026-06-18). Likely regressed when the combined image/video model was split into two video models — that change skipped re-implementing the per-op settings persistence into the sidecar. Reference: docs/project-integrity.md, js/services/generationService.js (generationSettings build ~line 630), routes/projects.js (save-generation, materialize*), js/utils/promptReuse.js (reuse readers). See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-06-18T06:00:00.000Z",
+  "updated_at": "2026-06-18T06:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

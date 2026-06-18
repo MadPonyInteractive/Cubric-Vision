@@ -35,18 +35,22 @@ function _mediaItemsFrom(settings = {}) {
         : [];
 }
 
-function _operationOf(item = {}, source = {}) {
-    return source.operation || item.operation || item.generationSettings?.operation || '';
+function _opHasImageInput(op) {
+    return !!op && getCommandMediaInputs(op).some(slot => slot.mediaType === 'image');
 }
 
 // True when the reused operation declares an image input slot (op-driven, via
 // commandRegistry) — NOT a hardcoded model/op family. Drives whether saved
 // frame snapshots are resurfaced for reuse, so any current/future image-input
 // op works without special-casing.
+//
+// Extend is the special case: the extended item's own op is `extend` (video
+// input only), but the start-frame image lives in its generationSettings — the
+// underlying i2v op the chunk was generated with. So also accept when the
+// generation snapshot's op declares an image input.
 function _opAcceptsImageInput(item = {}, source = {}) {
-    const op = _operationOf(item, source);
-    if (!op) return false;
-    return getCommandMediaInputs(op).some(slot => slot.mediaType === 'image');
+    if (_opHasImageInput(source.operation || item.operation)) return true;
+    return _opHasImageInput(item.generationSettings?.operation);
 }
 
 function _mediaItemsFromPreviewAssets(item = {}) {
@@ -290,7 +294,13 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
     if (batch != null) sharedUpdates.batch = Math.min(4, Math.max(1, Math.round(batch)));
     else if (_hasComponent(components, 'batch')) sharedUpdates.batch = PROMPT_CONTROL_DEFAULTS.batch;
 
-    const duration = _number(params.Duration ?? payload.item?.duration ?? payload.item?.videoMeta?.duration);
+    // Duration comes ONLY from the saved generation param (the seconds the user
+    // set in the PromptBox at generate time). Do NOT fall back to the clip's
+    // actual length: derived ops (extend/videoUpscale/interpolate) have no
+    // Duration param, and their item.duration is the COMBINED output length
+    // (e.g. a 21s extend chain), which would wrongly drive the next generation.
+    // Absent param → component default, same as every other control.
+    const duration = _number(params.Duration);
     if (duration != null) sharedUpdates.duration = Math.min(30, Math.max(1, Math.round(duration)));
     else if (_hasComponent(components, 'duration')) sharedUpdates.duration = PROMPT_CONTROL_DEFAULTS.duration;
 

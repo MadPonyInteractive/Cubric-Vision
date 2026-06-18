@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-112",
+  "title": "Reuse prompt on an extended generation in the history workspace...",
+  "description": "Reuse prompt on an extended generation in the history workspace produces a toast saying that \"No saved frame images were found for this entry\" The expectation is that it would load the image used for the generation and use that for the next generation by inserting it into the start frame. I also noted that when using the reuse prompt in the history workspace and leaving the history workspace, the prompt changes its parameters. I've noticed this happening on ratio, but just staying in the gallery workspace, and what I've just noticed is that using reuse prompt in the history workspace on video and then leaving to the gallery space, the seconds change. So what I notice is that I used the reuse prompt from a video that was 5 seconds, then I went to the gallery and it was 3 seconds. Also noticed in some cases that, opening another card, the time was then 21 seconds.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-18T04:31:31.386Z",
+  "updated_at": "2026-06-18T06:15:00.000Z",
+  "resolution": "FIXED + user-verified on RTX 5090 remote. Root cause: extend's final history item is built from the /extend-video sidecar, which discarded all reuse metadata. Fixes: (1) extend now sends generationSettings to /extend-video + server materializes the start-frame snapshot under the extended item's .preview-assets/<id>/ + persists generationSettings; extendedItem carries generationSettings + previewAssets (forward-only). (2) Duration drift killed — buildPromptReuseSettings no longer falls back to clip length (was reading the 21s combined extend length); reads only the saved Duration param. (3) _opAcceptsImageInput also checks generationSettings.operation so extend (video-only op) surfaces its saved start-frame image. (4) Double toast on extend -> one: concat is silent (silentComplete) and no longer drives StatusBar.progress (which was also resetting the gen timer -> the '0s' toast). (5) Toast token-race fixed: completion toast fires immediately, not inside the supersession-gated 400ms defer (back-to-back queue swallowed the first toast). (6) Create New fixed (broken since v1): now = Extend minus concat, shared _captureLastFrameMedia helper; both ALWAYS seed from the current clip's last frame (strip stale/reused startFrame -> no snap). (7) Status-bar info strings: 'Extend video from last frame' / 'Create video from last frame'. (8) Reuse settings show LIVE: el.refreshControls() re-mounts controls after applyPromptReuseSettings (was written after controls mounted -> stale until nav). Scoped out: MPI-113 (inline Stop + prompt draft persistence), MPI-115 (sidecar schema redesign — field duplication + contradictory quality sources, patch master too). See validation.md.",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
