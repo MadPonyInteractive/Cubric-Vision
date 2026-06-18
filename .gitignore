@@ -45,6 +45,7 @@ tmp/
 .DS_Store
 Thumbs.db
 desktop.ini
+project-paths.json
 
 # Editor
 .vscode
