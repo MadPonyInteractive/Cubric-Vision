@@ -124,12 +124,6 @@ async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, o
         duration:   outMeta.duration   || 0,
         frameCount: outMeta.frameCount || 0,
         hasAudio:   !!outMeta.hasAudio,
-        videoMeta:  {
-            fps:        outMeta.fps        || 0,
-            duration:   outMeta.duration   || 0,
-            frameCount: outMeta.frameCount || 0,
-            hasAudio:   !!outMeta.hasAudio,
-        },
         ...extraFields,
     };
     const thumbAbs = path.join(metaDir, `${newId}.thumb.jpg`);

@@ -1150,9 +1150,6 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 metaContent.duration   = v.duration;
                 metaContent.frameCount = v.frameCount;
                 metaContent.hasAudio   = v.hasAudio;
-                metaContent.videoMeta  = {
-                    fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio,
-                };
                 if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
                 if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
             }
@@ -1176,7 +1173,6 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             duration:   metaContent.duration   ?? null,
             frameCount: metaContent.frameCount ?? null,
             hasAudio:   metaContent.hasAudio   ?? null,
-            videoMeta:  metaContent.videoMeta  ?? null,
         });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -1193,7 +1189,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
  * POST /project-media/:projectId/probe-videos
  * Body: { folderPath }
  * Scans Media/ for video files, probes any whose sidecar lacks fps, and patches
- * the sidecar with { fps, duration, frameCount, hasAudio, videoMeta }.
+ * the sidecar with { fps, duration, frameCount, hasAudio }.
  * Returns { patched: number, total: number }.
  */
 router.post('/project-media/:projectId/probe-videos', async (req, res) => {
@@ -1234,7 +1230,6 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
             meta.duration   = v.duration;
             meta.frameCount = v.frameCount;
             meta.hasAudio   = v.hasAudio;
-            meta.videoMeta  = { fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio };
             if (meta.pixelDimensions) {
                 if (!meta.pixelDimensions.w && v.width)  meta.pixelDimensions.w = v.width;
                 if (!meta.pixelDimensions.h && v.height) meta.pixelDimensions.h = v.height;
@@ -1572,7 +1567,6 @@ router.post('/project/save-generation', async (req, res) => {
             negativePrompt: meta.negativePrompt || '',
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
-            ratioLabel:     meta.ratioLabel    || null,
             generationSettings: materializedGenerationSettings,
             createdAt:      new Date().toISOString(),
             name:           null,
@@ -1590,12 +1584,6 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.duration   = videoInfo.duration;
                 metaContent.frameCount = videoInfo.frameCount;
                 metaContent.hasAudio   = videoInfo.hasAudio;
-                metaContent.videoMeta  = {
-                    fps: videoInfo.fps,
-                    duration: videoInfo.duration,
-                    frameCount: videoInfo.frameCount,
-                    hasAudio: videoInfo.hasAudio,
-                };
             }
             const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractVideoThumb(filePath, thumbPath);
@@ -1711,7 +1699,6 @@ router.post('/project/save-generation', async (req, res) => {
             duration: metaContent.duration || 0,
             frameCount: metaContent.frameCount || 0,
             hasAudio: metaContent.hasAudio || false,
-            videoMeta: metaContent.videoMeta || null,
             stage:         metaContent.stage         ?? null,
             frozenParams:  metaContent.frozenParams  ?? null,
             loraSnapshot:  metaContent.loraSnapshot  ?? null,

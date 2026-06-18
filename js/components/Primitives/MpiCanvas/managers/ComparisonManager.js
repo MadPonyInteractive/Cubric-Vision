@@ -42,7 +42,7 @@ export class ComparisonManager {
         this.isComparisonMode = true;
     }
 
-    /** Load a video as the "after" media. fps from sidecar videoMeta.fps. */
+    /** Load a video as the "after" media. fps from sidecar item.fps. */
     async loadVideo(url, fps = 24) {
         const v = document.createElement('video');
         v.crossOrigin = 'anonymous';

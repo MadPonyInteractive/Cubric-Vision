@@ -127,12 +127,6 @@ router.post('/api/video/reverse', async (req, res) => {
             duration:   outMeta.duration   || 0,
             frameCount: outMeta.frameCount || 0,
             hasAudio:   !!outMeta.hasAudio,
-            videoMeta:  {
-                fps:        outMeta.fps        || srcMeta.fps,
-                duration:   outMeta.duration   || 0,
-                frameCount: outMeta.frameCount || 0,
-                hasAudio:   !!outMeta.hasAudio,
-            },
             sourceItemId: itemId  || null,
             sourceGroupId: groupId || null,
         };

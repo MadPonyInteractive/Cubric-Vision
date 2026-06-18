@@ -8,7 +8,7 @@
 
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
-import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, replaceHistoryItemById } from '../data/projectModel.js';
+import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, getSharedSettings, getOpSettings, replaceHistoryItemById } from '../data/projectModel.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
@@ -624,7 +624,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
         const width  = injectionParams.Width  || injectionParams.width  || 0;
         const height = injectionParams.Height || injectionParams.height || 0;
-        const ratioLabel = injectionParams.Ratio_Label || injectionParams.ratioLabel || null;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
         const generationMediaItems = _cloneMediaItems(mediaItems);
         const generationSettings = {
@@ -634,8 +633,25 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             mediaItems: generationMediaItems,
             previewOnly: config.previewOnly === true,
         };
+        // Snapshot the exact PromptBox control state at gen time so Reuse Prompt
+        // replays it DIRECTLY (no reverse-derivation from injectionParams). The
+        // three buckets mirror applyPromptReuseSettings' input 1:1:
+        //   shared = project.shared[mediaType] (ratio/quality/duration/motion/...)
+        //   op     = per-op state (denoise/useGrid/upscaleFactor)
+        //   model  = model-wide (loras/upscaleModel)
+        // Empty buckets are omitted to keep the sidecar clean.
         if (state.currentProject && model.id) {
-            generationSettings.modelSettings = _clonePlain(getModelSettings(state.currentProject, model.id));
+            const _ms = getModelSettings(state.currentProject, model.id);
+            const _shared = _clonePlain(getSharedSettings(state.currentProject, model.mediaType));
+            const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
+            const _model = {};
+            if ('loras' in _ms) _model.loras = _clonePlain(_ms.loras);
+            if ('upscaleModel' in _ms) _model.upscaleModel = _ms.upscaleModel ?? null;
+            const controlState = {};
+            if (Object.keys(_shared).length) controlState.shared = _shared;
+            if (Object.keys(_op).length) controlState.op = _op;
+            if (Object.keys(_model).length) controlState.model = _model;
+            generationSettings.controlState = controlState;
         }
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,
@@ -732,7 +748,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
                         itemId: thisItemId,
                         operation,
-                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, ratioLabel, generationSettings },
+                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -765,7 +781,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 negativePrompt: negative,
                 modelId: model.id,
                 seed: exec.seed ?? -1,
-                ratioLabel,
                 generationSettings: savedData?.generationSettings ?? generationSettings,
                 pixelDimensions: resolvedDims,
                 // Server returns aggregated generationMs on preview→final replace
@@ -779,7 +794,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                     duration:    savedData?.duration ?? 0,
                     frameCount:  savedData?.frameCount ?? 0,
                     hasAudio:    savedData?.hasAudio ?? false,
-                    videoMeta:   savedData?.videoMeta ?? null,
                 });
                 if (savedData?.stage)        baseProps.stage        = savedData.stage;
                 if (savedData?.frozenParams) baseProps.frozenParams = savedData.frozenParams;
@@ -884,7 +898,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         duration:        ext.duration ?? 0,
                         frameCount:      ext.frameCount ?? 0,
                         hasAudio:        ext.hasAudio ?? false,
-                        videoMeta:       ext.videoMeta ?? null,
                         extendedFrom:    ext.extendedFrom ?? null,
                         // Reuse Prompt metadata: server returns the materialized
                         // generationSettings (mediaItems rewritten to project-owned

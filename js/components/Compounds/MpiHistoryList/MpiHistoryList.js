@@ -107,8 +107,8 @@ export const MpiHistoryList = ComponentFactory.create({
             }
             const dims = (w && w > 0) ? `${w}×${h}` : '?×?';
             if (item.type === 'video' || _isVideo) {
-                const duration = _formatDuration(item.duration ?? item.videoMeta?.duration);
-                const fps = _formatFps(item.fps ?? item.videoMeta?.fps);
+                const duration = _formatDuration(item.duration);
+                const fps = _formatFps(item.fps);
                 return [dims, duration, fps].filter(Boolean).join(' \u00b7 ');
             }
             return dims;

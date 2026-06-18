@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-115",
+  "branch": "RunPod",
+  "files": [
+    { "path": "js/services/generationService.js", "change": "build generationSettings.controlState {shared,op,model}; drop ratioLabel/videoMeta writes" },
+    { "path": "js/utils/promptReuse.js", "change": "controlState fast-path in buildPromptReuseSettings; legacy reverse-derive fallback; modelUpdates reads controlState.model" },
+    { "path": "js/migrations/projectMigrations.js", "change": "SCHEMA_VERSION 3; migrateV2toV3 strips ratioLabel/videoMeta, moves modelSettings->controlState.model" },
+    { "path": "js/core/appVersion.js", "change": "SCHEMA_VERSION 2->3" },
+    { "path": "routes/projects.js", "change": "save-generation + upload + probe-videos: stop writing videoMeta + top-level ratioLabel (request+response)" },
+    { "path": "routes/videoConcat.js", "change": "drop videoMeta from extend/combine sidecar" },
+    { "path": "routes/videoCrop.js", "change": "drop videoMeta from crop sidecar" },
+    { "path": "routes/videoReverse.js", "change": "drop videoMeta from reverse sidecar" },
+    { "path": "js/services/mediaUploadService.js", "change": "drop videoMeta from return + JSDoc" },
+    { "path": "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js", "change": "drop videoMeta from media:imported emit/destructure/createItem + extend item" },
+    { "path": "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js", "change": "drop videoMeta from extend item" },
+    { "path": "js/components/Compounds/MpiHistoryList/MpiHistoryList.js", "change": "drop ?? videoMeta fallback (top-level canonical)" },
+    { "path": "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js", "change": "drop videoMeta?.fps fallback" },
+    { "path": "js/components/Primitives/MpiCanvas/managers/ComparisonManager.js", "change": "comment fix only" },
+    { "path": "docs/project-integrity.md", "change": "document controlState; remove videoMeta + drop modelSettings from generationSettings shape" }
+  ],
+  "master_patch": "NOT APPLIED — Fabio 2026-06-18: keep RunPod-only, no master patch needed"
+}

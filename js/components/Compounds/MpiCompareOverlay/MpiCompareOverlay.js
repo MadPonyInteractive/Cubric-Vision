@@ -56,7 +56,7 @@ function _isVideoItem(item) {
 }
 
 function _fpsOf(item, fallback = 24) {
-    return item?.videoMeta?.fps || item?.fps || fallback;
+    return item?.fps || fallback;
 }
 
 export const MpiCompareOverlay = ComponentFactory.create({

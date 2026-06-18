@@ -16,7 +16,7 @@ const fs   = require('fs-extra');
 const path = require('path');
 
 /** Current schema version — must match SCHEMA_VERSION in js/core/appVersion.js */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const MIGRATIONS = {
     /**
@@ -118,6 +118,53 @@ const MIGRATIONS = {
             shared:        sharedOut,
             schemaVersion: 2,
         };
+    },
+
+    /**
+     * v2 → v3 (MPI-115): Normalize .meta/<uuid>.json sidecars to the clean schema.
+     *
+     * Removes duplicated/dead fields and introduces generationSettings.controlState
+     * as the single source for replayable PromptBox state:
+     *  - delete top-level `ratioLabel`   (dup of injectionParams.Ratio_Label)
+     *  - delete `videoMeta`              (dup of canonical top-level fps/duration/...)
+     *  - delete `generationSettings.modelSettings` and rewrite its loras/upscaleModel
+     *    into `generationSettings.controlState.model`. The shared/op buckets are NOT
+     *    reconstructed here — Reuse Prompt's legacy fallback still reverse-derives them
+     *    from the preserved injectionParams, so old items keep working. New items get
+     *    a full controlState (shared+op+model) at generate time.
+     *
+     * Operates only on project.json's own groups' sidecars (Media/.meta).
+     */
+    2: async (project, folderPath) => {
+        const metaDir = path.join(folderPath, 'Media', '.meta');
+        if (fs.existsSync(metaDir)) {
+            const files = fs.readdirSync(metaDir).filter(f => f.endsWith('.json'));
+            for (const f of files) {
+                const p = path.join(metaDir, f);
+                let meta;
+                try { meta = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { continue; }
+
+                let changed = false;
+                if ('ratioLabel' in meta) { delete meta.ratioLabel; changed = true; }
+                if ('videoMeta' in meta)  { delete meta.videoMeta;  changed = true; }
+
+                const gs = meta.generationSettings;
+                if (gs && typeof gs === 'object' && gs.modelSettings && typeof gs.modelSettings === 'object') {
+                    const ms = gs.modelSettings;
+                    const model = {};
+                    if ('loras' in ms) model.loras = ms.loras;
+                    if ('upscaleModel' in ms) model.upscaleModel = ms.upscaleModel ?? null;
+                    gs.controlState = gs.controlState || {};
+                    if (Object.keys(model).length) gs.controlState.model = model;
+                    delete gs.modelSettings;
+                    changed = true;
+                }
+
+                if (changed) fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+            }
+        }
+
+        return { ...project, schemaVersion: 3 };
     },
 };
 

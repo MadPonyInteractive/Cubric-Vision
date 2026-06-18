@@ -267,6 +267,22 @@ function _defaultRatioSettings(model = {}) {
 }
 
 export function buildPromptReuseSettings(payload = {}, model = {}) {
+    // Fast path: items generated after MPI-115 carry the exact PromptBox control
+    // state snapshotted at gen time. Replay it directly — no reverse-derivation.
+    // Requires shared/op (the full snapshot); migrated old sidecars carry only
+    // controlState.model and fall through to the legacy derive below.
+    const controlState = payload.generationSettings?.controlState;
+    if (controlState && (controlState.shared || controlState.op)) {
+        return {
+            sharedUpdates: _clone(controlState.shared || {}),
+            opUpdates:     _clone(controlState.op || {}),
+            modelUpdates:  _clone(controlState.model || {}),
+        };
+    }
+
+    // Legacy fallback: pre-controlState sidecars (and frozenParams-only preview
+    // items) reverse-derive the buckets from injectionParams. Kept for robustness;
+    // the v2→v3 migration backfills controlState onto all on-disk sidecars.
     const params = payload.injectionParams || {};
     const operation = payload.operation || '';
     const components = _commandComponents(operation);
@@ -325,11 +341,14 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
         opUpdates.denoise = opDefault != null ? opDefault : PROMPT_CONTROL_DEFAULTS.denoise;
     }
 
-    const modelSettings = payload.generationSettings?.modelSettings;
+    // Model-wide settings: prefer the migrated controlState.model, fall back to
+    // the pre-MPI-115 modelSettings shape on un-migrated sidecars.
+    const modelSrc = payload.generationSettings?.controlState?.model
+        ?? payload.generationSettings?.modelSettings;
     const modelUpdates = {};
-    if (modelSettings && typeof modelSettings === 'object') {
-        if ('loras' in modelSettings) modelUpdates.loras = _clone(modelSettings.loras);
-        if ('upscaleModel' in modelSettings) modelUpdates.upscaleModel = modelSettings.upscaleModel ?? null;
+    if (modelSrc && typeof modelSrc === 'object') {
+        if ('loras' in modelSrc) modelUpdates.loras = _clone(modelSrc.loras);
+        if ('upscaleModel' in modelSrc) modelUpdates.upscaleModel = modelSrc.upscaleModel ?? null;
     }
 
     return { sharedUpdates, opUpdates, modelUpdates };

@@ -392,3 +392,4 @@
 {"ts":"2026-06-18T07:00:00.000Z","type":"task.moved","id":"MPI-113","from":"todo","to":"doing","maturity":"in-progress"}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-115", "at": "2026-06-18T08:00:00.000Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Moved MPI-115 to Doing; investigation complete (writer/reader/duplicate field map), designing clean schema + migration."}
 {"ts":"2026-06-18T08:30:00.000Z","type":"task.moved","id":"MPI-113","from":"doing","to":"done","maturity":"complete","status":"accepted"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-115", "at": "2026-06-18T09:00:00.000Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Moved MPI-115 to Done. Verified on real project (Sidecars test schemaVersion 3, clean sidecar w/ controlState, quality sources agree). Master patch cancelled per Fabio (RunPod-only)."}
