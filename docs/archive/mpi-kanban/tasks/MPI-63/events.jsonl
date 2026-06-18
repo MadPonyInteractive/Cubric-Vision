@@ -4,3 +4,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"checklist.updated","at":"2026-06-10T17:00:00.000Z","actor":"claude","summary":"5/6 done; only on-M4 launch test remains."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"task.moved","at":"2026-06-10T19:00:00.000Z","actor":"claude","from":"doing","to":"done","summary":".app failed on M4 (Rosetta + uv_cwd EPERM); reverted to start.command + added setup.command for Gatekeeper quarantine. Shipped in 0.0.12. All 3 boxes pass 0.0.11 functionally."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-63","type":"validation.updated","at":"2026-06-10T19:00:00.000Z","actor":"claude","summary":"On-hardware: .app FAIL (uv_cwd), start.command PASS, quarantine confirmed as the blocker; setup.command is the fix."}
+{"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-63", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived out of active board to docs/archive/mpi-kanban/tasks/."}

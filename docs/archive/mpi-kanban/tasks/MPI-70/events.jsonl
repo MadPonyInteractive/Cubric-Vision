@@ -10,3 +10,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"attention.required","at":"2026-06-12T20:50:00+01:00","actor":"claude","summary":"Stays validating until MPI-64 confirms live v0.3.0 Pod ready (user gate). Live-verify in flight cu124/L4."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"task.moved","at":"2026-06-13T09:30:00+01:00","actor":"claude","from":"doing","to":"done","summary":"Closed per user. Both v0.3.0 tags (cu124 CI, cu128 local) live+public+smoke-checked. Live-Pod deploy verification deferred to a separate card if a profile proves broken."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-70","type":"attention.cleared","at":"2026-06-13T09:30:00+01:00","actor":"claude","summary":"Closed; deferred live-Pod verification to a separate card."}
+{"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-70", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived out of active board to docs/archive/mpi-kanban/tasks/."}

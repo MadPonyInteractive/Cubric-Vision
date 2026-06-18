@@ -4,3 +4,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"validation.updated","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"User validated project + card notes; validation.md written."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"task.moved","at":"2026-06-14T04:45:13Z","actor":"claude","from":"doing","to":"done","summary":"Validated + user-approved completion. maturity validating->complete."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-76","type":"attention.cleared","at":"2026-06-14T04:45:13Z","actor":"claude","summary":"Done; validation complete."}
+{"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-76", "at": "2026-06-18T00:00:00Z", "actor": "claude", "summary": "Archived out of active board to docs/archive/mpi-kanban/tasks/."}
