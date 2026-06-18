@@ -1,6 +1,6 @@
 # Release Notes
 
-Cubric Studio release notes are stored here, one file per release.
+Cubric Vision release notes are stored here, one file per release.
 
 > **Archival vs. runtime.** The markdown files in this folder are **archival /
 > user-facing docs**. They are NOT read by the running app. The changelog overlay

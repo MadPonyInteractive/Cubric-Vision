@@ -34,7 +34,7 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 ### APP_VERSION
 
-- **Purpose:** Identifies the Cubric Studio release. Bumped on every public release.
+- **Purpose:** Identifies the Cubric Vision release. Bumped on every public release.
 - **Format:** Semantic versioning (`MAJOR.MINOR.PATCH`).
 - **When to bump:**
   - **Patch** (0.0.x → 0.0.y): Bug fixes, no new operations, no schema change.

@@ -1,13 +1,28 @@
 ---
 name: mpi-version-bump
-description: Interactive release workflow — bump app version (appVersion.js + package.json + package-lock.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, run release:check, and offer pre-release tests. Use when cutting a new Cubric Studio release or when the user says "bump the version", "cut a release", "/mpi-version-bump".
+description: The file-edit MECHANIC for a Cubric Vision version bump — bump app version (appVersion.js + package.json + package-lock.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, run release:check, and offer pre-release tests. Use when the user says "bump the version", "/mpi-version-bump", or when one of the release skills (mpi-apply-patch, mpi-merge-branches) needs the version stamped. For the full ship flow (which branch, builds, Cloudflare link, GitHub release) use those release skills — this skill only does the in-repo file edits.
 user-invocable: true
 ---
-# /mpi-version-bump — Interactive Release Workflow
+# /mpi-version-bump — version-bump file mechanic
 
-This skill guides you through a complete release: bumping the app version, updating engine versions, registering new operations, updating all related files, generating release notes, running `npm run release:check`, and optionally running pre-release tests.
+This skill is the **file-edit mechanic** for a version bump: bumping the app
+version, updating engine versions, registering new operations, updating all
+related files, generating release notes, running `npm run release:check`, and
+optionally running pre-release tests.
 
-Use this skill whenever you're ready to cut a new release of Cubric Studio.
+It does NOT decide *which branch*, run builds, touch the Cloudflare download
+link, or publish to GitHub. Those are the **three release skills** that call this
+one as their bump step:
+
+- **`mpi-apply-patch`** — bug-fix patch (3rd digit) on master + carry to dev branch.
+- **`mpi-merge-branches`** — promote dev branch → master (minor) + new Cloudflare link.
+- **`mpi-release-public`** — push the `v*` tag → public GitHub release.
+
+Run this skill directly only for the in-repo file edits, or when a release skill
+tells you to. The branch/build/link/tag decisions live in the release skills and
+`mpi-release-shared` — don't improvise them here.
+
+Use this skill whenever you're ready to stamp a new version of Cubric Vision.
 
 ---
 
@@ -17,7 +32,7 @@ If the release is a **pure patch** — bug fixes and/or small UI changes, with
 **no new operations, no ComfyUI engine change, and no project-schema change** —
 you only need to edit **five** files. Skip every operation/engine/schema step.
 
-1. `js/core/appVersion.js` — bump `APP_VERSION` (e.g. `0.0.1` → `0.0.2`). Leave `SCHEMA_VERSION` untouched.
+1. `js/core/appVersion.js` — bump `APP_VERSION` (e.g. a patch `1.0.1` → `1.0.2`). Leave `SCHEMA_VERSION` untouched.
 2. `package.json` — bump the top-level `"version"` to the same value. **The portable build reads this**; it must match `APP_VERSION`.
 3. `package-lock.json` — bump the root `"version"` and `packages[""].version` to the same value.
 4. `js/data/releaseNotes.js` — add a new `RELEASE_NOTES['<newVersion>']` entry (runtime changelog overlay source).
@@ -84,9 +99,14 @@ I will ask you the following questions:
 ### Q1: Bump Type?
 Choose: **patch** / **minor** / **major**
 
-- **patch** (e.g., 0.0.1 → 0.0.2): Bug fixes, no new features, no schema change
-- **minor** (e.g., 0.0.1 → 0.1.0): New operations added OR ComfyUI engine updated
-- **major** (e.g., 0.1.0 → 1.0.0): Breaking changes (schema change, significant architecture change)
+- **patch** (e.g., 1.0.1 → 1.0.2): Bug fixes, no new features, no schema change. Stage stays/derives **alpha** (Z>0). Shipped by `mpi-apply-patch`.
+- **minor** (e.g., 1.0.2 → 1.1.0): New operations added OR ComfyUI engine updated. Stage derives **beta** (X.Y.0, Y>0). Shipped by `mpi-merge-branches`.
+- **major** (e.g., 1.1.0 → 2.0.0): Breaking changes (schema change, significant architecture change). Stage derives **release** (X.0.0).
+
+> **Derived stage:** `js/core/appStage.js` derives alpha/beta/release from the
+> version — you don't set it. `X.0.0`→release, `X.Y.0`(Y>0)→beta, `X.Y.Z`(Z>0)→alpha,
+> `0.x.x`→alpha. It drives the About panel + bug-report `stage:<x>` label, so a
+> patch labeled itself "alpha" is correct, not a mistake.
 
 ### Q2: ComfyUI Engine Version Changing?
 Current ComfyUI version: **X.Y.Z** (read from `dev_configs/system_dependencies.json`)
@@ -157,9 +177,9 @@ Press Enter to skip if no additional notes.
 I will calculate the new version based on your bump type and confirm it with you:
 
 ```
-Current version: 0.0.1
+Current version: 1.0.2
 Bump type: minor
-New version: 0.1.0
+New version: 1.1.0
 
 Is this correct? [y/n]
 ```
@@ -313,7 +333,7 @@ Release notes live in **two** places that must stay aligned:
 I will create `docs/releases/YYYY-MM-DD-vX.Y.Z.md` with:
 
 ```markdown
-# Cubric Studio vX.Y.Z — YYYY-MM-DD
+# Cubric Vision vX.Y.Z — YYYY-MM-DD
 
 ## Changelog
 
@@ -441,15 +461,26 @@ Test result: PASS (17 tests)
 
 ## What Happens Next
 
-1. **Commit the changes** using `/commit` or your preferred git workflow
-2. **Tag the release** with the new version: `git tag -a vX.Y.Z -m 'Release vX.Y.Z'`
-3. **Update external platforms** using the checklist in the release notes:
-  - Landing page website
-  - Documentation site
-  - GitHub releases page (attach installer)
-  - Patreon announcement
-  - Discord #updates channel
-4. **Push to GitHub**: `git push && git push origin vX.Y.Z`
+> ⚠️ **Do NOT tag + push from here.** This skill only stamps the version files.
+> A `v*` tag fires `push: tags: v*` and **publishes a public GitHub release** —
+> doing that on a patch or a pre-release leaks it publicly. Tagging is ONLY
+> `mpi-release-public`'s job. The ship flow depends on the branch/channel:
+
+1. **Commit the version files** by explicit pathspec (shared tree — `git commit
+   --only <paths>`, never `git add -A`).
+2. **Hand off to the release skill that invoked you**, which owns the branch,
+   build, link, and (only for public) the tag:
+   - **patch** → `mpi-apply-patch` (master 3rd digit, refresh current Cloudflare
+     link, carry fix to dev branch unbumped). **No tag.**
+   - **minor promote** → `mpi-merge-branches` (dev→master, build, mint new
+     Cloudflare link + GC the old one). **No tag.**
+   - **public release** → `mpi-release-public` (push the `v*` tag → GitHub
+     release, reuse existing D: builds). **The only place a tag is pushed.**
+3. **Comms** (Patreon / Discord / YouTube / Gumroad) are owned by the
+   MadPony-Identity launch-comms workflow — a separate manual step, never
+   automated from here.
+
+See `mpi-release-shared` for the shared build/link/upload mechanics.
 
 ---
 
