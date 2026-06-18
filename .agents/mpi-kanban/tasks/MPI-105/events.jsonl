@@ -1,1 +1,2 @@
 {"ts":"2026-06-16T22:55:00Z","type":"task.created","id":"MPI-105","column":"todo","actor":"claude","note":"NVMe disk request + REST disk-type investigation (raised during builder-image work)"}
+{"ts":"2026-06-18T09:30:00Z","type":"task.moved","id":"MPI-105","from":"todo","to":"done","maturity":"complete","status":"denied","actor":"claude","note":"Won't fix: RunPod API has no disk-type field (REST PodCreateInput) and no NVMe signal (GQL storageSupport is Boolean); minDiskBandwidthMBps floor would silently drop GPUs. See validation.md."}

@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "js/services/generationService.js",
+      "why": "Bug 1 fix: stable _stableTempId/_stableExtraTempIds snapshot from opts; empty-output + cacheHit + onError branches emit the real tempId instead of reading a post-end null."
+    },
+    {
+      "path": "js/shell/statusBar.js",
+      "why": "Bug 2 fix: _setIdle() hard-stops the elapsed timer so a superseded Cue job never strands a ticking mm:ss at idle."
+    }
+  ]
+}
