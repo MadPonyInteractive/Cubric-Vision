@@ -336,6 +336,14 @@
  * @property {boolean} [showSettings=true]
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]
+ * @property {'gallery'|'history'} [workspaceKey='gallery']
+ *   Selects which session draft slot (`state.promptDraft` / `state.promptMedia`)
+ *   this box reads + writes, so gallery and history drafts never bleed (MPI-113).
+ * @property {string|null} [workspaceId=null]
+ *   Card id stamped into the saved slot. On mount the box restores its slot ONLY
+ *   when the slot's stored id matches this — so opening a different history card
+ *   shows a clean box, never the previous card's text/chips. Gallery omits it
+ *   (id null = always matches = persistent). See component-state.md.
  *
  * Instance methods (on instance.el):
  *   imageCount    {number}
