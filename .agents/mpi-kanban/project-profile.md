@@ -4,8 +4,8 @@ mode: scalable-foundation
 mode_rationale: user-confirmed at setup; strong repo evidence (17 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-06-05
-last_refresh_notes: refresh pass - validated board/state/index against repo; all 19 index pointers exist, boot docs route to JSON board, done-column statuses resolved; archived orphan task folders MPI-1 (moved) and MPI-5 (deleted) into tasks/_archived/.
+last_refresh: 2026-06-18
+last_refresh_notes: knowledge-index re-synced — all 88 memory files wired into topics, 8 topics added (RunPod, Pod image/mpi-ci, Build/release, macOS, Release ops, Cross-project, Conventions, derived dev_mode); all doc "Read first" pointers verified present; promotion audit found durable architecture facts already live in docs (project-integrity/versioning/comfy) so memory stays as war-story companions, no promotion. Prior (2026-06-05): validated board/state, archived orphan MPI-1/MPI-5.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
