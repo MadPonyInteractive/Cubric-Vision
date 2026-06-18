@@ -1,0 +1,139 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "cda7f0c6-292c-47bf-a33a-2341874f9de8",
+  "generated_at": "2026-06-17T15:40:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-74 per-generation force-local toggle — single-engine shipped, concurrency designed",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Add a per-generation 'Run locally' toggle in the PromptBox (shown only while remote-connected) that routes a single Cue/Q generation to the LOCAL ComfyUI instead of the cloud Pod. User later confirmed the REAL requirement is TRUE CONCURRENCY: a cloud gen and a local gen running at the same time.",
+    "status": "in_progress",
+    "summary": "Single-engine force-local is COMPLETE + live-verified + committed (2c3e68f source, 4e4c137 kanban/plan). It runs ONE engine at a time (cloud then local, sequentially). The user's actual goal — cloud + local SIMULTANEOUSLY — is fully DESIGNED (Phase 6 in plan.md) but NOT started. That is the next session's work."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-74/plan.md",
+    "completed": [
+      "Phase 1 — spine: forceLocal threaded startGeneration->runCommand->runWorkflow->ensureServerRunning; chokepoint 187 guard; httpBase(forceLocal); per-call local target for /prompt, /upload/image, output-collect, media upload; local preview WS via connect(forceLocal)/ensureWsConnected + _wsForceLocal wrong-engine reconnect",
+      "Phase 2 — local model guard: POST /comfy/models/check-local (shared _localModelsCheck helper) + _findModelNotLocal pre-dispatch toast+abort",
+      "Phase 3 — multi-stage staging routes honor req.body.forceLocal (prepare-workflow-inputs + stage-preview-latent copy into LOCAL input/)",
+      "Phase 4 — PromptBox 'Run locally' toggle (cloud<->laptop icon, remote-only, sticky within session, reset OFF on disconnect)",
+      "Phase 5 — Cue panel 'Local' chip per force-local job + engine in render signature",
+      "BUGFIX — lost-gen 404: _buildComfyViewUrl/_collect* now honor forceLocal so save-generation downloads output from the engine that produced it. Root cause of 'only one gen landed in gallery'. FIXED + verified.",
+      "LIVE-VERIFIED on a connected Pod: cloud gen + local gen both saved to gallery; app returned to IDLE-REMOTE after force-local run"
+    ],
+    "pending": [
+      "Phase 6 — TRUE CONCURRENCY (cloud + local at the same instant). DESIGNED in plan.md (collision map + minimal change set), NOT started.",
+      "Phase 6 Step 1 (root fix): make ComfyUIController per-engine (two instances localEngine+remoteEngine) instead of a shared singleton — resolves A1/A2/A3/A4 collisions at once. Drop the _wsForceLocal single-socket hack.",
+      "Phase 6 Step 2: split generationService _cueDispatchInFlight/_activeCueJob into two lanes (local + remote) routed by opts.forceLocal.",
+      "Phase 6 Step 3: engine-tag comfy:starting/ready/error; make MpiStartingComfy overlay non-blocking/per-engine so a local cold-boot doesn't freeze the cloud lane (this is what hijacked the UI in the live test).",
+      "Phase 6 Step 4: per-engine clientId (free from Step 1).",
+      "Phase 6 verify: enqueue cloud + local -> BOTH run concurrently; Stop one keeps the other; previews don't cross."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-74",
+    "title": "Per-generation \"Run locally\" override toggle (remote mode)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-74/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-74/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-74/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-74/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-74/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "investigate",
+    "implement Phase 6",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Phase 6 concurrency design + full singleton collision map written to plan.md (committed 4e4c137)",
+      "Single-engine force-local committed by explicit pathspec (2c3e68f) — no shared-tree stomp",
+      "MPI-74<->MPI-82 coordination thread persisted (committed 4e4c137)"
+    ],
+    "pending": [
+      "MPI-74 card stays doing/in-progress (Phase 6 pending) — do NOT close.",
+      "Shared board.json/index.json + MPI-82 card left UNCOMMITTED on purpose (MPI-82 still finishing). Next session: do not sweep them; commit only your own files by explicit pathspec.",
+      "Coordination message aea7c15d (heads-up to MPI-82 that I edited their committed files) is on disk + committed but may not need a reply — MPI-82 was finishing its own work; user said a reply is unnecessary.",
+      "Open message thread b05d602a (MPI-74<->MPI-82) can be resolved once Phase 6 lands or earlier if the coordination is considered done."
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 6 (true cloud+local concurrency). FIRST investigation BEFORE any code: grep 'ComfyUIController\\.' across js/ to size the singleton import blast radius (who calls .runWorkflow/.connect/.interrupt/.isWsReady/.httpBase). That decides the Step-1 refactor shape (default-export-for-back-compat + getEngine(forceLocal), vs full per-call resolution). Then implement Step 1 (per-engine ComfyUIController), then Step 2 (two queue lanes), Step 3 (engine-tagged non-blocking boot overlay), Step 4 (per-engine clientId). Backend needs NO changes (verified). Brief the user before writing code (project rule: brief gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Scope narrowed from the original brief's full two-engine hybrid to a per-gen toggle FIRST (single engine at a time), then user confirmed true concurrency is required -> Phase 6.",
+      "Decision B (per-call engine override via httpBase(forceLocal)) chosen over mutating remoteEngineClient._active — agreed with MPI-82 agent.",
+      "Ordering with MPI-82: they went first on the 3 shared backend files (committed d8925a1); MPI-74 layered routing on top. MPI-82 owns the model-upload SKIP gate (isRemote() && !forceLocal); MPI-74 owns engine routing.",
+      "Toggle: sticky within a remote session, OFF by default on first display, reset on disconnect (user-specified).",
+      "Cue badge: show 'Local' chip only on force-local jobs (absence = default engine) — no 'REMOTE' noise."
+    ],
+    "constraints": [
+      "ComfyUIController is a SINGLETON (one _ws, _isRunning, _activePromptId, clientId). This is THE wall for concurrency — Phase 6 Step 1 must make it per-engine.",
+      "Binary preview WS messages have NO prompt_id — routed via the single _activePromptId; two engines on one socket cross-talk previews. JSON messages ARE keyed by prompt_id (safe).",
+      "The _wsForceLocal wrong-engine reconnect added in Phase 1 is a SINGLE-SOCKET hack; with two concurrent engines it THRASHES (each run reconnecting the shared socket). Drop it in Step 1.",
+      "The 'Starting ComfyUI Engine...' overlay (MpiStartingComfy) is a GLOBAL body-level blocking modal driven by un-tagged comfy:starting — a local cold-boot freezes the whole UI over a running cloud gen. Step 3 fixes this.",
+      "activeGenerations is ALREADY multi-entry safe (UUID Map). Backend /proxy/* vs /comfy/* are SEPARATE route trees — no backend collision. save-generation is URL-driven + engine-aware. Backend needs NO change.",
+      "Shared git tree: concurrent agents share the index. Commit ONLY your files by explicit pathspec (feedback_shared_tree_commit_hygiene). NEVER git add . / git clean.",
+      "Project rule: brief the user BEFORE writing code; wait for 'go'. NEVER commit unless the user asks.",
+      "Stop/interrupt() is currently global — Phase 6 must route it per-engine so Stop targets the right lane."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js",
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Compounds/MpiQueuePanel/MpiQueuePanel.js",
+      "js/components/Compounds/MpiQueuePanel/MpiQueuePanel.css",
+      "js/utils/icons.js",
+      "routes/comfy.js",
+      ".agents/mpi-kanban/tasks/MPI-74/plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-74/plan.md",
+      "js/services/comfyController.js",
+      "js/services/generationService.js",
+      "js/services/activeGenerations.js",
+      "js/shell.js",
+      "js/components/Compounds/MpiStartingComfy/MpiStartingComfy.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "RunPod remote-engine (docs/runpod-remote-engine.md)",
+      "comfy_injection + comfy_engine rules",
+      "components rules (Stage baseline, BEM, ComponentFactory, on/off, icons.js)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-17T15:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-74 (per-generation 'Run locally' toggle) on the RunPod branch of Cubric-Vision. Single-engine force-local is COMPLETE, live-verified, and committed (2c3e68f source, 4e4c137 plan/kanban): a 'Run locally' toggle routes ONE generation to the local ComfyUI while the app stays cloud-connected, and it saves correctly. The user's real goal is TRUE CONCURRENCY — a cloud gen and a local gen running AT THE SAME TIME — which is fully DESIGNED as Phase 6 in .agents/mpi-kanban/tasks/MPI-74/plan.md but NOT started. The wall is that ComfyUIController is a singleton; Phase 6 Step 1 makes it per-engine (two instances), Step 2 splits the Cue queue into two lanes, Step 3 makes the 'Starting ComfyUI Engine...' overlay non-blocking/per-engine, Step 4 gives each engine its own clientId. The backend needs NO changes (verified). BEFORE any code, grep 'ComfyUIController\\.' across js/ to size the singleton refactor, then brief me and wait for 'go'. Commit only your own files by explicit pathspec (MPI-82 may have uncommitted work in shared kanban files). Read .agents/mpi-kanban/state/handoffs/cda7f0c6-292c-47bf-a33a-2341874f9de8.json and the plan.md Phase 6 section first."
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "38feba1c-72d2-4f51-b661-bc4589ffb608",
+  "status": "open",
+  "created_at": "2026-06-17T17:05:15Z",
+  "updated_at": "2026-06-17T17:05:15Z",
+  "from": {
+    "role": "implementer",
+    "agent": "claude",
+    "note": "Notification-settings feature session (per-type OS notification opt-out)."
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-74"
+  },
+  "subject": "Your uncommitted MPI-74 P6 hunk in MpiSettings.js was swept into commit ac00689",
+  "body": "Heads-up, no action strictly required. While committing my notification-settings feature (commit ac00689 on RunPod), the pre-commit hook (lefthook stash/restore around lint) collapsed a partial-file stage and swept ONE of your UNCOMMITTED hunks in js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js into my commit: the MPI-74 P6 change replacing the post-connect `fetch('/comfy/stop')` block with the 'KEEP local ComfyUI warm on connect' comment block (around the old line ~785). I had staged only my 2 hunks (27 insertions) but the hook committed 39 — your P6 hunk rode along.\n\nNothing is lost: the change is in history (ac00689) AND your working tree still matches HEAD for that file. User chose fix-forward (no reset/rewrite of a shared-branch commit). When you do your own MPI-74 commit, just be aware that MpiSettings.js P6 edit is already committed under my hash — don't re-commit it, and your plan.md / other MPI-74 files are still unstaged and yours to commit normally. Root cause + avoidance noted in memory feedback-shared-tree-commit-hygiene: same-file partial staging is NOT safe under the pre-commit hook when a peer has uncommitted hunks in the same file.",
+  "related": {
+    "task_card": "MPI-74",
+    "files": ["js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js"],
+    "commit": "ac00689"
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    { "at": "2026-06-17T17:05:15Z", "event": "created" }
+  ]
+}
