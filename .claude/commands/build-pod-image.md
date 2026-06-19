@@ -34,16 +34,29 @@ In the commands below, substitute:
   `git -C c:/AI/Mpi/mpi-ci log -1 --stat -- cubric-vision-pod/wrapper/wrapper.py`
   `git -C c:/AI/Mpi/mpi-ci status --short cubric-vision-pod/wrapper/`
   unchanged since last build → keep the current wrapper version.
-- **`<ref>`:** a SHA, not `master`; must match the Builder's `COMFYUI_REF`. Confirm with the user if bumping.
+- **`<ref>` (DERIVE FROM LOCK — MPI-117, do not hand-type):** read it from the node version-lock, do not prompt the user for a SHA:
+  `node -e "console.log(require('./dev_configs/node_lock.json').comfyui.core.tag)"` (currently `v0.19.3`).
+  Custom-node + frontend pins also live in that lock — the Dockerfile resolves them itself from the copied `node_lock.json`, so there are no per-node build-args to pass. To bump core/frontend/a node, edit `dev_configs/node_lock.json` and rebuild; the build follows the lock. Confirm with the user only if the lock itself is being bumped. Must stay in lockstep with the Builder's `COMFYUI_REF`.
 
 ### 2. App-side version sync (BEFORE redeploy; needs an app restart to take effect)
 `routes/remoteProxy.js` bakes `POD_IMAGE_VERSION` + `WRAPPER_VERSION` into the running Express child at boot — editing them needs an APP RESTART or the live app keeps sending the old tag. Update both to `<ver>`/`<wver>`, commit by explicit pathspec:
 `git commit --only routes/remoteProxy.js -m "..."` (never `git add .` — shared tree).
 
 ### 3. Commit + push mpi-ci FIRST (CI gotcha)
-`gh workflow run` builds the **pushed** ref, not the local tree. Stage only your files:
+`gh workflow run` builds the **pushed** ref, not the local tree. Stage only your files.
+
+**3a. Sync the node lock into the build context (MPI-117).** The Dockerfile `COPY`s
+`node_lock.json` from the `cubric-vision-pod/` build context; CI builds the pushed
+mpi-ci tree, so the lock must be committed there, freshly copied from the canonical
+Cubric-Vision lock every build:
 ```
-git -C c:/AI/Mpi/mpi-ci add <paths>
+cp c:/AI/Mpi/Cubric-Vision/dev_configs/node_lock.json c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json
+```
+Then stage it alongside your other mpi-ci changes (it's the source of node/core/frontend pins).
+
+**3b. Commit + push:**
+```
+git -C c:/AI/Mpi/mpi-ci add cubric-vision-pod/node_lock.json <other paths>
 git -C c:/AI/Mpi/mpi-ci commit -m "..."
 git -C c:/AI/Mpi/mpi-ci push
 ```

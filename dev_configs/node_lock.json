@@ -1,0 +1,79 @@
+{
+  "schema": "cubric/node-lock/v1",
+  "nodeset_version": "1",
+  "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. To bump a node, edit its entry here only. RunPod branch only.",
+  "comfyui": {
+    "core": { "tag": "v0.19.3", "commit": "3086026401180c9216bcb6ace442a4e3587d2c66" },
+    "frontend": {
+      "comfyui-frontend-package": "1.42.11",
+      "comfyui-workflow-templates": "0.9.57"
+    }
+  },
+  "nodes": {
+    "ComfyUI-MpiNodes": {
+      "source": "git-commit",
+      "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
+      "commit": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
+      "filename": "ComfyUI-MpiNodes",
+      "installRequirements": false,
+      "installOnEngine": true
+    },
+    "ComfyUI-VideoHelperSuite": {
+      "source": "git-commit",
+      "repo": "Kosinkadink/ComfyUI-VideoHelperSuite",
+      "commit": "4ee72c065db22c9d96c2427954dc69e7b908444b",
+      "filename": "comfyui-videohelpersuite",
+      "installRequirements": false,
+      "installOnEngine": true
+    },
+    "ComfyUI-Impact-Pack": {
+      "source": "git-commit",
+      "repo": "ltdrdata/ComfyUI-Impact-Pack",
+      "commit": "429d0159ad429e64d2b3916e6e7be9c22d025c3c",
+      "filename": "comfyui-impact-pack",
+      "installRequirements": true,
+      "installOnEngine": true
+    },
+    "comfyui-kjnodes": {
+      "source": "git-commit",
+      "repo": "kijai/ComfyUI-KJNodes",
+      "commit": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+      "filename": "comfyui-kjnodes",
+      "installRequirements": true,
+      "installOnEngine": true
+    },
+    "ComfyUI-UltimateSDUpscale": {
+      "source": "git-commit",
+      "repo": "ssitu/ComfyUI_UltimateSDUpscale",
+      "commit": "bebd5696fddd61cb0d08949a222c508898ab5577",
+      "filename": "comfyui_ultimatesdupscale",
+      "installRequirements": false,
+      "installOnEngine": true
+    },
+    "ComfyUI-Frame-Interpolation": {
+      "source": "git-commit",
+      "repo": "Fannovel16/ComfyUI-Frame-Interpolation",
+      "commit": "26545cc2dd95bc3d27f056016300673bdeee78f5",
+      "filename": "comfyui-frame-interpolation",
+      "installRequirements": true,
+      "installRequirementsCommand": "python install.py",
+      "installOnEngine": true
+    },
+    "ComfyUI-Impact-Subpack": {
+      "source": "git-commit",
+      "repo": "ltdrdata/ComfyUI-Impact-Subpack",
+      "commit": "50c7b71a6a224734cc9b21963c6d1926816a97f1",
+      "filename": "ComfyUI-Impact-Subpack",
+      "installRequirements": true,
+      "installOnEngine": true
+    },
+    "RES4LYF": {
+      "source": "git-commit",
+      "repo": "ClownsharkBatwing/RES4LYF",
+      "commit": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
+      "filename": "RES4LYF",
+      "installRequirements": true,
+      "installOnEngine": true
+    }
+  }
+}

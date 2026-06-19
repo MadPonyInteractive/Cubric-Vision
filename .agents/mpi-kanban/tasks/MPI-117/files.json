@@ -1,0 +1,7 @@
+{"schema":"mpi-kanban/task-files/v1","files":[
+  {"path":"dev_configs/node_lock.json","why":"NEW single source of truth: core+frontend+node pins, per-node source discriminator"},
+  {"path":"js/data/modelConstants/dependencies.js","why":"imports node_lock.json + lockUrl() resolver; 7 node urls now lock-derived; RES4LYF added"},
+  {"path":"../mpi-ci/cubric-vision-pod/Dockerfile","why":"PENDING: pin COMFYUI_REF=v0.19.3 + commit-checkout nodes from lock"},
+  {"path":"../mpi-ci/cubric-vision-pod/README.md","why":"PENDING: document lock-driven build args"},
+  {"path":".claude/commands/build-pod-image.md","why":"PENDING: consume lock instead of hand-typed SHA"}
+]}

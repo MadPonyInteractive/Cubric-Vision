@@ -1,11 +1,35 @@
 // ── Shared Dependencies ───────────────────────────────────────────────────────
 // Defined once, referenced by id in model dependency lists to avoid repetition.
 // *********
-// IMPORTANT: 
+// IMPORTANT:
 // 1 - If you need to change a URL, you have to set the SHA256 back to null.
 // 2 - When adding universal workflow dependencies, they need to be installed with the engine
 //     Set installOnEngine: true for those.
+// 3 - Custom-node URLs are VERSION-LOCKED (MPI-117). They are NOT hardcoded here —
+//     they are derived from dev_configs/node_lock.json via lockUrl(). To bump a node,
+//     edit that lock file, NOT this file. The RunPod Pod image consumes the same lock.
 // *********
+
+import nodeLock from '../../../dev_configs/node_lock.json' with { type: 'json' };
+
+// Resolve a locked custom-node id to its concrete download URL by `source`.
+// registry   -> Comfy Registry CDN zip
+// git-tag    -> GitHub tag archive
+// git-commit -> GitHub commit archive (immutable)
+export function lockUrl(id) {
+    const e = nodeLock.nodes[id];
+    if (!e) throw new Error(`[node_lock] no entry for "${id}"`);
+    switch (e.source) {
+        case 'registry':
+            return `https://cdn.comfy.org/${e.publisher}/${e.node}/${e.version}/node.zip`;
+        case 'git-tag':
+            return `https://github.com/${e.repo}/archive/refs/tags/${e.tag}.zip`;
+        case 'git-commit':
+            return `https://github.com/${e.repo}/archive/${e.commit}.zip`;
+        default:
+            throw new Error(`[node_lock] unknown source "${e.source}" for "${id}"`);
+    }
+}
 
 export const DEPS = {
     // Models
@@ -143,7 +167,7 @@ export const DEPS = {
         name: 'ComfyUI-MpiNodes',
         type: 'custom_nodes',
         filename: 'ComfyUI-MpiNodes',
-        url: 'https://github.com/MadPonyInteractive/ComfyUi-MpiNodes/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-MpiNodes'),
         installRequirements: false,
         size: '1.76MB',
         installOnEngine: true,
@@ -162,7 +186,7 @@ export const DEPS = {
         name: 'ComfyUI-VideoHelperSuite',
         type: 'custom_nodes',
         filename: 'comfyui-videohelpersuite',
-        url: 'https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-VideoHelperSuite'),
         installRequirements: false,
         size: '806KB',
         installOnEngine: true,
@@ -172,7 +196,7 @@ export const DEPS = {
         name: 'ComfyUI Impact Pack',
         type: 'custom_nodes',
         filename: 'comfyui-impact-pack',
-        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Pack/archive/refs/heads/Main.zip',
+        url: lockUrl('ComfyUI-Impact-Pack'),
         installRequirements: true,
         size: '5MB',
         installOnEngine: true,
@@ -182,7 +206,7 @@ export const DEPS = {
         name: 'ComfyUI KJNodes',
         type: 'custom_nodes',
         filename: 'comfyui-kjnodes',
-        url: 'https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.zip',
+        url: lockUrl('comfyui-kjnodes'),
         installRequirements: true,
         installOnEngine: true,
         size: '28MB',
@@ -192,7 +216,7 @@ export const DEPS = {
         name: 'ComfyUI Ultimate SD Upscale',
         type: 'custom_nodes',
         filename: 'comfyui_ultimatesdupscale',
-        url: 'https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-UltimateSDUpscale'),
         installRequirements: false,
         size: '940KB',
         installOnEngine: true,
@@ -202,7 +226,7 @@ export const DEPS = {
         name: 'ComfyUI Impact Subpack',
         type: 'custom_nodes',
         filename: 'comfyui-frame-interpolation',
-        url: 'https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-Frame-Interpolation'),
         installRequirements: true,
         installRequirementsCommand: 'python install.py',
         size: '37.4MB',
@@ -213,9 +237,19 @@ export const DEPS = {
         name: 'ComfyUI Impact Subpack',
         type: 'custom_nodes',
         filename: 'ComfyUI-Impact-Subpack',
-        url: 'https://github.com/ltdrdata/ComfyUI-Impact-Subpack/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-Impact-Subpack'),
         installRequirements: true,
         size: '172KB',
+        installOnEngine: true,
+    },
+    'RES4LYF': {
+        id: 'RES4LYF',
+        name: 'RES4LYF',
+        type: 'custom_nodes',
+        filename: 'RES4LYF',
+        url: lockUrl('RES4LYF'),
+        installRequirements: true,
+        size: '5MB',
         installOnEngine: true,
     },
     'face-yolov8n': {
