@@ -1,0 +1,123 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d5350b4a-6902-4956-ac45-30cce8dcb496",
+  "generated_at": "2026-06-19T16:32:57Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "RunPod Builder thin-base cu130 rebuild + local ComfyUI v0.25.1 reinstall + LTX-2.3 workflow scripts",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Test purchased LTX-2.3 (NerdyRodent) ComfyUI video workflow on RunPod using the Cubric Vision Builder Pod; produce a model-download script + node-install script; get the Builder image matching a clean, standard ComfyUI; reinstall the local authoring rig clean.",
+    "status": "in_progress",
+    "summary": "Builder image v0.1.3-cu130 built + pushed to GHCR (thin-base: zero nodes baked, scripts install nodes/models at runtime). Local rig reinstalled clean (ComfyUI v0.25.1, all nodes, RES4LYF pinned). On a real RTX 3090 Pod (driver 580, CUDA 13.0) install_nodes.sh ran clean. NEXT: run install_models_ltx23.sh on the Pod, load workflow, generate. Then fix the Builder's Jupyter (multi-terminal + upload broken)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Read LTX-2.3 workflow JSON + NerdyRodent Patreon PDF; extracted full model list",
+      "Decided diffusion = fp8_scaled (NOT mxfp8 — Blackwell-only, won't run on 3090/4090)",
+      "Wrote install_models_ltx23.sh (11 weights ~45GB: diffusion, VAEs, gemma fp4, upscaler, IC-LoRA, SDPose, abliterated, 2x BFS; Ollama excluded)",
+      "Local rig: fresh ComfyUI v0.25.1 portable on G:\\ComfyUi (cu130, py3.13, torch 2.12)",
+      "Local: installed triton + sage + cupy-cuda13x + imageio-ffmpeg + Manager + 8 nodes + RES4LYF (pinned 419de2d) + 4 detection weights",
+      "Local: YAML (checkpoints/diffusion_models/loras -> C:/AI) + launcher flags (--use-sage-attention --preview-method taesd --output-directory D:\\WORK\\Images\\Outputs)",
+      "REDESIGNED Builder to thin-base: image bakes ZERO nodes (Manager only); install_nodes.sh + install_models_ltx23.sh ship in image at /opt",
+      "Builder switched cu128 -> cu130 (matches local; faster/cheaper tests), torch 2.12+cu130, ComfyUI pinned eca4757 (v0.25.1)",
+      "Built + pushed ghcr.io/madponyinteractive/cubric-vision-builder:v0.1.3-cu130 (digest sha256:134c656...); fixed 2 build failures (torchaudio 2.12->2.11; sage needs TORCH_CUDA_ARCH_LIST)",
+      "Verified on real 3090 Pod: boots (driver 580.126.20, CUDA 13.0), install_nodes.sh runs clean (cupy-cuda13x ok)",
+      "Docker cleanup: pruned 16->2 images + 42GB cache (vhdx compact still pending, blocked by VS Code Docker ext lock)"
+    ],
+    "pending": [
+      "Run /opt/install_models_ltx23.sh on the 3090 Pod (RunPod Web Terminal), ~45GB via aria2c",
+      "Restart ComfyUI (8188), load LTX-2.3_nerdyRodent.json, generate to validate the workflow",
+      "Fix Builder Jupyter: make image's own terminal-capable JupyterLab win port 8888 (edit start-builder.sh: kill RunPod base Jupyter, start ours) -> restores multi-terminal + drag-drop upload; rebuild image",
+      "User to bump RunPod template image tag -> v0.1.3-cu130 (USER-only console op)",
+      "MPI-117 node-lock system + MPI-118 app ComfyUI bump to v0.25.1 (separate cards, RunPod branch only)"
+    ]
+  },
+  "task_card": {
+    "id": null,
+    "title": null,
+    "column": null,
+    "workspace": null,
+    "links": { "plan": null, "checklist": null, "validation": null, "handoffs": null }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit install scripts (canonical: c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\)",
+    "edit Builder Dockerfile / start-builder.sh",
+    "rebuild + push Builder image (image build/publish authorized; NO live Pod create/delete/deploy)",
+    "update MPI-117/MPI-118 brief"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "memory project_comfyui_portable_ships_cu130 (cu130 facts + 3090/580 boot data point)",
+      "memory project_builder_image_flow (thin-base redesign + torchaudio/sage/py3.12 gotchas)",
+      "memory project_builder_install_scripts (canonical script location + update procedure)",
+      "MPI-117 brief (node lock: per-node source Registry/tag/SHA; RES4LYF tagless; MpiNodes registry 1.1.1)",
+      "MPI-118 brief (app bump v0.25.1, cu130 guard) + MEMORY.md index pointers",
+      "mpi-ci/cubric-vision-builder/README.md (Runtime install scripts section)"
+    ],
+    "pending": [
+      "Confirm LTX-2.3 workflow actually generates on the Pod (validation not yet done)",
+      "Builder Jupyter fix not yet implemented (multi-terminal + upload still broken)",
+      "vhdx compact on D: still pending (run Optimize-VHD before opening VS Code, which holds the Docker lock)",
+      "Collect more RunPod host driver samples before deciding to move PRODUCT pod to cu130"
+    ]
+  },
+  "next_action": {
+    "description": "On the running RTX 3090 Pod, in the RunPod Web Terminal run: cd /opt/ComfyUI && bash /opt/install_models_ltx23.sh (~45GB). Then restart ComfyUI (8188), load LTX-2.3_nerdyRodent.json, and generate to confirm the workflow runs. After that, implement the Builder Jupyter fix (own JupyterLab wins 8888) and rebuild.",
+    "command": null
+  },
+  "context": {
+    "key_decisions": [
+      "Diffusion model = fp8_scaled NOT mxfp8 (mxfp8 = Blackwell sm_120 only; 3090/4090 can't run it)",
+      "Thin-base Builder: bake stable base (ComfyUI core + torch + sage + Manager), script everything volatile (nodes + weights) so node bumps DON'T need an image rebuild",
+      "Builder = cu130 (matches local rig, faster/cheaper tests); PRODUCT pod stays cu128 for host coverage. CUDA differing is fine — same ComfyUI version means workflows port; CUDA is NOT part of workflow parity",
+      "RES4LYF pinned to SHA 419de2d (tagless repo — SHA-pin is the only stable lock); local-only for now, future app dep via MPI-117",
+      "Node version lock SOURCE is per-node: Comfy Registry version (MpiNodes 1.1.1) / GitHub tag / GitHub SHA (RES4LYF) — see MPI-117"
+    ],
+    "constraints": [
+      "RunPod base Jupyter has DISABLED terminal launcher ('Launcher Error: Not Found') + flaky drag-drop upload -> use RunPod WEB TERMINAL, not Jupyter terminal. This is the multi-terminal + upload pain to fix.",
+      "Scripts are BAKED in the image at /opt/install_nodes.sh + /opt/install_models_ltx23.sh — no upload needed, just run them",
+      "cu130 image needs host driver >=580 to boot; verified a 3090 host had 580",
+      "Pod python is 3.12 (base default), local rig is 3.13 — harmless, but cupy/sage wheels resolve cp312 on Pod",
+      "Frame-Interp install.py's own cupy-wheel build FAILS (pkg_resources/no-GPU) — script overrides with cupy-cuda13x which SUCCEEDS; the traceback is expected + handled",
+      "torchaudio LAGS torch: valid cu130 trio = torch 2.12.0 / torchvision 0.27.0 / torchaudio 2.11.0 (NOT 2.12)",
+      "sage source build needs TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0 (Docker has no GPU to probe)",
+      "Live Pod create/delete/deploy = USER-only; image build/push is authorized",
+      "All RunPod work lands on the RunPod branch ONLY, never master"
+    ],
+    "files_modified": [
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\Dockerfile",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\install_nodes.sh",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\install_models_ltx23.sh",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\README.md",
+      "c:\\AI\\Mpi\\Cubric-Vision\\.agents\\mpi-kanban\\tasks\\MPI-117\\brief.md",
+      "c:\\AI\\Mpi\\Cubric-Vision\\.agents\\mpi-kanban\\tasks\\MPI-118\\ (created)",
+      "D:\\WORK\\workflows\\App\\install_ltx23_nerdyrodent.sh"
+    ],
+    "files_to_read_first": [
+      "C:\\Users\\Fabio\\.claude\\projects\\c--AI-Mpi-Cubric-Vision\\memory\\project_builder_image_flow.md",
+      "C:\\Users\\Fabio\\.claude\\projects\\c--AI-Mpi-Cubric-Vision\\memory\\project_builder_install_scripts.md",
+      "C:\\Users\\Fabio\\.claude\\projects\\c--AI-Mpi-Cubric-Vision\\memory\\project_comfyui_portable_ships_cu130.md",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\start-builder.sh",
+      "c:\\AI\\Mpi\\Cubric-Vision\\.agents\\mpi-kanban\\tasks\\MPI-117\\brief.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["RunPod / remote engine", "Pod image / mpi-ci", "ComfyUI engine / CUDA"]
+  },
+  "rules_active": [],
+  "recent_events": [
+    { "at": "2026-06-19T16:32:57Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming work on the Cubric Vision RunPod Builder + LTX-2.3 workflow test (branch: RunPod). Read .agents/mpi-kanban/state/handoffs/d5350b4a-6902-4956-ac45-30cce8dcb496.json for full context, then read the three memory files listed in files_to_read_first. State: the Builder image v0.1.3-cu130 is built + pushed to GHCR (thin-base — bakes ZERO custom nodes; install_nodes.sh + install_models_ltx23.sh ship baked at /opt/ and install nodes/weights at Pod runtime). The local authoring rig (G:\\ComfyUi) is freshly reinstalled (ComfyUI v0.25.1, cu130, all nodes incl. RES4LYF pinned 419de2d). On a live RTX 3090 Pod (driver 580, CUDA 13.0) install_nodes.sh ran clean. The NEXT action is: in the RunPod Web Terminal run `cd /opt/ComfyUI && bash /opt/install_models_ltx23.sh` (~45GB), then restart ComfyUI (8188), load LTX-2.3_nerdyRodent.json and generate to validate. After that, fix the Builder's Jupyter so its own terminal-capable JupyterLab wins port 8888 (edit start-builder.sh to kill the RunPod base Jupyter and start ours) — this restores multi-terminal + drag-drop upload, which RunPod's base Jupyter breaks (use the Web Terminal until fixed). Constraints: live Pod create/delete/deploy is USER-only (image build/push is fine); all work lands on the RunPod branch, never master; CUDA differing across environments is fine (workflows port by ComfyUI+node version, not CUDA). Related cards: MPI-117 (node version-lock system) and MPI-118 (app ComfyUI bump to v0.25.1) — do not start them unless asked."
+}

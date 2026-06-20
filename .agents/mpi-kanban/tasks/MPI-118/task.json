@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-118",
+  "title": "Bump app ComfyUI engine v0.19.3 → v0.25.1 (frontend 1.45.15) — RunPod branch",
+  "description": "After MPI-117 lock exists, bump app engine from v0.19.3 to named release v0.25.1 (SHA eca4757, frontend 1.45.15 auto-pinned). Source of truth = the release, not a local machine. RunPod branch only. See brief.md",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-06-19T09:05:54Z",
+  "updated_at": "2026-06-19T09:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
