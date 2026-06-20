@@ -2,3 +2,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-120","at":"2026-06-20T08:00:00Z","actor":"claude","from":"todo","to":"doing","reason":"Implementation started (main agent)."}
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-120","at":"2026-06-20T09:30:00Z","actor":"claude","note":"Offline detection shipped: netCheck.js + 2 preflights + 3 hang fixes; maturity in-progress->validating; live offline test deferred to user."}
 {"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-120","at":"2026-06-20T09:45:00Z","actor":"claude","note":"Validation checklist written — user eye-test items."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-120","at":"2026-06-20T10:00:00Z","actor":"claude","note":"Checklist rewritten plain do/see — easier to read."}
