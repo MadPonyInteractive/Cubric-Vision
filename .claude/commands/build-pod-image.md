@@ -24,6 +24,17 @@ In the commands below, substitute:
 - `<wver>` — wrapper version (`/health` string); bump ONLY if `wrapper/wrapper.py` changed
 - `<ref>` — ComfyUI git ref, a **SHA** (kept in lockstep with the Builder image for parity)
 
+> **`<ver>`/`<wver>` ARE BARE NUMBERS — NO `v` PREFIX (MPI-119 guard).** The
+> tag is `v<ver>`, so `<ver>` must be `0.4.9`, never `v0.4.9`. A `v`-prefixed
+> input produces a malformed double-`v` tag (`vv0.4.9`) — the exact CI bug from
+> the Insights report. Before building/dispatching, **strip any leading `v`** the
+> user or a README hands you:
+> ```
+> ver=$(echo "$ver" | sed 's/^v//'); wver=$(echo "$wver" | sed 's/^v//')
+> ```
+> Reject if it still doesn't match `^[0-9]+\.[0-9]+\.[0-9]+$` (or your scheme).
+> Same rule applies to the `manifest_version`/`wrapper_version` CI inputs in step 4.
+
 ---
 
 ## Flow A — Product Pod image
@@ -93,11 +104,47 @@ docker push ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128
 
 **c. Converge:** watch CI (`cd c:/AI/Mpi/mpi-ci && gh run watch`) and the backgrounded cu128 run. Do NOT proceed until BOTH pushes succeed. Either fails → fix + re-run only that leg; the other is unaffected.
 
-### 5. Manual gates (you CANNOT do these — tell the user)
-- **Make the GHCR package PUBLIC** (first push of a new package only): GitHub → Packages → `cubric-vision-pod` → settings → visibility. RunPod can only pull public. Later pushes stay public.
+### 5. Post-push verification (you CAN do 5a/5b once public — MPI-119)
+
+**5a. Public pull-verify (after the package is public).** Confirm each pushed tag
+is publicly pullable BEFORE calling the build done — catches "push said OK but the
+manifest isn't really there / package still private":
+```
+docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu124 >/dev/null && echo "cu124 OK"
+docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cpu  >/dev/null && echo "cpu OK"
+docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128 >/dev/null && echo "cu128 OK"
+```
+Any `manifest unknown` / `denied` → not done. Fix (re-push or fix visibility) and
+re-check. (cu128 stays local — pull-verify it after the local push.)
+
+**5b. Boot smoke test (per image).** The existing `import torch` line proves CUDA
+links; this proves the **wrapper actually serves**. Start the container, hit
+`/wrapper/stats`, assert 200 — catches broken torch/GPU installs that import but
+crash the server (recurring: `ltxvideo_kornia_pad`, `gpu_build_selection`):
+```
+docker run -d --rm --name cv-smoke -p 8000:8000 ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cpu
+# give the wrapper a few seconds to come up, then:
+curl -fsS http://127.0.0.1:8000/wrapper/stats >/dev/null && echo "stats 200 OK" || echo "SMOKE FAIL"
+docker stop cv-smoke
+```
+(cpu profile = cheapest boot; smoke it as the representative wrapper. GPU-only
+behavior still needs the user's live Pod verify below.)
+
+### Manual gates (you CANNOT do these — tell the user)
+- **Make the GHCR package PUBLIC** (first push of a new package only): GitHub → Packages → `cubric-vision-pod` → settings → visibility. RunPod can only pull public. Later pushes stay public. (Do 5a only AFTER this.)
 - **`wsl --shutdown`** after the local build to free the Docker VM RAM.
 - **Live verify = USER-only.** After the user redeploys a fresh Pod, confirm via the app-log image line + `/health` `wrapper_version`.
-- Remove the "Pending for the NEXT rebuild" block in the pod README once tags are pushed + public + verified.
+
+### Build card "done" definition (MPI-119)
+**Push success ≠ done.** A build card moves to `done` only when ALL hold:
+1. All tags pushed (CI legs + local cu128).
+2. Package public (manual gate).
+3. **5a pull-verify passes** for every pushed tag.
+4. **5b boot smoke passes** (`/wrapper/stats` 200).
+5. User's live Pod verify confirms the image line + `wrapper_version`.
+
+Until 1–5, the card stays `doing`. Then remove the "Pending for the NEXT rebuild"
+block in the pod README.
 
 ---
 

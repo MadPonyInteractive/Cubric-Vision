@@ -4,7 +4,18 @@
     "allow": [],
     "deny": []
   },
-  "hooks": {},
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/bump-rebuild-reminder.py"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": false,
     "superpowers@claude-plugins-official": false,

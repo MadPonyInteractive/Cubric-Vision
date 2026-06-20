@@ -132,7 +132,10 @@ If a bug may involve Electron-only behavior, desktop shell APIs, window controls
 **->** **Port note:** the app server binds to `127.0.0.1:3000`; make sure no other Cubric Studio instance is already using that port before running desktop tests.
 
 ### Git and Commits
-NEVER commit to git unless user specifically asks for it
+Agents MAY commit without asking. Shared tree — commit by explicit pathspec
+(`git commit --only <paths>`), never `git add -A`/`git add .`. Push stays a
+user-authorized live op (do not push unless asked). Docs-repo push block still
+applies (see Multi-Root Workspace § DOCS WEBSITE PUSH BLOCK).
 ---
 
 ## MPI Skills
