@@ -29,6 +29,7 @@
 const logger = require('./logger');
 const { getRemoteMode } = require('./remoteProxy');
 const { getWrapperToken, proxyUrl } = require('./remoteEngine');
+const { isNetworkDownError } = require('./netCheck');
 
 // RunPod proxy is behind Cloudflare — the default fetch UA gets 403 error 1010.
 const UA =
@@ -115,6 +116,15 @@ async function wrapperFetch(routePath, { method = 'GET', body, retries = 15, ret
       return res;
     } catch (err) {
       lastErr = err;
+      // Host has no internet (DNS/route dead) — retrying 15× just hangs ~32s
+      // for a result that can't change. Fail fast; caller surfaces an offline
+      // toast. Transient proxy 5xx (handled above) is a DIFFERENT case and
+      // still retries — do not collapse the two. (MPI-120)
+      if (isNetworkDownError(err)) {
+        const e = new Error('offline');
+        e.offline = true;
+        throw e;
+      }
       if (attempt < retries) {
         await new Promise((r) => setTimeout(r, retryDelayMs));
         continue;

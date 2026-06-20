@@ -50,7 +50,13 @@ const downloadService = {
             job.error = err.error;
             state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? job : j);
             Events.emit('download:failed', { modelId, error: err.error });
-            Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
+            // MPI-120: offline is an expected, actionable state → warning toast,
+            // not the GitHub-report error dialog.
+            if (err.offline) {
+                Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models." });
+            } else {
+                Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
+            }
             return;
         }
     },
@@ -231,6 +237,14 @@ const downloadService = {
                     duration: 4000,
                 });
                 toastInstance.on('close', () => toastWrap.remove());
+            }
+
+            // Reseed ComfyUI's model filename cache so newly downloaded weights are
+            // immediately visible without a restart (MPI-121). Pure file-add into an
+            // existing registered root — /object_info is sufficient. Fire-and-forget;
+            // if ComfyUI is not running the route no-ops silently.
+            if (!isUW) {
+                fetch('/comfy/refresh-models', { method: 'POST' }).catch(() => {});
             }
 
             // Capture installed IDs before re-sync to detect cascade installs

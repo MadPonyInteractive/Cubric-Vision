@@ -37,6 +37,7 @@ const {
   proxyUrl,
 } = require('./remoteEngine');
 const { client } = require('./runpodRemote');
+const { checkOnline } = require('./netCheck');
 
 // RunPod proxy is behind Cloudflare — default UA gets 403 error 1010.
 const UA =
@@ -711,6 +712,13 @@ router.post('/remote/pod/create', async (req, res) => {
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.status(400).json({ error: 'no_api_key' });
+    // Offline pre-flight (MPI-120): RunPod connect needs real internet. Without
+    // this, an offline create still calls the REST API and surfaces a generic
+    // "Could not connect" — the renderer can't tell offline from out-of-stock.
+    if (!(await checkOnline())) {
+      logger.warn('runpod', 'Pod create blocked: host appears offline');
+      return res.status(503).json({ error: 'offline', offline: true });
+    }
     logger.info('runpod', `Pod create requested: gpu=${gpuTypeId} dc=${datacenter || 'any'} vol=${volumeId || 'none(ephemeral)'}`);
     // wait:false — return as soon as the Pod is created; the renderer polls
     // /remote/comfy/status for ready (no 504 on a long first-image pull).
@@ -753,6 +761,12 @@ router.post('/remote/pod/reconnect', async (req, res) => {
   try {
     const key = await getRunPodApiKey();
     if (!key) return res.status(400).json({ error: 'no_api_key' });
+    // Offline pre-flight (MPI-120): same as create — fail fast with a distinct
+    // offline flag instead of the slow REST/recreate path on a dead network.
+    if (!(await checkOnline())) {
+      logger.warn('runpod', 'Pod reconnect blocked: host appears offline');
+      return res.status(503).json({ error: 'offline', offline: true });
+    }
     logger.info('runpod', `Pod reconnect requested: podId=${podId} gpu=${gpuTypeId} dc=${datacenter || 'any'}`);
 
     // Track the saved Pod so a delete-fallback / teardown targets it.

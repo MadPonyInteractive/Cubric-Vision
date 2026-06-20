@@ -721,6 +721,15 @@ export const MpiSettings = ComponentFactory.create({
                     Events.emit('ui:warning', { message: 'Selected GPU unavailable — pick another.' });
                     return;
                 }
+                // MPI-120: host is offline — backend pre-flight blocked the connect.
+                // Expected, actionable state → warning toast, not the error dialog.
+                if (data.offline) {
+                    _setEngineHint(root, "You're offline — connect to the internet, then Connect again.", true);
+                    _setEngineStatusText(root, 'stopped');
+                    _engineBtnLabelSet('Connect');
+                    Events.emit('ui:warning', { message: "You're offline — check your internet connection." });
+                    return;
+                }
                 if (data.podId) {
                     // Track the app-managed podId (a recreate yields a new one).
                     state.runpodConfig = { ..._runpodCfg(), podId: data.podId };

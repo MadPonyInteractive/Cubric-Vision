@@ -19,6 +19,7 @@ const crypto = require('crypto');
 const router = express.Router();
 const logger = require('./logger');
 const { client, setApiKeyResolver } = require('./runpodRemote');
+const { isNetworkDownError } = require('./netCheck');
 
 // --- fork bridge (child -> main request/response by id) ---------------------
 
@@ -107,8 +108,13 @@ async function waitForWrapperReady(podId, { timeoutMs = 240000, intervalMs = 500
         const health = await res.json();
         if (health && health.ready) return { ready: true, health };
       }
-    } catch {
-      // expected during cold start / stale-payload window
+    } catch (err) {
+      // A connection failure to the PROXY is expected during cold start /
+      // stale-payload window — keep polling. But if the HOST itself is offline
+      // (DNS/route dead), polling the full 4-min budget is a silent hang for a
+      // result that can't change — bail immediately. (MPI-120)
+      if (isNetworkDownError(err)) return { ready: false, offline: true };
+      // else: expected cold-start window — fall through and keep polling.
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }

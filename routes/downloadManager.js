@@ -28,6 +28,7 @@ async function _trash(p) {
 const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
+const { checkOnline } = require('./netCheck');
 const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const {
@@ -241,6 +242,12 @@ class ResumableDownloader {
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
             resume: true,
+            // NDH default timeout is -1 (no socket timeout) → a black-hole route
+            // (DNS resolves but the server never responds) hangs at 0% forever.
+            // 30s socket timeout makes a stalled connection emit 'error' instead
+            // of hanging silently. Does NOT cap total download time — it's an
+            // inactivity timeout on the socket. (MPI-120)
+            timeout: 30000,
         });
 
         this._bindEvents();
@@ -420,6 +427,15 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const { modelId, dependencies } = req.body;
     if (!modelId || !Array.isArray(dependencies)) {
         return res.status(400).json({ error: 'modelId + dependencies required' });
+    }
+
+    // Offline pre-flight (MPI-120): downloads (local or remote-Pod install) all
+    // need real internet. Fail fast with a distinct offline flag so the renderer
+    // shows a "you're offline" toast instead of a stuck/0% job or a cryptic
+    // getaddrinfo error dialog.
+    if (!(await checkOnline())) {
+        logger.warn('download', 'Download blocked: host appears offline');
+        return res.status(503).json({ error: 'offline', offline: true });
     }
 
     // Remote engine: install onto the Pod volume via the wrapper instead of

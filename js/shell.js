@@ -657,6 +657,14 @@ async function _initRemoteBoot(runpod) {
       return;
     }
 
+    // MPI-120: host offline at boot — backend pre-flight blocked the auto-connect.
+    // Stay local, tell the user once via the status bar (no modal on startup).
+    if (data.offline) {
+      clientLogger.info('shell', '[RunPod] auto-connect-on-start: offline — staying local');
+      _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+      StatusBar.notify("You're offline — staying local. Reconnect to your Pod from Settings when back online.", 'warning', 6000);
+      return;
+    }
     if (data.podId) {
       const cfg = Storage.getRunpodConfig();
       Storage.setRunpodConfig({ ...cfg, podId: data.podId });
