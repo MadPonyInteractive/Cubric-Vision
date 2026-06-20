@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-119",
+  "title": "Harden image-build + version-bump flow from Insights report (post skills-update)",
+  "description": "DEFERRED until MPI Kanban skills are updated by user. Then diff what skills already do vs the Insights-report suggestions and apply only the gaps. Build/bump hardening: v-prefix tag guard (double-v bug), post-push public pull-verify, per-image boot smoke, build card 'done' = pulled+booted. PLUS the 'forgot to bump/rebuild' net (user-requested): (A) investigate full inventory of every change-type/path needing a bump and/or image rebuild, (B) advisory PostToolUse hook that warns when a bump-trigger path is touched, (C) hook-vs-skill division. See brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-06-20T00:00:00Z",
+  "updated_at": "2026-06-20T00:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
