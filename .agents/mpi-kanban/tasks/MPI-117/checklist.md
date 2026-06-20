@@ -20,9 +20,10 @@
 > 0.25.0) also needs an image rebuild — finish MPI-118 first, then ONE rebuild covers
 > both. Target image version **v0.5.0** (engine change = minor bump). Card parked in
 > `doing` until that combined rebuild ships.
-- [ ] (after MPI-118) Rebuild Pod image (cu124 CI + cu128 local) via `/build-pod-image` — bakes lock at the MPI-118 versions
-- [ ] Image version **v0.5.0**; make GHCR public; update RunPod template + app POD_IMAGE
-- [ ] Parity test: same workflow app vs Pod, identical node availability + output
+- [x] (after MPI-118) Rebuild Pod image (cu124 CI + cu128 local) via `/build-pod-image` — bakes lock at the MPI-118 versions (v0.5.0; mpi-ci be03b86)
+- [x] Image version **v0.5.0**; pushed + public (cu124/cpu CI, cu128 local); app POD_IMAGE → v0.5.0 (remoteProxy.js 8c1ec47). 5a pull-verify + 5b boot smoke pass.
+- [ ] RunPod template image bump → v0.5.0 (USER manual gate)
+- [ ] **VALIDATING:** live Pod verify — fresh Pod boots v0.5.0, `/health` wrapper_version 0.2.11, node availability + output parity (app vs Pod)
 
 ## Constraints honored
 - [x] RunPod branch only (current branch = RunPod)
