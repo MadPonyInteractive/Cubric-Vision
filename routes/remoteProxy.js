@@ -71,10 +71,15 @@ const UA =
 // lands a user's LOCAL LoRA/upscale model on the volume at MODELS_DIR/<type>/ so a
 // remote generation auto-uploads it on demand (presence-checked via the existing
 // /wrapper/models/status). ComfyUI layer cache-reused from v0.4.8 (no master drift).
+// v0.5.0 / wrapper 0.2.11 (MPI-117 + MPI-118): ComfyUI engine bump
+// v0.19.3 -> v0.25.1 (core eca4757, frontend 1.45.15, templates 0.10.0) baked into
+// the cu124 + cu128 images via the node version-lock (dev_configs/node_lock.json).
+// Same 7-node set as v0.4.9 (RES4LYF stays Builder-only). cpu profile = no engine,
+// rebuilt only to keep the trio at one tag. Wrapper unchanged (still 0.2.11).
 // EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
 // at boot; a live app keeps sending the old tag until restarted.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.4.9';
+const POD_IMAGE_VERSION = 'v0.5.0';
 const WRAPPER_VERSION = '0.2.11';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
