@@ -5,6 +5,7 @@
  *   GET  /comfy/status              — is ComfyUI running + ready?
  *   POST /comfy/start               — launch ComfyUI in background
  *   POST /comfy/stop                — stop ComfyUI process
+ *   POST /comfy/refresh-models      — reseed ComfyUI filename cache via GET /object_info (file-add; no restart)
  *   POST /comfy/unload              — unload models / free memory
  *   POST /comfy/set-path            — set custom models root path
  *   GET  /comfy/get-path            — read current custom models root path (from extra_model_paths.yaml)
@@ -312,6 +313,30 @@ router.post('/comfy/stop', (req, res) => {
 router.post('/comfy/needs-restart', (req, res) => {
     processState.comfyNeedsRestart = req.body.value ?? true;
     res.json({ success: true, comfyNeedsRestart: processState.comfyNeedsRestart });
+});
+
+/**
+ * POST /comfy/refresh-models
+ * Calls ComfyUI GET /object_info to reseed the filename cache for model types
+ * already registered in folder_names_and_paths (equivalent to the "R" hotkey).
+ * Use this after a model FILE is added/removed in an existing root folder — no
+ * restart needed for pure file changes. Returns { success, notRunning } when
+ * ComfyUI is not running (caller may ignore — model list will reseed on next start).
+ */
+router.post('/comfy/refresh-models', async (req, res) => {
+    if (!processState.activeComfyProcess) {
+        return res.json({ success: true, notRunning: true });
+    }
+    const ax = getAxios();
+    if (!ax) return res.json({ success: true, notRunning: true });
+    try {
+        await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/object_info`, { timeout: 10000 });
+        logger.info('comfy', 'Model cache reseeded via /object_info (no restart needed)');
+        res.json({ success: true });
+    } catch (err) {
+        logger.error('comfy', 'refresh-models /object_info call failed', err);
+        res.status(502).json({ success: false, error: err.message });
+    }
 });
 
 /**
