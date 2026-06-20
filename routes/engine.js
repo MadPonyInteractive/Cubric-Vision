@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, getInstalledModelNodeDeps } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -362,7 +362,15 @@ async function _runEngineDownload(chosenModelsRoot) {
 
         // ── Pre-calculate combined size (engine + UW deps) ──────────────────────
         const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-        const missingDepIds = missingDeps;
+        // Engine wipe drops model-SPECIFIC custom nodes (e.g. PainterI2Vadvanced,
+        // required by the Wan I2V model) — the UW set only covers installOnEngine
+        // deps. Add the node deps of any INSTALLED model so they're reinstalled too,
+        // else the model shows "partially installed" after upgrade. (MPI-118)
+        const installedModelNodeDeps = await getInstalledModelNodeDeps(chosenModelsRoot);
+        const missingDepIds = [...new Set([...missingDeps, ...installedModelNodeDeps])];
+        if (installedModelNodeDeps.length > 0) {
+            logger.info('engine', `Including ${installedModelNodeDeps.length} installed-model node dep(s) in reinstall: ${installedModelNodeDeps.join(', ')}`);
+        }
         if (missingDeps.length > 0) {
             logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
             const uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
@@ -405,6 +413,14 @@ async function _runEngineDownload(chosenModelsRoot) {
             if (!content.includes('--enable-cors-header')) {
                 logger.info('system', 'Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
                 content = content.replace('ComfyUI\\main.py', 'ComfyUI\\main.py --listen 127.0.0.1 --preview-method taesd --enable-cors-header');
+                await fs.writeFile(batPath, content, 'utf8');
+            }
+            // Force UTF-8 so a user running the .bat directly gets the same crash
+            // protection as the app spawn (py3.13 cp1252 default — see comfy.js /
+            // MPI-118). Idempotent: only insert once.
+            if (!content.includes('PYTHONUTF8')) {
+                content = await fs.readFile(batPath, 'utf8');
+                content = 'set PYTHONUTF8=1\r\n' + content;
                 await fs.writeFile(batPath, content, 'utf8');
             }
         }
@@ -570,6 +586,12 @@ router.post('/engine/upgrade', async (req, res) => {
 
         // 1. Check if models are inside engine (legacy user)
         const hasCustomRoot = await fs.pathExists(extraConfigPath);
+        // Capture the user's configured models root from the existing YAML BEFORE
+        // wiping the engine — step 2 removes the YAML and the fresh-install extract
+        // scrubs it, so without this the upgrade silently resets the path to the
+        // default mpi_models (user's D:\CubricModels etc. is lost → 0 models → no
+        // prompt box). getCustomRoot returns null if no custom YAML exists. (MPI-118)
+        const preservedRoot = await getCustomRoot();
         if (!hasCustomRoot) {
             broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
             const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
@@ -587,8 +609,11 @@ router.post('/engine/upgrade', async (req, res) => {
         // Respond immediately — frontend listens on SSE
         res.json({ success: true, status: 'upgrade-started' });
 
-        // 3. Download + install new version async (SSE reports progress)
-        await _runEngineDownload();
+        // 3. Download + install new version async (SSE reports progress). Pass the
+        // preserved models root so the post-extract step 6 re-writes the YAML with
+        // the user's path instead of falling back to the default.
+        if (preservedRoot) logger.info('engine', `Preserving custom models root across upgrade: ${preservedRoot}`);
+        await _runEngineDownload(preservedRoot || undefined);
 
     } catch (e) {
         logger.error('system', 'Engine upgrade failed', e);

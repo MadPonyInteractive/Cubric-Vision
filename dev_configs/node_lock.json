@@ -3,10 +3,10 @@
   "nodeset_version": "1",
   "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. To bump a node, edit its entry here only. RunPod branch only.",
   "comfyui": {
-    "core": { "tag": "v0.19.3", "commit": "3086026401180c9216bcb6ace442a4e3587d2c66" },
+    "core": { "tag": "v0.25.1", "commit": "eca4757d653654deb5744edf16a862f352800fdc" },
     "frontend": {
-      "comfyui-frontend-package": "1.42.11",
-      "comfyui-workflow-templates": "0.9.57"
+      "comfyui-frontend-package": "1.45.15",
+      "comfyui-workflow-templates": "0.10.0"
     }
   },
   "nodes": {
@@ -64,14 +64,6 @@
       "repo": "ltdrdata/ComfyUI-Impact-Subpack",
       "commit": "50c7b71a6a224734cc9b21963c6d1926816a97f1",
       "filename": "ComfyUI-Impact-Subpack",
-      "installRequirements": true,
-      "installOnEngine": true
-    },
-    "RES4LYF": {
-      "source": "git-commit",
-      "repo": "ClownsharkBatwing/RES4LYF",
-      "commit": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
-      "filename": "RES4LYF",
       "installRequirements": true,
       "installOnEngine": true
     }

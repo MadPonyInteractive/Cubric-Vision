@@ -331,6 +331,12 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             if (mode === 'upgrading') {
                 _subscribeEngineEvents();
+                // Connect SSE BEFORE the POST so engine:downloading broadcasts are
+                // not missed (without this the progress bar stays stuck on the
+                // static "Preparing download..." placeholder until SSE lazily
+                // connects, then jumps straight to extracting). Matches the
+                // install + repair paths.
+                downloadService._ensureSSE();
                 fetch('/engine/upgrade', { method: 'POST' }).catch(err => {
                     _setError(`Upgrade failed: ${err.message}`);
                 });

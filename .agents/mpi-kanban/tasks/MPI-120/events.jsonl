@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-120","at":"2026-06-20T00:30:00Z","actor":"claude","summary":"Offline handling: model downloads + RunPod connect should warn user when offline, not hang/fail silently. Surfaced during MPI-118 testing (user lost internet 20min). Investigate current behavior first."}

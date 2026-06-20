@@ -21,6 +21,14 @@
 
 **Extra model folders:** Additive user folders exist only for `loras` and `upscale_models`. They are stored in `extra_model_folders.json` and re-merged into `extra_model_paths.yaml`; do not parse multiline YAML entries as the source of truth. The configured paths are bucket folders, not parent model roots.
 
+**Windows ComfyUI launch MUST force UTF-8 (`PYTHONUTF8=1`):** the embedded Python on Windows defaults source + stdio to cp1252. A custom node with a non-Latin-1 char in a string literal raises a `SyntaxError` on import AND crashes the traceback printer on the same char → the whole ComfyUI process exits (no server → no prompt box). `routes/comfy.js` sets `PYTHONUTF8: '1'` + `PYTHONIOENCODING: 'utf-8'` on the spawn env (all platforms); `engine.js` prepends `set PYTHONUTF8=1` to the patched `run_nvidia_gpu.bat`. Do NOT remove these. (MPI-118; Linux/Builder never hits it.)
+
+**Engine upgrade/wipe MUST preserve the custom models root:** any op that wipes the engine folder (`/engine/upgrade`) destroys `extra_model_paths.yaml`. Capture the root FIRST with `getCustomRoot()` (shared.js — reads `base_path:`) and pass it to `_runEngineDownload(preservedRoot)`, which re-writes it at step 6. `hasCustomRoot` is a boolean flag, NOT the value — never rely on it for preservation. Otherwise the user's custom folder (e.g. `D:\CubricModels`) silently resets to the default `mpi_models` → 0 models → no prompt box. (MPI-118.)
+
+**Engine reinstall MUST restore installed-model-specific node deps:** the UW reinstall set only covers `installOnEngine: true` deps. A model-specific custom node (e.g. `ComfyUI-PainterI2Vadvanced` for Wan I2V) is dropped on engine wipe. `getInstalledModelNodeDeps()` (shared.js) returns the custom-node deps of models whose weights are present on disk but whose nodes are missing; `_runEngineDownload` merges these into `missingDepIds`. Without it, the model shows "partially installed" after upgrade. (MPI-118.)
+
+**Models-path / folder change needs a ComfyUI restart:** ComfyUI builds `folder_names_and_paths` from `extra_model_paths.yaml` at startup ONLY — stock v0.25.1 has no runtime path-reload route. After a Settings path/folder change, `_setComfyPath` sets `state.comfyNeedsRestart = true`; `comfyController.js` then stops/starts ComfyUI at next generation so it re-reads the YAML. A running process keeps a stale (often empty) checkpoint list otherwise → `ckpt_name not in []`. A lighter `/object_info` refresh suffices ONLY for file add/remove in an already-registered folder, not a root change (see kanban MPI-121).
+
 See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for the registry structure.
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES

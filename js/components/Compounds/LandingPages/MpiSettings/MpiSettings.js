@@ -1834,6 +1834,12 @@ export const MpiSettings = ComponentFactory.create({
                 // in-memory flags stay stale and opening a project shows a false
                 // "no models installed" popup until some other surface re-syncs.
                 await reSyncInstalledModels();
+                // ComfyUI only reads extra_model_paths.yaml at startup, so a running
+                // process still has the OLD (empty) checkpoint list after a path
+                // change → generation fails with "ckpt_name not in []". Flag a
+                // restart so comfyController restarts ComfyUI and it re-scans the
+                // new root. Reuses the same mechanism as custom-node installs. (MPI-118)
+                state.comfyNeedsRestart = true;
             } catch (err) {
                 clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }

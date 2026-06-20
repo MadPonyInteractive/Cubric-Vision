@@ -134,16 +134,10 @@
 /* ── Upgrade message ─────────────────────────────────────────────────────── */
 .mpi-engine-install__message {
     margin: 0;
-    width: 100%;
-    padding: 10px 14px;
     font-size: var(--t-sm);
-    color: var(--accent-ok);
-    background: color-mix(in oklch, var(--accent-ok) 8%, transparent);
-    border: 1px solid color-mix(in oklch, var(--accent-ok) 25%, transparent);
-    border-left: 3px solid var(--accent-ok);
-    border-radius: var(--r-2);
+    color: var(--ink-3);
     line-height: 1.4;
-    text-align: left;
+    text-align: center;
 }
 
 /* ── Docs link ───────────────────────────────────────────────────────────── */

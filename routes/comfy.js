@@ -266,12 +266,20 @@ router.post('/comfy/start', async (req, res) => {
             args.push('--extra-model-paths-config', extraConfigPath);
         }
 
+        // Force UTF-8 for the embedded Python. On Windows, py3.13 still defaults
+        // source + stdio to cp1252, so any custom node with a non-Latin-1 char in
+        // a string literal (e.g. RES4LYF's "Δ" label) raises a SyntaxError on
+        // import AND crashes the traceback printer on the same char — killing the
+        // whole ComfyUI process (no server → no prompt box). PYTHONUTF8=1 fixes
+        // both. Surfaced by the v0.25.1 engine bump (py3.13). See MPI-118.
+        const baseEnv = { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
+
         // On Apple Silicon, PYTORCH_ENABLE_MPS_FALLBACK lets ops not yet implemented
         // for MPS fall back to CPU instead of throwing — the difference between a
         // graceful slowdown and a hard crash mid-generation.
         const spawnEnv = vendor === 'apple'
-            ? { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
-            : process.env;
+            ? { ...baseEnv, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
+            : baseEnv;
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
         processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));

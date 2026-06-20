@@ -242,16 +242,6 @@ export const DEPS = {
         size: '172KB',
         installOnEngine: true,
     },
-    'RES4LYF': {
-        id: 'RES4LYF',
-        name: 'RES4LYF',
-        type: 'custom_nodes',
-        filename: 'RES4LYF',
-        url: lockUrl('RES4LYF'),
-        installRequirements: true,
-        size: '5MB',
-        installOnEngine: true,
-    },
     'face-yolov8n': {
         id: 'face-yolov8n',
         name: 'face_yolov8n.pt',

@@ -511,6 +511,55 @@ async function checkUniversalWorkflowDepsStatus() {
 }
 
 /**
+ * Returns the custom-node dep ids required by currently-INSTALLED models that are
+ * NOT already in the engine-reinstall set (installOnEngine). The universal-workflow
+ * reinstall (`checkUniversalWorkflowDepsStatus` → `startUniversalWorkflowInstall`)
+ * only covers `installOnEngine: true` deps, so a model-SPECIFIC custom node (e.g.
+ * `ComfyUI-PainterI2Vadvanced`, required by the Wan I2V model) is dropped when the
+ * engine folder is wiped on upgrade → the model shows "partially installed". This
+ * finds those nodes for models whose WEIGHTS are present on disk, so the engine
+ * reinstall can restore them too. Returns an array of missing custom-node dep ids.
+ * (MPI-118: model-specific node deps must survive engine upgrade.)
+ */
+async function getInstalledModelNodeDeps(customRootOverride) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    // During an engine upgrade the YAML is already wiped when this runs, so
+    // getCustomRoot() would return null and the weights would resolve against the
+    // empty default root → every model reads "not installed" → no node deps. The
+    // caller passes the preserved root explicitly in that case. (MPI-118)
+    const customRoot = customRootOverride
+        ? resolveModelsRoot(customRootOverride)
+        : await getCustomRoot();
+    const config = {};
+    const engineSet = new Set(getUniversalWorkflowDepIds());
+    const missingNodeIds = new Set();
+
+    for (const model of MODELS) {
+        const depIds = Array.isArray(model.dependencies) ? model.dependencies : [];
+        // A model counts as "installed" when all its non-custom-node deps (the
+        // weights) are present — node deps are exactly what we may be missing.
+        const weightIds = depIds.filter(id => DEPS[id] && DEPS[id].type !== 'custom_nodes');
+        let weightsPresent = weightIds.length > 0;
+        for (const id of weightIds) {
+            const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
+            if (!(await fs.pathExists(localPath))) { weightsPresent = false; break; }
+        }
+        if (!weightsPresent) continue; // model not installed → skip its node deps
+
+        // Collect this installed model's custom-node deps that the engine set
+        // won't already reinstall, and that are missing from disk.
+        const nodeIds = depIds.filter(id => DEPS[id] && DEPS[id].type === 'custom_nodes' && !engineSet.has(id));
+        for (const id of nodeIds) {
+            const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
+            if (!(await fs.pathExists(localPath))) missingNodeIds.add(id);
+        }
+    }
+
+    return [...missingNodeIds];
+}
+
+/**
  * Calculates total size in bytes for all missing universal workflow dependencies.
  * Returns the sum of dep file sizes. Falls back to registry size string if HEAD request fails.
  */
@@ -602,5 +651,6 @@ module.exports = {
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,
     checkUniversalWorkflowDepsStatus,
+    getInstalledModelNodeDeps,
     getUniversalWorkflowDepsTotalSize,
 };
