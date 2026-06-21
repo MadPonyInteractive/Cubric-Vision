@@ -8,5 +8,5 @@
       "*": ["./*", "js/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "tmp"]
+  "exclude": ["node_modules", "dist", "tmp", "engine", "llama_engine", "comfy_workflows", "logs", "Builds"]
 }

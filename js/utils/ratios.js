@@ -76,7 +76,41 @@ export const WAN_RATIOS = {
     ]
 };// Future reference [4:3 = 1088x832 | 704x544]
 
-// TODO: LTX 2.3 video
+// LTX 2.3 video. Sizes are multiples of 64 (NOT just 32): the multi-stage
+// pipeline downscales x0.5 then upscales x2, so a value must stay on the /32
+// latent grid AFTER halving -> /64 at the input. /32 sizes like 736 silently
+// collapse (736 -> 704). 9:16 is exact only where the short edge is /576
+// (medium 576x1024, the 1088x1920 case); other tiers drift ~2-4% and would
+// need a crop for pixel-exact 9:16. Tiers map motion, not just detail: motion
+// peaks at low (~448) and decays as resolution climbs, while audio coherence
+// improves with size. 2K/4K dropped — motion dies and needs upscalers (TODO).
+export const LTX_RATIOS = {
+    very_low: [
+        { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
+        { label: "9:16", w: 384, h: 640, icon: "rect_9_16" },
+        { label: "16:9", w: 640, h: 384, icon: "rect_16_9" }
+    ],
+    low: [
+        { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
+        { label: "9:16", w: 448, h: 768, icon: "rect_9_16" },
+        { label: "16:9", w: 768, h: 448, icon: "rect_16_9" }
+    ],
+    medium: [
+        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
+        { label: "9:16", w: 576, h: 1024, icon: "rect_9_16" },
+        { label: "16:9", w: 1024, h: 576, icon: "rect_16_9" }
+    ],
+    high: [
+        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
+        { label: "9:16", w: 704, h: 1280, icon: "rect_9_16" },
+        { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" }
+    ],
+    very_high: [
+        { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
+        { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+    ]
+};
 
 // Ratios for social media image and video
 export const SOCIAL_RATIOS = [
@@ -95,6 +129,7 @@ export const RATIO_MODES = {
     flux: 'orientation',
     sdxl: 'orientation',
     wan:  'quality',
+    ltx:  'quality',
 };
 
 // ── Derived Icon Mapping ────────────────────────────────────────────────────
@@ -119,11 +154,10 @@ export const RATIO_ICONS = Object.keys(ICONS)
  *   'flux'   → FLUX_RATIOS[orientation]
  *   'sdxl'   → SDXL_RATIOS[orientation]
  *   'wan'    → WAN_RATIOS[qualityTier]
+ *   'ltx'    → LTX_RATIOS[qualityTier]
  *   others   → falls back to SDXL_RATIOS[orientation]
  *
  * For crop / social export: pass modelType = 'social' — returns SOCIAL_RATIOS (flat, no orientation).
- *
- * TODO: Add LTX_RATIOS for LTX 2.3 video.
  *
  * @param {string} modelType
  * @param {'portrait'|'landscape'} [orientation]
@@ -135,6 +169,7 @@ export function getModelRatios(modelType, orientation, qualityTier = 'medium') {
         case 'flux': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
         case 'social': return SOCIAL_RATIOS;
         case 'wan': return WAN_RATIOS[qualityTier] ?? WAN_RATIOS.medium;
+        case 'ltx': return LTX_RATIOS[qualityTier] ?? LTX_RATIOS.medium;
         case 'sdxl':
         default: return SDXL_RATIOS[orientation] ?? SDXL_RATIOS.portrait;
     }
