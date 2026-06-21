@@ -4,6 +4,32 @@
 > sequencing lock ("post-release only") is LIFTED — v1.0.0 shipped (2026-06-10),
 > we're post-release. Read this whole file to resume in a fresh session.
 
+## Session note (2026-06-21) — PARKED mid-deconstruction
+
+Started deconstructing the NerdyRodent monolith into per-op app workflows. Two
+decisions LOCKED this session before parking:
+
+1. **i2v/t2v ship as SEPARATE files, NOT one boolean-switched workflow.** Reason:
+   app maps op→workflow file 1:1 (`model.workflows[op]`, `supportedOps`), and
+   Comfy `/prompt` has no runtime node-bypass, so a single boolean-branched file
+   still executes both branches' graph. Two files = zero new app plumbing, matches
+   WAN. Confirmed against `commandRegistry.js` (`t2v`/`i2v`/`_ms` ops) + `models.js`
+   (WAN i2v/t2v each declare one workflow per op).
+2. **LTX is multi-stage `_ms`** → 4 files total: `LTX23_i2v.json` +
+   `LTX23_i2v_stage2.json` + `LTX23_t2v.json` + `LTX23_t2v_stage2.json`. Every
+   NEW app-read/write node carries `Input_*`/`Output_*` prefix (Tier-1 reserved
+   titles stay bare — `Preview_Only`, `SaveLatent`, `LoadLatent`, `Seed`,
+   `Positive`, `Negative`, `Duration`, `Motion_Intensity`, `Start_Frame`,
+   `End_Frame`, `Lora_*`, `Output`, `Output_Video`, `Output_Audio`, `Preview`).
+   `allowsBranchingContinue = false` (no per-stage LoRA variance) → Finish-only.
+
+**Why parked:** the manual ComfyUI steps to derive the `_stage2` API file (bypass
+stage-1 KSampler, set `Is_Continue`, re-export) are error-prone and forgettable.
+Pivoted to building a **workflow-generation orchestrator** first (separate effort,
+own card if it grows) so stage-2 derivation is mechanical. Once that exists, come
+back here and author the 4 LTX files through it. The rgthree strip (item 2 below)
+is still the gate before app integration.
+
 ## Where we are (as of 2026-06-19)
 
 LTX-2.3 (NerdyRodent) ComfyUI video workflow is being **authored + validated on the
@@ -82,10 +108,25 @@ actual **app integration** per the original scope (bottom of this file).
 
 Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
 `LTX23_t2v_stage2.json`) and `LTX23_i2v.json` (+ `LTX23_i2v_stage2.json`) exist.
-- Two-file multi-stage contract (no `Is_Continue` injection): stage-1 file contains
-  `Preview_Only` + `SaveLatent` + `Preview` + `Output`; stage-2 sibling authored by
-  bypassing the stage-1 KSampler in ComfyUI and Save (API). See
-  `.claude/rules/comfy_injection.md` § "Multi-stage video workflows".
+
+> **GENERATE these 4 files via the workflow-generation system — do NOT hand-author
+> the stage-2 siblings.** (Built 2026-06-21 for WAN; see
+> `comfy_workflows/scripts/workflow_generation/README.md`.) The system already turns a
+> stage-1 API export into stage-1 + derived stage-2 mechanically (bypass the
+> `Stage1_Bypass` node, flip `Is_Continue`), title-keyed, never by node ID.
+> **LTX task for the agent:** add a `generate_ltx.py` handler (model it on
+> `generate_wan.py`) that converts the user's LTX template(s) into the 4 files, then
+> register `("LTX23_", "ltx")` in `registry.py`. Decide whether LTX's stage-2 is the
+> same single-sampler bypass (reuse the WAN splice) or a different graph (encode a new
+> `SLOT_TO_INPUT` table + assert on surprise). Verify the handler output against ONE
+> hand-authored stage-2 (semantic node-set + per-node `inputs`/`_meta` equality) before
+> trusting it — that byte-equivalence check is how WAN was proven. See the README's
+> "Adding a new model family" section for the full checklist.
+
+- Two-file multi-stage contract: stage-1 file contains
+  `Preview_Only` + `SaveLatent` + `Preview` + `Output`; stage-2 sibling is **derived
+  by the generator** (was: hand-authored by bypassing the stage-1 KSampler in ComfyUI
+  and Save (API)). See `.claude/rules/comfy_injection.md` § "Multi-stage video workflows".
 - Standard flat LoRA shape (not staged WAN-style). stage-2 LoRAs don't vary the result
   for LTX → set `commands[op].allowsBranchingContinue = false` so preview cards expose
   only Discard + Finish (no Continue). Finish replaces the preview with the final video

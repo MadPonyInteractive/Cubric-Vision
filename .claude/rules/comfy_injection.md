@@ -105,7 +105,7 @@ Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a lo
 
 **Two-file convention:**
 - `<name>.json` — stage-1 (preview) workflow. Contains `SaveLatent`, `Preview_Only`, `Preview` and `Output` capture nodes, full sampler chain.
-- `<name>_stage2.json` — stage-2 workflow. **Authored by saving the API JSON with the stage-1 KSampler node toggled to Bypass mode in the ComfyUI graph editor.** ComfyUI's "Save (API)" export then deletes the bypassed node and rewires every consumer to the bypassed node's upstream feeder slot (Comfy's standard splice behavior). The result is a stage-2-only graph where `LoadLatent` feeds directly into the low-noise sampler.
+- `<name>_stage2.json` — stage-2 workflow. **Authored by saving the API JSON with the stage-1 KSampler node toggled to Bypass mode in the ComfyUI graph editor.** ComfyUI's "Save (API)" export then deletes the bypassed node and rewires every consumer to the bypassed node's upstream feeder slot (Comfy's standard splice behavior). The result is a stage-2-only graph where `LoadLatent` feeds directly into the low-noise sampler. **NOTE: WAN/LTX stage-2 siblings are now GENERATED from the stage-1 API export by `comfy_workflows/scripts/workflow_generation/` (see its `README.md`) — the bypass+re-export is mechanical (title-keyed on `Stage1_Bypass` + `Is_Continue`), not hand-authored.**
 
 `commandExecutor._resolveWorkflowFile` returns `<name>.json` normally; when `payload.isStage2 === true`, `_toStage2Filename` swaps the basename to `<name>_stage2.json`.
 
