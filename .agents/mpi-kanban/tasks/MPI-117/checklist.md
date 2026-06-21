@@ -22,8 +22,8 @@
 > `doing` until that combined rebuild ships.
 - [x] (after MPI-118) Rebuild Pod image (cu124 CI + cu128 local) via `/build-pod-image` — bakes lock at the MPI-118 versions (v0.5.0; mpi-ci be03b86)
 - [x] Image version **v0.5.0**; pushed + public (cu124/cpu CI, cu128 local); app POD_IMAGE → v0.5.0 (remoteProxy.js 8c1ec47). 5a pull-verify + 5b boot smoke pass.
-- [ ] RunPod template image bump → v0.5.0 (USER manual gate)
-- [ ] **VALIDATING:** live Pod verify — fresh Pod boots v0.5.0, `/health` wrapper_version 0.2.11, node availability + output parity (app vs Pod)
+- [x] RunPod template image bump → v0.5.0 (USER manual gate) — fresh Pod pulled v0.5.0-cu124
+- [x] **VALIDATED 2026-06-21:** live Pod verify (Pod rjjq48dp8pkp6x, no-volume A40) — v0.5.0-cu124 pulled, `/health` ready+comfy_ready wrapper_version 0.2.11, real SDXL t2i gen (1344×768) on remote = node-lock load-verified live
 
 ## Constraints honored
 - [x] RunPod branch only (current branch = RunPod)

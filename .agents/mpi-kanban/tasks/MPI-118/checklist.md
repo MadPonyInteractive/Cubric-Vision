@@ -12,4 +12,4 @@
 - [x] App POD_IMAGE_VERSION → v0.5.0 (remoteProxy.js 8c1ec47)
 
 ## Validating
-- [ ] **VALIDATING:** live Pod verify — fresh Pod boots v0.5.0 image, engine v0.25.1 runs a real gen, `/health` wrapper_version 0.2.11
+- [x] **VALIDATED 2026-06-21:** live Pod verify (Pod rjjq48dp8pkp6x, no-volume A40) — fresh Pod booted v0.5.0-cu124, engine v0.25.1 ran a real SDXL t2i gen (1344×768) on remote, `/health` wrapper_version 0.2.11
