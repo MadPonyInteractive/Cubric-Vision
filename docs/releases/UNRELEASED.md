@@ -8,17 +8,24 @@
 
 ## importantChanges
 
-- **Breaking — Wan 2.2 video model split.** The combined "Wan 2.2 Smooth" model
-  (which bundled both text-to-video and image-to-video) has been removed and
-  replaced by two dedicated models: **Wan 2.2 T2V Smooth** (text-to-video only)
-  and **Wan 2.2 I2V Smooth** (image-to-video only, includes the PainterI2V
-  advanced node). Users now install only the half they need instead of the full
-  ~36 GB combined download. Existing projects that referenced the old combined
-  model auto-fall-back to the first available video model on next load; nothing
-  breaks, but anyone who installed the combined model should install whichever
-  split model(s) they actually use and can uninstall the leftover checkpoints to
-  reclaim disk. (The underlying t2v/i2v checkpoints are unchanged — only the
-  model-pack grouping changed.)
+- **Models can now install individual operations.** Some models can do more than
+  one thing (e.g. Wan 2.2 does both **text-to-video** and **image-to-video**), and
+  each capability has its own large weights. Instead of forcing you to download
+  everything, the Models page now shows a toggle per operation inside the model
+  card — pick only the ones you want. **Wan 2.2 Smooth** is a single model again
+  (no more separate T2V/I2V packs): install just Text-to-Video, just Image-to-Video,
+  or both. The shared parts (VAE, text encoder) download once and are reused. The
+  download size on the card updates live as you toggle operations.
+  - The button reads **Install** when nothing's installed, **Update** when you've
+    changed your selection on an already-installed model, and **Uninstall** to
+    remove the whole model. Updating to add an operation downloads only the new
+    weights; removing one (after a confirm) deletes only that operation's files and
+    keeps everything the rest still needs.
+  - Operations you didn't install simply don't appear as options in the prompt box,
+    so you never pick something that isn't downloaded. Install one later and it
+    shows up automatically.
+  - Image models (SDXL, etc.) are unchanged — their operations all ship together,
+    so they have no toggles and install/uninstall exactly as before.
 
 - Removed the Settings → External Connections "ComfyUI API URL" field. It was
   non-functional dead config: the app never read it, and generation always used
