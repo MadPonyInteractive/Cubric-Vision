@@ -18,7 +18,7 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
-import { resolveFullUniverse, canonicalModelId } from './modelConstants/resolveModelDeps.js';
+import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps } from './modelConstants/resolveModelDeps.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
@@ -215,4 +215,32 @@ export function getModelDependencies(modelId) {
  */
 export function getModelDepStatus(modelId) {
     return _modelDepStatusCache.get(modelId) ?? null;
+}
+
+/**
+ * Whether a model is USABLE for generation (should appear in model pickers).
+ *
+ * Flat models: usable when `installed !== false` (the server's all-deps-present
+ * flag) — unchanged behaviour.
+ *
+ * Operation-keyed models (e.g. Wan 2.2): usable when AT LEAST ONE operation is
+ * installed (commonDeps + that op's deps complete), derived from the per-dep
+ * status cache. The server's `model.installed` flag is all-deps-present, which is
+ * FALSE for a deliberately partial (e.g. T2V-only) install — so it must NOT gate
+ * op-keyed models, or a usable Wan vanishes from the dropdown. (MPI-122)
+ *
+ * @param {ModelDef|string} modelOrId
+ * @returns {boolean}
+ */
+export function isModelUsable(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return false;
+    if (!hasOperationGroups(model)) return model.installed !== false;
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return model.installed === true; // no cache yet → trust server flag
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    return deriveInstalledOps(model, isOn).fullyInstalled;
 }

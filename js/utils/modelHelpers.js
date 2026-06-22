@@ -8,7 +8,7 @@
  */
 
 import { state } from '../state.js';
-import { getModelsByType } from '../data/modelRegistry.js';
+import { getModelsByType, isModelUsable } from '../data/modelRegistry.js';
 import { canonicalModelId } from '../data/modelConstants/resolveModelDeps.js';
 
 /**
@@ -60,7 +60,7 @@ export function setSelectedModelId(mediaType, modelId, opts = {}) {
  */
 export function resolveActiveModel(mediaType) {
     const installedModels = getModelsByType(mediaType)
-        .filter(m => m.installed !== false);
+        .filter(isModelUsable);
 
     const persisted = getSelectedModelId(mediaType);
     const modelId = persisted

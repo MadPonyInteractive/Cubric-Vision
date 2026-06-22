@@ -28,7 +28,7 @@ import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { MODELS, getModelsByType, getModelById } from '../../../data/modelRegistry.js';
+import { MODELS, getModelsByType, getModelById, isModelUsable } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
@@ -929,7 +929,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // last-touched mediaType so a video pick survives navigation/restart.
         const _lastType = state.s_lastSelectedMediaType === 'video' ? 'video' : 'image';
         const { model: activeModelInit, modelId: activeModelIdInit } = resolveActiveModel(_lastType);
-        let installedAllModels = MODELS.filter(m => m.installed !== false);
+        let installedAllModels = MODELS.filter(isModelUsable);
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
         // Fallback: the last-touched mediaType may have NO installed model (e.g.
@@ -1388,7 +1388,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // and the deleted `models:closed` listener. `models:closed` no longer fires;
         // PromptBox mount is triggered by install-state change instead (option A).
         _unsubs.push(Events.onState('s_installedModelIds', () => {
-            installedAllModels = MODELS.filter(m => m.installed !== false);
+            installedAllModels = MODELS.filter(isModelUsable);
             if (installedAllModels.length === 0) {
                 // Zero models: if project is empty/new → prompt once; otherwise read-only.
                 if (!_projectHasMedia) _promptInstallModels();

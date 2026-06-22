@@ -25,7 +25,7 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
-import { getModelsByType } from '../../../data/modelRegistry.js';
+import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
@@ -1771,7 +1771,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.onState('s_installedModelIds', () => {
             // Video history only offers i2v-capable models (frame-driven workspace).
             const currentModels = getModelsByType(modeKind)
-                .filter(m => m.installed !== false)
+                .filter(isModelUsable)
                 .filter(_promptModelFilter);
             // If activeModel was null (none eligible on entry) and an eligible model
             // has now been installed, adopt it so PromptBox can mount. Without this,
@@ -1811,14 +1811,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         /** @returns {boolean} */
         function _anyInstalledModelHasI2V() {
             return getModelsByType('video')
-                .filter(m => m.installed !== false)
+                .filter(isModelUsable)
                 .some(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')));
         }
 
         /** @returns {Object|null} */
         function _findFirstI2VCapableModel() {
             return getModelsByType('video')
-                .filter(m => m.installed !== false)
+                .filter(isModelUsable)
                 .find(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')))
                 || null;
         }

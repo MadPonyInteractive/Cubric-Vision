@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-123",
+  "title": "Cancel shows stale partial bytes on the model card until next refresh",
+  "description": "After pressing CANCEL on an active model download, the card kept showing the downloaded bytes as 'PARTIALLY INSTALLED' (e.g. 6.6GB) — the user thought cancel didn't delete the files. FOLLOW-UP FINDING: it likely DID delete them; after uninstalling other models (which forced a re-sync) the same card corrected to 70MB / 7.0GB. So the actual bug is a STALE DISPLAY / REFRESH issue, not missing cleanup: after cancel, the card's partial-bytes readout is not re-derived from disk until some other action triggers a sync, so it shows pre-cancel bytes.\n\nWhat to verify first (could be 1 or 2 bugs):\n1) Does CANCEL actually purge the in-flight partial files on disk? (Probably yes — confirm via disk + a fresh check.)\n2) Does the card re-derive partial bytes immediately after cancel? (Probably NO — that's the visible bug.)\n\nRepro: Models page, INSTALL a not-installed model (e.g. SDXL Realistic), let it pull some GB, press CANCEL (not PAUSE). Observed: card still reads the pre-cancel partial size; only corrects after another action (uninstall something / refresh / reopen). Seen on remote Pod (A40).\n\nLikely fix: downloadService.cancel() (or the download:cancelled handler in MpiModelManager) must trigger reSyncInstalledModels() so getModelDepStatus partial bytes are re-read and the card re-renders. The MpiModelManager download:cancelled handler already calls awaitReSync() — check why the partial readout isn't updating (cache not cleared for cancelled deps? remote check returning stale partialBytes? the per-dep status cache keyed wrong?). If cancel does NOT purge files, that's a second fix (delete in-flight files, shared-dep protected, distinct from PAUSE which retains).\n\nCare: resumable-download machinery (NDH, .cubricdl markers, refcounts, SSE) is fragile — see .claude/rules/downloads.md. PAUSE must keep partial for resume; only CANCEL purges. Related: MPI-122 op-selectable models — per-op cancel purges only that op's in-flight unique deps, shared-dep protected.",
+  "column": "todo",
+  "maturity": "todo",
+  "status": "active",
+  "created_at": "2026-06-22T05:15:00.000Z",
+  "updated_at": "2026-06-22T05:18:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

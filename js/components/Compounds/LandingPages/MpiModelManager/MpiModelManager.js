@@ -163,11 +163,17 @@ export const MpiModelManager = ComponentFactory.create({
         // sessions in state.s_modelOpDraftByModel. Defaults:
         //   - if any op is installed → the installed set (so reopening reflects disk)
         //   - else (fresh model)     → all selectable ops (default all-on)
+        // A NON-EMPTY saved draft wins. An empty/absent saved draft is NOT honored —
+        // "all ops off" is not a meaningful persisted state for a not-installed model
+        // (it would default Wan to commonDeps-only ~6.5GB and Install would fetch no
+        // ops). A stale empty draft from earlier testing must fall back to the
+        // installed-or-all default, not stick as empty. (MPI-122)
         function _draftFor(model) {
             const saved = state.s_modelOpDraftByModel?.[model.id];
-            if (Array.isArray(saved)) {
+            if (Array.isArray(saved) && saved.length > 0) {
                 // Keep only still-selectable ops, then expand requiresOps.
-                return expandRequiredOps(model, saved);
+                const expanded = expandRequiredOps(model, saved);
+                if (expanded.length > 0) return expanded;
             }
             const installed = _installedOpsOf(model);
             return installed.length ? installed : selectableOps(model);
@@ -400,7 +406,13 @@ export const MpiModelManager = ComponentFactory.create({
             const speed = job ? job.speed : '';
             const downloadedBytes = job ? job.downloadedBytes : (partial.downloadedBytes || 0);
             const totalBytes = job ? job.totalBytes : (partial.totalBytes || 0);
-            const displayState = partial.hasPartialProgress && !isActiveDownload ? 'partial' : downloadState;
+            // IMPORTANT: never coerce the card to the 'partial' DOWNLOAD state — that
+            // makes MpiInstalledDisplay render Resume/Cancel buttons, but a partial
+            // op-selectable model has no paused job to resume/cancel (the dead-button
+            // bug). The partial PROGRESS BAR is driven separately by hasPartialProgress;
+            // the action button stays Install/Update/Uninstall. (MPI-122)
+            const displayState = downloadState;
+            const showPartialBar = partial.hasPartialProgress && !isActiveDownload;
 
             // Button label: Install (nothing installed) / Update (changes) / Uninstall.
             const showInstalled = anyInstalled;
@@ -421,7 +433,7 @@ export const MpiModelManager = ComponentFactory.create({
                 deleteLabel: 'Install',
                 downloadState: displayState,
                 progress,
-                hasPartialProgress: partial.hasPartialProgress && !isActiveDownload,
+                hasPartialProgress: showPartialBar,
                 speed,
                 downloadedBytes,
                 totalBytes,
