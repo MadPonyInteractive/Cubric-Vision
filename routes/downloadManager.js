@@ -1242,6 +1242,14 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
             if (_remoteDepIds.has(dep.id)) {
                 _remoteDepIds.delete(dep.id);
                 await remoteModels.remoteCancelInstall(dep.id);
+                // MPI-123 — remoteCancelInstall is SOFT+ASYNC: the wrapper only
+                // sets a cancel flag and removes the `<dest>.part` on its next
+                // chunk write, so the frontend re-sync (/wrapper/models/status)
+                // races the purge and reports the stale partialBytes the user
+                // saw stuck on the card. Follow with a synchronous delete so the
+                // `.part` is gone by the time this route returns and the card
+                // re-derives a clean readout. Best-effort — never hard-fail cancel.
+                await remoteModels.remoteUninstallDep(dep).catch(() => {});
             }
             const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
             if (dl) {
