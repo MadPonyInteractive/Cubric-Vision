@@ -316,8 +316,9 @@ export const MpiModelManager = ComponentFactory.create({
 
             const toggles = [];
 
-            // Commit the current draft set and re-render.
-            const commit = () => { _setDraft(model, [...draft]); renderList(); };
+            // Commit the current draft set and re-render. force — the draft mutation
+            // IS the change; rebuild unconditionally so size/partial/button update.
+            const commit = () => { _setDraft(model, [...draft]); renderList({ force: true }); };
 
             if (showBase) {
                 const baseInst = MpiButton.mount(ce('div'), {
@@ -483,8 +484,43 @@ export const MpiModelManager = ComponentFactory.create({
             _opToggles.clear();
         }
 
+        // ── Render signature (MPI-124) ─────────────────────────────────────
+        // A string fingerprint of everything _buildCard renders for the whole
+        // list. renderList() short-circuits when it is unchanged so an incidental
+        // re-sync (every models:checked fires state:changed even when the installed
+        // SET did not move) no longer tears down + rebuilds every card → no flash.
+        // Mirrors the MpiQueuePanel signature-diff pattern. Anything that genuinely
+        // changes the visible output (section, installed ops, draft, job state,
+        // partial bar) is in the sig, so a real change still forces one full rebuild.
+        let _lastSig = null;
+        function _listSignature() {
+            return MODELS.map(model => {
+                const installedOps = _installedOpsOf(model);
+                const isInst = model.installed === true || installedOps.length > 0;
+                const draft = selectableOps(model).length ? _draftFor(model) : [];
+                const job = state.downloadJobs.find(j => j.modelId === model.id);
+                const jobSig = job
+                    ? `${job.status}:${job.indeterminate ? 1 : 0}:${job.phase || ''}`
+                    : 'idle';
+                // Partial bar only matters when idle; round progress so byte-level
+                // ticks don't churn the sig (active download patches in place anyway).
+                let partSig = '0';
+                if (!job) {
+                    const p = _computePartial(model);
+                    partSig = p.hasPartialProgress ? `1:${Math.round((p.progress || 0) * 100)}` : '0';
+                }
+                return `${model.id}|${isInst ? 1 : 0}|${[...installedOps].sort().join(',')}|${[...draft].sort().join(',')}|${jobSig}|${partSig}`;
+            }).join('||');
+        }
+
         // ── Render card list ───────────────────────────────────────────────
-        function renderList() {
+        // force=true bypasses the signature guard — used by the toggle commit()
+        // path, where the draft change IS the sig change but we still want an
+        // unconditional rebuild even if a future field makes the sigs collide.
+        function renderList({ force = false } = {}) {
+            const sig = _listSignature();
+            if (!force && sig === _lastSig) return; // no visible change → skip the flash
+            _lastSig = sig;
             _destroyAllCards();
             qsa('.mpi-model-manager__card', bodySlot).forEach(c => c.remove());
             qsa('.mpi-model-manager__section-header', bodySlot).forEach(h => h.remove());
