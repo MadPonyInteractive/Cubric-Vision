@@ -76,6 +76,19 @@
 
 ## fixes
 
+- **The model-downloads panel no longer flashes on every refresh.** Opening the
+  panel, finishing or cancelling a download, or toggling a model's operations
+  rebuilt the whole list each time, so it visibly flickered — even when nothing had
+  actually changed. The list now only redraws the cards that genuinely changed, so
+  it stays steady through refreshes and download activity.
+
+- **Cancelling a remote download now clears its leftover bytes immediately.** When
+  running on a RunPod remote engine, cancelling an in-progress model download left
+  the card showing the pre-cancel "partially installed" size until you triggered
+  another refresh, making it look like the cancel hadn't cleaned anything up. The
+  partial files are now deleted on the Pod as part of the cancel, so the card
+  updates to the correct size right away.
+
 - **Stop now works from a card's prompt box.** Running an op (e.g. Extend) against a
   card in the history view left the prompt box's **Stop** button greyed out, forcing
   you to go back to the gallery and stop from the queue panel. The history prompt box
