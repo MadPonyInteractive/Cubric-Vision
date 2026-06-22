@@ -26,6 +26,7 @@ import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
 import { getModelsByType } from '../../../data/modelRegistry.js';
+import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
@@ -884,7 +885,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
-                targetModel = installedModels.find(m => m.id === payload.modelId) || null;
+                // Canonicalize legacy split ids (wan-22-t2v/i2v → wan-22). (MPI-122)
+                const canonId = canonicalModelId(payload.modelId);
+                targetModel = installedModels.find(m => m.id === canonId) || null;
             }
             if (!targetModel) {
                 const label = payload.modelId || 'Unknown model';

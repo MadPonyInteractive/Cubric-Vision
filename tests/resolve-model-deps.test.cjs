@@ -14,6 +14,8 @@ const {
     resolveDeps,
     resolveFullUniverse,
     deriveInstalledOps,
+    expandRequiredOps,
+    dependentsOfOp,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -40,6 +42,19 @@ const WAN_COMMON = WAN.commonDeps;
 const WAN_T2V = WAN.operations.t2v_ms.deps;
 const WAN_I2V = WAN.operations.i2v_ms.deps;
 const WAN_UNIVERSE = [...WAN_COMMON, ...WAN_T2V, ...WAN_I2V];
+
+// Op-keyed model with an op that REQUIRES another op (forward-looking shape).
+// `extend` needs `i2v_ms` installed; selecting extend must pull i2v's deps too.
+const REQ = {
+    id: 'req-model',
+    supportedOps: ['t2v_ms', 'i2v_ms', 'extend'],
+    commonDeps: ['cdep'],
+    operations: {
+        t2v_ms: { deps: ['t2v-w'] },
+        i2v_ms: { deps: ['i2v-w'] },
+        extend: { deps: ['extend-w'], requiresOps: ['i2v_ms'] },
+    },
+};
 
 // depStatus helper: a Set of installed dep ids → predicate.
 const statusFrom = (installed) => (id) => installed.has(id);
@@ -145,6 +160,64 @@ function testDeriveInstalledOps() {
     assert.deepStrictEqual(r, { installedOps: [], fullyInstalled: false });
 }
 
+// ── Integration: resolve against the REAL registry ───────────────────────────
+// Catches authoring drift the resolver throws on — a model referencing a dep id
+// that doesn't exist in dependencies.js (MPI-122 reshape regression guard).
+function testRealRegistryIntegrity() {
+    const { MODELS } = require('../js/data/modelConstants/models.js');
+    const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+    const exists = id => !!DEPS[id];
+
+    // Every model's FULL universe resolves without throwing, and every resolved
+    // dep id is a real entry in DEPS.
+    for (const model of MODELS) {
+        const universe = resolveFullUniverse(model, exists); // throws on unknown dep
+        assert.ok(universe.length > 0, `${model.id} resolves to no deps`);
+        for (const id of universe) {
+            assert.ok(exists(id), `${model.id} references missing dep "${id}"`);
+        }
+    }
+
+    // wan-22 is the merged, op-keyed model — both ops selectable, split ids gone.
+    const wan = MODELS.find(m => m.id === 'wan-22');
+    assert.ok(wan, 'wan-22 model is missing from the registry');
+    assert.ok(hasOperationGroups(wan), 'wan-22 must be operation-keyed');
+    assert.deepStrictEqual(selectableOps(wan).sort(), ['i2v_ms', 't2v_ms']);
+    assert.ok(!MODELS.some(m => m.id === 'wan-22-t2v' || m.id === 'wan-22-i2v'),
+        'split wan ids must not exist as models');
+
+    // T2V-only selection excludes the I2V-only node; full universe includes it.
+    const t2vOnly = resolveDeps(wan, ['t2v_ms'], exists);
+    assert.ok(!t2vOnly.includes('ComfyUI-PainterI2Vadvanced'),
+        'T2V-only install must not pull the I2V-only node');
+    assert.ok(resolveFullUniverse(wan).includes('ComfyUI-PainterI2Vadvanced'),
+        'full universe must include the I2V-only node');
+}
+
+// requiresOps: selecting a dependent op pulls in its prerequisite op's deps, and
+// an op only reads installed when its prerequisites are also on disk.
+function testRequiresOps() {
+    // Selecting `extend` expands to include i2v_ms → both their deps resolve.
+    assert.deepStrictEqual(expandRequiredOps(REQ, ['extend']).sort(), ['extend', 'i2v_ms']);
+    const r = resolveDeps(REQ, ['extend']);
+    assert.ok(r.includes('extend-w') && r.includes('i2v-w') && r.includes('cdep'),
+        'extend must pull i2v + common deps');
+    assert.ok(!r.includes('t2v-w'), 'extend must not pull unrelated t2v');
+
+    // dependentsOfOp: removing i2v_ms must cascade-off extend.
+    assert.deepStrictEqual(dependentsOfOp(REQ, 'i2v_ms'), ['extend']);
+    assert.deepStrictEqual(dependentsOfOp(REQ, 't2v_ms'), []);
+
+    // deriveInstalledOps: extend's own dep present but i2v missing → extend NOT installed.
+    const noI2V = deriveInstalledOps(REQ, statusFrom(new Set(['cdep', 'extend-w'])));
+    assert.ok(!noI2V.installedOps.includes('extend'),
+        'extend cannot be installed without its required i2v_ms');
+    // All present → extend installed.
+    const all = deriveInstalledOps(REQ, statusFrom(new Set(['cdep', 'extend-w', 'i2v-w'])));
+    assert.ok(all.installedOps.includes('extend') && all.installedOps.includes('i2v_ms'),
+        'extend installed once i2v + own deps present');
+}
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const tests = {
@@ -155,6 +228,8 @@ const tests = {
     testDedupeStable,
     testUnknownOpsAndDeps,
     testDeriveInstalledOps,
+    testRequiresOps,
+    testRealRegistryIntegrity,
 };
 
 let failed = 0;

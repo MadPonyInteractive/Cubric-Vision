@@ -60,6 +60,29 @@
 
 ---
 
+## Operation-selectable models — the resolver chokepoint (MPI-122)
+
+A model declares its deps in ONE of two shapes (see `docs/data.md` § resolveModelDeps):
+- **Flat** (all image models): `dependencies: string[]`.
+- **Operation-keyed** (e.g. Wan 2.2 `wan-22`): `commonDeps: string[]` + `operations: { <opKey>: { deps: string[] } }`, and NO flat `dependencies`. The user picks which operations to install in the model manager.
+
+**The download lifecycle is frozen and op-blind.** `downloadService.start(modelId, deps)` and `uninstall(modelId, deps)` ALWAYS take a RESOLVED FLAT dep array. Operations are collapsed to that flat array by `js/data/modelConstants/resolveModelDeps.js` at the call site — BEFORE the lifecycle. Jobs/SSE/refcounts/`.cubricdl` markers never learn about operations; jobs stay keyed by `modelId`. **Do NOT add a per-operation download job, a second SSE channel, or operation-level refcounts.**
+
+**Which resolver call to use:**
+- **Install** → `resolveDeps(model, selectedOps)` (the user's op selection; `null` = all selectable ops = fresh full install).
+- **Whole-model uninstall** + **install-status checks** (`/comfy/models/check`) → `resolveFullUniverse(model)` so no op payload is orphaned and partial state is computed against the complete universe.
+- **Backend shared-dep protection** (`_findOtherModelsUsingDep`, `_remoteSharedDepIds` in `routes/downloadManager.js`; `getInstalledModelNodeDeps` in `routes/shared.js`) MUST resolve every OTHER model's full universe — never read a `.dependencies` field, which no longer exists on op-keyed models. Otherwise a shared/op-specific dep another installed model needs gets deleted (e.g. uninstalling Wan I2V trashing the VAE/text-encoder T2V also uses).
+
+**Never read `model.dependencies` directly.** Use the resolver. A flat model is treated as `commonDeps = dependencies` with no operations, so one code path covers both shapes.
+
+**Per-operation install AND uninstall.** The model-download page lets the user toggle ops on/off on an installed model:
+- Adding an op (Update / Install) downloads only its missing resolved deps.
+- Removing an op (Update, after a confirm) calls `downloadService.uninstall(modelId, deps)` with `deps` = the removed op's resolved deps MINUS any dep still used by an op that REMAINS installed/selected (incl. commonDeps, which any remaining op keeps). This intra-model subtraction is done CLIENT-SIDE — the backend's shared-dep guard only protects across OTHER models (it excludes the target model), so it would not stop you deleting a dep a sibling op of the same model still needs.
+- The button reads Install (0 installed) / Update (draft ≠ installed) / Uninstall (installed, no change). The op draft persists in `state.s_modelOpDraftByModel`.
+No change to the download/refcount/SSE contract — per-op uninstall is the same `uninstall()` call with a narrower dep list.
+
+---
+
 ## 🛠️ Implementation Patterns
 
 ### Starting a Download (Frontend)

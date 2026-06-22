@@ -21,6 +21,7 @@
 
 import { ComfyUIController, getEngine } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
+import { resolveDeps } from '../data/modelConstants/resolveModelDeps.js';
 import { COMMANDS, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
@@ -370,13 +371,19 @@ function _findMissingModel(params) {
  * display name when NOT fully installed locally, else null. On a check error,
  * returns null (fail-open) — the run then surfaces any real failure itself rather
  * than blocking on a flaky check.
+ * Resolves only the REQUESTED operation's deps (commonDeps + that op's payload),
+ * so a Wan run for an op the user installed isn't blocked because a DIFFERENT,
+ * deliberately-omitted op's weights are absent (MPI-122). Flat/universal models
+ * resolve to their full dep set.
  * @param {string} modelId
+ * @param {string} [operation]
  * @returns {Promise<string|null>}
  */
-async function _findModelNotLocal(modelId) {
+async function _findModelNotLocal(modelId, operation = null) {
     const model = getModelById(modelId);
-    if (!model || !Array.isArray(model.dependencies)) return null;
-    const deps = model.dependencies
+    if (!model) return null;
+    const selectedOps = operation ? [operation] : null;
+    const deps = resolveDeps(model, selectedOps)
         .map(depId => {
             const dep = DEPS[depId];
             return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
@@ -816,7 +823,7 @@ export function runCommand(payload) {
         // the local run would then fail mid-prompt. Pre-check local presence and abort
         // with a clear toast (mirrors the missing-slot/LoRA guards) before dispatch.
         if (workingPayload.forceLocal === true) {
-            const notLocal = await _findModelNotLocal(workingPayload.modelId);
+            const notLocal = await _findModelNotLocal(workingPayload.modelId, workingPayload.operation);
             if (notLocal) {
                 await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
                 Events.emit('ui:warning', {

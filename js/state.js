@@ -43,6 +43,12 @@ const _state = {
                                // video) is restored. Updated by setSelectedModelId.
                                // Mirrored to localStorage by subscriber below.
 
+    s_modelOpDraftByModel: Storage.getModelOpDraft(),
+                               // MPI-122: { [modelId]: string[] } — the user's
+                               // per-model operation toggle draft in the model-download
+                               // page. Survives restart. Written by MpiModelManager via
+                               // top-level replace; mirrored to localStorage below.
+
     // ── Installed model list (populated after syncModelInstalled) ──────────────
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.
@@ -185,6 +191,7 @@ export function batchState(fn) {
 Events.on('state:changed', ({ key, value }) => {
     if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
     else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
+    else if (key === 's_modelOpDraftByModel') Storage.setModelOpDraft(value);
     else if (key === 'pixelMode') {
         const mode = (value === 'smooth' || value === 'pixel') ? value : 'auto';
         Storage.setPixelMode(mode);

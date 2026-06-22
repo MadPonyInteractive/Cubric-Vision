@@ -154,6 +154,10 @@ export const Storage = {
   getSelectedModels:   () => get(STORAGE_KEYS.SELECTED_MODELS, { image: null, video: null }),
   setSelectedModels:   (v) => set(STORAGE_KEYS.SELECTED_MODELS, v),
 
+  // Per-model operation toggle draft (MPI-122). { [modelId]: string[] } of selected opKeys.
+  getModelOpDraft:     () => get(STORAGE_KEYS.MODEL_OP_DRAFT, {}),
+  setModelOpDraft:     (v) => set(STORAGE_KEYS.MODEL_OP_DRAFT, v),
+
   getLastSelectedMediaType: () => get(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, 'image'),
   setLastSelectedMediaType: (v) => set(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, v),
 

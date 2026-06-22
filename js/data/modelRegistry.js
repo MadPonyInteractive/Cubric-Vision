@@ -18,6 +18,7 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
+import { resolveFullUniverse, canonicalModelId } from './modelConstants/resolveModelDeps.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
@@ -80,9 +81,12 @@ export async function initPaths() {
 export async function syncModelInstalled() {
     try {
         // Build payload for model-tied workflows
+        // Resolve the FULL dep universe (commonDeps + every selectable op) so the
+        // server stats the complete set and partial state is computed against
+        // everything — flat models resolve to their plain dependency list.
         const modelPayload = MODELS.map(model => ({
             id: model.id,
-            deps: model.dependencies.map(depId => {
+            deps: resolveFullUniverse(model).map(depId => {
                 const dep = DEPS[depId];
                 return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
             }).filter(Boolean),
@@ -150,12 +154,14 @@ export function getModelsByType(mediaType) {
 }
 
 /**
- * Returns a model by id.
+ * Returns a model by id. Legacy split ids (wan-22-t2v / wan-22-i2v) canonicalize
+ * to the merged wan-22 entry so historical media/sidecars/localStorage resolve.
  * @param {string} id
  * @returns {ModelDef|null}
  */
 export function getModelById(id) {
-    return MODELS.find(m => m.id === id) ?? null;
+    const canonical = canonicalModelId(id);
+    return MODELS.find(m => m.id === canonical) ?? null;
 }
 
 /**
@@ -190,14 +196,15 @@ export function resolveDep(depId) {
 }
 
 /**
- * Returns all resolved dependencies for a model.
+ * Returns all resolved dependencies for a model (full universe: commonDeps +
+ * every selectable operation). Flat models resolve to their plain dep list.
  * @param {string} modelId
  * @returns {Object[]}
  */
 export function getModelDependencies(modelId) {
     const model = getModelById(modelId);
     if (!model) return [];
-    return model.dependencies.map(id => DEPS[id]).filter(Boolean);
+    return resolveFullUniverse(model).map(id => DEPS[id]).filter(Boolean);
 }
 
 /**

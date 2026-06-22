@@ -8,6 +8,8 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs } from '../../../data/commandRegistry.js';
+import { getModelDepStatus } from '../../../data/modelRegistry.js';
+import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -120,6 +122,25 @@ export const MpiPromptBox = ComponentFactory.create({
         let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
         let _runLocal         = false; // MPI-74: force this generation onto local ComfyUI while remote-connected. Sticky within a remote session, reset on disconnect. UI-only until MPI-82 spine reads it.
         let _context          = props.context || {};
+
+        // The physically-installed op set for a model, derived from the last
+        // /comfy/models/check result. Passed into getAvailableCommands so the
+        // PromptBox hides a selectable op the user chose not to install (MPI-122).
+        // Returns null when status is unknown → getAvailableCommands falls back to
+        // static supportedOps (no behaviour change for image / pre-check models).
+        function _ctxWithInstalledOps(model) {
+            if (!model?.operations) return _context;
+            const depStatus = getModelDepStatus(model.id);
+            if (!depStatus) return _context;
+            const { installedOps } = deriveInstalledOps(
+                model,
+                depId => {
+                    const s = depStatus.get(depId);
+                    return s === true || s?.installed === true;
+                },
+            );
+            return { ..._context, installedOps };
+        }
 
         /** @type {Map<string, Object>} */
         const _activeControls = new Map();
@@ -396,7 +417,7 @@ export const MpiPromptBox = ComponentFactory.create({
         function _pickOpForModel(candidate) {
             if (!candidate?.supportedOps?.length) return activeOperation;
             const supported = candidate.supportedOps;
-            const cmds = getAvailableCommands(candidate.mediaType, candidate, _context);
+            const cmds = getAvailableCommands(candidate.mediaType, candidate, _ctxWithInstalledOps(candidate));
             const byKey = new Map(cmds.map(c => [c.key, c]));
             const hasImages = (el.imageCount ?? 0) > 0;
             const hasVideo  = (el.videoCount  ?? 0) > 0;
@@ -805,14 +826,14 @@ export const MpiPromptBox = ComponentFactory.create({
 
         function _pickTextOnlyOp() {
             if (!model) return null;
-            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const textOnly = cmds.filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0);
             return textOnly[0]?.key ?? null;
         }
 
         function _pickFallbackOp() {
             if (!model) return null;
-            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const candidates = cmds.filter(c => (c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
             const ready = candidates.find(c => c.available);
             return (ready ?? candidates[0])?.key ?? null;
@@ -823,7 +844,7 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!opDropdownSlot) return;
 
             const hasMedia = el.imageCount > 0 || el.videoCount > 0;
-            const availableCmds = getAvailableCommands(model.mediaType, model, _context);
+            const availableCmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const filteredCmds = _context.filterNoInputOps
                 ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 : availableCmds;
@@ -836,11 +857,6 @@ export const MpiPromptBox = ComponentFactory.create({
             opDropdownSlot.innerHTML = '';
             if (availableOps.length === 0) return;
 
-            const labelEl = document.createElement('span');
-            labelEl.className = 'mpi-prompt-box__op-label';
-            labelEl.textContent = 'Op:';
-            labelEl.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-right:0.25rem;';
-
             _opDropdown = MpiDropdown.mount(document.createElement('div'), {
                 options: availableOps,
                 value: activeOperation,
@@ -849,7 +865,6 @@ export const MpiPromptBox = ComponentFactory.create({
             });
             _opDropdown.on('change', ({ value }) => el.setOperation(value));
 
-            opDropdownSlot.appendChild(labelEl);
             opDropdownSlot.appendChild(_opDropdown.el);
         }
 
@@ -1106,6 +1121,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 _applyRemotePhase(); // MPI-73: enable/disable Cue on transition
             }
         }));
+
+        // MPI-122: when install status is re-checked (e.g. the user adds the I2V op
+        // to an already-installed Wan model), refresh the op dropdown so newly-
+        // installed operations appear (and removed ones vanish) without a remount.
+        _unsubs.push(Events.on('models:checked', () => { _refreshOpDropdown(); }));
 
         // MPI-73: disable the Cue button while the remote engine is connecting or
         // disconnecting. Generation mid-transition would fall to the wrong engine

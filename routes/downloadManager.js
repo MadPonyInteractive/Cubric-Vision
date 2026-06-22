@@ -56,8 +56,12 @@ const ENGINE_ROOT = getEngineRoot();
 
 function _findOtherModelsUsingDep(depId, excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    // Resolve each model's FULL dep universe (commonDeps + every op) so an
+    // op-specific or common dep of another installed model is protected — the
+    // flat `.dependencies` field no longer exists on operation-keyed models. (MPI-122)
     return MODELS
-        .filter(m => m.id !== excludeModelId && m.installed === true && Array.isArray(m.dependencies) && m.dependencies.includes(depId))
+        .filter(m => m.id !== excludeModelId && m.installed === true && resolveFullUniverse(m).includes(depId))
         .map(m => ({ modelId: m.id, modelName: m.name }));
 }
 
@@ -72,13 +76,19 @@ function _findOtherModelsUsingDep(depId, excludeModelId) {
 // ids that ARE still needed by another volume-installed model (must be kept).
 async function _remoteSharedDepIds(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const others = MODELS.filter(m => m.id !== excludeModelId && Array.isArray(m.dependencies));
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    // Full dep universe per model (commonDeps + every op) so op-specific + common
+    // deps of another volume-installed model are kept, not the gone flat list. (MPI-122)
+    const others = MODELS
+        .filter(m => m.id !== excludeModelId)
+        .map(m => ({ model: m, depIds: resolveFullUniverse(m) }))
+        .filter(o => o.depIds.length > 0);
     // Ask the wrapper which of those models are installed on the volume. Pass each
     // model's deps as { id, type, filename } (remoteModelsCheck owns the split).
-    const checkModels = others.map(m => ({
-        id: m.id,
-        deps: m.dependencies.map(depId => {
-            const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const checkModels = others.map(({ model, depIds }) => ({
+        id: model.id,
+        deps: depIds.map(depId => {
             const d = DEPS[depId] || {};
             return { id: depId, type: d.type, filename: d.filename };
         }),
@@ -87,11 +97,11 @@ async function _remoteSharedDepIds(excludeModelId) {
     try {
         const out = await remoteModels.remoteModelsCheck(checkModels);
         const results = (out && out.results) || {};
-        for (const m of others) {
-            const entry = results[m.id];
+        for (const { model, depIds } of others) {
+            const entry = results[model.id];
             // Only an INSTALLED (complete-on-volume) other model protects its deps.
             if (entry && entry.installed === true) {
-                for (const depId of m.dependencies) keep.add(depId);
+                for (const depId of depIds) keep.add(depId);
             }
         }
     } catch (err) {

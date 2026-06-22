@@ -28,7 +28,8 @@ import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
+import { MODELS, getModelsByType, getModelById } from '../../../data/modelRegistry.js';
+import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
@@ -438,7 +439,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify('Disarm Loop before continuing a preview.', 'warning');
                 return;
             }
-            const model = MODELS.find(m => m.id === item.modelId);
+            const model = getModelById(item.modelId);
             if (!model) {
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot continue.`, 'warning');
                 return;
@@ -614,7 +615,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify('Disarm Loop before finishing a preview.', 'warning');
                 return;
             }
-            const model = MODELS.find(m => m.id === item.modelId);
+            const model = getModelById(item.modelId);
             if (!model) {
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot finish.`, 'warning');
                 return;
@@ -1001,7 +1002,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
-                targetModel = installedAllModels.find(m => m.id === payload.modelId) || null;
+                // Canonicalize legacy split ids (wan-22-t2v/i2v → wan-22) so reuse
+                // from split-era history resolves to the merged model. (MPI-122)
+                const canonId = canonicalModelId(payload.modelId);
+                targetModel = installedAllModels.find(m => m.id === canonId) || null;
             }
             if (!targetModel) {
                 const label = payload.modelId || 'Unknown model';

@@ -41,6 +41,7 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {number} [downloadedBytes=0]   - Bytes downloaded so far
  * @param {number} [totalBytes=0]        - Total bytes to download
  * @param {boolean} [canUninstall=false] - Show Uninstall button when true and installed
+ * @param {string} [uninstallLabel='Uninstall'] - Label for the installed-state primary button. Pass 'Update' when an operation-selectable model has pending toggle changes (MPI-122); the click still emits 'uninstall' — the caller decides install-missing vs uninstall-removed.
  * @param {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
  *   (e.g. some deps are on disk but missing others). Use with downloadState='idle' to show
  *   a progress bar while keeping the Install button.
@@ -54,6 +55,10 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * Public APIs (on el):
  *   el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) — update progress bar in place
  *   el.setDownloadState(downloadState) — re-render buttons + badge for new state
+ *   el.opsSlot — static DOM slot between the badge row and the action button
+ *     (MPI-122). The model manager appends operation-toggle buttons here; it is
+ *     hidden by default and never touched by setDownloadState's button rebuild,
+ *     so toggle instances survive progress/state updates.
  *   el.destroy() — tear down all mounted children
  *
  * Emits:
@@ -77,6 +82,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             <div class="mpi-installed-display__image" id="idimage-slot"></div>
             <div class="mpi-installed-display__info-row" id="idinfo-slot"></div>
             <div class="mpi-installed-display__badge-row" id="idbadge-slot"></div>
+            <div class="mpi-installed-display__ops" id="idops-slot"></div>
             <div class="mpi-installed-display__actions" id="idactions-slot"></div>
         </div>
     `,
@@ -197,6 +203,14 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const badgeSlot = qs('#idbadge-slot', el);
         const actionsSlot = qs('#idactions-slot', el);
 
+        // MPI-122: static slot (between badge + actions) for operation toggles. The
+        // model manager populates it after mount via el.opsSlot. It is NOT touched by
+        // _renderState (download-state rebuilds), so toggle instances survive progress
+        // updates. Empty + display:none by default so non-op cards show nothing.
+        const opsSlot = qs('#idops-slot', el);
+        opsSlot.style.display = 'none';
+        el.opsSlot = opsSlot;
+
         // Live refs for in-place progress update (populated by _renderState)
         let _progressBarInst = null;
         let _progressLabelEl = null;
@@ -309,11 +323,13 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 actionsSlot.appendChild(actionBtn.el);
                 _children.push(actionBtn);
             } else if (installed && props.canUninstall) {
-                // Uninstall button — shown for fully installed models
+                // Installed-state primary button. Label defaults to 'Uninstall';
+                // op-selectable models pass 'Update' when toggles changed (MPI-122).
+                // The event is always 'uninstall' — the caller branches on its draft.
                 const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
                 actionsSlot.appendChild(spacer);
                 const uninstallBtn = MpiButton.mount(ce('div'), {
-                    text: 'Uninstall',
+                    text: props.uninstallLabel || 'Uninstall',
                     variant: 'ghost',
                     size: 'md',
                 });

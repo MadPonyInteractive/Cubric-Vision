@@ -54,6 +54,9 @@
     gap: 0.75rem;
 }
 
+/* Operation toggles render INSIDE the card (MpiInstalledDisplay el.opsSlot);
+   their layout lives in MpiInstalledDisplay.css. */
+
 /* ── Empty state ─────────────────────────────────────────────── */
 .mpi-model-manager__empty {
     display: flex;

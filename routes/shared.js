@@ -524,6 +524,7 @@ async function checkUniversalWorkflowDepsStatus() {
 async function getInstalledModelNodeDeps(customRootOverride) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
     // During an engine upgrade the YAML is already wiped when this runs, so
     // getCustomRoot() would return null and the weights would resolve against the
     // empty default root → every model reads "not installed" → no node deps. The
@@ -535,24 +536,60 @@ async function getInstalledModelNodeDeps(customRootOverride) {
     const engineSet = new Set(getUniversalWorkflowDepIds());
     const missingNodeIds = new Set();
 
-    for (const model of MODELS) {
-        const depIds = Array.isArray(model.dependencies) ? model.dependencies : [];
-        // A model counts as "installed" when all its non-custom-node deps (the
-        // weights) are present — node deps are exactly what we may be missing.
-        const weightIds = depIds.filter(id => DEPS[id] && DEPS[id].type !== 'custom_nodes');
-        let weightsPresent = weightIds.length > 0;
-        for (const id of weightIds) {
-            const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
-            if (!(await fs.pathExists(localPath))) { weightsPresent = false; break; }
-        }
-        if (!weightsPresent) continue; // model not installed → skip its node deps
+    // True when a dep's file is on disk. Cached per-dep so the per-op weight gate
+    // and the node-restore pass don't stat the same path twice.
+    const _onDisk = new Map();
+    const isOnDisk = async (id) => {
+        if (_onDisk.has(id)) return _onDisk.get(id);
+        const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
+        const present = await fs.pathExists(localPath);
+        _onDisk.set(id, present);
+        return present;
+    };
 
-        // Collect this installed model's custom-node deps that the engine set
-        // won't already reinstall, and that are missing from disk.
+    for (const model of MODELS) {
+        // Operation-keyed models (e.g. Wan 2.2) carry op-specific custom nodes
+        // (ComfyUI-PainterI2Vadvanced lives under operations.i2v_ms). The flat
+        // `.dependencies` field is gone, so resolve the FULL universe and restore a
+        // node only when the model's WEIGHTS for that node are present — a node whose
+        // op the user never installed must not be restored. (MPI-122, was MPI-118)
+        const depIds = resolveFullUniverse(model);
+        if (depIds.length === 0) continue;
+
+        // A node dep is restorable only if it's missing, not engine-reinstalled, and
+        // its sibling weights (the non-node deps in the SAME op group) are on disk —
+        // i.e. that operation is actually installed.
         const nodeIds = depIds.filter(id => DEPS[id] && DEPS[id].type === 'custom_nodes' && !engineSet.has(id));
-        for (const id of nodeIds) {
-            const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
-            if (!(await fs.pathExists(localPath))) missingNodeIds.add(id);
+        if (nodeIds.length === 0) continue;
+
+        const ops = model.operations || {};
+        for (const nodeId of nodeIds) {
+            if (await isOnDisk(nodeId)) continue; // present → nothing to restore
+
+            // Find the op group this node belongs to (if any). For a node carried in
+            // commonDeps or on a flat model, the gate is "the model's weights are
+            // present"; for an op-specific node it's "that op's weights are present".
+            const owningOp = Object.values(ops).find(o => Array.isArray(o.deps) && o.deps.includes(nodeId));
+            const gateDeps = owningOp
+                ? owningOp.deps
+                : depIds; // common / flat node → whole-model weight gate
+            const weightIds = gateDeps.filter(id => DEPS[id] && DEPS[id].type !== 'custom_nodes');
+
+            let weightsPresent = true;
+            for (const id of weightIds) {
+                if (!(await isOnDisk(id))) { weightsPresent = false; break; }
+            }
+            // Common-node gate: a flat/common node with no weights of its own still
+            // requires the model itself to be installed (any op's weights present).
+            if (!owningOp && weightIds.length === 0) {
+                weightsPresent = false;
+                for (const id of depIds) {
+                    if (DEPS[id] && DEPS[id].type !== 'custom_nodes' && await isOnDisk(id)) {
+                        weightsPresent = true; break;
+                    }
+                }
+            }
+            if (weightsPresent) missingNodeIds.add(nodeId);
         }
     }
 

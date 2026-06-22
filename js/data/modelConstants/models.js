@@ -10,7 +10,9 @@
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
  * @property {string[]} supportedOps - Operation keys from commandRegistry.js
  * @property {Record<string,string>} workflows - op key → workflow filename
- * @property {string[]} dependencies - Dep ids from DEPS above
+ * @property {string[]} [dependencies] - Flat dep ids (models whose ops are NOT separably installable). Treated as commonDeps with no operations by the resolver.
+ * @property {string[]} [commonDeps] - Always-required dep ids (operations-keyed models only): VAE, encoder, shared nodes.
+ * @property {Record<string,{deps:string[]}>} [operations] - Per-operation unique dep ids (operations-keyed models only). Resolved into a flat list by resolveModelDeps.js before download.
  * @property {boolean}  installed    - Resolved at runtime by syncModelInstalled(); not set here
  */
 
@@ -133,8 +135,8 @@ export const MODELS = [
     },
     // ── Video Models ───────────────────────────────────────────────────
     {
-        id: 'wan-22-t2v',
-        name: 'Wan 2.2 T2V Smooth',
+        id: 'wan-22',
+        name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         video: 'wan22_preview.mp4',
@@ -143,49 +145,30 @@ export const MODELS = [
             { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
             { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
         ],
-        supportedOps: ['t2v_ms'],
+        supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
-        description: 'Wan 2.2 text-to-video only, for anime and realism using the SmoothMix models.',
+        description: 'Wan 2.2 text-to-video and image-to-video, for anime and realism using the SmoothMix models.',
         workflows: {
             t2v_ms: 'Wan22_t2v.json',
-        },
-        dependencies: [
-            'wan-22-t2v-high',
-            'wan-22-t2v-low',
-            'wan_2.1_vae',
-            'umt5_xxl_fp8_e4m3fn_scaled',
-            'ComfyUI-MpiNodes',
-            'ComfyUI-VideoHelperSuite',
-            'comfyui-kjnodes',
-        ],
-    },
-    {
-        id: 'wan-22-i2v',
-        name: 'Wan 2.2 I2V Smooth',
-        dropdownMeta: 'VIDEO',
-        mediaType: 'video',
-        video: 'wan22_i2v_preview.mp4',
-        mediaRatio: 'portrait',
-        type: 'wan',
-        loraStages: [
-            { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
-            { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
-        ],
-        supportedOps: ['i2v_ms'],
-        gen_speed: 'fast',
-        description: 'Wan 2.2 image-to-video only, for anime and realism using the SmoothMix models.',
-        workflows: {
             i2v_ms: 'Wan22_i2v.json',
         },
-        dependencies: [
-            'wan-22-i2v-high',
-            'wan-22-i2v-low',
+        // Always-installed shared payload (VAE, text encoder, shared custom nodes).
+        commonDeps: [
             'wan_2.1_vae',
             'umt5_xxl_fp8_e4m3fn_scaled',
             'ComfyUI-MpiNodes',
             'ComfyUI-VideoHelperSuite',
             'comfyui-kjnodes',
-            'ComfyUI-PainterI2Vadvanced',
         ],
+        // Per-operation weights the user can opt in/out of. Resolved + unioned with
+        // commonDeps by resolveModelDeps.js before the download lifecycle.
+        operations: {
+            t2v_ms: {
+                deps: ['wan-22-t2v-high', 'wan-22-t2v-low'],
+            },
+            i2v_ms: {
+                deps: ['wan-22-i2v-high', 'wan-22-i2v-low', 'ComfyUI-PainterI2Vadvanced'],
+            },
+        },
     },
 ];

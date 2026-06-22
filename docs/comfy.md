@@ -194,6 +194,15 @@ Singleton that owns the frontend download queue.
 - `start(modelId, dependencies)`: Enqueue a model for download via backend SSE.
 - `pause(modelId)` / `resume(modelId)` / `cancel(modelId)`: Control an active download.
 - `uninstall(modelId, dependencies)`: Remove model files via backend.
+
+> **Operation-selectable models (MPI-122).** `dependencies` here is ALWAYS a
+> resolved, flat dep array. For operation-keyed models (e.g. Wan 2.2) the
+> renderer runs `resolveDeps(model, selectedOps)` at the call site — install uses
+> the user's op selection, whole-model uninstall and install-status checks use
+> `resolveFullUniverse(model)`. The download lifecycle (jobs, SSE, refcounts,
+> `.cubricdl` markers) is unchanged and never learns about operations; jobs stay
+> keyed by `modelId`. Backend shared-dep protection resolves every other model's
+> full universe so a common/op-specific dep another model needs is never deleted.
 - SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
 - Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
 - On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and repopulate `state.downloadJobs`.

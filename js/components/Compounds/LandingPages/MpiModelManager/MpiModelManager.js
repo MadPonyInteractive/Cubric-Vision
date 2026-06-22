@@ -6,6 +6,11 @@ import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
+import {
+    resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
+    expandRequiredOps, dependentsOfOp,
+} from '../../../../data/modelConstants/resolveModelDeps.js';
+import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
@@ -13,16 +18,27 @@ import { formatBytes } from '../../../../utils/formatBytes.js';
 /**
  * MpiModelManager — Model-manager content for the MpiSlideOver panel.
  *
- * Renders installed + available models as MpiInstalledDisplay cards and owns
- * all model-list logic: refresh, install, pause/resume/cancel, uninstall
- * confirmation, partial-progress, and download:* event subscriptions. Patches
- * single cards in-place on download:progress.
+ * Renders installed + available models as MpiInstalledDisplay cards and owns all
+ * model-list logic: refresh, install, pause/resume/cancel, uninstall, partial-
+ * progress, and download:* event subscriptions.
+ *
+ * MPI-122 — operation-selectable models (e.g. Wan 2.2) render a toggle row above
+ * the card. The user picks which operations to install; the button reads
+ * Install / Update / Uninstall depending on installed vs drafted state:
+ *   - 0 ops installed                → Install (installs the drafted ops)
+ *   - ≥1 installed, draft == installed → Uninstall (whole model)
+ *   - ≥1 installed, draft != installed → Update (install added ops + uninstall
+ *     removed ops; a confirm dialog gates any removal)
+ * The draft persists across sessions in state.s_modelOpDraftByModel. A "base"
+ * toggle (commonDeps) is shown only when the model has bundled ops that run on
+ * commonDeps alone (image models with upscale/detail); turning it off cascades
+ * every op off. Video models (no bundled ops) show only their op toggles.
+ *
+ * Flat models with no separable operations (all image models today) keep the
+ * original Install/Uninstall card behaviour with no toggle row.
  *
  * No overlay chrome — drops into the MpiSlideOver body. MpiSlideOver calls
  * el.onOpen() each time the panel opens so installed state is re-synced.
- *
- * Usage (via slide-over event):
- *   Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
  */
 export const MpiModelManager = ComponentFactory.create({
     name: 'MpiModelManager',
@@ -44,56 +60,200 @@ export const MpiModelManager = ComponentFactory.create({
 
         const _unsubs = [];
 
-        // Per-modelId card instance tracking so downloadProgress events can update a
-        // single card in-place instead of re-rendering the whole list (see
-        // .claude/rules/downloads.md rule 4 — subscribe to download:* via Events, do
-        // not poll state.downloadJobs).
-        //   Map<modelId, { wrapper: HTMLElement, display: MpiInstalledDisplayInstance }>
+        // Per-modelId card instance tracking so download:progress events can update a
+        // single card in-place instead of re-rendering the whole list.
+        //   Map<modelId, { wrapper, display }>
         const _cardInstances = new Map();
-
-        // Track callbacks for pause/resume/cancel so we can remove stale listeners
-        // when setDownloadState('downloading') rebuilds buttons (Bug 3 fix).
-        //   Map<modelId, { pause: Function, resume: Function, cancel: Function }>
+        //   Map<modelId, { pause, resume, cancel }>
         const _cardHandlers = new Map();
+        // Op-toggle MpiButton instances per model, torn down on re-render/destroy.
+        //   Map<modelId, Array<{ key, inst }>>  (key 'base' for the base toggle)
+        const _opToggles = new Map();
+
+        // ── Base-toggle pseudo-key ───────────────────────────────────────────
+        const BASE = 'base';
 
         // ── Refresh button ───────────────────────────────────────────────────
         const refreshBtn = MpiButton.mount(refreshSlot, {
-            icon: 'refresh',
-            variant: 'ghost',
-            size: 'md',
+            icon: 'refresh', variant: 'ghost', size: 'md',
             info: 'Refresh model state from disk',
         });
+        _unsubs.push(on(refreshBtn.el, 'click', () => { awaitReSync(); }));
 
-        _unsubs.push(on(refreshBtn.el, 'click', () => {
-            awaitReSync();
-        }));
-
-        // ── Uninstall confirm dialog (shared across all cards) ────────────
-        let _pendingUninstall = null; // { modelId, deps, name }
-        const _uninstallDialog = MpiOkCancel.mount(document.createElement('div'), {
-            title:       'Uninstall model',
-            text:        'Delete this model?\n• Files shared with other installed models will be kept.',
+        // ── Confirm dialog (shared) — used for whole-model uninstall AND op removal ──
+        let _pendingConfirm = null; // { run: async () => void }
+        const _confirmDialog = MpiOkCancel.mount(document.createElement('div'), {
+            title:       'Uninstall',
+            text:        'Delete these files?\n• Files shared with other installed models will be kept.',
             okLabel:     'Uninstall',
             cancelLabel: 'Cancel',
             checkbox:    { label: 'Also delete model files from disk', checked: true },
         });
-        _uninstallDialog.on('ok', async ({ checkboxChecked }) => {
-            const pending = _pendingUninstall;
-            _pendingUninstall = null;
+        _confirmDialog.on('ok', async ({ checkboxChecked }) => {
+            const pending = _pendingConfirm;
+            _pendingConfirm = null;
             if (!pending) return;
-            await downloadService.uninstall(pending.modelId, pending.deps, checkboxChecked);
+            await pending.run(checkboxChecked);
             await reSyncInstalledModels();
         });
-        _uninstallDialog.on('cancel', () => { _pendingUninstall = null; });
+        _confirmDialog.on('cancel', () => { _pendingConfirm = null; });
 
-        // ── Install a model (non-blocking via downloadService) ───────────────
-        async function _installModel(model) {
-            const dependencies = model.dependencies
-                .map(depId => DEPS[depId])
-                .filter(Boolean);
+        // Set the dialog body text before showing (op removal vs whole-model differ).
+        const _confirmText = qs('#text-slot', _confirmDialog.el);
+        function _showConfirm(text, run) {
+            if (_confirmText) _confirmText.textContent = text;
+            _pendingConfirm = { run };
+            _confirmDialog.el.show();
+        }
+
+        // ── Dep helpers ──────────────────────────────────────────────────────
+        const _depIsInstalled = depState =>
+            depState === true || depState?.installed === true;
+
+        function _parseSizeToBytes(sizeStr) {
+            if (!sizeStr) return 0;
+            const match = sizeStr.match(/^([\d\.]+)\s*(GB|MB|KB|B)$/i);
+            if (!match) return 0;
+            return parseFloat(match[1]) * { GB: 1024 ** 3, MB: 1024 ** 2, KB: 1024, B: 1 }[match[2].toUpperCase()] || 0;
+        }
+
+        function _sizeOf(depIds) {
+            let total = 0;
+            for (const id of depIds) {
+                const dep = DEPS[id];
+                if (dep) total += _parseSizeToBytes(dep.size);
+            }
+            return total;
+        }
+
+        function _vramOf(depIds) {
+            let maxVram = 0;
+            for (const id of depIds) {
+                const v = parseInt(DEPS[id]?.vram) || 0;
+                if (v > maxVram) maxVram = v;
+            }
+            return maxVram;
+        }
+
+        // Operations the model bundles into its core (in supportedOps but NOT a
+        // selectable operation group) — e.g. SDXL upscale/detail. When ≥1 exists,
+        // commonDeps form a usable "base" and we show a base toggle. Video models
+        // have none, so no base toggle.
+        function _bundledOps(model) {
+            const sel = new Set(selectableOps(model));
+            return (model.supportedOps || []).filter(op => {
+                if (sel.has(op)) return false;
+                const cmd = getCommand(op);
+                return cmd && !cmd.universal;
+            });
+        }
+        const _hasBaseToggle = model => _bundledOps(model).length > 0;
+
+        // ── Installed-state + draft derivation ───────────────────────────────
+        function _installedOpsOf(model) {
+            const depStatus = getModelDepStatus(model.id);
+            if (!depStatus) return [];
+            const { installedOps } = deriveInstalledOps(
+                model, id => _depIsInstalled(depStatus.get(id)),
+            );
+            return installedOps;
+        }
+
+        // The user's current op-selection draft for a model. Persisted across
+        // sessions in state.s_modelOpDraftByModel. Defaults:
+        //   - if any op is installed → the installed set (so reopening reflects disk)
+        //   - else (fresh model)     → all selectable ops (default all-on)
+        function _draftFor(model) {
+            const saved = state.s_modelOpDraftByModel?.[model.id];
+            if (Array.isArray(saved)) {
+                // Keep only still-selectable ops, then expand requiresOps.
+                return expandRequiredOps(model, saved);
+            }
+            const installed = _installedOpsOf(model);
+            return installed.length ? installed : selectableOps(model);
+        }
+
+        function _setDraft(model, ops) {
+            const next = expandRequiredOps(model, ops);
+            state.s_modelOpDraftByModel = {
+                ...(state.s_modelOpDraftByModel || {}),
+                [model.id]: next,
+            };
+        }
+
+        // ── Resolve helpers around install/uninstall ─────────────────────────
+        // Deps to fetch for the drafted op set (commonDeps + drafted ops).
+        function _draftDepIds(model) {
+            return resolveDeps(model, _draftFor(model));
+        }
+
+        // Per-op uninstall dep set: the removed ops' deps MINUS any dep still used
+        // by an op that REMAINS installed-or-drafted (incl. commonDeps, which any
+        // remaining op keeps alive). Intra-model subtraction — the backend's
+        // shared-dep guard only protects across OTHER models, so we must not hand it
+        // a dep a sibling op of THIS model still needs. (MPI-122)
+        function _opUninstallDepIds(model, removedOps, keptOps) {
+            const removed = resolveDeps(model, removedOps);
+            const keep = new Set(resolveDeps(model, keptOps)); // includes commonDeps
+            return removed.filter(id => !keep.has(id));
+        }
+
+        // ── Install / Update / Uninstall actions ─────────────────────────────
+        async function _install(model) {
+            const dependencies = _draftDepIds(model)
+                .map(id => DEPS[id]).filter(Boolean);
             if (!dependencies.length) return;
             await downloadService.start(model.id, dependencies);
             renderList();
+        }
+
+        // Whole-model uninstall (no toggle change, or flat model).
+        function _confirmWholeUninstall(model) {
+            const deps = resolveFullUniverse(model).map(id => DEPS[id]).filter(Boolean);
+            _showConfirm(
+                `Uninstall ${model.name}?\n• Files shared with other installed models will be kept.`,
+                async (deleteFiles) => {
+                    await downloadService.uninstall(model.id, deps, deleteFiles);
+                },
+            );
+        }
+
+        // Update: apply the draft against the installed set. Adds install; removals
+        // require confirm. Mixed → confirm (for the removal) then add.
+        async function _applyUpdate(model) {
+            const installed = new Set(_installedOpsOf(model));
+            const draft = new Set(_draftFor(model));
+            const added = [...draft].filter(op => !installed.has(op));
+            const removed = [...installed].filter(op => !draft.has(op));
+
+            const doInstall = async () => {
+                if (!added.length) return;
+                // Install resolves the FULL draft (downloader dedupes already-present
+                // deps; the resumable layer skips complete files).
+                await _install(model);
+            };
+
+            if (removed.length === 0) {
+                await doInstall();
+                return;
+            }
+
+            // Removal present → confirm. On OK: uninstall removed ops' unique deps,
+            // then install any added ops.
+            const keptOps = [...draft]; // what stays after the update
+            const removeDeps = _opUninstallDepIds(model, removed, keptOps)
+                .map(id => DEPS[id]).filter(Boolean);
+            const removedLabels = removed.map(op => (getCommand(op) || {}).label || op).join(', ');
+            const addedLabels = added.map(op => (getCommand(op) || {}).label || op).join(', ');
+            const lines = [`Remove ${removedLabels} from ${model.name}?`];
+            if (addedLabels) lines.push(`Also installs: ${addedLabels}.`);
+            lines.push('• Files shared with other operations or models are kept.');
+            _showConfirm(lines.join('\n'), async (deleteFiles) => {
+                if (removeDeps.length) {
+                    await downloadService.uninstall(model.id, removeDeps, deleteFiles);
+                }
+                await doInstall();
+            });
         }
 
         // ── Re-sync wrapper ────────────────────────────────────────────────
@@ -104,43 +264,211 @@ export const MpiModelManager = ComponentFactory.create({
             refreshBtn.el.removeAttribute('loading');
         }
 
-        // ── Compute size + VRAM stats from deps ─────────────────────────────
-        function _computeModelStats(model) {
-            if (!model.dependencies || model.dependencies.length === 0) {
-                return { sizeText: '', vramText: '' };
+        // ── Partial-progress measured against the DRAFT deps ─────────────────
+        // The bar tracks how much of what the user will install is already on disk,
+        // so a deliberately-omitted op never reads as partial. (MPI-122)
+        function _computePartial(model) {
+            const depStatus = getModelDepStatus(model.id);
+            if (!depStatus) return { hasPartialProgress: false };
+            const deps = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
+            let installedDeps = 0, downloaded = 0, total = 0;
+            for (const dep of deps) {
+                const st = depStatus.get(dep.id);
+                if (_depIsInstalled(st)) { downloaded += _parseSizeToBytes(dep.size); installedDeps += 1; }
+                else if (st?.partialBytes) { downloaded += st.partialBytes; }
+                total += _parseSizeToBytes(dep.size);
             }
-
-            let totalBytes = 0;
-            let maxVram = 0;
-
-            for (const depId of model.dependencies) {
-                const dep = DEPS[depId];
-                if (!dep) continue;
-                totalBytes += _parseSizeToBytes(dep.size);
-                const vramNum = parseInt(dep.vram) || 0;
-                if (vramNum > maxVram) maxVram = vramNum;
+            const allInstalled = installedDeps === deps.length;
+            if (total > 0 && !allInstalled) {
+                return {
+                    hasPartialProgress: true,
+                    progress: Math.min(total > 0 ? downloaded / total : 0, 0.99),
+                    downloadedBytes: downloaded,
+                    totalBytes: total,
+                };
             }
-
-            return {
-                sizeText: totalBytes > 0 ? formatBytes(totalBytes) : '',
-                vramText: maxVram > 0 ? `${maxVram}GB VRAM` : '',
-            };
+            return { hasPartialProgress: false };
         }
 
-        function _parseSizeToBytes(sizeStr) {
-            if (!sizeStr) return 0;
-            const match = sizeStr.match(/^([\d\.]+)\s*(GB|MB|KB|B)$/i);
-            if (!match) return 0;
-            return parseFloat(match[1]) * { GB: 1024 ** 3, MB: 1024 ** 2, KB: 1024, B: 1 }[match[2].toUpperCase()] || 0;
+        // ── Toggle row ───────────────────────────────────────────────────────
+        // Renders the base toggle (iff bundled ops) + one toggle per selectable op.
+        // Toggling mutates the draft with cascade rules then re-renders the list so
+        // size/partial/button all reflect the new draft. `frozen` disables the row
+        // during an active download.
+        function _buildToggleRow(model, { frozen }) {
+            const ops = selectableOps(model);
+            if (ops.length === 0) return null; // flat model → no toggles
+
+            const draft = new Set(_draftFor(model));
+            const showBase = _hasBaseToggle(model);
+
+            // The row IS the toggle grid — no header label (the toggle text is
+            // self-explanatory and the user has no concept of "operations" yet).
+            // Flex-wrap so future models stack toggles (max ~3 per row via CSS).
+            const row = ce('div', { className: 'mpi-model-manager__ops-row' });
+            const btnRow = row;
+
+            const toggles = [];
+
+            // Commit the current draft set and re-render.
+            const commit = () => { _setDraft(model, [...draft]); renderList(); };
+
+            if (showBase) {
+                const baseInst = MpiButton.mount(ce('div'), {
+                    // icon-button mode reads `label`, not `text`.
+                    label: 'Base model', icon: 'layers', variant: 'secondary', size: 'sm',
+                    toggleable: true, active: draft.size > 0, disabled: frozen,
+                });
+                baseInst.on('toggle', ({ active }) => {
+                    if (active) {
+                        // Base on alone = commonDeps only (bundled ops become usable).
+                        // No op auto-selected; user adds ops explicitly.
+                    } else {
+                        // Base off → cascade every op off (nothing can exist without common).
+                        draft.clear();
+                    }
+                    commit();
+                });
+                toggles.push({ key: BASE, inst: baseInst });
+                btnRow.appendChild(baseInst.el);
+            }
+
+            ops.forEach(op => {
+                const cmd = getCommand(op) || {};
+                const inst = MpiButton.mount(ce('div'), {
+                    // icon-button mode reads `label`, not `text`.
+                    label: cmd.label || op,
+                    icon: cmd.icon || undefined,
+                    variant: 'secondary', size: 'sm',
+                    toggleable: true, active: draft.has(op), disabled: frozen,
+                });
+                inst.on('toggle', ({ active }) => {
+                    if (active) {
+                        draft.add(op);
+                        // Pull in required ops (e.g. extend needs i2v).
+                        for (const req of expandRequiredOps(model, [op])) draft.add(req);
+                    } else {
+                        draft.delete(op);
+                        // Cascade off anything that required this op.
+                        for (const dep of dependentsOfOp(model, op)) draft.delete(dep);
+                        // No-base models: blocking the last op is NOT required — the
+                        // user uninstalls everything via the Uninstall button. But a
+                        // zero-draft on a fresh (nothing installed) no-base model would
+                        // disable Install; allow it — button just disables.
+                    }
+                    commit();
+                });
+                toggles.push({ key: op, inst });
+                btnRow.appendChild(inst.el);
+            });
+
+            _opToggles.set(model.id, toggles);
+            return row;
         }
 
-        // Destroy all existing card instances and clear tracking Map. Called before
-        // each full renderList() to avoid leaking child subscriptions.
+        // ── Card builder (unified install/uninstall path) ────────────────────
+        function _buildCard(model) {
+            const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
+
+            const job = state.downloadJobs.find(j => j.modelId === model.id);
+            const downloadState = job ? job.status : 'idle';
+            const isActiveDownload = ['downloading', 'paused', 'installing'].includes(downloadState);
+
+            // Sizes: drafted footprint (what install fetches) for op-keyed models,
+            // else the full universe.
+            const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model);
+            const sizeBytes = _sizeOf(sizeDepIds);
+            const vram = _vramOf(resolveFullUniverse(model));
+            const sizeText = sizeBytes > 0 ? formatBytes(sizeBytes) : '';
+            const vramText = vram > 0 ? `${vram}GB VRAM` : '';
+
+            // Install state machine.
+            const installedOps = _installedOpsOf(model);
+            const hasOps = selectableOps(model).length > 0;
+            const draft = _draftFor(model);
+            const draftDiffersFromInstalled = hasOps && (
+                installedOps.length !== draft.length
+                || installedOps.some(op => !draft.includes(op))
+            );
+            const anyInstalled = model.installed === true || installedOps.length > 0;
+
+            // Partial progress (idle only).
+            let partial = { hasPartialProgress: false };
+            if (downloadState === 'idle') partial = _computePartial(model);
+
+            const progress = job ? job.progress : (partial.progress || 0);
+            const speed = job ? job.speed : '';
+            const downloadedBytes = job ? job.downloadedBytes : (partial.downloadedBytes || 0);
+            const totalBytes = job ? job.totalBytes : (partial.totalBytes || 0);
+            const displayState = partial.hasPartialProgress && !isActiveDownload ? 'partial' : downloadState;
+
+            // Button label: Install (nothing installed) / Update (changes) / Uninstall.
+            const showInstalled = anyInstalled;
+            const uninstallLabel = draftDiffersFromInstalled ? 'Update' : 'Uninstall';
+
+            const card = MpiInstalledDisplay.mount(cardWrap, {
+                title: model.name,
+                meta: sizeText,
+                text: model.description || '',
+                image: model.image || '',
+                video: model.video || '',
+                mediaRatio: model.mediaRatio || '',
+                icon: showInstalled ? 'info' : 'warning',
+                iconText: vramText,
+                installed: showInstalled,
+                canUninstall: showInstalled,
+                uninstallLabel,
+                deleteLabel: 'Install',
+                downloadState: displayState,
+                progress,
+                hasPartialProgress: partial.hasPartialProgress && !isActiveDownload,
+                speed,
+                downloadedBytes,
+                totalBytes,
+                indeterminate: job ? !!job.indeterminate : false,
+                phase: job ? (job.phase || 'preparing') : 'preparing',
+            });
+
+            // Toggle row lives INSIDE the card, between the badge and the action
+            // button (card.el.opsSlot is a static slot the card never rebuilds).
+            // Op-keyed models only; frozen during an active download.
+            const toggleRow = _buildToggleRow(model, { frozen: isActiveDownload });
+            if (toggleRow && card.el.opsSlot) {
+                card.el.opsSlot.appendChild(toggleRow);
+                card.el.opsSlot.style.display = '';
+            }
+
+            if (isActiveDownload) {
+                const pauseCb = () => downloadService.pause(model.id);
+                const resumeCb = () => downloadService.resume(model.id);
+                const cancelCb = () => downloadService.cancel(model.id);
+                card.on('pause', pauseCb);
+                card.on('resume', resumeCb);
+                card.on('cancel', cancelCb);
+                _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
+            } else if (showInstalled) {
+                // Installed → button is Update (apply draft) or Uninstall (whole model).
+                card.on('uninstall', () => {
+                    if (draftDiffersFromInstalled) _applyUpdate(model);
+                    else _confirmWholeUninstall(model);
+                });
+            } else {
+                // Not installed → Install the drafted ops.
+                card.on('delete', () => { _install(model); });
+            }
+
+            _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
+            return cardWrap;
+        }
+
+        // ── Teardown ─────────────────────────────────────────────────────────
         function _destroyAllCards() {
-            for (const { display } of _cardInstances.values()) {
-                display?.el?.destroy?.();
-            }
+            for (const { display } of _cardInstances.values()) display?.el?.destroy?.();
             _cardInstances.clear();
+            for (const toggles of _opToggles.values()) {
+                toggles.forEach(({ inst }) => inst?.el?.destroy?.());
+            }
+            _opToggles.clear();
         }
 
         // ── Render card list ───────────────────────────────────────────────
@@ -150,311 +478,46 @@ export const MpiModelManager = ComponentFactory.create({
             qsa('.mpi-model-manager__section-header', bodySlot).forEach(h => h.remove());
             qsa('.mpi-model-manager__empty', bodySlot).forEach(e => e.remove());
 
-            const installed = MODELS.filter(m => m.installed === true);
-            const uninstalled = MODELS.filter(m => m.installed !== true);
+            // A model is "installed" for sectioning when its installed flag is set OR
+            // at least one of its ops is installed (op-keyed partial installs).
+            const isInstalled = m => m.installed === true || _installedOpsOf(m).length > 0;
+            const installed = MODELS.filter(isInstalled);
+            const uninstalled = MODELS.filter(m => !isInstalled(m));
 
-            // Installed section
             if (installed.length > 0) {
-                const header = ce('div', { className: 'mpi-model-manager__section-header' },
-                    [document.createTextNode('Installed Models')]);
-                bodySlot.appendChild(header);
-
-                installed.forEach(model => {
-                    const stats = _computeModelStats(model);
-                    const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
-                    bodySlot.appendChild(cardWrap);
-
-                    const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
-                    const downloadState = downloadJob ? downloadJob.status : 'idle';
-                    const progress = downloadJob ? downloadJob.progress : 0;
-                    const speed = downloadJob ? downloadJob.speed : '';
-                    const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
-                    const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
-
-                    // Partial progress for installed model with missing deps (no active download)
-                    let partialProgress = 0;
-                    let partialDownloadedBytes = 0;
-                    let partialTotalBytes = 0;
-                    let hasPartialProgress = false;
-                    if (downloadState === 'idle') {
-                        const depStatus = getModelDepStatus(model.id);
-                        if (depStatus) {
-                            const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
-                            let installedDeps = 0;
-                            for (const dep of deps) {
-                                const depState = depStatus.get(dep.id);
-                                const depInstalled = depState === true || depState?.installed === true;
-                                if (depInstalled) {
-                                    partialDownloadedBytes += _parseSizeToBytes(dep.size);
-                                    installedDeps += 1;
-                                } else if (depState?.partialBytes) {
-                                    partialDownloadedBytes += depState.partialBytes;
-                                }
-                                partialTotalBytes += _parseSizeToBytes(dep.size);
-                            }
-                            // MPI-95 — a model is partial when ANY dep is missing, not only
-                            // when bytes are short. A missing SMALL dep (e.g. the 144KB
-                            // ComfyUI-PainterI2Vadvanced per-model node) leaves
-                            // downloaded/total at ~0.99999 of 36.5GB, which rounded to a
-                            // FULL bar while the badge said PARTIALLY INSTALLED — a
-                            // contradiction the user hit. Drive "partial" off dep COUNT,
-                            // and clamp the bar below 100% so a missing component is always
-                            // visible regardless of its byte size.
-                            const allDepsInstalled = installedDeps === deps.length;
-                            if (partialTotalBytes > 0 && !allDepsInstalled) {
-                                hasPartialProgress = true;
-                                partialProgress = Math.min(
-                                    partialTotalBytes > 0 ? partialDownloadedBytes / partialTotalBytes : 0,
-                                    0.99,
-                                );
-                            }
-                        }
-                    }
-
-                    const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
-                    // For installed model with partial: show progress bar + Resume/Cancel
-                    // For fully installed model (no active download, no partial): Uninstall button
-                    const displayDownloadState = hasPartialProgress ? 'partial' : downloadState;
-                    const displayProgress = hasPartialProgress ? partialProgress : progress;
-                    const displayDownloadedBytes = hasPartialProgress ? partialDownloadedBytes : downloadedBytes;
-                    const displayTotalBytes = hasPartialProgress ? partialTotalBytes : totalBytes;
-
-                    const card = MpiInstalledDisplay.mount(cardWrap, {
-                        title: model.name,
-                        meta: stats.sizeText,
-                        text: model.description || '',
-                        image: model.image || '',
-                        video: model.video || '',
-                        mediaRatio: model.mediaRatio || '',
-                        icon: 'info',
-                        iconText: stats.vramText,
-                        installed: true,
-                        canUninstall: true,
-                        downloadState: displayDownloadState,
-                        progress: displayProgress,
-                        hasPartialProgress,
-                        speed,
-                        downloadedBytes: displayDownloadedBytes,
-                        totalBytes: displayTotalBytes,
-                        indeterminate: downloadJob ? !!downloadJob.indeterminate : false,
-                        phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
-                    });
-
-                    // Wire pause/resume/cancel only while a download is genuinely
-                    // ACTIVE. A lingering 'complete' job (download:complete sets the
-                    // status but never clears the job from state.downloadJobs) is
-                    // terminal — the model is installed — so it must take the
-                    // uninstall branch. Without this, an install-then-uninstall left
-                    // the INSTALLED card with pause/cancel handlers and NO uninstall
-                    // handler, so the Uninstall click emitted but nothing called
-                    // _uninstallDialog.el.show() (the dialog never opened). (MPI-99)
-                    const isActiveDownload = downloadState === 'downloading'
-                        || downloadState === 'paused'
-                        || downloadState === 'installing';
-                    if (isActiveDownload) {
-                        const pauseCb = () => downloadService.pause(model.id);
-                        const resumeCb = () => downloadService.resume(model.id);
-                        const cancelCb = () => downloadService.cancel(model.id);
-                        card.on('pause', pauseCb);
-                        card.on('resume', resumeCb);
-                        card.on('cancel', cancelCb);
-                        _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
-                    } else {
-                        card.on('uninstall', () => {
-                            _pendingUninstall = { modelId: model.id, deps, name: model.name };
-                            _uninstallDialog.el.show();
-                        });
-                    }
-
-                    _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
-                });
+                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__section-header' },
+                    [document.createTextNode('Installed Models')]));
+                installed.forEach(model => bodySlot.appendChild(_buildCard(model)));
             }
 
-            // Available section
             if (uninstalled.length === 0 && installed.length > 0) {
-                const emptyEl = ce('div', { className: 'mpi-model-manager__empty' },
-                    [ce('span', { textContent: 'No models available to install' })]);
-                bodySlot.appendChild(emptyEl);
+                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__empty' },
+                    [ce('span', { textContent: 'No models available to install' })]));
                 return;
             }
-
             if (uninstalled.length === 0 && installed.length === 0) {
-                const emptyEl = ce('div', { className: 'mpi-model-manager__empty' },
-                    [ce('span', { textContent: 'No models available' })]);
-                bodySlot.appendChild(emptyEl);
+                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__empty' },
+                    [ce('span', { textContent: 'No models available' })]));
                 return;
             }
-
-            uninstalled.forEach(model => {
-                const stats = _computeModelStats(model);
-                const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
-                bodySlot.appendChild(cardWrap);
-
-                const downloadJob = state.downloadJobs.find(j => j.modelId === model.id);
-                const downloadState = downloadJob ? downloadJob.status : 'idle';
-                const progress = downloadJob ? downloadJob.progress : 0;
-                const speed = downloadJob ? downloadJob.speed : '';
-                const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
-                const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
-
-                // Partial progress for uninstalled model with some deps already on disk
-                let partialProgress = 0;
-                let partialDownloadedBytes = 0;
-                let partialTotalBytes = 0;
-                let hasPartialProgress = false;
-                if (downloadState === 'idle') {
-                    const depStatus = getModelDepStatus(model.id);
-                    if (depStatus) {
-                        const deps = model.dependencies.map(id => DEPS[id]).filter(Boolean);
-                        let installedDeps = 0;
-                        for (const dep of deps) {
-                            const depState = depStatus.get(dep.id);
-                            const depInstalled = depState === true || depState?.installed === true;
-                            if (depInstalled) {
-                                partialDownloadedBytes += _parseSizeToBytes(dep.size);
-                                installedDeps += 1;
-                            } else if (depState?.partialBytes) {
-                                partialDownloadedBytes += depState.partialBytes;
-                            }
-                            partialTotalBytes += _parseSizeToBytes(dep.size);
-                        }
-                        // MPI-95 — partial is driven by dep COUNT, not bytes alone, and the
-                        // bar is clamped below 100% so a missing SMALL dep (e.g. the 144KB
-                        // ComfyUI-PainterI2Vadvanced node) can't render a FULL bar while the
-                        // badge reads PARTIALLY INSTALLED. See the matching block above.
-                        const allDepsInstalled = installedDeps === deps.length;
-                        if (partialTotalBytes > 0 && !allDepsInstalled) {
-                            hasPartialProgress = true;
-                            partialProgress = Math.min(
-                                partialTotalBytes > 0 ? partialDownloadedBytes / partialTotalBytes : 0,
-                                0.99,
-                            );
-                        }
-                    }
-                }
-
-                // Keep downloadState='idle' so Install button shows (not Resume/Cancel)
-                const displayProgress = hasPartialProgress ? partialProgress : progress;
-                const displayDownloadedBytes = hasPartialProgress ? partialDownloadedBytes : downloadedBytes;
-                const displayTotalBytes = hasPartialProgress ? partialTotalBytes : totalBytes;
-
-                const card = MpiInstalledDisplay.mount(cardWrap, {
-                    title: model.name,
-                    meta: stats.sizeText,
-                    text: model.description || '',
-                    image: model.image || '',
-                    video: model.video || '',
-                    mediaRatio: model.mediaRatio || '',
-                    icon: 'warning',
-                    iconText: stats.vramText,
-                    installed: false,
-                    deleteLabel: 'Install',
-                    downloadState,
-                    progress: displayProgress,
-                    hasPartialProgress,
-                    speed,
-                    downloadedBytes: displayDownloadedBytes,
-                    totalBytes: displayTotalBytes,
-                    indeterminate: downloadJob ? !!downloadJob.indeterminate : false,
-                    phase: downloadJob ? (downloadJob.phase || 'preparing') : 'preparing',
-                });
-
-                // Wire pause/resume/cancel only while a download is genuinely ACTIVE.
-                // A lingering terminal job ('complete'/'cancelled' — download:complete
-                // sets the status but never clears the job from state.downloadJobs) must
-                // fall through to the Install handler. Without this whitelist, an
-                // install-then-uninstall left the UNINSTALLED card with pause/cancel
-                // handlers and NO delete handler, so the Install click emitted but
-                // nothing called _installModel → dead Install button. Mirror of the
-                // installed-branch fix above. (MPI-102; twin of MPI-99 / a28c7a8)
-                const isActiveDownload = downloadState === 'downloading'
-                    || downloadState === 'paused'
-                    || downloadState === 'installing';
-                if (isActiveDownload) {
-                    const pauseCb = () => downloadService.pause(model.id);
-                    const resumeCb = () => downloadService.resume(model.id);
-                    const cancelCb = () => downloadService.cancel(model.id);
-                    card.on('pause', pauseCb);
-                    card.on('resume', resumeCb);
-                    card.on('cancel', cancelCb);
-                    _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
-                } else {
-                    card.on('delete', async () => { await _installModel(model); });
-                }
-
-                _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
-            });
+            uninstalled.forEach(model => bodySlot.appendChild(_buildCard(model)));
         }
 
         // ── State subscriptions ──────────────────────────────────────────────
-        // Only re-render the full list when install status changes. Progress updates
-        // flow through the download:progress event below and patch single cards.
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 's_installedModelIds') renderList();
         }));
 
         // ── Download event subscriptions ─────────────────────────────────────
-        // download:progress patches a single card in place — no full re-render.
         _unsubs.push(Events.on('download:progress', ({ modelId, progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) => {
             const card = _cardInstances.get(modelId);
             if (!card) return;
             card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase });
         }));
 
-        _unsubs.push(Events.on('download:started', ({ modelId }) => {
-            const card = _cardInstances.get(modelId);
-            if (!card) return;
-            // setDownloadState('downloading') rebuilds buttons that emit pause/cancel.
-            // Destroy the existing card and remove it so the re-render creates fresh listeners.
-            // This avoids the broken card.display.listeners reference from Bug 3 fix attempt.
-            if (card.display && card.display.el && typeof card.display.el.destroy === 'function') {
-                try { card.display.el.destroy(); } catch (_) { /* ignore */ }
-            }
-            _cardInstances.delete(modelId);
-            _cardHandlers.delete(modelId);
-            // Re-render the card in its place so it shows downloading state with working buttons
-            const cardWrap = card.wrapper;
-            cardWrap.innerHTML = '';
-            const downloadJob = state.downloadJobs.find(j => j.modelId === modelId);
-            const progress = downloadJob ? downloadJob.progress : 0;
-            const speed = downloadJob ? downloadJob.speed : '';
-            const downloadedBytes = downloadJob ? downloadJob.downloadedBytes : 0;
-            const totalBytes = downloadJob ? downloadJob.totalBytes : 0;
-            const indeterminate = downloadJob ? !!downloadJob.indeterminate : false;
-            const phase = downloadJob ? (downloadJob.phase || 'preparing') : 'preparing';
-
-            const model = MODELS.find(m => m.id === modelId);
-            if (model) {
-                const stats = _computeModelStats(model);
-                const newCard = MpiInstalledDisplay.mount(cardWrap, {
-                    title: model.name,
-                    meta: stats.sizeText,
-                    text: model.description || '',
-                    image: model.image || '',
-                    video: model.video || '',
-                    mediaRatio: model.mediaRatio || '',
-                    icon: 'info',
-                    iconText: stats.vramText,
-                    installed: model.installed === true,
-                    canUninstall: model.installed === true,
-                    downloadState: 'downloading',
-                    progress,
-                    speed,
-                    downloadedBytes,
-                    totalBytes,
-                    indeterminate,
-                    phase,
-                });
-                const pauseCb = () => downloadService.pause(modelId);
-                const resumeCb = () => downloadService.resume(modelId);
-                const cancelCb = () => downloadService.cancel(modelId);
-                newCard.on('pause', pauseCb);
-                newCard.on('resume', resumeCb);
-                newCard.on('cancel', cancelCb);
-                _cardHandlers.set(modelId, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
-                _cardInstances.set(modelId, { wrapper: cardWrap, display: newCard });
-            }
-        }));
+        // download:started rebuilds the whole list so the card shows the toggle row
+        // (frozen) + downloading state with fresh pause/cancel handlers.
+        _unsubs.push(Events.on('download:started', () => { renderList(); }));
 
         _unsubs.push(Events.on('download:paused', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
             const card = _cardInstances.get(modelId);
@@ -480,18 +543,12 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
             const card = _cardInstances.get(modelId);
             if (card) card.display.el.setDownloadState('cancelled');
-            // Rebuild card so its handlers wire to `delete` (Install) again — the
-            // pause/resume/cancel handlers attached during downloading are dead now.
             awaitReSync();
         }));
 
         _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
-            // Immediately show 'complete' state before async re-sync (Bug 4 fix)
             const card = _cardInstances.get(modelId);
             if (card) card.display.el.setDownloadState('complete');
-            // awaitReSync() calls renderList() after the sync resolves — a second
-            // synchronous renderList() here would render stale MODELS[].installed
-            // data (race condition seen in pre-refactor code).
             awaitReSync();
         }));
 
@@ -499,31 +556,19 @@ export const MpiModelManager = ComponentFactory.create({
             const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
             const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
             if (removed.length > 0 && keptTotal === 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} uninstalled.` });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
             } else if (removed.length > 0) {
-                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} uninstalled (some shared files kept).` });
+                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).` });
             } else if (keptModelFiles.length > 0) {
-                // Nothing removed because the user kept files on disk: the model's
-                // own weight stays for a fast re-install, and its other deps are
-                // engine-required (universal) or shared with another model. This is
-                // the EXPECTED outcome of "uninstall without deleting files", NOT a
-                // failure — so the model legitimately stays installed.
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
             } else {
-                // Nothing removed and nothing the user chose to keep → every dep is
-                // engine-required (universal) or shared with another installed model,
-                // so there is nothing this model can remove on its own. Honest:
-                // it can't be uninstalled while those dependencies are still needed.
                 Events.emit('ui:info', { title: 'Nothing to remove', message: `${modelName} — all files are shared with other models or required by the engine.` });
             }
         }));
 
-        _unsubs.push(Events.on('download:failed', () => {
-            awaitReSync();
-        }));
+        _unsubs.push(Events.on('download:failed', () => { awaitReSync(); }));
 
         // ── Open hook — MpiSlideOver calls this each time the panel opens ──────
-        // Re-sync installed state from disk so the list reflects external changes.
         el.onOpen = () => { awaitReSync(); };
 
         // ── Initial render ─────────────────────────────────────────────────
@@ -533,7 +578,7 @@ export const MpiModelManager = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _destroyAllCards();
-            _uninstallDialog?.el?.destroy?.();
+            _confirmDialog?.el?.destroy?.();
         };
     },
 });

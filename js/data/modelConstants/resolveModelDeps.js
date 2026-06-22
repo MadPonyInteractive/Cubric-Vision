@@ -73,6 +73,61 @@ function opDeps(model, op) {
 }
 
 /**
+ * Op ids a given op depends on (e.g. an extend op that needs i2v installed).
+ * Empty when none declared. Optional `requiresOps` on the operation entry.
+ * @param {object} model
+ * @param {string} op
+ * @returns {string[]}
+ */
+function opRequires(model, op) {
+    const entry = model?.operations?.[op];
+    return Array.isArray(entry?.requiresOps) ? entry.requiresOps : [];
+}
+
+/**
+ * Expand a selection to include every op it (transitively) requires via
+ * `requiresOps`. Only selectable ops survive. Order-independent; the result is a
+ * stable, deduped list in registry (selectableOps) order so the resolved dep list
+ * and download-job signature don't depend on toggle order.
+ * @param {object} model
+ * @param {string[]} ops
+ * @returns {string[]}
+ */
+export function expandRequiredOps(model, ops) {
+    if (!hasOperationGroups(model)) return [];
+    const available = selectableOps(model);
+    const availableSet = new Set(available);
+    const want = new Set(ops.filter(op => availableSet.has(op)));
+    // Transitive closure over requiresOps.
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const op of [...want]) {
+            for (const req of opRequires(model, op)) {
+                if (availableSet.has(req) && !want.has(req)) {
+                    want.add(req);
+                    changed = true;
+                }
+            }
+        }
+    }
+    return available.filter(op => want.has(op)); // stable registry order
+}
+
+/**
+ * Selectable ops that (transitively) require `op` — i.e. dependents that must be
+ * deselected/uninstalled when `op` is removed. Used by the UI cascade-off.
+ * @param {object} model
+ * @param {string} op
+ * @returns {string[]}
+ */
+export function dependentsOfOp(model, op) {
+    if (!hasOperationGroups(model)) return [];
+    return selectableOps(model).filter(other =>
+        other !== op && expandRequiredOps(model, [other]).includes(op));
+}
+
+/**
  * Operations a model can offer as selectors. Only ops that appear in BOTH
  * supportedOps and operations are selectable; everything else is always-on.
  * @param {object} model
@@ -130,9 +185,11 @@ export function resolveDeps(model, selectedOps = null, depExists = null) {
     // so the resolved list is identical regardless of toggle/click order — a stable
     // download-job signature.
     const available = selectableOps(model);
+    // Expand the selection to pull in any op required via `requiresOps` (an op
+    // can't install without the ops it depends on). null = all selectable ops.
     const wanted = (selectedOps == null)
         ? available
-        : available.filter(op => selectedOps.includes(op));
+        : expandRequiredOps(model, selectedOps);
 
     const ids = [...common];
     for (const op of wanted) {
@@ -188,9 +245,15 @@ export function deriveInstalledOps(model, depStatus) {
         };
     }
 
-    const installedOps = commonComplete
-        ? selectableOps(model).filter(op => allComplete(opDeps(model, op)))
-        : [];
+    // First pass: ops whose common + own deps are all on disk.
+    const depComplete = commonComplete
+        ? new Set(selectableOps(model).filter(op => allComplete(opDeps(model, op))))
+        : new Set();
+
+    // Second pass: an op only counts as installed if every op it requires is also
+    // installed — a dependent op is unusable without its prerequisites on disk.
+    const installedOps = selectableOps(model).filter(op =>
+        depComplete.has(op) && opRequires(model, op).every(req => depComplete.has(req)));
 
     return { installedOps, fullyInstalled: installedOps.length > 0 };
 }
