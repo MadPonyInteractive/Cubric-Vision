@@ -1,0 +1,119 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "21c3e0f6-7ea7-4850-b452-667d87020bfe",
+  "generated_at": "2026-06-21T12:00:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX-2.3 workflow authoring in live ComfyUI — i2v/t2v/first-last modes built into one template",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-4: build the LTX-2.3 image-to-video and text-to-video template in live ComfyUI (cooperative session, user drives ComfyUI, agent edits the workflow JSON directly).",
+    "status": "in_progress",
+    "summary": "Authoring a single multi-mode LTX-2.3 template file in the user's live ComfyUI install. Three generation modes now work end-to-end: i2v, t2v, and first/last-frame, selected by one Input_Mode integer via MpiAnySwitch. User reworked audio (removed stage-1 audio save/load) and the output section. Next: pick the next LTX op to build (video extend = priority, then ControlNet, then head-swap), possibly after a LoRA hunt for a first/last transition LoRA."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/plan.md",
+    "completed": [
+      "Traced the NerdyRodent monolith Stage-1 latent chain (master rgthree Any Switch 257 → mute-driven branch select; i2v = LAT_INIT_IMG live)",
+      "Traced Stage-2 latent chain (LTXVLatentUpsampler → LTXVImgToVideoInplace re-inject → concat → SamplerCustomAdvanced)",
+      "Confirmed negative prompt is classic CFGGuider (NOT NAG; NAG bypassed); captured negative text",
+      "Fixed EmptyLTXVLatentVideo float-size crash: MpiMath expression must be floor(a/2) not int(a/2) (int not in MpiMath eval context)",
+      "Inserted Stage-2 LTXVImgToVideoInplace into the template (was missing → Stage-2 lost image anchor)",
+      "Built single-toggle t2v via 2x MpiIfElse + MpiSimpleBoolean (later REPLACED)",
+      "Replaced the IfElse pair with 2x MpiAnySwitch + Input_Mode MpiInt for 3-way i2v/t2v/FL select",
+      "Built the first/last-frame chain: IMG2 preprocess + 2x LTXVImgToVideoInplaceKJ (S1+S2) + MpiMath index_2 = Frames-1",
+      "User removed stage-1 audio save/load latent (no app-side stage-1 audio preview) and reworked the output section (Input_Use_Audio now MpiSimpleBoolean)"
+    ],
+    "pending": [
+      "Decide next LTX op: video extend (PRIORITY), then ControlNet, then head-swap",
+      "Possible LoRA hunt FIRST: find a first/last transition LoRA on HuggingFace/Civitai — vanilla FL transition is weak",
+      "Eventually export the live template into the per-op app API files (LTX23_i2v.json + _stage2, LTX23_t2v.json + _stage2) via the workflow-generation orchestrator",
+      "Update MpiNodes dependency pin + rebuild Pod image once new MPI nodes (Mpi Conditioning Reroute, Mpi Reroute, etc.) are finalized and pushed"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "research LoRAs on HuggingFace/Civitai when asked"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Session findings captured in this handoff; live template is saved by the user as source of truth"
+    ],
+    "pending": [
+      "MPI-4 brief.md still describes the LOCKED 'i2v/t2v as SEPARATE files, single-boolean rejected' decision. This session built ONE multi-mode template in ComfyUI — that is NOT a contradiction: the single file is the live AUTHORING/derivation artifact; the per-op app file split still happens at export. Add a brief.md session note clarifying this so a fresh session does not 'fix' the multi-mode template back into separate files prematurely.",
+      "Consider a memory entry: LTX template mode-select pattern (Input_Mode MpiInt 1/2/3 → MpiAnySwitch per stage; lazy switch blocks unselected branches). Useful for future LTX op files."
+    ]
+  },
+  "next_action": {
+    "description": "Ask the user which LTX op to build next (video extend = stated priority; then ControlNet; then head-swap). Before starting, the user may ask you to search HuggingFace/Civitai for a first/last-frame TRANSITION LoRA (vanilla FL transition quality is weak). All workflow edits happen in the live ComfyUI file G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json — re-scan it first (context from the prior session is summarized, not live). New ops may go in new files derived from this template.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Single multi-mode template (Input_Mode MpiInt: 1=i2v, 2=t2v, 3=FL) driving 2x MpiAnySwitch (Mode Switch S1 id180, S2 id181) → concats 145/37 → samplers 70/39. Chosen over nested IfElse booleans because MpiAnySwitch is one node, lazy (blocks unselected branches via ExecutionBlocker), and scales to 5 modes.",
+      "No rgthree nodes — project standard is MPI custom nodes only. NerdyRodent's rgthree Any Switch / Fast Groups Muter were re-implemented with MpiAnySwitch.",
+      "MpiMath float bug: expression must use floor(a/2); int() is NOT in MpiMath's eval context (builtins stripped, only math.* injected) so int(a/2) silently returns 0.0 (float) and crashes EmptyLTXVLatentVideo's torch.zeros (needs int).",
+      "FL recipe copied from NerdyRodent: LTXVImgToVideoInplaceKJ widgets [num_images=2, strength_1=1, strength_2=1, index_1=0], image_1=start(IMG1 preprocess), image_2=end(IMG2 preprocess), index_2 = Frames-1 via MpiMath. S1 latent = EmptyLTXVLatentVideo(143), S2 latent = LTXVLatentUpsampler(123).",
+      "Stage-2 must re-inject the start image (LTXVImgToVideoInplace) onto the upscaled latent or i2v drifts after stage 2 — this was a real bug fixed this session."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI on 127.0.0.1:8188; agent edits the workflow JSON on disk. ALWAYS ask the user to CLOSE the workflow tab in ComfyUI before writing the JSON, or the UI will overwrite the edit on next save.",
+      "Windows Python is cp1252 by default — ALWAYS run helper scripts with PYTHONUTF8=1 or arrows/unicode crash with UnicodeEncodeError. Open JSON with encoding='utf-8'.",
+      "User's color/title convention: yellow nodes = Input_* (app-read), Output_* = app-write. New app-read/write nodes MUST carry Input_/Output_ prefix; Tier-1 reserved titles stay bare (Preview_Only, SaveLatent, LoadLatent, Seed, Positive, Negative, Duration, Start_Frame, End_Frame, etc.).",
+      "rgthree Any Switch picks the FIRST input whose upstream is NOT muted (mute/bypass-driven, no index widget) — relevant only when reading NerdyRodent, NOT for our MpiAnySwitch (which is index-selected via 'select').",
+      "App can only preview Stage-1 by hovering a gallery card (no audio playback) — that is WHY the user removed stage-1 audio save/load latent. Audio also changes a lot stage1→stage2.",
+      "MpiAnySwitch node shape was hand-built in JSON this session — if ComfyUI shows it red on load, clone the exact shape from a real MpiAnySwitch instance instead.",
+      "Backups exist on disk: LTX_i2v_t2v_template.bak.json / .bak2.json / .bak3.json in the same workflows folder."
+    ],
+    "files_modified": [
+      "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json"
+    ],
+    "files_to_read_first": [
+      "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json",
+      "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX-2.3_nerdyRodent.json",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      "G:\\ComfyUi\\ComfyUI\\custom_nodes\\ComfyUi-MpiNodes\\switches.py",
+      "G:\\ComfyUi\\ComfyUI\\custom_nodes\\ComfyUi-MpiNodes\\if_else.py",
+      "G:\\ComfyUi\\ComfyUI\\custom_nodes\\ComfyUi-MpiNodes\\math.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "ComfyUI workflows / injection",
+      "Comfy node naming law (Input_/Output_ prefix)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-21T12:00:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/21c3e0f6-7ea7-4850-b452-667d87020bfe.json and use mpi-continue. This is a COOPERATIVE LIVE session: the user drives ComfyUI on 127.0.0.1:8188 and you edit the workflow JSON on disk at G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json. Re-scan that file FIRST (prior context is summarized, not live). Three modes already work via Input_Mode (MpiInt 1=i2v 2=t2v 3=FL) → 2x MpiAnySwitch → concats → samplers. Gotchas: always ask the user to CLOSE the ComfyUI tab before you write the JSON; always run python helpers with PYTHONUTF8=1 and open files as utf-8; use only MPI custom nodes, never rgthree; MpiMath needs floor(a/2) not int(a/2). Next action: ask the user which LTX op to build next — video extend (priority), then ControlNet, then head-swap — and note they may first ask you to search HuggingFace/Civitai for a first/last-frame transition LoRA. Backups: .bak/.bak2/.bak3.json beside the template."
+}
