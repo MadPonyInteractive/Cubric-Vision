@@ -238,6 +238,19 @@ ARCHITECTURE"), then either polish-and-ship for the 25th, or add extend/headswap
   Singularity dropped, transition deferred (FL-only, needs effect-system decision). Base + good prompt +
   merged Soft polish IS the product — clean, fast, dependency-free. Strong, defensible release.
 
+### ⚠️ WORKFLOW NOT SAVED — RE-CREATE THIS LoRA STATE NEXT SESSION (2026-06-23)
+The live ComfyUI workflow was NOT saved before the Pod was deleted (only settings changed; all are
+recorded here). The persistent 75GB volume survives but the in-ComfyUI graph edits do not. On the next
+Pod, reload the template and SET THE LoRA CHAIN TO:
+- **Soft_Enhance → 0.7** (KEEP/merge candidate; the only active LoRA)
+- **VBVR-V4 (i2v reasoning) → 0.0**
+- **VBVR-V1 (t2v reasoning) → 0.0**
+- **Singularity OmniCine → 0.0**
+- **Transition → 0.0** (until FL/effect work)
+That's the end-state: every dropped LoRA at 0, Soft at 0.7. (Backslash-vs-forwardslash path note still
+applies — the 3 may show "missing" on Linux reload, re-select from dropdown; then SAVE the workflow this
+time so it doesn't have to be re-created again.)
+
 ### NEXT SESSION PLAN (2026-06-24, new Pod off the persistent 75GB volume)
 1. **Audio-drop GATE (not a slider).** Test if the input-audio influence needs a STRENGTH SLIDER or just a
    binary "did the user drop audio / not" gate (auto-enable at a fixed strength on file-present). Open
