@@ -199,10 +199,61 @@ ARCHITECTURE"), then either polish-and-ship for the 25th, or add extend/headswap
 - **STILL OPEN (NOT 25th-critical):** v3 i2v MOTION test (download v3 — "better motion, attention-only",
   the variant we never tested; judge MOTION not prompt-following); VBVR/transition on **FL** (transition's
   home, untested, likely highest-value); landscape behavior (one A/B done, more if needed).
-- **⭐ SHIP CONFIG EMERGING (i2v + t2v, 25th release):** **BASE model + the prompt-contract, NO capability
-  LoRAs.** VBVR (V1+V4) dropped, Singularity dropped. Transition (FL) is the only LoRA still in the running
-  and it's a toggle, not always-on. The base distilled LTX-2.3 + a well-shaped prompt IS the product —
-  clean, fast, dependency-free. Strong, defensible release story.
+- **✅ SOFT_ENHANCE — KEEP (the session's one clean LoRA win) 2026-06-23.** Detail/autofocus/DoF
+  + "removes crispness for a more realistic/softer result" enhancer. The ONLY LoRA that reliably IMPROVES
+  output (softer/more natural skin + face, better face lighting, color, realism) — opposite of VBVR/Singularity.
+  Earned signal all session (cig/detail got WORSE without it); confirmed across i2v + t2v, multiple strengths.
+  - **🎯 VISIBILITY RULE:** Soft's effect is a FACE/DETAIL polish → only clearly visible when the FACE IS
+    LARGE in frame (close-up / medium / a push-in). On wide/full-body shots the face is too small to read
+    the difference. Test it (and it shines) on close shots, not wides. This is a USAGE rule, not a flaw.
+  - It does NOT suppress motion — apparent "fewer actions/steps" base-vs-Soft was t2v free-choreography
+    variance (no start-frame anchor), not Soft killing motion.
+  - **Strength:** 0.7 = best face detail; 0.5 = perfect-in-between (slightly less face improvement, lower
+    over-effect risk); law says 0.5 (1.0 hallucinates — invented a necklace earlier). Ship strength TBD (0.5-0.7).
+  - **Placement:** currently BOTH stages. It's a DETAIL LoRA → strongest on STAGE-2 (the detail stage, user
+    confirms bigger impact there). Per the stage-1=motion/stage-2=detail rule, ship placement is likely
+    stage-2-weighted. Still confirming stage-1 effect on opening composition (see pose-pin test below).
+  - **✅ DECISION: SCHEDULED TO BE MERGED INTO THE MODEL.** Tiny (344MB), no prompt change, no toggle,
+    always-on quality gain → bake into shipped diffusion weights. No extra dep, no mirror-risk, no runtime
+    stacking. The opposite of the dropped capability LoRAs. (Final ship strength 0.5-0.7 + per-stage weight
+    to lock when the merge is built.)
+  - **⚠️ TIMING NOTE (no conclusion):** observed 0.0=124s / 0.5=113s / 0.7=107s on this Pod — i.e. "more LoRA
+    = faster", which is IMPOSSIBLE for a real compute cost. So this is **VRAM-staging variance on this GPU
+    (32GB, 40GB model → dynamic load lottery), NOT the LoRA.** A LoRA adds compute, never subtracts; Soft's
+    true cost is negligible (344MB) → treat as TIME-NEUTRAL. Do NOT record "Soft is faster". Retest on a
+    clean/resident-VRAM card later to confirm the staging-variance read.
+  - **Open:** does an explicit START-POSE in the prompt override the i2v start-frame's pose? (base vs Soft
+    each guessed a different opening orientation when pose was unspecified — pinning "near side-profile,
+    facing left" tests if prompt can redirect the opening + removes that A/B confound.)
+- **TRANSITION LoRA — recap (user, 2026-06-23):** tested earlier; matches the corrected stage rule —
+  creator proposed STAGE-2-only → NO effect; only worked when added to STAGE-1 (swap/cross with stage-2).
+  Confirms stage-1=motion. **Use case is NARROW:** only good for **First/Last-frame (FL)** where the
+  ENVIRONMENT and/or CHARACTER changes SUBSTANTIALLY between start and end frame. Not a general enhancer.
+  **Delivery UNDECIDED:** on/off switch, its own OPERATION, or an "EFFECT" — Cubric Vision has **NO effect
+  system yet**. Many style/effect LoRAs exist → an effects system is its own BRAINSTORM (not 25th scope).
+  Transition is deferred until that's decided; stays a separate switchable dep, never merged.
+
+- **⭐⭐ SHIP CONFIG LOCKED (i2v + t2v, ~25th release):** **BASE distilled LTX-2.3 + prompt-contract +
+  Soft_Enhance (MERGED, 0.5-0.7 detail/realism polish). NO reasoning/anatomy LoRAs.** VBVR (V1+V4) dropped,
+  Singularity dropped, transition deferred (FL-only, needs effect-system decision). Base + good prompt +
+  merged Soft polish IS the product — clean, fast, dependency-free. Strong, defensible release.
+
+### NEXT SESSION PLAN (2026-06-24, new Pod off the persistent 75GB volume)
+1. **Audio-drop GATE (not a slider).** Test if the input-audio influence needs a STRENGTH SLIDER or just a
+   binary "did the user drop audio / not" gate (auto-enable at a fixed strength on file-present). Open
+   question: does a fixed strength (e.g. 1.0) work on EVERY image, or do some need a lower value (→ keep
+   slider)? If fixed works everywhere → drop the slider, ship the gate. NOT an on/off button — a
+   user-dropped-audio-or-not gate.
+2. **Soft_Enhance MERGE** — schedule/execute the bake-into-weights (or confirm the merge recipe + final
+   strength/per-stage weight).
+3. **IF time — VIDEO EXTEND (optional operation).** Lengthy; likely needs its own Pod. Key unknowns:
+   - Can extend be a SEPARATE workflow → an OPTIONAL operation (not baked into the main template)?
+   - LTX extend pulls from **stage-1 latent** — but can ALSO pull from an **already-made/final video**.
+     **Must test the difference: extend-from-stage-1-latent vs extend-from-final-video** (quality, seams,
+     practicality). This decides the extend architecture. Half-wired already (IfElse 51/56 feed the
+     save-gate, NOT the sampler — sampler-side continue feed unverified).
+4. Loose ends (only if fast): v3 i2v MOTION test; music style-word test ("cinematic" vs "documentary");
+   transition/FL once an effect-system path is chosen.
 
 ### ⭐⭐ DISTILLED-LoRA STRENGTH LAW (general rule — confirmed on LTX, 2026-06-23)
 > **Distilled LTX models want LoRAs at LOW strength: band 0.3–0.7, sweet spot ~0.5.**
