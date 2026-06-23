@@ -95,6 +95,10 @@ If you are working with resumable downloads, IPC/SSE download events, or the dow
 If you need to build, produce, or collect portable release artifacts (CI workflow, `scripts/build-portable.mjs`, output folders, exec-bit/symlink gotchas, the `D:\CubricStudio\Vision\Builds` distribution folder):
 **->** **READ:** `docs/releases/portable-distribution-contract.md` (§ "Build Process"). The same doc holds the artifact contract (names, layout, manifests); `docs/releases/github-release-checklist.md` covers release copy.
 
+### Builder Pod — Model Onboarding (cooperative sessions)
+If you are in a cooperative session adding a model/workflow via the **Cubric Vision Builder** RunPod image (spin a Pod, install nodes/weights, author + test a ComfyUI workflow, save tuning research) — or you need locked research (LTX-2.3 tiers, LoRA strength law, prompt contract, model set):
+**->** **READ FIRST:** `c:\AI\Mpi\mpi-ci\cubric-vision-builder\playbook\README.md` (the operational loop) and `…\playbook\research\README.md` (concluded findings — read before re-testing). This is the home for all builder-Pod workflow + research; `mpi-ci` is a separate repo (use `git -C`, absolute paths). To BUILD/PUSH the image itself, use the `build-pod-image` skill.
+
 ### Component Mount Map
 If you need to know who mounts a component, what props it receives, or where it appears in the UI:
 **->** **MUST READ:** `.claude/rules/component-mounts.md`

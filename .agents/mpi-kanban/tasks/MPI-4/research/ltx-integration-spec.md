@@ -21,6 +21,13 @@ Backups beside it: `.bak`, `.bak2`, `.no_audio_latent`, `.pre_lora`.
 - Decision re-evaluated tomorrow: if good progress, MAY add extend/etc; if not, ship the
   refined base. Bias = ship a solid, well-tested base over a broad-but-shaky one.
 
+> **CONCLUDED FINDINGS GRADUATED → Builder playbook.** The durable conclusions
+> below (LTX tiers, distilled-LoRA strength law, prompt contract, model set,
+> strategy) now live at `c:\AI\Mpi\mpi-ci\cubric-vision-builder\playbook\research\`
+> so they survive this card. This spec stays the LIVE TASK LOG (test queue, template
+> node inventory §1, held reminders, in-flight state). When a finding here concludes,
+> graduate it there and leave a pointer.
+
 ## 0b. TEST QUEUE — resume here tomorrow (2026-06-22)
 All 4 CivitAI LoRAs downloaded + moved to `C:/AI/loras/` (ComfyUI reads here via
 extra_model_paths `comfyui_external`). Files:
@@ -49,6 +56,207 @@ extra_model_paths `comfyui_external`). Files:
 
 **After tests -> decide:** which LoRAs to keep (merge vs switch per §"LoRA DELIVERY
 ARCHITECTURE"), then either polish-and-ship for the 25th, or add extend/headswap if time.
+
+### SESSION PROGRESS (2026-06-23) — in-flight, NOT yet concluded
+- **Live template re-scanned, matches decisions.** STG nodes (226/229) ALREADY DELETED by
+  user (cleanup item #6 DONE). Two plain CFGGuider (32 stage-1 / 33 stage-2). Heretic-fp8
+  encoder live in DualCLIPLoader(3). Abliterated LoraLoader(5) bypassed (mode 4). The 4 new
+  LoRAs are on disk but NOT wired into the template yet.
+- **LoRA TENSOR-HEADER FACTS (verified, not agent-guessed):** all 4 capability LoRAs are
+  **MODEL-ONLY** (100% `diffusion_model.*` keys, ZERO clip/te). => load via `MpiLoraModel`
+  (model-only), **strength_MODEL is the only live knob, strength_CLIP is inert.** Matches
+  user's WAN experience. The abliterated-heretic LoRA = opposite: 100% `text_encoders.*`
+  (CLIP-only, strength_MODEL inert) — confirms the ~50x-dilution / superseded-by-encoder call.
+- **LoRA folder reorg:** ALL LTX LoRAs moved from `C:/AI/loras/` ROOT into `C:/AI/loras/LTX2.3/`
+  (rgthree "Auto Nest Subdirectories in Menus" gives folder submenus; root files don't nest).
+  Moved: the 4 new (Reasoning_V1, reasoning_Sulphur-2_I2V_V4, Soft_Enhance,
+  Singularity-OmniCine_V1) + abliterated-heretic-rank64 + head_swap_v3 (rank_64 +
+  rank_adaptive_fro_098) + ic-lora-union-control-ref0.5. **NEW LoRA-name strings carry the
+  `LTX2.3\` prefix** (e.g. `LTX2.3\LTX2.3_Reasoning_V1.safetensors`) — use prefixed names when
+  wiring template / dep manifest. ⚠️ **NerdyRodent MONOLITH still points at the old ROOT paths
+  — repath it before reusing it** (heretic-abliterated node 5 in the live template also points
+  at root now via `LTX2.3\` — harmless while bypassed, repath if un-bypassed).
+- **VBVR test (Run A, local, CONFOUNDED):** seed 46, 704×1280, 3s, I2V, V4@0.7 vs none.
+  Both bad (horror hands, missing fingers) — but seed 46 is a BAD seed, so this measures
+  seed-noise not LoRA. Repro image = the back-to-camera squat pose (the known motion-dead /
+  spatially-ambiguous one): "hand on buttock" ≈ "hand on hip" from behind = near-zero visual
+  signal to disambiguate. CORRECT next method (user's plan): lock a GOOD base seed FIRST,
+  THEN A/B LoRA on/off same seed. Don't trust single confounded runs.
+
+### ⭐ VBVR/Singularity = PROMPT-CONTRACT LoRAs (durable finding -> Cubric-Prompt recipe)
+> HOLD as a note until we lock WHICH LoRA ships; then write the Cubric-Prompt LTX recipe.
+- No trigger word, no template baked in the files (V1 meta = `LTX2.3_reasoning_big`, ai-toolkit;
+  V4 = zero metadata). The **sequence STRUCTURE is the trigger.**
+- **Contract:** brief scene anchor FRONT-LOADED, then DISCRETE ORDERED literal motion steps,
+  named body parts, no run-on action piles. i2v = MINIMAL scene anchor (start frame already
+  carries description; over-describing fights the pixels) + steps. t2v = FULL scene description
+  (no frame to lean on) + steps. Matches Singularity's Cinematic Timeline ([Scene&Style] first,
+  then [Action Timeline 0-Xs]). This is the LTX prompt shape **Cubric-Prompt must generate**
+  (recipe home: `Cubric-Prompt/src/main/recipes/{model-id}.recipe.ts` + research under
+  `dev-docs/recipe-research/`).
+
+### RUNPOD AUTHORING PLAN (speed — local ~100s/gen too slow for seed-hunt; 5090 ~15-20s)
+- Moving tests to a Pod for FASTER iteration (NOT for VRAM — local 16GB is fine for current
+  tests). Trigger to actually spin: after gym (don't burn Pod idle).
+- **Target GPU = RTX 5090** (~32GB VRAM, Blackwell). Bonus: 32GB FITS full-bf16 gemma (24.4GB)
+  alongside the transformer — the "won't fit 16GB" wall lifts there, so a full-bf16-vs-heretic-fp8
+  encoder A/B becomes possible on a 5090 Pod. ⚠️ Blackwell needs cu128+ ComfyUI build (older
+  cu124/cu126 may lack Blackwell kernels — if first gen throws a CUDA-arch error, that's why).
+- **Agent file access on Pod = SSH/SCP** (NOT the app's HTTP channel). Past RunPod *product*
+  work was HTTP-only (correct for the shipping app — can't assume SSH keys on a user Pod);
+  authoring is a different layer where the operator hands the agent SSH. Loop becomes identical
+  to local: user drives ComfyUI GUI in browser (proxy :8188); agent over SSH reads/edits the
+  template JSON (after user SAVE+CLOSE — stale-disk rule unchanged), scp's LoRAs up / outputs
+  down, tails logs, runs python. Needs: key-based auth (no interactive password), connect
+  string from RunPod console, `-o StrictHostKeyChecking=accept-new` on first connect. Agent
+  still CANNOT watch video — visual verdict stays the user, SSH only handles plumbing.
+
+### VBVR live-test findings (2026-06-23, local i2v) — STRENGTH NORM CONCLUDED
+- **⭐ VBVR i2v STRENGTH NORM = 0.5 (max ~0.7). DO NOT go high.** Concluded across 4 tests,
+  3 images, 2 resolutions (stage-1 352×640 AND 544×960). Higher strength costs, with NO motion
+  payoff to justify it:
+  - **Identity DRIFT / face squash** scales with strength (confirmed 2 separate images — face
+    widens/jaw distorts at 1.0). Partly compounded by low stage-1 res + far-from-camera face,
+    but persists at higher res too => it's the LoRA, not just resolution.
+  - **Speech/lip-sync naturalness DEGRADES** at high strength (same audio in, mouth-shapes read
+    less natural — face geometry distortion breaks lip-sync).
+  - **Fine-detail erosion** at high strength (necklace etc.).
+  - At 0.5: best overall (face, detail, coherence). 0.5–0.7 = the usable band; above = net-negative.
+- **Implication for merge plan:** can't bake a face-distorting LoRA in always-on at high strength.
+  If VBVR ships, it ships at LOW strength (~0.5), OR t2v-only (no input identity to protect).
+- **FL start/end frame = user's identity-lock escape hatch** (pins both ends, drift can't run away).
+- **✅ DECIDER CLOSED 2026-06-23 (Pod, full fair test): DROP VBVR FOR i2v.** Tested the long
+  multi-part hypothesis to exhaustion on a Builder Pod (RTX PRO 4500, bf16 distilled):
+  - **Clean single-subject image + ordered `then/while/as` prompt + good seed → BASE (VBVR 0.0)
+    already follows the whole sequence.** Base does the steps unaided. VBVR has no gap to fill.
+  - **Tested the creator's OWN recommended envelope** (CivArchive card: strength 1.0-2.0 for
+    adherence, 10-12 steps, ordered-literal prompt — we matched the prompt shape exactly):
+    - 0.5 / 0.7 @ 8 steps = ~nothing (one extra camera-look vs base).
+    - 0.7 @ **12 steps** = slightly better head-tilt + slightly better eyes, **BUT jacket morph
+      got WORSE** (shoulder visible through jacket), and **+25s/gen.** The eye gain is moot —
+      stage-2 detail pass handles eyes anyway.
+    - 1.0+ = face morph (prior finding, holds).
+  - **Net:** best-case effect = a marginally better tilt, bought with a worse garment morph,
+    a permanent +25s step tax, AND a shipped dependency (download/mirror/merge). Not worth it.
+  - **The base IS the i2v product:** good image + the prompt-contract (front-loaded anchor +
+    ordered literal `then/while/as` steps + named body parts) delivers the sequence clean,
+    fast, dependency-free. **VBVR-V4 (i2v) = DROPPED.**
+  - **Context that explains the flat response:** Kijai's "distilled LoRA" is a SPEED/step-count
+    compression LoRA (dev→8-step CFG1), NOT reasoning — nobody baked sequencing in; the base
+    distilled model is just already good at ordered prompts. VBVR (3rd-party LiconStudio/Civitai
+    port of a Wan2.2 reasoning LoRA) tries to improve what the base already does → redundant.
+- **✅ t2v V1 DROPPED TOO 2026-06-23 (Pod). VBVR FULLY DROPPED (both modes).** Tested V1 (the
+  t2v reasoning LoRA, the one WITH proper ai-toolkit metadata) base-vs-0.7 across two t2v scenes,
+  same seed each:
+  - **Scene 1 (studio):** V1 looked BETTER — fixed jacket drape, and removed a literal studio-light
+    PROP the base built from "soft directional light" (lighting-as-condition not object). Promising.
+  - **Scene 2 (neon street):** V1 = TIE-to-WORSE. Same motion sequence as base; V1 added nonsense
+    coat buttons, was LESS charming, and SUPPRESSED the (weakly-rendered) rain entirely. The
+    scene-1 light-prop "win" did NOT replicate.
+  - **Verdict: inconsistent across scenes at the same strength = a coin-flip, not a feature.** For
+    an always-on shipped LoRA that's a DROP. **VBVR V1 (t2v) + V4 (i2v) both DROPPED.** Base + the
+    prompt-contract is the product for both modes.
+- **VERSION/BASE-MISMATCH FINDING (explains V4's i2v flatness):** VBVR has many versions —
+  v1.0=T2V, v2/v3/v4=I2V. **v4 (what we tested for i2v) was trained/demoed on the "Sulphur-2"
+  UNCENSORED base, not the standard Lightricks distilled base we run** (creator: "generated using
+  Sulphur 2… I highly recommend LTX 2.3 Sulphur 2 base"). LoRA-tuned-for-base-X-on-base-Y often
+  goes flat → may explain V4's weak i2v showing. **v3 is the "better motion, smaller, attention-only"
+  i2v variant we NEVER tested.** → ONE cheap i2v A/B left worth doing: download **v3**, judge MOTION
+  (not prompt-following) base-vs-0.7 on the clean image. If v3 fixes floaty motion where v4 didn't →
+  reconsider i2v. If v3==base → i2v drop stays locked. (Don't chase the Sulphur-2 base itself — that's
+  an uncensored full checkpoint, separate NSFW shipping decision, out of 25th scope.)
+- **AUDIO — "no music" PROSE DOESN'T WORK (confirmed live):** no NAG/negative field; inline "no music"
+  ignored, clip still had music. Only prose lever = dense dominant ambient that crowds music out.
+  Reliable music-off needs a WORKFLOW/MODEL-level control → open item. Also: rain renders only as
+  ground-impact drops (no visible falling rain); reasoning LoRAs suppress weakly-supported elements.
+  Both graduated to Cubric-Prompt MPI-11.
+- **✅ SINGULARITY OmniCine DROPPED 2026-06-23 (Pod, tested in NATIVE timeline syntax).** Tested
+  properly in its `[Scene&Style]`/`[Action Timeline] 0-Xs`/`[Camera Timeline]`/`[Environment]` format,
+  i2v, strengths 0.8/0.5/0.3, simple AND dense (5-segment/10s) prompts, stage-1 + stage-2, portrait + landscape:
+  - **Real but marginal WIN:** at 0.3 on a DENSE 5-segment timeline it paced actions across more of
+    the clip than base (base CRAMMED segments 1-3 into the first ~3s then paused; 0.3 spread them).
+    Timeline-choreography-at-scale is its one genuine capability base lacks. Base honors ~2 segments
+    fine but rushes 5.
+  - **Killers:** (1) **degrades AUDIO at every strength** — gated/distorted fabric foley, no ambient
+    bed, robotic voice at 0.8; (2) **ethnicity bias** — drags faces Asian unprompted (full at 0.8,
+    partial 0.5, clean only at 0.3); (3) +2.5GB dependency; (4) ~17% slower (87→102s @0.8; 105+195s @0.3);
+    (5) identity instability at higher strength.
+  - **DECISION RULE (user): search for documented audio/sigma settings → none exist → DROP.** HF/Civitai
+    cards have ZERO audio settings (no audio_normalization_factors, no sigmas, no fix). Blind tuning of
+    the stage-1 sampler `audio_normalization_factors` (all 1.0) is an unbounded time sink — not for the ship.
+    Also recommends an **fp8** transformer base; we run **bf16** (another base mismatch, like VBVR-v4/Sulphur).
+  - **Verdict: DROP.** Marginal pacing win < degraded audio (no documented fix) + ethnicity bias + 2.5GB + time.
+- **⭐ AUDIO/MUSIC CONTROL — clarified live (multiple findings):**
+  - "no music" prose = IGNORED (no NAG/negative field).
+  - **"cinematic" / "fashion editorial" style words PULL IN scored music** (theory, strongly indicated).
+  - **Listing CONCRETE diegetic foley** (`footsteps, fabric movement`) in an `[Audio]` line → model voices
+    THAT and DROPS music (base 0.0 with a concrete foley list = no music). Abstract ambient ("room tone")
+    does NOT render; concrete sounds do. This is the most reliable in-prose music lever found.
+  - Un-cinematic style ("documentary/candid/homemade") = untested counter-lever theory (kills music?).
+  - **The workflow stage-1 sampler HAS `audio_normalization_factors` (all =1.0) + audio sigmas** = a
+    real workflow-level audio-control surface IF in-prose levers prove insufficient. Open item.
+  - Rain renders only as ground-impact drops (no falling rain). All graduated to Cubric-Prompt MPI-11.
+- **STILL OPEN (NOT 25th-critical):** v3 i2v MOTION test (download v3 — "better motion, attention-only",
+  the variant we never tested; judge MOTION not prompt-following); VBVR/transition on **FL** (transition's
+  home, untested, likely highest-value); landscape behavior (one A/B done, more if needed).
+- **⭐ SHIP CONFIG EMERGING (i2v + t2v, 25th release):** **BASE model + the prompt-contract, NO capability
+  LoRAs.** VBVR (V1+V4) dropped, Singularity dropped. Transition (FL) is the only LoRA still in the running
+  and it's a toggle, not always-on. The base distilled LTX-2.3 + a well-shaped prompt IS the product —
+  clean, fast, dependency-free. Strong, defensible release story.
+
+### ⭐⭐ DISTILLED-LoRA STRENGTH LAW (general rule — confirmed on LTX, 2026-06-23)
+> **Distilled LTX models want LoRAs at LOW strength: band 0.3–0.7, sweet spot ~0.5.**
+- Matches the user's WAN experience EXACTLY (distilled WAN: LoRAs prefer 0.3–0.7, 0.5 sweet spot).
+- Now confirmed on LTX across TWO independent LoRAs converging on the same curve:
+  - VBVR: best @0.5, degrades >0.7 (identity/lip-sync/detail).
+  - Soft Enhance: clean @0.5, HALLUCINATES detail @1.0 (invented a necklace).
+- This is a DISTILLED-MODEL PROPERTY (few denoise steps → no error-averaging → a LoRA's nudge
+  commits hard; cfg=1 → no CFG headroom to dilute), NOT a per-LoRA quirk.
+- **DEFAULT any LTX LoRA to 0.5, sweep 0.3–0.7.** Skips a blind strength hunt per LoRA. Feeds
+  template defaults + model-config + Cubric-Prompt recipe.
+- Over-strength tell on enhancer LoRAs = HALLUCINATED detail (jewelry, accessories not in source).
+- Note: higher stage-1 res (544×960 vs 352×640) preserves identity MUCH better (freckles
+  consistent across the strength sweep) — so earlier "identity drift" was PARTLY low-res+far-face,
+  not pure LoRA. Drift is resolution-mitigable, which de-risks the merge plan.
+
+### ⭐ STRATEGIC CONFIDENCE MARKER: LTX stage-1 quality > WAN (live-observed 2026-06-23)
+- At stage-1 ONLY (352×640, pre-upscale), output quality is already impressive — "Wan cannot do
+  this." Confirms the core thesis: LTX-2.3 quality >> WAN. This is the moat behind the
+  high-quality-open-video-model strategy (and the future NSFW-motion-LoRA play). Strength-independent
+  observation — bankable.
+- **VBVR does NOT add NSFW/genitalia capability** (tested, confirmed). It's reasoning/motion,
+  not content/anatomy (dev's own words: "NOT a motion LoRA, stacks with motion LoRAs"). The
+  Civit NSFW examples were either already-visible-in-frame-1 content (i2v animating what's
+  there) or made on the Sulphur-2 full UNCENSORED CHECKPOINT, not this LoRA on the official base.
+- **Confirms the 2-layer censorship model (layer 2 = capability gap):** model can ANIMATE what's
+  visible in frame 1, CANNOT SYNTHESIZE anatomy it never trained on. No LoRA/abliteration fixes
+  layer 2. i2v makes it worse (i2v = "animate this frame", so off-frame synthesis is uphill).
+- **AUDIO prompt rule (durable -> Cubric-Prompt recipe):** if ambient/diegetic sound is NOT
+  described, the model defaults to placing MUSIC over the clip. Always specify ambient sound
+  ("room tone, footsteps, breathing, no music") OR add `music, soundtrack, score` to negative.
+
+### 🎯 STRATEGIC: own NSFW MOTION LoRA — market gap (FUTURE, post-first-LTX-release, UNDER CONSIDERATION)
+> Not a 25th-June item. Logged as a differentiator candidate, NOT a current test task.
+- **Market gap:** proprietary models (Sora/Veo/Kling/Runway) hard-block NSFW. NSFW creators'
+  only real open option today = WAN (functional, lower quality). LTX-2.3 = higher quality but
+  no NSFW capability + NO community LoRA fills it (confirmed this session). => "high-quality open
+  video model that does NSFW" is an UNOCCUPIED category. Cubric Vision could be the only one.
+- **Scope (user has trained many image LoRAs, this is his read):** teach generalized **MOTION
+  only, NOT anatomy.** WAN precedent: 5-10 short (~3s) clips were enough to teach a motion.
+  Don't build a massive LoRA — a few basic generalized NSFW motions. RTX 6000 (~not expensive),
+  ~2-3 days based on WAN. LTX ≠ WAN so trial-and-error first run is longer, later runs fast.
+  Existing successful WAN NSFW LoRAs often SHIP their datasets => half the work (port/adapt to LTX).
+- **Why viable now (corrects earlier "expensive/data-heavy" caution):** that caution was for
+  teach-anatomy-from-scratch. Motion-only on already-visible content = a much smaller, bounded
+  R&D project. The difficulty (and the fact the community hasn't done it for 2.3) IS the moat.
+- **Decision: ship refined base on the 25th regardless; this is its own epic, later.**
+
+### HELD REMINDERS (surface at the right moment)
+1. 🔊 UNMUTE the 2× SaveLatent nodes (`ltx_video_latent`, `ltx_audio_latent`) before the final
+   logged workflow — muted now to avoid polluted test outputs.
+2. 🗂️ Repath NerdyRodent monolith LoRAs root -> `LTX2.3\` (see folder-reorg note above).
+3. 📝 Write the Cubric-Prompt LTX recipe from the prompt-contract finding ONCE the ship LoRA
+   is locked.
 
 ---
 
@@ -382,10 +590,20 @@ Stage-2 inherits audio automatically (its audio latent derives from stage-1 outp
   KEPT the audio-latent SaveLatent (it affects stage-2 output). Re-scan before next JSON edit.
 - **2026-06-21 — Transition LoRA = cross-op toggle.** `valiantcat/LTX-2.3-Transition-LORA`
   (file `LTX2.3\ltx2.3-transition.safetensors`, 372MB, verified model-only: 1152 tensors all
-  `diffusion_model.*`, ZERO CLIP). Loaded via **MpiLoraModel** (model-only), **stage-2 only**
-  (matches official valiantcat workflow), switched by **Input_Use_Transition** (normal
-  MpiBoolean float out 0.0/1.0 → strength_model self-bypass). NOT promoted to its own
-  operation — applies across i2v/t2v/FL.
+  `diffusion_model.*`, ZERO CLIP). Loaded via **MpiLoraModel** (model-only), switched by
+  **Input_Use_Transition** (normal MpiBoolean float out 0.0/1.0 → strength_model
+  self-bypass). NOT promoted to its own operation — applies across i2v/t2v/FL.
+  - ⚠️ **STAGE PLACEMENT CORRECTED 2026-06-23 (live test).** This entry originally said
+    "stage-2 only (matches official valiantcat workflow)" — **WRONG.** Live A/B: transition
+    on **stage-2 only = ZERO effect**; moved to **stage-1 = the effect appeared.** So
+    transition must run on **STAGE-1** (or both). This establishes the general rule below.
+  - ⭐ **GENERAL RULE (2026-06-23): STAGE-1 = MOTION, STAGE-2 = FINE DETAIL.** Stage-1 is the
+    motion-deciding stage (latent's temporal structure is born here); a motion/sequencing
+    LoRA on stage-2 alone does nothing. Stage-2 re-denoises for spatial detail only. So:
+    motion-class LoRAs (transition, VBVR, Singularity) → STAGE-1; detail-class LoRAs
+    (Soft_Enhance — cig/fine detail degraded with it OFF on stage-2) → STAGE-2. Confirmed by
+    the transition stage-2→stage-1 flip AND by the stage-2-only garment-morph (pants) being a
+    detail-stage re-interpretation, not a motion change.
   - WHY cross-op: README confirms it works for t2v AND i2v, not FL-only ("strong
     generalization in: First-to-last frame · Text-to-video · Image-to-video"; "open-ended
     prompt-driven generation"). Strongest on FL (different scene/clothes/identity), lighter
