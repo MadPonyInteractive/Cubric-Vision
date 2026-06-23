@@ -1,0 +1,116 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c3f8a1e7-2b9d-4f6a-8e13-7c5b9d04a2f1",
+  "supersedes": "d7e2f1a3-9c4b-4e8a-bf21-3a6d8e90c5f2",
+  "generated_at": "2026-06-23T23:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 LTX-2.3 — LoRA HUNT COMPLETE. Tested all 5 capability LoRAs on the Builder Pod: VBVR-V4 (i2v), VBVR-V1 (t2v), Singularity OmniCine, Soft_Enhance, + recapped Transition. VERDICT: ship config LOCKED = BASE distilled LTX-2.3 + prompt-contract + Soft_Enhance (MERGED). All reasoning/anatomy LoRAs DROPPED. Also nailed: stage-1=motion/stage-2=detail rule, audio/music control findings, timeline-prompt-works-on-base, t2v opening-pose is promptable. Created Cubric-Prompt card MPI-11 (recipe findings). Pod being DELETED (volume kept, 75GB).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "MPI-4 LTX-2.3: decide the capability-LoRA set for the ~25th-June release, biasing toward shipping a refined base. Move to a Builder Pod for fast iteration.",
+    "status": "in_progress",
+    "summary": "LoRA decision COMPLETE. Ship config locked: i2v + t2v = BASE distilled LTX-2.3 + the prompt-contract + Soft_Enhance (SCHEDULED TO MERGE into the model, 0.5-0.7, realism/face polish). DROPPED: VBVR-V4 (i2v — base already follows ordered prompts; marginal; trained on Sulphur-2 base mismatch), VBVR-V1 (t2v — inconsistent across scenes), Singularity OmniCine (degrades audio with no documented fix + unprompted ethnicity bias + 2.5GB + slower + needs different prompt syntax). DEFERRED: Transition (FL-only use, needs an effect-system decision Cubric Vision doesn't have yet). Remaining for next session: audio-drop GATE test, execute the Soft merge, optionally video-extend (stage-1-latent vs final-video source question)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "TESTED ALL 5 capability LoRAs fairly (each in its native prompt format + creator's recommended envelope). VERDICTS: Soft_Enhance=KEEP+merge (the one clean win — softer/more realistic face+skin+lighting, 344MB, always-on, no prompt change; visible only on CLOSE shots). VBVR-V4(i2v)=DROP. VBVR-V1(t2v)=DROP. Singularity=DROP. Transition=DEFER. Full reasons in spec + playbook research/lora-strength-law.md + tested-loras-versions.md.",
+      "ESTABLISHED the STAGE-1=MOTION / STAGE-2=DETAIL rule (proven via transition stage-2-only=no-effect, stage-1=effect; + garment morph being stage-2-only). Corrected a stale spec entry that wrongly said transition was stage-2-only. Motion LoRAs→stage-1, detail LoRAs→stage-2.",
+      "AUDIO/MUSIC control findings: 'no music' prose is IGNORED (no NAG/negative field); 'cinematic'/'editorial' style words PULL IN scored music; listing CONCRETE diegetic foley (footsteps, fabric) suppresses music + renders, while abstract 'room tone' does NOT render; the stage-1 sampler has audio_normalization_factors (all=1.0) as a real workflow-level lever. Rain renders only as ground-impact drops.",
+      "PROMPT-CONTRACT refinements: timeline syntax ([Scene&Style]/[Action Timeline] 0-Xs/[Camera Timeline]) WORKS ON THE BASE MODEL (respects time segments + camera cuts); t2v opening-pose is promptable ('looking away from camera'→back-to-camera start, rotates into described pose); duration must match step-density (~1-1.5s/step; too-long = start-hang + over-run); small handheld props (cigarette/glasses) hallucinate/teleport in motion; name which hand holds what + call free hand 'empty'.",
+      "CREATED Cubric-Prompt kanban card MPI-11 (todo) holding all prompt-shape findings to graduate into ltx-2.3.recipe.ts (draft, t2v-only → needs i2v mode). Living card. Committed.",
+      "BUILT the durable record: playbook research/tested-loras-versions.md (exact versions+base tested = re-test baseline); lora-strength-law.md verdicts; model-set.md status table. Memory trimmed to pointers. All committed across 3 repos (Cubric-Vision RunPod branch, mpi-ci main, Cubric-Prompt).",
+      "Confirmed: Kijai's 'distilled LoRA' = a SPEED/step-compression LoRA, NOT reasoning — explains why base already follows prompts + why 3rd-party reasoning LoRAs are redundant."
+    ],
+    "pending": [
+      "⚠️ WORKFLOW WAS NOT SAVED before Pod deletion. On the next Pod: reload template + set LoRA chain to Soft_Enhance=0.7, ALL dropped LoRAs (VBVR-V4, VBVR-V1, Singularity, Transition)=0.0, then SAVE the workflow this time. (Backslash path note: the 3 may show 'missing' on Linux reload — re-select from dropdown.)",
+      "AUDIO-DROP GATE test (next-session task 1): does the input-audio influence need a STRENGTH SLIDER or just a binary 'did user drop audio / not' gate (auto-enable at a fixed strength on file-present)? Open: does a fixed strength (e.g. 1.0) work on EVERY image, or do some need lower (→ keep slider)? NOT an on/off button — a user-dropped-audio-or-not gate.",
+      "EXECUTE the Soft_Enhance MERGE into the shipped model (next-session task 2): confirm merge recipe + final strength (0.5-0.7) + per-stage weight.",
+      "VIDEO EXTEND (next-session task 3, IF time — lengthy, likely needs its own Pod): can extend be a SEPARATE workflow → OPTIONAL operation? LTX extend pulls from STAGE-1 LATENT but can ALSO pull from an ALREADY-MADE/FINAL video — MUST test the difference (extend-from-stage-1-latent vs extend-from-final-video: quality, seams, practicality). Half-wired (IfElse 51/56 feed save-gate NOT sampler — sampler-side continue feed unverified).",
+      "Loose ends (only if fast): v3 i2v MOTION test (the 'better motion, attention-only' VBVR variant never tested — judge MOTION not prompt-following); music style-word test ('cinematic' vs 'documentary/candid' — does un-cinematic style kill music?); transition/FL once an effect-system path is chosen.",
+      "EFFECT SYSTEM brainstorm (separate, not 25th): many style/effect LoRAs exist (transition is one); Cubric Vision has no effect system. How to deliver toggle/effect LoRAs (switch vs operation vs effect-system). Own brainstorm.",
+      "RELEASE ~25th June: ship the refined base (i2v/t2v/FL + input-audio gate + merged Soft) — config now locked. Add extend only if it lands clean in time.",
+      "Mirror heretic-gemma-fp8 (anongecko) to own repo before shipping as a dep (supply-chain). Singularity mirror no longer needed (dropped)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "guide the user through Pod shell ops (Jupyter / RunPod Web Terminal) — agent has NO SSH; user drives the shell",
+    "run rclone to/from R2 (cubric-builds bucket) for model staging",
+    "edit the Builder playbook at c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ — living doc, keep updating",
+    "append findings to Cubric-Prompt card MPI-11 (c:/AI/Mpi/Cubric-Prompt/.agents/mpi-kanban/tasks/MPI-11/)"
+  ],
+  "next_action": {
+    "description": "Resume MPI-4 on a NEW Pod started off the PERSISTENT 75GB volume (pick a BETTER GPU card than the RTX PRO 4500 — extend is lengthy; more VRAM cuts the staging tax). The LoRA decision is DONE: ship = base + prompt-contract + merged Soft_Enhance. Reload the template, set LoRA chain to Soft=0.7 / all-dropped=0.0, SAVE the workflow. Then do the two next-session tasks: (1) audio-drop GATE test (slider vs binary gate), (2) execute the Soft merge. If fast, (3) start video-extend (test stage-1-latent vs final-video source). Read the spec §0b + the playbook research/ first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SHIP CONFIG LOCKED: i2v + t2v = BASE distilled LTX-2.3 + prompt-contract + Soft_Enhance MERGED (0.5-0.7). NO reasoning/anatomy LoRAs.",
+      "VBVR (V4 i2v + V1 t2v) DROPPED — base already follows ordered prompts; marginal; V4 base-mismatched (Sulphur-2). Singularity DROPPED — audio degrade (no doc fix) + ethnicity bias + 2.5GB + slower. Both recorded with re-test triggers in tested-loras-versions.md for future new versions.",
+      "Soft_Enhance KEEP → MERGE. The one clean win. Realism/face/lighting polish, 344MB, always-on, visible only on CLOSE shots (a usage rule).",
+      "Transition DEFERRED — FL-only (substantial env/character change between start+end frame); delivery undecided (switch/operation/EFFECT); Cubric Vision has no effect system → own brainstorm.",
+      "STAGE-1=MOTION, STAGE-2=DETAIL (general LTX multi-stage rule). Motion LoRAs→stage-1, detail→stage-2.",
+      "Audio: 'no music' prose ignored; concrete foley list suppresses music; 'cinematic' pulls music; audio_normalization_factors (workflow) is the real lever. Music suppression still an open product item.",
+      "App multi-stage prompt-edit (verified in code): user editing prompt + re-running stage-2 reuses the stage-1 latent (no recompute) — clean way to fix stage-2 upscale morphs (skirt→pants) cheaply without touching motion. Real product strength."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI + Pod shell; agent edits JSON / guides / runs rclone. Confirm user SAVED+CLOSED the ComfyUI tab before any disk JSON write.",
+      "Live Pod ops (create/Stop/Terminate) are USER-only; agent has NO usable SSH.",
+      "PERSISTENT volume kept (75GB, survives Pod deletion) — next Pod mounts it, zero re-download. Pick a BETTER GPU (the RTX PRO 4500 32GB had a heavy VRAM-staging tax: 8s clip ~162s stage-1 + ~200s stage-2). Volume may be region-locked — if a new Pod can't mount it, re-run install_models_ltx23.sh (fast, R2-backed).",
+      "A/B LoRAs via strength 0.0↔0.5, NEVER bypass-toggle (bypass = model reload → RAM-leak → OOM; crashed the Pod at 99% RAM this session; ComfyUI self-heals in-place, don't pkill).",
+      "Lock a GOOD base seed on a CLEAN image first, then A/B — judging a LoRA delta on a bad/morphing seed = noise on noise.",
+      "Test each LoRA in its NATIVE prompt format + check creator's recommended base/precision (mismatch → flat response, e.g. VBVR-v4/Sulphur, Singularity/fp8).",
+      "CFG locked at 1 (distilled). Node naming Input_*/Output_*. MPI custom nodes only in anything that ships (rgthree authoring-only). PYTHONUTF8=1 for local python."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (LoRA verdicts + stage rule + audio + next-session plan + unsaved-workflow state — COMMITTED)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/research/lora-strength-law.md + tested-loras-versions.md (NEW) + model-set.md + README.md (verdicts — COMMITTED)",
+      "c:/AI/Mpi/Cubric-Prompt/.agents/mpi-kanban/tasks/MPI-11/ (NEW card — recipe findings — COMMITTED) + board.json + events.jsonl",
+      "memory: project_ltx23_capability_loras_dropped.md, project_ltx_stage1_motion_stage2_detail.md, feedback_lora_ab_use_strength_not_bypass.md (+ MEMORY.md index)"
+    ],
+    "files_to_read_first": [
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (§0b SESSION PROGRESS + NEXT SESSION PLAN + WORKFLOW NOT SAVED block)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/research/tested-loras-versions.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/research/lora-strength-law.md",
+      "c:/AI/Mpi/Cubric-Prompt/.agents/mpi-kanban/tasks/MPI-11/brief.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "Builder-Pod model-onboarding playbook",
+      "Cubric-Prompt recipe (MPI-11)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-23T23:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/tasks/MPI-4/handoffs/c3f8a1e7-2b9d-4f6a-8e13-7c5b9d04a2f1.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI + the Pod shell; you edit JSON / guide commands / run rclone. THE LoRA DECISION IS DONE — ship config is LOCKED: i2v + t2v = BASE distilled LTX-2.3 + the prompt-contract + Soft_Enhance MERGED into the model (0.5-0.7, a realism/face/lighting polish — the one LoRA that earned its keep; visible only on close shots). All reasoning/anatomy LoRAs were tested fairly and DROPPED: VBVR-V4 (i2v — base already follows ordered prompts; also trained on a mismatched Sulphur-2 base), VBVR-V1 (t2v — inconsistent across scenes), Singularity OmniCine (degrades audio with NO documented fix + an unprompted ethnicity bias + 2.5GB + slower). Transition is DEFERRED (FL-only, needs an effect-system decision Cubric Vision doesn't have yet). The durable record is in the Builder playbook research/ (tested-loras-versions.md = exact versions tested for future re-tests; lora-strength-law.md = verdicts) and the live log is the MPI-4 spec §0b. Prompt-shape findings went to Cubric-Prompt card MPI-11. ⚠️ THE WORKFLOW WAS NOT SAVED before the Pod was deleted — on the new Pod, reload the template, set the LoRA chain to Soft_Enhance=0.7 and ALL dropped LoRAs (VBVR-V4, VBVR-V1, Singularity, Transition)=0.0, and SAVE it this time. Start a NEW Pod off the PERSISTENT 75GB volume (it survives — pick a BETTER GPU than the RTX PRO 4500, since the next work is video-extend which is lengthy and more VRAM cuts the heavy staging tax). THEN do the next-session tasks IN ORDER: (1) AUDIO-DROP GATE — test whether the input-audio influence needs a strength SLIDER or just a binary 'did the user drop audio or not' gate (auto-enable at a fixed strength on file-present); the open question is whether one fixed strength works on every image or some need lower. (2) Execute the Soft_Enhance MERGE into the shipped model. (3) IF time, VIDEO EXTEND as an optional operation — the key test is extend-from-stage-1-latent vs extend-from-an-already-made-final-video (quality/seams/practicality), which decides the extend architecture; it's half-wired (IfElse 51/56 feed the save-gate not the sampler). Method reminders: A/B LoRAs via strength 0↔0.5 (never bypass — model reload → RAM-leak OOM, which crashed the Pod this session); lock a good base seed on a clean image first; test each LoRA in its native prompt format and check the creator's recommended base/precision (mismatch = flat). RELEASE TARGET ~25th June — ship the refined base (config now locked); add extend only if it lands clean in time."
+}
