@@ -1,0 +1,56 @@
+# 05 — Author & test the workflow
+
+## The cooperative loop
+
+User drives the ComfyUI GUI in the browser (proxy `:8188`); the agent edits the
+template JSON on disk / guides Pod commands. **The agent cannot watch video — the
+visual verdict is always the user.** The agent handles plumbing (JSON, downloads,
+logs, settings capture).
+
+⚠️ **Stale-disk rule:** always confirm the user has **SAVED + CLOSED** the ComfyUI
+tab before any JSON write. Live ComfyUI state ≠ what's on disk.
+
+## Before a workflow will RUN — required setup (2026-06-23)
+
+- **Seed latents in `input/`.** The LTX template's `LoadLatent` nodes
+  (`ltx_video_latent`, `ltx_audio_latent`, for continue/extend) need their seed
+  `.latent` files present in `/opt/ComfyUI/input/` or the graph errors on load. Drop
+  them there (Jupyter `input/` folder) before the first run. Example assets
+  (`example.png`, audio for i2v tests) also live in `input/`.
+- **Windows→Linux LoRA path mismatch.** A template saved on Windows stores LoRA
+  names with a **backslash** (`LTX2.3\foo.safetensors`); Linux ComfyUI lists them
+  with a **forward slash** (`LTX2.3/foo`) and string-matches literally → the node
+  shows "missing" even though the file is present. Fix: re-select each from the
+  dropdown (the file IS in the list), OR
+  `sed -i 's#LTX2.3\\\\#LTX2.3/#g' the template JSON before loading. **Re-save the
+  workflow on Linux** so the stored paths use `/` and the next load is clean.
+- **Jupyter subfolder navigation is per-Pod.** Some Builder Pods let Jupyter expand
+  subfolders + cd into them; others (the flaky ones) only show root. Don't assume —
+  if the tree won't expand, use the RunPod Web Terminal instead.
+
+## Node-naming law (HARD)
+
+App-facing nodes MUST use the `Input_*` / `Output_*` prefix vocabulary. New nodes
+not in the Tier-1 vocab MUST be `Input_*` / `Output_*` (MPI-116). MPI custom nodes
+only in anything that ships — **never rgthree in the app** (rgthree is
+authoring-only on the Builder; the app strips it). CFG locked at 1 (distilled).
+
+The current LTX template's full `Input_*`/`Output_*` node inventory lives in the
+MPI-4 spec §1 (`ltx-integration-spec.md`) — read it before re-wiring.
+
+## Strength defaults — don't blind-hunt
+
+LoRAs default to **0.5**, sweep 0.3–0.7 (the distilled-LoRA law). See
+[research/lora-strength-law.md](research/lora-strength-law.md). Watch total stacked
+LoRA strength < ~1.5 or quality degrades.
+
+## Save what you learn
+
+When a test concludes:
+1. **Save the workflow JSON** (and note the settings that produced a good result).
+   Local home: `G:/ComfyUi/ComfyUI/user/default/workflows/`.
+2. **Graduate concluded findings** into [research/](research/) (and leave a pointer
+   in the task log). The live blow-by-blow stays on the task card; the *conclusion*
+   comes here so the next session doesn't re-test it.
+3. Before logging a FINAL workflow: unmute any test-muted nodes (e.g. the 2×
+   SaveLatent), repath any LoRAs you moved folders, drop test-only overrides.

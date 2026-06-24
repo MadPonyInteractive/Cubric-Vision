@@ -116,7 +116,7 @@ reuse.
 
 Full authoring contract (two-file convention, `LoadLatent` injection, `Preview` vs `Output` capture, WAN baked-vs-live LoRA semantics, LTX flat-LoRA + `allowsBranchingContinue: false`) lives in `.claude/rules/comfy_injection.md` § "Multi-stage video workflows". Read it before touching `_ms` ops.
 
-LTX-2.3 resolution tiers, the /64 size rule (multi-stage ×0.5 stage), and measured per-tier timings + motion/audio tradeoff live in [`docs/ltx-2.3-tiers.md`](ltx-2.3-tiers.md). Read it before changing `LTX_RATIOS` in `js/utils/ratios.js`.
+LTX-2.3 resolution tiers, the /64 size rule (multi-stage ×0.5 stage), and measured per-tier timings + motion/audio tradeoff live in [`docs/builder/research/ltx-2.3-tiers.md`](builder/research/ltx-2.3-tiers.md). Read it before changing `LTX_RATIOS` in `js/utils/ratios.js`.
 
 ## assetService (`js/services/assetService.js`)
 

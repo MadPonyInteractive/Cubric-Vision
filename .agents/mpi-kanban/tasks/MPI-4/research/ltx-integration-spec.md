@@ -23,10 +23,10 @@ Backups beside it: `.bak`, `.bak2`, `.no_audio_latent`, `.pre_lora`.
 
 > **CONCLUDED FINDINGS GRADUATED → Builder playbook.** The durable conclusions
 > below (LTX tiers, distilled-LoRA strength law, prompt contract, model set,
-> strategy) now live at `c:\AI\Mpi\mpi-ci\cubric-vision-builder\playbook\research\`
-> so they survive this card. This spec stays the LIVE TASK LOG (test queue, template
-> node inventory §1, held reminders, in-flight state). When a finding here concludes,
-> graduate it there and leave a pointer.
+> strategy) now live at `docs/builder/research/` (Cubric-Vision) so they survive
+> this card. This spec stays the LIVE TASK LOG (test queue, template node inventory
+> §1, held reminders, in-flight state). When a finding here concludes, graduate it
+> there and leave a pointer.
 
 ## 0b. TEST QUEUE — resume here tomorrow (2026-06-22)
 All 4 CivitAI LoRAs downloaded + moved to `C:/AI/loras/` (ComfyUI reads here via

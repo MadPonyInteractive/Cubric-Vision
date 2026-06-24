@@ -97,7 +97,7 @@ If you need to build, produce, or collect portable release artifacts (CI workflo
 
 ### Builder Pod — Model Onboarding (cooperative sessions)
 If you are in a cooperative session adding a model/workflow via the **Cubric Vision Builder** RunPod image (spin a Pod, install nodes/weights, author + test a ComfyUI workflow, save tuning research) — or you need locked research (LTX-2.3 tiers, LoRA strength law, prompt contract, model set):
-**->** **READ FIRST:** `c:\AI\Mpi\mpi-ci\cubric-vision-builder\playbook\README.md` (the operational loop) and `…\playbook\research\README.md` (concluded findings — read before re-testing). This is the home for all builder-Pod workflow + research; `mpi-ci` is a separate repo (use `git -C`, absolute paths). To BUILD/PUSH the image itself, use the `build-pod-image` skill.
+**->** **READ FIRST:** `docs/builder/README.md` (the operational loop) and `docs/builder/research/README.md` (concluded findings — read before re-testing). This is the home for all builder-Pod workflow + research, and it lives in THIS repo. The **image build + install scripts only** live in the separate `mpi-ci` repo at `c:\AI\Mpi\mpi-ci\cubric-vision-builder\` (Dockerfile, `install_*.sh`, `start-builder.sh`, its `README.md`); edit that repo with `git -C`. To BUILD/PUSH the image itself, use the `build-pod-image` skill.
 
 ### Component Mount Map
 If you need to know who mounts a component, what props it receives, or where it appears in the UI:
