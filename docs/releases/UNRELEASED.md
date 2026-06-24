@@ -123,3 +123,9 @@
   notes against an individual result; they're saved into the card's metadata and
   travel with the project. Notes editing uses a new lightweight overlay
   (text area + Save/Cancel).
+
+- **Wan LoRA settings no longer show an inert Clip slider.** The Model Manager
+  LoRA slots for **Wan 2.2** showed both **Model** and **Clip** strength — but Wan
+  only uses Model strength, so the Clip value did nothing. Wan now shows just the
+  Model strength (other models still show both where they apply). Also fixed the
+  strength value clipping inside its input box.
