@@ -1,6 +1,6 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 125,
+ "next_id": 126,
  "columns": {
   "todo": [
    "MPI-71",
@@ -11,6 +11,7 @@
    "MPI-120"
   ],
   "done": [
+   "MPI-125",
    "MPI-123",
    "MPI-121",
    "MPI-124",
@@ -64,5 +65,5 @@
    "MPI-115"
   ]
  },
- "updated_at": "2026-06-22T14:15:00Z"
+ "updated_at": "2026-06-24T08:10:00Z"
 }

@@ -4,6 +4,8 @@
  * @property {string}   id           - Unique identifier
  * @property {string}   name         - Display name
  * @property {string}   [dropdownMeta] - Short UI category shown in compact model selectors
+ * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
+ * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
  * @property {'image'|'video'} mediaType
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
@@ -141,6 +143,11 @@ export const MODELS = [
         mediaType: 'video',
         video: 'wan22_preview.mp4',
         type: 'wan',
+        // Which LoRA strength knobs the settings UI shows for this model. Wan
+        // workflows read strength_model only — strength_clip is inert — so we
+        // surface just the Model slider. Omit → both (default). Future models
+        // that are clip-only can set ['clip'].
+        loraStrengths: ['model'],
         loraStages: [
             { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
             { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },

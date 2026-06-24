@@ -131,6 +131,15 @@
     white-space: nowrap;
 }
 
+/* MpiInput size="sm" caps the field at 6ch, which clips a 2-decimal strength
+   like -1.00 (5 chars + padding). Widen the field for these strength inputs so
+   the value isn't cut off. */
+.mpi-model-settings__lora-strengths .mpi-input--sm .mpi-input__field {
+    width: 8ch;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+}
+
 /* A dropdown whose selected LoRA/upscale file is missing from the configured
    folders — warn the user it cannot be loaded. */
 .mpi-dropdown--missing .mpi-dropdown__trigger {

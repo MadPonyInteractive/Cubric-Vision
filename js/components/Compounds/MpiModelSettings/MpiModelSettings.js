@@ -89,6 +89,44 @@ function _upscaleOptions(upscaleModels) {
     return (upscaleModels || []).map(f => ({ label: f, value: f }));
 }
 
+/**
+ * Build the strength-inputs row for one LoRA slot. `kinds` is the model's
+ * loraStrengths array (e.g. ['model'], ['clip'], or ['model','clip']) — only the
+ * listed knobs render. onModel/onClip fire on change. Returns the row element.
+ */
+function _buildStrengthsRow(slot, kinds, onModel, onClip) {
+    const strengthsEl = document.createElement('div');
+    strengthsEl.className = 'mpi-model-settings__lora-strengths';
+
+    if (kinds.includes('model')) {
+        const modelLabel = document.createElement('label');
+        modelLabel.className = 'mpi-model-settings__strength-label';
+        modelLabel.textContent = 'Model';
+        const modelInput = MpiInput.mount(document.createElement('div'), {
+            type: 'number', size: 'sm', value: slot.strengthModel,
+            min: -2, max: 2, step: 0.05, decimals: 2,
+        });
+        modelInput.on('change', ({ value }) => onModel(value));
+        strengthsEl.appendChild(modelLabel);
+        strengthsEl.appendChild(modelInput.el);
+    }
+
+    if (kinds.includes('clip')) {
+        const clipLabel = document.createElement('label');
+        clipLabel.className = 'mpi-model-settings__strength-label';
+        clipLabel.textContent = 'Clip';
+        const clipInput = MpiInput.mount(document.createElement('div'), {
+            type: 'number', size: 'sm', value: slot.strengthClip,
+            min: -2, max: 2, step: 0.05, decimals: 2,
+        });
+        clipInput.on('change', ({ value }) => onClip(value));
+        strengthsEl.appendChild(clipLabel);
+        strengthsEl.appendChild(clipInput.el);
+    }
+
+    return strengthsEl;
+}
+
 const _baseName = (f) => String(f || '').replace(/\\/g, '/').split('/').pop();
 /** Separator-agnostic full-path key (forward slash, lowercased). */
 const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
@@ -323,7 +361,7 @@ export const MpiModelSettings = ComponentFactory.create({
 
         // ── LoRA slots ────────────────────────────────────────────────────────
 
-        function _mountLoraSlots(slots, modelType) {
+        function _mountLoraSlots(slots, modelType, kinds = ['model', 'clip']) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
 
@@ -350,51 +388,11 @@ export const MpiModelSettings = ComponentFactory.create({
                 const dropHost = document.createElement('div');
                 dropHost.className = 'mpi-model-settings__lora-dropdown';
 
-                const strengthsEl = document.createElement('div');
-                strengthsEl.className = 'mpi-model-settings__lora-strengths';
-
-                const modelLabel = document.createElement('label');
-                modelLabel.className = 'mpi-model-settings__strength-label';
-                modelLabel.textContent = 'Model';
-
-                const modelInput = MpiInput.mount(document.createElement('div'), {
-                    type: 'number',
-                    size: 'sm',
-                    value: slot.strengthModel,
-                    min: -2,
-                    max: 2,
-                    step: 0.05,
-                    decimals: 2,
-                });
-
-                const clipLabel = document.createElement('label');
-                clipLabel.className = 'mpi-model-settings__strength-label';
-                clipLabel.textContent = 'Clip';
-
-                const clipInput = MpiInput.mount(document.createElement('div'), {
-                    type: 'number',
-                    size: 'sm',
-                    value: slot.strengthClip,
-                    min: -2,
-                    max: 2,
-                    step: 0.05,
-                    decimals: 2,
-                });
-
-                modelInput.on('change', ({ value }) => {
-                    _loraSlots[i].strengthModel = value;
-                    _autoSave();
-                });
-
-                clipInput.on('change', ({ value }) => {
-                    _loraSlots[i].strengthClip = value;
-                    _autoSave();
-                });
-
-                strengthsEl.appendChild(modelLabel);
-                strengthsEl.appendChild(modelInput.el);
-                strengthsEl.appendChild(clipLabel);
-                strengthsEl.appendChild(clipInput.el);
+                const strengthsEl = _buildStrengthsRow(
+                    slot, kinds,
+                    (value) => { _loraSlots[i].strengthModel = value; _autoSave(); },
+                    (value) => { _loraSlots[i].strengthClip = value; _autoSave(); },
+                );
 
                 slotEl.appendChild(dropHost);
                 slotEl.appendChild(strengthsEl);
@@ -442,7 +440,7 @@ export const MpiModelSettings = ComponentFactory.create({
             });
         }
 
-        function _mountStagedLoraSlots(slots, modelType, loraStages) {
+        function _mountStagedLoraSlots(slots, modelType, loraStages, kinds = ['model', 'clip']) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
 
@@ -469,51 +467,11 @@ export const MpiModelSettings = ComponentFactory.create({
                     const dropHost = document.createElement('div');
                     dropHost.className = 'mpi-model-settings__lora-dropdown';
 
-                    const strengthsEl = document.createElement('div');
-                    strengthsEl.className = 'mpi-model-settings__lora-strengths';
-
-                    const modelLabel = document.createElement('label');
-                    modelLabel.className = 'mpi-model-settings__strength-label';
-                    modelLabel.textContent = 'Model';
-
-                    const modelInput = MpiInput.mount(document.createElement('div'), {
-                        type: 'number',
-                        size: 'sm',
-                        value: slot.strengthModel,
-                        min: -2,
-                        max: 2,
-                        step: 0.05,
-                        decimals: 2,
-                    });
-
-                    const clipLabel = document.createElement('label');
-                    clipLabel.className = 'mpi-model-settings__strength-label';
-                    clipLabel.textContent = 'Clip';
-
-                    const clipInput = MpiInput.mount(document.createElement('div'), {
-                        type: 'number',
-                        size: 'sm',
-                        value: slot.strengthClip,
-                        min: -2,
-                        max: 2,
-                        step: 0.05,
-                        decimals: 2,
-                    });
-
-                    modelInput.on('change', ({ value }) => {
-                        _loraSlots[stage.key][i].strengthModel = value;
-                        _autoSave();
-                    });
-
-                    clipInput.on('change', ({ value }) => {
-                        _loraSlots[stage.key][i].strengthClip = value;
-                        _autoSave();
-                    });
-
-                    strengthsEl.appendChild(modelLabel);
-                    strengthsEl.appendChild(modelInput.el);
-                    strengthsEl.appendChild(clipLabel);
-                    strengthsEl.appendChild(clipInput.el);
+                    const strengthsEl = _buildStrengthsRow(
+                        slot, kinds,
+                        (value) => { _loraSlots[stage.key][i].strengthModel = value; _autoSave(); },
+                        (value) => { _loraSlots[stage.key][i].strengthClip = value; _autoSave(); },
+                    );
 
                     slotEl.appendChild(dropHost);
                     slotEl.appendChild(strengthsEl);
@@ -575,6 +533,8 @@ export const MpiModelSettings = ComponentFactory.create({
                 const model = getModelById(ctx.modelId);
                 const modelType = model?.type ?? null;
                 const loraStages = model?.loraStages ?? null;
+                // Which strength knobs to surface; default both. Wan is model-only.
+                const loraKinds = model?.loraStrengths ?? ['model', 'clip'];
                 // Resolve saved dep ID → filename; fallback to model default → filename → SIAX
                 const savedFile = _depToFilename(settings.upscaleModel) || settings.upscaleModel;
                 const modelDefaultFile = _depToFilename(model?.defaultUpscale);
@@ -583,9 +543,9 @@ export const MpiModelSettings = ComponentFactory.create({
                 _mountUpscaleDropdown(defaultUpscale, modelType);
                 el.classList.toggle('mpi-model-settings--staged-lora', Boolean(loraStages?.length));
                 if (loraStages?.length) {
-                    _mountStagedLoraSlots(settings.loras, modelType, loraStages);
+                    _mountStagedLoraSlots(settings.loras, modelType, loraStages, loraKinds);
                 } else {
-                    _mountLoraSlots(settings.loras, modelType);
+                    _mountLoraSlots(settings.loras, modelType, loraKinds);
                 }
                 lorasSection.style.display = '';
                 _clearDropZones();
