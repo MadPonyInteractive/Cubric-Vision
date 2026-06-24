@@ -11,6 +11,7 @@ the card and don't get re-discovered.
 | [tested-loras-versions.md](tested-loras-versions.md) | **Exact LoRA versions + base tested** → re-test baseline when a NEW version appears. Don't re-litigate from zero. |
 | [model-set.md](model-set.md) | The base weights + LoRAs (roles, sizes, status), merge-vs-switch delivery, mirroring TODO. |
 | [prompt-contract.md](prompt-contract.md) | The LTX prompt SHAPE (front-loaded anchor + ordered steps) + audio rule → Cubric-Prompt recipe. |
+| [audio-input.md](audio-input.md) | Input-audio gate + influence wiring; influence = denoise-preserve dial (not a mix); verdict = binary gate at fixed 1.0, slider not needed. |
 | [strategy.md](strategy.md) | LTX>WAN moat, NSFW capability gap, future NSFW-motion-LoRA epic, release framing. |
 
 ## Live task log (NOT here — still on the card)

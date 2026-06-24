@@ -29,6 +29,56 @@ Backups beside it: `.bak`, `.bak2`, `.no_audio_latent`, `.pre_lora`.
 > there and leave a pointer.
 
 ## 0b. TEST QUEUE — resume here tomorrow (2026-06-22)
+
+### ✅ AUDIO-INPUT GATE + TRANSITION-ON-FL — RESULTS (2026-06-24)
+Audio control wired as TWO nodes (verified in the saved template):
+- **`Input_Use_Input_Audio`** (`MpiSimpleBoolean`, id 203) → `Audio In Select` (`MpiIfElse` 204)
+  `.boolean`. TRUE = use the dropped-audio latent (link 312); FALSE = empty audio (313). This
+  is the **binary "did the user drop audio / not" GATE** the plan asked for.
+- **`Input_Audio_Influence`** (`MpiFloat`, id 201, 0–1) → `Invert Influence` (202) →
+  `Audio Mask` (`SolidMask` 199 `.value`) → `Audio Noise Mask` (`SetLatentNoiseMask` 200) →
+  the gate's TRUE input. It is a **denoise-PRESERVE dial on the input-audio latent**, not a mix
+  weight: influence 1.0 → mask 0 → audio latent fully preserved (max influence); influence 0 →
+  mask 1 → audio fully renoised (ignored). (Gotcha hit live: gate OFF + influence at max = no
+  effect — the gate is the master switch.)
+
+**Verdict — RESOLVED (online research, 2026-06-24):** the influence slider's "input voice +
+generated ambient mix" goal is **ARCHITECTURALLY IMPOSSIBLE** on LTX-2.3. Official LTX guide:
+input audio is returned UNMODIFIED (drives video only, model adds no ambient); generating
+ambient requires the NO-input-audio path (prompt builds full soundscape). They're mutually
+exclusive modes; the uniform solid-mask only blends between them (no clean mix at any value).
+→ **Ship the binary gate (`Input_Use_Input_Audio`); keep influence at 1.0, DON'T expose it.**
+The real "audio drives motion" knob is `modality_scale` (default 1.0, try 3.0), NOT the mask —
+likely explains the live "lower influence → more movement." Full detail + the mel-spectrogram
+input-prep rules → `docs/builder/research/audio-input.md`. (Earlier this matched on 3 clips at
+1.0; the architecture finding makes the no-slider call definitive.) Keep the
+slider only if a future clip needs <1.0; none did yet (need a couple more varied clips to lock).
+
+**Transition LoRA on FL = the use case, CONFIRMED.** With two DIFFERENT-content frames (different
+clothing / tattoo / mask), BASE FL snaps start→end in the first ms (no path between mismatched
+subjects). With the Transition LoRA ON (its on/off switch), it **morphs smoothly across the full
+2s** — clothes morph, mask morphs, a real transition. No audio conflict (audio still perfect at
+1.0). This is exactly its DEFER/FL-only home.
+
+**Stage-1 timings (same 2s clip, this Pod):** i2v+audio **34s** · FL **36s** · FL+transition **42s**
+(~+6s / +17% LoRA tax).
+
+**Stage-2 transition test — DONE:** stage-2 = same result, just higher quality (detail refine, no
+distort). Then bypassed transition in stage-2 → **ZERO difference** vs both-stages.
+
+**Soft_Enhance stage-2 test — DONE (2026-06-24):** A/B Soft stage-1+2 vs Soft stage-1-only →
+difference MARGINAL (stage-1+2 = faintly softer skin/lips; stage-1-only = faintly more micro-texture).
+Not a reliable win/loss — can't tell at normal framing. WHY: **LTX stage-2 is a low-denoise latent
+UPSCALER (hi-res-fix), not a full second sampler** — little headroom to re-act a LoRA, and stage-1's
+latent already carries the shaping.
+
+**→ DECISION: ALL LoRAs go STAGE-1 ONLY, bypass stage-2** (capability + detail + USER-added LoRAs).
+Skip the per-stage LoRA time tax for a difference you can't reliably see. Generalizes the stage rule:
+a stage-1 LoRA's effect carries into stage-2 through the latent (stage-2 continues from the stage-1
+latent, doesn't re-gen). Motion/morph LoRA stage-1-only = zero diff; detail LoRA (Soft) stage-1-only =
+near-zero diff. Stage-2 LoRA = optional polish at best, never load-bearing.
+
+### (stale — pre-decision queue, kept for trace)
 All 4 CivitAI LoRAs downloaded + moved to `C:/AI/loras/` (ComfyUI reads here via
 extra_model_paths `comfyui_external`). Files:
 - `LTX2.3_reasoning_Sulphur-2_I2V_V4.safetensors` (VBVR I2V, 0.5-1.0)
@@ -213,10 +263,13 @@ ARCHITECTURE"), then either polish-and-ship for the 25th, or add extend/headswap
   - **Placement:** currently BOTH stages. It's a DETAIL LoRA → strongest on STAGE-2 (the detail stage, user
     confirms bigger impact there). Per the stage-1=motion/stage-2=detail rule, ship placement is likely
     stage-2-weighted. Still confirming stage-1 effect on opening composition (see pose-pin test below).
-  - **✅ DECISION: SCHEDULED TO BE MERGED INTO THE MODEL.** Tiny (344MB), no prompt change, no toggle,
-    always-on quality gain → bake into shipped diffusion weights. No extra dep, no mirror-risk, no runtime
-    stacking. The opposite of the dropped capability LoRAs. (Final ship strength 0.5-0.7 + per-stage weight
-    to lock when the merge is built.)
+  - **❌ MERGE CANCELLED (2026-06-24). Ship Soft as a normal STAGE-1 LoRA loader, NOT merged.**
+    The merge was justified by "always-on, both-stages, no toggle." But two findings killed it:
+    (1) ALL LoRAs ship STAGE-1 ONLY now (stage-2 = low-denoise upscaler; LoRA there is marginal — see
+    the stage-2 A/B above), and (2) the LTX template now carries 6 generic `Input_Lora_N`
+    (`MpiLoraModelClip`) loader slots. Soft simply occupies one stage-1 slot at 0.5-0.7. No bake-into-weights,
+    no mirror-risk tradeoff to make, no separate merged-model artifact. Simpler ship. (Superseded the prior
+    "SCHEDULED TO BE MERGED" decision; historical reasoning kept below for trace.)
   - **⚠️ TIMING NOTE (no conclusion):** observed 0.0=124s / 0.5=113s / 0.7=107s on this Pod — i.e. "more LoRA
     = faster", which is IMPOSSIBLE for a real compute cost. So this is **VRAM-staging variance on this GPU
     (32GB, 40GB model → dynamic load lottery), NOT the LoRA.** A LoRA adds compute, never subtracts; Soft's
@@ -251,20 +304,67 @@ That's the end-state: every dropped LoRA at 0, Soft at 0.7. (Backslash-vs-forwar
 applies — the 3 may show "missing" on Linux reload, re-select from dropdown; then SAVE the workflow this
 time so it doesn't have to be re-created again.)
 
-### NEXT SESSION PLAN (2026-06-24, new Pod off the persistent 75GB volume)
-1. **Audio-drop GATE (not a slider).** Test if the input-audio influence needs a STRENGTH SLIDER or just a
-   binary "did the user drop audio / not" gate (auto-enable at a fixed strength on file-present). Open
-   question: does a fixed strength (e.g. 1.0) work on EVERY image, or do some need a lower value (→ keep
-   slider)? If fixed works everywhere → drop the slider, ship the gate. NOT an on/off button — a
-   user-dropped-audio-or-not gate.
-2. **Soft_Enhance MERGE** — schedule/execute the bake-into-weights (or confirm the merge recipe + final
-   strength/per-stage weight).
-3. **IF time — VIDEO EXTEND (optional operation).** Lengthy; likely needs its own Pod. Key unknowns:
+### SESSION PROGRESS (2026-06-24) — what got DONE / decided this session
+1. ✅ **Audio-drop GATE — DONE.** Verdict = binary "user dropped audio / not" gate
+   (`Input_Use_Input_Audio`) at FIXED influence 1.0; slider NOT needed (3/3 clips clean: i2v, FL,
+   FL+transition). Influence node = a denoise-PRESERVE dial (see `docs/builder/research/audio-input.md`).
+2. ❌ **Soft_Enhance MERGE — CANCELLED.** No model merge. Soft ships as a normal STAGE-1 LoRA loader (one
+   of the 6 generic `Input_Lora_N` slots) at 0.5-0.7. Killed by: all-LoRAs-stage-1-only + the new generic
+   loader slots. Simpler ship, no bake, no mirror tradeoff.
+3. ✅ **Transition LoRA on FL — DONE.** Works (smooth A→B morph), STAGE-1 ONLY, audio-safe, ~+17% time;
+   it's a short atomic morph primitive (orchestration note → Cubric-Studio). Stays a toggle.
+4. ✅ **Stage rule generalized.** LTX stage-2 = low-denoise upscaler → ALL LoRAs stage-1 only (bypass
+   stage-2). Latent carries the effect.
+5. ✅ **6 generic LoRA loaders added** to the LTX template (`Input_Lora_1..6`, `MpiLoraModelClip`,
+   clip-capable). Workflow saved + copied to `D:/WORK/workflows/App/LTX23.json`.
+6. ✅ **Clip-knob UI** scoped per-template → card MPI-125 (Wan drops clip, LTX keeps it).
+7. ❌ **SOLUTION B (audio-ref voice+ambient mix) — TESTED, ABANDONED on distilled. REVERTED.**
+   Wired + tested fully (t2v + i2v) over a session. **Result: voice-identity transfer does NOT work on our
+   distilled few-step base.** Detailed dead-end analysis in `docs/builder/research/audio-input.md` (§ "SOLUTION
+   B — TESTED & ABANDONED"). Short version:
+   - **lipdub IC-LoRA = wrong tool** (video-to-video re-dub; needs an input-video guide we don't have → it
+     ignored the audio ref, generated a fresh voice). → moved lipdub to a FUTURE v2v op (item 3 below).
+   - **ID-LoRA** (`AviadDahan/LTX-2.3-ID-LoRA-TalkVid-3K`, audio_ref_only_ic = our exact wiring) = the RIGHT
+     family. Ambient-from-prompt worked; **voice identity still did NOT carry.**
+   - **modality_scale is NOT an identity lever** — it's cross-attn COUPLING (`(scale-1)*(pos−modality_pass)`);
+     cranking 3→5 made audio DEVIATE MORE + distort (speed up/down, unusable). cfg can't pull identity either:
+     `SetAudioRefTokens` puts `ref_audio` in BOTH pos+neg → cancels in the `(cfg-1)*(pos−neg)` term.
+   - **Real identity strength = ID-LoRA + DENOISE STEPS.** ID-LoRA ref inference = 30 steps / audio-cfg 7 /
+     identity-guidance 3 (full-model regime). We run **7 steps, cfg≈1** (distilled lock; bumping to 15-30 =
+     non-distilled, defeats the point; 12 is the realistic ceiling and won't cross the gap). i2v (matches
+     ID-LoRA's image+audio training) also failed at modality 1 and 4. **→ distilled can't do ID-LoRA voice
+     transfer. Reverted to pre-Solution-B backup (`...102335.bak.json`); Solution-B attempt snapshotted at
+     `...solb-attempt-20260624-121639.bak.json`.** MultimodalGuider also has a cfg=1 crash bug
+     (`noise_pred_neg` unbound when `do_uncond()` False + a post-cfg normalizing sampler) — needs cfg≥1.1.
+   - **MultimodalGuider/modality_scale = DROPPED for audio-ID. May still be worth it for audio↔video SYNC**
+     (its actual job) — separate future question, not for v1.
+
+### STILL PENDING — resume here
+0. **PIVOT (chosen direction): build LIPDUB as a video-to-video op** (see item 3). The plan: users generate
+   video (no audio / prompt-ambient) on the distilled t2v/i2v template, THEN a separate lipdub v2v pass dubs
+   in a target voice — lipdub gets the input-video guide it needs (the thing missing in the t2v ID-LoRA test).
+   Chaining the two ops = the originally-desired "specific voice + good video" result, done properly. Also
+   explore whether the two can be linked into one user flow. Dep (lipdub-0.9) already local.
+1b. **RE-HOST the gated lipdub IC-LoRA before shipping Solution B.** App can't auto-pull a gated HF
+   repo. LTX-2 Community License PERMITS re-hosting (propagate use-policy + ship license + keep
+   attribution; $10M/yr commercial threshold N/A). Mirror to our HF/R2, point the dep URL there.
+   Full detail in `docs/builder/research/model-set.md` § "GATED dep — audio IC-LoRA". Same playbook
+   as the heretic-encoder + Singularity mirror TODO.
+2. **VIDEO EXTEND (optional operation).** Lengthy; likely needs its own Pod. Key unknowns:
    - Can extend be a SEPARATE workflow → an OPTIONAL operation (not baked into the main template)?
    - LTX extend pulls from **stage-1 latent** — but can ALSO pull from an **already-made/final video**.
      **Must test the difference: extend-from-stage-1-latent vs extend-from-final-video** (quality, seams,
      practicality). This decides the extend architecture. Half-wired already (IfElse 51/56 feed the
      save-gate, NOT the sampler — sampler-side continue feed unverified).
+3. **LIPDUB (video-to-video op) — FUTURE, own v2v workflow.** The lipdub IC-LoRA
+   (`ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors`, already downloaded to `C:/AI/loras/LTX2.3/`) is a
+   **video-to-video re-dubbing** tool (`Control Type: Video & Audio`, trained on lip-dub pairs): feed an
+   EXISTING talking-head video + new dialogue text → regenerates lips + voice to match that video. It
+   NEEDS an input-video guide (`LTXAddVideoICLoRAGuide`), which the t2v/i2v template doesn't have — that's
+   why the audio-only test gave fresh voice + no ambient (it ignored the audio ref with no video to anchor).
+   **Genuinely useful** (users have videos that just need the mouth re-synced to new audio). Build it as a
+   dedicated **v2v workflow** alongside extend / head-swap / ControlNet (the v2v family below), based on the
+   current template + `LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json`. Dep already local.
 4. Loose ends (only if fast): v3 i2v MOTION test; music style-word test ("cinematic" vs "documentary");
    transition/FL once an effect-system path is chosen.
 

@@ -1,0 +1,134 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c57162cd-17cd-40da-86c6-ee53b9a7183e",
+  "supersedes": "717bf2f9-6573-454f-8a43-5f97a8f38cd9",
+  "generated_at": "2026-06-24T11:22:30Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 LTX-2.3 — SOLUTION B TESTED & ABANDONED on distilled; PIVOT to lipdub video-to-video op. Wired the audio-ref-token path (LTXVSetAudioRefTokens + IC-LoRA loader + two MpiIfElse gated by Input_Use_Input_Audio + MultimodalGuider/GuiderParameters), tested across t2v + i2v. Found: lipdub IC-LoRA = wrong tool (v2v re-dub, needs input-video guide); ID-LoRA (AviadDahan TalkVid-3K, audio_ref_only_ic) = right family, ambient-from-prompt WORKS but voice identity does NOT carry on our distilled 7-step base; modality_scale = audio↔video COUPLING (distorts when cranked), NOT identity; cfg can't pull identity (ref_audio in both pos+neg cancels). Identity needs ID-LoRA × 30 steps / audio-cfg 7 = full-model regime, incompatible with distilled lock. REVERTED template to pre-Solution-B backup. Decided: ship working audio gate for v1; build lipdub as a v2v op next.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "MPI-4 LTX-2.3: implement Solution B — input-audio + generated-ambient mix via the IC-LoRA ref-token path (LTXVSetAudioRefTokens). Then finalize the ship config for the ~25th-June release.",
+    "status": "in_progress",
+    "summary": "Solution B fully tested and ABANDONED on the distilled base — voice-identity transfer does not work at 7 steps / cfg≈1 (needs ID-LoRA's 30-step regime). Ambient-from-prompt works. Template reverted to clean pre-Solution-B state. NEXT (chosen): build LIPDUB as a separate video-to-video op based on the current template + the online lipdub workflow; chain generate→lipdub for 'good video + specific voice'."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "SOLUTION B WIRED + TESTED + ABANDONED. lipdub IC-LoRA = video-to-video re-dub (Control Type: Video & Audio, trained on lip-dub pairs) → needs an INPUT-VIDEO guide (LTXAddVideoICLoRAGuide) → ignored audio ref in t2v → fresh voice. Wrong tool for t2v/i2v.",
+      "ID-LoRA (AviadDahan/LTX-2.3-ID-LoRA-TalkVid-3K, ~1.1GB, strategy audio_ref_only_ic = exactly what LTXVSetAudioRefTokens does, no video guide) = the RIGHT family. Swapped loader to plain LoraLoaderModelOnly (ID-LoRA has no reference_downscale_factor metadata). Result: AMBIENT-from-prompt now WORKS, but voice identity STILL does not carry (tone completely different) — t2v AND i2v, modality_scale 1/3/4/5.",
+      "modality_scale is NOT an identity lever: term = (scale-1)*(pos − modality_pass), modality_pass drops both cross-attns → it amplifies audio↔video COUPLING. Cranking 3→5 made audio DEVIATE MORE + distort (speed up/down, unusable). cfg also can't pull identity: SetAudioRefTokens attaches ref_audio to BOTH positive AND negative cond → cancels in the (cfg-1)*(pos−neg) term.",
+      "ROOT CAUSE: identity strength = ID-LoRA × DENOISE STEPS. ID-LoRA reference inference = 30 steps / audio-cfg 7 / identity-guidance 3 (full-model regime). We run 7 steps / cfg≈1 (distilled lock). Too few steps for ref tokens to steer the voice. 15-30 steps = non-distilled (defeats the point); 12 is the realistic ceiling and won't close the gap. → distilled CANNOT do ID-LoRA voice transfer.",
+      "MultimodalGuider cfg=1 BUG found + worked around: it only assigns noise_pred_neg under do_uncond() (cfg≠1), but the LTXVNormalizingSampler post-cfg hook always reads it → UnboundLocalError on node 70. Fix = cfg ≥ 1.1 (GuiderParameters cfg widget step is 0.1, so 1.05 snaps to 1.1).",
+      "REVERTED template to pre-Solution-B backup LTX_i2v_t2v_template.20260624-102335.bak.json (155 nodes, CFGGuider live, SolidMask audio path live, empty New Nodes group). Solution-B attempt snapshotted at ...solb-attempt-20260624-121639.bak.json. Copied reverted file to D:/WORK/workflows/App/LTX_i2v_t2v_template.json.",
+      "DEPS downloaded + verified to C:/AI/loras/LTX2.3/: lipdub-0.9 (2.47GB, gated Lightricks repo, for the future v2v op), id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors (1.16GB, ungated AviadDahan). BOTH on the re-host list (model-set.md + memory project_dep_rehost_rule): re-host anything not official / from less-established authors before shipping.",
+      "Documented everywhere: docs/builder/research/audio-input.md § 'SOLUTION B — TESTED & ABANDONED' (full read-first analysis); spec §0b item 7 + pending; model-set.md supply-chain; memory project_ltx_audio_id_distilled_deadend + project_dep_rehost_rule + feedback_live_workflow_small_tweaks."
+    ],
+    "pending": [
+      "BUILD LIPDUB VIDEO-TO-VIDEO OP (DO FIRST — user's explicit next ask). Base it on the current LTX_i2v_t2v_template.json + the online lipdub workflow ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json (+ ..._V2V_ICLoRA_Single_Stage_Distilled.json). Key: lipdub NEEDS the input-video guide (LTXAddVideoICLoRAGuide + LoadVideo→GetVideoComponents→Resize) that the t2v test lacked — that's why it'll work here. Dep lipdub-0.9 already local. Likely its own workflow file (not baked into the main template). Read iclora.py (LTXAddVideoICLoRAGuide) for the video-guide node.",
+      "FUTURE: explore chaining generate (prompt-ambient) → lipdub (target voice) into one user flow = the originally-desired 'good video + specific voice' result, done with the right tool per stage.",
+      "VIDEO EXTEND (optional op): test extend-from-stage-1-latent vs extend-from-final-video. Half-wired (IfElse 51/56 feed save-gate not sampler). v2v family alongside lipdub + head-swap + ControlNet.",
+      "modality_scale / MultimodalGuider may still be worth testing for audio↔video SYNC (its actual job, NOT identity) — separate future question, not v1.",
+      "RELEASE ~25th June: ship refined base (i2v/t2v/FL + audio gate generate-from-prompt OR pass-through + stage-1 LoRA loaders). Audio voice-ID is OUT for v1 (distilled dead-end). Add lipdub v2v + extend only if they land clean in time.",
+      "Re-host before public ship: lipdub IC-LoRA (gated, when v2v ships), ID-LoRA (third-party), heretic-gemma-fp8 (anongecko), Singularity. Mirror to our HF/R2.",
+      "Push the two reorg commits when ready (Cubric-Vision 9455e90 + mpi-ci 93be372) — push is user-authorized, NOT done."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session) — build the lipdub v2v workflow; put NEW nodes in a 'New Nodes' group; ALWAYS back up + confirm the ComfyUI tab is SAVED+CLOSED before a disk write",
+    "STRUCTURAL workflow edits only (add/remove/rewire nodes, type swaps); the USER sets knob values (cfg, strength) himself in the UI — user's live save is the source of truth (see memory feedback_live_workflow_small_tweaks)",
+    "guide the user through ComfyUI (cooperative live session); the user drives generation + UI tweaks",
+    "run curl/rclone to download or stage model deps (loras live under C:/AI/loras/LTX2.3/, also C:/AI/loras and G:/CubricModels/loras per extra_model_paths.yaml)",
+    "edit the Builder playbook + research at c:/AI/Mpi/Cubric-Vision/docs/builder/ — living docs"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/audio-input.md — added '❌❌ SOLUTION B — TESTED & ABANDONED' read-first block (full dead-end analysis) + superseded marker on the old optimism block.",
+      "spec §0b — item 7 rewritten to tested/abandoned; pending list pivoted to lipdub v2v.",
+      "docs/builder/research/model-set.md — supply-chain section: gated lipdub + third-party ID-LoRA re-host TODOs; LTX-2 community license PERMITS re-host.",
+      "memory: NEW project_ltx_audio_id_distilled_deadend, project_dep_rehost_rule, feedback_live_workflow_small_tweaks; MEMORY.md index updated for all three.",
+      "spec §0b pending item 3 already logs lipdub as a future v2v op (dep local)."
+    ],
+    "pending": [
+      "ALL doc/spec/memory edits this session are UNCOMMITTED (cooperative live session, no commits). Commit at next mpi-end by explicit pathspec.",
+      "Prior-session uncommitted edits also still pending: audio-input.md, tested-loras-versions.md, model-set.md, spec, the earlier handoff. mpi-end should sweep all.",
+      "Decide if the lipdub v2v op (and extend) warrant their own MPI cards once scoped."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4. DO FIRST (user's explicit next ask): build the LIPDUB VIDEO-TO-VIDEO lip-sync workflow, based on the current LTX_i2v_t2v_template.json + the online lipdub workflow (ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json, and the V2V single-stage variant). The whole reason it will work where the t2v Solution-B test failed: lipdub NEEDS an input-VIDEO guide (LoadVideo → GetVideoComponents → Resize → LTXAddVideoICLoRAGuide), which the t2v path lacked. The dep (lipdub-0.9, 2.47GB) is already local at C:/AI/loras/LTX2.3/. It will likely be its own workflow file (a v2v op), not baked into the main t2v/i2v template. COOPERATIVE LIVE SESSION: user drives ComfyUI + UI knob tweaks; agent does STRUCTURAL JSON edits, backs up + confirms SAVED+CLOSED before any disk write, puts new nodes in a 'New Nodes' group. Read the spec §0b + docs/builder/research/audio-input.md (Solution-B dead-end, so you don't re-attempt it) + iclora.py (LTXAddVideoICLoRAGuide node) first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SOLUTION B (audio-ref voice+ambient mix) ABANDONED on distilled — voice identity won't transfer at 7 steps / cfg≈1; needs ID-LoRA's 30-step/audio-cfg-7 full regime. Ambient-from-prompt works. Tested across t2v + i2v + modality_scale 1/3/4/5. Reverted template.",
+      "modality_scale = audio↔video COUPLING guidance, NOT a voice-identity lever (cranking it distorts audio). cfg can't pull identity either (SetAudioRefTokens puts ref_audio in BOTH pos+neg → cancels). Don't relitigate.",
+      "PIVOT: build lipdub as a video-to-video op (it gets the input-video guide the t2v test lacked) + chain generate→lipdub for the desired 'specific voice' result. Better architecture: separate 'make video+ambient' from 'impose a voice', right tool per stage.",
+      "AUDIO for v1 ships as the binary gate (Input_Use_Input_Audio): ON = pass input audio through (drives video, returned), OFF = model generates the soundscape from prompt. NO voice-identity mix in v1.",
+      "RE-HOST RULE (user): re-host any model dep NOT from an official / long-established source before shipping (gated lipdub, third-party ID-LoRA, heretic-gemma, Singularity). Mirror to our HF/R2.",
+      "LIVE-SESSION DIVISION OF LABOUR (user): agent does STRUCTURAL workflow edits; user sets knob values (cfg/strength) in the UI himself. User's live save = source of truth; reconcile by user reloading from disk.",
+      "GuiderParameters cfg widget step = 0.1 (no sub-0.1 floats; 1.05 → 1.1)."
+    ],
+    "constraints": [
+      "WORKING LOCAL — NOT a Pod this session. G:/ComfyUi/ComfyUI is the LOCAL ComfyUI install. MpiNodes = symlink → C:/AI/Mpi/ComfyUi-MpiNodes. LoRAs: C:/AI/loras/LTX2.3 (+ C:/AI/loras, G:/CubricModels/loras via extra_model_paths.yaml).",
+      "COOPERATIVE LIVE SESSION: confirm the user SAVED+CLOSED the ComfyUI tab AND back up the workflow before any disk JSON write. Working file G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json; after save copy → D:/WORK/workflows/App/LTX_i2v_t2v_template.json (final product folder; the handoff-era LTX23.json name is superseded by this filename).",
+      "Distilled base ltx-2.3-22b-distilled-1.1_transformer_only_bf16, locked at 7 steps / cfg≈1. The distilled few-step regime is WHY audio voice-ID failed — keep it in mind for any audio-identity work (don't retry on distilled).",
+      "Node naming law: new non-Tier-1 nodes MUST be Input_*/Output_*. LTX/IC-LoRA vendor nodes kept as-is.",
+      "A/B LoRAs via strength 0↔0.5, NEVER bypass-toggle (model reload → RAM-leak OOM). Lock a good base seed first.",
+      "MultimodalGuider requires cfg ≥ 1.1 to avoid the noise_pred_neg UnboundLocalError with a post-cfg normalizing sampler (only relevant if it's ever re-used for sync)."
+    ],
+    "files_modified": [
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (REVERTED to pre-Solution-B backup ...102335.bak.json) + copied to D:/WORK/workflows/App/",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.20260624-*.bak.json (several backups incl. ...102335 = clean pre-Solution-B, and ...solb-attempt-20260624-121639 = the full Solution-B attempt)",
+      "C:/AI/loras/LTX2.3/ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors (2.47GB, downloaded — for the future v2v op)",
+      "C:/AI/loras/LTX2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors (1.16GB, downloaded — ID-LoRA, abandoned for distilled)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (SOLUTION B TESTED & ABANDONED block — UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/model-set.md (gated lipdub + ID-LoRA re-host TODOs — UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (§0b item 7 abandoned + lipdub-v2v pivot — UNCOMMITTED)",
+      "memory: project_ltx_audio_id_distilled_deadend (NEW), project_dep_rehost_rule (NEW), feedback_live_workflow_small_tweaks (NEW), MEMORY.md"
+    ],
+    "files_to_read_first": [
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (§0b SESSION PROGRESS item 7 + STILL PENDING)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (the SOLUTION B TESTED & ABANDONED block — so you do NOT re-attempt audio voice-ID on distilled)",
+      "G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json (the lipdub v2v reference to build from)",
+      "G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_V2V_ICLoRA_Single_Stage_Distilled.json (v2v single-stage variant)",
+      "G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-LTXVideo/iclora.py (LTXAddVideoICLoRAGuide = the input-video guide node lipdub needs)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "Builder-Pod model-onboarding playbook (now docs/builder/)",
+      "ComfyUI workflows / injection"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-24T11:22:30Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX-2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/c57162cd-17cd-40da-86c6-ee53b9a7183e.json and use mpi-continue. COOPERATIVE LIVE LOCAL session: you edit the workflow JSON / guide the user; the USER drives ComfyUI generation and sets all knob values (cfg, strength) in the UI himself — you do STRUCTURAL node edits only, back up + confirm the tab is SAVED+CLOSED before any disk write, and put new nodes in a 'New Nodes' group. Working LOCAL (NOT a Pod): G:/ComfyUi/ComfyUI is the local install; MpiNodes is a symlink to C:/AI/Mpi/ComfyUi-MpiNodes; LoRAs under C:/AI/loras/LTX2.3. THE NEXT ASK (do this first): build a LIPDUB VIDEO-TO-VIDEO lip-sync workflow, based on the current template (G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json) + the online lipdub workflow (ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json, and the V2V single-stage variant). BACKGROUND you must NOT relitigate: last session we fully tested 'Solution B' (input-voice + generated-ambient mix via audio ref-tokens, LTXVSetAudioRefTokens) and ABANDONED it — on our distilled 7-step / cfg≈1 base the voice identity does NOT transfer (ID-LoRA needs ~30 steps / audio-cfg 7 = the full-model regime); modality_scale is audio↔video COUPLING not an identity lever (cranking it distorts audio); cfg can't pull identity because SetAudioRefTokens puts ref_audio in both positive and negative conditioning so it cancels. Ambient-from-prompt DID work. We reverted the template to the clean pre-Solution-B backup. The PIVOT: lipdub is a VIDEO-TO-VIDEO re-dub — it needs an input-VIDEO guide (LoadVideo → GetVideoComponents → Resize → LTXAddVideoICLoRAGuide), exactly the thing the t2v test lacked, which is WHY it will work. Build it as its own v2v op (likely a separate workflow file, not baked into the main t2v/i2v template), alongside the extend / head-swap / ControlNet v2v family. The dep (ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors, 2.47GB) is already local at C:/AI/loras/LTX2.3/. Future idea: chain generate (prompt-ambient) → lipdub (target voice) into one flow = the originally-desired 'good video + specific voice'. Read iclora.py for the LTXAddVideoICLoRAGuide node. LOCKED DECISIONS not to revisit: ALL LoRAs ship STAGE-1 ONLY; NO model merge; audio for v1 = the binary Input_Use_Input_Audio gate (pass-through OR generate-from-prompt), no voice-identity mix; re-host any non-official / less-established dep before shipping (lipdub gated, ID-LoRA third-party, heretic-gemma, Singularity). After save, copy the working file to D:/WORK/workflows/App/LTX_i2v_t2v_template.json. All this session's doc/spec/memory edits are UNCOMMITTED — commit at the next mpi-end. RELEASE TARGET ~25th June (audio voice-ID is OUT for v1)."
+}
