@@ -44,6 +44,10 @@
     align-self: end;
 }
 
+.mpi-prompt-box__col--enhance {
+    flex-shrink: 0;
+}
+
 .mpi-prompt-box__col--settings {
     flex-shrink: 0;
 }

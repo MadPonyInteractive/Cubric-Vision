@@ -18,6 +18,7 @@ import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
+import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/connectorOps.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -69,6 +70,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--enhance hide" id="enhance-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
@@ -915,6 +917,72 @@ export const MpiPromptBox = ComponentFactory.create({
                 emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
             });
         }
+
+        // ── Enhance (Cubric Prompt, MPI-5) ─────────────────────────────────────
+        // Capability-gated: the control is only mounted when cubric.prompt is
+        // registered and advertises prompt.enhance. Absent Prompt → no control
+        // at all (the slot stays hidden), so PromptBox is a clean standalone
+        // editor. Toggleable icon button, on by default (signals "available").
+        // Clicking enhances the active prompt field via the broker and writes
+        // the result back through the existing injectPrompts().
+        const enhanceSlot = qs('#enhance-slot', el);
+        let _enhanceBtn = null;
+        let _enhancing = false;
+
+        function _enhanceToast(message, variant) {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+            document.body.appendChild(wrapper);
+            const toast = MpiToast.mount(wrapper, { message, variant, duration: 3000 });
+            toast.on('close', () => wrapper.remove());
+        }
+
+        async function _runEnhance() {
+            if (_enhancing) return;
+            const source = isNegativeMode ? negativeValue : positiveValue;
+            if (!source.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
+            _enhancing = true;
+            _enhanceBtn?.el?.setDisabled?.(true);
+            try {
+                // Vision owns the recipe key: Cubric Prompt selects its enhancer
+                // recipe by this id. Default to the model's `type` (e.g. 'sdxl',
+                // 'wan' — already aligns with Prompt's recipe ids); a model may
+                // override with an explicit `enhanceRecipe` when they diverge.
+                const result = await enhancePrompt({
+                    prompt: positiveValue,
+                    negativePrompt: negativeValue,
+                    targetModelId: model?.enhanceRecipe ?? model?.type,
+                    operation: activeOperation,
+                });
+                if (result.ok) {
+                    el.injectPrompts({
+                        positive: result.prompt ?? positiveValue,
+                        negative: result.negativePrompt ?? negativeValue,
+                    });
+                    emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
+                    // result.note is set when Prompt had no recipe for this model
+                    // and fell back to a default enhancer — surface it honestly.
+                    _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success');
+                } else {
+                    _enhanceToast(result.error || 'Enhance failed.', 'warning');
+                }
+            } finally {
+                _enhancing = false;
+                _enhanceBtn?.el?.setDisabled?.(false);
+            }
+        }
+
+        // Probe capability async; reveal the button only if Prompt is live.
+        checkPromptEnhanceAvailable().then((available) => {
+            if (!available || !enhanceSlot) return;
+            enhanceSlot.classList.remove('hide');
+            _enhanceBtn = MpiButton.mount(enhanceSlot, {
+                icon: 'enhance',
+                info: 'Enhance prompt with Cubric Prompt',
+                size: 'sm', variant: 'primary', toggleable: true, active: true,
+            });
+            _enhanceBtn.on('click', () => { void _runEnhance(); });
+        }).catch(() => { /* no broker / no Prompt → stay standalone */ });
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
         runSlotEl = qs('#bottom-right-slot', el);

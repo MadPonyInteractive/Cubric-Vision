@@ -47,6 +47,7 @@ const { router: runpodRemoteRoutes } = require('./routes/runpodRemote');
 const { router: remoteEngineRoutes } = require('./routes/remoteEngine');
 const { router: remoteProxyRoutes } = require('./routes/remoteProxy');
 const { cleanComfyUITempFiles } = require('./routes/shared');
+const connectorRoutes = require('./routes/connector');
 
 console.log('[server.js] App initialization started');
 logger.info('system', 'Server initialization started');
@@ -65,6 +66,7 @@ app.use(videoTrimInputRoutes);
 app.use(downloadManagerRoutes);
 app.use(runpodRemoteRoutes);
 app.use(remoteEngineRoutes);
+app.use(connectorRoutes);
 
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 process.on('SIGINT', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
@@ -83,4 +85,18 @@ app.listen(port, '127.0.0.1', () => {
     }).catch(err => {
         console.error('Failed to load dynamic modules:', err);
     });
+
+    // Live connector responder (MPI-5): register with the hub broker and answer
+    // system.memory.release via /comfy/unload. Best-effort — no broker = no-op.
+    const path = require('node:path');
+    const { startConnectorResponder } = require('./services/connectorResponder');
+    startConnectorResponder({
+        manifestPath: path.join(__dirname, 'resources', 'cubric', 'connector-manifest.json'),
+    }).then(responder => {
+        if (responder) {
+            // Share the connected client with the caller routes (/connector/*).
+            connectorRoutes.setClient(responder.client);
+            logger.info('system', 'Connector responder registered (system.memory.release) + caller routes live.');
+        }
+    }).catch(() => { /* best-effort: Vision works standalone without a broker */ });
 });
