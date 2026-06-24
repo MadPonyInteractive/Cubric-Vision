@@ -3,6 +3,99 @@
 > Concluded 2026-06-24 (MPI-4). How the input-audio control is wired in the
 > LTX-2.3 template, and the gate-vs-slider product decision.
 
+---
+
+## ✅✅ VOICE-ID WORKS ON DISTILLED — `LTXVReferenceAudio`, not `LTXVSetAudioRefTokens` (2026-06-24, LATEST — read FIRST)
+
+> **This corrects the "SOLUTION B ABANDONED / needs 30 steps" block far below.** That conclusion was a WRONG
+> ROOT CAUSE — we tested the wrong node. Voice-identity transfer DOES work on our distilled 8-step / cfg-1 base.
+
+### The fix: two different audio-ref nodes — we'd tested the wrong one
+- `LTXVSetAudioRefTokens` (what we abandoned): attaches `ref_audio` to BOTH pos+neg conditioning → **cancels**
+  in the `(cfg-1)*(pos-neg)` term → zero identity push. THIS is why our Solution-B test failed — not the step count.
+- **`LTXVReferenceAudio`** (comfy-core `comfy_extras/nodes_lt.py`, the RIGHT node): also sets ref_audio on
+  pos+neg, BUT additionally patches the model via `set_model_sampler_post_cfg_function` — runs an EXTRA forward
+  pass per step WITHOUT the ref, then adds `(cond_pred − pred_noref) * identity_guidance_scale` on top of the cfg
+  result. That term does NOT cancel → it's the real identity lever. `identity_guidance_scale` default 3,
+  `start_percent`/`end_percent` gate the active sigma range. **cfg=1 SAFE** (reads only always-present args; the
+  old `MultimodalGuider noise_pred_neg` bug does NOT apply here).
+
+### Source of truth: the OFFICIAL ComfyUI template `video_ltx2_3_id_lora.json` runs at **8 steps / cfg 1**
+`CheckpointLoader(ltx-2.3-22b-dev-fp8) → distilled-LoRA@0.5 → ID-LoRA-talkvid-3k@1.0 (LoraLoaderModelOnly,
+MODEL-ONLY, no clip) → LTXVReferenceAudio(scale=3) → CFGGuider stage-1`. Reference IMAGE via
+`LTXVImgToVideoInplace(0.7)`, NOT `LTXAddVideoICLoRAGuide`. ID guidance STAGE-1 only. (The ID-LoRA repo's own
+README defaults to 30 steps / cfg3 / audio-cfg7 — the FULL regime — but the ComfyUI template proves it also
+works few-step. Don't jump to 30 unless deliberately testing the full regime.)
+
+### Applied to our template (`LTX_i2v_t2v_template.json`)
+`LTXVReferenceAudio` #274 spliced into stage-1 guider #33: model via `talk3_ID_Lora` #277 (MpiLoraModel,
+talkvid-3k @1.0) → MpiReroute#196; pos/neg from LTXVConditioning#212; ref_audio from existing LoadAudio#197
+(`Input_Audio_File`); audio_vae from VAELoaderKJ#2. Stage-2 guider #32 untouched. The ID-LoRA loader is titled
+`talk3_ID_Lora` NOT `Input_*` — `Input_*` is reserved for app INJECTION points; a baked loader (fixed path) is
+internal. Backup `...pre-refaudio-20260624-131500.bak.json`.
+
+### MEASURED tuning (user live tests 2026-06-24) — beats the official defaults
+| Finding | Detail |
+|---|---|
+| **scale 3 (official) often TOO MUCH** | overdrives/distorts. **~1.5 better.** Try 1.0–1.2 if still hot. Very sensitive. |
+| **Length: 5s = sweet spot, NOT a hard limit** | 3s and 7s work well; 7s good. 38s CAN work but "syncs in harder" → distortion, needs repeated speed adjustment. Short = cleaner. |
+| **Seed is a LOTTERY — even single-speaker** | same settings, different seed = pass/fail. NOT reliable one-shot even for ONE voice. Seed-hunt always (38s M+F succeeded on 3rd seed). Single-voice = BETTER ODDS than multi, not "reliable". |
+| **scale 1.5 = best middle point** | user's settled value for identity_guidance_scale. 3 too hot, lower loses identity; ~1.5 is the sweet spot. |
+| **Multi-speaker UNRELIABLE — worse lottery** | talkvid-3k is single-speaker. Failure modes, all seed-dependent: (a) both MUTE, (b) both get ONE identity (portrait: both female voice+look), (c) dialogue ATTRIBUTION DRIFT — female echoed the male's line ("what trash again"). 38s M+F once carried both (lucky 3rd seed). The WHOLE capability is a lottery; multi-voice is just worse odds than single. → multi-character belongs in `Original` mode, not `Reference`. |
+| **Accent transfer = LOTTERY (not "never")** | EARLIER call "accent doesn't transfer" was WRONG/too absolute. Later test: the male character carried the reference's INDIAN ACCENT, from stage-1. So accent CAN carry — like everything here, seed-dependent. If it doesn't land, reinforce in prompt. |
+| **STAGE-2 SHIP SIGMAS = `0.65, 0.45, 0.25, 0.0`** | Full sweep on HUMAN faces (704×1280 i2v): 0.5=too soft (leaves detail on table) · **0.65=THE KNEE (ship)** real skin texture, natural, identity+audio hold · 0.7=more detail but audio starts to DRIFT (she "wanted to say something else", like 0.85) · 0.85=over-sharp/plasticky + most drift. 0.65 = "photographic not filter-sharpened", the point before stage-2 re-decides content. AUDIO-DRIFT (dialogue changes from stage-1) is the hard ceiling signal. On ANIMATED animals the sigma differences were near-invisible (no fine texture); humans show it clearly — always tune sigmas on human skin. Stage-1 keeps its LTXVScheduler (8 steps, max_shift 2.05) — only stage-2 manual sigmas were tuned. |
+| **t2v white-screens; i2v (portrait) works** | needs an image anchor. Portrait i2v: lip-sync GOOD, sound GOOD. Pure t2v → white screen (likely needs first-frame image). |
+| **"weird music" sometimes at 1.5** | identity term amplifies ALL audio-ref features incl. musicality. Lever to try: `end_percent` < 1 (gate guidance to early steps). UNTESTED. |
+| **Prompt format helps** | structured `[VISUAL]/[SPEECH]/[SOUNDS]` got the male's mouth moving where a flat prompt didn't. |
+
+### Prompt format (official ID-LoRA)
+`[VISUAL]: scene + appearance + style` · `[SPEECH]: the literal words to be spoken (speaker-tagged)` ·
+`[SOUNDS]: voice tone + ambience`. All optional, all recommended. Words from [SPEECH]; voice from the ref clip.
+
+### ⚠️ STAGE-2 DROPS IDENTITY — must reuse the ref-audio + LoRA on stage-2 (2026-06-24)
+Splicing `LTXVReferenceAudio` into stage-1 ONLY (matching the official template's layout) is NOT enough for OUR
+template. Running stage-2 changed voices completely + character FEATURES drifted — stage-2 ignored the identity.
+Cause (verified in JSON):
+- Our **stage-2 guider #32 model ← raw UNETLoader #4** (via reroute #258) — NO LoRA chain, NO ID-LoRA, NO
+  ref-audio patch. (The LoRA chain ends at #277→#196 = stage-1 only; #191→#259 is a dead-end stage-2 line.)
+- Our stage-2 sigmas start at **0.909** (higher denoise than official's 0.85) → regenerates more → identity loss worse.
+- The official template survives stage-1-only because its stage-2 is a LIGHT low-denoise refine on the
+  distilled-LoRA model; ours refines harder on a raw model.
+FIX (applied): stage-2 guider #32 model repointed to the `LTXVReferenceAudio #274` MODEL output (carries LoRA
+chain + identity post-cfg patch), same source as stage-1.
+
+✅ **RESOLVED (2026-06-24): stage-2 `LTXVReferenceAudio` REMOVED — not needed.** A/B'd 0.65 sigmas WITH vs
+WITHOUT the stage-2 ref-audio node → EXACT same result. The real cure for stage-2 drift was the SIGMAS
+(start 0.909 → 0.65), NOT re-patching identity on stage-2. The node only cost an extra forward pass per stage-2
+step for zero gain → deleted from stage-2. Identity holds via low-start-sigma refine alone. Lesson REFINED: only
+re-patch identity on a stage that denoises HARD; a LIGHT refine (low start sigma) inherits stage-1's identity
+without re-patching.
+
+### FINAL shipped wiring (user, saved 2026-06-24) — TWO gates + a radio
+- **`Input_Use_Reference_Audio`** (MpiIfElse): TRUE = goal-1 path (`LTXVReferenceAudio` voice-ID) → CFGGuider;
+  FALSE = `Original Cond` (plain text conditioning). Gates the voice-ID branch.
+- **`Input_Use_Input_Audio`** (MpiIfElse): the existing goal-2 gate (frozen-audio / Audio Mask path).
+- Both audio inputs kept (`Input_Audio_File` feeds both). The app chooses which at dispatch.
+- `talk3_ID_Lora` @ 1.0, `identity_guidance_scale` = 1.50 baked in. Stage-2 ref-audio node gone.
+- **Cubric Vision UI plan:** a RADIO `Reference` | `Original`, ENABLED ONLY when audio is present. Drives the two
+  gates (one mode live at a time). Implementation next → version bump → release.
+
+NO SEED UI — see [[feedback-no-seed-ui]]: random seed every gen, never expose seed; the lottery is handled by
+the model being seed-tolerant + workflow quality, not by user seed control.
+
+### SHIP decision: one "Audio" RADIO — `Reference` | `Original`
+- **`Reference`** = this path (`LTXVReferenceAudio` voice-ID). Reliable for ONE voice identity. i2v.
+- **`Original`** = the SolidMask / frozen-audio path below (goal 2; claims multi-character).
+- The radio IS the gate that resolves the goal1↔goal2 conflict (both tap `Input_Audio_File`, both feed the
+  sampler — only one mechanism live at a time). User does the IfElse/gating wiring.
+- Open: t2v image-anchor requirement; `end_percent` for weird-music; length auto-normalize window
+  (cap+toast vs silently trim — TBD from length tests).
+
+### Dep (re-host before public ship — third-party)
+`ltx-2.3-id-lora-talkvid-3k.safetensors` (AviadDahan/TalkVid-3K, local at `C:/AI/loras/LTX2.3/id-lora-talkvid/`).
+
+---
+
 ## Two control nodes (saved template)
 
 | Node | Type | Role |
@@ -60,11 +153,15 @@ generated-ambient is a TRADE-OFF on one knob, not independent layers.
 soundscape from prompt via `v2a_cross_attn`, or (c) mix the input voice in post.
 Open product question — not solved by the current solid-mask wiring.
 
-## ❌❌ SOLUTION B — TESTED & ABANDONED on distilled (2026-06-24) — read this FIRST
-> Supersedes the "MIX IS ACHIEVABLE via Solution B" optimism below. We BUILT and TESTED the audio-ref-token
-> path end-to-end (t2v + i2v, a full session). **On our distilled few-step base, input-voice identity transfer
-> does NOT work.** Ambient-from-prompt DOES work. Reverted the template to pre-Solution-B. Pivoted to a future
-> lipdub video-to-video op instead.
+## ❌❌ SOLUTION B — "TESTED & ABANDONED" (2026-06-24) — ⚠️ SUPERSEDED, WRONG ROOT CAUSE
+> ⚠️ **SUPERSEDED by the ✅✅ block at the TOP of this file.** The conclusion here ("voice-ID can't work on
+> distilled, needs 30 steps") was WRONG — we tested the wrong NODE (`LTXVSetAudioRefTokens`, which cancels in
+> cfg). The right node is `LTXVReferenceAudio` and voice-ID DOES work at 8 steps / cfg 1. Kept below as history
+> (the node mechanics described are accurate; only the "distilled can't" verdict is refuted).
+>
+> _(historical)_ We built+tested the `LTXVSetAudioRefTokens` audio-ref-token path end-to-end (t2v + i2v).
+> On distilled, input-voice identity did NOT carry via THAT node. Ambient-from-prompt DID work. We wrongly
+> blamed the step count and reverted; later found the real cause was the wrong node.
 
 **What we tried, in order:**
 1. **lipdub IC-LoRA** (`Lightricks/LTX-2.3-22b-IC-LoRA-LipDub`, `LTXVSetAudioRefTokens` + IC-LoRA loader on
