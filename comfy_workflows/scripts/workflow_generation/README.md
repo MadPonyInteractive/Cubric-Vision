@@ -28,7 +28,7 @@ Turns **source workflow templates** into the **API JSON files the app loads** fr
 | `generate_wan.py` | WAN handler: one stage-1 API export → `<name>.json` + `<name>_stage2.json` (derives stage-2). |
 | `.state.json` | Machine-local sha256 cache (gitignored). |
 | `sdxl_*_template.json` | SDXL source templates (committed — the historical exception). |
-| `Wan22_*_template.json`, `LTX23_*_template.json` | Video-model sources you drag in (gitignored; originals live in your working folder). |
+| `Wan22_*_template.json`, `LTX_*_template.json` | Video-model sources you drag in (gitignored; originals live in your working folder). |
 
 ## The two handler shapes
 
@@ -62,15 +62,24 @@ to the derive.
 
 ## Adding a new model family (e.g. LTX)
 
-This is exactly what MPI-4 will need for LTX. LTX ships as **four app files** from
-**one or two source templates** — see MPI-4 brief for the split decision. Steps:
+This is what MPI-127 needs for LTX. The single tested source is
+`LTX_i2v_t2v_template.json` (API export already in this folder). It drives i2v + t2v
+via the `Input_Text_to_video` MpiBoolean gate, and FF/LF via the `Input_Use_End_Image`
+gate (the two-`LTXVAddGuide` chain — see `MPI-4/research/flf-addguide-splice.md`). The
+handler fans this ONE source into **four app files** (i2v + t2v, each × stage-1/stage-2).
+**Do NOT rename the source** — the user keeps `LTX_i2v_t2v_template` across G/D/repo;
+future LTX siblings are separate files (`LTX_v2v_lipsync`, `LTX_v2v_extend`, …), so the
+family prefix is `LTX_`. Steps:
 
 1. **Add a handler module** `generate_ltx.py` exposing
    `build(source_path: Path, out_dir: Path) -> list[Path]`. Model it on
-   `generate_wan.py`. LTX must produce `LTX23_i2v.json` + `LTX23_i2v_stage2.json`
-   and `LTX23_t2v.json` + `LTX23_t2v_stage2.json` (multi-stage `_ms`, Finish-only —
-   `allowsBranchingContinue=false`, no per-stage LoRA variance).
-2. **Register the prefix** in `registry.py`: add `("LTX23_", "ltx")` to `HANDLERS`.
+   `generate_wan.py`. LTX must produce `LTX_i2v.json` + `LTX_i2v_stage2.json` and
+   `LTX_t2v.json` + `LTX_t2v_stage2.json` (multi-stage `_ms`, Finish-only —
+   `allowsBranchingContinue=false`, no per-stage LoRA variance). The i2v/t2v split is a
+   fan-out: stamp the `Input_Text_to_video` gate (off → i2v, on → t2v) on the source,
+   then run the WAN-style stage-2 derivation on each. FF/LF needs no extra file — it
+   rides the i2v file's `Input_Use_End_Image` gate.
+2. **Register the prefix** in `registry.py`: add `("LTX_", "ltx")` to `HANDLERS`.
 3. **Keep it title-keyed.** Reuse the `Stage1_Bypass` / `Is_Continue` convention if
    LTX's stage-2 is the same bypass-one-sampler shape; if LTX's graph differs, encode
    the new splice in the handler's own `SLOT_TO_INPUT`-style table and assert on

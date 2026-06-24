@@ -19,7 +19,7 @@ is by `_meta.title` (the app's MPI-116 naming law).
 HANDLERS = [
     ("sdxl_",  "sdxl"),   # sdxl_t2i_template.json, sdxl_upscaler_template.json, ...
     ("Wan22_", "wan"),    # Wan22_i2v_template.json, Wan22_t2v_template.json
-    # ("LTX23_", "ltx"),  # future
+    # ("LTX_", "ltx"),  # MPI-127: source = LTX_i2v_t2v_template.json (do NOT rename)
 ]
 
 
