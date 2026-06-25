@@ -11,7 +11,7 @@
  *   3. Add the control ID to the desired operation's components[] in commandRegistry.js
  */
 
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiOptionSelector, clampQualityTier } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
@@ -101,7 +101,13 @@ export const PROMPT_BOX_CONTROLS = {
             }
 
             const saved = _readSaved(this, opts);
-            const initialTier = saved.ratioSelector?.qualityTier || this.defaultValue;
+            const savedTier = saved.ratioSelector?.qualityTier || this.defaultValue;
+            // qualityTier is shared-scope (per mediaType), so a model switch can
+            // carry an invalid tier (LTX 2k/4k → Wan, which has no such button →
+            // nothing selected). Clamp to a valid tier for THIS model; if the
+            // clamp changed it, write the correction back to shared state + notify
+            // the sibling ratio control so UI and injected dims stay in sync.
+            const initialTier = clampQualityTier(modelType, savedTier);
             const initialRatio = saved.ratioSelector?.selectedRatio || '1:1';
             this.value = initialTier;
 
@@ -111,6 +117,11 @@ export const PROMPT_BOX_CONTROLS = {
                 modelType,
                 selectedRatio: initialRatio,
             });
+
+            if (initialTier !== savedTier) {
+                _emitUpdate(this, opts, 'ratioSelector', { qualityTier: initialTier });
+                Events.emit('ratio:quality-change', { modelId, qualityTier: initialTier });
+            }
 
             this._instance.on('change', ({ qualityTier }) => {
                 this.value = qualityTier;
