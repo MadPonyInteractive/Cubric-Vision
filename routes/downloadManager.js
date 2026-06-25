@@ -126,6 +126,7 @@ const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
 const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
 const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
+const LOCAL_DOWNLOAD_CONCURRENCY = 1;
 
 function _createDepJob(dep) {
     return {
@@ -206,6 +207,7 @@ class ResumableDownloader {
                 this.depJob.status = 'complete';
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
                 _checkModelJobsComplete();
+                _startPendingDeps();
             } catch (err) {
                 // SHA256 mismatch — clean up and mark failed
                 await fs.remove(this.localPath).catch(() => {});
@@ -214,6 +216,7 @@ class ResumableDownloader {
                 this.depJob.error = err.message;
                 _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
                 _checkModelJobsComplete();
+                _startPendingDeps();
             }
         });
 
@@ -225,6 +228,7 @@ class ResumableDownloader {
             this.depJob.error = err.message;
             _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
             _checkModelJobsComplete();
+            _startPendingDeps();
         });
     }
 
@@ -604,9 +608,18 @@ function _fmtGb(bytes) {
 // ── Pending Deps Launcher ──────────────────────────────────────────────────────
 
 async function _startPendingDeps() {
-    const pending = Array.from(_depJobs.values()).filter(d => d.status === 'queued' && d.refCount > 0);
-    logger.info('download', `_startPendingDeps: found ${pending.length} queued deps to download`);
+    const pending = Array.from(_depJobs.values()).filter(d =>
+        d.status === 'queued'
+        && d.refCount > 0
+        && _depHasActiveDownloadConsumer(d.id)
+    );
+    const slots = Math.max(0, LOCAL_DOWNLOAD_CONCURRENCY - _activeDownloaders.size);
+    logger.info('download', `_startPendingDeps: ${pending.length} queued deps, ${_activeDownloaders.size}/${LOCAL_DOWNLOAD_CONCURRENCY} active`);
+    if (slots <= 0) return;
+
+    let started = 0;
     for (const depJob of pending) {
+        if (started >= slots) break;
         // Resume a paused downloader (same instance — node-downloader-helper picks up from .part file)
         if (_pausedDownloaders.has(depJob.id)) {
             const downloader = _pausedDownloaders.get(depJob.id);
@@ -616,6 +629,7 @@ async function _startPendingDeps() {
             // Re-wire progress in case the same dep is shared across model jobs
             _wireProgress(depJob, downloader);
             downloader.resume();
+            started += 1;
             continue;
         }
 
@@ -632,6 +646,7 @@ async function _startPendingDeps() {
         downloader.download().catch(err => {
             logger.error('download', `downloader.download() caught error for ${depJob.id}: ${err.message}`);
         });
+        started += 1;
     }
 }
 
@@ -655,6 +670,14 @@ function _wireProgress(depJob, downloader) {
             });
         }
     };
+}
+
+function _depHasActiveDownloadConsumer(depId) {
+    for (const modelJob of _modelJobs.values()) {
+        if (modelJob.status !== 'downloading') continue;
+        if (modelJob.deps.some(d => d.id === depId)) return true;
+    }
+    return false;
 }
 
 // ── Remote (RunPod wrapper) install driver ──────────────────────────────────
@@ -1240,6 +1263,7 @@ router.post('/comfy/models/download/pause', (req, res) => {
     });
     _recalculateModelJobProgress(job);
     _broadcast('download:paused', _downloadJobEventPayload(job));
+    _startPendingDeps();
     res.json({ success: true });
 });
 
@@ -1300,6 +1324,7 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
     _teardownRemoteEventStreamIfIdle();
     _modelJobs.delete(modelId);
     _broadcast('download:cancelled', { modelId });
+    _startPendingDeps();
     res.json({ success: true });
 });
 
