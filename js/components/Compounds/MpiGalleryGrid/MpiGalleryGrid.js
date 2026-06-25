@@ -9,11 +9,25 @@ import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById } from '../../../data/modelRegistry.js';
 import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
 import { state } from '../../../state.js';
+import { Storage } from '../../../core/storage.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
+
+// One-card-at-a-time: stop every OTHER playing media element in the gallery —
+// audio cards (<audio data-src>) AND unmuted hover videos — so a hover/click
+// never overlaps another card's sound. Pass the element that should keep
+// playing (or null to stop everything). Also re-mutes stopped hover videos.
+function _stopOtherGalleryMedia(except) {
+    qsa('audio[data-src], video.mpi-group-card__thumb--video').forEach((m) => {
+        if (m === except) return;
+        m.pause();
+        try { m.currentTime = 0; } catch (_) {}
+        if (m.tagName === 'VIDEO') m.muted = true;
+    });
+}
 
 /**
  * MpiGalleryGrid — Compound: adaptive grid of ItemGroup cards with size slider
@@ -586,23 +600,35 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.appendChild(audio);
                 _audioEl = audio;
 
-                // Card click → play/pause toggle. Pause every OTHER playing audio
-                // card first so two clips never overlap.
+                // Card click → play/pause toggle. Stop every OTHER playing card
+                // (audio + hover video) first so two clips never overlap.
                 on(cardEl, 'click', (e) => {
                     // Selection mode / action buttons keep their own handlers.
                     if (e.target.closest('.mpi-group-card__top-actions, .mpi-group-card__select-wrap')) return;
                     e.stopPropagation();
                     if (audio.paused) {
-                        // Stop any other playing audio card (pause + reset).
-                        qsa('audio[data-src]').forEach(a => {
-                            if (a !== audio) { a.pause(); try { a.currentTime = 0; } catch (_) {} }
-                        });
+                        _stopOtherGalleryMedia(audio);
                         audio.play().catch(() => {});
                     } else {
                         // Stop (not pause): reset to the beginning.
                         audio.pause();
                         try { audio.currentTime = 0; } catch (_) {}
                     }
+                });
+
+                // Play audio on hover (setting, default on): hovering an audio
+                // card plays it (stop button shows via the 'play' listener);
+                // leaving stops + resets. Click-to-stop still works.
+                on(cardEl, 'mouseenter', () => {
+                    if (!Storage.getPlayAudioOnHover()) return;
+                    if (!audio.paused) return;
+                    _stopOtherGalleryMedia(audio);
+                    audio.play().catch(() => {});
+                });
+                on(cardEl, 'mouseleave', () => {
+                    if (audio.paused) return;
+                    audio.pause();
+                    try { audio.currentTime = 0; } catch (_) {}
                 });
 
                 if (selected?.duration > 0) _setAudioLength(selected.duration);
@@ -656,12 +682,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             function _onCardEnter() {
                 if (!_videoThumb) return;
+                // Play audio on hover (setting, default on): stop any other
+                // playing card first, then unmute so this card is the only sound.
+                const withAudio = Storage.getPlayAudioOnHover();
+                if (withAudio) {
+                    _stopOtherGalleryMedia(_videoThumb);
+                    _videoThumb.muted = false;
+                } else {
+                    _videoThumb.muted = true;
+                }
                 _videoThumb.play().catch(() => {});
             }
 
             function _onCardLeave() {
                 if (!_videoThumb) return;
                 _videoThumb.pause();
+                _videoThumb.muted = true; // re-mute so it never plays sound off-hover
                 try { _videoThumb.currentTime = 0; } catch (_) {}
             }
 
@@ -1399,6 +1435,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
             e.preventDefault();
             grid.scrollTop += e.deltaY;
         }, { passive: false }));
+
+        // Scrolling moves a playing card out from under the cursor without
+        // firing mouseleave (the element moves, the pointer doesn't) — so hover
+        // audio/video would keep playing off-screen. On any scroll, stop every
+        // media element whose card is no longer hovered. Keeps the one still
+        // under the cursor playing.
+        _unsubs.push(on(grid, 'scroll', () => {
+            const hovered = qs('.mpi-group-card:hover', grid);
+            qsa('audio[data-src], video.mpi-group-card__thumb--video', grid).forEach((m) => {
+                if (m.paused) return;
+                if (hovered && hovered.contains(m)) return;
+                m.pause();
+                try { m.currentTime = 0; } catch (_) {}
+                if (m.tagName === 'VIDEO') m.muted = true;
+            });
+        }, { passive: true }));
 
         // ── Info toggle button ───────────────────────────────────────────────
 

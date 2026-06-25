@@ -47,6 +47,10 @@ export const MpiSettings = ComponentFactory.create({
                         <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
                     </div>
                     <div class="mpi-settings__form-group">
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsPlayAudioOnHoverSlot"></div>
+                        <span class="mpi-settings__hint">Hovering a video or audio card in the gallery plays its sound. Turn off for silent hover.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
                         <label class="mpi-settings__field-label">Desktop Notifications</label>
                         <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyGenerationSlot"></div>
                         <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyDownloadsSlot"></div>
@@ -202,6 +206,17 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 autoStartInst.on('change', ({ checked }) =>
                     Storage.setAutoStartComfy(checked));
+            }
+
+            // ── Play audio on hover checkbox ─────────────────────────────────
+            const hoverAudioSlot = qs('#mpiSettingsPlayAudioOnHoverSlot', root);
+            if (hoverAudioSlot) {
+                hoverAudioSlot.innerHTML = '';
+                MpiCheckbox.mount(hoverAudioSlot, {
+                    checked: Storage.getPlayAudioOnHover(),
+                    label: 'Play audio on hover',
+                }).on('change', ({ checked }) =>
+                    Storage.setPlayAudioOnHover(checked));
             }
 
             // ── Desktop notification prefs (per-type OS opt-out) ─────────────

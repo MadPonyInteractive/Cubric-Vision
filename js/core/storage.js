@@ -142,6 +142,9 @@ export const Storage = {
   getAutoStartComfy:   () => get(STORAGE_KEYS.AUTO_START_COMFY, false),
   setAutoStartComfy:   (v) => set(STORAGE_KEYS.AUTO_START_COMFY, v),
 
+  getPlayAudioOnHover: () => get(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, true),
+  setPlayAudioOnHover: (v) => set(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, v),
+
   getExtraProjectPaths: () => get(STORAGE_KEYS.EXTRA_PROJECT_PATHS, []),
   setExtraProjectPaths: (v) => set(STORAGE_KEYS.EXTRA_PROJECT_PATHS, v),
 

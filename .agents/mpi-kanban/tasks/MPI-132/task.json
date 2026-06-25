@@ -1,0 +1,23 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-132",
+    "title": "Play media audio on hover (video + audio cards) + settings toggle + fix stuck-playing cards",
+    "description": "Hovering a gallery VIDEO card plays its audio (currently muted); hovering an AUDIO card plays it (currently click-only). Both gated by a NEW settings checkbox 'Play audio on hover' (default ON). When OFF: video-card hover stays silent and audio-card hover does nothing (click play/stop unchanged). When ON: hover plays, only ONE card plays at a time across the whole gallery (video + audio), and audio cards still show the stop button + click stops. Behavior on video hover keeps current motion (play from 0 on enter, pause+reset on leave) but with sound (unmute on enter, re-mute on leave). ALSO fix an unreported bug: cards sometimes keep playing audio/video when NOT hovered, suspected on scroll-wheel gallery scroll (mouseleave likely not firing during scroll / promote-observer churn). Surface: js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js (video hover handlers _onCardEnter/_onCardLeave ~L656, audio card _ensureAudioCardControls ~L565, the 'pause other audio' qsa). Setting: js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (new MpiCheckbox, copy the Auto-start ComfyUI block) + a Storage.get/setPlayAudioOnHover localStorage pair (js/services/storage.js + STORAGE_KEYS). COORDINATION: MPI-127 (audio agent) owns MpiGalleryGrid.js audio-card code right now - message sent, must get green light before touching that file.",
+    "column": "doing",
+    "maturity": "in-progress",
+    "status": "open",
+    "created_at": "2026-06-25T14:00:00Z",
+    "updated_at": "2026-06-25T14:25:00Z",
+    "links": {
+        "validation": "validation.md",
+        "events": "events.jsonl"
+    },
+    "tags": [
+        "ui",
+        "gallery",
+        "audio",
+        "settings",
+        "bugfix"
+    ],
+    "priority": "normal"
+}
