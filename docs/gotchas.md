@@ -22,6 +22,8 @@ Durable architecture reference = `docs/runpod-remote-engine.md` (promoted from `
 
 As of 2026-06-14, `RunPod` is the active shared integration branch (v1.1.0). No one works on `master` (dormant, 1.0.0 line). Branch from `RunPod`, commit to `RunPod`, PR against `RunPod`. Because the branch is shared by concurrent agents, STAGE BY EXPLICIT PATH (never `git add -A`). `master` receives only minor patches for 1.0.x issues, which are then merged back into `RunPod`.
 
+**RunPod must NOT merge INTO master until master's first PUBLIC release (~2026-07-09).** RunPod carries unreleased work (LTX, remote engine); the LTX feature drop ships to **Patreon/Pro ONLY off the RunPod branch** (Cloudflare/R2 link, no git tag, no GitHub publish). ONLY AFTER the first public master release does RunPod merge into master. So for any RunPod-branch work (LTX, Pod rebuilds e.g. MPI-131): stay on RunPod, no promote-to-master, no master merge, no public GitHub release. Don't auto-bump the app version for a small Pod-parity fix — ask the user whether it folds into the existing RunPod LTX drop. The first public master release (R2 dep links + master 1.0.x bump) is **MPI-129's** gate; dep weight re-host (HF→R2) is also **MPI-129**, not MPI-127/131.
+
 ### RunPod volume persistent — Reset does NOT wipe it
 
 RunPod network volume (`/workspace/mpi_models/`, `/workspace/comfyui/...`) is PERSISTENT. Console "Reset" resets the container/ephemeral disk only — Uptime keeps climbing, Volume usage stays full, models survive. Confirmed live 2026-06-17. The only ways to clear the volume are manual file delete (wrapper/SSH `rm`) or destroying the network volume itself.

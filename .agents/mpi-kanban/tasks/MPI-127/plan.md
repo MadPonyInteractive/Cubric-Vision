@@ -298,8 +298,10 @@ audio-only card does NOT open the history workspace on click.
 - ✅ MPI-133 (LTX 2K/4K tiers + per-model qualityTier) shipped + verified (model-switch retention, reuse
   cross-model clamp→very_high). 2K/4K DIM-OUTPUT unverified — user GPU too slow for a 2K test gen; logic
   proven by runnable asserts + real-Node migration run. Commits 9e5322d/ec39133/75e6de7/0addae7.
-- ⏳ REMAINING: dep-rehost of non-MPI-hosted LTX weights (post-ship follow-up card, see [[project-dep-rehost-rule]]);
-  MPI-131 product Pod rebuild (separate cross-repo session). Card otherwise ship-ready.
+- ⏳ REMAINING (both SEPARATE cards, not MPI-127's scope): MPI-131 product Pod rebuild (cross-repo mpi-ci
+  session — kornia + MpiNodes + LTXVideo + input-placeholder parity, for REMOTE gen). Dep weight re-host
+  (HF→R2) is MPI-129, NOT here. MPI-127 app integration is functionally complete + locally verified;
+  ship-ready for the Patreon/Pro drop off the RunPod branch.
 
 **ENGINE FIXES this session (local dev engine unblocked + durable fixes shipped):**
 1. **kornia trap** ([[project-ltxvideo-kornia-pad]]): ComfyUI-LTXVideo's UNPINNED kornia → 0.8.3 (removed
