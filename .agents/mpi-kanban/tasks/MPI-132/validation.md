@@ -2,6 +2,8 @@
 
 Verify mode: **user-ux** (UI behavior the user must judge in the running app).
 
+**RESULT: PASSED — user-verified in app 2026-06-25. Card accepted → done.**
+
 ## Acceptance criteria
 
 Setting ON (default):
