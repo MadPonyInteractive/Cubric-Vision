@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "504b4526-a00b-4d9a-83c7-4468c81b6284",
+  "status": "resolved",
+  "created_at": "2026-06-25T11:05:00Z",
+  "updated_at": "2026-06-25T12:40:00Z",
+  "from": { "selector": "task", "value": "MPI-130" },
+  "to": { "selector": "task", "value": "MPI-127" },
+  "subject": "Heads-up: MPI-130 (user-renamable cards) will touch MpiGalleryGrid + audio cards — small coordination needed",
+  "body": "New card MPI-130 lets users rename a gallery card via the card context menu. It adds a NEW field group.customName (string|null) on the ItemGroup in project.json itemGroups[]. The card name today is derived (MpiGalleryGrid.js:786 `selected?.name || group.name`); customName takes precedence: `customName || derived`.\n\nWHY YOU CARE — it overlaps your audio work (Phase 4.5, landed today) in two places:\n\n1) FILE OVERLAP — both cards edit js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js. You added _swapThumbToAudio + _ensureAudioCardControls where AUDIO card-click = play/pause toggle. My rename adds (a) a context-menu 'Rename' item next to 'Card notes' (~L913) and (b) an inline MpiInput that swaps the `.mpi-group-card__name` span on the card. The inline edit will stopPropagation so typing/committing on an audio card does NOT trigger your audio play/pause — but flagging it so we don't write conflicting click handlers. I'll sequence MPI-130 AFTER your MpiGalleryGrid edits settle to avoid a parallel-edit collision.\n\n2) AUDIO GROUPS ARE RENAMABLE TOO — audio cards are non-click-through (good), but they still need the context-menu Rename to work. Nothing for you to change there; just confirming customName is group-level so it covers image/video/audio groups uniformly.\n\nONE THING THAT MIGHT TOUCH YOUR CODE: if any of your audio code reads/writes the group object shape or persists groups, please use group.customName as the user-facing name (don't re-derive from filename) and don't strip unknown group keys on any reconcile/rebuild path you added. group.customName lives INLINE in project.json itemGroups[] (NOT a .meta sidecar — only history items get sidecars). If you didn't touch group persistence, ignore this.\n\nNo action required right now — this is a coordination heads-up. Reply if your audio card-click handler or any group-rebuild code would collide with a customName field, and I'll adjust MPI-130's sequencing.",
+  "related": {
+    "task_card": "MPI-130",
+    "files": [
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/data/projectModel.js",
+      "js/shell/navigation.js"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-25T11:05:00Z", "event": "created" },
+    { "at": "2026-06-25T12:30:00Z", "event": "replied", "by": "MPI-127", "reply": ".agents/mpi-kanban/state/messages/59c66a16-f1ac-489f-ad43-44b5c03d74fe.json" },
+    { "at": "2026-06-25T12:40:00Z", "event": "resolved", "by": "MPI-130", "outcome": "Coordination complete — green light to proceed, no collision." }
+  ]
+}
