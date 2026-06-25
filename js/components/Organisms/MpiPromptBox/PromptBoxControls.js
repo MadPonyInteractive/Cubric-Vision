@@ -17,7 +17,7 @@ import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.j
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qsa } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
-import { getOpSettings, getSharedSettings } from '../../../data/projectModel.js';
+import { getOpSettings, getSharedSettings, getModelSettings } from '../../../data/projectModel.js';
 import { getCommandDefault } from '../../../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
@@ -25,9 +25,10 @@ import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 // ── Scope helpers ─────────────────────────────────────────────────────────────
 //
-// Controls declare `scope: 'shared' | 'perOp'`.
-//   'shared' → project.shared[mediaType] (cross-model, partitioned by image|video)
-//   'perOp'  → project.modelSettings[modelId].operations[opName]
+// Controls declare `scope: 'shared' | 'perOp' | 'perModel'`.
+//   'shared'   → project.shared[mediaType] (cross-model, partitioned by image|video)
+//   'perOp'    → project.modelSettings[modelId].operations[opName]
+//   'perModel' → project.modelSettings[modelId] (model-wide, NOT op-scoped)
 // `opName` is provided by MpiPromptBox via mount opts. If a perOp control mounts
 // without an opName (legacy/demo), it falls back to the shared bucket.
 
@@ -39,6 +40,9 @@ function _readSaved(ctrl, opts) {
     if (!state.currentProject) return {};
     if (ctrl.scope === 'perOp' && opts.opName && opts.model?.id) {
         return getOpSettings(state.currentProject, opts.model.id, opts.opName);
+    }
+    if (ctrl.scope === 'perModel' && opts.model?.id) {
+        return getModelSettings(state.currentProject, opts.model.id);
     }
     return getSharedSettings(state.currentProject, _mediaTypeOf(opts));
 }
@@ -63,6 +67,15 @@ function _emitUpdate(ctrl, opts, key, value) {
         });
         return;
     }
+    if (ctrl.scope === 'perModel') {
+        const modelId = opts.model?.id;
+        if (!modelId) return;
+        // Model-wide write — reuse the existing opName-less model:update path
+        // (same one loras/upscaleModel use). The key must be in _MODEL_WIDE_KEYS
+        // in projectService so it routes to modelSettings[modelId][key].
+        Events.emit('settings:model:update', { modelId, opName: null, key, value });
+        return;
+    }
     Events.emit('settings:shared:update', {
         mediaType: _mediaTypeOf(opts),
         key,
@@ -85,7 +98,13 @@ export const PROMPT_BOX_CONTROLS = {
      */
     qualityTier: {
         nodeTitle: null,
-        scope: 'shared',
+        // perModel (MPI-133): the tier lives at modelSettings[modelId].qualityTier
+        // so each model remembers its own quality independently — switching
+        // LTX↔Wan (or reusing across models) never silently downgrades quality.
+        // The sibling `ratio` control keeps selectedRatio/orientation in the
+        // SHARED bucket (framing is cross-model), so this control reads ratio
+        // from shared but tier from the model bucket.
+        scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.qualityTier,
         mount(el, opts = {}) {
             const model = opts.model || {};
@@ -100,15 +119,20 @@ export const PROMPT_BOX_CONTROLS = {
                 return;
             }
 
-            const saved = _readSaved(this, opts);
-            const savedTier = saved.ratioSelector?.qualityTier || this.defaultValue;
-            // qualityTier is shared-scope (per mediaType), so a model switch can
-            // carry an invalid tier (LTX 2k/4k → Wan, which has no such button →
-            // nothing selected). Clamp to a valid tier for THIS model; if the
-            // clamp changed it, write the correction back to shared state + notify
-            // the sibling ratio control so UI and injected dims stay in sync.
+            // Tier from the per-model bucket; lazy-fallback to the legacy shared
+            // ratioSelector.qualityTier for projects not yet migrated to SCHEMA 4.
+            const modelBucket = state.currentProject
+                ? getModelSettings(state.currentProject, modelId) : {};
+            const sharedBucket = getSharedSettings(state.currentProject || {}, _mediaTypeOf(opts));
+            const savedTier = modelBucket.qualityTier
+                ?? sharedBucket.ratioSelector?.qualityTier
+                ?? this.defaultValue;
+            // Clamp to a tier this model actually has. A cross-model carry (LTX
+            // 2k/4k → Wan) clamps to 'very_high' (Wan's max), NOT 'medium' — the
+            // nearest-equivalent quality, so a reused 2K clip doesn't silently
+            // drop to mid. If the clamp changed the value, persist the correction.
             const initialTier = clampQualityTier(modelType, savedTier);
-            const initialRatio = saved.ratioSelector?.selectedRatio || '1:1';
+            const initialRatio = sharedBucket.ratioSelector?.selectedRatio || '1:1';
             this.value = initialTier;
 
             this._instance = MpiOptionSelector.mount(el, {
@@ -118,14 +142,16 @@ export const PROMPT_BOX_CONTROLS = {
                 selectedRatio: initialRatio,
             });
 
-            if (initialTier !== savedTier) {
-                _emitUpdate(this, opts, 'ratioSelector', { qualityTier: initialTier });
+            if (initialTier !== modelBucket.qualityTier) {
+                // Persist the resolved tier into the model bucket (covers both the
+                // clamp case and the first-time migration-fallback read).
+                _emitUpdate(this, opts, 'qualityTier', initialTier);
                 Events.emit('ratio:quality-change', { modelId, qualityTier: initialTier });
             }
 
             this._instance.on('change', ({ qualityTier }) => {
                 this.value = qualityTier;
-                _emitUpdate(this, opts, 'ratioSelector', { qualityTier });
+                _emitUpdate(this, opts, 'qualityTier', qualityTier);
                 // Notify sibling ratio control to re-render its ratio set.
                 Events.emit('ratio:quality-change', { modelId, qualityTier });
             });
@@ -162,12 +188,21 @@ export const PROMPT_BOX_CONTROLS = {
             const modelType = model.type ?? 'flux';
             const modelId = model.id;
 
-            // Read persisted settings from project
+            // Read persisted settings from project. selectedRatio/orientation are
+            // SHARED (cross-model framing); qualityTier is PER-MODEL (MPI-133) —
+            // read it from the model bucket, lazy-falling back to the legacy
+            // shared value for projects not yet migrated to SCHEMA 4, then clamp
+            // to a tier this model supports.
             const saved = _readSaved(this, opts);
             const savedRatioSettings = saved.ratioSelector || {};
             const initialOrientation = savedRatioSettings.orientation || PROMPT_CONTROL_DEFAULTS.orientation;
             const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
-            const initialQualityTier = savedRatioSettings.qualityTier || PROMPT_CONTROL_DEFAULTS.qualityTier;
+            const modelBucket = state.currentProject
+                ? getModelSettings(state.currentProject, modelId) : {};
+            const initialQualityTier = clampQualityTier(
+                modelType,
+                modelBucket.qualityTier ?? savedRatioSettings.qualityTier ?? PROMPT_CONTROL_DEFAULTS.qualityTier,
+            );
 
             // Mount selector with saved state
             this._instance = MpiOptionSelector.mount(el, {

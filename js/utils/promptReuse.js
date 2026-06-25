@@ -1,6 +1,7 @@
 import { findClosestRatio, getModelRatios, RATIO_MODES } from './ratios.js';
 import { getCommand, getCommandDefault, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../data/promptControlDefaults.js';
+import { clampQualityTier } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 
 const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
 
@@ -280,6 +281,15 @@ function _defaultRatioSettings(model = {}) {
     };
 }
 
+// Clamp a reused per-model qualityTier (MPI-133) to one the TARGET model has.
+// A cross-model reuse (LTX 2k/4k → Wan, model toggle OFF) carries a tier the
+// target lacks; clampQualityTier maps it to 'very_high' (nearest equivalent),
+// so the reused clip lands at the target's max quality, never a silent mid drop.
+function _clampReusedTier(modelUpdates, model) {
+    if (!modelUpdates || !('qualityTier' in modelUpdates)) return modelUpdates;
+    return { ...modelUpdates, qualityTier: clampQualityTier(model?.type, modelUpdates.qualityTier) };
+}
+
 export function buildPromptReuseSettings(payload = {}, model = {}) {
     // Fast path: items generated after MPI-115 carry the exact PromptBox control
     // state snapshotted at gen time. Replay it directly — no reverse-derivation.
@@ -290,7 +300,7 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
         return {
             sharedUpdates: _clone(controlState.shared || {}),
             opUpdates:     _clone(controlState.op || {}),
-            modelUpdates:  _clone(controlState.model || {}),
+            modelUpdates:  _clampReusedTier(_clone(controlState.model || {}), model),
         };
     }
 

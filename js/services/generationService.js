@@ -647,6 +647,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const _model = {};
             if ('loras' in _ms) _model.loras = _clonePlain(_ms.loras);
             if ('upscaleModel' in _ms) _model.upscaleModel = _ms.upscaleModel ?? null;
+            // qualityTier is per-model (MPI-133) — snapshot it into the model
+            // bucket so Reuse Prompt replays it to modelSettings[id], and a
+            // cross-model reuse clamps it (handled in buildPromptReuseSettings).
+            if ('qualityTier' in _ms) _model.qualityTier = _ms.qualityTier;
             const controlState = {};
             if (Object.keys(_shared).length) controlState.shared = _shared;
             if (Object.keys(_op).length) controlState.op = _op;

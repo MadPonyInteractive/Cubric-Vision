@@ -132,14 +132,15 @@ const tiersFor = (modelType) =>
     QUALITY_TIERS_BY_MODEL[String(modelType || '').toLowerCase()] ?? QUALITY_TIERS_BY_MODEL.wan;
 
 /**
- * Clamp a persisted quality tier to one valid for `modelType`. `qualityTier` is
- * `shared`-scope (per mediaType, not per model), so switching LTX→Wan can carry
- * an LTX-only tier (2k/4k) that Wan has no button for — leaving the radio with
- * nothing selected. Callers clamp on model switch so UI + injected dims agree.
- * Returns the tier unchanged when valid, else `'medium'`.
+ * Clamp a persisted quality tier to one valid for `modelType`. Tiers are now
+ * per-model (MPI-133), but a cross-model REUSE can still carry a tier the target
+ * model lacks (LTX 2k/4k → Wan). Clamp to the nearest-equivalent rather than a
+ * mid default: an unknown tier falls to `'very_high'` (the highest shared tier),
+ * so a reused 2K/4K clip lands at the target's MAX quality, never silently mid.
+ * Returns the tier unchanged when valid.
  */
 export function clampQualityTier(modelType, tier) {
-    return tiersFor(modelType).includes(tier) ? tier : 'medium';
+    return tiersFor(modelType).includes(tier) ? tier : 'very_high';
 }
 
 const QUALITY_LABELS = {

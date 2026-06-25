@@ -16,7 +16,7 @@ const fs   = require('fs-extra');
 const path = require('path');
 
 /** Current schema version — must match SCHEMA_VERSION in js/core/appVersion.js */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const MIGRATIONS = {
     /**
@@ -165,6 +165,55 @@ const MIGRATIONS = {
         }
 
         return { ...project, schemaVersion: 3 };
+    },
+
+    /**
+     * v3 → v4 (MPI-133): qualityTier becomes per-model.
+     *
+     * Pre-v4 stored the quality tier in the cross-model shared bucket
+     * (`shared[mediaType].ratioSelector.qualityTier`), so switching models or
+     * reusing across model families silently carried/dropped the tier. v4 copies
+     * the existing shared tier into each model's own `modelSettings[id].qualityTier`
+     * (matched by the model's mediaType) so every model remembers its own quality.
+     *
+     * The old shared `ratioSelector.qualityTier` is LEFT in place — it is a
+     * harmless lazy-read fallback for any model whose per-model slot is still
+     * empty, and `selectedRatio`/`orientation` continue to live there. No sidecars
+     * are touched (gen-time controlState now snapshots qualityTier under .model).
+     */
+    3: async (project) => {
+        const { MODELS } = require('../data/modelConstants/models.js');
+        const mediaTypeById = new Map(MODELS.map(m => [m.id, m.mediaType]));
+        const typeById = new Map(MODELS.map(m => [m.id, m.type]));
+
+        // Tier lists per model family — kept in sync with MpiOptionSelector's
+        // QUALITY_TIERS_BY_MODEL. A shared tier copied to a model that lacks it
+        // (e.g. a phantom 2k on Wan, left over from when the tier was shared and
+        // LTX set it) clamps to the family's max ('very_high') so the stored
+        // value is valid from the start — no phantom tier waiting to be clamped.
+        const tiersFor = (t) => ({
+            wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+            ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
+        })[String(t || '').toLowerCase()] ?? ['very_low', 'low', 'medium', 'high', 'very_high'];
+
+        const sharedTierByType = {
+            image: project.shared?.image?.ratioSelector?.qualityTier,
+            video: project.shared?.video?.ratioSelector?.qualityTier,
+        };
+
+        const nextModelSettings = { ...(project.modelSettings ?? {}) };
+        for (const [modelId, model] of Object.entries(nextModelSettings)) {
+            // Don't clobber a model that already has a per-model tier.
+            if (model && typeof model === 'object' && model.qualityTier != null) continue;
+            const mediaType = mediaTypeById.get(modelId) ?? 'image';
+            const tier = sharedTierByType[mediaType];
+            if (tier != null) {
+                const valid = tiersFor(typeById.get(modelId)).includes(tier) ? tier : 'very_high';
+                nextModelSettings[modelId] = { ...model, qualityTier: valid };
+            }
+        }
+
+        return { ...project, modelSettings: nextModelSettings, schemaVersion: 4 };
     },
 };
 
