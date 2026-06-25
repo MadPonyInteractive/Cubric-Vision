@@ -22,8 +22,12 @@
 
 .mpi-opt-sel__quality-radio {
     display: inline-flex;
-    /* LTX has 7 tiers (MPI-133): 5 base on row 1, 2K/4K wrap to row 2. The
-       5-tier Wan/LTX layouts still fit one row at normal widths. */
+}
+
+/* LTX has 7 tiers (MPI-133): 5 base on row 1, 2K/4K wrap to row 2. The flex
+   parent is the inner MpiRadioGroup row, NOT this wrapper — scope the wrap there
+   so other --row radios app-wide are untouched. */
+.mpi-opt-sel__quality-radio .mpi-radio-group--row {
     flex-wrap: wrap;
     row-gap: 0.25rem;
 }

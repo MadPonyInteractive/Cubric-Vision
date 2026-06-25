@@ -248,6 +248,14 @@
     padding: 4px 2px 2px;
 }
 
+/* Full-width op-slot button (LTX "Generate Audio") — span the settings row like
+   the slider controls, instead of sitting at natural button width. */
+.mpi-prompt-box__op-btn--full {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
+}
+
 .mpi-prompt-box__slider-lbl {
     display: flex;
     justify-content: space-between;

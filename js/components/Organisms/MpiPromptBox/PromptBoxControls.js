@@ -383,6 +383,9 @@ export const PROMPT_BOX_CONTROLS = {
                 active: initialActive,
                 info: 'Generate audio — the model produces its own audio track from the prompt',
             });
+            // Full-width: span the settings row like the slider controls do. The
+            // ctrlEl host is display:contents, so the modifier rides the button root.
+            this._instance.el?.classList.add('mpi-prompt-box__op-btn--full');
 
             this._instance.on('click', ({ active }) => {
                 this.value = !!active;
