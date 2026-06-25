@@ -2,12 +2,12 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-133",
   "title": "LTX 2K/4K tiers",
-  "description": "Add 2K + 4K quality tiers to LTX video. Extend the quality radio (per-model tier list), add /64-snapped dims to LTX_RATIOS, wrap radio to 2 rows, status-bar info carries resolution + motion hint. No state/sidecar change. Ships via MPI-127.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "description": "Add 2K + 4K quality tiers to LTX video. Extended the quality radio (model-aware tier list, tiersFor), added /64-snapped dims to LTX_RATIOS, wrap radio to 2 rows (scoped flex-wrap on the inner MpiRadioGroup row), status-bar info carries resolution + motion hint, full-width Generate Audio button. SCOPE GREW (user call): qualityTier became PER-MODEL (was shared) — modelSettings[id].qualityTier via new 'perModel' control scope; selectedRatio/orientation stay shared; clampQualityTier maps cross-model carries to 'very_high' (not 'medium'); gen-time controlState snapshots tier under .model; reuse clamps against target; SCHEMA 3->4 migration copies shared tier per-model (clamped per family). Ships via MPI-127. Commits: 9e5322d, ec39133, 75e6de7, 0addae7.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-06-25T14:00:00Z",
-  "updated_at": "2026-06-25T15:45:00Z",
+  "updated_at": "2026-06-25T16:10:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl"

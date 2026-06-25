@@ -178,7 +178,47 @@ Original phase notes preserved below for the MPI-128 session:
   this — audio latent is generated live in stage-1. This gates only preview→continue. If it can't
   land tonight, ship LTX with preview→Finish disabled or single-stage only, and card this.
 
-## Phase 4: LTX model entry + ops wiring
+## Phase 4 — DONE (2026-06-25)
+
+`ltx-23` model entry added to `models.js` (`type:'ltx'`, `tier:2`, `mediaType:'video'`,
+`capabilities:{multiStage:false,audio:true}`, `loraStrengths:['model']`, no `loraStages`,
+`supportedOps:['t2v_ms','i2v_ms']`, `workflows`→`LTX_t2v/i2v.json`, 9 weights + `ComfyUI-LTXVideo`
++ `ComfyUI-MpiNodes` + `comfyui-kjnodes` in `commonDeps`, empty per-op deps). `wan-22` got
+`tier:2` + `capabilities:{multiStage:true,audio:false}`; `ModelDef` typedef extended with
+`tier` + `capabilities`.
+
+**Op-key resolution (user-decided this session):** shared `_ms` keys kept (no `ltx_*`). LTX is
+single-stage → `previewStage` toggle capability-gated OFF via `capabilities.multiStage` (sibling
+skip at `MpiPromptBox.js` ~L891, next to the existing `historyMode` skip). WAN unaffected.
+
+**Audio-slot gating (LOCKED):** audio `mediaInputs` slot (`title:'Input_Audio_File'`,
+`required:false`) added to the SHARED `t2v_ms`/`i2v_ms` ops; new `filterMediaInputsForModel(slots,
+model)` helper drops audio slots when `model.capabilities?.audio !== true`. Applied at the two
+leakage read points: `MpiPromptBox._mediaSlotsForOperation` + `commandExecutor` media-slot map
+(L490). WAN never shows/accepts/injects audio; LTX does.
+
+**Plan-drift fix shipped:** shared `i2v`/`i2v_ms` frame slots retitled `Start_Frame`→
+`Input_Start_Frame`, `End_Frame`→`Input_End_Frame` to match the re-authored tier-2 WAN + LTX
+workflows (WAN i2v frame injection was title-mismatched until now — this fixes WAN too).
+
+Verified: `node --check` all 4 files; `npm run lint` 0 errors (12 pre-existing unrelated warnings);
+in-repo smoke test (11/11 PASS) — `resolveDeps(ltx)` returns all 9 + node with no missing dep; LTX
+i2v slots = start/end + audio, WAN i2v = start/end only (no audio), WAN t2v = no slots.
+`previewStage` gate is DOM-mount-only (matches the verified `historyMode` skip pattern).
+
+**Correction (2026-06-25, in-app finding):** LTX is a FLAT model — one transformer serves
+both t2v + i2v, so there is NO separable install unit. Switched from `commonDeps`+`operations{}`
+(which rendered a no-op per-op install toggle in the manager — selecting t2v vs i2v downloaded the
+identical bytes) to flat `dependencies[]`. `selectableOps(ltx)` is now empty → manager shows no
+toggle, installs once, both ops work (like an image model). WAN keeps its toggles (genuinely
+separate per-op weights). Future LTX op needing its own weights → split into `operations{}` then.
+Also removed a prior-session bug: `installOnEngine: true` on `ComfyUI-LTXVideo` (made every fresh
+engine pull the 70MB LTX node + pip-install its requirements with no LTX model) — it's a per-model
+node now, installs with the LTX model + Pod-via-wrapper. Also removed `video:'wan22_preview.mp4'`
+from the LTX entry — that's WAN footage; the card now renders an empty media slot until a real
+LTX-2.3 preview clip exists (drop it in `comfy_workflows/display/` + set `video:`).
+
+Original phase notes preserved below:
 
 - [ ] Add the `ltx-23` model entry to `js/data/modelConstants/models.js`:
   `type:'ltx', tier:2, mediaType:'video', capabilities:{multiStage:true,audio:true},
@@ -189,6 +229,116 @@ Original phase notes preserved below for the MPI-128 session:
   Add the i2v audio + 2-image slots and t2v 1-audio slot via the op `mediaInputs`. **Verify:** the
   model appears in the manager; `resolveDeps(ltxModel)` returns all 9 (+nodes) with no missing-dep
   throw; `isModelUsable` flips true once deps are marked present.
+
+## Phase 4.5: Audio as first-class INPUT media — PLAN DRIFT (2026-06-25, in-app BLOCKER)
+
+**Why this is here:** Phase 5 (the audio-MODE radio) shipped + verified its enable/disable, but
+in-app testing exposed that there is NO WAY to actually ADD an audio file. The radio gates on
+`audioCount`, but audio media never enters the pipeline. The handoff's "audio chips already render"
+was WRONG — only the PromptBox `_renderStrip` had an audio branch; the whole INGEST path is missing.
+This blocks LTX audio entirely (the radio can never enable). NOT in MPI-128 (that card is multi-stage
++ multimodal-5-images, a different thing). Officially MPI-127 plan drift; must ship this release.
+
+**Gaps found (end-to-end trace 2026-06-25):**
+1. `MpiMediaDropOverlay.js` (L55-58) classifies ONLY `image/` + `video/` — audio file → `mediaType`
+   undefined → `continue` → dropped silently. This is the GALLERY window-drop path → why nothing
+   appeared. FIX: add `audio/` → `'audio'`.
+2. PromptBox `_renderStrip` audio chip branch EXISTS (L542) + `_tryAddMedia` is type-agnostic +
+   drop handler detects `audio/` (L338) — so a drop DIRECTLY on the prompt box may work; the gallery
+   overlay intercepts most drops first (window-level). Verify after #1.
+3. `uploadMediaFile` (mediaUploadService) passes `mediaType` through but: `measureMediaDimensions(file,
+   'audio')` likely chokes (audio has no w/h) → must no-op/return null for audio; server
+   `/project-media/:id/upload` route + sidecar must accept `mediaType:'audio'` (probe duration, no
+   thumb, or an audio-icon placeholder thumb).
+4. Gallery CARD render is binary image-vs-video (`isVideo = mediaType==='video'`, L1303) — no audio
+   card branch. Per locked decision: audio card = big audio icon, audio-only cards NOT click-through
+   to the history workspace (like a preview). Build the audio render branch + click-block.
+5. `el.remainingCapacity` (L586) is already generic — works for audio once slots resolve. OK.
+
+**Tasks:**
+- [ ] `MpiMediaDropOverlay`: classify `audio/` → `'audio'`; update its JSDoc (`image|video` → `image|video|audio`).
+- [ ] `mediaUploadService` / `measureMediaDimensions`: audio path returns no/zero dimensions safely;
+  confirm the upload route + sidecar accept `mediaType:'audio'` (add server branch if missing —
+  duration probe ok, thumb = null/audio-icon).
+- [ ] Gallery card: render an audio card (big audio icon, no `<video>`/`<img>`), and make audio-only
+  cards non-click-through to history workspace (mirror the preview-card gate).
+- [ ] PromptBox: confirm dropped/imported audio shows the audio chip + flips `audioCount` → radio
+  enables. (Most code exists; verify the import → `media:imported` → strip path for audio.)
+- [ ] Reuse/recall: ensure an imported audio asset can be re-added to the prompt box like an image
+  (the `media:imported` consumer + any “Set as …” affordance).
+
+**Verify mode: user-ux.** Drop an audio file → gallery card appears with audio icon + uploads to
+project; a thumbnail chip appears over the prompt box (like images); the audio-mode radio enables;
+audio-only card does NOT open the history workspace on click.
+
+**SESSION 2 PROGRESS (2026-06-25) — VERIFIED IN-APP unless noted:**
+- ✅ Phase 4 (model entry + flat deps) — verified: LTX installs, no per-op toggle, empty media slot.
+- ✅ Phase 5 (audio-mode radio) — VERIFIED: radio first, presence-gated enable/disable, WAN has none,
+  no previewStage on LTX, param dump CORRECT (Original → Input_Use_Input_Audio:true,
+  Input_Use_Reference_Audio:false, Input_Use_Transition:true; Reference flips).
+- ✅ Phase 4.5 (audio as first-class input media) — VERIFIED: drop→gallery card (play/STOP icon,
+  click toggles, stop=reset-to-0, length m:ss), drag-to-prompt, chip shows FILENAME, replace-on-drop.
+- ✅ GEN PROOF (t2v): both Original + Reference audio generate with audio in output (after engine fixes).
+- ✅ i2v op-gating RESOLVED — NOT a bug, working as designed. `i2v_ms` declares `requiresImages:1`
+  (commandRegistry.js); `getAvailableCommands` sets `available = imageCount >= requiresImages`, so with
+  no image i2v shows disabled/greyed. Drop an image → `_emitMediaChange` (MpiPromptBox.js ~L253) auto-
+  switches the text-only op to the now-available media op (i2v). Inverse reverts on media removal. This
+  is SHARED app behavior (WAN i2v_ms is also requiresImages:1) — NOT flat-model/installedOps related:
+  LTX is flat (no `operations{}` key) so the installedOps hide-branch is skipped, both ops always visible,
+  gated purely by media presence. Earlier handoff worry (flat model gates i2v differently) was a false alarm.
+- ✅ VALIDATION TRAP RESOLVED — the "latest verify failure" was ComfyUI validating unreached LoadLatent/
+  LoadImage/LoadAudio nodes against missing baked files. Fixed: ship placeholders (ltx_video/audio latents,
+  ltx_placeholder.png, ltx_silence.wav) in comfy_workflows/input/ + WORKFLOW_INPUT_DEFAULTS; bake all 4
+  LTX workflows' optional Load nodes to those placeholders; baked into the GEN TEMPLATE so re-exports don't
+  regress. See [[project-workflow-input-validation-trap]] + .claude/rules/comfy_injection.md § THE VALIDATION TRAP.
+- ✅ t2v WITHOUT audio verified after silence-placeholder fix.
+- ✅ VERIFIED IN-APP (user, 2026-06-25): i2v simple, i2v+audio (reference + original), FF/LF (start+end
+  frame via Input_Use_End_Image gate), reuse-prompt audio chip on i2v cards, frame-count/timing (fixed by
+  user's stage-2 workflow re-export). t2v ±audio. Generate Audio toggle (Input_Use_Audio) + audioMode radio.
+- ✅ MPI-133 (LTX 2K/4K tiers + per-model qualityTier) shipped + verified (model-switch retention, reuse
+  cross-model clamp→very_high). 2K/4K DIM-OUTPUT unverified — user GPU too slow for a 2K test gen; logic
+  proven by runnable asserts + real-Node migration run. Commits 9e5322d/ec39133/75e6de7/0addae7.
+- ⏳ REMAINING: dep-rehost of non-MPI-hosted LTX weights (post-ship follow-up card, see [[project-dep-rehost-rule]]);
+  MPI-131 product Pod rebuild (separate cross-repo session). Card otherwise ship-ready.
+
+**ENGINE FIXES this session (local dev engine unblocked + durable fixes shipped):**
+1. **kornia trap** ([[project-ltxvideo-kornia-pad]]): ComfyUI-LTXVideo's UNPINNED kornia → 0.8.3 (removed
+   `pad`) → node import fails → `LTXVNormalizingSampler` unregistered → "Node 'Stage1_Bypass' not found".
+   FIX: (a) local — `pip install kornia==0.8.2` into engine python (done, verified). (b) DURABLE —
+   new declarative `pipPins` field on deps + `routes/downloadManager.js` installs pins after
+   requirements; `ComfyUI-LTXVideo` dep carries `pipPins:['kornia==0.8.2']`.
+2. **stale MpiNodes** → "Node 'IMG2' not found" (IMG2 = renamed MpiReroute, a NEW reroute node).
+   Engine pack was at cd951391/eca4757; current pack `780c7c3c` (C:\AI\Mpi\ComfyUi-MpiNodes, pushed to
+   origin/main) adds MpiReroute + MpiConditioningReroute (logic.py:374/397). FIX: (a) local — hand-synced
+   engine custom_nodes/ComfyUI-MpiNodes from the local repo (done). (b) DURABLE — bumped
+   `dev_configs/node_lock.json` MpiNodes cd951391→780c7c3c (app + Pod consume this; archive URL verified
+   resolves). BOTH need an APP/ComfyUI RESTART to load.
+3. **Card MPI-131 created** (todo): product RunPod Pod (mpi-ci/cubric-vision-pod) needs LTXVideo node +
+   kornia pin + bumped MpiNodes — Pod rebuild + push, cross-repo, separate session. Engine was just bumped.
+
+**RULE/DOC updates this session (with user authorization):**
+- `.claude/rules/downloads.md` — corrected the WRONG `installOnEngine`-for-all-model-nodes rule into a
+  universal-vs-per-model split (per-model nodes install WITH the model, NOT installOnEngine).
+- `.claude/rules/comfy_injection.md` — tier-2 dual-emit alias, Input_Start/End_Frame + audio-gate title
+  rows, Output_Preview "wired", multi-stage = per-MODEL via capabilities.multiStage, LTX no-splice
+  Input_Is_Continue note. Removed installOnEngine bug from LTXVideo dep; removed fake LTX preview video.
+
+**COORDINATION:** MPI-130 (renamable cards) resolved — no collision; my dragstart payload now carries
+`name: customName||group.name`, chip prefers `item.name`; MPI-130 made `name` survive nav snapshots.
+
+**Phase 4.5 file-level detail (all DONE + verified):**
+- `MpiMediaDropOverlay`: classifies `audio/` → `'audio'` (+ JSDoc + overlay text).
+- `routes/projects.js`: `mediaTypeFromExt` recognizes mp3/wav/flac/m4a/ogg/aac/opus; upload-route
+  sidecar writes `type:'audio'`, `thumbPath:null` (no frame/probe — `// ponytail:` no duration probe,
+  `probeVideo` returns null without a video stream; add a dedicated audio probe if length must be
+  server-side. Client gets length from the `<audio>` `loadedmetadata` instead).
+- `projectModel.js`: new `createAudioItem` factory; ItemGroup `type` typedef now `image|video|audio`.
+- `MpiGalleryBlock`: `media:imported` handler builds an audio item via `createAudioItem`; `open-group`
+  skips navigation for `type:'audio'` (non-click-through, like preview).
+- `MpiGalleryGrid`: `_swapThumbToAudio` renders a centered `play` icon thumb; `_ensureAudioCardControls`
+  attaches a hidden `<audio>`, card-click toggles play/pause (no loop), icon swaps play↔pause as
+  feedback, pauses other playing audio cards first; length shows in the card sub-line (`m:ss`) from
+  `<audio>` metadata or sidecar duration. CSS: white icon, pink when `--selected`.
 
 ## Phase 5: Audio-mode UI (`MpiPromptBox`)
 

@@ -482,3 +482,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-133","type":"task.updated","at":"2026-06-25T14:05:00Z","actor":"claude","summary":"Full implementation spec written to brief.md (dims researched + /64-verified)."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-132","at":"2026-06-25T15:00:00Z","actor":"claude","from":"doing","to":"done","note":"User-verified; play media audio on hover + scroll-stop fix. Done."}
 {"at":"2026-06-25T15:45:00Z","event":"task.moved","task":"MPI-133","from":"todo","to":"doing"}
+{"at":"2026-06-25T16:10:00Z","event":"task.moved","task":"MPI-133","from":"doing","to":"done"}
