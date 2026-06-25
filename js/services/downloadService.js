@@ -171,6 +171,7 @@ const downloadService = {
         // Without this listener, the job stays at progress: 0 until download:progress fires.
         this._eventSource.addEventListener('download:started', (e) => {
             const data = JSON.parse(e.data);
+            _speedSamples.delete(data.modelId);
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
             if (job) {
                 job.status = data.status;
@@ -360,6 +361,7 @@ const downloadService = {
 
         this._eventSource.addEventListener('download:resumed', (e) => {
             const data = JSON.parse(e.data);
+            _speedSamples.delete(data.modelId);
             const job = state.downloadJobs.find(j => j.modelId === data.modelId);
             if (job) {
                 job.status = 'downloading';
@@ -441,15 +443,17 @@ function _deriveSpeed(modelId, downloadedBytes) {
     const now = Date.now();
     const prev = _speedSamples.get(modelId);
     if (!prev) {
-        _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, label: '' });
+        _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, rate: 0, label: '' });
         return '';
     }
     const dBytes = downloadedBytes - prev.bytes;
     const dt = (now - prev.t) / 1000;
-    // Ignore sub-200ms ticks and non-increasing byte counts — keep the last label.
-    if (dt < 0.2 || dBytes <= 0) return prev.label;
-    const label = _formatSpeed(dBytes / dt);
-    _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, label });
+    // Publish at most once per second and keep the last label between updates.
+    if (dt < 1 || dBytes <= 0) return prev.label;
+    const instantRate = dBytes / dt;
+    const rate = prev.rate > 0 ? (prev.rate * 0.65) + (instantRate * 0.35) : instantRate;
+    const label = _formatSpeed(rate);
+    _speedSamples.set(modelId, { bytes: downloadedBytes, t: now, rate, label });
     return label;
 }
 

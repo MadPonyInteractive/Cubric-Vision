@@ -337,6 +337,37 @@ function _formatSpeed(bytesPerSec) {
     return `${bytesPerSec.toFixed(0)} B/s`;
 }
 
+function _modelSpeedLabel(modelJob) {
+    const now = Date.now();
+    const bytes = modelJob.downloadedBytes || 0;
+    const prev = modelJob._speedSample;
+    if (!prev) {
+        modelJob._speedSample = {
+            bytes,
+            t: now,
+            rate: 0,
+            label: modelJob.speed || '',
+        };
+        return modelJob._speedSample.label;
+    }
+
+    const dt = (now - prev.t) / 1000;
+    const dBytes = bytes - prev.bytes;
+    if (dt < 1 || dBytes <= 0) return prev.label;
+
+    const instantRate = dBytes / dt;
+    const rate = prev.rate > 0 ? (prev.rate * 0.65) + (instantRate * 0.35) : instantRate;
+    const label = _formatSpeed(rate);
+    modelJob._speedSample = { bytes, t: now, rate, label };
+    return label;
+}
+
+function _resetModelSpeed(modelJob) {
+    if (!modelJob) return;
+    delete modelJob._speedSample;
+    modelJob.speed = '';
+}
+
 function _parseSizeToBytes(sizeStr) {
     if (!sizeStr) return 0;
     const match = sizeStr.match(/^([\d\.]+)\s*(GB|MB|KB|B)$/i);
@@ -546,6 +577,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
     }
 
     modelJob.status = 'downloading';
+    _resetModelSpeed(modelJob);
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 
     _startPendingDeps();
@@ -604,21 +636,21 @@ async function _startPendingDeps() {
 }
 
 function _wireProgress(depJob, downloader) {
-    downloader.onProgress = (downloadedBytes, totalBytes, speed) => {
+    downloader.onProgress = (downloadedBytes, totalBytes) => {
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depJob.id);
             if (!myDep) continue;
             myDep.downloadedBytes = downloadedBytes;
             myDep.totalBytes = totalBytes;
             modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
-            modelJob.speed = speed;
+            modelJob.speed = _modelSpeedLabel(modelJob);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId: depJob.id,
                 downloadedBytes: modelJob.downloadedBytes,
                 totalBytes: modelJob.totalBytes,
-                speed,
+                speed: modelJob.speed,
                 progress: modelJob.progress,
             });
         }
@@ -935,6 +967,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
     modelJob.status = 'downloading';
+    _resetModelSpeed(modelJob);
 
     if (!toInstall.length) {
         // Everything already present — settle the job state immediately.
@@ -1218,6 +1251,7 @@ router.post('/comfy/models/download/resume', (req, res) => {
         return res.json({ success: true, remoteUnsupported: 'resume' });
     }
     job.status = 'downloading';
+    _resetModelSpeed(job);
     job.deps.forEach(d => { if (d.status === 'paused') d.status = 'queued'; });
     _recalculateModelJobProgress(job);
     _broadcast('download:resumed', _downloadJobEventPayload(job));
