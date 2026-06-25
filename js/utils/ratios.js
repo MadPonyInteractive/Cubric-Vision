@@ -90,8 +90,8 @@ export const WAN_RATIOS = {
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
-        { label: "9:16", w: 384, h: 640, icon: "rect_9_16" },
-        { label: "16:9", w: 640, h: 384, icon: "rect_16_9" }
+        { label: "9:16", w: 192, h: 384, icon: "rect_9_16" },
+        { label: "16:9", w: 384, h: 192, icon: "rect_16_9" }
     ],
     low: [
         { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
