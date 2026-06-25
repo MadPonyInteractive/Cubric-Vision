@@ -127,6 +127,11 @@ const _modelJobs = new Map();     // modelId → DownloadJob
 const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
 const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
 const LOCAL_DOWNLOAD_CONCURRENCY = 1;
+const SLOW_RECONNECT_MIN_BEST_BPS = 5 * 1024 * 1024;
+const SLOW_RECONNECT_MIN_BPS = 512 * 1024;
+const SLOW_RECONNECT_RATIO = 0.15;
+const SLOW_RECONNECT_AFTER_MS = 45000;
+const SLOW_RECONNECT_COOLDOWN_MS = 120000;
 
 function _createDepJob(dep) {
     return {
@@ -181,6 +186,10 @@ class ResumableDownloader {
         this._downloader = null;
         this.onProgress = null;
         this._eventsBound = false;
+        this._bestSpeed = 0;
+        this._slowSince = 0;
+        this._lastSlowReconnectAt = 0;
+        this._slowReconnectInFlight = false;
     }
 
     _bindEvents() {
@@ -193,6 +202,7 @@ class ResumableDownloader {
             this.depJob.downloadedBytes = stats.downloaded;
             this.depJob.totalBytes = stats.total;
             this.depJob.speed = _formatSpeed(speed);
+            this._maybeRecoverSlowStream(speed, stats.downloaded, stats.total);
             if (this.onProgress) {
                 this.onProgress(stats.downloaded, stats.total, this.depJob.speed);
             }
@@ -265,6 +275,60 @@ class ResumableDownloader {
         });
 
         this._bindEvents();
+    }
+
+    _maybeRecoverSlowStream(speed, downloaded, total) {
+        if (!this._downloader || this.depJob.status !== 'downloading') return;
+        if (this._slowReconnectInFlight) return;
+        if (!downloaded || (total && downloaded >= total)) return;
+
+        const now = Date.now();
+        if (speed > this._bestSpeed) this._bestSpeed = speed;
+
+        const hadHealthySpeed = this._bestSpeed >= SLOW_RECONNECT_MIN_BEST_BPS;
+        const isVerySlow = speed > 0
+            && speed < SLOW_RECONNECT_MIN_BPS
+            && speed < this._bestSpeed * SLOW_RECONNECT_RATIO;
+
+        if (!hadHealthySpeed || !isVerySlow) {
+            this._slowSince = 0;
+            return;
+        }
+
+        if (!this._slowSince) {
+            this._slowSince = now;
+            return;
+        }
+
+        const slowForMs = now - this._slowSince;
+        const sinceReconnectMs = now - this._lastSlowReconnectAt;
+        if (slowForMs < SLOW_RECONNECT_AFTER_MS || sinceReconnectMs < SLOW_RECONNECT_COOLDOWN_MS) return;
+
+        this._recoverSlowStream(speed).catch(err => {
+            logger.warn('download', `slow-stream reconnect failed for ${this.depJob.id}: ${err.message}`);
+        });
+    }
+
+    async _recoverSlowStream(speed) {
+        if (!this._downloader || this._slowReconnectInFlight) return;
+        this._slowReconnectInFlight = true;
+        this._lastSlowReconnectAt = Date.now();
+        this._slowSince = 0;
+
+        try {
+            const state = this._downloader.getResumeState();
+            logger.warn('download', `slow-stream reconnect for ${this.depJob.id}: current=${_formatSpeed(speed)}, best=${_formatSpeed(this._bestSpeed)}`);
+            await this._downloader.pause().catch(() => false);
+            if (this.depJob.status !== 'downloading') return;
+            this._downloader.resumeFromFile(state.filePath, {
+                downloaded: state.downloaded,
+                total: state.total,
+                fileName: state.fileName,
+            }).catch(err => logger.warn('download', `slow-stream resume failed for ${this.depJob.id}: ${err.message}`));
+        } finally {
+            this._bestSpeed = 0;
+            this._slowReconnectInFlight = false;
+        }
     }
 
     async download() {
