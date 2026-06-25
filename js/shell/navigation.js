@@ -241,7 +241,7 @@ function _updateBreadcrumb(page, params) {
         const group = state.currentProject?.itemGroups?.find(g => g.id === params.groupId);
         _projectNameInst.el.setBackLabel('Gallery');
         _projectNameInst.el.setGalleryLabel('');
-        _projectNameInst.el.setGroupLabel(group?.name || 'Group');
+        _projectNameInst.el.setGroupLabel(group?.customName || group?.name || 'Group');
         const hs = state.historyStats || { count: 0, bytes: 0 };
         const initialCount = (hs.groupId === group?.id) ? hs.count : (group?.history?.length || 0);
         const initialBytes = (hs.groupId === group?.id) ? hs.bytes : 0;

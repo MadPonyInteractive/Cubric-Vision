@@ -244,7 +244,7 @@
     opacity: 0;
 }
 
-.mpi-group-card__thumb:not([src]),
+.mpi-group-card__thumb:not([src]):not(.mpi-group-card__thumb--audio),
 .mpi-group-card__thumb[src=""],
 .mpi-group-card__preview-img[src=""],
 .mpi-group-card__preview-img:not([src]) {
@@ -521,6 +521,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1.1;
+}
+
+/* Inline rename: force the overlay visible + interactive while editing. */
+.mpi-group-card--renaming .mpi-group-card__overlay {
+    opacity: 1;
+    transform: translate(0, 0);
+    pointer-events: auto;
+}
+
+.mpi-group-card__rename {
+    width: 100%;
 }
 
 .mpi-group-card__sub {
@@ -845,4 +856,39 @@
     text-align: center;
     z-index: 5;
     pointer-events: none;
+}
+
+/* ── Audio card (LTX-2.3 input media) ─────────────────────────────────────
+   Audio has no frame: a centered play/pause icon on the standard card surface.
+   Icon is white (--ink-1), turns pink (--accent-heat) when the card is
+   selected, matching the name/sub text. Click the card to play/pause. */
+.mpi-group-card__thumb--audio {
+    /* The audio thumb is a <div> with no [src], so the generic
+       `.mpi-group-card__thumb:not([src])` hide rule would blank it — force it
+       visible. */
+    visibility: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-3);
+    cursor: pointer;
+}
+
+.mpi-group-card__audio-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-1);
+    transition: color var(--t-fast) var(--ease);
+}
+
+.mpi-group-card__audio-icon svg {
+    width: 38%;
+    height: 38%;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.mpi-group-card--selected .mpi-group-card__audio-icon {
+    color: var(--accent-heat);
 }

@@ -43,6 +43,7 @@ import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../..
 import {
     createImageItem,
     createVideoItem,
+    createAudioItem,
     createItemGroup,
     appendToHistory,
     getSelectedItem,
@@ -191,7 +192,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
         window.addEventListener('drop',      _onDrop);
 
         // ── Navigate to group history ───────────────────────────────────────────
-        grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
+        // Audio-only groups are not click-through (like preview cards) — they are
+        // input assets played in-place via the card's native controls, not a
+        // history workspace target.
+        grid.on('open-group', ({ group }) => {
+            if (group?.type === 'audio') return;
+            navigate(PAGE_GROUP_HISTORY, { groupId: group.id });
+        });
 
         // ── Card notes ──────────────────────────────────────────────────────────
         // Edits notes on the card's selected history item, persisted into the
@@ -307,6 +314,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
             removeGroup(groupId);
         });
         grid.on('favourite', ({ group }) => {
+            updateGroup(group);
+        });
+        grid.on('rename', ({ group }) => {
             updateGroup(group);
         });
 
@@ -1301,12 +1311,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
+            const isAudio = mediaType === 'audio';
             const dims = pixelDimensions?.w > 0 && pixelDimensions?.h > 0
                 ? pixelDimensions
                 : null;
             const displayName = filename
                 ? filename.replace(/\.[^.]+$/, '')
-                : (isVideo ? 'Imported Video' : 'Imported Image');
+                : (isVideo ? 'Imported Video' : isAudio ? 'Imported Audio' : 'Imported Image');
 
             const id = itemId || filename.replace(/\.[^.]+$/, '');
             const item = isVideo
@@ -1323,6 +1334,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     duration:   duration   ?? 0,
                     frameCount: frameCount ?? 0,
                     hasAudio:   hasAudio   ?? false,
+                })
+                : isAudio
+                ? createAudioItem({
+                    id,
+                    filePath: url,
+                    uploaded: true,
+                    operation: 'imported',
+                    duration: duration ?? 0,
                 })
                 : createImageItem({
                     id,

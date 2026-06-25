@@ -340,10 +340,27 @@
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: var(--s-1);
+    padding: var(--s-1);
     background: var(--surface-2);
     color: var(--ink-1);
+}
+
+.mpi-prompt-box-media-strip__audio-name {
+    max-width: 100%;
+    font-size: var(--t-2xs);
+    line-height: 1.1;
+    color: var(--ink-2);
+    text-align: center;
+    /* Two-line clamp so a filename is readable in the square chip. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-all;
 }
 
 .mpi-prompt-box-media-strip__type {

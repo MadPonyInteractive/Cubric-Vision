@@ -7,7 +7,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
 import { getModelDepStatus } from '../../../data/modelRegistry.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
@@ -36,7 +36,7 @@ import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/conne
  *   el.getMediaItems()
  *   el.clearMedia()
  *   el.removeMedia(id)
- *   el.injectMedia({ url, mediaType, role? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame')
+ *   el.injectMedia({ url, mediaType, role?, name? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame'); name is the user-facing chip label (customName/derived)
  *   el.getMediaByRole(role)         — returns role-assigned item or undefined
  *   el.removeMediaByRole(role)      — removes the chip currently assigned to that role
  *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
@@ -116,7 +116,7 @@ export const MpiPromptBox = ComponentFactory.create({
             if (_restoringMedia) return;
             const items = el.getMediaItems()
                 .filter(m => typeof m.url === 'string' && !m.url.startsWith('blob:'))
-                .map(({ url, mediaType, role }) => ({ url, mediaType, role }));
+                .map(({ url, mediaType, role, name }) => ({ url, mediaType, role, name }));
             state.promptMedia = { ...state.promptMedia, [_wsKey]: { id: _wsId, items } };
         }
         let activeOperation   = props.operation || 't2i';
@@ -172,7 +172,9 @@ export const MpiPromptBox = ComponentFactory.create({
         const _mediaItems = [];
 
         function _mediaSlotsForOperation(operation = activeOperation) {
-            return getCommandMediaInputs(operation);
+            // Audio slot on the shared video ops is gated by model capability —
+            // WAN never accepts/shows it, LTX does.
+            return filterMediaInputsForModel(getCommandMediaInputs(operation), model);
         }
 
         function _maxMediaForOperation(operation, mediaType) {
@@ -266,13 +268,17 @@ export const MpiPromptBox = ComponentFactory.create({
                 _refreshOpDropdown();
             }
 
+            // Notify the audioMode control (LTX) that audio presence changed so
+            // it can enable/disable its radio.
+            _activeControls.get('audioMode')?.setAudioPresent?.(el.audioCount > 0);
+
             const renderedItems = _withAssignedRoles();
             _renderStrip(renderedItems);
             _saveMedia();
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
-        function _tryAddMedia({ url, file, mediaType, source, role }) {
+        function _tryAddMedia({ url, file, mediaType, source, role, name }) {
             const maxCount = _maxMediaForCurrentOperation(mediaType);
             if (maxCount <= 0) { _showIncompatibleToast(); return; }
 
@@ -295,6 +301,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
             if (role) item.role = role;
+            if (name) item.name = name; // user-facing name (customName/derived) for chip label
             _mediaItems.push(item);
             _emitMediaChange();
         }
@@ -318,9 +325,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
-                        const { filePath, type } = JSON.parse(appData);
+                        const { filePath, type, name } = JSON.parse(appData);
                         if (!_acceptsMediaType(type)) { _showIncompatibleToast(); return; }
-                        _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
+                        _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app', name });
                     } catch { /* malformed */ }
                     return;
                 }
@@ -520,6 +527,22 @@ export const MpiPromptBox = ComponentFactory.create({
         _stripEl.className = 'mpi-prompt-box-media-strip';
         el.prepend(_stripEl);
 
+        // Best-effort display name for an audio chip: the user-facing name
+        // carried on the item (group customName/derived — MPI-130), else the
+        // dropped File's name, else the basename of its project URL.
+        function _audioName(item) {
+            if (item.name) return item.name;
+            if (item.file?.name) return item.file.name;
+            try {
+                const raw = item.url || '';
+                const pathPart = raw.includes('path=')
+                    ? decodeURIComponent(raw.split('path=')[1])
+                    : decodeURIComponent(raw.split('?')[0]);
+                const base = pathPart.split(/[\\/]/).pop() || '';
+                return base || 'audio';
+            } catch { return 'audio'; }
+        }
+
         function _renderStrip(items) {
             if (!_stripEl) return;
             _stripEl.innerHTML = '';
@@ -533,8 +556,10 @@ export const MpiPromptBox = ComponentFactory.create({
                     : item.mediaType === 'video'
                         ? `<video src="${item.url}" class="mpi-prompt-box-media-strip__thumb" muted playsinline preload="metadata" draggable="false"></video>
                            <span class="mpi-prompt-box-media-strip__type">${renderIcon('video', 'xs')}</span>`
-                        : `<div class="mpi-prompt-box-media-strip__audio-thumb">${renderIcon('audio', 'sm')}</div>
-                           <span class="mpi-prompt-box-media-strip__type">${renderIcon('audio', 'xs')}</span>`;
+                        : `<div class="mpi-prompt-box-media-strip__audio-thumb">
+                               ${renderIcon('audio', 'sm')}
+                               <span class="mpi-prompt-box-media-strip__audio-name" title="${_audioName(item)}">${_audioName(item)}</span>
+                           </div>`;
                 chip.innerHTML = `
                     ${mediaHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
@@ -568,9 +593,9 @@ export const MpiPromptBox = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
-        el.injectMedia = ({ url, mediaType, role }) => {
+        el.injectMedia = ({ url, mediaType, role, name }) => {
             if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
-            _tryAddMedia({ url, file: null, mediaType, source: 'app', role });
+            _tryAddMedia({ url, file: null, mediaType, source: 'app', role, name });
             return true;
         };
 
@@ -890,6 +915,15 @@ export const MpiPromptBox = ComponentFactory.create({
                 // restores in gallery contexts.
                 if (componentId === 'previewStage' && _context.historyMode === true) continue;
 
+                // Preview toggle is capability-gated: only multi-stage models
+                // (WAN) show it. Single-stage models (LTX this release) hide it —
+                // preview→continue needs dual-latent staging carded to MPI-128.
+                if (componentId === 'previewStage' && model?.capabilities?.multiStage !== true) continue;
+
+                // audioMode radio is capability-gated: only models with audio
+                // (LTX) show it. WAN never mounts it.
+                if (componentId === 'audioMode' && model?.capabilities?.audio !== true) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
@@ -901,6 +935,10 @@ export const MpiPromptBox = ComponentFactory.create({
                     clientLogger.error('PromptBox', `Control "${componentId}" mount failed`, err);
                 }
             }
+
+            // Seed audioMode enablement from current media (audio may already be
+            // present when the op/controls (re)mount).
+            _activeControls.get('audioMode')?.setAudioPresent?.((el.audioCount || 0) > 0);
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
@@ -1001,6 +1039,15 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.getRunPayload = () => {
             const injectionParams = getInjectionParamsFromControls(_activeControls);
+            // TEMP DEBUG (MPI-127 audio verify): confirm the audio gate params.
+            // Remove after verification.
+            console.log('[MPI-127 param dump] injectionParams =', injectionParams,
+                '| audioCount =', el.audioCount,
+                '| audioMode params =', {
+                    Input_Use_Reference_Audio: injectionParams.Input_Use_Reference_Audio,
+                    Input_Use_Input_Audio: injectionParams.Input_Use_Input_Audio,
+                    Input_Use_Transition: injectionParams.Input_Use_Transition,
+                });
             const previewCtrl = _activeControls.get('previewStage');
             const historyMode = _context.historyMode === true;
             const previewOnly = !historyMode && previewCtrl?.getValue?.() === true;
@@ -1253,7 +1300,7 @@ export const MpiPromptBox = ComponentFactory.create({
             if (_saved.length) {
                 _restoringMedia = true;
                 try {
-                    for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role });
+                    for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role, name: m.name });
                 } finally {
                     _restoringMedia = false;
                 }

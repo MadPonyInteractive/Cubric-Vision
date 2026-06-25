@@ -442,6 +442,7 @@ export async function persistGroups() {
         selectedIndex: g.selectedIndex,
         open:          g.open,
         favourite:     g.favourite,
+        customName:    g.customName ?? null,
         history:       g.history.map(item =>
             typeof item === 'string' ? item : item.id
         ),
