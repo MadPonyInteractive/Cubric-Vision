@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "04a6836a-da30-455d-b7c8-a8edaf882955",
+  "generated_at": "2026-06-25T00:00:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-127 LTX-2.3 app integration — Batch 1 + WAN tier-2 + Phase 3 complete; Phase 4 next",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-127: stand up the LTX-2.3 video model family in Cubric Vision (workflow-gen + deps + ops + audio-mode UI + tier-2 capture fix).",
+    "status": "in_progress",
+    "summary": "Foundations done: workflow-gen handler, 9 deps + pinned LTXVideo node, capture fix, WAN bumped to tier-2, tier-2 param feed (dual-emit alias) — all verified. LTX ships SINGLE-STAGE this release (dual-latent stage-2 carded to MPI-128). Remaining: Phase 4 (LTX model entry + ops), Phase 5 (audio-mode UI), Phase 6 (docs/rules + release:check), plus run mpic-compute-dep-hashes."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+    "completed": [
+      "Investigation (4 agents) + ground-truth workflow scan",
+      "All architecture forks resolved with user",
+      "Batch 1: generate_ltx.py + registry, capture fix, 9 deps + LTXVideo node (SHA pinned)",
+      "WAN tier-2 bump + generate_wan.py title fix; all 8 video workflows regenerated + DoD PASS",
+      "Phase 3: tier-2 param feed (dual-emit alias in _buildParams)",
+      "Phase 4a + deferred items carded to MPI-128"
+    ],
+    "pending": [
+      "Run mpic-compute-dep-hashes to fill 9 sha256:null in dependencies.js",
+      "Phase 2: model capabilities/component-group wiring (SINGLE-STAGE scope for LTX this release)",
+      "Phase 4: add ltx-23 model entry to models.js (type:'ltx', single-stage ops, 9 commonDeps incl ComfyUI-LTXVideo) + register LTX i2v/t2v ops in commandRegistry.js",
+      "Phase 5: audio-mode UI (Reference|Original radio in MpiPromptBox, audio-presence-gated, drives Input_Use_Reference_Audio/Input_Use_Input_Audio + forces Input_Use_Transition; audio = first-class media, big icon, non-clickable cards)",
+      "Phase 6: update .claude/rules/component-comfy.md + comfy_injection.md + release:check"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-127",
+    "title": "LTX-2.3 app integration — stand up the LTX video model family (workflow-gen + deps + audio modes UI)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-127/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-127/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Current State / Completed / Plan Drift updated with Batch-1, WAN tier-2, Phase 3, and the tier-1-extinct→mixed-fleet correction",
+      "MPI-128 created (todo/planned) with full brief for next-release LTX work"
+    ],
+    "pending": [
+      "Run mpic-compute-dep-hashes before ship (9 sha256 null)",
+      "Phase 6: rule-file updates (.claude/rules/component-comfy.md, comfy_injection.md) — needs user approval per CLAUDE.md architectural-rule rule",
+      "End-session: write memory notes (LTX first non-merged-LoRA model; ship deps = workflow-scan not install-script; tier-2 dual-emit alias; WAN now tier-2). Correct/extend [[project-transition-lora-short-morph]] via existing [[project-ltx-transition-lora-enables-lipsync]]"
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 4: add the ltx-23 model entry to js/data/modelConstants/models.js (type:'ltx', tier-2, mediaType:'video', SINGLE-STAGE ops this release — no previewStage/_ms, capabilities audio:true, loraStrengths:['model'], no loraStages, 9 commonDeps including ComfyUI-LTXVideo), and register the LTX i2v/t2v operations in js/data/commandRegistry.js with audio + 2-image (i2v) / 1-audio (t2v) mediaInputs slots. Read the plan + the dependencies.js LTX block + the LTX_*.json generated workflows first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "LTX ships SINGLE-STAGE this release; dual-latent stage-2 staging + preview→Continue carded to MPI-128 (user decision). LTX ops must register WITHOUT previewStage/_ms.",
+      "Op-key approach: shared i2v/t2v ops (NOT ltx_* keys). User re-authored WAN to tier-2 so the whole video fleet is uniform — no tier flag.",
+      "Tier-2 param feed = dual-emit ALIAS in _buildParams (every bare key also emitted as Input_<key>), NOT a tier flag or control migration. Safe because comfyController silently skips params with no matching node title. Image workflows stay tier-1.",
+      "Audio is first-class media (like image/video): big audio icon in gallery + prompt box; audio-only cards NOT clickable into history workspace (like a preview). i2v = up to 2 images (start+end) + 1 audio; t2v = 1 audio. 5+-image multimodal UI deferred (max is a data seam).",
+      "Deps: 4 of 9 on MPI HF (gemma/soft-enhance/transition/talkvid); 5 upstream (Kijai transformer+2VAE+text-projection, Lightricks spatial-upscaler) — self-host deferred to MPI-128 (39GB upload tax). Re-host rule carve-out: mirror community files, trust stable first-party.",
+      "generate_ltx.py is NO-SPLICE (unlike WAN): LTX bakes the stage-2 switch (Input_Is_Continue drives MpiIfElse) so derive = flip one boolean. Temporal upscaler NOT used (only spatial)."
+    ],
+    "constraints": [
+      "RunPod is a SHARED branch — commit by explicit pathspec, never git add -A. User decided NOT to branch/bump tonight; push through on RunPod.",
+      "scalable-foundation mode: resolve decisions up-front, no mid-implementation forks.",
+      "sha256 for all 9 LTX deps is still null — MUST run mpic-compute-dep-hashes before any ship/build.",
+      "Pre-existing uncommitted cosmetic edit in dependencies.js (comment banners) is NOT ours — leave it / do not sweep into commits.",
+      "LTX is the FIRST model with non-merged baked LoRAs (transition/soft/talkvid in commonDeps, baked strengths in the workflow, NOT user slots). LoRA filenames carry LTX2.3/ subfolder nesting.",
+      "Workflow node titles are the contract — verify against the generated LTX_*.json, never guess titles (has bitten twice this session)."
+    ],
+    "files_modified": [
+      "comfy_workflows/scripts/workflow_generation/generate_ltx.py (new)",
+      "comfy_workflows/scripts/workflow_generation/registry.py",
+      "comfy_workflows/scripts/workflow_generation/generate_wan.py",
+      "comfy_workflows/scripts/workflow_generation/LTX_i2v_t2v_template.json (user re-export)",
+      "comfy_workflows/scripts/workflow_generation/Wan22_i2v_template.json (user re-export, tier-2)",
+      "comfy_workflows/scripts/workflow_generation/Wan22_t2v_template.json (user re-export, tier-2)",
+      "comfy_workflows/LTX_i2v.json + LTX_i2v_stage2.json + LTX_t2v.json + LTX_t2v_stage2.json (generated)",
+      "comfy_workflows/Wan22_i2v.json + _stage2 + Wan22_t2v.json + _stage2 (regenerated)",
+      "js/data/modelConstants/dependencies.js (9 LTX weight deps + ComfyUI-LTXVideo)",
+      "dev_configs/node_lock.json (ComfyUI-LTXVideo pinned SHA)",
+      "js/services/commandExecutor.js (capture fix line ~906 + tier-2 dual-emit alias + Input_Video_Latent)",
+      ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-128/* (new card)",
+      ".agents/mpi-kanban/board.json (MPI-127 doing, MPI-128 created)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-127/brief.md",
+      "js/data/modelConstants/dependencies.js",
+      "js/data/modelConstants/models.js",
+      "js/data/commandRegistry.js",
+      "comfy_workflows/LTX_i2v.json",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["ComfyUI workflow injection", "ComfyUI engine / backend / models", "Components & UI", "Downloads"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/component-comfy.md",
+    ".claude/rules/downloads.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-25T00:00:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/04a6836a-da30-455d-b7c8-a8edaf882955.json and use mpi-continue to resume MPI-127 (LTX-2.3 app integration, branch RunPod). Batch 1 + WAN tier-2 bump + Phase 3 (tier-2 param feed) are DONE and verified; LTX ships SINGLE-STAGE this release (dual-latent stage-2 is carded to MPI-128). Your next action is Phase 4: add the ltx-23 model entry to js/data/modelConstants/models.js (type:'ltx', mediaType:'video', SINGLE-STAGE ops — no previewStage/_ms, audio capability, loraStrengths:['model'], no loraStages, commonDeps = the 9 LTX deps incl ComfyUI-LTXVideo) and register the LTX i2v/t2v ops in js/data/commandRegistry.js (i2v: up to 2 image slots + 1 audio slot; t2v: 1 audio slot; audio = first-class media). Verify node titles against the generated comfy_workflows/LTX_i2v.json — never guess titles. Then Phase 5 (audio-mode Reference|Original radio in MpiPromptBox) and Phase 6 (rules + release:check). Before any build, run mpic-compute-dep-hashes to fill the 9 null sha256 in dependencies.js. Commit by explicit pathspec only (shared RunPod branch); do not push."
+}

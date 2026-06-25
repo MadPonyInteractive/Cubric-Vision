@@ -1,0 +1,31 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-128",
+    "title": "LTX-2.3 next-release — multi-stage preview, dual-latent staging, deferred capabilities",
+    "description": "Follow-up to MPI-127 (LTX-2.3 shipped single-stage). This card carries everything deferred from the first LTX release: (1) DUAL-LATENT stage-2 staging — LTX saves Output_Video_Latent + Output_Audio_Latent and stage-2 loads BOTH (Input_Video_Latent + Input_Audio_Latent), but /comfy/stage-preview-latent + loadLatentName stage a SINGLE file; wiring this unlocks LTX preview->Continue/Finish (MPI-127 shipped stage-1 only). (2) Self-host the 5 upstream LTX base files to MPI HF (39GB transformer + 2 VAEs + text-projection from Kijai, spatial-upscaler from Lightricks) and swap dep URLs — the 4 community files already mirror to Mad-Pony-Interactive/cubric-studio. (3) Kill the _ms key-suffix magic -> command.isMultiStage flag across commandExecutor. (4) Multimodal input UI (5+ images) when LTX upstream lands it — the {min,max} media-slot seam is already in place, max is a data bump. (5) Deferred LTX branches (separate workflows, own templates): lipdub v2v, lipsync-v2v-2, video extend, CTRL/pose, head-swap (BFS nodes). Distinct from MPI-4 (the LTX AUTHORING/research card) — this is the APP-integration follow-up.",
+    "column": "todo",
+    "maturity": "planned",
+    "status": "open",
+    "created_at": "2026-06-25T00:00:00Z",
+    "updated_at": "2026-06-25T00:00:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "ltx",
+        "workflow",
+        "model-integration",
+        "audio",
+        "multi-stage",
+        "deferred",
+        "next-release"
+    ],
+    "priority": "medium"
+}
