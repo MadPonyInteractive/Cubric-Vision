@@ -37,6 +37,19 @@
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
 
+- **New video model: LTX 2.3.** A fast video model that generates **with sound** —
+  give it a reference clip to guide the voice, or feed in your own audio to drive
+  the result. Does both **text-to-video** and **image-to-video**, and supports
+  **first-frame / last-frame** guidance: drop a start image, optionally an end
+  image, and it animates between them. Pick the quality you want from the tier
+  selector, now including **2K and 4K** for LTX. The **Generate Audio** toggle
+  controls whether the model produces its own audio track; attach an audio clip and
+  the **Reference / Original** options take over to guide it from your file.
+  - **Quality is now remembered per model.** Each video model keeps its own quality
+    tier — switching between Wan and LTX (or reusing a prompt across them) no longer
+    carries one model's setting onto another. Reusing an LTX 2K/4K result onto a
+    model that doesn't go that high lands at that model's top quality instead.
+
 - **Hover to hear your clips.** Hovering a video card in the gallery now plays its
   audio; hovering an audio card plays it too (the stop button shows while it plays,
   and clicking still stops it). Only one card plays at a time, so sounds never
