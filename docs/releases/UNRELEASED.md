@@ -46,6 +46,14 @@
   never the previous card's text or images. (Drafts are session-only and clear on app
   restart; dragged-in files that weren't saved into the project can't be restored.)
 
+- **Rename your gallery cards.** Right-click any gallery card for a new **Rename**
+  option — give a result your own name (e.g. "hero shot", "client pick") instead of
+  the auto-generated label. Type inline on the card, press Enter to save or Escape to
+  cancel; clear the name and press Enter to go back to the original. The custom name
+  shows on the card, in the history breadcrumb, and on the prompt-box chip when you
+  drag the card in — and it sticks across navigation and project reloads. Works for
+  image, video, and audio cards.
+
 - **Smarter OS notifications.** Desktop notifications now fire whenever the app is
   not focused — not just when it's minimized — so a generation that finishes while
   Cubric is sitting behind another window still pops a notification. New: when a
