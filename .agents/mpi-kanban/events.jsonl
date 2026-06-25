@@ -492,3 +492,4 @@
 {"at":"2026-06-25T18:15:00Z","event":"task.created","task":"MPI-136"}
 {"at":"2026-06-25T18:55:00Z","event":"task.created","task":"MPI-137"}
 {"at":"2026-06-25T18:20:00Z","event":"task.created","task":"MPI-138"}
+{"at":"2026-06-25T19:15:00Z","event":"task.merged","task":"MPI-138","into":"MPI-134"}

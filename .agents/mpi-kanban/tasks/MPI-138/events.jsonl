@@ -1,1 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-138","type":"task.created","at":"2026-06-25T18:20:00Z","actor":"claude","summary":"Bug carded + fixed: auto-retry self-cancel flicker from two retry drivers (boot + Settings) ping-ponging the GPU wait. Fix: per-GPU wait key (_gpuWaitFor) -> same-gpu duplicate wait-start no-ops. In doing/in-progress, live verify owed."}
