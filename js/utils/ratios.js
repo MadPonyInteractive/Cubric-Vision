@@ -83,7 +83,10 @@ export const WAN_RATIOS = {
 // (medium 576x1024, the 1088x1920 case); other tiers drift ~2-4% and would
 // need a crop for pixel-exact 9:16. Tiers map motion, not just detail: motion
 // peaks at low (~448) and decays as resolution climbs, while audio coherence
-// improves with size. 2K/4K dropped — motion dies and needs upscalers (TODO).
+// improves with size. 2K/4K (MPI-133) are native broadcast tiers (official
+// 1440p/2160p snapped to the /64 pipeline grid) — detail-focused, low motion at
+// 2K and minimal motion at 4K (a known model limit; the quality radio's hover
+// info communicates the tradeoff). NOT an upscale pass.
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
@@ -109,6 +112,16 @@ export const LTX_RATIOS = {
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
         { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+    ],
+    '2k': [
+        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
+        { label: "9:16", w: 1408, h: 2560, icon: "rect_9_16" },
+        { label: "16:9", w: 2560, h: 1408, icon: "rect_16_9" }
+    ],
+    '4k': [
+        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
+        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16" },
+        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" }
     ]
 };
 

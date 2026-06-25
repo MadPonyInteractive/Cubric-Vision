@@ -1,0 +1,31 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-131",
+    "title": "Product RunPod Pod rebuild: LTXVideo node + kornia==0.8.2 pin + bumped MpiNodes (780c7c3c reroute nodes) — engine just bumped, remote LTX gen blocked without these",
+    "description": "MPI-127 stood up LTX-2.3 in the app and ships an APP-SIDE fix for the kornia trap (routes/downloadManager.js now supports a declarative `pipPins` field; the ComfyUI-LTXVideo dep carries pipPins:['kornia==0.8.2']). That covers LOCAL installs. It does NOT cover REMOTE (RunPod) generation, which uses the SEPARATE mpi-ci repo's PRODUCT Pod image at c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\ (NOT the cubric-vision-builder image, which already pins kornia in install_nodes.sh:86).\n\nPROBLEM: The product Pod (cubric-vision-pod/) was JUST bumped (new ComfyUI engine on the RunPod branch). Grep shows the product Pod's Dockerfile + node_lock.json have NO kornia pin and no LTXVideo-specific handling. If LTX is meant to run on remote RunPod, the product Pod will hit the IDENTICAL failure the app hit locally: ComfyUI-LTXVideo's unpinned `kornia` resolves to 0.8.3 → that release REMOVED kornia.geometry.transform.pyramid.pad → LTXVideo import fails (`cannot import name 'pad'`) → LTXVNormalizingSampler et al never register → gen fails with \"Node 'Stage1_Bypass' not found. The custom node may not be installed.\"\n\nROOT-CAUSE REFERENCE: see project memory [[project-ltxvideo-kornia-pad]] and the thorough comment block in c:\\AI\\Mpi\\mpi-ci\\cubric-vision-builder\\install_nodes.sh lines 70-87 (the builder image already does this correctly — copy that pattern).\n\nTASKS (in the mpi-ci repo, cubric-vision-pod/):\n1. Confirm whether the product Pod even installs ComfyUI-LTXVideo (check cubric-vision-pod/node_lock.json + Dockerfile). If LTX nodes are NOT yet in the product Pod node set, add ComfyUI-LTXVideo to its node_lock.json (same pinned SHA the app uses: dev_configs/node_lock.json in Cubric-Vision; PR#513 / commit 4f45fd6c222eb06eb3e46605da62e7c889e4be5c).\n2. Pin `kornia==0.8.2` in the product Pod build AFTER node requirements install (mirror cubric-vision-builder/install_nodes.sh:85-87). Unpinned kornia → 0.8.3 → broken.\n3. Verify the engine bump didn't already resolve/relocate this (check the new ComfyUI tag's bundled kornia; the embedded/site-packages kornia is what matters, not the node's requirements alone).\n4. Rebuild + push the product Pod image (use the build-pod-image skill / the mpi-ci CI flow — push BEFORE gh workflow run, per [[project-mpi-ci-pod-build-procedure]]). Pin/bump the image tag + WRAPPER/POD_IMAGE in the app if the app references it by digest/tag (note: image pin changes need an APP restart — [[project-image-pin-restart]]).\n5. Smoke-test remote LTX t2v + i2v gen on a fresh Pod from the rebuilt image: it must NOT throw 'Stage1_Bypass not found'.\n\nWHY SEPARATE SESSION: cross-repo (mpi-ci), needs a Pod image rebuild + push + remote smoke test — distinct from the Cubric-Vision app work. Edit mpi-ci with `git -C c:\\AI\\Mpi\\mpi-ci` (separate repo). Do NOT run git from Cubric-Vision against it.\n\nNON-BLOCKING for the LOCAL ship: local LTX gen is fixed (kornia downgraded on the dev engine + pipPins added). This card is specifically the REMOTE/Pod parity fix.\n\n6. ALSO IN THIS REBUILD — bumped MpiNodes. dev_configs/node_lock.json was bumped this session: ComfyUI-MpiNodes cd951391 -> 780c7c3c (adds two NEW reroute nodes MpiReroute + MpiConditioningReroute, logic.py:374/397; a workflow node titled 'IMG2' is a renamed MpiReroute). The product Pod consumes the SAME node_lock.json, so rebuilding the Pod image picks up the new SHA automatically — but it MUST be rebuilt (the running Pod image has the stale MpiNodes). Without it, remote LTX gen fails with \"Node 'IMG2' not found\" exactly like it did locally. The local engine was hand-synced from C:\\AI\\Mpi\\ComfyUi-MpiNodes (HEAD 780c7c3c, pushed to origin/main) to unblock dev. Verify the Pod rebuild clones MpiNodes at 780c7c3c.\n\n7. REMOTE INPUT-PLACEHOLDER PARITY (NEW, 2026-06-25). MPI-127 fixed a ComfyUI validation trap: the LTX workflows carry LoadLatent/LoadImage/LoadAudio nodes that Comfy validates EVEN WHEN UNREACHED (behind Is_Continue / unused i2v frame loaders / no-audio gens). The app now ships 4 placeholder defaults in comfy_workflows/input/ (ltx_video_latent_00001_.latent, ltx_audio_latent_00001_.latent, ltx_placeholder.png, ltx_silence.wav) listed in WORKFLOW_INPUT_DEFAULTS (routes/comfy.js), uploaded to the Pod input/ before every _ms submit by /comfy/prepare-workflow-inputs. The remote upload (routes/comfy.js) now routes by extension: `.latent` -> /wrapper/upload/latent, png/wav -> /wrapper/upload/media. VERIFY ON THE POD: the product Pod's wrapper MUST expose BOTH /wrapper/upload/latent AND /wrapper/upload/media, and both must land the file in ComfyUI's input/ dir under the bare basename (the builder/product wrapper share code, but confirm /wrapper/upload/media exists + accepts image/audio). If /wrapper/upload/media is missing or rejects png/wav, remote LTX t2v/i2v (and any no-audio remote gen) will die on 'Invalid image file' / 'Invalid audio file' — the SAME validation trap, but remote. Ref: [[project-workflow-input-validation-trap]] + .claude/rules/comfy_injection.md § THE VALIDATION TRAP. (The workflow JSON itself is POSTed in /proxy/prompt — NOT baked in the image — so the regenerated LTX workflows reach the Pod automatically; only the input placeholders need the upload path.) Add this to the remote smoke test (task 5): run a remote LTX t2v with NO audio attached and confirm it validates.",
+    "column": "todo",
+    "maturity": "planned",
+    "status": "open",
+    "created_at": "2026-06-25T13:00:00Z",
+    "updated_at": "2026-06-25T15:30:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "ltx",
+        "runpod",
+        "mpi-ci",
+        "pod-image",
+        "kornia",
+        "remote-engine",
+        "cross-repo"
+    ],
+    "priority": "high"
+}

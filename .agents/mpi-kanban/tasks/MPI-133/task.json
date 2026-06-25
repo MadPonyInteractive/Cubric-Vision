@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-133",
+  "title": "LTX 2K/4K tiers",
+  "description": "Add 2K + 4K quality tiers to LTX video. Extend the quality radio (per-model tier list), add /64-snapped dims to LTX_RATIOS, wrap radio to 2 rows, status-bar info carries resolution + motion hint. No state/sidecar change. Ships via MPI-127.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-06-25T14:00:00Z",
+  "updated_at": "2026-06-25T15:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-133","type":"task.created","at":"2026-06-25T14:00:00Z","actor":"claude","summary":"LTX 2K/4K tiers idea captured from brainstorm."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-133","type":"task.updated","at":"2026-06-25T14:05:00Z","actor":"claude","summary":"Full implementation spec written to brief.md (dims researched + /64-verified)."}
+{"at":"2026-06-25T15:45:00Z","event":"task.moved","from":"todo","to":"doing","note":"MPI-133 LTX 2K/4K tiers implemented (ratios.js +2k/4k, MpiOptionSelector model-aware tiersFor + motion hints, CSS flex-wrap). Lint clean, tier+dims verified. Awaiting in-app verification before done."}

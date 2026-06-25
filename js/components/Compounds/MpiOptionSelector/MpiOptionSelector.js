@@ -122,13 +122,30 @@ function _templateNumber(props) {
 //
 // Used for models with RATIO_MODES[modelType] === 'quality' (e.g. wan, ltx).
 
-const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
+// Tier lists are per-model (MPI-133): LTX adds native 2K/4K broadcast tiers that
+// Wan must NOT gain. Default to the 5-tier base for any unknown model type.
+const QUALITY_TIERS_BY_MODEL = {
+    wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+    ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
+};
+const tiersFor = (modelType) =>
+    QUALITY_TIERS_BY_MODEL[String(modelType || '').toLowerCase()] ?? QUALITY_TIERS_BY_MODEL.wan;
+
 const QUALITY_LABELS = {
     very_low:  'Very Low',
     low:       'Low',
     medium:    'Medium',
     high:      'High',
     very_high: 'Very High',
+    '2k':      '2K',
+    '4k':      '4K',
+};
+
+// 2K/4K carry a motion hint so the status-bar teaches the res/motion tradeoff
+// (research: motion decays as resolution climbs). All other tiers show plain dims.
+const QUALITY_MOTION_HINT = {
+    '2k': 'detail-focused, low motion',
+    '4k': 'max detail, minimal motion',
 };
 
 /**
@@ -137,13 +154,14 @@ const QUALITY_LABELS = {
  * (falls back to first ratio in the tier).
  */
 function _buildQualityOptions(modelType, selectedRatio) {
-    return QUALITY_TIERS.map(t => {
+    return tiersFor(modelType).map(t => {
         let info = QUALITY_LABELS[t];
         if (modelType) {
             const ratios = getModelRatios(modelType, undefined, t);
             const match = ratios.find(r => r.label === selectedRatio) || ratios[0];
             if (match?.w && match?.h) {
-                info = `${QUALITY_LABELS[t]} — ${match.w}×${match.h}`;
+                const hint = QUALITY_MOTION_HINT[t] ? ` · ${QUALITY_MOTION_HINT[t]}` : '';
+                info = `${QUALITY_LABELS[t]} — ${match.w}×${match.h}${hint}`;
             }
         }
         return { label: QUALITY_LABELS[t], value: t, info };
@@ -169,7 +187,7 @@ function _setupQuality(el, props, emit) {
 
     el.getValue = () => props.qualityTier;
     el.setValue = (v) => {
-        if (!QUALITY_TIERS.includes(v) || props.qualityTier === v) return;
+        if (!tiersFor(props.modelType).includes(v) || props.qualityTier === v) return;
         props.qualityTier = v;
         _syncRadio();
     };
@@ -201,7 +219,7 @@ function _setupQuality(el, props, emit) {
         const qualityBtn = e.target.closest('.mpi-radio-group__btn');
         if (!qualityBtn || qualityBtn.disabled) return;
         const newTier = qualityBtn.dataset.value;
-        if (!newTier || !QUALITY_TIERS.includes(newTier) || props.qualityTier === newTier) return;
+        if (!newTier || !tiersFor(props.modelType).includes(newTier) || props.qualityTier === newTier) return;
         props.qualityTier = newTier;
         _syncRadio();
         emit('change', { qualityTier: newTier });
