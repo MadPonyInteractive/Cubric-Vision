@@ -410,10 +410,14 @@ const _BOOT_RETRY_INTERVAL_MS = 15000;
 // (surface it)? RunPod returns several wordings for the same stock condition —
 // notably "This machine does not have the resources to deploy your pod" on a
 // scarce card (e.g. RTX 5090), which the older narrower pattern missed, so the
-// refusal dead-ended instead of re-entering the auto-retry wait. Shared by the
-// boot create loop here and the Settings connect path.
+// refusal dead-ended instead of re-entering the auto-retry wait. RunPod also returns
+// a GENERIC "Something went wrong. Please try again later or contact support." (HTTP
+// 500, no Pod) for a transient capacity failure on a scarce card — also retryable.
+// Real, persistent failures (Invalid API key / Volume not found / offline) have their
+// own distinct strings handled before this, so matching the generic transient here
+// does not swallow them. Shared by the boot create loop here and the Settings path.
 function _isStockRefusal(msg) {
-  return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available/i
+  return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available|something went wrong|try again later/i
     .test(msg || '');
 }
 
@@ -467,45 +471,69 @@ function _stopGpuWait() {
   if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
 }
 
-// Run the background wait for `gpuType`. `shouldContinue()` is checked each tick so
-// a caller (boot) can bail on changed intent; default keeps going until free/abort.
-// On free, calls `onFree()` (boot kicks the create; Settings just hands to its
-// connect). Returns true if it ran onFree, false if abandoned.
-async function _startGpuWait({ gpuType, datacenter, onFree, shouldContinue }) {
-  if (_gpuWaitActive) return false; // one wait at a time (MPI-138: second driver bails)
+// MPI-134: paint the steady "waiting…" state (panel: Cancel + hint via the
+// remoteWaitGpu onState handler; phase stays null so local generation is not blocked).
+// Idempotent — re-entered on every refused retry without re-toasting.
+function _enterWaitState(gpuType) {
+  if (state.remoteWaitGpu !== gpuType) {
+    state.remoteWaitGpu = gpuType;
+    StatusBar.notify(`Waiting for ${gpuType} — we'll connect the moment it frees. Keep generating locally; cancel in Settings → RunPod.`, 'info', 8000);
+  }
+}
+
+// MPI-134: the auto-retry wait is no longer a separate availability-poll loop. The
+// `available` flag is unreliable (low/medium-stock cards still refuse the create), so
+// the create attempt itself is the probe — the retry loop lives inside _initRemoteBoot,
+// which paints the steady "waiting…" state between refusals. _startGpuWait is gone.
+
+// Bridge: the Settings panel asks the shell to start/stop the connect (the loop must
+// outlive the panel). On free, run the FULL connect flow (_initRemoteBoot) — the GPU
+// is in stock now so it skips its own wait and runs create → _pollRemoteReady (drives
+// the % + connected edge + WS handshake), exactly like a boot auto-connect. Reusing
+// it avoids a thin create-only path that left the hero stuck at "connecting 0%".
+function _initGpuWaitBridge() {
+  // MPI-134: the Settings panel asks the shell to start/stop the auto-retry connect
+  // (the loop must outlive the panel). _initRemoteBoot IS that loop — it owns the
+  // create-retry, the wait-state paint, and the single-flight guard (one owner per
+  // GPU; a duplicate for the same card no-ops, a different card aborts+takes over).
+  // So the bridge is now a thin pass-through, NOT a second wait driver.
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('remote:wait-start', ({ gpuType, datacenter } = {}) => {
+    if (!gpuType) return;
+    // Fire-and-forget: _initRemoteBoot self-guards against a duplicate same-GPU call.
+    // Pass the current config (the saved GPU is the source of truth), overriding the
+    // datacenter from the event so a fresh pick is honoured immediately.
+    const cfg = Storage.getRunpodConfig();
+    _initRemoteBoot({ ...cfg, gpuType, datacenter: datacenter ?? cfg.datacenter });
+  });
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('remote:wait-cancel', () => _stopGpuWait());
+}
+
+async function _initRemoteBoot(runpod) {
+  // MPI-134: _initRemoteBoot is now the SINGLE owner of the connect+auto-retry loop
+  // (boot auto-connect AND the Settings handoff both call it). Two drivers chasing the
+  // same GPU used to race — each clearing the other's remoteWaitGpu → the panel
+  // "cancelled by itself". Single-flight guard: a second call for the SAME GPU while
+  // one is already running just no-ops (the running one already covers it). A DIFFERENT
+  // GPU (real switch) aborts the running loop first, then takes over.
+  if (_gpuWaitActive) {
+    if (_gpuWaitFor === (runpod.gpuType || null)) {
+      clientLogger.info('shell', `[RunPod] connect already in progress for ${runpod.gpuType} — ignoring duplicate`);
+      return;
+    }
+    _stopGpuWait();
+    // Let the running loop observe the abort and exit before we re-arm (its abort
+    // checks are at most one tick apart; poll briefly so the guard below doesn't drop us).
+    for (let i = 0; i < 50 && _gpuWaitActive; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
   _gpuWaitActive = true;
   _gpuWaitAbort = false;
-  _gpuWaitFor = gpuType;
-  state.remoteWaitGpu = gpuType;
-  StatusBar.notify(`Waiting for ${gpuType} — we'll connect when it frees. Keep generating locally; cancel in Settings → RunPod.`, 'info', 8000);
+  _gpuWaitFor = runpod.gpuType || null;
   try {
-    // MPI-134: the wait gate USED to fire onFree() the instant `_isGpuInStockBoot`
-    // returned true. But RunPod's `available` flag is OPTIMISTIC — a scarce card
-    // (RTX 5090) reads available:true yet the actual createPod refuses with "does
-    // not have the resources". So the old gate returned true on tick 1, fired the
-    // create, it refused, the caller re-entered this wait, the flag was STILL true
-    // → fired again with NO backoff → a hot spin hammering the API every ~1-2s
-    // (and the UI flickered waiting↔creating). The create attempt is the only
-    // ground truth for a scarce card, so: always sleep the interval FIRST, then
-    // let onFree() (which runs the real create) be the probe. A refusal flows back
-    // here as another wait iteration, now correctly spaced by _BOOT_RETRY_INTERVAL_MS.
-    while (!_gpuWaitAbort) {
-      if (shouldContinue && !shouldContinue()) return false;
-      // Back off BEFORE each attempt so a refused create can't spin. (First tick
-      // also waits — a just-refused create is what brought us here.)
-      for (let w = 0; w < _BOOT_RETRY_INTERVAL_MS && !_gpuWaitAbort; w += 500) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-      if (_gpuWaitAbort) return false;
-      if (shouldContinue && !shouldContinue()) return false;
-      // Clear the wait flag before the create so the panel flips waiting→connecting
-      // in step with the hero. onFree() runs the create+ready flow; if it refuses
-      // (scarce card), the caller re-enters this wait for another spaced attempt.
-      if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
-      await onFree();
-      return true;
-    }
-    return false;
+    return await _runRemoteBoot(runpod);
   } finally {
     _gpuWaitActive = false;
     _gpuWaitFor = null;
@@ -513,58 +541,7 @@ async function _startGpuWait({ gpuType, datacenter, onFree, shouldContinue }) {
   }
 }
 
-// POST a fresh create for the picked GPU and let the connection feed drive the rest
-// Bridge: the Settings panel asks the shell to start/stop a wait (the loop must
-// outlive the panel). On free, run the FULL connect flow (_initRemoteBoot) — the GPU
-// is in stock now so it skips its own wait and runs create → _pollRemoteReady (drives
-// the % + connected edge + WS handshake), exactly like a boot auto-connect. Reusing
-// it avoids a thin create-only path that left the hero stuck at "connecting 0%".
-function _initGpuWaitBridge() {
-  const _runSettingsWait = (gpuType, datacenter) => {
-    _startGpuWait({
-      gpuType,
-      datacenter,
-      // Safety net: stop if the user switched the saved GPU out from under this wait
-      // or turned auto-retry off (the Settings dropdown handler also restarts the wait
-      // for the new card, but this guards every other path).
-      shouldContinue: () => {
-        const c = Storage.getRunpodConfig();
-        return c.autoRetry === true && c.gpuType === gpuType;
-      },
-      onFree: async () => {
-        // GPU is free → run the full create+ready flow. No saved podId → fresh create.
-        await _initRemoteBoot(Storage.getRunpodConfig());
-      },
-    });
-  };
-  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('remote:wait-start', ({ gpuType, datacenter } = {}) => {
-    if (!gpuType) return;
-    // MPI-138: a wait is already live for the SAME GPU → it already covers this
-    // request; do NOT stop+restart it. The old code stop+restarted unconditionally,
-    // so a second driver (boot auto-connect + a manual Settings Connect both chasing
-    // the same card) ping-ponged: each wait-start killed the other's wait (clearing
-    // remoteWaitGpu → panel flips waiting→Connect = "cancels by itself") then re-armed.
-    // No-op the duplicate; one owner per GPU.
-    if (_gpuWaitActive && _gpuWaitFor === gpuType) return;
-    // A wait is running for a DIFFERENT GPU (a real GPU-switch). Stop it, then start
-    // the new one once it has actually exited so the single-wait guard doesn't drop us.
-    if (_gpuWaitActive) {
-      _stopGpuWait();
-      const armWhenFree = () => {
-        if (_gpuWaitActive) { setTimeout(armWhenFree, 100); return; }
-        _runSettingsWait(gpuType, datacenter);
-      };
-      setTimeout(armWhenFree, 100);
-      return;
-    }
-    _runSettingsWait(gpuType, datacenter);
-  });
-  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('remote:wait-cancel', () => _stopGpuWait());
-}
-
-async function _initRemoteBoot(runpod) {
+async function _runRemoteBoot(runpod) {
   // Reached only when `autoConnectOnStart` is ON (MPI-85) — the caller gates on it.
   // Flag remote mode active so status polls + teardown target the saved podId; the
   // boot gate only needs `active` to skip the local install path. deleteOnQuit is
@@ -619,23 +596,44 @@ async function _initRemoteBoot(runpod) {
   // leaves wasConnected:true + a podId), and tripping on them made the boot wait give
   // up immediately instead of waiting for the GPU. A real live connection is detected
   // by the create path / connection feed, not by stale saved flags. (MPI-110)
-  const _bootWaitContinues = () => {
+  // Intent check, re-read each tick: bail the auto-retry only if the user turned the
+  // flags off or switched the saved GPU (NOT on stale wasConnected/podId — those are
+  // last-session storage flags, MPI-110). Settings-driven retries pass autoConnectOnStart
+  // off, so gate on autoRetry + matching GPU; the boot launch also has autoConnectOnStart.
+  const _retryContinues = () => {
+    if (_gpuWaitAbort) return false;
     const c = Storage.getRunpodConfig();
-    return c.autoConnectOnStart === true && c.autoRetry === true && c.gpuType === runpod.gpuType;
+    return c.autoRetry === true && c.gpuType === runpod.gpuType;
   };
-  if (!warm && runpod.autoRetry === true && !(await _isGpuInStockBoot(runpod.gpuType, runpod.datacenter))) {
-    clientLogger.info('shell', `[RunPod] auto-connect-on-start: ${runpod.gpuType} out of stock — waiting in background (auto-retry)`);
-    const freed = await _startGpuWait({
-      gpuType: runpod.gpuType, datacenter: runpod.datacenter,
-      onFree: async () => {}, shouldContinue: _bootWaitContinues,
-    });
-    if (!freed) {
-      clientLogger.info('shell', '[RunPod] auto-connect-on-start: wait abandoned (intent changed) — leaving local');
-      return;
-    }
+  // MPI-134: the auto-retry WAIT is just the create-loop below in its "still refusing"
+  // state. The RunPod `available` flag is unreliable — a card reading low/medium (or even
+  // available) can still refuse the create ("does not have the resources"). So the only
+  // honest probe is the create attempt itself; we present a steady "waiting…" (Cancel +
+  // hint, phase:null so local generation is never blocked) and the create-loop retries
+  // every 15s until it wins or the user cancels. No separate availability poll, no second
+  // wait driver. A warm resume skips all this (its GPU is already provisioned).
+  const autoRetry = !warm && runpod.autoRetry === true;
+  if (autoRetry && !(await _isGpuInStockBoot(runpod.gpuType, runpod.datacenter))) {
+    clientLogger.info('shell', `[RunPod] ${runpod.gpuType} out of stock — entering background auto-retry`);
+    _enterWaitState(runpod.gpuType);
+    if (!_retryContinues()) return;
   }
-  StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000);
-  _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+  // MPI-134 Defect 5: announce the connecting phase only ONCE a Pod actually
+  // exists, not before the create attempt. A scarce card's create can refuse and
+  // re-wait; announcing 'connecting'/'Creating a Pod…' up front made the panel
+  // flicker waiting→Creating→stopped→waiting every retry tick. A warm resume always
+  // has a Pod (its podId), so announce it immediately; a fresh create defers the
+  // announce until the create loop below returns a real podId (see _announceConnecting).
+  let _announced = false;
+  const _announceConnecting = () => {
+    if (_announced) return;
+    _announced = true;
+    // The Pod is real now → leave the wait state and surface the connecting phase.
+    if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
+    StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000);
+    _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+  };
+  if (warm) _announceConnecting();
   let _bootConnected = false; // MPI-73: resolves the 'connecting' phase
   try {
     const endpoint = warm ? '/remote/pod/reconnect' : '/remote/pod/create';
@@ -667,18 +665,27 @@ async function _initRemoteBoot(runpod) {
       data = await res.json().catch(() => ({}));
       const refusedOutOfStock = !res.ok && _isStockRefusal(data.message || data.error || '');
       const sniped = data.unavailable || refusedOutOfStock;
-      if (sniped && !warm && runpod.autoRetry === true) {
-        // Drop back to local · offline and re-wait — don't hold a fake 'connecting'.
-        clientLogger.info('shell', '[RunPod] auto-connect-on-start: sniped mid-create — re-waiting (auto-retry)');
-        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
-        const freed = await _startGpuWait({
-          gpuType: runpod.gpuType, datacenter: runpod.datacenter,
-          onFree: async () => {}, shouldContinue: _bootWaitContinues,
-        });
-        if (!freed) return; // intent changed — leave local
-        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+      if (sniped && autoRetry) {
+        // MPI-134: the create refused and no Pod exists. This IS the wait — the
+        // `available` flag lies for low/medium-stock cards, so the create attempt is
+        // the only honest probe. Hold the steady "waiting…" state (silent: no phase
+        // emit, no toast spam — _enterWaitState is idempotent), back off 15s, and
+        // retry. remoteWaitGpu stays pinned, so the panel never flickers to
+        // Creating/stopped. A user Cancel (_stopGpuWait) or GPU switch flips
+        // _retryContinues() false and we bail to local.
+        clientLogger.info('shell', `[RunPod] ${runpod.gpuType} refused (low stock) — retrying in ${_BOOT_RETRY_INTERVAL_MS / 1000}s`);
+        _enterWaitState(runpod.gpuType);
+        for (let w = 0; w < _BOOT_RETRY_INTERVAL_MS; w += 500) {
+          await new Promise((r) => setTimeout(r, 500));
+          if (!_retryContinues()) return; // cancelled / intent changed — leave local
+        }
+        if (!_retryContinues()) return;
         continue;
       }
+      // Got a real response. Announce 'connecting' only when a Pod actually exists or
+      // is starting (a hard refusal with no Pod — auto-retry off — falls through to the
+      // error/unavailable handling below WITHOUT a misleading connecting flash).
+      if (data.podId || data.starting || data.ready) _announceConnecting();
       break;
     }
 
@@ -941,6 +948,22 @@ function _initRemoteConnectionFeed() {
       if (suppress && _last) return; // stay shown-connected; keep backing off
     }
     if (!connected) {
+      // MPI-134: during an auto-retry WAIT (remoteWaitGpu set) no Pod exists — each
+      // 15s retry calls /remote/pod/create, and the backend reports connecting:true
+      // for the ~1.5s that REST call is in flight. A feed poll landing in that window
+      // used to flash the hero to "CONNECTING 0%" then back to local. While waiting,
+      // that transient is NOT a real connect — stay local · offline (phase:null), and
+      // clear any stale 'connecting' the fold-in might hold. The real connect announces
+      // its own phase via _announceConnecting once a Pod actually exists.
+      if (state.remoteWaitGpu) {
+        // Force phase:null + local · offline (explicit phase always emits, clearing any
+        // stale 'connecting' the fold-in held). Only emit on a real change to avoid spam.
+        if (_remotePhase === 'connecting' || _last !== false) {
+          _last = false;
+          _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+        }
+        return;
+      }
       // MPI-110: a create/resume is in flight backend-side → keep the hero/status
       // bar on "connecting" (not local · offline) regardless of whether Settings is
       // open. _emitRemoteConnection with an explicit phase always emits and sets the

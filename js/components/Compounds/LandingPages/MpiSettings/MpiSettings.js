@@ -30,7 +30,7 @@ const REUSE_PARTS = [
 // on a scarce card (RTX 5090), which the older narrower pattern missed, so the
 // refusal dead-ended to a toast instead of re-entering the wait. Keep in sync.
 function _isStockRefusal(msg) {
-    return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available/i
+    return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available|something went wrong|try again later/i
         .test(msg || '');
 }
 
