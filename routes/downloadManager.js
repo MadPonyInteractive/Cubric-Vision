@@ -278,6 +278,17 @@ class ResumableDownloader {
     }
 
     _maybeRecoverSlowStream(speed, downloaded, total) {
+        // DISABLED (MPI-129): the pause()→resumeFromFile() recover path races the
+        // live NDH socket — old socket pushes bytes into a WriteStream resume has
+        // already ended → ERR_STREAM_WRITE_AFTER_END, an UNHANDLED 'error' that
+        // crashes the whole server (observed 2026-06-25 on ltx23-gemma-clip, HF
+        // throttled to 101 KB/s, bogus best=6554 MB/s baseline). Net value was
+        // negative: zero saves, one server-kill. HF/Xet wave-throttling self-
+        // recovers on its own, so riding it out beats reconnecting. The real fix
+        // is the R2 migration (this card); remove this method + the _bestSpeed/
+        // _slowSince/_slowReconnect* fields + SLOW_RECONNECT_* consts once the
+        // last HF URL is gone. No-op until then.
+        return;
         if (!this._downloader || this.depJob.status !== 'downloading') return;
         if (this._slowReconnectInFlight) return;
         if (!downloaded || (total && downloaded >= total)) return;
