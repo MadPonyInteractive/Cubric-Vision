@@ -1299,6 +1299,21 @@ async function _runCustomNodeInstall(modelJob) {
                 }
             }
         }
+
+        // Version pins (MPI-127): some nodes have UNPINNED requirements that pull a
+        // package version which breaks the node import (e.g. ComfyUI-LTXVideo's
+        // unpinned `kornia` resolves to 0.8.3, which removed `pad` →
+        // `ImportError: cannot import name 'pad'` → the whole node fails to load).
+        // Force the known-good pins AFTER requirements so they win.
+        if (Array.isArray(dep.pipPins) && dep.pipPins.length) {
+            try {
+                await runPipCommand(['install', ...dep.pipPins, '--no-warn-script-location']);
+                logger.info('download', `pip pins installed for ${dep.id}: ${dep.pipPins.join(', ')}`);
+            } catch (err) {
+                logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message}`);
+                throw err;
+            }
+        }
     }
 
     if (anyFailure) {

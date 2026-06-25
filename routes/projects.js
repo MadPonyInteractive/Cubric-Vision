@@ -85,7 +85,9 @@ function pathFromProjectFileUrl(value) {
 }
 
 function mediaTypeFromExt(ext) {
-    return ['mp4', 'webm'].includes(ext) ? 'video' : 'image';
+    if (['mp4', 'webm'].includes(ext)) return 'video';
+    if (['mp3', 'wav', 'flac', 'm4a', 'ogg', 'aac', 'opus'].includes(ext)) return 'audio';
+    return 'image';
 }
 
 async function findRecentProjectThumbnail(mediaDir) {
@@ -1129,7 +1131,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const metaPath = path.join(metaDir, `${id}.json`);
         const metaContent = {
             id,
-            type:           mediaType === 'video' ? 'video' : 'image',
+            type:           mediaType === 'video' ? 'video' : mediaType === 'audio' ? 'audio' : 'image',
             filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
             operation:      req.body.operation || 'imported',
             displayName:    finalFileName.replace(/\.[^.]+$/, ''),
@@ -1159,6 +1161,11 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             if (thumbed) {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
+        } else if (mediaType === 'audio') {
+            // Audio: no frames/dimensions/thumb — render an icon card.
+            // ponytail: no duration probe — probeVideo returns null without a
+            // video stream; add a dedicated audio probe if the card must show length.
+            metaContent.thumbPath = null;
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
         res.json({

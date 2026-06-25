@@ -22,7 +22,7 @@
 import { ComfyUIController, getEngine } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
 import { resolveDeps } from '../data/modelConstants/resolveModelDeps.js';
-import { COMMANDS, getCommandMediaInputs } from '../data/commandRegistry.js';
+import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
@@ -487,7 +487,12 @@ function _buildParams(payload) {
     // Map media to operation-declared Comfy input slots. Slots are role-first:
     // explicit item.role wins, then remaining media fills matching mediaType in
     // declared order. This supports future multi-image/video/audio workflows.
-    const mediaSlots = getCommandMediaInputs(payload.operation);
+    // Audio slot is model-capability-gated (LTX yes, WAN no) — drop it for
+    // models without audio so a WAN run never injects an Input_Audio_File.
+    const mediaSlots = filterMediaInputsForModel(
+        getCommandMediaInputs(payload.operation),
+        getModelById(payload.modelId),
+    );
     if (mediaSlots.length) {
         const usedIds = new Set();
         const assigned = new Map();
@@ -571,8 +576,12 @@ function _buildParams(payload) {
                     });
                 });
             } else {
-                (settings.loras || []).forEach((slot, i) => {
-                    if (!slot.name) return;
+                // Flat-lora models (image models + LTX). `settings.loras` may be a
+                // non-array (e.g. a stale object from a model that previously had
+                // loraStages, or {} from a partial settings merge), so coerce.
+                const flatLoras = Array.isArray(settings.loras) ? settings.loras : [];
+                flatLoras.forEach((slot, i) => {
+                    if (!slot?.name) return;
                     params[`Lora_${i + 1}`] = {
                         lora_name:      _resolveModelName(slot.name, state.availableLoras),
                         strength_model: slot.strengthModel ?? 1.0,

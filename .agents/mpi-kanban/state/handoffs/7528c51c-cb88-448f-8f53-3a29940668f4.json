@@ -1,0 +1,132 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7528c51c-cb88-448f-8f53-3a29940668f4",
+  "generated_at": "2026-06-25T08:46:53Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Local model download slowdown investigation during LTX-2.3 install",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Investigate model download UI speed flicker, then diagnose severe local download slowdown during LTX-2.3 model install.",
+    "status": "in_progress",
+    "summary": "Speed flicker was fixed and committed. Local model dependency downloads were capped to one active file and committed. A follow-up low-speed reconnect watchdog was added because a single long-lived Hugging Face/Xet stream still degraded from tens of MB/s to ~100-300 KB/s while a fresh ranged request to the same file reached ~10.3 MB/s."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+    "completed": [
+      "Diagnosed original speed label flicker as per-dependency instantaneous speed being shown on the model card during multi-dep downloads.",
+      "Committed d58eb4b: Stabilize model download speed display.",
+      "Confirmed local _startPendingDeps previously started every queued dep immediately.",
+      "Committed 47e924a: Limit local model dependency downloads.",
+      "After restart, confirmed local scheduler used 0/1 active with ltx23-gemma-clip downloading and ltx23-lora-talkvid queued.",
+      "Confirmed remaining slowdown was real byte movement, not UI noise, and not caused by parallel local deps.",
+      "Header probe showed Hugging Face resolver quota was not exhausted (RateLimit r=2998 of q=3000), and the file was served via Xet/CDN with byte ranges.",
+      "Fresh curl ranged probe against the same active file downloaded 32 MB at about 10.3 MB/s while the app's long-lived stream was around 0.1-0.3 MB/s.",
+      "Committed 02ef2c0: Recover degraded model download streams."
+    ],
+    "pending": [
+      "User will pause, close the app, restart, and resume to test the low-speed reconnect watchdog in a fresh server process.",
+      "Watch logs for 'slow-stream reconnect for ltx23-gemma-clip' if speed collapses after initially healthy throughput.",
+      "Decide whether to keep local concurrency at 1, make it configurable, or specialize by host after real-world testing.",
+      "Update .claude/rules/downloads.md and docs/comfy.md only after user approval, because architectural rule files are already dirty from unrelated work."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-127",
+    "title": "LTX-2.3 app integration \u2014 stand up the LTX video model family (workflow-gen + deps + audio modes UI)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-127/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-127/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-127/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-127/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "verify",
+    "continue",
+    "edit_download_manager",
+    "update_docs_after_approval"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Canonical handoff written under .agents/mpi-kanban/state/handoffs/.",
+      "Task-local handoff pointer written under .agents/mpi-kanban/tasks/MPI-127/handoffs/.",
+      "Legacy docs handoff pointer written under docs/handoffs/.",
+      "Index active_handoffs updated."
+    ],
+    "pending": [
+      "If the low-speed reconnect watchdog works, document local-download concurrency and stream recovery in .claude/rules/downloads.md and docs/comfy.md after explicit user approval.",
+      "Consider writing a memory entry about Hugging Face/Xet long-lived local streams degrading while fresh ranged connections remain fast.",
+      "Do not change RunPod remote wrapper download behavior unless testing shows a separate cloud regression; user reports cloud downloads are extremely fast."
+    ]
+  },
+  "next_action": {
+    "description": "After the user restarts the app and resumes the download, inspect logs/app.log and /comfy/downloads/status to verify whether the slow-stream watchdog fires and whether throughput recovers.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Local and RunPod download paths must be treated separately. The local path uses node-downloader-helper in routes/downloadManager.js; the RunPod path uses the remote wrapper event stream and has been performing well.",
+      "Do not assume Hugging Face formal rate limiting was the issue. Live headers showed resolver quota available, while a new ranged connection was fast.",
+      "The local scheduler cap was kept local-only by changing _startPendingDeps/ResumableDownloader behavior, not remoteModels wrapper behavior.",
+      "The speed-display smoothing remains useful even with sequential local downloads because progress ticks and degraded streams can still be jittery."
+    ],
+    "constraints": [
+      "Project rules require reading CLAUDE.md, .claude/rules/dos_and_donts.md, .claude/rules/downloads.md, docs/PROJECT.md, and logs/app.log tail before further download code changes.",
+      "Do not update .claude/rules/ without explicit user approval.",
+      "Current app process must be restarted before commit 02ef2c0 can affect the active download.",
+      "Unrelated dirty files exist in the worktree, including .claude/rules/downloads.md, .claude/rules/comfy_injection.md, MPI-127 task files, model/prompt/command files, and prompt box files. Do not include or revert them accidentally."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "js/services/downloadService.js",
+      ".agents/mpi-kanban/state/index.json",
+      ".agents/mpi-kanban/state/handoffs/7528c51c-cb88-448f-8f53-3a29940668f4.json",
+      ".agents/mpi-kanban/tasks/MPI-127/handoffs/7528c51c-cb88-448f-8f53-3a29940668f4.json",
+      "docs/handoffs/2026-06-25-08-46-local-download-slowdown.json"
+    ],
+    "files_to_read_first": [
+      "CLAUDE.md",
+      ".claude/rules/dos_and_donts.md",
+      ".claude/rules/downloads.md",
+      "docs/PROJECT.md",
+      "docs/comfy.md",
+      "routes/downloadManager.js",
+      "js/services/downloadService.js",
+      "logs/app.log",
+      ".agents/mpi-kanban/tasks/MPI-127/plan.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "Downloads",
+      "ComfyUI engine / backend / models",
+      "RunPod / remote engine",
+      "Debugging runtime issues",
+      "Conventions / gotchas"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-25T08:46:53Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/7528c51c-cb88-448f-8f53-3a29940668f4.json and use mpi-continue to continue from where we left off. You are continuing MPI-127 context, but the immediate focus is the local model download slowdown follow-up: after the user restarts the app and resumes the LTX-2.3 download, inspect logs/app.log and /comfy/downloads/status to verify whether the low-speed reconnect watchdog fires and whether throughput recovers."
+}

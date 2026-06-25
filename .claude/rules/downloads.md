@@ -56,7 +56,12 @@
 
 **Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. If the new workflow requires a dep not yet marked `installOnEngine: true` in `dependencies.js`, add the flag there — it is automatically included in future engine installs.
 
-**Adding a custom_node dep to an image/video model:** If a `custom_nodes` dep is referenced by any entry in `models.js`, it MUST be marked `installOnEngine: true` in `dependencies.js`. Otherwise a fresh engine install leaves the custom node missing, `POST /comfy/models/check` reports the model as not installed, and the model manager pops up on project entry even though the user installed nothing extra. The engine install is the only path that handles `custom_nodes` deps proactively — regular model install only fetches them as a side effect of installing a specific model.
+**Custom_node deps — universal vs per-model (do NOT conflate):**
+
+- **Universal nodes** (needed by the UNIVERSAL workflows — interpolate, upscale, resize, auto-mask — that every install must serve) MUST be marked `installOnEngine: true`. They are baked in with the engine so a fresh install can run any universal workflow with zero extra install. This is the ONLY case for `installOnEngine: true`. Examples: `ComfyUI-MpiNodes`, `comfyui-videohelpersuite`, `comfyui-frame-interpolation`, `comfyui-kjnodes`.
+- **Per-model nodes** (used only by a specific model's workflows) MUST NOT set `installOnEngine: true`. Put them in that model's `dependencies[]` (flat) or an `operations.<op>.deps[]` (op-keyed) so they install WHEN the model/op installs — and on a Pod, route to the wrapper for volume install (see `routes/remoteModels.js` `_isImageResident`), so a new model never forces an engine/image rebuild. Precedents: `ComfyUI-PainterI2Vadvanced` (Wan i2v op), `ComfyUI-LTXVideo` (LTX model). Setting `installOnEngine: true` on one of these is a BUG — it pulls the node (and its pip install) into EVERY fresh engine even when the model isn't installed.
+
+A per-model node is NOT missing after a fresh engine install because the model that needs it has not been installed yet; installing the model fetches it. The universal-vs-per-model split is the whole point — only universal needs proactive engine-time install.
 
 ---
 

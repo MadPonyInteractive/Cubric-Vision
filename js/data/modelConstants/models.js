@@ -7,6 +7,8 @@
  * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
  * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
  * @property {'image'|'video'} mediaType
+ * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2.
+ * @property {{multiStage?:boolean, audio?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot. Absent → both false.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
@@ -141,6 +143,8 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
+        tier: 2,
+        capabilities: { multiStage: true, audio: false },
         video: 'wan22_preview.mp4',
         type: 'wan',
         // Which LoRA strength knobs the settings UI shows for this model. Wan
@@ -177,5 +181,51 @@ export const MODELS = [
                 deps: ['wan-22-i2v-high', 'wan-22-i2v-low', 'ComfyUI-PainterI2Vadvanced'],
             },
         },
+    },
+    {
+        id: 'ltx-23',
+        name: 'LTX 2.3',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        tier: 2,
+        // Single-stage this release: multiStage:false hides the previewStage toggle
+        // on the shared _ms ops (preview→continue is carded to MPI-128). audio:true
+        // surfaces the audio media slot + (Phase 5) the Reference|Original mode UI.
+        capabilities: { multiStage: false, audio: true },
+        // No preview clip yet — must NOT reuse wan22_preview.mp4 (that's WAN
+        // footage; showing it on the LTX card misrepresents the model). Leave the
+        // media slot empty until a real LTX-2.3 clip exists, then add `video:`.
+        type: 'ltx',
+        // LTX has 6 flat user LoRA slots (Input_Lora_1..6), no high/low staging →
+        // no loraStages. Model-strength only.
+        loraStrengths: ['model'],
+        supportedOps: ['t2v_ms', 'i2v_ms'],
+        gen_speed: 'fast',
+        description: 'LTX 2.3 text-to-video and image-to-video with synchronized audio — reference-voice and direct-audio modes.',
+        workflows: {
+            t2v_ms: 'LTX_t2v.json',
+            i2v_ms: 'LTX_i2v.json',
+        },
+        // FLAT model: one transformer serves both t2v and i2v, so there is no
+        // separable install unit — both ops ship together (like an image model).
+        // `dependencies` (not commonDeps/operations) ⇒ no per-op install toggle in
+        // the manager; install once, both ops work. When a future op needs its OWN
+        // weights, split it into operations{} then and a toggle appears.
+        // First model with non-merged baked LoRAs (transition/soft/talkvid) shipped
+        // as deps, NOT user slots — see [[project-ltx-transition-lora-enables-lipsync]].
+        dependencies: [
+            'ltx23-transformer',
+            'ltx23-video-vae',
+            'ltx23-audio-vae',
+            'ltx23-text-projection',
+            'ltx23-gemma-clip',
+            'ltx23-spatial-upscaler',
+            'ltx23-lora-soft-enhance',
+            'ltx23-lora-transition',
+            'ltx23-lora-talkvid',
+            'ComfyUI-LTXVideo',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+        ],
     },
 ];
