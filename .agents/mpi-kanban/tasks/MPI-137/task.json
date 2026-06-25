@@ -1,0 +1,30 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-137",
+    "title": "Reorganize R2 model storage — move weights from cubric-builds to a dedicated cubric-models bucket (per-product prefix)",
+    "description": "ARCHITECTURE FIX (not urgent, off-deadline). Model weights were placed under cubric-builds/models/ltx-2.3/ on 2026-06-25 as a release-night expedient (MPI-129 / MPI-136 work). That bucket should hold APP BUILDS ONLY. Model weights belong in their own bucket so each Cubric product scales cleanly: builds -> cubric-builds/<product>/, models -> cubric-models/<product>/. Target layout: cubric-models/vision/<type>/<file> (e.g. cubric-models/vision/text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors). When Cubric Audio ships it gets cubric-models/audio/ + cubric-builds/audio/ with no collision. MIGRATION IS SERVER-SIDE, NO RE-UPLOAD: rclone can copy object-to-object inside R2 (cubric-builds/models/ -> cubric-models/vision/) without download/re-upload, IF the R2 API token is re-scoped to read+write BOTH buckets. PREREQUISITES (Cloudflare dashboard, user-only): (1) create bucket cubric-models, (2) bind a PUBLIC hostname for it — dl.cubric.studio currently maps to cubric-builds; cubric-models needs its own hostname (e.g. models.cubric.studio) OR a Worker that path-routes (two buckets cannot share one domain root natively), (3) re-scope the R2 API token in C:/Users/Fabio/.secrets to include cubric-models write (current token is scoped to cubric-builds only — confirmed 403 on ListBuckets and on cubric-models read 2026-06-25). STEPS once prereqs done: (a) rclone server-side copy cubric-builds/models/ltx-2.3/* -> cubric-models/vision/* (verify sizes + a few sha256), (b) swap every dl.cubric.studio/models/ltx-2.3/... URL to the new host in BOTH js/data/modelConstants/dependencies.js (app) AND c:/AI/Mpi/mpi-ci/cubric-vision-builder/install_models_ltx23.sh (wrapper/builder Pod, which hardcodes R2='https://dl.cubric.studio/models/ltx-2.3') — they MUST stay in sync or remote install breaks, (c) re-verify the new URLs HEAD 200 + Content-Length, (d) only after the new bucket is fully verified live, GC the old cubric-builds/models/ copies (double-gated delete per r2-upload.md). NOTE the existing LoRAs already on cubric-builds/models/ltx-2.3/loras/ (Reasoning, Sulphur, Singularity, Soft_Enhance) move too. Users never see the bucket name (only dl.cubric.studio / the new host), so this is internal tidiness + future-proofing, not a user-facing fix.",
+    "column": "todo",
+    "maturity": "planned",
+    "status": "open",
+    "created_at": "2026-06-25T18:55:00Z",
+    "updated_at": "2026-06-25T18:55:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "r2",
+        "cloudflare",
+        "infrastructure",
+        "storage",
+        "downloads",
+        "tech-debt"
+    ],
+    "priority": "medium"
+}

@@ -493,3 +493,6 @@
 {"at":"2026-06-25T18:55:00Z","event":"task.created","task":"MPI-137"}
 {"at":"2026-06-25T18:20:00Z","event":"task.created","task":"MPI-138"}
 {"at":"2026-06-25T19:15:00Z","event":"task.merged","task":"MPI-138","into":"MPI-134"}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-139","at":"2026-06-25T22:27:51.652Z","actor":"vscode","summary":"Created MPI-139."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-139","at":"2026-06-25T22:30:44.724Z","actor":"vscode","summary":"Updated MPI-139."}
+{"at":"2026-06-25T22:55:00Z","event":"task.created","task":"MPI-140"}
