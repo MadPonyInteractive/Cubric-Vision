@@ -45,6 +45,8 @@
 
 > **Before searching for anything in the codebase,** check `docs/PROJECT.md` first — it is the orientation hub that points to all subsystem docs. Most answers about structure, architecture, and data shapes are already documented there.
 
+> **For non-obvious gotchas and hard-won lessons** (RunPod/remote engine, LTX-2.3 authoring, Pod/mpi-ci, ComfyUI engine, UI components, generation/prompt/sidecar, downloads, build/release, macOS ops, conventions), grep or read **`docs/gotchas.md`** — one entry per fact, grouped by domain. It holds the "why it broke last time" knowledge that isn't in the architectural rules. Verify a named file/function/flag still exists before relying on an entry.
+
 ---
 
 ## Context Router

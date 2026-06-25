@@ -37,6 +37,12 @@
 
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
 
+- **Hover to hear your clips.** Hovering a video card in the gallery now plays its
+  audio; hovering an audio card plays it too (the stop button shows while it plays,
+  and clicking still stops it). Only one card plays at a time, so sounds never
+  overlap. Toggle it in **Settings → App Behavior → "Play audio on hover"** (on by
+  default).
+
 - **Your prompt drafts now survive navigation.** Prompt text (positive + negative)
   and staged input media (start/end frames, input video) typed into a prompt box no
   longer vanish when you switch between the gallery and a card's history view — come
@@ -83,6 +89,11 @@
   default and warns, so the generation still runs.
 
 ## fixes
+
+- **Cards no longer keep playing after you scroll away.** Scrolling the gallery
+  could leave a card's audio or video still playing off-screen, because moving the
+  card out from under a still cursor doesn't register as "stopped hovering". Hover
+  sound now stops correctly when a card scrolls out of view.
 
 - **The model-downloads panel no longer flashes on every refresh.** Opening the
   panel, finishing or cancelling a download, or toggling a model's operations
