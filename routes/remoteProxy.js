@@ -72,6 +72,11 @@ const UA =
 // lands a user's LOCAL LoRA/upscale model on the volume at MODELS_DIR/<type>/ so a
 // remote generation auto-uploads it on demand (presence-checked via the existing
 // /wrapper/models/status). ComfyUI layer cache-reused from v0.4.8 (no master drift).
+// v0.6.0 / wrapper 0.2.11 (MPI-131): remote LTX parity. Adds ComfyUI-LTXVideo
+// (4f45fd6) to the baked node set + pins kornia==0.8.2 after node-reqs (LTXVideo
+// imports kornia.geometry.transform.pyramid.pad, removed in 0.8.3 -> import fail
+// -> "Stage1_Bypass not found"). Bumps ComfyUI-MpiNodes cd951391 -> 780c7c3c
+// (MpiReroute/MpiConditioningReroute, the IMG2 node). 8-node set. Wrapper unchanged.
 // v0.5.0 / wrapper 0.2.11 (MPI-117 + MPI-118): ComfyUI engine bump
 // v0.19.3 -> v0.25.1 (core eca4757, frontend 1.45.15, templates 0.10.0) baked into
 // the cu124 + cu128 images via the node version-lock (dev_configs/node_lock.json).
@@ -80,7 +85,7 @@ const UA =
 // EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
 // at boot; a live app keeps sending the old tag until restarted.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.5.0';
+const POD_IMAGE_VERSION = 'v0.6.0';
 const WRAPPER_VERSION = '0.2.11';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
