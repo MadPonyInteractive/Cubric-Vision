@@ -56,15 +56,25 @@ async function _authHeaders() {
 
 /**
  * Split an app dep filename that embeds its subdir into the wrapper's
- * { type, filename } shape. 'checkpoints/SDXL_Realistic.safetensors' ->
- * { type: 'checkpoints', filename: 'SDXL_Realistic.safetensors' }. A bare
+ * { type, filename } shape. The FIRST path segment is the model type root; the
+ * REST (subfolders + basename) stays in `filename` so the Pod mirrors the local
+ * on-disk layout exactly (local install is `path.join(modelsRoot, dep.filename)`,
+ * which keeps every subfolder). MPI-141: splitting on the LAST '/' here used to
+ * drop the middle subpath ('loras/LTX2.3/x' -> filename 'x'), so the Pod landed
+ * a flat 'loras/x' while local kept 'loras/LTX2.3/x' — and the baked workflow's
+ * 'LTX2.3/x' lora_name then failed ComfyUI's value_not_in_list. Two same-named
+ * files in different subfolders would also collide to one basename. Splitting on
+ * the FIRST '/' preserves the subpath; the wrapper's _model_dest validates it.
+ * 'checkpoints/SDXL_Realistic.safetensors' -> { type: 'checkpoints', filename:
+ * 'SDXL_Realistic.safetensors' }; 'loras/LTX2.3/Soft_Enhance.safetensors' ->
+ * { type: 'loras', filename: 'LTX2.3/Soft_Enhance.safetensors' }. A bare
  * filename with no subdir yields type ''.
  */
 function splitDepFilename(depFilename) {
   const norm = String(depFilename || '').replace(/\\/g, '/').replace(/^\/+/, '');
-  const idx = norm.lastIndexOf('/');
+  const idx = norm.indexOf('/');
   if (idx === -1) return { type: '', filename: norm };
-  return { type: norm.slice(0, idx).split('/')[0], filename: norm.slice(idx + 1) };
+  return { type: norm.slice(0, idx), filename: norm.slice(idx + 1) };
 }
 
 /**

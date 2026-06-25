@@ -85,8 +85,8 @@ const UA =
 // EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
 // at boot; a live app keeps sending the old tag until restarted.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.6.0';
-const WRAPPER_VERSION = '0.2.11';
+const POD_IMAGE_VERSION = 'v0.7.0';
+const WRAPPER_VERSION = '0.2.12';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.

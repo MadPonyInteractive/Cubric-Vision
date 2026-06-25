@@ -909,6 +909,27 @@ function createEngine({ engine, alwaysLocal }) {
             }
         }
 
+        // 3b. Remote engine: heal path-bearing loader values to the Pod's '/'
+        // separator. BAKED workflow values (lora_name 'LTX2.3\\x', upscale_model,
+        // etc.) ship hardcoded in the workflow JSON with Windows backslashes and
+        // NEVER pass through the dropdown heal (/comfy/list-files → toEngineSep) —
+        // they're injected straight into /prompt. The Linux Pod enumerates with
+        // '/', so 'LTX2.3\\x' fails ComfyUI value_not_in_list even after the Pod
+        // keeps the LTX2.3/ subfolder (MPI-141 fix #1). Local-pinned/local engine
+        // is skipped: Windows ComfyUI lists with '\\', so backslashes already
+        // match — flipping them would BREAK local. (MPI-141)
+        if (!this._alwaysLocal && remoteEngineClient.isRemote()) {
+            const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
+            for (const node of Object.values(workflow)) {
+                if (!node || !node.inputs) continue;
+                for (const k of PATH_INPUTS) {
+                    if (typeof node.inputs[k] === 'string' && node.inputs[k].includes('\\')) {
+                        node.inputs[k] = node.inputs[k].replace(/\\/g, '/');
+                    }
+                }
+            }
+        }
+
         // 4. Execution
         return new Promise(async (resolve, reject) => {
             const outputs = [];
