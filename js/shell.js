@@ -450,10 +450,20 @@ async function _isGpuInStockBoot(gpuType, datacenter) {
 // kicks off (surfaced app-wide by the connection feed's `connecting` flag).
 let _gpuWaitActive = false;
 let _gpuWaitAbort = false;
+// MPI-138: which GPU the live wait is retrying. Lets a SECOND retry driver for the
+// SAME GPU recognise the wait is already covered and no-op, instead of stop+restart.
+// Two independent drivers exist — a manual Settings Connect AND the boot
+// auto-connect-on-start loop (_initRemoteBoot) — and before retry actually worked
+// (MPI-134) they never collided because neither looped past the first refusal. Now
+// both loop, so without this key they ping-ponged: each stopped the other's wait
+// (clearing remoteWaitGpu → panel flips waiting→Connect = "cancels by itself") then
+// re-armed. One owner per GPU now.
+let _gpuWaitFor = null;
 
 function _stopGpuWait() {
   if (!_gpuWaitActive) return;
   _gpuWaitAbort = true;
+  _gpuWaitFor = null;
   if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
 }
 
@@ -462,9 +472,10 @@ function _stopGpuWait() {
 // On free, calls `onFree()` (boot kicks the create; Settings just hands to its
 // connect). Returns true if it ran onFree, false if abandoned.
 async function _startGpuWait({ gpuType, datacenter, onFree, shouldContinue }) {
-  if (_gpuWaitActive) return false; // one wait at a time
+  if (_gpuWaitActive) return false; // one wait at a time (MPI-138: second driver bails)
   _gpuWaitActive = true;
   _gpuWaitAbort = false;
+  _gpuWaitFor = gpuType;
   state.remoteWaitGpu = gpuType;
   StatusBar.notify(`Waiting for ${gpuType} — we'll connect when it frees. Keep generating locally; cancel in Settings → RunPod.`, 'info', 8000);
   try {
@@ -497,6 +508,7 @@ async function _startGpuWait({ gpuType, datacenter, onFree, shouldContinue }) {
     return false;
   } finally {
     _gpuWaitActive = false;
+    _gpuWaitFor = null;
     if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
   }
 }
@@ -528,9 +540,15 @@ function _initGpuWaitBridge() {
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('remote:wait-start', ({ gpuType, datacenter } = {}) => {
     if (!gpuType) return;
-    // A wait is already running (e.g. GPU-switch fired cancel→start in the same turn,
-    // and the old loop hasn't observed the abort yet). Stop it, then start the new one
-    // once it has actually exited so the single-wait guard doesn't drop us.
+    // MPI-138: a wait is already live for the SAME GPU → it already covers this
+    // request; do NOT stop+restart it. The old code stop+restarted unconditionally,
+    // so a second driver (boot auto-connect + a manual Settings Connect both chasing
+    // the same card) ping-ponged: each wait-start killed the other's wait (clearing
+    // remoteWaitGpu → panel flips waiting→Connect = "cancels by itself") then re-armed.
+    // No-op the duplicate; one owner per GPU.
+    if (_gpuWaitActive && _gpuWaitFor === gpuType) return;
+    // A wait is running for a DIFFERENT GPU (a real GPU-switch). Stop it, then start
+    // the new one once it has actually exited so the single-wait guard doesn't drop us.
     if (_gpuWaitActive) {
       _stopGpuWait();
       const armWhenFree = () => {

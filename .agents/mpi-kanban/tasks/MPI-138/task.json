@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-138",
+  "title": "Auto-retry 'cancels by itself' — two retry drivers (boot + Settings) ping-pong the GPU wait",
+  "description": "BUG (MPI-134 follow-up, found during live verify 2026-06-25). With auto-retry on + a scarce RTX 5090, the Connect button flipped Cancel->Connect by itself every ~15-60s mid-wait, looking like a self-cancel. User pressed Cancel zero times.\n\nROOT CAUSE: TWO independent retry drivers run in parallel for the same GPU and fight over the single wait:\n  1. Boot auto-connect (_initRemoteBoot, fires when autoConnectOnStart is on at launch) — has its own while(true) create-retry loop.\n  2. Manual Settings Connect — hands off to the shell wait via remote:wait-start.\nConfirmed in logs/app.log L2243-2275: [settings] and [shell] auto-connect-on-start create lines INTERLEAVE (e.g. 18:58:12 shell, :27 settings, :44 shell), each ~15s apart.\nThe remote:wait-start handler (shell.js _initGpuWaitBridge) UNCONDITIONALLY stop+restarted any live wait. So when the second driver fired wait-start for the SAME GPU, it called _stopGpuWait() -> cleared state.remoteWaitGpu -> the Settings panel re-render flipped waiting->Connect (the visible 'cancels by itself') -> then re-armed 100ms later. Ping-pong.\n\nLATENT BEFORE MPI-134: without the stock-refusal regex fix, neither driver looped past the first refusal, so they never collided. MPI-134 (retry actually works now) EXPOSED this pre-existing race; it did not create it.\n\nFIX (single retry owner per GPU): added module var `_gpuWaitFor` tracking which GPU the live wait is retrying (set in _startGpuWait, cleared in _stopGpuWait + the finally). In the wait-start handler: if a wait is already live for the SAME gpuType -> NO-OP (the existing wait already covers it). Only a real GPU SWITCH (different gpuType) still stop+restarts. The boot loop's direct _startGpuWait call already bails on the `if (_gpuWaitActive) return false` single-wait guard, so it collapses into the live wait. One owner per GPU; no churn, no flicker.\n\nNOTE this is a re-cut of MPI-134's FIX 2 fallout, NOT a revert: FIX 2's 15s backoff stays (verified working live — attempts now ~15s apart, spin gone). MPI-138 only stops the DUPLICATE driver from stop-restarting the wait.\n\nVERIFY: per-GPU guard self-check 5/5 PASS (same-gpu duplicate no-ops, direct second startWait bails, gpu-switch restarts, post-stop fresh wait starts); tests/runpod-remote-hardening.test.cjs 16/16 pass; eslint clean.\nLIVE verify OWED (needs app restart): with BOTH autoConnectOnStart + autoRetry on and a scarce 5090, confirm the button stays steady on Cancel/'waiting...' between attempts (NO Cancel<->Connect flicker) while it retries ~15s apart.\n\nFiles: js/shell.js. Branch: RunPod.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "Claude RunPod auto-retry fix",
+  "created_at": "2026-06-25T18:20:00Z",
+  "updated_at": "2026-06-25T18:20:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

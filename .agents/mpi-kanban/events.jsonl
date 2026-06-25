@@ -489,3 +489,6 @@
 {"at":"2026-06-25T17:00:00Z","event":"task.moved","task":"MPI-134","from":"todo","to":"done"}
 {"at":"2026-06-25T17:00:00Z","event":"task.created","task":"MPI-135"}
 {"at":"2026-06-25T17:30:00Z","event":"task.moved","task":"MPI-134","from":"done","to":"doing"}
+{"at":"2026-06-25T18:15:00Z","event":"task.created","task":"MPI-136"}
+{"at":"2026-06-25T18:55:00Z","event":"task.created","task":"MPI-137"}
+{"at":"2026-06-25T18:20:00Z","event":"task.created","task":"MPI-138"}
