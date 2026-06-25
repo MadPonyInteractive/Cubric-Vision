@@ -1,9 +1,3 @@
 # orchestrator runtime state (machine-local sha cache)
 .state.json
 __pycache__/
-
-# Dragged-in source templates are NOT committed (originals live in your working
-# folder). SDXL templates are the historical exception — they ARE committed, so
-# only ignore the video-model sources you drop in transiently.
-Wan22_*_template.json
-LTX23_*_template.json
