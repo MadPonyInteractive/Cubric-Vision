@@ -470,7 +470,18 @@ function _buildParams(payload) {
         // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged
         // by /comfy/stage-preview-latent. Default applies when no explicit
         // loadLatentName is supplied (every stage-1 run).
-        params['LoadLatent'] = payload.loadLatentName || 'ComfyUI_00001_.latent';
+        const _latentName = payload.loadLatentName || 'ComfyUI_00001_.latent';
+        params['LoadLatent'] = _latentName;             // tier-1 (legacy)
+        // Tier-2 video-latent title (MPI-127). The generic Input_ alias can't
+        // derive this (LoadLatent -> Input_Video_Latent is a rename, not a
+        // prefix), so emit it explicitly. WAN + LTX stage-1 both load the single
+        // engine-input latent here; stage-2 swaps in the staged preview latent.
+        params['Input_Video_Latent'] = _latentName;
+        // NOTE: LTX also has an Input_Audio_Latent node (it saves TWO latents).
+        // Dual-latent stage-2 staging is NOT wired yet — the stage-preview-latent
+        // route stages a single file. Tracked as its own task (see plan Phase 4a).
+        // Stage-1 doesn't need it (audio latent is generated live); a previewed
+        // LTX clip cannot be "continued" correctly until dual staging lands.
     }
 
     // Map media to operation-declared Comfy input slots. Slots are role-first:
@@ -581,6 +592,23 @@ function _buildParams(payload) {
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
             if (upscaleFilename) params['Upscale_Model'] = _resolveUpscaleParam(upscaleFilename);
         }
+    }
+
+    // ── Tier-2 alias pass (MPI-127) ───────────────────────────────────────────
+    // The fleet is mixed: image workflows use bare tier-1 titles (Positive, Seed,
+    // Width…); the video workflows (WAN/LTX) were re-authored to tier-2 (Input_*).
+    // Every param key built above is the bare/legacy name. Emit an Input_-prefixed
+    // ALIAS for each so a tier-2 node consumes the alias and a tier-1 node consumes
+    // the bare key. Injection matches by node title and silently skips params with
+    // no matching node (comfyController filters to existing titles), so the unused
+    // half is a harmless no-op in either workflow. No per-key code, no model flag.
+    // ponytail: dual-emit alias, not a tier migration — cheaper than renaming every
+    // shared control's output key and re-authoring all image workflows. Drop the
+    // bare half once every workflow is tier-2.
+    for (const key of Object.keys(params)) {
+        if (key.startsWith('Input_') || key.startsWith('Output_')) continue;
+        const aliased = `Input_${key}`;
+        if (!(aliased in params)) params[aliased] = params[key];
     }
 
     return params;
@@ -899,11 +927,13 @@ export function runCommand(payload) {
         // Treat "Output_Video" as an output node too so the SAME capture path
         // works for every video workflow; the audio node is tracked separately
         // and muxed server-side at save time (video is master). Preview-only
-        // multi-stage runs still capture the "Preview" node.
+        // multi-stage runs still capture the "Preview" node — or "Output_Preview"
+        // for tier-2 workflows (Input_*/Output_* naming, e.g. LTX-2.3, MPI-127),
+        // which title their preview SaveVideo "Output_Preview" not bare "Preview".
         const _captureTitle = workingPayload.previewOnly === true && String(workingPayload.operation || '').endsWith('_ms')
             ? 'preview'
             : 'output';
-        const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : null;
+        const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id => {
                 const t = workflow[id]._meta?.title?.toLowerCase();

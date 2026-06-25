@@ -98,7 +98,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
+      "title": "Input_Seed"
     }
   },
   "723": {
@@ -318,7 +318,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   },
   "744": {
@@ -357,7 +357,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "752": {
@@ -366,7 +366,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Preview_Only"
+      "title": "Input_Preview_Only"
     }
   },
   "768": {
@@ -432,7 +432,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_1"
+      "title": "Input_Lora_High_1"
     }
   },
   "788": {
@@ -446,7 +446,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_3"
+      "title": "Input_Lora_High_3"
     }
   },
   "789": {
@@ -460,7 +460,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_5"
+      "title": "Input_Lora_High_5"
     }
   },
   "790": {
@@ -474,7 +474,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_2"
+      "title": "Input_Lora_High_2"
     }
   },
   "791": {
@@ -488,7 +488,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_4"
+      "title": "Input_Lora_High_4"
     }
   },
   "792": {
@@ -502,7 +502,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_6"
+      "title": "Input_Lora_High_6"
     }
   },
   "793": {
@@ -516,7 +516,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "794": {
@@ -530,7 +530,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_2"
     }
   },
   "795": {
@@ -544,7 +544,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_3"
     }
   },
   "796": {
@@ -558,7 +558,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_4"
     }
   },
   "797": {
@@ -572,7 +572,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_5"
     }
   },
   "798": {
@@ -586,7 +586,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_6"
     }
   },
   "823": {
@@ -628,7 +628,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Width"
+      "title": "Input_Width"
     }
   },
   "828": {
@@ -637,7 +637,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Height"
+      "title": "Input_Height"
     }
   },
   "838": {
@@ -646,7 +646,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Duration"
+      "title": "Input_Duration"
     }
   },
   "883": {
@@ -691,7 +691,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Video_Latent"
     }
   },
   "886": {
@@ -717,7 +717,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Is_Continue"
+      "title": "Input_Is_Continue"
     }
   },
   "888": {
@@ -746,7 +746,7 @@
     },
     "class_type": "LoadLatent",
     "_meta": {
-      "title": "LoadLatent"
+      "title": "Input_Video_Latent"
     }
   },
   "901": {
@@ -793,7 +793,7 @@
     },
     "class_type": "SaveVideo",
     "_meta": {
-      "title": "Preview"
+      "title": "Output_Preview"
     }
   },
   "904": {

@@ -142,7 +142,7 @@ export const DEPS = {
         size: '6.27GB',
         sha256: 'c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68'
     },
-    // Upscale Models
+    // Upscale Models --------------------------------------------------------
     '4x-NMKD-Siax': {
         id: '4x-NMKD-Siax',
         name: '4x NMKD-Siax 200k',
@@ -161,7 +161,109 @@ export const DEPS = {
         sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
         installOnEngine: true,
     },
-    // Nodes
+    // LTX-2.3 (MPI-127) ------------------------------------------------------
+    // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow
+    // scan 2026-06-25), NOT the broader mpi-ci install set (which pulls extra
+    // weights for deferred branches: head-swap, pose, lipdub). Base files come
+    // from stable upstreams tonight (Kijai/Lightricks/valiantcat); self-hosting
+    // them to MPI HF is a post-release follow-up card. sha256 = null until
+    // mpic-compute-dep-hashes is run.
+    'ltx23-transformer': {
+        id: 'ltx23-transformer',
+        name: 'LTX-2.3 22B Distilled Transformer (bf16)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
+        url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
+        size: '39GB',
+        sha256: null,
+    },
+    'ltx23-video-vae': {
+        id: 'ltx23-video-vae',
+        name: 'LTX-2.3 Video VAE (bf16)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'vae/LTX23_video_vae_bf16.safetensors',
+        url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_video_vae_bf16.safetensors',
+        size: '1.45GB',
+        sha256: null,
+    },
+    'ltx23-audio-vae': {
+        id: 'ltx23-audio-vae',
+        name: 'LTX-2.3 Audio VAE (bf16)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'vae/LTX23_audio_vae_bf16.safetensors',
+        url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_audio_vae_bf16.safetensors',
+        size: '370MB',
+        sha256: null,
+    },
+    'ltx23-text-projection': {
+        id: 'ltx23-text-projection',
+        name: 'LTX-2.3 Text Projection (bf16)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'text_encoders/ltx-2.3_text_projection_bf16.safetensors',
+        url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors',
+        size: '2.31GB',
+        sha256: null,
+    },
+    'ltx23-gemma-clip': {
+        id: 'ltx23-gemma-clip',
+        name: 'Gemma 3 12B Heretic fp8 (LTX CLIP)',
+        origin: 'Mad-Pony-Interactive/cubric-studio',
+        filename: 'text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
+        size: '14.5GB',
+        sha256: null,
+    },
+    'ltx23-spatial-upscaler': {
+        id: 'ltx23-spatial-upscaler',
+        name: 'LTX-2.3 Spatial Upscaler x2 (stage-2)',
+        origin: 'Lightricks/LTX-2.3',
+        filename: 'latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
+        url: 'https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
+        size: '1.5GB',
+        sha256: null,
+    },
+    // Baked LoRAs — loaded by the workflow (not user slots), travel with the
+    // model. First Cubric model whose LoRAs are NOT merged into the base.
+    // filename uses forward slashes (path.join normalizes on disk); the workflow
+    // bakes the same LTX2.3/ subfolder path. See [[project-lora-path-separator]].
+    'ltx23-lora-soft-enhance': {
+        id: 'ltx23-lora-soft-enhance',
+        name: 'LTX-2.3 Soft Enhance LoRA (baked)',
+        origin: 'Mad-Pony-Interactive/cubric-studio',
+        filename: 'loras/LTX2.3/LTX2.3_Soft_Enhance.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/LTX2.3_Soft_Enhance.safetensors',
+        size: '344MB',
+        sha256: null,
+    },
+    'ltx23-lora-transition': {
+        id: 'ltx23-lora-transition',
+        name: 'LTX-2.3 Transition LoRA (baked — i2v motion/lipsync enabler)',
+        origin: 'Mad-Pony-Interactive/cubric-studio',
+        filename: 'loras/LTX2.3/ltx2.3-transition.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/ltx2.3-transition.safetensors',
+        size: '372MB',
+        sha256: null,
+    },
+    'ltx23-lora-talkvid': {
+        id: 'ltx23-lora-talkvid',
+        name: 'LTX-2.3 ID LoRA TalkVid-3K (baked — voice-ID)',
+        origin: 'Mad-Pony-Interactive/cubric-studio',
+        filename: 'loras/LTX2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors',
+        url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/ltx-2.3-id-lora-talkvid-3k.safetensors',
+        size: '1.1GB',
+        sha256: null,
+    },
+    // Nodes -----------------------------------------------------------------
+    'ComfyUI-LTXVideo': {
+        id: 'ComfyUI-LTXVideo',
+        name: 'ComfyUI-LTXVideo',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-LTXVideo',
+        url: lockUrl('ComfyUI-LTXVideo'),
+        installRequirements: true,
+        size: '70MB',
+        installOnEngine: true,
+    },
     'ComfyUI-MpiNodes': {
         id: 'ComfyUI-MpiNodes',
         name: 'ComfyUI-MpiNodes',

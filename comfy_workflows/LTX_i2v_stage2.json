@@ -524,7 +524,7 @@
   },
   "71": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiBoolean",
     "_meta": {

@@ -23,7 +23,7 @@ import copy
 from pathlib import Path
 
 BYPASS_TITLE = "Stage1_Bypass"
-IS_CONTINUE_TITLE = "Is_Continue"
+IS_CONTINUE_TITLE = "Input_Is_Continue"  # tier-2 rename (MPI-127); was "Is_Continue"
 
 # class_type -> {output_slot_index: input_name_that_feeds_it}
 # Verified empirically against the committed Wan22_*_stage2.json:
@@ -41,8 +41,8 @@ SLOT_TO_INPUT = {
 # Titles that MUST survive into stage-2 (sanity gate on the derived file).
 # Each entry is a set of acceptable alternatives (any one present passes).
 REQUIRED_TITLES = [
-    {"Output", "Output_Video"},  # final capture (native SaveVideo or legacy Output)
-    {"LoadLatent"},
+    {"Output_Video"},          # final capture (tier-2 SaveVideo, MPI-127)
+    {"Input_Video_Latent"},    # stage-2 loaded latent (tier-2 rename of "LoadLatent")
     {IS_CONTINUE_TITLE},
 ]
 

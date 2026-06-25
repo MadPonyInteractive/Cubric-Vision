@@ -150,7 +150,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
+      "title": "Input_Seed"
     }
   },
   "723": {
@@ -379,7 +379,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   },
   "744": {
@@ -418,7 +418,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "752": {
@@ -427,7 +427,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Preview_Only"
+      "title": "Input_Preview_Only"
     }
   },
   "759": {
@@ -436,7 +436,7 @@
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
-      "title": "Use_End_Image"
+      "title": "Input_Use_End_Image"
     }
   },
   "765": {
@@ -578,7 +578,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_1"
+      "title": "Input_Lora_High_1"
     }
   },
   "788": {
@@ -592,7 +592,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_3"
+      "title": "Input_Lora_High_3"
     }
   },
   "789": {
@@ -606,7 +606,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_5"
+      "title": "Input_Lora_High_5"
     }
   },
   "790": {
@@ -620,7 +620,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_2"
+      "title": "Input_Lora_High_2"
     }
   },
   "791": {
@@ -634,7 +634,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_4"
+      "title": "Input_Lora_High_4"
     }
   },
   "792": {
@@ -648,7 +648,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_6"
+      "title": "Input_Lora_High_6"
     }
   },
   "793": {
@@ -662,7 +662,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "794": {
@@ -676,7 +676,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_2"
     }
   },
   "795": {
@@ -690,7 +690,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_3"
     }
   },
   "796": {
@@ -704,7 +704,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_4"
     }
   },
   "797": {
@@ -718,7 +718,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_5"
     }
   },
   "798": {
@@ -732,7 +732,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_6"
     }
   },
   "825": {
@@ -842,7 +842,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Motion_Intensity"
+      "title": "Input_Motion_Intensity"
     }
   },
   "836": {
@@ -851,7 +851,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Width"
+      "title": "Input_Width"
     }
   },
   "837": {
@@ -860,7 +860,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Height"
+      "title": "Input_Height"
     }
   },
   "839": {
@@ -869,7 +869,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "End_Frame"
+      "title": "Input_End_Frame"
     }
   },
   "841": {
@@ -878,7 +878,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "Start_Frame"
+      "title": "Input_Start_Frame"
     }
   },
   "842": {
@@ -887,7 +887,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Duration"
+      "title": "Input_Duration"
     }
   },
   "843": {
@@ -900,7 +900,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Video_Latent"
     }
   },
   "844": {
@@ -909,7 +909,7 @@
     },
     "class_type": "LoadLatent",
     "_meta": {
-      "title": "LoadLatent"
+      "title": "Input_Video_Latent"
     }
   },
   "845": {
@@ -918,7 +918,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Is_Continue"
+      "title": "Input_Is_Continue"
     }
   },
   "846": {
@@ -1035,7 +1035,7 @@
     },
     "class_type": "SaveVideo",
     "_meta": {
-      "title": "Preview"
+      "title": "Output_Preview"
     }
   }
 }

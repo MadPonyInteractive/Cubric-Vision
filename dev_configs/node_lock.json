@@ -10,6 +10,14 @@
     }
   },
   "nodes": {
+    "ComfyUI-LTXVideo": {
+      "source": "git-commit",
+      "repo": "Lightricks/ComfyUI-LTXVideo",
+      "commit": "4f45fd6c222eb06eb3e46605da62e7c889e4be5c",
+      "filename": "ComfyUI-LTXVideo",
+      "installRequirements": true,
+      "installOnEngine": true
+    },
     "ComfyUI-MpiNodes": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
