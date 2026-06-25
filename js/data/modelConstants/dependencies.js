@@ -174,8 +174,9 @@ export const DEPS = {
         origin: 'Kijai/LTX2.3_comfy',
         filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
-        size: '39GB',
-        sha256: null,
+        size: '41GB',
+        vram: '12GB',
+        sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
     },
     'ltx23-video-vae': {
         id: 'ltx23-video-vae',
@@ -184,7 +185,7 @@ export const DEPS = {
         filename: 'vae/LTX23_video_vae_bf16.safetensors',
         url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_video_vae_bf16.safetensors',
         size: '1.45GB',
-        sha256: null,
+        sha256: '01ea62d09bc139f95c5dee7b5c062ad6a3e6cd8be910a1983ac02e7eb5b8ee3b',
     },
     'ltx23-audio-vae': {
         id: 'ltx23-audio-vae',
@@ -193,7 +194,7 @@ export const DEPS = {
         filename: 'vae/LTX23_audio_vae_bf16.safetensors',
         url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_audio_vae_bf16.safetensors',
         size: '370MB',
-        sha256: null,
+        sha256: '5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3',
     },
     'ltx23-text-projection': {
         id: 'ltx23-text-projection',
@@ -202,7 +203,7 @@ export const DEPS = {
         filename: 'text_encoders/ltx-2.3_text_projection_bf16.safetensors',
         url: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors',
         size: '2.31GB',
-        sha256: null,
+        sha256: '911d59bb4cb7708179c9a0045ea0fe41212ecfb77aed3a02702b7c0a8274911f',
     },
     'ltx23-gemma-clip': {
         id: 'ltx23-gemma-clip',
@@ -211,7 +212,7 @@ export const DEPS = {
         filename: 'text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
         size: '14.5GB',
-        sha256: null,
+        sha256: '6a8b1a6f0ef61c2a1a02d19bc8b75234db85dee03d598223107c495032450745',
     },
     'ltx23-spatial-upscaler': {
         id: 'ltx23-spatial-upscaler',
@@ -220,7 +221,7 @@ export const DEPS = {
         filename: 'latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
         url: 'https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
         size: '1.5GB',
-        sha256: null,
+        sha256: '5f416311fa8172b65af67530758964708d29a317b830d689a51143b7f91913ed',
     },
     // Baked LoRAs — loaded by the workflow (not user slots), travel with the
     // model. First Cubric model whose LoRAs are NOT merged into the base.
@@ -233,7 +234,7 @@ export const DEPS = {
         filename: 'loras/LTX2.3/LTX2.3_Soft_Enhance.safetensors',
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/LTX2.3_Soft_Enhance.safetensors',
         size: '344MB',
-        sha256: null,
+        sha256: '47681fb3c11a90d95f826838400c69d5dfe210721ea277cc7872f7c98903d12a',
     },
     'ltx23-lora-transition': {
         id: 'ltx23-lora-transition',
@@ -242,7 +243,7 @@ export const DEPS = {
         filename: 'loras/LTX2.3/ltx2.3-transition.safetensors',
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/ltx2.3-transition.safetensors',
         size: '372MB',
-        sha256: null,
+        sha256: 'ba420d6fefafced8e317e2d6ff951b312b52f534377d016b491877a00b830d33',
     },
     'ltx23-lora-talkvid': {
         id: 'ltx23-lora-talkvid',
@@ -251,7 +252,7 @@ export const DEPS = {
         filename: 'loras/LTX2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors',
         url: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/re-host/loras/ltx-2.3-id-lora-talkvid-3k.safetensors',
         size: '1.1GB',
-        sha256: null,
+        sha256: 'e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9',
     },
     // Nodes -----------------------------------------------------------------
     'ComfyUI-LTXVideo': {
@@ -261,8 +262,13 @@ export const DEPS = {
         filename: 'ComfyUI-LTXVideo',
         url: lockUrl('ComfyUI-LTXVideo'),
         installRequirements: true,
+        // Its requirements.txt has an UNPINNED `kornia`, which resolves to 0.8.3 —
+        // that release removed `kornia.geometry.transform.pyramid.pad`, so the node
+        // import fails (`cannot import name 'pad'`) and LTXVNormalizingSampler et al
+        // never register → "Node 'Stage1_Bypass' not found" at gen time. Pin 0.8.2.
+        // See [[project-ltxvideo-kornia-pad]].
+        pipPins: ['kornia==0.8.2'],
         size: '70MB',
-        installOnEngine: true,
     },
     'ComfyUI-MpiNodes': {
         id: 'ComfyUI-MpiNodes',

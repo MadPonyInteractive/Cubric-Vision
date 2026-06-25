@@ -269,8 +269,11 @@ export const MpiPromptBox = ComponentFactory.create({
             }
 
             // Notify the audioMode control (LTX) that audio presence changed so
-            // it can enable/disable its radio.
-            _activeControls.get('audioMode')?.setAudioPresent?.(el.audioCount > 0);
+            // it can enable/disable its radio. The useAudio toggle takes the same
+            // signal but disables INVERSELY (off when a clip is present).
+            const _audioPresent = el.audioCount > 0;
+            _activeControls.get('audioMode')?.setAudioPresent?.(_audioPresent);
+            _activeControls.get('useAudio')?.setAudioPresent?.(_audioPresent);
 
             const renderedItems = _withAssignedRoles();
             _renderStrip(renderedItems);
@@ -920,9 +923,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 // preview→continue needs dual-latent staging carded to MPI-128.
                 if (componentId === 'previewStage' && model?.capabilities?.multiStage !== true) continue;
 
-                // audioMode radio is capability-gated: only models with audio
-                // (LTX) show it. WAN never mounts it.
-                if (componentId === 'audioMode' && model?.capabilities?.audio !== true) continue;
+                // audioMode radio + useAudio toggle are capability-gated: only
+                // models with audio (LTX) show them. WAN never mounts them.
+                if ((componentId === 'audioMode' || componentId === 'useAudio') && model?.capabilities?.audio !== true) continue;
 
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
@@ -936,9 +939,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 }
             }
 
-            // Seed audioMode enablement from current media (audio may already be
-            // present when the op/controls (re)mount).
-            _activeControls.get('audioMode')?.setAudioPresent?.((el.audioCount || 0) > 0);
+            // Seed audioMode + useAudio enablement from current media (audio may
+            // already be present when the op/controls (re)mount).
+            const _seedAudioPresent = (el.audioCount || 0) > 0;
+            _activeControls.get('audioMode')?.setAudioPresent?.(_seedAudioPresent);
+            _activeControls.get('useAudio')?.setAudioPresent?.(_seedAudioPresent);
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
@@ -1039,15 +1044,6 @@ export const MpiPromptBox = ComponentFactory.create({
 
         el.getRunPayload = () => {
             const injectionParams = getInjectionParamsFromControls(_activeControls);
-            // TEMP DEBUG (MPI-127 audio verify): confirm the audio gate params.
-            // Remove after verification.
-            console.log('[MPI-127 param dump] injectionParams =', injectionParams,
-                '| audioCount =', el.audioCount,
-                '| audioMode params =', {
-                    Input_Use_Reference_Audio: injectionParams.Input_Use_Reference_Audio,
-                    Input_Use_Input_Audio: injectionParams.Input_Use_Input_Audio,
-                    Input_Use_Transition: injectionParams.Input_Use_Transition,
-                });
             const previewCtrl = _activeControls.get('previewStage');
             const historyMode = _context.historyMode === true;
             const previewOnly = !historyMode && previewCtrl?.getValue?.() === true;

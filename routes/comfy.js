@@ -42,8 +42,26 @@ const remoteModels = require('./remoteModels');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
+// Repo-owned defaults staged into the engine input/ before every _ms submit.
+// ComfyUI validates EVERY LoadLatent/LoadImage node in a workflow even when its
+// output is unreached (e.g. behind an Is_Continue gate), so each model family's
+// load-node baked filenames must have a real file here. The engine input/ is
+// garbage-collected on shutdown (cleanComfyUITempFiles), but prepare runs every
+// submit so the defaults are always re-staged.
+//   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
+//   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
+//   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
+//   ltx_placeholder.png         — LTX Input_Start_Frame/End_Frame fallback (t2v
+//                                 has no real frame; i2v injects over it)
+//   ltx_silence.wav             — LTX Input_Audio_File fallback (a gen with no
+//                                 audio input never injects this node; without a
+//                                 staged default it dies on Invalid audio file)
 const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
     'ComfyUI_00001_.latent',
+    'ltx_video_latent_00001_.latent',
+    'ltx_audio_latent_00001_.latent',
+    'ltx_placeholder.png',
+    'ltx_silence.wav',
 ]);
 
 function _broadcastComfyEvent(event, data) {
@@ -152,10 +170,17 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
                     error: `Workflow input default missing: ${filename}`,
                 });
             }
-            // Remote engine: upload the bundled default latent to the Pod volume
-            // input dir (idempotent, overwrite) instead of a local copy.
+            // Remote engine: upload the bundled default to the Pod volume input
+            // dir (idempotent, overwrite) instead of a local copy. Route by
+            // extension — `.latent` via the latent endpoint, image/audio
+            // placeholders (LTX ltx_placeholder.png / ltx_silence.wav) via the
+            // generic media endpoint. Both land in the same Pod input/ dir, but
+            // the latent endpoint may reject non-.latent uploads.
             if (remoteActive) {
-                await remoteModels.remoteUploadInput(source, filename, '/wrapper/upload/latent');
+                const endpoint = filename.endsWith('.latent')
+                    ? '/wrapper/upload/latent'
+                    : '/wrapper/upload/media';
+                await remoteModels.remoteUploadInput(source, filename, endpoint);
             } else {
                 await fs.copy(source, path.join(inputDir, filename), { overwrite: true });
             }

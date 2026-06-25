@@ -158,8 +158,8 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
-            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
-            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
         ],
         promptRequired: false,
         components: ['qualityTier', 'duration', 'motionIntensity', 'ratio'],
@@ -169,8 +169,16 @@ export const commands = {
         icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
+        // Audio slot is model-capability-gated: only models with
+        // capabilities.audio (LTX) surface/accept it. WAN filters it out at the
+        // slot read points (MpiPromptBox._mediaSlotsForOperation, commandExecutor).
+        mediaInputs: [
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+        ],
         promptRequired: true,
-        components: ['qualityTier', 'duration', 'ratio', 'previewStage'],
+        // audioMode is capability-gated (only models with capabilities.audio mount
+        // it — MpiPromptBox skips it for WAN). Ordered first in the op slot.
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'ratio', 'previewStage'],
         // Preview cards from this op show a Continue button (branch stage-2 to
         // a NEW card) in addition to Finish (replace preview with final).
         // WAN supports branching because its low-stage LoRAs vary the stage-2
@@ -183,12 +191,16 @@ export const commands = {
         icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
+        // Audio slot is model-capability-gated (see t2v_ms note). WAN gets only
+        // the two image frame slots; LTX additionally accepts the audio slot.
         mediaInputs: [
-            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
-            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
         ],
         promptRequired: false,
-        components: ['qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        // audioMode capability-gated (see t2v_ms note); ordered first.
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
         allowsBranchingContinue: true,
     },
     extend: {
@@ -399,6 +411,20 @@ export function getCommandMediaInputs(key) {
         });
     }
     return slots;
+}
+
+/**
+ * Capability-gates a slot list for a given model. The shared video ops
+ * (i2v_ms/t2v_ms) declare an audio slot, but only models with
+ * `capabilities.audio` (LTX) may surface/accept it; WAN must not. Call this at
+ * every read point where the slot list drives UI acceptance or injection.
+ * @param {Array<{mediaType:string}>} slots
+ * @param {import('./modelRegistry.js').ModelDef|null} [model]
+ * @returns {Array<{mediaType:string}>}
+ */
+export function filterMediaInputsForModel(slots, model = null) {
+    if (model?.capabilities?.audio === true) return slots;
+    return slots.filter(slot => slot.mediaType !== 'audio');
 }
 
 /**

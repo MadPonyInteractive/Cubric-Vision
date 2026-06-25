@@ -156,19 +156,33 @@ export function buildPromptReusePayload(item = {}) {
         modelId: item.modelId ?? source.modelId ?? null,
         operation: source.operation ?? item.operation ?? null,
         injectionParams,
-        mediaItems: previewMediaItems.length ? previewMediaItems : savedMediaItems,
+        // Frame snapshots are the authoritative IMAGE source; saved media supplies
+        // everything else (audio, non-frame video). Merging — not either/or — so an
+        // i2v gen with audio carries BOTH its start/end frames AND its audio clip.
+        mediaItems: _mergeReuseMedia(previewMediaItems, savedMediaItems),
         previewOnly: source.previewOnly === true,
         generationSettings: _clone(source),
         item,
     };
 }
 
+// Frames (from preview-assets) are authoritative for images; saved media fills
+// every OTHER media type (audio, non-frame video). If frames are present, saved
+// images are dropped to avoid a duplicate start-frame chip.
+function _mergeReuseMedia(frameItems = [], savedItems = []) {
+    if (!frameItems.length) return savedItems;
+    const savedNonImage = savedItems.filter(m => (m.mediaType ?? m.type) !== 'image');
+    return [...frameItems, ...savedNonImage];
+}
+
 export async function resolvePromptReuseMediaItems(payload = {}, project = {}) {
+    // Materialized preview-asset frames are the authoritative IMAGE source. Merge
+    // them with the payload's saved NON-image media (audio, non-frame video) so an
+    // i2v gen with audio recalls its frames AND its audio — not one or the other.
     const previewItems = await _previewAssetMediaItems(payload.item, project);
-    if (previewItems.length) return previewItems;
     const existing = Array.isArray(payload.mediaItems) ? payload.mediaItems.filter(Boolean) : [];
-    if (existing.length) return existing;
-    return [];
+    const merged = _mergeReuseMedia(previewItems, existing);
+    return merged;
 }
 
 export function itemHasReusablePrompt(item = {}) {

@@ -15,6 +15,7 @@ import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSe
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { qsa } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
 import { getOpSettings, getSharedSettings } from '../../../data/projectModel.js';
 import { getCommandDefault } from '../../../data/commandRegistry.js';
@@ -261,6 +262,158 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             return {};
+        },
+    },
+
+    /**
+     * audioMode — LTX audio routing (Reference | Original). Only meaningful when
+     * an audio file is present; the radio is disabled otherwise (baked workflow
+     * defaults win with no injection). `setAudioPresent(bool)` is called by
+     * MpiPromptBox from _emitMediaChange when el.audioCount crosses 0.
+     *   Reference → Input_Use_Reference_Audio (voice-ID from the clip)
+     *   Original  → Input_Use_Input_Audio (direct audio)
+     * Either mode forces Input_Use_Transition true (the i2v motion/lipsync enabler
+     * — see [[project-ltx-transition-lora-enables-lipsync]]). No seed UI, no
+     * influence slider ([[feedback-no-seed-ui]]).
+     */
+    audioMode: {
+        nodeTitle: null,
+        scope: 'shared',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.audioMode,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const initial = (saved.audioMode === 'original' || saved.audioMode === 'reference')
+                ? saved.audioMode : this.defaultValue;
+            this.value = initial;
+            this._audioPresent = false;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Audio';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: 'Reference', value: 'reference', icon: 'audio',
+                      info: 'Reference voice — clone the speaker from the audio clip' },
+                    { label: 'Original', value: 'original', icon: 'volumeHigh',
+                      info: 'Original audio — use the input audio directly' },
+                ],
+                value: initial,
+                name: 'audioMode',
+                size: 'sm',
+                columns: 2,
+            });
+
+            this._instance.on('select', ({ value }) => {
+                if (value !== 'reference' && value !== 'original') return;
+                this.value = value;
+                _emitUpdate(this, opts, 'audioMode', value);
+            });
+
+            // Disabled until an audio chip is present.
+            this._applyEnabled(this._audioPresent);
+        },
+        /** Enable/disable the radio + dim the host based on audio presence. */
+        _applyEnabled(present) {
+            const root = this._instance?.el;
+            if (!root) return;
+            qsa('.mpi-radio-group__btn', root).forEach((btn) => {
+                btn.disabled = !present;
+            });
+            root.style.opacity = present ? '' : '0.4';
+            root.style.pointerEvents = present ? '' : 'none';
+        },
+        /** Called by MpiPromptBox when audio media presence changes. */
+        setAudioPresent(present) {
+            this._audioPresent = !!present;
+            this._applyEnabled(this._audioPresent);
+        },
+        getValue() { return this.value ?? this.defaultValue; },
+        getInjectionParams() {
+            // No audio → inject nothing; the workflow's baked gates apply.
+            if (!this._audioPresent) return {};
+            const mode = this.value ?? this.defaultValue;
+            return {
+                Input_Use_Reference_Audio: mode === 'reference',
+                Input_Use_Input_Audio: mode === 'original',
+                Input_Use_Transition: true,
+            };
+        },
+        destroy() {
+            this._instance?.destroy?.();
+            this._instance = null;
+        },
+    },
+
+    /**
+     * useAudio — LTX "generate audio" toggle (Input_Use_Audio MpiSimpleBoolean).
+     * ON → the model generates its own audio track from the prompt. Sits directly
+     * under the audioMode radio. DISABLED while an audio chip is present — then the
+     * audioMode radio (Reference/Original) drives audio from the clip, so this
+     * gate is moot. `setAudioPresent(bool)` is called by MpiPromptBox alongside
+     * audioMode's, from _emitMediaChange when el.audioCount crosses 0.
+     */
+    useAudio: {
+        nodeTitle: 'Input_Use_Audio',
+        scope: 'shared',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.useAudio,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const initialActive = saved.useAudio !== false; // default ON
+            this.value = initialActive;
+            this._audioPresent = false;
+
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'audio',
+                label: 'Generate Audio',
+                labelPosition: 'right',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initialActive,
+                info: 'Generate audio — the model produces its own audio track from the prompt',
+            });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                _emitUpdate(this, opts, 'useAudio', !!active);
+            });
+
+            // Disabled while an audio clip is present (radio drives audio then).
+            this._applyEnabled(this._audioPresent);
+        },
+        /** Disable + dim the toggle WHEN an audio chip is present (inverse of audioMode). */
+        _applyEnabled(present) {
+            const root = this._instance?.el;
+            if (!root) return;
+            root.style.opacity = present ? '0.4' : '';
+            root.style.pointerEvents = present ? 'none' : '';
+        },
+        /** Called by MpiPromptBox when audio media presence changes. */
+        setAudioPresent(present) {
+            this._audioPresent = !!present;
+            this._applyEnabled(this._audioPresent);
+        },
+        getValue() { return this.value === true; },
+        getInjectionParams() {
+            // An audio clip present → the audioMode radio owns the audio gates;
+            // don't fight it. Inject only when no clip is attached.
+            if (this._audioPresent) return {};
+            return { Input_Use_Audio: this.value === true };
+        },
+        destroy() {
+            this._instance?.destroy?.();
+            this._instance = null;
         },
     },
 

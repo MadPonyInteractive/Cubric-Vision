@@ -132,11 +132,11 @@
         0
       ],
       "positive": [
-        "344",
+        "101",
         0
       ],
       "negative": [
-        "344",
+        "101",
         1
       ]
     },
@@ -268,7 +268,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "Output_Video_Latent"
+      "title": "SaveLatent"
     }
   },
   "49": {
@@ -366,7 +366,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "Output_Audio_Latent"
+      "title": "SaveLatent"
     }
   },
   "55": {
@@ -557,7 +557,7 @@
   },
   "75": {
     "inputs": {
-      "int": 3
+      "int": 4
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -614,7 +614,7 @@
   },
   "88": {
     "inputs": {
-      "int": 704
+      "int": 384
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -623,7 +623,7 @@
   },
   "89": {
     "inputs": {
-      "int": 1280
+      "int": 384
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -632,7 +632,7 @@
   },
   "90": {
     "inputs": {
-      "image": "Man_talking_to_woman_park_202606241940.jpeg"
+      "image": "ltx_placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -641,7 +641,7 @@
   },
   "91": {
     "inputs": {
-      "image": "Man_talking_to_woman_park_202606242105.jpeg"
+      "image": "ltx_placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -834,8 +834,8 @@
   "128": {
     "inputs": {
       "any": [
-        "335",
-        2
+        "349",
+        0
       ]
     },
     "class_type": "MpiReroute",
@@ -1281,6 +1281,7 @@
       "filename_prefix": "LTX",
       "format": "auto",
       "codec": "auto",
+      "video-preview": "",
       "video": [
         "189",
         0
@@ -1365,8 +1366,8 @@
   },
   "197": {
     "inputs": {
-      "audio": "p_15587815_293.mp3",
-      "audioUI": "/api/view?filename=p_15587815_293.mp3&type=input&subfolder=&rand=0.606431389674981"
+      "audio": "ltx_silence.wav",
+      "audioUI": "ltx_silence.wav"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1871,7 +1872,7 @@
   },
   "296": {
     "inputs": {
-      "boolean": false,
+      "boolean": true,
       "true": [
         "33",
         0
@@ -2065,11 +2066,11 @@
       "frame_idx": 0,
       "strength": 0.7,
       "positive": [
-        "344",
+        "101",
         0
       ],
       "negative": [
-        "344",
+        "101",
         1
       ],
       "vae": [
@@ -2278,76 +2279,24 @@
       "title": "FLF"
     }
   },
-  "339": {
-    "inputs": {
-      "positive": [
-        "342",
-        0
-      ],
-      "negative": [
-        "343",
-        0
-      ]
-    },
-    "class_type": "MpiConditioningReroute",
-    "_meta": {
-      "title": "To Stage 2"
-    }
-  },
-  "342": {
+  "349": {
     "inputs": {
       "boolean": [
         "313",
         0
       ],
       "true": [
-        "334",
-        0
+        "335",
+        2
       ],
       "false": [
-        "46",
+        "38",
         0
       ]
     },
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "FLF"
-    }
-  },
-  "343": {
-    "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
-      "true": [
-        "334",
-        1
-      ],
-      "false": [
-        "46",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "FLF"
-    }
-  },
-  "344": {
-    "inputs": {
-      "positive": [
-        "339",
-        0
-      ],
-      "negative": [
-        "339",
-        1
-      ]
-    },
-    "class_type": "MpiConditioningReroute",
-    "_meta": {
-      "title": "From Stage 1"
     }
   }
 }
