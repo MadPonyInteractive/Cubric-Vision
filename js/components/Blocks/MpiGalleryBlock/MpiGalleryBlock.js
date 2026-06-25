@@ -1057,8 +1057,26 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
                     StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
                 }
+                // Resolve a reused input file back to its source group's custom
+                // name (if the user renamed that card), so the chip shows the
+                // custom name instead of the raw filename. Match by basename —
+                // the reuse mediaItem carries a url/filePath, the source group's
+                // selected item carries a filePath pointing at the same file.
+                const _basename = (p) => String(p || '').split(/[\\/]/).pop();
+                const _customNameForUrl = (url) => {
+                    const base = _basename(url);
+                    if (!base) return undefined;
+                    const groups = state.currentProject?.itemGroups || [];
+                    for (const g of groups) {
+                        if (!g.customName) continue;
+                        const sel = g.history?.[g.selectedIndex ?? 0];
+                        if (sel && _basename(sel.filePath) === base) return g.customName;
+                    }
+                    return undefined;
+                };
                 for (const item of mediaItems) {
-                    _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
+                    const url = item.url || item.filePath;
+                    _pb.el.injectMedia?.({ url, mediaType: item.mediaType || item.type, role: item.role, name: _customNameForUrl(url) ?? item.name });
                 }
             }
 
