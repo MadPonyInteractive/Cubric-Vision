@@ -484,3 +484,8 @@
 {"at":"2026-06-25T15:45:00Z","event":"task.moved","task":"MPI-133","from":"todo","to":"doing"}
 {"at":"2026-06-25T16:10:00Z","event":"task.moved","task":"MPI-133","from":"doing","to":"done"}
 {"at":"2026-06-25T16:40:00Z","event":"task.moved","task":"MPI-127","from":"doing","to":"done"}
+{"ts":"2026-06-25T16:40:00Z","type":"task.moved","id":"MPI-131","from":"todo","to":"doing","by":"agent"}
+{"at":"2026-06-25T17:00:00Z","event":"task.created","task":"MPI-134"}
+{"at":"2026-06-25T17:00:00Z","event":"task.moved","task":"MPI-134","from":"todo","to":"done"}
+{"at":"2026-06-25T17:00:00Z","event":"task.created","task":"MPI-135"}
+{"at":"2026-06-25T17:30:00Z","event":"task.moved","task":"MPI-134","from":"done","to":"doing"}

@@ -23,6 +23,17 @@ const REUSE_PARTS = [
     { key: 'images', label: 'Use Images' },
 ];
 
+// MPI-110: does a Pod create refusal message mean "out of stock / no host could
+// place it" (retryable → hand off to the auto-retry wait) vs. a real failure?
+// Mirrors `_isStockRefusal` in shell.js — RunPod returns several wordings for the
+// same stock condition, notably "does not have the resources to deploy your pod"
+// on a scarce card (RTX 5090), which the older narrower pattern missed, so the
+// refusal dead-ended to a toast instead of re-entering the wait. Keep in sync.
+function _isStockRefusal(msg) {
+    return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available/i
+        .test(msg || '');
+}
+
 /**
  * MpiSettings — Settings content for the MpiSlideOver panel.
  *
@@ -564,7 +575,9 @@ export const MpiSettings = ComponentFactory.create({
                     _setEngineHint(root, 'Download mode (no GPU): install models, then pick a GPU and Connect to generate.');
                 }
             } else if (running) {
-                _setEngineStatusText(root, 'creating…');
+                // MPI-135 C: Pod is running but ComfyUI not ready yet — connecting,
+                // not creating (the Pod already exists). Match the hero phase.
+                _setEngineStatusText(root, 'connecting…');
                 _engineBtnLabelSet('Disconnect');
                 _engineBtnDisabled(false);
             } else {
@@ -752,7 +765,7 @@ export const MpiSettings = ComponentFactory.create({
                 // Create/resume refused outright (out of stock, API error) — no Pod.
                 if (!res.ok || (!data.starting && !data.ready)) {
                     const msg = data.message || data.error || 'Could not connect to a Pod.';
-                    const outOfStock = /not enough|unavailable|no .*available|out of stock|insufficient/i.test(msg);
+                    const outOfStock = _isStockRefusal(msg);
                     // MPI-110: auto-retry on + an out-of-stock refusal with no Pod left
                     // behind → re-enter the background wait instead of asking the user
                     // to pick another card. A non-stock error (real API failure) still
@@ -774,7 +787,13 @@ export const MpiSettings = ComponentFactory.create({
                 // on a long first-image pull). Poll /remote/comfy/status to ready,
                 // surfacing a "downloading the engine" message when the wait runs
                 // long (a fresh image tag's first ~3 GB pull onto a host).
-                _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
+                // MPI-135 C: the Pod now EXISTS (podId stored above) and we're polling
+                // it to ready — that is the CONNECTING phase, not "creating". The hero
+                // already shows 'connecting'; the panel text said "creating…" for this
+                // whole window, contradicting it. Flip to "connecting…" so both surfaces
+                // agree. ("creating…" = before the create returns a Pod; "resuming…" =
+                // warm-resume of an existing Pod, left as-is.)
+                _setEngineStatusText(root, warm ? 'resuming…' : 'connecting…');
                 let _slowShown = false;
                 let _notRunning = false; // MPI-96: RunPod host failed to start the Pod
                 const ready = await _pollEngineReady(() => {
@@ -837,7 +856,9 @@ export const MpiSettings = ComponentFactory.create({
                 // opens lazily at generation time — flipping to "ready" now lets the
                 // user queue a job before the WS handshake, hanging it in STARTING
                 // (MPI-73 Bug 1). Open the WS and gate "ready" on the real handshake.
-                _setEngineStatusText(root, warm ? 'resuming…' : 'creating…');
+                // MPI-135 C: still the connecting phase (Pod up, WS handshaking) — not
+                // "creating". Keep the panel text consistent with the hero.
+                _setEngineStatusText(root, warm ? 'resuming…' : 'connecting…');
                 let _wsOk = _downloadMode; // download Pods have no WS — ready == connected
                 if (!_downloadMode) {
                     try {
@@ -847,7 +868,7 @@ export const MpiSettings = ComponentFactory.create({
                 }
                 if (!_wsOk) {
                     _setEngineHint(root, 'Almost ready — finishing the connection to the engine. Give it a moment, then try generating.', true);
-                    _setEngineStatusText(root, 'creating…');
+                    _setEngineStatusText(root, 'connecting…');
                     _engineBtnLabelSet('Disconnect');
                     state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
                     Events.emit('ui:info', { message: 'Almost ready — finishing the connection.' });

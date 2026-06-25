@@ -405,6 +405,18 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
 // would block local generation). The user can generate locally while it waits.
 const _BOOT_RETRY_INTERVAL_MS = 15000;
 
+// MPI-110: does a Pod create/reconnect refusal message mean "this GPU is out of
+// stock / no host could place it right now" (retryable) vs. a real API failure
+// (surface it)? RunPod returns several wordings for the same stock condition —
+// notably "This machine does not have the resources to deploy your pod" on a
+// scarce card (e.g. RTX 5090), which the older narrower pattern missed, so the
+// refusal dead-ended instead of re-entering the auto-retry wait. Shared by the
+// boot create loop here and the Settings connect path.
+function _isStockRefusal(msg) {
+  return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available/i
+    .test(msg || '');
+}
+
 // Is `gpuType` available right now in the live RunPod snapshot? Mirrors the
 // Settings picker's availMap logic. `datacenter` may be '__any__' (any DC) or a
 // real DC id. CPU download Pods are effectively always available.
@@ -456,21 +468,31 @@ async function _startGpuWait({ gpuType, datacenter, onFree, shouldContinue }) {
   state.remoteWaitGpu = gpuType;
   StatusBar.notify(`Waiting for ${gpuType} — we'll connect when it frees. Keep generating locally; cancel in Settings → RunPod.`, 'info', 8000);
   try {
+    // MPI-134: the wait gate USED to fire onFree() the instant `_isGpuInStockBoot`
+    // returned true. But RunPod's `available` flag is OPTIMISTIC — a scarce card
+    // (RTX 5090) reads available:true yet the actual createPod refuses with "does
+    // not have the resources". So the old gate returned true on tick 1, fired the
+    // create, it refused, the caller re-entered this wait, the flag was STILL true
+    // → fired again with NO backoff → a hot spin hammering the API every ~1-2s
+    // (and the UI flickered waiting↔creating). The create attempt is the only
+    // ground truth for a scarce card, so: always sleep the interval FIRST, then
+    // let onFree() (which runs the real create) be the probe. A refusal flows back
+    // here as another wait iteration, now correctly spaced by _BOOT_RETRY_INTERVAL_MS.
     while (!_gpuWaitAbort) {
       if (shouldContinue && !shouldContinue()) return false;
-      if (await _isGpuInStockBoot(gpuType, datacenter)) {
-        if (_gpuWaitAbort) return false;
-        // The WAIT is over — the GPU is free and we're about to create/connect. Clear
-        // the wait flag NOW (before the connect, which onFree drives to completion) so
-        // the Settings panel flips "waiting…" → "connecting…" in step with the hero,
-        // instead of showing "waiting" for the whole multi-minute connect. (MPI-110)
-        if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
-        await onFree();
-        return true;
-      }
+      // Back off BEFORE each attempt so a refused create can't spin. (First tick
+      // also waits — a just-refused create is what brought us here.)
       for (let w = 0; w < _BOOT_RETRY_INTERVAL_MS && !_gpuWaitAbort; w += 500) {
         await new Promise((r) => setTimeout(r, 500));
       }
+      if (_gpuWaitAbort) return false;
+      if (shouldContinue && !shouldContinue()) return false;
+      // Clear the wait flag before the create so the panel flips waiting→connecting
+      // in step with the hero. onFree() runs the create+ready flow; if it refuses
+      // (scarce card), the caller re-enters this wait for another spaced attempt.
+      if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
+      await onFree();
+      return true;
     }
     return false;
   } finally {
@@ -625,7 +647,7 @@ async function _initRemoteBoot(runpod) {
       });
       resOk = res.ok;
       data = await res.json().catch(() => ({}));
-      const refusedOutOfStock = !res.ok && /not enough|unavailable|no .*available|out of stock|insufficient/i.test(data.message || data.error || '');
+      const refusedOutOfStock = !res.ok && _isStockRefusal(data.message || data.error || '');
       const sniped = data.unavailable || refusedOutOfStock;
       if (sniped && !warm && runpod.autoRetry === true) {
         // Drop back to local · offline and re-wait — don't hold a fake 'connecting'.
