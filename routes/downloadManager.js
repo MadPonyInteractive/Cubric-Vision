@@ -153,6 +153,15 @@ function _createDepJob(dep) {
         refCount: 0,
         error: null,
         sha256Expected: dep.sha256 || null,
+        // MPI-149 — carry the install-enforcement fields through to the runtime depJob.
+        // finishCustomNodeInstall iterates modelJob.deps (these depJobs); the install
+        // loop reads dep.pipPins (force known-good pins AFTER requirements, e.g.
+        // kornia==0.8.2 for LTXVideo) and dep.installRequirementsCommand (custom
+        // installer, e.g. Frame-Interpolation `python install.py`). Without these here
+        // they were dropped on the engine-deps/upgrade path → kornia floated to 0.8.3 →
+        // LTXVideo `pad` ImportError after every engine update.
+        pipPins: dep.pipPins || null,
+        installRequirementsCommand: dep.installRequirementsCommand || null,
     };
 }
 
