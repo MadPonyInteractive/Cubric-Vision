@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-135","type":"task.created","at":"2026-06-25T17:00:00Z","actor":"claude","summary":"Investigation carded (low pri): (A) DC-steering for scarce GPUs vs hammering __any__; (B) volume-backed connect missing connecting-phase + late %. Spun out of MPI-134."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-135","type":"task.updated","at":"2026-06-26T14:00:00Z","actor":"claude","summary":"Fixed invalid maturity backlog -> idea (backlog is a legacy column, not a maturity enum value; was rendering red)."}

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-147","at":"2026-06-26T14:00:00Z","actor":"claude","summary":"Created 'LTX Progress Bar' (recreated clean; MPI-141 was the deleted original orphaned by next_id drift)."}
