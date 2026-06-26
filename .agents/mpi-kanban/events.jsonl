@@ -509,3 +509,13 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-147","at":"2026-06-26T14:00:00Z","actor":"claude","summary":"Created LTX Progress Bar (recreated clean; orphaned MPI-141 was the deleted original)."}
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-135","at":"2026-06-26T14:00:00Z","actor":"claude","summary":"Fixed invalid maturity backlog -> idea."}
 {"schema":"mpi-kanban/event/v1","type":"board.updated","at":"2026-06-26T14:00:00Z","actor":"claude","summary":"Healed next_id drift: folders 144/145/146 existed but next_id was 144 (caused ID-collision dupes). Reset next_id to 148."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-139","at":"2026-06-26T12:35:00Z","actor":"vscode","summary":"Owns reordered v0.9.0 floor-first batch plan."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-139","type":"task.moved","at":"2026-06-26T14:05:00Z","actor":"vscode","from":"todo","to":"doing","summary":"beginImplementation — Phase 1 v0.26.0 floor bump."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-148","type":"task.created","at":"2026-06-26T14:05:00Z","actor":"vscode","summary":"Created MPI-148 — deferred Builder image v0.26.0 bump (follow-up to MPI-139)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-149","type":"task.created","at":"2026-06-26T14:25:00Z","actor":"vscode","summary":"BUG: kornia pipPins skipped on engine-upgrade path → LTXVideo pad ImportError (found during MPI-139)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-150","type":"task.created","at":"2026-06-26T14:50:00Z","actor":"vscode","summary":"Umbrella/coordination card — RunPod backlog Clusters A/B/C."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-149","type":"task.moved","at":"2026-06-26T15:05:00Z","actor":"vscode","from":"todo","to":"doing","summary":"kornia pipPins fix applied + code-verified (validating)."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-151","at":"2026-06-26T13:30:20.256Z","actor":"vscode","summary":"Created MPI-151."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-152","type":"task.created","at":"2026-06-26T14:45:00Z","actor":"claude","from":null,"to":"doing","summary":"Created in doing (in-progress); evidence captured in research/live-evidence.md."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-153","at":"2026-06-26T15:19:06.953Z","actor":"vscode","summary":"Created MPI-153."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-152","type":"validation.updated","at":"2026-06-26T15:30:00Z","actor":"claude","summary":"MPI-152 maturity validating — local PASS, remote pending Pod rebuild."}

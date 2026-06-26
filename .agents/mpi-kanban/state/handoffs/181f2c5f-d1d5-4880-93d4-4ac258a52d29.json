@@ -1,0 +1,123 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "181f2c5f-d1d5-4880-93d4-4ac258a52d29",
+  "generated_at": "2026-06-26T15:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "v0.9.0 floor-first batch — ComfyUI v0.26.0 bump + MPI-149 kornia pin fix; umbrella plan (MPI-150) created",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Plan + execute the v0.9.0 Pod image-rebuild batch (MPI-145 sage + MPI-146 VRAM + MPI-139 v0.26.0). User REORDERED to floor-first: bump ComfyUI v0.26.0 FIRST, then perf on the stable floor.",
+    "status": "in_progress",
+    "summary": "ComfyUI v0.26.0 bumped in-repo (node_lock + system_dependencies) and VERIFIED locally — i2v + audio-input + Wan all generate clean on the user's RTX 4060 Ti. MPI-149 (kornia pin dropped on engine-upgrade path → LTXVideo breaks) ROOT-CAUSED + FIXED (code-verified, live-verify pending). Backlog reorganized into a 3-cluster umbrella plan (MPI-150) with a file-conflict matrix. Next session continues the umbrella: finish Cluster A (Build A + perf), then Cluster B, then C."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-150/plan.md",
+    "completed": [
+      "MPI-139 Phase 1: bumped dev_configs/node_lock.json core v0.25.1→v0.26.0 (commit f6c162ddcfbd7eefb39c06fe5b8d4c46e8d09f40), frontend 1.45.15→1.45.19, templates 0.10.0→0.10.3; bumped dev_configs/system_dependencies.json engine 0.25.1→0.26.0 (global bump: local + Pod). release:check PASSED.",
+      "v0.26.0 release + local diff reviewed: LTX nodes have NO API renames (safe); #14459 node-loading change is a no-op indent (safe); kornia must stay 0.8.2 (v0.26 ships kornia>=0.7.1 unpinned); #14577/#14594 = memory-mgr change (dynamic vram + native fp8) — input for MPI-146.",
+      "8 baked node requirements desk-checked vs v0.26: none pin comfyui/comfy-kitchen; no node blocks the build.",
+      "comfy-kitchen 'errors' RESOLVED as benign (MPI-131 reply, coordination thread closed) — it's a clean capability probe, guilt-by-association with the MPI-144 OOM. comfy-kitchen==0.2.10 is pinned identically in 0.25.1 AND 0.26.0.",
+      "LOCAL v0.26 upgrade ran + VERIFIED: i2v ✅ + audio-input ✅ + Wan ✅ all gen clean. Custom root G:\\CubricModels preserved.",
+      "MPI-149 FIXED: routes/downloadManager.js _createDepJob (lines 163-164) now carries pipPins + installRequirementsCommand through to the runtime depJob. Code-verified (file loads, LTXVideo DEP has pipPins:['kornia==0.8.2'], chain whole). Dev box manually patched to kornia 0.8.2 (pad OK) so LTX works now.",
+      "Umbrella plan MPI-150 created: 3 clusters (A Pod-batch / B download-stack / C LTX-authoring) + file-conflict matrix. Trimmed out 71/69/126/137 per user.",
+      "Logged gotcha: LTX cold-vs-warm load time (cold ~60s, warm ~35-40s, sampling identical) — explains why better Pod cards feel slower (storage-bandwidth-bound model load, not compute).",
+      "Created cards: MPI-148 (Builder image v0.26 bump, deferred), MPI-149 (the kornia fix), MPI-150 (umbrella)."
+    ],
+    "pending": [
+      "MPI-149 LIVE VERIFY: confirm on the next real engine upgrade that the log shows `pip pins installed for ComfyUI-LTXVideo: kornia==0.8.2` and kornia ends at 0.8.2 (pad OK). Then move MPI-149 to done.",
+      "Cluster A remaining: MPI-139 Phase 1.5 (Krea2 + Boogu-Image model defs), then Build A (bump app routes/remoteProxy.js POD_IMAGE_VERSION v0.8.1→v0.9.0, build image cu124+cpu CI / cu128 local via build-pod-image, verify on a fresh v0.26 Pod = the stability gate), then Phase 2 (MPI-145 bake sage + MPI-146 per-card VRAM → Build B v0.10.0).",
+      "MPI-148 Builder image bump (deferred, low).",
+      "Cluster B (after A commits — shares downloadManager.js + wrapper.py): MPI-129 R2 → MPI-140 progress-lie + MPI-136 stall-watchdog (together) → MPI-135 investigate.",
+      "Cluster C (independent): MPI-128 LTX dual-latent staging + MPI-147 LTX status-bar progress.",
+      "COMMIT: this session's changes are uncommitted (user said handoff + new session; commit via mpi-end-session when ready). RunPod branch only — NO master merge / GitHub release / git tag."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-150",
+    "title": "Umbrella: RunPod-branch backlog (Clusters A/B/C) — coordination plan",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-150/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-150/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-150/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-139 plan.md updated with the floor-first reorder, v0.26 diff findings, local-upgrade result, and the folded-in MPI-149 step.",
+      "MPI-149 root cause + exact fix written to tasks/MPI-149/research/root-cause-and-fix.md; validation.md records code-verified + live-verify-pending.",
+      "MPI-150 plan.md holds the cluster breakdown + file-conflict matrix.",
+      "docs/gotchas.md: added the LTX cold-vs-warm load-time entry."
+    ],
+    "pending": [
+      "After MPI-149 live-verify on next engine upgrade: finalize/confirm a docs/gotchas.md entry on the pipPins-drop-on-upgrade class (the _createDepJob whitelist must carry enforcement fields).",
+      "docs/gotchas.md candidate (post Build A): 'ComfyUI v0.26 ships kornia>=0.7.1 unpinned → keep 0.8.2 pin; v0.26 moved node sys-path loading (#14459, benign) + memory mgr (#14577 dynamic-vram + native fp8 #14594) — retune VRAM (MPI-146) on the new mgr.'",
+      "mpi-end-session must commit this session's files (RunPod branch, explicit pathspec — shared tree)."
+    ]
+  },
+  "next_action": {
+    "description": "Continue the umbrella plan (MPI-150). MPI-149 is fixed + code-verified (live-verify it on the next engine upgrade). Resume Cluster A: MPI-139 Phase 1.5 (author Krea2 + Boogu-Image model defs in js/data/modelConstants/dependencies.js + models.js), then Build A (bump routes/remoteProxy.js POD_IMAGE_VERSION→v0.9.0 + build via build-pod-image, verify on a fresh v0.26 Pod). Read MPI-150 plan.md + MPI-139 plan.md first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "FLOOR-FIRST reorder (user): bump ComfyUI v0.26.0 BEFORE the sage/VRAM perf work — v0.26 changes the memory manager (#14577/#14594) and node loading the perf fixes sit on, so tuning then bumping = wasted. Two builds: Build A = v0.26 floor (v0.9.0), Build B = sage+VRAM (v0.10.0).",
+      "MPI-139 (v0.26) split FROM the original v0.9.0 sage/VRAM batch; MPI-145/146 are now Phase 2 on the stable floor. MPI-139 owns the batch plan.",
+      "MPI-149 folded into the v0.26 floor as a blocker (not standalone) — it breaks LTXVideo for any user who updates the engine.",
+      "Backlog → 3-cluster umbrella (MPI-150) run cluster-by-cluster with handoffs, NOT separate agents on interrelated cards. Trimmed 71/69/126/137 out of scope.",
+      "Global ComfyUI bump = local portable + Pod (both via the repo). User's separate G-drive ComfyUI install is THEIR manual update (outside repo, not agent-editable).",
+      "comfy-kitchen confirmed a non-issue (benign probe) — do not re-investigate."
+    ],
+    "constraints": [
+      "RunPod branch only — NO master merge, NO GitHub release, NO git tag (MPI-131 rule) until the public master release lands.",
+      "Shared git tree — commit by explicit pathspec (git commit --only <paths>), never git add -A/. Push is user-authorized only.",
+      "Edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci` (SEPARATE repo). Image build scripts live in c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\ (product) + cubric-vision-builder\\ (authoring). Pod ops + image builds are USER-GATED live ops (build-pod-image; cu128 LOCAL-only, cu124+cpu via CI). A POD_IMAGE_VERSION bump needs an app restart + a FRESH Pod.",
+      "node_lock.json (dev_configs) is the single source for ComfyUI core+frontend+node pins; the Pod build copies it + the app imports it. v0.26.0 commit = f6c162ddcfbd7eefb39c06fe5b8d4c46e8d09f40.",
+      "kornia stays pinned 0.8.2 (LTXVideo pyramid.pad import; v0.26 still needs it — LTXVideo HEAD is our pinned commit, PR #516 not merged). MPI-149 makes the pin re-fire on upgrade.",
+      "FILE-CONFLICT MATRIX (MPI-150 plan.md): Cluster A must fully ship+commit before Cluster B (share downloadManager.js + wrapper.py + dependencies.js + remoteProxy.js). MPI-129 is upstream of 140/136. C is independent.",
+      "LTX model-load slowness is storage-bandwidth-bound (cold ~60s vs warm ~35-40s; sampling identical) — bigger on Pod network-SSD even with better cards. NOT a Pod-compute bug (logged in docs/gotchas.md).",
+      "Don't read/grep .secrets/runpod.env. On a Pod never pkill main.py (cascades) — use /wrapper/restart-comfy. Editing a live Pod's wrapper.py doesn't take effect (in-memory _build_cmd); only a rebuild/fresh Pod applies it."
+    ],
+    "files_modified": [
+      "dev_configs/node_lock.json (core v0.26.0 + frontend/templates)",
+      "dev_configs/system_dependencies.json (engine 0.26.0)",
+      "routes/downloadManager.js (_createDepJob carries pipPins + installRequirementsCommand — MPI-149 fix)",
+      "docs/gotchas.md (LTX cold-vs-warm load-time entry)",
+      ".agents/mpi-kanban/tasks/MPI-139/plan.md, MPI-145/plan.md (reorder notes)",
+      ".agents/mpi-kanban/tasks/MPI-148/ (Builder bump card), MPI-149/ (kornia fix card + research + validation), MPI-150/ (umbrella card + plan)",
+      ".agents/mpi-kanban/board.json, events.jsonl, state/index.json (card moves + message thread)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-150/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-139/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-149/research/root-cause-and-fix.md",
+      ".agents/mpi-kanban/tasks/MPI-149/validation.md",
+      "routes/remoteProxy.js (POD_IMAGE_VERSION to bump for Build A)",
+      "docs/gotchas.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "Pod/mpi-ci", "ComfyUI engine", "LTX-2.3 authoring"]
+  },
+  "rules_active": [
+    "CLAUDE.md (Builder Pod / mpi-ci routing; RunPod branch discipline; shared-tree commit hygiene)",
+    ".claude/rules/comfy_engine.md",
+    "docs/gotchas.md (RunPod/remote, LTX, ComfyUI engine, sage)",
+    ".claude/commands/build-pod-image.md (Build A/B flow)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-26T15:10:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming the Cubric Vision RunPod-branch v0.9.0 batch in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/181f2c5f-d1d5-4880-93d4-4ac258a52d29.json then use mpi-continue. STATUS: ComfyUI was bumped v0.25.1→v0.26.0 in-repo (dev_configs/node_lock.json core f6c162d + frontend 1.45.19/templates 0.10.3; dev_configs/system_dependencies.json engine 0.26.0) and VERIFIED locally — i2v + audio-input + Wan all generate clean on the user's RTX 4060 Ti. The work is reordered FLOOR-FIRST (user decision): bump v0.26 first (Build A = v0.9.0), then bake sage (MPI-145) + per-card VRAM (MPI-146) on the stable floor (Build B = v0.10.0). MPI-149 (a real ship-risk bug found this session: routes/downloadManager.js `_createDepJob` dropped pipPins + installRequirementsCommand from the runtime depJob, so the kornia==0.8.2 pin never re-fired on engine upgrade → LTXVideo `pad` ImportError) is FIXED + code-verified (lines 163-164 now carry both fields); it still needs a LIVE verify on the next engine upgrade (look for `pip pins installed for ComfyUI-LTXVideo: kornia==0.8.2` in logs/app.log). The whole backlog was reorganized into a 3-cluster umbrella plan: card MPI-150, plan at .agents/mpi-kanban/tasks/MPI-150/plan.md, with a FILE-CONFLICT MATRIX — Cluster A (Pod batch: 139→149→145→146→148) must fully ship+commit BEFORE Cluster B (download stack: 129→140→136→135, shares downloadManager.js + wrapper.py); Cluster C (LTX authoring: 128,147) is independent. NEXT: continue MPI-150 — finish Cluster A: MPI-139 Phase 1.5 (author Krea2 + Boogu-Image model defs in js/data/modelConstants/dependencies.js + models.js), then Build A (bump routes/remoteProxy.js POD_IMAGE_VERSION v0.8.1→v0.9.0, build the Pod image via the build-pod-image flow, verify on a fresh v0.26 Pod = the stability gate). GOTCHAS: RunPod branch ONLY (no master merge / GitHub release / git tag — MPI-131); shared tree → commit by explicit pathspec; edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci`; Pod ops + image builds are user-gated (cu128 builds locally, cu124+cpu via CI); a POD_IMAGE_VERSION bump needs an app restart + fresh Pod; keep kornia pinned 0.8.2; LTX model-load slowness is storage-bandwidth-bound (cold ~60s/warm ~40s, sampling identical — bigger on Pod, NOT a compute bug); comfy-kitchen is a confirmed non-issue. This session's changes are UNCOMMITTED — commit via mpi-end-session (explicit pathspec, RunPod branch). Brief before code."
+}
