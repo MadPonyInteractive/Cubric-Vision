@@ -1,0 +1,2 @@
+{"ts":"2026-06-26T12:00:00Z","type":"task.created","id":"MPI-145","column":"todo","by":"agent","note":"sage-attention not installing on Pod; v0.9.0 batch."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-145","at":"2026-06-26T12:20:00Z","actor":"vscode","summary":"Attached v0.9.0 batch plan (bake sage MPI-145 + per-card VRAM MPI-146). MPI-139 split to v0.10.0."}

@@ -1,0 +1,119 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "03db19ff-0d10-49ba-9382-4ee30a14954e",
+  "generated_at": "2026-06-26T12:05:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Remote LTX-2.3 on RunPod — from MPI-131 to a fully-working remote pipeline (6 bugs, 4 image respins v0.6.0->v0.8.1)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-131 (remote Pod parity for LTX-2.3) and get remote LTX generation actually working on RunPod.",
+    "status": "in_progress",
+    "summary": "Remote LTX-2.3 now FULLY WORKS on RunPod — t2v, i2v, and 4K i2v verified live on both a 5090 (cu128) and a 4090 (cu124). Six bugs found+fixed+shipped across images v0.6.0->v0.8.1. Remaining = a deliberate v0.9.0 PERF/feature batch (sage-attention + per-card VRAM + ComfyUI v0.26.0 + new image models), all of which need ONE more image rebuild. Handing off here because context is huge and the v0.9.0 batch is a fresh deliberate cycle."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-131: kornia==0.8.2 pin + ComfyUI-LTXVideo node + MpiNodes 780c7c3c baked into the product Pod (image v0.6.0). Fixed 'Stage1_Bypass not found'. Verified live.",
+      "MPI-141: wrapper preserves model subfolders (_safe_relpath not _safe_basename) + app backslash->slash heal (image v0.7.0). Fixed LoRA 'value_not_in_list'. Verified.",
+      "MPI-142: dropped --cache-lru 2 from Pod ComfyUI launch -> --cache-ram default (pressure-aware). Fixed ~74-84GB RAM pin on LTX. Image v0.8.0. Verified live (RAM evicts now).",
+      "MPI-143: Pod start.sh extra_model_paths.yaml was missing latent_upscale_models (+audio_encoders+more) -> ComfyUI couldn't see the on-volume upscaler -> gen 'succeeded' but saved NOTHING. THE 3-HOUR ROOT CAUSE. Image v0.8.0. Added a release:check guardrail (Cubric-Vision scripts/release-health-check.mjs) that fails the build on any unmapped dep folder type. Guardrail already caught a 2nd drift (ultralytics). Verified live (first working remote LTX gen).",
+      "MPI-144: added --lowvram to the Pod wrapper (match local routes/comfy.js:283) -> fixed 24GB 4090 OOM. Image v0.8.1. Verified live on a fresh 4090 (the gen that OOM'd now completes).",
+      "Image v0.8.1 / wrapper 0.2.14 built+pushed+pull-verified (cu124+cpu CI, cu128 local). App routes/remoteProxy.js -> v0.8.1/0.2.14.",
+      "All commits pushed: mpi-ci main (latest 789b119), app RunPod (latest b9ec6c6)."
+    ],
+    "pending": [
+      "MPI-145 (HIGH): fix sage-attention on the Pod — it never installs (empty pylibs, ModuleNotFoundError, no --use-sage-attention in cmdline) so all remote LTX ran on slower SDPA. Port the Builder's source-build-with-TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0 pattern. The real SAMPLING speedup.",
+      "MPI-146 (MED): per-card VRAM mode — v0.8.1 added --lowvram BLANKET; the 32GB 5090 did 4K WITHOUT lowvram on v0.7.0, so blanket lowvram may slow big cards. lowvram for <=24GB, normalvram for >=32GB. Verify the 5090 regression is real first.",
+      "MPI-139: bump ComfyUI v0.25.1 -> v0.26.0 (for Krea2 + Boogu image models the user wants). Re-verify all 8 baked node pins resolve on 0.26 + author the new image-model defs in dependencies.js/models.js.",
+      "MPI-137: R2 bucket reorg (cubric-builds/models -> cubric-models/vision). Dep-URL change, NO image dependency — can ship independently.",
+      "BATCH NOTE: MPI-145 + MPI-146 + MPI-139 ALL need an image rebuild -> do them together as ONE v0.9.0 cycle. MPI-137 is orthogonal."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-145",
+    "title": "Pod sage-attention not installing -> SDPA fallback -> slower LTX sampling. Fix the runtime sage bootstrap (Blackwell/Ada arch-list).",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-145/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-145/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "plan", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "All six bug root-causes + fixes captured in task cards MPI-131/141/142/143/144 (descriptions are detailed).",
+      "release:check guardrail added so the MPI-143 yaml-drift class can't ship silently again.",
+      "Pod README (mpi-ci cubric-vision-pod/README.md) updated through v0.8.1 with per-version deltas + the v0.9.0 pending block."
+    ],
+    "pending": [
+      "Consider adding a docs/gotchas.md entry: 'remote LTX gen succeeds but saves nothing' = missing extra_model_paths.yaml folder-type mapping (read the ComfyUI CONTAINER log first — it names the failing node in one line). The 3-hour lesson.",
+      "Consider a gotchas entry: Pod VRAM mode — local uses --lowvram for all NVIDIA (comfy.js:283); Pod must match or smaller cards OOM in normalvram; but lowvram concentrates the model in system RAM so a 56GB model needs a big-RAM Pod too.",
+      "MPI-143 follow-ups still open: (1) verify i2v WITH audio (audio_encoders mapped but unproven), (2) the on-volume upscaler is truncated 995MB vs 1.5GB declared — loaded OK but re-pull/verify SHA."
+    ]
+  },
+  "next_action": {
+    "description": "Plan the v0.9.0 image-rebuild batch: MPI-145 (sage-attention fix — the main perf lever, port the Builder's TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0 source-build) + MPI-146 (per-card VRAM: lowvram<=24GB, normalvram>=32GB) + MPI-139 (ComfyUI v0.26.0 + Krea2/Boogu image models). All need one rebuild. Then rebuild image v0.9.0 (cu124+cpu CI, cu128 local), bump app remoteProxy.js, verify on a fresh Pod. Start with MPI-145.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "All Pod/LTX work stays on the RunPod branch — NO master merge, NO GitHub release, NO git tag (MPI-131 task 8: master releases publicly in ~2 weeks; RunPod merges into master ONLY AFTER that). Deadline is relaxed — no Pro/Patreon patrons currently live.",
+      "v0.8.1 = STOP point for shipping fixes; the v0.9.0 batch (sage+vram+v0.26+models) is a deliberate fresh cycle, not started in this huge context.",
+      "The slow MODEL LOAD is partly disk-bound (Pod network-SSD vs user's local M.2) — no safe remote NVMe path exists. The non-linear duration->gen-time (3s=1:22, 5s=1:44) is MODEL/two-stage-pipeline behavior (also happens on user's local), NOT a Pod bug — do not chase it.",
+      "Sage-attention is the real sampling-speed lever (it's broken on the Pod, all gens ran on SDPA)."
+    ],
+    "constraints": [
+      "Edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci` — SEPARATE repo. NEVER run git from Cubric-Vision against it. Image build scripts (Dockerfile/start.sh/wrapper.py/install_*.sh) live ONLY in c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\ (product) + cubric-vision-builder\\ (authoring).",
+      "Pod ops (create/delete/connect) + image BUILDS are user-gated live ops. The build-pod-image command/skill drives builds; cu128 is LOCAL-ONLY (overflows CI), cu124+cpu via CI.",
+      "POD_IMAGE_VERSION/WRAPPER_VERSION in routes/remoteProxy.js bake at Express-child boot -> a bump needs an APP RESTART + a FRESH Pod (running Pod's image is frozen at create).",
+      "NEVER read/grep any .secrets/ or runpod.env (echoes the API key). The Pod web terminal: `kill`/pkill cascades and nukes the terminal/Jupiter (low PID) — use /wrapper/restart-comfy via the wrapper API to restart ComfyUI, never pkill main.py.",
+      "Pod web terminal (conda cu124 base) has NO curl — use python urllib for wrapper API calls. The wrapper holds _build_cmd in MEMORY — editing wrapper.py on a live Pod + /wrapper/restart-comfy does NOT pick up the edit (wrapper itself isn't reloaded); only a fresh Pod / rebuild applies wrapper.py changes.",
+      "DIAGNOSIS LESSON (cost 3 hours on MPI-143): when a remote gen reports success but produces no output, PULL THE COMFYUI CONTAINER LOG FIRST (RunPod Logs->Container: 'got prompt' -> 'Prompt executed'). It named the failing node in one line. Do not structurally theorize before reading it.",
+      "node_lock.json (dev_configs/) is the single source for ComfyUI core + node pins; the Pod build copies it. Bump there, not in the Dockerfile."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile (kornia pin, WRAPPER_VERSION bumps)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (subfolder preserve, cache-lru drop, --lowvram, version)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (extra_model_paths.yaml folder-type map)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json (synced from app)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md (version history v0.6.0->v0.8.1)",
+      "c:/AI/Mpi/Cubric-Vision/routes/remoteProxy.js (POD_IMAGE_VERSION/WRAPPER_VERSION -> v0.8.1/0.2.14)",
+      "c:/AI/Mpi/Cubric-Vision/scripts/release-health-check.mjs (checkPodModelPaths guardrail)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-145/task.json",
+      ".agents/mpi-kanban/tasks/MPI-146/task.json",
+      ".agents/mpi-kanban/tasks/MPI-144/task.json",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/install_nodes.sh",
+      "c:/AI/Mpi/Cubric-Vision/routes/comfy.js",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md",
+      "docs/gotchas.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "Pod/mpi-ci", "ComfyUI engine", "LTX-2.3 authoring"]
+  },
+  "rules_active": [
+    "CLAUDE.md (Builder Pod / mpi-ci routing; RunPod branch discipline)",
+    ".claude/rules/comfy_engine.md",
+    "docs/gotchas.md (RunPod/remote, sage, Pod build, LTX)",
+    "docs/builder/README.md + docs/builder/research/README.md (LTX research)",
+    ".claude/commands/build-pod-image.md (build flow)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-26T12:05:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming remote-LTX-on-RunPod work in the Cubric Vision Electron app (c:/AI/Mpi/Cubric-Vision) on branch RunPod. Read .agents/mpi-kanban/state/handoffs/03db19ff-0d10-49ba-9382-4ee30a14954e.json then use mpi-continue. STATUS: remote LTX-2.3 generation now FULLY WORKS on RunPod (t2v, i2v, 4K i2v verified live on a 5090-cu128 and a 4090-cu124). This session shipped SIX fixes across product-Pod images v0.6.0->v0.8.1 (all on the RunPod branch / the SEPARATE mpi-ci repo): MPI-131 kornia+LTXVideo+MpiNodes, MPI-141 LoRA subfolder, MPI-142 cache-lru->cache-ram RAM fix, MPI-143 the big one (Pod extra_model_paths.yaml was missing latent_upscale_models -> ComfyUI couldn't see the on-volume upscaler -> gen 'succeeded' but saved nothing; took ~3 hours, the CONTAINER log named it in one line — read that FIRST next time; added a release:check guardrail that caught a 2nd drift), MPI-144 --lowvram to fix the 24GB-4090 OOM. Image v0.8.1/wrapper 0.2.14 is built+pushed+verified; app routes/remoteProxy.js points at v0.8.1/0.2.14; everything is committed+pushed (mpi-ci main 789b119, app RunPod b9ec6c6). NEXT: plan + execute the v0.9.0 image-rebuild BATCH (all need one rebuild): MPI-145 fix sage-attention on the Pod (it never installs -> all gens ran on slower SDPA; port the Builder image's source-build with TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0 — the main sampling speedup) + MPI-146 per-card VRAM (v0.8.1 set --lowvram BLANKET; 32GB+ cards like the 5090 worked WITHOUT it and lowvram may slow them — use lowvram<=24GB, normalvram>=32GB) + MPI-139 bump ComfyUI v0.25.1->v0.26.0 for the Krea2/Boogu image models the user wants (re-verify the 8 baked node pins + author the new model defs). Start with MPI-145. GOTCHAS: edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci` (separate repo); image builds + Pod ops are user-gated live ops (cu128 builds locally, cu124+cpu via CI — see build-pod-image command); a POD_IMAGE_VERSION bump needs an app restart + a FRESH Pod; never read/grep .secrets/runpod.env; never pkill main.py on a Pod (cascades) — use /wrapper/restart-comfy; editing a live Pod's wrapper.py does NOT take effect (wrapper holds _build_cmd in memory — only a rebuild/fresh Pod applies it); the model LOAD slowness is partly disk-bound (Pod SSD, no remote NVMe) and the non-linear duration->time is model/pipeline behavior (also local), NOT a Pod bug. Open MPI-143 follow-ups: verify i2v WITH audio (audio_encoders mapped, unproven) + re-pull the truncated 995MB upscaler (should be 1.5GB). Brief before code."
+}

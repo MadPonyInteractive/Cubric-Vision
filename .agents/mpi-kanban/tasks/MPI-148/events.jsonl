@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-148","type":"task.created","at":"2026-06-26T14:05:00Z","actor":"vscode","summary":"Created MPI-148 — deferred Builder image v0.26.0 bump (follow-up to MPI-139)."}

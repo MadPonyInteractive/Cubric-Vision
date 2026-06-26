@@ -1,0 +1,4 @@
+{"ts":"2026-06-26T10:30:00Z","type":"task.created","id":"MPI-142","column":"doing","by":"agent"}
+{"ts":"2026-06-26T11:30:00Z","type":"task.moved","id":"MPI-142","from":"doing","to":"done","by":"agent","note":"Image v0.8.0 built+pushed+verified (cu124/cpu/cu128, wrapper 0.2.13). Live-verified: remote LTX t2v+i2v incl 4K on 5090."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-142","at":"2026-06-26T10:27:38.649Z","actor":"vscode","summary":"Created MPI-142."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-142","at":"2026-06-26T10:27:51.041Z","actor":"vscode","summary":"Deleted MPI-142."}

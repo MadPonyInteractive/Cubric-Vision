@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-143",
+  "title": "- LTX progress bar",
+  "description": "A status bar progress when a generation is running an LTX workflow. It just jumps to 50% when the generation starts and then, after a while, goes to 100% and hangs there for a while. It finishes, so there's no usable progress feedback in this workflow. The workflow has two main places where it hangs, and that's the first and the second sampler.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "deleted",
+  "created_at": "2026-06-26T10:28:27.682Z",
+  "updated_at": "2026-06-26T10:28:57.393Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

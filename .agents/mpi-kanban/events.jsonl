@@ -519,3 +519,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-152","type":"task.created","at":"2026-06-26T14:45:00Z","actor":"claude","from":null,"to":"doing","summary":"Created in doing (in-progress); evidence captured in research/live-evidence.md."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-153","at":"2026-06-26T15:19:06.953Z","actor":"vscode","summary":"Created MPI-153."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-152","type":"validation.updated","at":"2026-06-26T15:30:00Z","actor":"claude","summary":"MPI-152 maturity validating — local PASS, remote pending Pod rebuild."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-154","at":"2026-06-26T15:53:50.896Z","actor":"vscode","summary":"Created MPI-154."}
