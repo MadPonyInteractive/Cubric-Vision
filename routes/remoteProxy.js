@@ -84,9 +84,14 @@ const UA =
 // rebuilt only to keep the trio at one tag. Wrapper unchanged (still 0.2.11).
 // EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
 // at boot; a live app keeps sending the old tag until restarted.
+// v0.8.0 / wrapper 0.2.13 (MPI-142 + MPI-143): drop --cache-lru 2 (was pinning
+// ~74-84GB system RAM on LTX-2.3 _ms → use --cache-ram default, pressure-aware);
+// + map latent_upscale_models/audio_encoders/etc. in the Pod extra_model_paths.yaml
+// (a model in an unmapped folder type → ComfyUI can't see it → remote gen silently
+// produces no output — the MPI-143 root cause). release:check now guards this drift.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.7.0';
-const WRAPPER_VERSION = '0.2.12';
+const POD_IMAGE_VERSION = 'v0.8.0';
+const WRAPPER_VERSION = '0.2.13';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -468,7 +473,7 @@ router.get('/remote/comfy/status', async (req, res) => {
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
     if (health.ready) _starting = false;
-    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, connecting: inFlight(), noGpu: _mode.noGpu });
+    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, wrapperVersion: health.wrapper_version || null, connecting: inFlight(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window — but also the window
     // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96).
