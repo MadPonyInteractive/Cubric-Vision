@@ -95,8 +95,13 @@ const UA =
 // + map latent_upscale_models/audio_encoders/etc. in the Pod extra_model_paths.yaml
 // (a model in an unmapped folder type → ComfyUI can't see it → remote gen silently
 // produces no output — the MPI-143 root cause). release:check now guards this drift.
+// v0.9.0 / wrapper 0.2.14 (MPI-139): bump ComfyUI v0.25.1→v0.26.0 (node_lock core
+// f6c162d, frontend 1.45.19, templates 0.10.3). FLOOR-FIRST build — v0.26 only, NO
+// perf changes yet (sage MPI-145 + per-card VRAM MPI-146 land in v0.10.0). This is
+// the stability gate: prove v0.26 boots + LTX-2.3 still generates before tuning perf
+// on top. Wrapper unchanged (0.2.14 — no wrapper edit in this phase).
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.8.1';
+const POD_IMAGE_VERSION = 'v0.9.0';
 const WRAPPER_VERSION = '0.2.14';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
