@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-139","at":"2026-06-25T22:27:51.652Z","actor":"vscode","summary":"Created MPI-139."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-139","at":"2026-06-25T22:30:44.724Z","actor":"vscode","summary":"Updated MPI-139."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-139","at":"2026-06-26T12:35:00Z","actor":"vscode","summary":"Owns reordered v0.9.0 floor-first batch plan (v0.26.0 bump first, sage+VRAM Phase 2). Confirmed kornia 0.8.2 pin still needed on 0.26."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-139","type":"task.moved","at":"2026-06-26T14:05:00Z","actor":"vscode","from":"todo","to":"doing","summary":"beginImplementation — Phase 1 v0.26.0 floor bump."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-139","type":"checklist.updated","at":"2026-06-26T14:05:00Z","actor":"vscode","summary":"Derived phase checklist (floor / models / perf)."}
