@@ -52,8 +52,8 @@ const UA =
 //   -cu124 = everything else (Ampere/Ada/Hopper), torch 2.6.0+cu124, host-driver
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
-// Both bake ffmpeg + git; sageattention compiles to the volume on first boot per
-// GPU arch (~5-15 min one-time, SDPA fallback). The image TAG version (0.4.8) is
+// Both bake ffmpeg + git; sageattention is BAKED per-arch at image build (MPI-145,
+// v0.10.0 — no first-boot compile; SDPA fallback if it didn't build). The image TAG version (0.4.8) is
 // a rebuild of wrapper 0.2.10 across all three profiles (cpu/cu124/cu128). 0.4.8
 // adds the first-boot manifest provenance stamp (MPI-90) the app compat gate reads.
 // MPI-100 briefly shipped a v0.4.5 `disk` block (statvfs) but it was REVERTED:
@@ -105,8 +105,8 @@ const UA =
 // endpoint → wrapper bump 0.2.14→0.2.15 + a Pod image rebuild to ship for REMOTE.
 // (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.9.1';
-const WRAPPER_VERSION = '0.2.15';
+const POD_IMAGE_VERSION = 'v0.10.0';
+const WRAPPER_VERSION = '0.2.16';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
