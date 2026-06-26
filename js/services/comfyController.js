@@ -125,6 +125,9 @@ function createEngine({ engine, alwaysLocal }) {
     /** @type {Map<string, (err: Error) => void>} Reject hooks mirroring `_promptListeners`, used to settle a pending generation if the WS drops out-of-band (e.g. a remote container OOM-kill — B4). */
     _promptRejectors: new Map(),
 
+    /** @type {Map<string, (result: object) => void>} Resolve hooks mirroring `_promptListeners`. Used to settle a pending generation from `/history` when the live terminal WS event was MISSED during a reconnect blip (MPI-152): terminal events are sent `broadcast=False` and are NOT replayed on reconnect, so a gen that finishes during the ~1s reconnect window would hang forever. `_reconcileFromHistory` resolves through this. */
+    _promptResolvers: new Map(),
+
     /** @type {number} Consecutive WS reconnect attempts with no successful open. Reset on `onopen`; a sustained drop trips `_onWsDropped`. */
     _wsReconnectAttempts: 0,
 
@@ -637,6 +640,15 @@ function createEngine({ engine, alwaysLocal }) {
             // safe to accept a generation (MPI-73 Bug 1). `ensureWsConnected` polls
             // `isWsReady()`, which now returns true.
             this._wsReady = true;
+            // MPI-152: if a generation was in flight when the socket blipped, the
+            // terminal completion event (broadcast=False, not replayed) may have
+            // fired into the dead socket and been lost → the gen would hang forever.
+            // Reconcile from `/history` now that we're reconnected. Small delay so
+            // the connection settles before the HTTP call.
+            if (this._isRunning && this._activePromptId) {
+                const pid = this._activePromptId;
+                setTimeout(() => this._reconcileFromHistory(pid), 500);
+            }
         };
 
         this._ws.onerror = (e) => {
@@ -683,6 +695,7 @@ function createEngine({ engine, alwaysLocal }) {
         const rejectors = Array.from(this._promptRejectors.values());
         this._promptListeners.clear();
         this._promptRejectors.clear();
+        this._promptResolvers.clear();
         this._pendingPromptMessages.clear();
         this._activePromptId = null;
         this._isRunning = false;
@@ -699,6 +712,72 @@ function createEngine({ engine, alwaysLocal }) {
         for (const reject of rejectors) {
             try { reject(err); } catch (_) { /* best-effort */ }
         }
+    },
+
+    /**
+     * Settle a generation from ComfyUI `/history` when its live terminal WS event
+     * was MISSED during a reconnect blip (MPI-152). ComfyUI sends terminal events
+     * (`execution_success` / the legacy `executing node===null`) with
+     * `broadcast=False` to the submitting client only, and does NOT replay them on
+     * reconnect. A gen that finishes during the ~1s WS reconnect window therefore
+     * never settles → the gallery card spins + the status bar hangs forever even
+     * though the engine finished and the output file exists.
+     *
+     * On reconnect (`onopen`, while a gen is in flight) we query
+     * `/history/{prompt_id}`:
+     *   - empty `{}`            → still running; let normal WS events settle it.
+     *   - status.completed +    → DONE: build output URLs from `entry.outputs`
+     *     status_str==='success'  (same per-node shape as the `executed` event, so
+     *                             `_collectComfyOutputUrls` is reused) and resolve.
+     *   - status_str==='error'  → reject with the history error messages.
+     * Best-effort: any fetch/parse failure is swallowed so the normal WS flow (or
+     * the B4 drop watchdog) still governs.
+     * @param {string} promptId
+     * @private
+     */
+    async _reconcileFromHistory(promptId) {
+        // Already settled by a live event between the onopen and this timeout.
+        if (!this._promptResolvers.has(promptId)) return;
+        let entry;
+        try {
+            const resp = await fetch(`${this.httpBase()}/history/${promptId}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            entry = data?.[promptId];
+        } catch (_) {
+            return; // proxy/wrapper not ready — let WS flow handle it
+        }
+        if (!entry) return;                       // not in history yet → still running
+        const status = entry.status;
+        if (!status?.completed) return;           // incomplete → still running
+        // Re-check: a live terminal event may have landed during the await.
+        if (!this._promptResolvers.has(promptId)) return;
+
+        if (status.status_str === 'error') {
+            const reject = this._promptRejectors.get(promptId);
+            this._promptListeners.delete(promptId);
+            this._promptRejectors.delete(promptId);
+            this._promptResolvers.delete(promptId);
+            if (this._activePromptId === promptId) this._activePromptId = null;
+            this._isRunning = this._promptListeners.size > 0;
+            clientLogger.warn('comfy', `Reconciled FAILED gen ${promptId} from /history`);
+            reject?.(new Error(`Remote generation failed: ${(status.messages || []).join('; ') || 'unknown error'}`));
+            return;
+        }
+
+        // success → rebuild outputs from every node's history output dict
+        const outputs = [];
+        for (const nodeOutput of Object.values(entry.outputs || {})) {
+            _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
+        }
+        const resolve = this._promptResolvers.get(promptId);
+        this._promptListeners.delete(promptId);
+        this._promptRejectors.delete(promptId);
+        this._promptResolvers.delete(promptId);
+        if (this._activePromptId === promptId) this._activePromptId = null;
+        this._isRunning = this._promptListeners.size > 0;
+        clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history (${outputs.length} outputs) — terminal WS event was missed on reconnect`);
+        resolve?.({ success: true, images: outputs });
     },
 
     /**
@@ -965,6 +1044,7 @@ function createEngine({ engine, alwaysLocal }) {
                     if (promptId) {
                         this._promptListeners.delete(promptId);
                         this._promptRejectors.delete(promptId);
+                        this._promptResolvers.delete(promptId);
                     }
                     if (this._activePromptId === promptId) this._activePromptId = null;
                     this._isRunning = this._promptListeners.size > 0;
@@ -972,10 +1052,26 @@ function createEngine({ engine, alwaysLocal }) {
                     return;
                 }
 
-                if (msg.type === 'executing' && msg.data.node === null) {
+                // Terminal completion. ComfyUI signals "queue item done" two
+                // different ways across versions:
+                //   • <=0.25.1: `executing` with `node === null` (the sentinel).
+                //   • 0.26.0+ : a dedicated `execution_success` message; the old
+                //     `executing node===null` sentinel is NO LONGER sent
+                //     (execution.py:815). Listening only for the sentinel left the
+                //     generation Promise hung forever on 0.26 — the asset arrived
+                //     (via `executed`, still sent) but the job never settled, so the
+                //     app sat in "STARTING" (MPI-139 v0.26 floor regression).
+                // Accept BOTH so the resolve is engine-version-agnostic. `executed`
+                // events (above) have already populated `outputs` by the time either
+                // terminal arrives.
+                const isTerminalDone =
+                    (msg.type === 'executing' && msg.data?.node === null) ||
+                    msg.type === 'execution_success';
+                if (isTerminalDone) {
                     if (promptId) {
                         this._promptListeners.delete(promptId);
                         this._promptRejectors.delete(promptId);
+                        this._promptResolvers.delete(promptId);
                     }
                     if (this._activePromptId === promptId) this._activePromptId = null;
                     this._isRunning = this._promptListeners.size > 0;
@@ -1049,6 +1145,11 @@ function createEngine({ engine, alwaysLocal }) {
                     // Register a reject hook so an out-of-band WS drop (B4) can
                     // settle this generation instead of leaving it hung "running".
                     this._promptRejectors.set(promptId, reject);
+                    // Register a resolve hook so a MISSED terminal event (lost during
+                    // a reconnect blip — terminal events are broadcast=False + not
+                    // replayed) can be settled from `/history` by `_reconcileFromHistory`
+                    // (MPI-152).
+                    this._promptResolvers.set(promptId, resolve);
                     if (onMessage) onMessage({ type: 'prompt_ack', prompt_id: promptId });
                     const pending = this._pendingPromptMessages.get(promptId) || [];
                     this._pendingPromptMessages.delete(promptId);

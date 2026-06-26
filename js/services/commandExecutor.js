@@ -1049,6 +1049,19 @@ export function runCommand(payload) {
                 if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
         }
+        // Idempotent gen-finish. ComfyUI may signal completion via the legacy
+        // `executing node===null` sentinel (<=0.25.1) OR the new `execution_success`
+        // message (0.26.0+) — and in mixed cases potentially both. Guard so
+        // onComplete + the aggregator finish fire exactly once (MPI-152).
+        let _generationFinished = false;
+        const _finishGeneration = () => {
+            if (_generationFinished) return;
+            _generationFinished = true;
+            aggregator.onExecutionSuccess();
+            closeComfyEventSource();
+            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
+        };
+
         const onMessage = (msg) => {
             if (msg.type === 'prompt_ack') {
                 exec.promptId = msg.prompt_id;
@@ -1136,10 +1149,19 @@ export function runCommand(payload) {
                     return;
                 }
 
-                // node === null: execution complete signal
-                aggregator.onExecutionSuccess();
-                closeComfyEventSource();
-                exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
+                // node === null: legacy (<=0.25.1) execution-complete signal.
+                _finishGeneration();
+                return;
+            }
+
+            // 0.26.0+ terminal: the `executing node===null` sentinel was dropped in
+            // favour of a dedicated `execution_success` message. Without handling it
+            // here, `exec.onComplete` never fires — outputs arrive (via `executed`)
+            // but the gallery card + status bar hang forever (MPI-152). Handle BOTH
+            // so the completion is engine-version-agnostic; `_finishGeneration` is
+            // idempotent (whichever terminal arrives first wins).
+            if (msg.type === 'execution_success') {
+                _finishGeneration();
                 return;
             }
 

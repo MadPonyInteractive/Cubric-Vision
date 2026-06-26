@@ -96,13 +96,17 @@ const UA =
 // (a model in an unmapped folder type → ComfyUI can't see it → remote gen silently
 // produces no output — the MPI-143 root cause). release:check now guards this drift.
 // v0.9.0 / wrapper 0.2.14 (MPI-139): bump ComfyUI v0.25.1→v0.26.0 (node_lock core
-// f6c162d, frontend 1.45.19, templates 0.10.3). FLOOR-FIRST build — v0.26 only, NO
-// perf changes yet (sage MPI-145 + per-card VRAM MPI-146 land in v0.10.0). This is
-// the stability gate: prove v0.26 boots + LTX-2.3 still generates before tuning perf
-// on top. Wrapper unchanged (0.2.14 — no wrapper edit in this phase).
+// f6c162d, frontend 1.45.19, templates 0.10.3). FLOOR-FIRST build — v0.26 only.
+// v0.9.1 / wrapper 0.2.15 (MPI-152): add GET /wrapper/history/{prompt_id} for remote
+// gen completion reconciliation. v0.26 terminal WS events are broadcast=False + not
+// replayed on reconnect, so a gen finishing during the ~1s remote WS reconnect blip
+// never settled → gallery card spun forever. The app now polls /history on reconnect
+// (comfyController._reconcileFromHistory) and settles from it. Needs this wrapper
+// endpoint → wrapper bump 0.2.14→0.2.15 + a Pod image rebuild to ship for REMOTE.
+// (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.9.0';
-const WRAPPER_VERSION = '0.2.14';
+const POD_IMAGE_VERSION = 'v0.9.1';
+const WRAPPER_VERSION = '0.2.15';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -1263,6 +1267,23 @@ router.get('/proxy/queue', async (req, res) => {
     await _passthrough(res, upstream);
   } catch (err) {
     logger.error('runpod', 'proxy queue snapshot failed', err);
+    res.status(502).json({ error: 'relay_failed' });
+  }
+});
+
+// Completion reconciliation (MPI-152): the app polls ComfyUI /history/{prompt_id}
+// on WS reconnect to settle a gen whose terminal event was missed during the blip
+// (terminal events are broadcast=False + not replayed). Forwards to the wrapper's
+// /wrapper/history/{prompt_id} (wrapper >= 0.2.15). An empty `{}` body = the prompt
+// is not yet in history (still running); the app treats that as "keep waiting".
+router.get('/proxy/history/:promptId', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/history/${encodeURIComponent(req.params.promptId)}`, { headers });
+    await _passthrough(res, upstream);
+  } catch (err) {
+    logger.error('runpod', 'proxy history reconcile failed', err);
     res.status(502).json({ error: 'relay_failed' });
   }
 });

@@ -108,6 +108,23 @@ Lives in `comfy_workflows/scripts/workflow_generation/`. `generate.bat` → `orc
 
 Gemma text-encoder for both video and audio paths = **fp8** (fp4 degrades, full over-influences). Main diffusion = **full bf16 ONLY** (fp8 dropped). Full bf16 runs on 16GB VRAM via RAM offload (peaks 14.4/16.0 GB VRAM, ~24GB spills to system RAM). User explicitly rejected fp8 fallback: "the quality is crap on fp8." Full bf16 (16GB VRAM + ~32GB+ free system RAM) is the HARD minimum spec. Gen timings (full bf16, RTX 3090): i2v 2s≈60s; t2v 5s≈100s.
 
+### LTX-2.3 cold-vs-warm load time — prompt→sampling gap is ALL model load, not compute
+
+Measured live on RTX 4060 Ti (16GB), local engine, ComfyUI v0.26.0, i2v_ms ltx-23 (logs/app.log
+2026-06-26): the gap from `got prompt` to the first sampler actually stepping is pure model
+load/init. **COLD** (first gen after engine start): ≈**60s** (got prompt 12:33:14 → stage-1 "Model
+Initialization complete!" 12:34:15). **WARM** (model already resident, 2nd+ gen): ≈**35-40s** (got
+prompt 12:36:13 → init complete 12:36:53). The cold→warm delta (~20s) is disk/RAM warmup of the
+~56GB model (42GB bf16 diffusion + 14GB gemma fp8); SAMPLING itself is identical both runs
+(`Prompt executed in 138.81s` cold vs `138.34s` warm — same to <0.5s). So the cold penalty is
+LOAD-bound, not compute-bound. **IMPLICATION for the Pod (the user's "better cards feel SLOWER"
+observation):** a faster GPU does NOT shrink this gap — it is gated by storage→RAM→VRAM bandwidth.
+The Pod's network-SSD is slower than the user's local M.2, so the cold-load penalty is BIGGER on a
+Pod even with a 5090/4090, and every fresh Pod gen pays the cold price. Do NOT chase this as a
+sampling/Pod-compute regression; it is the model-load floor. Levers: keep the model warm (avoid
+MpiClearVram between gens), faster Pod storage if ever available. Sampling speed is a separate
+lever (sage-attention, MPI-145).
+
 ### LTX-2.3 stage-1 = motion, stage-2 = upscaler
 
 Stage-1 decides motion; stage-2 is a low-denoise latent UPSCALER (hi-res-fix) that re-denoises for spatial detail only and does NOT re-plan motion. **ALL LoRAs go STAGE-1 ONLY, bypass stage-2** — a stage-1 LoRA's effect is carried into stage-2 through the latent; duplicating into stage-2 = redundant cost. Live A/B (Soft LoRA stage-1+2 vs stage-1-only): difference marginal. Garment morph at stage-2 is an upscale/detail re-interpretation artifact — fix via prompt word or stage-2 denoise strength, NOT LoRA juggling. Step counts: terminal shows N-1 denoise steps for N scheduled (first sigma = start latent, not a bug).
@@ -195,6 +212,22 @@ The ComfyUI Windows portable (`ComfyUI_windows_portable_nvidia.7z`) at v0.25.1 s
 ---
 
 ## ComfyUI engine / workflows / injection
+
+### v0.26 dropped the `executing node===null` completion sentinel → use `execution_success` (MPI-152)
+
+ComfyUI v0.26.0 no longer signals queue-item completion with `executing` `{node: null}`. Completion is now a dedicated **`execution_success`** `{prompt_id}` WS message (`execution.py:815`, `broadcast=False`). The app had TWO completion handlers both keyed on the dropped sentinel: `comfyController.js` (gen Promise resolve) and `commandExecutor.js` `exec.onComplete` (gallery placeholder→asset swap + status/clock clear). Symptom on v0.26: the gen COMPLETES on the engine and outputs land (via `executed`, still sent), but the app HANGS forever — gallery card spins, clock counts, status stuck. Fix: accept BOTH terminals (`executing node===null` legacy + `execution_success`) in both handlers; `commandExecutor` routes through an idempotent `_finishGeneration()`. The events were NOT renamed broadly (v0.26 still sends old `progress` alongside new `progress_state`) — only the terminal sentinel changed. ALSO: terminal events are `broadcast=False` (client-targeted) and are NOT replayed on WS reconnect, so a gen finishing during a remote WS reconnect blip loses its terminal → `comfyController._reconcileFromHistory` polls `/history/{prompt_id}` on reconnect and settles from it (needs the wrapper `/wrapper/history` endpoint, wrapper >= 0.2.15). `model_type FLUX` in the LTX load log is NORMAL (LTX uses the DiT/Flux arch class), not a bug.
+
+### v0.26 product-Pod build: comfyui_ref MUST be the node_lock TAG, not the commit SHA (MPI-139)
+
+The product Pod Dockerfile (`mpi-ci/cubric-vision-pod/Dockerfile`) clones ComfyUI with `git clone --depth 1 --branch ${COMFYUI_REF}`. `--branch` accepts a **tag or branch name ONLY — a commit SHA fails** (`fatal: Remote branch <sha> not found`, exit 128, build dies). When dispatching `build-pod-image`, pass `comfyui_ref` = `node_lock.json` `comfyui.core.tag` (e.g. `v0.26.0`), NOT `comfyui.core.commit`. The **Builder** Dockerfile uses `git checkout ${COMFYUI_REF}` instead, which DOES take a SHA — don't conflate the two. (Hit live: first v0.9.0 CI dispatch failed on the SHA; re-dispatch with the tag succeeded.)
+
+### v0.26 `--lowvram` is a NO-OP when dynamic-vram (aimdo) is enabled (MPI-146)
+
+v0.26's `--lowvram` help text: *"Doesn't do anything if dynamic vram is enabled. If dynamic vram isn't being used this option makes the text encoders run on the CPU."* The default dynamic-vram allocator (`comfy_aimdo`) fault-loads weights JIT and keeps the encoder on GPU. So if a Pod gen shows the Gemma text-encoder loading/running on CPU (`CLIP/text encoder model load device: cpu`) AND a partially-offloaded transformer with `lowvram patches: 0`, **aimdo is NOT initializing** (likely a CUDA/package mismatch in the Pod image) → `--lowvram` falls through to its real CPU-offload behavior = slow. The MPI-146 lever is therefore "get aimdo initializing + DROP `--lowvram`", NOT "tune lowvram". `--disable-dynamic-vram` is deprecated ("removed soon") — don't add it. Check ComfyUI startup stdout for `aimdo`/`dynamic` init lines on the next Pod. fp8 transformer (~20GB) + fp8 encoder (~7GB) fits a 24GB 4090 with dynamic-vram.
+
+### v0.26 node renames (#14547) + category moves (#14460) = display-name only, NO workflow breakage
+
+PR #14547 ("Rename a bunch of nodes") changes node **display_name** + `is_deprecated` flags ONLY — the `node_id`/`class_type` keys (what saved workflow JSON references) are UNCHANGED. #14460 category moves are UI-only (where a node appears in the add-node menu). Verified all baked LTX-2.3/Wan/SDXL workflow `class_type` refs survive v0.26 unchanged. Do NOT chase a "node rename" when migrating engine versions unless a PR actually changes `NODE_CLASS_MAPPINGS` keys (these two did not).
 
 ### workflow input validation trap
 
