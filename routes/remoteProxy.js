@@ -84,14 +84,20 @@ const UA =
 // rebuilt only to keep the trio at one tag. Wrapper unchanged (still 0.2.11).
 // EDITING THESE TWO CONSTANTS NEEDS AN APP RESTART — the Express child bakes them
 // at boot; a live app keeps sending the old tag until restarted.
+// v0.8.1 / wrapper 0.2.14 (MPI-144): Pod ComfyUI now launches with --lowvram, to
+// MATCH the local engine (routes/comfy.js:283 uses --lowvram for every NVIDIA GPU).
+// Without it the Pod ran ComfyUI in default normalvram → tried to keep the 42GB LTX
+// transformer resident in VRAM → OOM-killed a 5s 704x1280 i2v on a 24GB 4090. lowvram
+// offloads to system RAM (paired with the --cache-ram pressure-aware default), so big
+// models fit on smaller cards exactly as they do locally.
 // v0.8.0 / wrapper 0.2.13 (MPI-142 + MPI-143): drop --cache-lru 2 (was pinning
 // ~74-84GB system RAM on LTX-2.3 _ms → use --cache-ram default, pressure-aware);
 // + map latent_upscale_models/audio_encoders/etc. in the Pod extra_model_paths.yaml
 // (a model in an unmapped folder type → ComfyUI can't see it → remote gen silently
 // produces no output — the MPI-143 root cause). release:check now guards this drift.
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.8.0';
-const WRAPPER_VERSION = '0.2.13';
+const POD_IMAGE_VERSION = 'v0.8.1';
+const WRAPPER_VERSION = '0.2.14';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
