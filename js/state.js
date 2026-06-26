@@ -59,7 +59,7 @@ const _state = {
     comfyNeedsRestart: false,   // true after custom node install
 
     // ── Gallery organization ───────────────────────────────────────────────────
-    gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'previews'|'favorites'
+    gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'audios'|'previews'|'favorites'
     galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
     gallerySizeLevel: 3,             // 1–4; survives gallery navigation within session
 

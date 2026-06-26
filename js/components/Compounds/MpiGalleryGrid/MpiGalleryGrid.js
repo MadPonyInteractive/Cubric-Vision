@@ -86,6 +86,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="images"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="videos"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="audios"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="previews"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="favorites"></div>
                     <div class="mpi-gallery-grid__info-btn-slot"></div>
@@ -1303,6 +1304,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 let display = _groups.filter(g => {
                     if (filter === 'images')   return g.type === 'image';
                     if (filter === 'videos')    return g.type === 'video';
+                    if (filter === 'audios')    return g.type === 'audio';
                     if (filter === 'previews')  return g.history?.[g.selectedIndex]?.stage === 'preview';
                     if (filter === 'favorites') return g.favourite === true;
                     return true;
@@ -1489,6 +1491,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             { filter: 'all',       label: 'All' },
             { filter: 'images',    label: 'Images' },
             { filter: 'videos',    label: 'Videos' },
+            { filter: 'audios',    label: 'Audio' },
             { filter: 'previews',  label: 'Previews' },
             { filter: 'favorites', label: 'Favs' },
         ];

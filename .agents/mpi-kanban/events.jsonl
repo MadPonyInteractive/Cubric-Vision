@@ -520,3 +520,16 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-153","at":"2026-06-26T15:19:06.953Z","actor":"vscode","summary":"Created MPI-153."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-152","type":"validation.updated","at":"2026-06-26T15:30:00Z","actor":"claude","summary":"MPI-152 maturity validating — local PASS, remote pending Pod rebuild."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-154","at":"2026-06-26T15:53:50.896Z","actor":"vscode","summary":"Created MPI-154."}
+{"ts":"2026-06-26T16:10:00Z","type":"task.moved","id":"MPI-145","from":"todo","to":"doing","by":"agent"}
+{"ts":"2026-06-26T16:10:00Z","type":"task.moved","id":"MPI-146","from":"todo","to":"doing","by":"agent"}
+{"ts":"2026-06-26T16:30:00Z","type":"validation.updated","id":"MPI-145","by":"agent","note":"validation.md written — code PASS, remote verify pending v0.10.0 build."}
+{"ts":"2026-06-26T23:40:00Z","type":"task.created","id":"MPI-155","column":"todo","by":"agent"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-151","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-151 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-153","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-153 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-154","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-154 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-151","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"MPI-151 coded, validating."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-153","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"MPI-153 coded, validating."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-154","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"MPI-154 coded, validating."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-151","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"MPI-151 done."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-153","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"MPI-153 done."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-154","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"MPI-154 done."}

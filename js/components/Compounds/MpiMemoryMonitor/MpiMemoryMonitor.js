@@ -83,7 +83,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
             icon: 'unload',
             size: 'md',
             variant: 'ghost',
-            info: props.info ?? 'Release VRAM — F5 standard · Ctrl+F5 deep clean',
+            info: props.info ?? 'Release VRAM — F5 · Ctrl+click or Ctrl+F5 for deep clean (VRAM + RAM)',
         });
 
         // ── Ctrl-held visual (signals deep clean mode) ───────────────────────
@@ -106,7 +106,12 @@ export const MpiMemoryMonitor = ComponentFactory.create({
         const _unsubKeydown = Hotkeys.bind('memoryMonitor.ctrl.down', _onKeydown);
         const _unsubKeyup   = Hotkeys.bind('memoryMonitor.ctrl.up', _onKeyup);
 
-        unloadBtn.on('click', () => emit('release', { deep: _ctrlHeld }));
+        // Read the modifier off the click event itself — authoritative and
+        // immune to _ctrlHeld desync (missed keydown on focus steal / DevTools).
+        unloadBtn.on('click', ({ originalEvent }) => {
+            const deep = !!(originalEvent && (originalEvent.ctrlKey || originalEvent.metaKey)) || _ctrlHeld;
+            emit('release', { deep });
+        });
 
         // ── Public status API ────────────────────────────────────────────────
         /**

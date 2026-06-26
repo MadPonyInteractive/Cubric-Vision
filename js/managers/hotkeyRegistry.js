@@ -76,7 +76,16 @@ export const HOTKEY_REGISTRY = [
         type:             KEY_TYPE.DOWN,
         category:         'memory',
         scopeLabel:       'Memory',
-        description:      'Refresh memory',
+        description:      'Release VRAM',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'memory.refresh.deep',
+        key:              'control+f5',
+        type:             KEY_TYPE.DOWN,
+        category:         'memory',
+        scopeLabel:       'Memory',
+        description:      'Deep clean (VRAM + RAM)',
         allowWhileTyping: true,
     },
 

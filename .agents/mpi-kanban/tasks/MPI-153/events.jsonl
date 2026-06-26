@@ -1,1 +1,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-153","at":"2026-06-26T15:19:06.953Z","actor":"vscode","summary":"Created MPI-153."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-153","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-153 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-153","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"Audio filter chip added to gallery (slot+tabDef+predicate). maturity=validating, awaiting live test."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-153","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"Audio gallery filter + toolbar grid relayout (auto/14rem/auto, space-between). Verified at app min width."}

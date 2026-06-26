@@ -10,7 +10,12 @@
 
 .mpi-gallery-grid__tabs {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* Left track sizes to the (small) sort controls; right track sizes to the
+       filter chips; the center slider takes whatever is left, up to 14rem, and
+       shrinks first when space is tight. This stops the chips — which are wider
+       than an equal 1fr split allowed — from overflowing onto the slider. */
+    grid-template-columns: auto minmax(0, 14rem) auto;
+    justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1rem;
@@ -27,9 +32,9 @@
     min-width: 0;
 }
 
-.mpi-gallery-grid__zone--left   { justify-self: start; }
-.mpi-gallery-grid__zone--center { justify-self: center; }
-.mpi-gallery-grid__zone--right  { justify-self: end; }
+.mpi-gallery-grid__zone--left   { justify-self: start; min-width: 0; }
+.mpi-gallery-grid__zone--center { justify-self: stretch; min-width: 0; }
+.mpi-gallery-grid__zone--right  { justify-self: end; min-width: 0; }
 
 .mpi-gallery-grid__zone-label {
     font-family: 'JetBrains Mono', monospace;
@@ -62,8 +67,9 @@
 }
 
 .mpi-gallery-grid__slider-wrap {
-    width: 14rem;
-    flex-shrink: 0;
+    width: 100%;
+    max-width: 14rem;
+    min-width: 0;
 }
 
 .mpi-gallery-grid__tab {

@@ -48,8 +48,8 @@ export const MpiHotkeys = ComponentFactory.create({
                         <div class="mpi-hotkeys__shortcut-group">
                             <h4>Memory</h4>
                             <ul>
-                                <li><span>F5</span><span>Release Memory</span></li>
-                                <li><span>CTRL+F5</span><span>Release Memory + Cache</span></li>
+                                <li><span>F5</span><span>Release VRAM</span></li>
+                                <li><span>CTRL+F5</span><span>Deep Clean (VRAM + RAM)</span></li>
                             </ul>
                         </div>
 

@@ -317,8 +317,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
         fsBtn.on('click', async () => {
             try {
-                if (document.fullscreenElement) await document.exitFullscreen();
-                else                            await el.requestFullscreen();
+                if (document.fullscreenElement) {
+                    await document.exitFullscreen();
+                } else {
+                    const videoEl = _surface ? _surface.getVideoElement() : null;
+                    if (videoEl) await videoEl.requestFullscreen();
+                }
             } catch (err) { console.error('Fullscreen request failed:', err); }
         });
 
