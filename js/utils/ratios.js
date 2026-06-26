@@ -55,7 +55,7 @@ export const WAN_RATIOS = {
         { label: "16:9", w: 320, h: 176, icon: "rect_16_9" }
     ],
     low: [
-        { label: "1:1", w: 624, h: 624, icon: "rect_1_1" },
+        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 368, h: 640, icon: "rect_9_16" },
         { label: "16:9", w: 640, h: 368, icon: "rect_16_9" }
     ],
@@ -94,17 +94,17 @@ export const LTX_RATIOS = {
         { label: "16:9", w: 384, h: 192, icon: "rect_16_9" }
     ],
     low: [
-        { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
-        { label: "9:16", w: 448, h: 768, icon: "rect_9_16" },
-        { label: "16:9", w: 768, h: 448, icon: "rect_16_9" }
+        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
+        { label: "9:16", w: 352, h: 640, icon: "rect_9_16" },
+        { label: "16:9", w: 640, h: 352, icon: "rect_16_9" }
     ],
     medium: [
-        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
-        { label: "9:16", w: 576, h: 1024, icon: "rect_9_16" },
-        { label: "16:9", w: 1024, h: 576, icon: "rect_16_9" }
+        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
+        { label: "9:16", w: 448, h: 832, icon: "rect_9_16" },
+        { label: "16:9", w: 832, h: 448, icon: "rect_16_9" }
     ],
     high: [
-        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
+        { label: "1:1", w: 832, h: 832, icon: "rect_1_1" },
         { label: "9:16", w: 704, h: 1280, icon: "rect_9_16" },
         { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" }
     ],
