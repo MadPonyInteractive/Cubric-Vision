@@ -510,6 +510,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         return null;
     }
 
+    // Job clock anchor — set when ComfyUI ACCEPTS the prompt (prompt_ack), not at
+    // dispatch. Anchoring at dispatch counted ComfyUI's cold-start boot (~15s of the
+    // server coming up) as generation time. prompt_ack means the server is up and
+    // has queued THIS prompt, so the clock, card generationMs, and toast all measure
+    // the same span: accepted → done (includes model load, excludes server boot).
+    // (MPI-147)
     let samplingStartTime = null;
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
@@ -564,6 +570,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
     exec.onPromptAck = (promptId) => {
         activeGenerations.setPromptId(_regId, promptId);
+        // Server accepted the prompt → NOW start the clock (past cold-start boot).
+        samplingStartTime ??= Date.now();
+        Events.emit('tool:accepted', { tool: 'groupHistory' });
     };
 
     exec.onPreview = (url) => {
@@ -572,9 +581,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         callbacks.onPreview?.(url);
     };
 
-    exec.onSamplingStart = () => {
-        samplingStartTime ??= Date.now();
-    };
 
     exec.onComplete = async (urls, outputInfo = {}) => {
         // TEMP-DEBUG (MPI-64 Bug B — intermittent: fresh Generate with preview

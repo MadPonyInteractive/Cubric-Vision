@@ -29,6 +29,8 @@ import { state } from '../state.js';
 import { getModelSettings, getToolSettings } from '../data/projectModel.js';
 import { DEPS } from '../data/modelConstants/dependencies.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
+import { createStageProgress } from './phaseProgress.js';
+import { stagesFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
 
 function _buildComfyViewUrl(fileInfo, forceLocal = false) {
@@ -817,6 +819,9 @@ const LOADER_CLASS_TYPES = new Set([
 const IMMEDIATE_WORK_KINDS = new Set(['sampler', 'imageUpscale', 'vhs']);
 const DELAYED_WORK_KINDS = new Set(['ultimateSDUpscale']);
 const TERMINAL_PHASE_WORK_KINDS = new Set(['sampler']);
+// Kinds whose nodes emit tqdm step bars on stdout → the stage-progress SSE should
+// open for them (MPI-147). Samplers + UltimateSDUpscale (tile/step passes).
+const STEP_EMITTING_KINDS = new Set(['sampler', 'ultimateSDUpscale', 'detailer']);
 const ULTIMATE_START_PROGRESS = 0.75;
 
 export function runCommand(payload) {
@@ -904,6 +909,15 @@ export function runCommand(payload) {
             exec.onError?.(err);
             return;
         }
+
+        // Progress-stage tracker (MPI-147). The status bar runs the fill 0-100% PER
+        // tqdm bar and shows "Stage N/M"; the bar count M is recorded per workflow +
+        // run mode in js/data/progressStages.js (the JSON can't predict it, and the
+        // SAME file yields a different count single vs preview vs stage2). 0 =
+        // unrecorded → stages tick up without a total.
+        const _stageMode = workingPayload.isStage2 === true ? 'stage2'
+            : workingPayload.previewOnly === true ? 'preview' : 'single';
+        const stageProgress = createStageProgress({ stages: stagesFor(workflowFile, _stageMode) });
 
         const opDef = COMMANDS[workingPayload.operation];
         if (opDef?.injector) {
@@ -1002,6 +1016,14 @@ export function runCommand(payload) {
         const hasTerminalPhaseSampler = Object.values(weightMap.nodes).some(node =>
             TERMINAL_PHASE_WORK_KINDS.has(node.kind)
         );
+        // Open the stdout SSE for ANY node that emits tqdm step bars, not just
+        // samplers — UltimateSDUpscale emits its own step bars, but its kind is
+        // `ultimateSDUpscale` (not `sampler`), so gating the SSE on samplers alone
+        // left upscaler workflows on the old WS path (bar hangs at ~90% during the
+        // tile passes). (MPI-147)
+        const hasStepEmittingNode = Object.values(weightMap.nodes).some(node =>
+            STEP_EMITTING_KINDS.has(node.kind)
+        );
         let comfyEventSource = null;
 
         // Message handler — forwards previews + collects Output-titled results
@@ -1014,6 +1036,9 @@ export function runCommand(payload) {
         let audioOutputUrl = null;
         let _samplingStartFired = false;
         let _modelInitializing = hasTerminalPhaseSampler;
+        // Once stdout tqdm progress arrives it is authoritative for the fill — the
+        // WS aggregator is suppressed so the two don't fight (MPI-147).
+        let _stdoutDriving = false;
         // Tool-panel previews (e.g. resize thumbnail round-trip) bypass
         // generationService and call runCommand directly with
         // `suppressLifecycleEvents: true`. They must not emit StatusBar
@@ -1035,7 +1060,13 @@ export function runCommand(payload) {
             exec.onSamplingStart?.();
         };
         const emitProgress = (value) => {
-            if (!_suppressLifecycleEvents && _samplingStartFired) {
+            // Bar emission is decoupled from sampling-start (MPI-147). The bar
+            // reflects honest node-completion progress from the first node, so it
+            // climbs under the LOADING MODEL label instead of freezing at 0% and
+            // snapping in mid-sampler. The elapsed TIMER stays gated on
+            // tool:sampling-start (see statusBar) so card/toast durations still
+            // exclude cold model-load time — only the visual fill moves early.
+            if (!_suppressLifecycleEvents) {
                 Events.emit('tool:progress', { tool: 'groupHistory', value });
             }
             exec.onProgress?.(value);
@@ -1058,8 +1089,11 @@ export function runCommand(payload) {
             closeComfyEventSource();
             getEngine(workingPayload.forceLocal === true).interrupt();
         };
-        if (hasTerminalPhaseSampler && typeof EventSource !== 'undefined') {
+        if (hasStepEmittingNode && typeof EventSource !== 'undefined') {
             comfyEventSource = new EventSource('/comfy/events/stream');
+            // Model-load markers (synthesized from WS on remote, parsed from stdout
+            // locally) only drive the "Loading model" label — NOT the bar. The load
+            // shows up as its own tqdm bar (stage 1) via step-progress below.
             comfyEventSource.addEventListener('comfy:model-initializing', () => {
                 _modelInitializing = true;
                 if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
@@ -1068,6 +1102,60 @@ export function runCommand(payload) {
                 _modelInitializing = false;
                 if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
             });
+            // tqdm step progress parsed from ComfyUI stdout (MPI-147). The WS
+            // progress_state is useless for LTX (slow phases report binary 0/1), so
+            // the real per-step signal is stdout. The bar runs 0-100% PER tqdm bar;
+            // the stage tracker counts bars and the status bar shows "Stage N/M" so
+            // each reset reads as a new stage, not a bug. Authority (_stdoutDriving)
+            // flips only here — on remote (no step events) the WS aggregator stays
+            // the fallback. Stage 1 (model-load 0/1) does NOT count as sampling, so
+            // the timer/badge only start once a multi-step bar (max>1) appears.
+            comfyEventSource.addEventListener('comfy:step-progress', (e) => {
+                let value = 0, max = 0;
+                try {
+                    const d = JSON.parse(e.data);
+                    value = Number(d.value) || 0; max = Number(d.max) || 0;
+                } catch (_err) { return; }
+                if (!(max > 0)) return;
+                _stdoutDriving = true;
+                stageProgress.step(value, max);
+                // Sampling proper begins at the first multi-step bar (the load bar is
+                // max 1). Keeps the timer excluding cold model-load (user's rule).
+                if (max > 1) { _modelInitializing = false; emitSamplingStart(); }
+                _emitStageAndProgress();
+            });
+            // UltimateSDUpscale outer tile bar (MPI-147). Sets the stage = tile #;
+            // the interleaved inner step bars (above) only move the fill.
+            comfyEventSource.addEventListener('comfy:tile-progress', (e) => {
+                let tile = 0, tiles = 0;
+                try {
+                    const d = JSON.parse(e.data);
+                    tile = Number(d.tile) || 0; tiles = Number(d.tiles) || 0;
+                } catch (_err) { return; }
+                if (!(tiles > 0)) return;
+                _stdoutDriving = true;
+                _modelInitializing = false;
+                emitSamplingStart();
+                stageProgress.tile(tile, tiles);
+                _emitStageAndProgress();
+            });
+            // Detailer segment count (MPI-147). "# of Detected SEGS: N" sets the
+            // total up front ("Detail 2/3"); each per-segment 0/8 step bar then ticks
+            // the stage via the normal per-bar logic.
+            comfyEventSource.addEventListener('comfy:segment-total', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.total > 0) { stageProgress.setTotal(Number(d.total)); _emitStageAndProgress(); }
+                } catch (_err) { /* ignore */ }
+            });
+        }
+        function _emitStageAndProgress() {
+            Events.emit('tool:stage', {
+                tool: 'groupHistory',
+                stage: stageProgress.stage(),
+                total: stageProgress.total(),
+            });
+            emitProgress(stageProgress.percent());
         }
         // Idempotent gen-finish. ComfyUI may signal completion via the legacy
         // `executing node===null` sentinel (<=0.25.1) OR the new `execution_success`
@@ -1078,6 +1166,10 @@ export function runCommand(payload) {
             if (_generationFinished) return;
             _generationFinished = true;
             aggregator.onExecutionSuccess();
+            // On completion the last stage's bar fills to 100% (the trailing vae
+            // decode emits no tqdm). statusBar.complete() also flashes 100%, so this
+            // is belt-and-suspenders for the fill. Only when stdout drove (local).
+            if (_stdoutDriving) { stageProgress.finish(); emitProgress(stageProgress.percent()); }
             closeComfyEventSource();
             exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
         };
@@ -1131,8 +1223,10 @@ export function runCommand(payload) {
                         emitSamplingStart();
                     }
                 }
-                if (_modelInitializing) return;
-                emitProgress(aggregator.percent());
+                // Emit regardless of _modelInitializing — the bar reflects node
+                // progress and may legitimately climb before the sampler fires.
+                // The timer stays gated on sampling-start (MPI-147).
+                if (!_stdoutDriving) emitProgress(aggregator.percent());
                 return;
             }
 
@@ -1150,8 +1244,7 @@ export function runCommand(payload) {
                         emitSamplingStart();
                     }
                 }
-                if (_modelInitializing) return;
-                emitProgress(aggregator.percent());
+                if (!_stdoutDriving) emitProgress(aggregator.percent());
                 return;
             }
 
@@ -1165,7 +1258,19 @@ export function runCommand(payload) {
                     } else if (!_modelInitializing && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
                         emitSamplingStart();
                     }
+                    // imageUpscale (ESRGAN) is a single-shot op with NO progress
+                    // signal — show an indeterminate pulse while it runs, clear it
+                    // when the graph moves to any other node (MPI-147).
+                    if (!_suppressLifecycleEvents) {
+                        const indeterminate = nodeKind === 'imageUpscale';
+                        if (indeterminate) emitSamplingStart();
+                        Events.emit('tool:indeterminate', { tool: 'groupHistory', active: indeterminate });
+                    }
                     aggregator.onExecuting(msg);
+                    // Coarse node-transition advances the bar even for nodes that
+                    // emit no per-step progress (loaders, CLIP, VAE) — keeps it
+                    // climbing through the pre-sampler graph (MPI-147).
+                    if (!_stdoutDriving) emitProgress(aggregator.percent());
                     return;
                 }
 

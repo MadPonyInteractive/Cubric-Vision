@@ -83,6 +83,13 @@ function _classifyComfyOutput(defaultLevel, text) {
     return 'info';
 }
 
+// tqdm progress line, e.g.  "14%|█▍ | 1/7 [00:07<00:43, 7.24s/it, ...]".
+// ComfyUI redraws with \r, so one stdout chunk can hold several states — we take
+// the LAST match (current state). `[` anchors N/M to the bar so we don't match
+// stray "1/7" elsewhere. (MPI-147 — the WS progress_state is useless for the
+// slow phases; the real per-step + model-init signal is only in stdout.)
+const TQDM_RE = /(\d+)\/(\d+)\s*\[/g;
+
 function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
@@ -93,6 +100,42 @@ function _handleComfyOutput(level, chunk) {
         _broadcastComfyEvent('comfy:model-init-complete', { message: text });
     } else if (/Model Initializing/i.test(text)) {
         _broadcastComfyEvent('comfy:model-initializing', { message: text });
+    }
+
+    // Detailer (MaskDetailerPipe / FaceDetailer) declares how many segments (detail
+    // areas) it found, then runs one sampler bar per segment. The count is the stage
+    // total ("Detail 2/3"); each per-segment step bar ticks the stage. (MPI-147)
+    const segs = /#\s*of\s*Detected\s*SEGS:\s*(\d+)/i.exec(text);
+    if (segs) {
+        const total = parseInt(segs[1], 10);
+        if (total > 0) _broadcastComfyEvent('comfy:segment-total', { total });
+        // no return — the line carries no tqdm bar
+    }
+
+    // UltimateSDUpscale emits a separate OUTER tile bar prefixed "USDU: t/T"
+    // interleaved with the inner step bars. The tile bar is the stage ("Tile 2/4");
+    // the inner step bar is the fill. Route them on different channels so the stage
+    // counter tracks tiles, not every interleaved bar. (MPI-147)
+    const usdu = /USDU:\s*\d+%\|[^|]*\|\s*(\d+)\/(\d+)\s*\[/.exec(text);
+    if (usdu) {
+        const tile  = parseInt(usdu[1], 10);
+        const tiles = parseInt(usdu[2], 10);
+        if (tiles > 0) _broadcastComfyEvent('comfy:tile-progress', { tile, tiles });
+        return; // a USDU line carries no inner step value worth forwarding
+    }
+
+    // Drive the status bar from the tqdm step counter. EVERY bar counts as a stage,
+    // including the model-load `0/1`→`1/1` bar (it's stage 1 — the load phase the
+    // user waits on). The renderer's stage tracker dedups consecutive ticks of the
+    // same bar (same max, rising value) and counts a new bar when max changes or
+    // value resets. Take the LAST N/M in the chunk (tqdm redraws with \r).
+    let m, last = null;
+    TQDM_RE.lastIndex = 0;
+    while ((m = TQDM_RE.exec(text)) !== null) last = m;
+    if (last) {
+        const value = parseInt(last[1], 10);
+        const max   = parseInt(last[2], 10);
+        if (max > 0) _broadcastComfyEvent('comfy:step-progress', { value, max });
     }
 }
 

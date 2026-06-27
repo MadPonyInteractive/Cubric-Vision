@@ -54,3 +54,9 @@ When a test concludes:
    comes here so the next session doesn't re-test it.
 3. Before logging a FINAL workflow: unmute any test-muted nodes (e.g. the 2×
    SaveLatent), repath any LoRAs you moved folders, drop test-only overrides.
+4. **Record the progress-bar stage count** (MPI-147). Run it, count how many times a
+   tqdm bar restarts at 0 in the ComfyUI terminal (incl. the `0/1` model-load bar),
+   and add the count per run mode to `js/data/progressStages.js`. Full procedure:
+   [comfy_workflows/scripts/workflow_generation/README.md](../../comfy_workflows/scripts/workflow_generation/README.md)
+   § "Progress stages". (UltimateSDUpscale / detailer self-declare; ESRGAN upscale
+   pulses — no entry needed for those.)

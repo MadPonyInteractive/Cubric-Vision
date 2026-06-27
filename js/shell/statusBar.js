@@ -42,6 +42,7 @@ let _state        = 'idle';   // 'idle' | 'active'
 let _hoverTarget  = null;
 let _hoverObs     = null;
 let _currentLabel = '';
+let _stageText  = '';   // " · 2/3" stage suffix (MPI-147), '' when no multi-stage
 let _queueDepth = 0;
 let _elapsedSec   = 0;
 let _activeStartedAt = null;
@@ -72,9 +73,10 @@ function _setFill(pct) {
 }
 
 function _getDisplayLabel(label = _currentLabel) {
+    const base = `${label}${_stageText}`;
     const pending = Math.max(0, _queueDepth - 1);
-    if (_state !== 'active' || pending === 0) return label;
-    return `${label} (${pending} queued)`;
+    if (_state !== 'active' || pending === 0) return base;
+    return `${base} (${pending} queued)`;
 }
 
 function _renderJobLabel() {
@@ -84,7 +86,7 @@ function _renderJobLabel() {
 
 function _beginActiveCycle() {
     _completionToken++;
-    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade');
+    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade', 'shell-info__fill--indeterminate');
 }
 
 function _startTimer() {
@@ -125,6 +127,7 @@ function _setIdle() {
     _job.className = 'shell-info__job';
     _jobLabel.textContent = `IDLE · ${_idleScopeLabel()}`;
     _currentLabel = '';
+    _stageText = '';
     _activeStartedAt = null;
 
     _jobPct.textContent  = '';
@@ -224,6 +227,7 @@ export const StatusBar = {
             _beginActiveCycle();
             _stopTimer();
             _elapsedSec = 0;
+            _stageText = '';
             _activeStartedAt = Date.now();
             _setFill(0);
             if (_jobPct) _jobPct.textContent = '';
@@ -248,6 +252,19 @@ export const StatusBar = {
         },
 
         /**
+         * Start the elapsed clock AND re-anchor the wall-clock basis (MPI-147).
+         * Called at prompt_ack so the visible timer, the toast's totalElapsed, and
+         * the card's generationMs all measure the same span (accepted → done),
+         * excluding ComfyUI's cold-start boot. Idempotent — re-anchors only once.
+         */
+        startClock() {
+            if (_state !== 'active') return;
+            if (_timerInterval !== null) return; // already counting — don't re-anchor
+            _activeStartedAt = Date.now();       // toast wall-clock basis
+            _startTimer();                        // resets _elapsedSec → ticks from 0
+        },
+
+        /**
          * Convenience: prepare(label) + startTimer(). For callers that skip pre-phases.
          * @param {string} label
          */
@@ -268,12 +285,43 @@ export const StatusBar = {
         },
 
         /**
+         * Toggle the indeterminate pulse (MPI-147) for nodes with no progress
+         * signal (e.g. ESRGAN upscale). Clears the % readout while active; restores
+         * normal mode (and a 0 fill) when turned off.
+         * @param {boolean} active
+         */
+        setIndeterminate(active) {
+            if (_state !== 'active' || !_fill) return;
+            if (active) {
+                _fill.classList.add('shell-info__fill--indeterminate');
+                if (_jobPct) _jobPct.textContent = '';
+            } else {
+                _fill.classList.remove('shell-info__fill--indeterminate');
+            }
+        },
+
+        /**
          * Update job label text mid-job (e.g. phase change). Does not affect timer.
          * @param {string} label
          */
         updateLabel(label) {
             if (_state !== 'active') return;
             _currentLabel = label.toUpperCase();
+            _renderJobLabel();
+        },
+
+        /**
+         * Set the "Stage N/M" suffix shown after the job label (MPI-147). Pass
+         * stage 0 (or no multi-stage workflow) to clear it. total 0 = unknown →
+         * shows "· N" with no "/M".
+         * @param {number} stage
+         * @param {number} [total]
+         */
+        setStage(stage, total) {
+            if (_state !== 'active') return;
+            _stageText = stage > 0
+                ? (total > 0 ? ` · ${stage}/${total}` : ` · ${stage}`)
+                : '';
             _renderJobLabel();
         },
 
@@ -297,7 +345,9 @@ export const StatusBar = {
             state.lastGeneration = { label, elapsed: totalElapsed };
             Events.emit('generation:timing', { elapsed: totalElapsed, label });
 
+            _fill.classList.remove('shell-info__fill--indeterminate');  // exit pulse before the 100% flash (MPI-147)
             _setFill(100);
+            if (_jobPct)  _jobPct.textContent  = '100%';  // keep pct text in sync with the 100% fill (MPI-147)
             if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
 
@@ -371,23 +421,35 @@ export const StatusBar = {
      */
     listen() {
         if (_listenUnsubs.length > 0) return;
-        // tool:running — ComfyUI graph executing, pre-model phase. Spinner on, no timer.
+        // tool:running — job dispatched. Spinner + label only; NO timer yet (ComfyUI
+        // may still be booting — MPI-147: don't count cold-start in the clock).
         _listenUnsubs.push(Events.on('tool:running', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.prepare('Starting');
         }));
-        // tool:loading-model — VRAM load phase. Update label only, timer still not running.
+        // tool:accepted — ComfyUI accepted the prompt (prompt_ack). NOW start the
+        // clock so it matches the card's generationMs + toast (all anchored here).
+        _listenUnsubs.push(Events.on('tool:accepted', ({ tool }) => {
+            if (tool === 'groupHistory') StatusBar.progress.startClock();
+        }));
+        // tool:loading-model — VRAM load phase. Update label only (timer already running).
         _listenUnsubs.push(Events.on('tool:loading-model', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
         }));
-        // tool:sampling-start — KSampler firing. NOW start the timer + update label.
+        // tool:sampling-start — KSampler firing. Switch the label to the op name;
+        // timer is already running from tool:running.
         _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, operation }) => {
-            if (tool === 'groupHistory') {
-                StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
-                StatusBar.progress.startTimer();
-            }
+            if (tool === 'groupHistory') StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
         }));
         _listenUnsubs.push(Events.on('tool:progress', ({ tool, value }) => {
             if (tool === 'groupHistory') StatusBar.progress.update(value);
+        }));
+        // tool:stage — multi-stage workflow phase counter (MPI-147). Shows "· N/M".
+        _listenUnsubs.push(Events.on('tool:stage', ({ tool, stage, total }) => {
+            if (tool === 'groupHistory') StatusBar.progress.setStage(stage, total);
+        }));
+        // tool:indeterminate — no-progress-signal node (ESRGAN upscale). Pulse.
+        _listenUnsubs.push(Events.on('tool:indeterminate', ({ tool, active }) => {
+            if (tool === 'groupHistory') StatusBar.progress.setIndeterminate(active === true);
         }));
         _listenUnsubs.push(Events.on('tool:cancelled', ({ tool }) => {
             if (tool === 'groupHistory') StatusBar.progress.cancel();

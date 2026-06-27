@@ -3,27 +3,36 @@
 /**
  * progressAggregator.js — Aggregates ComfyUI workflow progress across all nodes.
  *
- * Pre-execution: build a weight map from workflow JSON once, before the prompt is sent.
- * Runtime: consume progress_state (preferred) or progress+executing (legacy fallback).
- * Output: monotonically-increasing 0–1 percent value.
+ * Model (MPI-147): time-proportional weighted bar.
+ *
+ *   progress = Σ(nodeFraction × nodeWeight) / Σ(nodeWeight)
+ *
+ * The weight is what the node COSTS IN TIME, not a flat per-node count. In a real
+ * LTX graph (148 nodes) ~140 are instant config/wiring; the time lives in the
+ * sampler's denoise steps and a couple of decode/upscale ops. A flat node-count
+ * bar makes the 7 sampler steps worth 1/148 ≈ 0.7% — invisible (the "hang at 7%
+ * while all 7 steps run"). So samplers carry weight = their step count, real work
+ * nodes carry a small fixed weight, and config nodes carry 0.
+ *
+ * Detection was the old bug: `/sampler$/i` mis-matched LTX helpers
+ * (LTXVNormalizingSampler bypass, LTXVLatentUpsampler) and missed the real
+ * denoiser (SamplerCustomAdvanced). Fixed below — match the KSampler family +
+ * SamplerCustom(Advanced), exclude `*Select` config pickers.
  *
  * @module progressAggregator
  */
 
 // ── Weight constants ──────────────────────────────────────────────────────────
 
-const SAMPLER_REGEX = /sampler$/i;
-const UPSCALE_WITH_MODEL_WEIGHT = 10;
-const VHS_NODE_WEIGHT = 5;
+const SAMPLER_REGEX = /KSampler/i;
+const SAMPLER_SELECT_REGEX = /Select$/i;   // KSamplerSelect etc. — config, no steps
+const UPSCALE_WITH_MODEL_WEIGHT = 8;
+const VHS_NODE_WEIGHT = 4;
 const DEFAULT_SAMPLER_STEPS = 20;
 const DEFAULT_NODE_WEIGHT = 0;
 
-// UltimateSDUpscale dual-stream phase split (load/pre-pass vs upscale)
-const ULTIMATE_PRE_PASS_FRACTION = 0.20;
-const ULTIMATE_UPSCALE_FRACTION  = 0.80;
-
-// Fallback detection: if no progress_state received within this many ms, use legacy path
-const LEGACY_FALLBACK_MS = 2000;
+// UltimateSDUpscale: steps × estimated tiles (dims unknown pre-run → fixed 4)
+const ULTIMATE_TILE_ESTIMATE = 4;
 
 // ── Weight map builder ────────────────────────────────────────────────────────
 
@@ -44,32 +53,38 @@ export function buildWeightMap(workflow) {
         let kind   = 'default';
 
         if (classType === 'UltimateSDUpscale') {
-            const steps  = parseInt(inputs.steps, 10) || DEFAULT_SAMPLER_STEPS;
-            // Tile estimate: use dims if known, else fixed *4
-            let tiles = 4;
-            if (inputs.upscale_by && inputs.tile_width && inputs.tile_height) {
-                // dims not reliably known pre-run; keep fixed fallback
-            }
-            weight = steps * tiles;
+            const steps = parseInt(inputs.steps, 10) || DEFAULT_SAMPLER_STEPS;
+            weight = steps * ULTIMATE_TILE_ESTIMATE;
             kind   = 'ultimateSDUpscale';
 
         } else if (classType === 'ImageUpscaleWithModel') {
             weight = UPSCALE_WITH_MODEL_WEIGHT;
             kind   = 'imageUpscale';
 
-        } else if (
-            classType === 'VHS_LoadVideoPath' ||
-            classType === 'VHS_VideoCombine'
-        ) {
+        } else if (classType === 'VHS_LoadVideoPath' || classType === 'VHS_VideoCombine') {
             weight = VHS_NODE_WEIGHT;
             kind   = 'vhs';
 
         } else if (
-            classType === 'KSampler' ||
-            classType === 'KSamplerAdvanced' ||
-            classType === 'SamplerCustom' ||
-            classType === 'ClownsharKSampler' ||
-            SAMPLER_REGEX.test(classType)
+            classType === 'MaskDetailerPipe' ||
+            classType === 'FaceDetailer' ||
+            classType === 'DetailerForEach' ||
+            classType === 'DetailerForEachDebug'
+        ) {
+            // One sampler pass per detected segment (detail area). Step-emitting;
+            // the segment count comes at runtime from "# of Detected SEGS: N".
+            weight = parseInt(inputs.steps, 10) || DEFAULT_SAMPLER_STEPS;
+            kind   = 'detailer';
+
+        } else if (
+            !SAMPLER_SELECT_REGEX.test(classType) && (
+                classType === 'KSampler' ||
+                classType === 'KSamplerAdvanced' ||
+                classType === 'SamplerCustom' ||
+                classType === 'SamplerCustomAdvanced' ||
+                classType === 'ClownsharKSampler' ||
+                SAMPLER_REGEX.test(classType)
+            )
         ) {
             weight = parseInt(inputs.steps, 10) || DEFAULT_SAMPLER_STEPS;
             kind   = 'sampler';
@@ -101,178 +116,89 @@ export function buildWeightMap(workflow) {
 export function create(weightMap) {
     const { totalWeight, nodes } = weightMap;
 
-    // Per-node runtime state
-    // fraction: 0.0 – 1.0 contribution within the node's own weight
+    // Per-node fraction (0..1) within its own weight.
     const nodeState = {};
-    for (const id of Object.keys(nodes)) {
-        nodeState[id] = { fraction: 0, finished: false };
-    }
+    for (const id of Object.keys(nodes)) nodeState[id] = { fraction: 0, finished: false };
 
-    let _percent     = 0;          // last emitted value (monotonic floor)
-    let _useModern   = null;       // null = undecided; true = progress_state; false = legacy
-    let _legacyTimer = null;
-    let _legacyActiveNode = null;  // nodeId currently executing (legacy path)
-    let _ultimateSawMaxChange = false; // dual-stream detection for UltimateSDUpscale
+    let _percent  = 0;   // last emitted value (monotonic floor)
+    let _curNode  = null;
 
-    // Compute raw aggregated fraction from nodeState
+    // Only weighted nodes (samplers, upscale, vhs) move the bar — instant config
+    // nodes have weight 0, so finishing them contributes nothing. That's the
+    // point: the bar tracks time, and time = sampler steps + decode/upscale.
     function _compute() {
         let sum = 0;
         for (const [id, ns] of Object.entries(nodeState)) {
             const w = nodes[id]?.weight ?? DEFAULT_NODE_WEIGHT;
+            if (w <= 0) continue;
             sum += (ns.finished ? 1.0 : ns.fraction) * w;
         }
         return sum / totalWeight;
     }
 
-    // Update _percent monotonically, clamp to [0,1]
-    function _advance(raw) {
-        const clamped = Math.min(1, Math.max(0, raw));
-        if (clamped > _percent) _percent = clamped;
+    function _advance() {
+        const clamped = Math.min(1, Math.max(0, _compute()));
+        if (clamped > _percent) _percent = clamped;  // monotonic
         return _percent;
     }
 
+    function _finishNode(id) {
+        if (id == null || !nodeState[id]) return;
+        nodeState[id].finished = true;
+        nodeState[id].fraction = 1.0;
+    }
+
+    function _setRunning(id, value, max) {
+        if (id == null) return;
+        // New node started → previous one done.
+        if (_curNode && _curNode !== id) _finishNode(_curNode);
+        _curNode = id;
+        if (nodeState[id] && max > 0) {
+            let frac = Math.min(1, value / max);
+            // UltimateSDUpscale runs multiple tile-passes, each restarting steps
+            // 0→max. Pass 1 filling to 1.0 would mark the node "done" and pin the
+            // bar at ~100% with 3 passes left to go. Cap running fraction below 1.0
+            // so only the engine's explicit `finished`/executing-next completes it.
+            if (nodes[id]?.kind === 'ultimateSDUpscale') frac = Math.min(frac, 0.9);
+            nodeState[id].fraction = frac;
+        }
+    }
+
     // ── Modern path (progress_state) ─────────────────────────────────────────
+    // msg.data.nodes: { [id]: { state: 'pending'|'running'|'finished', value, max } }
 
     function onProgressState(msg) {
-        if (_useModern === false) return; // locked to legacy
-        _useModern = true;
-
-        if (_legacyTimer) {
-            clearTimeout(_legacyTimer);
-            _legacyTimer = null;
-        }
-
-        // msg.data.nodes: { [nodeId]: { state: 'pending'|'running'|'finished', value, max } }
         const nodeData = msg?.data?.nodes;
         if (!nodeData) return;
-
         for (const [id, info] of Object.entries(nodeData)) {
-            if (!nodeState[id]) continue; // unknown node
-            if (info.state === 'finished') {
-                nodeState[id].finished = true;
-                nodeState[id].fraction = 1.0;
-            } else if (info.state === 'running' && info.max > 0) {
-                let frac = info.value / info.max;
-                // UltimateSDUpscale reports per-tile progress that hits 1.0 mid-run.
-                // Cap at 0.95 until node reports 'finished' to avoid premature 100%.
-                const kind = nodes[id]?.kind;
-                if (kind === 'ultimateSDUpscale') frac = Math.min(frac, 0.95);
-                nodeState[id].fraction = frac;
-            }
+            if (info.state === 'finished') _finishNode(id);
+            else if (info.state === 'running') _setRunning(id, Number(info.value) || 0, Number(info.max) || 0);
         }
-
-        // Nodes that previously reported progress but are now absent from the
-        // snapshot are inferred finished (older ComfyUI builds drop finished
-        // nodes from progress_state). Do NOT blanket-finish by `kind` — that
-        // marks not-yet-run single-pass nodes (ImageUpscaleWithModel,
-        // VHS_VideoCombine) as done the moment any upstream node starts, which
-        // pinned the bar at 100% for video_upscale.
-        const runningIds = new Set(Object.keys(nodeData).filter(id => nodeData[id].state === 'running'));
-        for (const [id, ns] of Object.entries(nodeState)) {
-            if (ns.finished) continue;
-            if (runningIds.has(id)) continue;
-            if (id in nodeData) continue; // explicit pending/finished state already handled above
-            if (ns.fraction > 0) {
-                ns.finished = true;
-                ns.fraction = 1.0;
-            }
-        }
-
-        _advance(_compute());
+        _advance();
     }
 
     // ── Legacy path (executing + progress) ───────────────────────────────────
 
-    function _startLegacyTimer() {
-        if (_useModern !== null) return;
-        _legacyTimer = setTimeout(() => {
-            if (_useModern === null) _useModern = false;
-        }, LEGACY_FALLBACK_MS);
-    }
-
     function onProgress(msg) {
-        if (_useModern === true) return; // locked to modern
-
-        // Start the fallback timer on first progress event if undecided
-        if (_useModern === null) {
-            _useModern = false;
-            if (_legacyTimer) { clearTimeout(_legacyTimer); _legacyTimer = null; }
-        }
-
-        const { value, max } = msg?.data || {};
-        if (!max || max <= 0) return;
-
-        const fraction = value / max;
-
-        if (_legacyActiveNode && nodeState[_legacyActiveNode]) {
-            const ns   = nodeState[_legacyActiveNode];
-            const kind = nodes[_legacyActiveNode]?.kind;
-
-            if (kind === 'ultimateSDUpscale') {
-                // Dual-stream detection: if max changes mid-node, first stream done
-                if (!ns._lastMax) {
-                    ns._lastMax = max;
-                } else if (max !== ns._lastMax && !_ultimateSawMaxChange) {
-                    _ultimateSawMaxChange = true;
-                    // First stream complete (pre-pass = 20%)
-                    ns.fraction = ULTIMATE_PRE_PASS_FRACTION;
-                }
-
-                if (_ultimateSawMaxChange) {
-                    // Second stream: map fraction into [0.20, 1.0]
-                    ns.fraction = ULTIMATE_PRE_PASS_FRACTION + fraction * ULTIMATE_UPSCALE_FRACTION;
-                } else {
-                    // First stream: map into [0, 0.20]
-                    ns.fraction = fraction * ULTIMATE_PRE_PASS_FRACTION;
-                }
-            } else {
-                ns.fraction = fraction;
-            }
-        }
-
-        _advance(_compute());
+        const { node, value, max } = msg?.data || {};
+        _setRunning(node != null ? node : _curNode, Number(value) || 0, Number(max) || 0);
+        _advance();
     }
 
     function onExecuting(msg) {
-        if (_useModern === true) return;
-
-        _startLegacyTimer();
-
         const nodeId = msg?.data?.node;
-
-        if (nodeId === null) {
-            // Execution complete signal — finish any still-active node
-            if (_legacyActiveNode && nodeState[_legacyActiveNode]) {
-                nodeState[_legacyActiveNode].finished  = true;
-                nodeState[_legacyActiveNode].fraction  = 1.0;
-            }
-            _legacyActiveNode = null;
-            return;
-        }
-
-        // Mark previously active node as finished
-        if (_legacyActiveNode && _legacyActiveNode !== nodeId && nodeState[_legacyActiveNode]) {
-            nodeState[_legacyActiveNode].finished = true;
-            nodeState[_legacyActiveNode].fraction = 1.0;
-            _ultimateSawMaxChange = false; // reset for next UltimateSDUpscale node
-        }
-
-        _legacyActiveNode = nodeId;
-        _advance(_compute());
+        if (nodeId == null) { _finishNode(_curNode); _curNode = null; return; }
+        if (_curNode && _curNode !== nodeId) _finishNode(_curNode);
+        _curNode = nodeId;
+        _advance();
     }
 
     // ── Completion ────────────────────────────────────────────────────────────
 
     function onExecutionSuccess() {
-        // Force all nodes to finished
-        for (const ns of Object.values(nodeState)) {
-            ns.finished = true;
-            ns.fraction = 1.0;
-        }
-        _advance(1.0);
+        for (const ns of Object.values(nodeState)) { ns.finished = true; ns.fraction = 1.0; }
+        _percent = 1.0;
     }
-
-    // ── Public API ────────────────────────────────────────────────────────────
 
     return {
         onProgressState,

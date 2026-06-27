@@ -97,3 +97,35 @@ family prefix is `LTX_`. Steps:
 - The app loads the files in `comfy_workflows/` (NOT the `_template` sources). Those
   are owned by the user per the injection rules; the generator is the only sanctioned
   writer of the derived siblings.
+
+## Progress stages — record the bar count (MPI-147)
+
+The status bar runs the progress fill **0-100% per tqdm bar** and shows `Stage N/M`.
+`M` (how many 0-100% bars a run produces) can't be derived from the JSON — the
+model-load bar isn't a node, LTX schedulers compute step counts at runtime, and the
+SAME file yields a different count in single-stage vs preview vs stage-2 mode. So `M`
+is **recorded by hand** in `js/data/progressStages.js`, keyed by workflow filename
+(without `_stage2`) and run mode.
+
+When you add or change a workflow:
+
+1. **Run it in each mode** (single / multi-stage preview / stage-2 finish) and watch
+   the ComfyUI terminal.
+2. **Count how many times a tqdm bar restarts at 0**, INCLUDING the `0/1` model-load
+   bar. That number is `M` for that mode. (LTX single = 3: model-load + 2 samplers.
+   WAN single = 2: one per sampler. t2i = 2.)
+3. **Add the entry** to `PROGRESS_STAGES` in `js/data/progressStages.js`:
+   `'your_workflow.json': { single: N, preview: N, stage2: N }`.
+
+Special cases the app handles automatically (no entry needed):
+- **UltimateSDUpscale** — the `USDU: t/T` tile bar self-declares the tile count →
+  `Tile N/M` live.
+- **Detailer** (`MaskDetailerPipe`/`FaceDetailer`) — `# of Detected SEGS: N` self-
+  declares the segment count → `Detail N/M` live.
+- **ImageUpscaleWithModel** (universal upscale) — single-shot op, NO progress signal
+  → indeterminate pulse, no count.
+
+No entry → the stage counter still ticks up, just without a total (`· 2` not `· 2/3`).
+The detection of which node kinds emit step bars lives in `STEP_EMITTING_KINDS`
+(`js/services/commandExecutor.js`) + `buildWeightMap` kinds (`progressAggregator.js`);
+the stdout tqdm parse is in `routes/comfy.js` (`_handleComfyOutput`).
