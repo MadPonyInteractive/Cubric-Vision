@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-79","at":"2026-06-14T10:55:11.439Z","actor":"vscode","summary":"Created MPI-79."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-79","at":"2026-06-14T12:55:00.000Z","actor":"claude","from":"todo","to":"doing","reason":"Implementation started (skipped-doing backfill)."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-79","at":"2026-06-14T13:00:00.000Z","actor":"claude","note":"User verified all four panels: child pop-up stays open underneath; click-away no longer closes; Escape + close button still close."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-79","at":"2026-06-14T13:00:00.000Z","actor":"claude","from":"doing","to":"done","reason":"Verified by user; final completion approved."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-79","at":"2026-06-27T01:15:00Z","actor":"claude","summary":"Archived from done to tasks/_archived/MPI-79 (mpi-archive cleanup of oldest completed cards)."}

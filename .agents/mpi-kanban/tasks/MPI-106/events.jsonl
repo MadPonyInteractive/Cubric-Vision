@@ -1,2 +1,0 @@
-{"ts":"2026-06-17T01:30:00Z","type":"task.created","id":"MPI-106","column":"done","actor":"claude","note":"Cubric Vision Builder authoring image shipped + live-verified (RTX 5090)"}
-{"ts":"2026-06-17T01:30:01Z","type":"task.moved","id":"MPI-106","from":"todo","to":"done","actor":"claude","note":"work shipped+verified same session; created directly in done"}

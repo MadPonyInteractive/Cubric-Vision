@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 156,
+  "next_id": 157,
   "columns": {
     "todo": [
+      "MPI-156",
       "MPI-150",
       "MPI-148",
       "MPI-147",
@@ -52,44 +53,8 @@
       "MPI-112",
       "MPI-111",
       "MPI-110",
-      "MPI-74",
-      "MPI-82",
-      "MPI-108",
-      "MPI-109",
-      "MPI-107",
-      "MPI-89",
-      "MPI-90",
-      "MPI-83",
-      "MPI-106",
-      "MPI-103",
-      "MPI-78",
-      "MPI-93",
-      "MPI-101",
-      "MPI-100",
-      "MPI-99",
-      "MPI-97",
-      "MPI-95",
-      "MPI-98",
-      "MPI-94",
-      "MPI-81",
-      "MPI-92",
-      "MPI-96",
-      "MPI-80",
-      "MPI-86",
-      "MPI-88",
-      "MPI-87",
-      "MPI-72",
-      "MPI-64",
-      "MPI-85",
-      "MPI-84",
-      "MPI-75",
-      "MPI-79",
-      "MPI-77",
-      "MPI-73",
-      "MPI-102",
-      "MPI-104",
-      "MPI-115"
+      "MPI-73"
     ]
   },
-  "updated_at": "2026-06-27T00:30:00Z"
+  "updated_at": "2026-06-27T01:15:00Z"
 }
