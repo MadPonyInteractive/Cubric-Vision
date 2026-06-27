@@ -193,6 +193,24 @@ function createEngine({ engine, alwaysLocal }) {
      * @returns {Promise<{ ready: boolean, remoteComfyRestarted: boolean }>}
      */
     async ensureServerRunning(opts = {}) {
+        // Remote mode owns its own error surfacing (retry dialog in background,
+        // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
+        // try/catch so a remote failure doesn't double-emit ui:error below. A
+        // local-pinned engine skips the remote refresh entirely.
+        //
+        // MPI-156: this refresh runs BEFORE the transition guard below (it used to
+        // run after). After a disconnect+DELETE, the renderer's `_remoteTransition`
+        // can be left stale (a `phase` event missed/raced) — and a stale
+        // `disconnecting` would throw the transition error below for EVERY later
+        // gen, LOCAL included, wedging the app until restart (zero `[comfy]` lines:
+        // the throw is before any engine starts). Refreshing first lets the guard
+        // reconcile against backend truth: if the backend reports remote-mode
+        // INACTIVE, the Pod is gone and the user's intent is local — a stale
+        // transition flag must not block that.
+        if (!this._alwaysLocal) {
+            try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
+        }
+
         // MPI-73: refuse to start ANY remote generation while the remote engine is
         // connecting or disconnecting. Mid-transition the backend remote-mode flag
         // may not yet reflect the user's intent, so without this guard the run
@@ -200,25 +218,28 @@ function createEngine({ engine, alwaysLocal }) {
         // waiting for the Pod — exactly the "pressed Cue while connecting and it
         // generated locally" bug. A local-pinned engine is unaffected: it always
         // wants local ComfyUI, so a remote transition never mis-routes it.
+        //
+        // MPI-156: only honour the transition flag when the backend STILL reports
+        // remote mode active. A `disconnecting` flag stuck after a Pod delete (the
+        // backend already cleared remote mode) is stale — clear it and fall through
+        // to local so a torn-down engine can never block a local gen indefinitely.
         if (_remoteTransition && !this._alwaysLocal) {
-            // Backstop only — the Cue button is disabled during a transition
-            // (MpiPromptBox), so this rarely fires. Surface a plain INFO toast, not
-            // the bug-reporter `comfy:error` modal: a transition refusal is expected
-            // UX, not a crash to report. The thrown error still ends the pipeline.
-            const tMsg = _remoteTransition === 'disconnecting'
-                ? 'Disconnecting the remote engine — wait for it to finish before generating.'
-                : 'Connecting to the remote engine — wait until it is ready before generating.';
-            Events.emit('ui:info', { message: tMsg });
-            const err = new Error(tMsg);
-            err.code = 'remote_transition';
-            throw err;
-        }
-        // Remote mode owns its own error surfacing (retry dialog in background,
-        // modal-bound comfy:error in foreground) — dispatch OUTSIDE the local
-        // try/catch so a remote failure doesn't double-emit ui:error below. A
-        // local-pinned engine skips the remote refresh entirely.
-        if (!this._alwaysLocal) {
-            try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
+            if (_remoteTransition === 'disconnecting' && !remoteEngineClient.isRemote()) {
+                clientLogger.warn('comfy', 'Stale "disconnecting" transition after remote teardown — clearing and falling through to local.');
+                _remoteTransition = null;
+            } else {
+                // Backstop only — the Cue button is disabled during a transition
+                // (MpiPromptBox), so this rarely fires. Surface a plain INFO toast, not
+                // the bug-reporter `comfy:error` modal: a transition refusal is expected
+                // UX, not a crash to report. The thrown error still ends the pipeline.
+                const tMsg = _remoteTransition === 'disconnecting'
+                    ? 'Disconnecting the remote engine — wait for it to finish before generating.'
+                    : 'Connecting to the remote engine — wait until it is ready before generating.';
+                Events.emit('ui:info', { message: tMsg });
+                const err = new Error(tMsg);
+                err.code = 'remote_transition';
+                throw err;
+            }
         }
         // A local-pinned engine ALWAYS takes the local branch below, even while
         // remote-connected; the remote engine takes the remote-ready path when a

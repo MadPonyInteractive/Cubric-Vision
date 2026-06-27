@@ -1420,21 +1420,38 @@ router.get('/comfy/events/stream', async (req, res, next) => {
     });
     res.flushHeaders();
     const nodeStream = Readable.fromWeb(upstream.body);
+    // MPI-156: keepalive. The upstream wrapper SSE goes quiet during long
+    // sampling/load stretches; with no traffic the proxy/socket reaps this
+    // relay at a ~128s idle cadence ("remote SSE stream aborted: terminated")
+    // and the live progress bar freezes while the Pod is still connected (the
+    // gen finishes server-side regardless). A ':'-prefixed line is an SSE
+    // comment — EventSource ignores it, but it resets the idle timer.
+    const keepalive = setInterval(() => {
+      if (!res.writableEnded) res.write(':ping\n\n');
+    }, 20000);
+    const stopKeepalive = () => clearInterval(keepalive);
     // Same crash guard as _streamthrough: the SSE relay is the live event
     // channel during a generation, so its upstream socket drops whenever the
     // Pod OOMs/restarts mid-gen. An unhandled 'error' here would crash the
     // backend (exit 1) and freeze the generation. Swallow + end the SSE.
     nodeStream.on('error', (err) => {
       logger.warn('runpod', `remote SSE stream aborted: ${err?.message || err}`);
+      stopKeepalive();
       ctrl.abort();
       if (!res.writableEnded) res.end();
     });
     res.on('error', () => {
+      stopKeepalive();
       ctrl.abort();
       nodeStream.destroy();
     });
     nodeStream.pipe(res);
+    // res 'close' fires on every terminal path (clean pipe-end, client abort,
+    // error) — the catch-all that guarantees the interval is cleared even when
+    // upstream ends cleanly without an 'error' event.
+    res.on('close', stopKeepalive);
     req.on('close', () => {
+      stopKeepalive();
       ctrl.abort();
       nodeStream.destroy();
     });
