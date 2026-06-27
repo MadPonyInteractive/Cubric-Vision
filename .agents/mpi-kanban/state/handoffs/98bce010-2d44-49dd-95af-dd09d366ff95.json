@@ -1,0 +1,117 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "98bce010-2d44-49dd-95af-dd09d366ff95",
+  "generated_at": "2026-06-27T18:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-147 LTX/status-bar progress — remote (Pod) follow-up",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Fix the status-bar progress for LTX (and all workflows): it jumped to 50%/100% and hung instead of showing real per-step feedback. The bar must work BOTH locally and on remote RunPod Pods.",
+    "status": "in_progress",
+    "summary": "LOCAL path is SHIPPED + live-verified (commit 3a09e4f): a stdout-tqdm-driven per-stage status bar replaces the broken WS-weighted bar. REMOTE (Pod) still falls back to the old WS aggregator because the Pod wrapper does not capture/parse ComfyUI stdout. Remaining work = teach the Pod wrapper (mpi-ci repo) to pipe+parse ComfyUI stdout and broadcast the same SSE events, then live-verify on a Pod."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Local: routes/comfy.js parses ComfyUI stdout tqdm bars -> comfy:step-progress / comfy:tile-progress (USDU) / comfy:segment-total (detailer SEGS) over the /comfy/events/stream SSE",
+      "Local: js/services/phaseProgress.js (createStageProgress) — per-bar 0-100% fill + 'Stage N/M' counter, tile() mode for Ultimate, setTotal() for detailer",
+      "Local: js/services/commandExecutor.js SSE listeners drive the bar; STEP_EMITTING_KINDS opens the stream for sampler/ultimateSDUpscale/detailer; imageUpscale (ESRGAN, no signal) -> indeterminate pulse",
+      "Local: js/data/progressStages.js — recorded bar count per workflow + run mode (single/preview/stage2)",
+      "Local: timer/card/toast unified at prompt_ack (tool:accepted) so they match and exclude ComfyUI cold-start boot",
+      "Verified live by user: LTX 3/2/1, WAN 2/2, detailer 1/N, Ultimate upscaler (2-tile), universal upscale pulse",
+      "Docs: generation README + builder 05-author-and-test + gotchas.md",
+      "Committed local work: 3a09e4f"
+    ],
+    "pending": [
+      "Pod wrapper (mpi-ci): capture ComfyUI stdout (add stdout=PIPE in _spawn) + a reader task that parses tqdm lines the SAME way routes/comfy.js does",
+      "Pod wrapper: broadcast comfy:step-progress {value,max}, comfy:tile-progress {tile,tiles}, comfy:segment-total {total} via _broadcast_sse() — the existing SSE relay (remoteProxy.js) already pipes these to the app unchanged",
+      "Ship the wrapper.py change via R2 no-rebuild (publish-runtime.sh) — no image rebuild needed",
+      "Live-verify on a Pod: LTX gen should show the smooth 'Stage N/M' bar identical to local",
+      "Then close MPI-147 (doing -> done)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-147",
+    "title": "LTX Progress Bar",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-147/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-147/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "edit mpi-ci wrapper.py", "build-pod-image or publish-runtime", "verify on Pod"],
+  "knowledge_preservation": {
+    "completed": [
+      "gotchas.md § 'status-bar progress — WS events are useless, ComfyUI stdout is the truth (MPI-147)' captures the architecture + remote fallback note",
+      "Stage-counting procedure documented in comfy_workflows/scripts/workflow_generation/README.md § 'Progress stages' and docs/builder/05-author-and-test.md step 4"
+    ],
+    "pending": [
+      "After remote ships: update the gotchas remote-fallback sentence to 'remote now parses stdout too'",
+      "User raised: consider a more prominent doc callout that a NEW step-emitting node type also needs its class_type added to STEP_EMITTING_KINDS (commandExecutor.js) + buildWeightMap kinds (progressAggregator.js) — currently mentioned but not a checklist line"
+    ]
+  },
+  "next_action": {
+    "description": "In the mpi-ci repo at c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\wrapper\\wrapper.py: (1) in ComfyManager._spawn() (~line 248) add stdout=asyncio.subprocess.PIPE (and merge stderr) to create_subprocess_exec; (2) add an async reader task draining proc.stdout line-by-line that parses tqdm (port the regexes from routes/comfy.js _handleComfyOutput: tqdm /(\\d+)\\/(\\d+)\\s*\\[/g taking the LAST match, skip max<=1 model-load bars for step-progress but route USDU: lines to tile-progress and '# of Detected SEGS: N' to segment-total) and calls _broadcast_sse(...) with the SAME event shapes the app expects. Then publish via publish-runtime.sh (R2 no-rebuild) and live-verify an LTX gen on a Pod shows the smooth Stage N/M bar. Close MPI-147 when verified.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "WS progress_state is useless for video/upscale (ComfyUI 0.26 reports slow phases — model-init, VAE — as binary 0/1; LTX samplers are tiny). ComfyUI STDOUT (tqdm) is the only real signal. This is the whole basis of the fix.",
+      "Bar runs 0-100% PER tqdm bar; status bar shows 'Stage N/M' so each reset reads as a new stage, not a bug. (User's idea, replaced an earlier weighted-aggregation attempt that kept failing.)",
+      "Stage count M is RECORDED by hand per workflow + run mode in js/data/progressStages.js — it cannot be derived from the JSON (model-load bar isn't a node; LTX schedulers compute step counts at runtime; same file differs single vs preview vs stage2).",
+      "UltimateSDUpscale self-declares tiles via 'USDU: t/T'; detailer self-declares segments via '# of Detected SEGS: N' — no progressStages entry needed for those. ImageUpscaleWithModel (ESRGAN) emits NO signal -> indeterminate pulse.",
+      "timer/card/toast anchor at prompt_ack (tool:accepted) — earlier attempts anchored at dispatch (counted ComfyUI cold-start boot ~15s) or at sampling-start (card < toast mismatch)."
+    ],
+    "constraints": [
+      "The Pod wrapper currently does NOT capture ComfyUI stdout: create_subprocess_exec(*cmd) with no stdout=PIPE (wrapper.py ~line 248). It only SYNTHESIZES model-init events from WS (ModelInitSynth ~line 385). No tqdm parsing exists on the Pod.",
+      "The SSE relay already works: remoteProxy.js /comfy/events/stream pipes the Pod's /wrapper/events/stream straight through. So whatever the wrapper _broadcast_sse()s reaches the app's commandExecutor SSE listeners unchanged. Only the PRODUCER (wrapper stdout parse) is missing.",
+      "The app's remote path ALREADY falls back gracefully: with no comfy:step-progress events, _stdoutDriving stays false and the WS aggregator drives the bar (old behavior, not frozen, just not smooth). So shipping the wrapper change is purely additive — no app change needed for remote.",
+      "Ship wrapper.py via R2 no-rebuild (publish-runtime.sh) — do NOT rebuild the image for a wrapper-only change. See cubric-vision-pod/bootstrap.sh + publish-runtime.sh.",
+      "Event shapes MUST match the app exactly: comfy:step-progress {value,max}, comfy:tile-progress {tile,tiles}, comfy:segment-total {total}. See the addEventListener blocks in js/services/commandExecutor.js (~lines 1085-1145).",
+      "Shared git tree — commit by explicit pathspec, never git add . ; the mpi-ci repo is separate (use git -C c:/AI/Mpi/mpi-ci). The MPI-156 keepalive change in routes/remoteProxy.js is NOT part of MPI-147 — leave it.",
+      "User noted MPI-156 (Pod image builds) is in flight — this remote work pairs naturally with that session."
+    ],
+    "files_modified": [
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "js/services/progressAggregator.js",
+      "js/services/phaseProgress.js",
+      "js/shell/statusBar.js",
+      "routes/comfy.js",
+      "styles/shell/components.css",
+      "js/data/progressStages.js",
+      "comfy_workflows/scripts/workflow_generation/README.md",
+      "docs/builder/05-author-and-test.md",
+      "docs/gotchas.md"
+    ],
+    "files_to_read_first": [
+      "routes/comfy.js (the _handleComfyOutput tqdm/USDU/SEGS parse to PORT to the Pod)",
+      "js/services/commandExecutor.js (SSE listener event shapes the wrapper must match)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (_spawn ~248 needs stdout=PIPE; _broadcast_sse ~377; ModelInitSynth ~385)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/publish-runtime.sh (R2 no-rebuild ship path)",
+      "docs/gotchas.md § status-bar progress (MPI-147)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["status-bar progress (MPI-147)", "RunPod / remote engine", "Pod wrapper owns+supervises ComfyUI"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    "docs/gotchas.md (§ status-bar progress, § RunPod / remote engine)"
+  ],
+  "recent_events": [
+    { "at": "2026-06-27T18:10:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/98bce010-2d44-49dd-95af-dd09d366ff95.json and use mpi-continue to resume MPI-147. Context: the LTX/status-bar progress fix is SHIPPED + verified for LOCAL generations (commit 3a09e4f) — it drives the bar from ComfyUI stdout tqdm parsing (routes/comfy.js -> SSE -> phaseProgress.js -> statusBar), showing 'Stage N/M' per workflow. The REMAINING work is REMOTE (RunPod Pod): the Pod wrapper at c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\wrapper\\wrapper.py does NOT capture ComfyUI stdout, so remote gens fall back to the old (smooth-less) WS bar. Your task: in wrapper.py, add stdout=PIPE to the ComfyUI subprocess in _spawn() and add an async reader that parses tqdm lines the SAME way routes/comfy.js _handleComfyOutput does, broadcasting comfy:step-progress {value,max}, comfy:tile-progress {tile,tiles}, and comfy:segment-total {total} via _broadcast_sse(). The SSE relay already pipes these to the app unchanged — no app change needed. Ship via publish-runtime.sh (R2 no-rebuild), then live-verify an LTX gen on a Pod shows the smooth Stage N/M bar, and close MPI-147. Read routes/comfy.js and js/services/commandExecutor.js first for the exact regexes and event shapes. mpi-ci is a separate git repo (git -C). Do not touch the MPI-156 keepalive in remoteProxy.js."
+}

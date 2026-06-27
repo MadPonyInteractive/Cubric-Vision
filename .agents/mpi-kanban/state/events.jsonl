@@ -22,3 +22,7 @@
 {"ts":"2026-06-17T01:30:01Z","type":"task.moved","id":"MPI-106","from":"todo","to":"done","actor":"claude","note":"work shipped+verified same session; created directly in done"}
 {"ts":"2026-06-17T02:00:00Z","type":"task.moved","id":"MPI-83","from":"todo","to":"doing","actor":"claude","note":"picked up MPI-83 Bug2 (per-file probe metadata); Bug1 already fixed, dropped"}
 {"ts":"2026-06-17T02:30:00Z","type":"task.moved","id":"MPI-83","from":"doing","to":"done","actor":"claude","note":"Bug2 fixed+committed d12f526, live-verified; Bug1 already fixed (dropped). User accepted."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T14:10:00Z","actor":"claude","from":"todo","to":"doing","summary":"LTX progress bar: rgthree-model rewrite of progressAggregator."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T18:00:00Z","actor":"claude","from":"doing","to":"done","summary":"LTX progress bar shipped (3a09e4f)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T18:05:00Z","actor":"claude","from":"done","to":"doing","summary":"Reopened — remote Pod path still TODO."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T19:45:00Z","actor":"claude","from":"doing","to":"done","summary":"Remote Pod stdout-parse shipped (wrapper 0.2.19) + live-verified on A4500 (LTX 1->2->3 per-step fill)."}
