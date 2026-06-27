@@ -183,3 +183,47 @@ import failure changes nothing → it CANNOT be the gap. Prior agents correctly 
 - **NOT useful:** re-running SDXL/image gens. SDXL never touches the LTX video path,
   so it cannot confirm or deny any LTX theory — it is the (already-collected) control
   showing the Pod stack is fine for images.
+
+## ROOT CAUSE FOUND 2026-06-27 — it's INTER-STAGE MODEL STAGING, not per-step compute
+Per-step sampler rate is FAST on BOTH sides (live tqdm): Pod main LTX sampler =
+**~2.96 it/s (~0.34 s/it)**, local = ~4.57 s/it — i.e. the Pod's per-step DiT compute
+is actually FASTER. **The wall-clock is NOT in the sampler steps.** It is in the gaps
+BETWEEN stages, where aimdo (re)stages each stage's model:
+```
+Requested to load LTXAV
+Model LTXAV prepared for dynamic VRAM loading. 40050MB Staged. 1440 patches attached.
+```
+LTX-2.3 is multi-stage (text-encoder LTXAVTEModel_ ~15GB → stage-1 transformer LTXAV
+~40GB → stage-2 LTXAV ~40GB → VideoVAE/AudioVAE). The **40GB LTXAV transformer is
+(re)STAGED at EACH stage boundary** — in the local cold LTX log it appears 3× with
+~38s + ~39s wall-clock BETWEEN the staging events (16:36:29 → 16:37:07 → 16:37:46),
+while the sampler bars in between are quick. SDXL is fast because it's ONE small
+(~5GB) model, ONE stage, no re-staging. This is why:
+- per-step is fast both sides (compute was never the issue);
+- total is slow (staging dominates the wall-clock);
+- it's LTX-specific (SDXL doesn't re-stage a 40GB model 3×);
+- disabling aimdo OOM'd (materializing 40GB × stages resident > RAM) — aimdo's
+  staging is the SYMPTOM's mechanism but also the OOM SAFETY; the fix is to stop the
+  RE-staging, not to disable aimdo.
+
+### The narrowing question (needs Pod WARM log)
+Local does the same re-staging on COLD (the +38s events are in local's 132s cold
+gen) yet local WARM = 1:31 vs Pod WARM = 2:09. So warm runs must SKIP some staging
+(model kept resident/cached). The remaining question: **what does the Pod re-stage
+on a WARM gen that local keeps cached?** Likely a cache-retention difference —
+wrapper.py:202-211 DROPPED `--cache-lru` (MPI-142) to fall back to v0.26's
+pressure-aware `--cache-ram` default "matching local"; verify the Pod actually keeps
+the 40GB LTXAV resident across stages on warm the way local does.
+
+### NEXT — capture & compare the WARM staging logs (free, no rebuild)
+1. On the Pod, run TWO consecutive LTX gens; capture the `Requested to load` /
+   `Model … prepared for dynamic VRAM loading … Staged` lines + timestamps for the
+   SECOND (warm) gen.
+2. Compare to a local WARM LTX gen's same lines (app.log).
+3. If the Pod re-stages LTXAV (40GB) on warm where local keeps it cached → the fix is
+   cache retention (keep the stage models resident between/across gens), NOT a torch
+   bump and NOT aimdo-off. Tune via `--cache-ram`/`--reserve-vram`/cache count —
+   aimdo stays ON (no OOM). If both re-stage identically on warm → the per-STAGING
+   cost itself is slower on the Pod (PCIe / host-mem bandwidth / torch-2.8 staging
+   path) → measure staging seconds per 40GB event, Pod vs local.
+Do NOT bump torch or disable aimdo before this log comparison localizes the cost.
