@@ -85,9 +85,29 @@ they cannot be verified independently (same Pod).
   measurably faster than SDPA, (c) 4090 picks `--lowvram` & survives, 5090 picks
   `--normalvram` & is faster than its lowvram baseline. **Verify:** see below.
 
-## Completed
+## Completed (code, 2026-06-26 — self-verified, pending live Pod)
 
-- [ ] Nothing yet.
+- [x] **Sage baked (MPI-145):** `cubric-vision-pod/Dockerfile` — per-profile source
+  build after the torch branch (cu124 `8.6;8.9`, cu128 `12.0`, cpu skip),
+  `git+thu-ml/SageAttention.git` + `--no-build-isolation` + `MAX_JOBS=4` +
+  `pip install triton`. Non-fatal `|| echo WARN`.
+- [x] **start.sh gutted:** removed the runtime `pip --target` compile + `.sage_arch`
+  stamp; replaced with one python probe (sage import + total VRAM GiB) → sets
+  `USE_SAGE` and resolves the VRAM mode. No runtime compile.
+- [x] **Per-card VRAM (MPI-146):** start.sh exports `CUBRIC_VRAM_MODE`
+  (`>=32GB → --normalvram`, else `--lowvram`, default `--lowvram`); wrapper
+  `_build_cmd` uses `self.vram_mode` instead of hardcoded `--lowvram`.
+- [x] **Versions:** wrapper.py `0.2.15→0.2.16`; Dockerfile ARG `0.2.14→0.2.16`;
+  app `routes/remoteProxy.js` POD_IMAGE `v0.9.1→v0.10.0` / WRAPPER `0.2.15→0.2.16`;
+  README v0.10.0 block (folds MPI-145/146/152).
+- [x] **Self-verify:** start.sh `bash -n` OK + probe parse tested 6/6 (5090→sage+normalvram,
+  4090→sage+lowvram, no-gpu/crash/empty→SDPA+lowvram, 32 boundary correct);
+  wrapper.py `ast.parse` OK; remoteProxy.js `node --check` OK; app `release:check` PASSED;
+  env-handoff chain start.sh→wrapper confirmed end-to-end.
+
+### Pending (user-gated)
+- [ ] Build image v0.10.0 (cu124+cpu CI, cu128 local — `build-pod-image`).
+- [ ] Live verify per § Verification (4090 cu124 + 5090 cu128).
 
 ## Remaining Work
 

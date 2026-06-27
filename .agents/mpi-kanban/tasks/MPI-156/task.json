@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-156",
+  "title": "Pod fast model loading (torch 2.8 → aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+  "description": "Two intertwined efforts, sequenced externalize-FIRST then torch-2.8 (user decision). ROOT CAUSE CONFIRMED from the live cu124 Pod log: ComfyUI v0.26's dynamic-vram allocator comfy-aimdo (v0.4.10, INSTALLED) refuses to init because torch < 2.8 ('WARNING: Unsupported Pytorch detected. DynamicVRAM support requires Pytorch version 2.8 or later. Falling back to legacy ModelPatcher') -> legacy ModelPatcher + --lowvram puts the 15GB Gemma encoder on CPU + streams the 42GB transformer through RAM = ~6-min cold loads. Multi-model app = every model switch reloads = ~7min per 2s gen = UNUSABLE. The Pod Dockerfile pins cu124->torch 2.6.0 (cu124 wheel ceiling) and cu128->torch 2.7.1 (it DELIBERATELY uninstalls the base's torch 2.8 nightly, MPI-70, for a fixed release) -> both fail the >=2.8 gate. FIX: torch 2.8 stable+cu128 (cu124 can't reach 2.8 on cu124 wheels -> move to cu128/cu130 base or accept slow; the log also hinted cu130 for optimized ops). aimdo is the silent default (no enable flag); --lowvram does NOT disable it (it's the fallback when aimdo is already off); fp8 transformer+encoder fit 24GB with aimdo JIT fault-in -> loads drop to seconds. PHASE 1 (externalize, FIRST): nearly every rebuild this session was a start.sh/wrapper.py edit (both COPY'd into the image, run as CMD). Image has git/curl/aria2 + /workspace volume + POST /wrapper/restart-comfy. Move start.sh+wrapper.py to a DEDICATED public R2 bucket (cubric-pod-runtime, separate from cubric-builds which MPI-137 is already splitting into cubric-models), boot-fetch via curl with baked-in fallback, live-reload via restart-comfy. After ONE rebuild to ship the bootstrap, all shell/wrapper edits = R2 push + restart, NO rebuild. PHASE 2: torch 2.8 -> aimdo, drop --lowvram. PHASE 3: reframe MPI-146 (lowvram/normalvram split is moot under aimdo) + measure the load-time win. Full plan: plan.md. BRANCH RunPod, mpi-ci separate repo, builds user-gated. Cross-links MPI-145/146/137/129/155.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-06-27T01:45:00Z",
+  "updated_at": "2026-06-27T01:45:00Z",
+  "links": {"brief": "brief.md", "plan": "plan.md", "checklist": "checklist.md", "validation": "validation.md", "files": "files.json", "events": "events.jsonl", "handoffs": "handoffs/", "research": "research/"},
+  "tags": ["runpod", "mpi-ci", "pod-image", "torch", "aimdo", "dynamic-vram", "performance", "model-loading", "r2", "externalize", "remote-engine"],
+  "priority": "high"
+}
