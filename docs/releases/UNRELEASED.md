@@ -49,6 +49,10 @@
     tier — switching between Wan and LTX (or reusing a prompt across them) no longer
     carries one model's setting onto another. Reusing an LTX 2K/4K result onto a
     model that doesn't go that high lands at that model's top quality instead.
+  - LTX previews are **Finish-only**: preview a clip, then Finish to render it at
+    full quality. There's no "generate from" branch (that's a Wan-only option,
+    where a separate second-stage LoRA varies the result) — on LTX the second
+    stage matches the preview, so you continue it in place.
 
 - **Hover to hear your clips.** Hovering a video card in the gallery now plays its
   audio; hovering an audio card plays it too (the stop button shows while it plays,
