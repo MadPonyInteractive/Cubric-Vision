@@ -4,6 +4,23 @@
 > sequencing lock ("post-release only") is LIFTED — v1.0.0 shipped (2026-06-10),
 > we're post-release. Read this whole file to resume in a fresh session.
 
+## Inherited from MPI-128 (2026-06-27) — deferred LTX scope
+
+MPI-128 (app integration) shipped its core (dual-latent stage-2 staging + the
+`_ms`→`isMultiStage` refactor) and closed. Two of its items are AUTHORING/branch
+work that belongs here:
+
+- **Multimodal input UI (5+ images).** LTX upstream will accept 5+ input images
+  (+ audio, video on some ops). The `{key, mediaType, min, max}` media-slot seam
+  is already in place from MPI-127; `max` reads from model capacity. **Blocked on
+  LTX upstream** — when it lands, bump the data + build the multi-image UI. No
+  op/executor rewrite (data + UI only).
+- **Deferred LTX branch workflows** (each its own `LTX_*_template.json`, fanned by
+  `generate_ltx.py`): lipdub v2v (LoadVideoUpload-split bug), lipsync-v2v-2, video
+  extend, CTRL/pose (IC-LoRA union + SDPose wholebody), head-swap (BFS nodes —
+  `ComfyUI-BFSNodes`, dropped from MPI-127 ship set). Most reuse the existing
+  handler once authored.
+
 ## Session note (2026-06-21) — PARKED mid-deconstruction
 
 Started deconstructing the NerdyRodent monolith into per-op app workflows. Two

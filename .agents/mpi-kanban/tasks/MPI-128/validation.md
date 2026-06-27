@@ -31,7 +31,19 @@ generated live from prompt). Two previews queued (16:9 + 9:16), both landed.
 - [x] 6. Older queued preview still works (both previews independent, no cross-talk).
 - [x] previewStage toggle now visible on LTX (multiStage:true landed).
 
-## STILL UNTESTED (follow-up, not blocking item-1 close)
+## Item 2 — kill _ms suffix magic (DONE, 2026-06-27, commit 26d83ad)
+Replaced `String(operation).endsWith('_ms')` (4 runtime spots: commandExecutor
+_prepareWorkflowInputs/_buildParams/_captureTitle + generationService debug gate)
+with `command.isMultiStage` flag on t2v_ms/i2v_ms + `commandIsMultiStage()` helper.
+- node --check pass; self-check ms_flag_check.mjs PASS (real ops true, others
+  false, unregistered *_ms now false = safer than the old suffix match).
+
+## Card close (2026-06-27)
+Items 1 + 2 done + committed. Item 1 (R2 audit) already done via MPI-137.
+Items 3 (multimodal UI, blocked on upstream) + 4 (deferred LTX branch workflows)
+moved to MPI-4 (authoring card). MPI-128 closed.
+
+## STILL UNTESTED (follow-up, not blocking close)
 - LTX with a real AUDIO INPUT FILE (Reference / Original mode) preview→Finish —
   exercises the Input_Audio_File chip injecting over the baked default alongside
   dual-latent staging.
