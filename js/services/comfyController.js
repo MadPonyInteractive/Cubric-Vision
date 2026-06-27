@@ -740,7 +740,16 @@ function createEngine({ engine, alwaysLocal }) {
         if (!this._promptResolvers.has(promptId)) return;
         let entry;
         try {
-            const resp = await fetch(`${this.httpBase()}/history/${promptId}`);
+            // Remote: ComfyUI's /history is NOT publicly exposed by the Pod — the
+            // wrapper proxies it at /wrapper/history/{id} (MPI-152 reconcile). Local:
+            // hit ComfyUI's /history directly. Using the bare /history remotely 404s
+            // (the wrapper has no such route) → reconcile silently failed → remote
+            // gens whose broadcast=False terminal was missed hung forever (MPI-156).
+            const isRemote = !this._alwaysLocal && remoteEngineClient.isRemote();
+            const histUrl = isRemote
+                ? `${this.httpBase()}/wrapper/history/${promptId}`
+                : `${this.httpBase()}/history/${promptId}`;
+            const resp = await fetch(histUrl);
             if (!resp.ok) return;
             const data = await resp.json();
             entry = data?.[promptId];
@@ -1013,6 +1022,7 @@ function createEngine({ engine, alwaysLocal }) {
         return new Promise(async (resolve, reject) => {
             const outputs = [];
             let promptId = null;
+            let _terminalSafetyTimer = null;   // MPI-156: remote broadcast=False terminal safety net
             const internalListener = (msg) => {
                 if (msg instanceof ArrayBuffer || (msg && msg.type === 'preview')) {
                     if (onMessage) onMessage(msg);
@@ -1024,6 +1034,20 @@ function createEngine({ engine, alwaysLocal }) {
                 if (msg.type === 'executed') {
                     const nodeOutput = msg.data.output;
                     _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
+                    // MPI-156 safety net: on REMOTE, the terminal `execution_success`
+                    // is broadcast=False and is NOT replayed, so if it never reaches
+                    // the proxied WS (no reconnect to trigger the onopen reconcile)
+                    // the gen hangs forever even though outputs already arrived. Arm a
+                    // debounced /wrapper/history poll after the last `executed`; the
+                    // terminal/error paths clear it. Idempotent: _reconcileFromHistory
+                    // no-ops if the resolver was already consumed by a live terminal.
+                    if (!this._alwaysLocal && remoteEngineClient.isRemote() && promptId) {
+                        if (_terminalSafetyTimer) clearTimeout(_terminalSafetyTimer);
+                        const pid = promptId;
+                        _terminalSafetyTimer = setTimeout(() => {
+                            this._reconcileFromHistory(pid);
+                        }, 4000);
+                    }
                 }
 
                 // A node raised in-process (missing node, a node throwing, a
@@ -1037,6 +1061,7 @@ function createEngine({ engine, alwaysLocal }) {
                 // OOM-kill (exit 137) kills the process before this event ever
                 // sends — that path is handled by the WS-drop detection (B4).
                 if (msg.type === 'execution_error') {
+                    if (_terminalSafetyTimer) { clearTimeout(_terminalSafetyTimer); _terminalSafetyTimer = null; }
                     const d = msg.data || {};
                     const nodeType = d.node_type || d.class_type || 'a node';
                     const exc = d.exception_type ? `${d.exception_type}: ` : '';
@@ -1068,6 +1093,7 @@ function createEngine({ engine, alwaysLocal }) {
                     (msg.type === 'executing' && msg.data?.node === null) ||
                     msg.type === 'execution_success';
                 if (isTerminalDone) {
+                    if (_terminalSafetyTimer) { clearTimeout(_terminalSafetyTimer); _terminalSafetyTimer = null; }
                     if (promptId) {
                         this._promptListeners.delete(promptId);
                         this._promptRejectors.delete(promptId);
