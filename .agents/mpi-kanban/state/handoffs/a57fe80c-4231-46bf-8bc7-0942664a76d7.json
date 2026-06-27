@@ -1,0 +1,122 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a57fe80c-4231-46bf-8bc7-0942664a76d7",
+  "generated_at": "2026-06-27T09:00:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 Phase 1+2 SHIPPED + live-verified on a 5090 (R2 externalize, torch 2.8->aimdo ~6min->fast loads, remote completion-hang fixed). Now building the broad cu124-profile with torch 2.8+cu126 (Option A) to bring aimdo to non-Blackwell cards; awaiting a 4090 live aimdo-verify.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Make remote model loading not take ~6-7 minutes per generation (unusable for a multi-model app). Sequenced: externalize start.sh/wrapper to R2 FIRST, then torch 2.8 -> aimdo.",
+    "status": "in_progress",
+    "summary": "Phases 1 (R2 externalize) + 2 (torch 2.8 -> aimdo) are SHIPPED and LIVE-VERIFIED on a 5090 (cu128): aimdo inits, model load dropped ~6min -> seconds, full t2v+audio gen completes. A discovered remote completion-hang (v0.26 broadcast=False terminal + wrong reconcile URL) was ALSO fixed + live-verified. REMAINING: the broad/low-driver cu124 profile (4090/Ampere/Hopper) still lacked aimdo; building it now with torch 2.8+cu126 (Option A, research-confirmed aimdo gate is torch-only) -> needs a live 4090 aimdo-verify, then MPI-156 is fully done."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+    "completed": [
+      "PHASE 1 (R2 externalize): bootstrap.sh fetches start.sh+wrapper.py from cubric-pod-runtime (https://pod.cubric.studio/vision/<channel>/) at boot, baked fallback. publish-runtime.sh push helper. Shipped in v0.10.2 (both GPU profiles). Caught+fixed cu124-base-lacks-curl (commit 21bc929). LIVE-verified: real-image fetch + no-rebuild-reload via test channel + the live 5090 boot log.",
+      "PHASE 2 (torch 2.8 -> aimdo): cu128 bumped torch 2.7.1 -> 2.8.0+cu128 (trio tv 0.23.0/ta 2.8.0). aimdo INITED on the live 5090 ('comfy-aimdo inited for GPU'); model load ~6min -> seconds; full 2-stage t2v+audio 'Prompt executed in ~67-101s'. Shipped as v0.10.3-cu128 (pushed+public).",
+      "DROP vram flag: torch-2.8 aimdo REMOVED --normalvram -> old start.sh crash-looped the 5090. Fixed: start.sh VRAM_MODE='' (aimdo manages), wrapper 0.2.18 skips empty flag w/ legacy --lowvram sentinel. R2-pushed (no rebuild), live-verified.",
+      "REMOTE completion-hang FIXED (commit 860412e, comfyController.js): v0.26 terminal execution_success is broadcast=False + the remote reconcile fetched /history (Pod only exposes /wrapper/history). Now: remote reconcile uses /wrapper/history/{id} + a 4s post-'executed' safety poll. LIVE-verified on the 5090 (remote t2v+audio settles, no hang).",
+      "MPI-137 model migration (full-migrate-except-GC): 63GB/12 LTX files server-side-copied cubric-builds/models -> cubric-models/vision/ltx-2.3 (rclone check 0 diffs); URLs swapped in dependencies.js (de59499) + builder install_models_ltx23.sh (ee9bdae); all HEAD-200. Card doing/validating.",
+      "Researched + LOCKED Option A for the broad profile: torch 2.8 ships cu126 wheels; aimdo's enable gate is torch>=2.8 ONLY (verified vs ComfyUI main.py — NO torch.version.cuda check; 'CUDA 12.8+' on PyPI is a tested-config note, not a code gate). cu126 wheel reports cuda 12.6 -> PASSES the gate. Base pytorch:2.6.0-cuda12.6-cudnn9-devel exists+pullable; cu126 trio (torch 2.8.0 / tv 0.23.0 / ta 2.8.0, cp311) verified on the index."
+    ],
+    "pending": [
+      "IN FLIGHT: building cu124-profile (broad/low-floor) with base cuda12.6 + torch 2.8.0+cu126 at tag v0.10.3-cu124 (background task bk1yutk3y; output file under the scratchpad tasks dir). On completion it asserts torch 2.8 + cuda 12.6 + sage, then pushes. CHECK that output file for 'CU124(cu126-guts) v0.10.3 BUILD+PUSH COMPLETE'.",
+      "After build+push: pull-verify (docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v0.10.3-cu124), then optionally dry-run bootstrap inside it.",
+      "THE KEY TEST: user spins a fresh 4090 Pod (broad profile's target card) on v0.10.3-cu124. Confirm boot log shows: [cubric-bootstrap] installed fetched start.sh, torch 2.8.0+cu126, and 'comfy-aimdo inited for GPU' (NOT 'requires Pytorch 2.8 ... Falling back'). This is the ONE residual unknown (the native aimdo plat_init on a 12.6 base — source shows no version check, but unverified on hardware). Then a gen: fast load + completes + UI settles.",
+      "If aimdo inits on the 4090 -> Option A fully proven, BOTH GPU profiles have aimdo, MPI-156 done. If it FALLS BACK -> fall to Option B (move broad profile to cu128 base, accept higher r570 driver floor).",
+      "PUSH the unpushed commits (USER-GATED): mpi-ci has 21bc929 (curl fix), 7c006fb (README), ba55268 (cu128 torch 2.8), + the normalvram-fix commit, + the new cu124->cu126 Dockerfile commit (NOT YET COMMITTED — commit it). App RunPod branch has de59499, 3a43c20 (v0.10.2 pin), 860412e (completion fix), + a v0.10.3 pin edit (NOT YET COMMITTED — commit routes/remoteProxy.js). The curl fix especially must be pushed for reproducibility.",
+      "NEXT-BUILD TODO (left as a Dockerfile comment): RENAME the broad profile cu124 -> cu126 (it is cu126 inside now). Touches: Dockerfile branch, BASE_IMAGE arg, build matrix, routes/remoteProxy.js podImageForCard suffix, README tags, rollback-tag matching.",
+      "Phase 3 (reframe MPI-146): the per-card lowvram/normalvram split is MOOT under aimdo (confirmed: --normalvram removed, --lowvram is a no-op). Update MPI-146 to 'drop vram flags, aimdo manages'. Measure the win formally if desired.",
+      "Commit the kanban + docs drift at mpi-end (board.json, MPI-156 plan/validation/checklist/events, MPI-137/128/129 card edits, docs/gotchas.md 3-4 new entries, MEMORY.md, the R2 capability doc in MadPony-Identity)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 -> aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-156/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-156 plan.md updated (Phase 1 done, Phase 2 done incl the --normalvram forced drop, Plan Drift notes Option A research + decision).",
+      "MPI-156 validation.md holds the full live-verify record: Phase 1 proof, Phase 2 aimdo proof, the --normalvram crash+fix, the remote completion-hang root-cause+fix+live-verify, and the cu124-base-curl bug.",
+      "docs/gotchas.md added: (1) start.sh/wrapper R2-fetched at boot, (2) v0.26 aimdo needs torch>=2.8, (3) install curl (cu124 base lacks it), (4) v0.26 aimdo REMOVED --normalvram, (5) remote gen hang = broadcast=False terminal + wrong reconcile URL, (6) Git-Bash schannel looped-curl flake.",
+      "MEMORY.md MPI-156 in-flight line updated (Phase 1 done state). MadPony-Identity R2 capability doc records the 3-bucket convention (cubric-builds/dl, cubric-models/models, cubric-pod-runtime/pod).",
+      "MPI-137 card+validation updated (prereqs done, migration done except GC). MPI-128 item(2) + MPI-129 de-staled to point at cubric-models/vision (not HF/cubric-builds)."
+    ],
+    "pending": [
+      "Add a docs/gotchas.md entry for Option A once 4090-verified: 'broad cu124 profile uses cuda12.6 base + torch 2.8.0+cu126 to get aimdo at a lower driver floor (~r560) than cu128 (r570); aimdo gate is torch-only so cu126 wheel passes; RENAME profile to cu126 next build.'",
+      "Update MEMORY.md MPI-156 line to 'Phase 1+2 SHIPPED+live-verified, cu124-cu126 aimdo test pending' at mpi-end.",
+      "Reframe MPI-146 (Phase 3) + commit all kanban/docs drift at mpi-end.",
+      "The 3 coordination messages to the other (preview-flow) agent (105ba703 thread) are informational; other agent is unblocked (completion fix shipped). No action unless they reply."
+    ]
+  },
+  "next_action": {
+    "description": "Check the background build (task bk1yutk3y output file in the scratchpad tasks dir) for 'CU124(cu126-guts) v0.10.3 BUILD+PUSH COMPLETE' + the 'torch 2.8.0 cuda 12.6 / sage OK' verify line. If done, pull-verify ghcr.io/madponyinteractive/cubric-vision-pod:v0.10.3-cu124 (docker manifest inspect). Then tell the user to spin a fresh 4090 Pod on v0.10.3-cu124 (restart the app first so POD_IMAGE_VERSION v0.10.3 is sent) and paste the boot log; confirm 'comfy-aimdo inited for GPU' (Option A's residual unknown). Commit the not-yet-committed Dockerfile (cu124->cu126 guts) + routes/remoteProxy.js v0.10.3 pin by explicit pathspec (do NOT push — user-gated). Brief before code (Continue Brief gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Externalize-FIRST then torch-2.8 (user) — so aimdo iteration is fast R2-push not 25-min rebuilds. Paid off: the --normalvram fix shipped via R2, no rebuild.",
+      "torch 2.8 folded into the BUILD (not R2-iterated) per user 'do torch 2.8 on the build so we don't build again' — the torch pin is baked, not externalized.",
+      "Broad profile = Option A: cuda12.6 base + torch 2.8.0+cu126. Research-confirmed aimdo gate is torch>=2.8 ONLY (ComfyUI main.py: no torch.version.cuda check), so the cu126 wheel (reports cuda 12.6) enables aimdo. Keeps a lower driver floor (~r560) than cu128 (r570) = wider old-host coverage, the broad profile's whole purpose.",
+      "Keep the profile KEY+tag as 'cu124' THIS build (avoid touching app suffix logic + rollback-tag matching mid-test); RENAME to cu126 next build (TODO left in Dockerfile).",
+      "5090 -> cu128 image, 4090/everything-else -> cu124 image (routes/remoteProxy.js podImageForCard isBlackwell check). The earlier 4090 failure was IMAGE_NOT_FOUND v0.10.3-cu124 (didn't exist yet), NOT a driver issue.",
+      "Remote completion fix is app-side only (comfyController.js) — /wrapper/history already exists in wrapper 0.2.18, so NO Pod rebuild needed for it."
+    ],
+    "constraints": [
+      "RunPod branch only — NO master merge / GitHub release / git tag (MPI-131).",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci); push IS part of the build flow but is USER-GATED (auto-mode denies push to default branch). Shared tree — commit by EXPLICIT pathspec, never git add -A/.",
+      "Pod ops + image builds USER-GATED. cu124 + cu128 build LOCAL only (sage overflows CI); only cpu via CI. comfyui_ref = node_lock TAG v0.26.0.",
+      "Image/version bump needs an APP RESTART (POD_IMAGE_VERSION bakes at Express-child boot) + a FRESH Pod. A killed terminal orphans the Pod (stop it manually in RunPod).",
+      "The broad profile build uses a NEW base (cuda12.6) -> first build pulls fresh layers, slower than cached cu128 builds.",
+      "Git-Bash curl on Windows: a looped 'curl -o' against pod.cubric.studio returns false HTTP 000 (schannel). Verify public R2 with a SINGLE verbose curl or rclone S3 API (rclone cat/lsf), not a looped curl -o.",
+      "WS events are clientId-scoped (broadcast=False terminal) — a passive WS client with a different clientId sees only 'status', not the prompt-scoped terminal. Can't passively eavesdrop completion.",
+      "cpu image uses a SEPARATE Dockerfile.cpu + start-cpu.sh (slim download-mode, MPI-88) — NOT externalized, NOT a bootstrap test. Only the GPU images use bootstrap.sh.",
+      "re-check kornia 0.8.2 + baked nodes still import after the torch 2.8 bump (MPI-149 lesson) — the cu128 build passed (kornia pad OK in the build log), expect cu126 same."
+    ],
+    "files_modified": [
+      "(committed) app RunPod: js/services/comfyController.js (860412e completion fix), js/data/modelConstants/dependencies.js (de59499 R2 URLs), routes/remoteProxy.js (3a43c20 v0.10.2 pin; v0.10.3 pin edit NOT yet committed)",
+      "(committed) mpi-ci main local (UNPUSHED except d5bba40): cubric-vision-pod/{bootstrap.sh, publish-runtime.sh, Dockerfile, README.md, wrapper/wrapper.py, start.sh}; commits 21bc929/7c006fb/ba55268/normalvram-fix; cubric-vision-builder/install_models_ltx23.sh (ee9bdae)",
+      "(UNCOMMITTED) mpi-ci Dockerfile (cu124 branch -> cuda12.6 base + torch 2.8+cu126, rename-TODO comment); app routes/remoteProxy.js (POD_IMAGE_VERSION v0.10.3)",
+      "(uncommitted kanban/docs) board.json, MPI-156/137/128/129 cards+workspaces, docs/gotchas.md, MEMORY.md, MadPony-Identity R2 doc"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "js/services/comfyController.js (the remote completion fix + reconcile)",
+      ".claude/commands/build-pod-image.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "Pod/mpi-ci", "ComfyUI engine", "build/release"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline; shared-tree commit hygiene by explicit pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    ".claude/commands/build-pod-image.md (cu124+cu128 LOCAL-only; Step 0 disk reclaim; the MPI-156 publish-instead-of-rebuild note)",
+    "docs/gotchas.md (RunPod/remote, ComfyUI engine, aimdo/torch, R2-externalize, --normalvram, completion-hang)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-27T09:00:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/a57fe80c-4231-46bf-8bc7-0942664a76d7.json then use mpi-continue. STATUS: MPI-156 Phases 1 (externalize start.sh/wrapper to the R2 bucket cubric-pod-runtime / pod.cubric.studio/vision) and 2 (torch 2.7.1 -> 2.8.0+cu128 to enable ComfyUI v0.26's comfy-aimdo dynamic-VRAM allocator) are SHIPPED as image v0.10.3-cu128 and LIVE-VERIFIED on a real RTX 5090: aimdo inits ('comfy-aimdo inited for GPU'), model load dropped from ~6min to seconds, a full 2-stage t2v+audio gen completes. Two bugs found+fixed live this session: (a) torch-2.8 aimdo REMOVED ComfyUI's --normalvram flag -> the old start.sh crash-looped the Pod -> fixed by dropping the vram flag (start.sh VRAM_MODE='' + wrapper 0.2.18 skips empty, sentinel keeps legacy --lowvram for old images), shipped via R2 with NO rebuild; (b) remote gens hung on 'Generating...' because v0.26's terminal execution_success is broadcast=False and the reconcile fetched /history which the Pod doesn't expose -> fixed in js/services/comfyController.js (commit 860412e: use /wrapper/history/{id} on remote + a 4s post-'executed' safety poll), live-verified. THE NEXT STEP: the BROAD/low-driver-floor GPU profile (the one named 'cu124', serving 4090/Ampere/Hopper, NOT Blackwell) still lacked aimdo because cu124 wheels can't reach torch 2.8. Decision (Option A, research-confirmed): build it with base pytorch:2.6.0-cuda12.6-cudnn9-devel + torch 2.8.0+cu126 -- aimdo's enable gate is torch>=2.8 ONLY (ComfyUI main.py has no torch.version.cuda check; the cu126 wheel reports cuda 12.6 and PASSES), giving aimdo at a lower driver floor (~r560) than cu128 (r570). That build is IN FLIGHT as a background task (bk1yutk3y, output file in the scratchpad tasks dir) at tag v0.10.3-cu124, KEEPING the 'cu124' key+tag this build (a rename-to-cu126 TODO is left in the Dockerfile) to avoid touching the app's podImageForCard suffix logic mid-test. FIRST: check that build's output file for 'CU124(cu126-guts) v0.10.3 BUILD+PUSH COMPLETE' + the torch 2.8.0/cuda 12.6/sage OK verify line; if done, pull-verify the tag. THEN have the user spin a fresh 4090 Pod on v0.10.3-cu124 (restart the app first so it sends POD_IMAGE_VERSION v0.10.3) and confirm the boot log shows 'comfy-aimdo inited for GPU' (NOT the 'requires Pytorch 2.8 ... Falling back' fallback) -- that is Option A's one residual unknown (the native aimdo plat_init on a 12.6 base; source shows no version check but it's unverified on hardware). If aimdo inits -> both GPU profiles have aimdo, MPI-156 done; if it falls back -> Option B (move the broad profile to a cu128 base, accept r570). GOTCHAS: RunPod branch ONLY (no master/release/tag, MPI-131); mpi-ci is a SEPARATE repo (git -C) and push is USER-GATED (auto-mode denies pushing to the default branch); builds USER-GATED, GPU profiles LOCAL-only; image bump needs app restart + fresh Pod; a killed terminal orphans the Pod (stop it manually). UNPUSHED + UNCOMMITTED work exists -- see the handoff's files_modified; commit the cu124->cu126 Dockerfile + the v0.10.3 app pin by explicit pathspec, do NOT push unless the user asks. The Pod from this session may still be running -- remind the user to stop it if not in use. Brief before code (Continue Brief gate)."
+}

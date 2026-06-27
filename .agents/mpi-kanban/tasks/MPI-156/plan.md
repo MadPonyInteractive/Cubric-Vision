@@ -83,30 +83,25 @@ MPI-129 (HF→R2 dep migration), MPI-155 (local-engine per-card VRAM, separate).
 Goal: stop rebuilding the image for shell/wrapper edits. After this, edits = R2
 upload + Pod (or wrapper) restart, no rebuild.
 
-- [ ] Create a dedicated public-read R2 bucket for Pod runtime (e.g.
-  `cubric-pod-runtime`), following MPI-137's per-product-prefix convention.
-  Decide the path layout (e.g. `pod-runtime/<channel>/start.sh`,
-  `.../wrapper.py`, `.../manifest.json` carrying the wrapper version + a content
-  hash). **Verify:** `curl` the published `start.sh` URL from the dev box returns
-  the file (200, correct bytes).
-- [ ] Add a tiny image **bootstrap** entrypoint that, at boot: curls
-  start.sh + wrapper.py (+ manifest) from R2 into the image's runtime dir,
-  validates them (hash/non-empty + `bash -n` start.sh), falls back to the
-  baked-in copies if the fetch fails (resilience if R2 is down), then execs
-  start.sh. Replace `CMD ["/opt/cubric-wrapper/start.sh"]` with the bootstrap.
-  Keep baked copies as the fallback. **Verify:** locally, `bash -n` the bootstrap;
-  simulate fetch-OK and fetch-fail paths (stub curl) and confirm it execs the
-  fetched file on OK and the baked file on fail.
-- [ ] Decide the version-pinning model: the app's `POD_IMAGE_VERSION` pins the
-  image, but start.sh/wrapper now float from R2. Add an R2 `channel` (e.g.
-  `stable` vs the image tag) so a given image always fetches a compatible runtime,
-  and the `/health` `wrapper_version` stays honest (the fetched wrapper.py
-  self-reports its version). **Verify:** `/health` reports the R2-fetched
-  wrapper's version, not the baked one.
-- [ ] Add a publish helper (rclone push of start.sh + wrapper.py + manifest to
-  the bucket) — script or documented one-liner in the pod README + the
-  build-pod-image doc. **Verify:** running it updates the bucket; a fresh Pod
-  boot picks up the change with NO image rebuild.
+- [x] Create a dedicated public-read R2 bucket for Pod runtime
+  (`cubric-pod-runtime`), public host `https://pod.cubric.studio/<channel>/`.
+  Path layout: `<channel>/start.sh`, `<channel>/wrapper.py`,
+  `<channel>/manifest.json` (manifest carries wrapper_version + start/wrapper
+  sha256). **Verified:** bucket created (user), rclone write/read OK, public URL
+  HTTP 200 with correct bytes.
+- [x] Image **bootstrap** entrypoint `bootstrap.sh`: curls start.sh + wrapper.py
+  (+ manifest) from R2, validates (non-empty + `bash -n` start.sh), falls back to
+  the baked copies on failure, execs start.sh. `CMD` swapped to bootstrap; baked
+  copies kept as fallback. **Verified:** `bash -n` clean; local harness proved
+  fetch-OK execs fetched + fetch-fail/bad-syntax/disabled all fall back to baked.
+- [x] Version-pinning model: R2 `channel` (default `stable`, env-overridable via
+  `CUBRIC_RUNTIME_CHANNEL`); bootstrap unsets the baked `CUBRIC_WRAPPER_VERSION`
+  when a fetched wrapper installs, so `/health` self-reports the fetched version.
+  **Verified locally** (version env UNSET on fetch-OK, kept on fallback). Live
+  `/health` check folded into the rebuild verification below.
+- [x] Publish helper `publish-runtime.sh` (rclone push + public-URL verify);
+  documented in the pod README + build-pod-image doc. **Verified:** published the
+  current files to `stable/`; rclone read-back + public curl confirm.
 - [ ] ONE image rebuild to ship the bootstrap (user-gated, cu128 first). After
   this, Phases 2-3 iterate start.sh via R2, no rebuild. **Verify (user-ux, live):**
   fresh Pod boots, fetches runtime from R2, `[cubric]` log lines appear, a gen
@@ -133,12 +128,13 @@ drop + tuning is R2-fast.
   optimized CUDA operations`; the local engine already runs cu130) as the single
   modern base for all GPU profiles. **Verify:** the chosen base builds + a fresh
   4090 Pod boots with torch ≥ 2.8 (no `requires Pytorch 2.8` warning).
-- [ ] In start.sh, once aimdo is confirmed initializing, **DROP `--lowvram`**
-  (it's a no-op under aimdo and forces the CPU encoder when aimdo is off). Let
-  aimdo manage memory. Keep a guarded fallback for the no-aimdo case. (R2 edit,
-  no rebuild after Phase 1.) **Verify (live):** boot log shows aimdo init line
-  (`DynamicVRAM support detected and enabled` / `aimdo inited for GPU`), NOT the
-  fallback warning; ComfyUI cmdline has no `--lowvram`.
+- [x] DROP the vram flag (start.sh `VRAM_MODE=""`, wrapper skips empty + sentinel
+  default; wrapper 0.2.18). DONE via R2 push, NO rebuild. Turned out to be FORCED,
+  not optional: torch-2.8 aimdo REMOVED `--normalvram` → the old start.sh crashed
+  ComfyUI (`unrecognized arguments: --normalvram`, exit 2) in a boot loop on the
+  live 5090. Now passes no vram flag → aimdo manages. **Verify (live, PENDING):**
+  next Pod boots clean, cmdline `vram=` empty, aimdo init line, NOT the <2.8
+  fallback warning.
 - [ ] Tune if needed: if VAE-decode OOM appears under aimdo (known LTX edge,
   ComfyUI #12784), add `--reserve-vram` / `--vram-headroom`. (R2 edit.)
   **Verify:** gen completes without VAE-decode OOM.
@@ -158,7 +154,22 @@ drop + tuning is R2-fast.
 
 ## Plan Drift
 
-- None yet.
+- 2026-06-27: Phase 1 shipped as v0.10.2 (bootstrap externalize, both GPU profiles;
+  caught+fixed cu124-base-lacks-curl). Verified end-to-end short of a live Pod
+  (real-image fetch + no-rebuild-reload via test channel). See validation.md.
+- 2026-06-27: User chose to fold Phase 2 (torch 2.8) into the build NOW rather than
+  R2-iterate after a separate live test — "do torch 2.8 on the build so we don't
+  build again." Research (2 agents, sourced) settled the trios + cu124 path:
+  - cu128: `torch 2.8.0 / torchvision 0.23.0 / torchaudio 2.8.0 +cu128` (sm_120 kept,
+    aimdo gate = torch>=2.8 + CUDA12.8 + non-WSL Linux, AUTO no flag, disable via
+    `--disable-dynamic-vram`). sage builds clean on 2.8 (break is at 2.9).
+  - cu124-broad: torch 2.8 ships **cu126** wheels (LibCUDA 12.0 floor ~r525 — LOWER
+    than cu124's current r550), so cu124→cu126 wheels can ADD aimdo without losing
+    host coverage. OPEN: does aimdo's "CUDA 12.8+" gate pass on a cu126-wheel /
+    cuda12.4-base combo? UNVERIFIED — decide cu124 base AFTER the cu128 live proof.
+  - Driver floors (NVIDIA notes): cuda12.4=r550, 12.6=r560, 12.8=r570, 13.0=r580.
+  - Building v0.10.3-cu128 (torch 2.8) now; user live-tests on a 4090 (modern-driver
+    host — sm_89 runs fine on cuda12.8) to PROVE aimdo kills the 6-min loads.
 
 ## Verification
 

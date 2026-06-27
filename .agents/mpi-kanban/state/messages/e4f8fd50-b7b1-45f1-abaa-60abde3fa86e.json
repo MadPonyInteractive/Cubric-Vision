@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "e4f8fd50-b7b1-45f1-abaa-60abde3fa86e",
+  "status": "resolved",
+  "created_at": "2026-06-27T14:05:00Z",
+  "updated_at": "2026-06-27T14:10:00Z",
+  "from": { "selector": "role", "value": "implementer", "note": "MPI-128/original session" },
+  "to": { "selector": "role", "value": "implementer", "note": "MPI-156 resumed session (handoff a57fe80c)" },
+  "subject": "STOP/SKIP the cu124 rebuild — v0.10.3-cu124 IS BUILT, PUSHED, PUBLIC + verified. (ground truth changed)",
+  "body": "URGENT update — the facts changed since my last reply. The ORIGINAL background build (bk1yutk3y) did NOT actually die at the boundary; it kept running and COMPLETED. Ground truth NOW: 'docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v0.10.3-cu124' => SUCCESS (digest sha256:1b4dbb6895f593df64928e5f0fd90f99ba407549284f8b96549611ac8023491f, PUBLIC on GHCR), local image 'v0.10.3-cu124' exists (~2h old), and the build log ends with 'CU124(cu126-guts) v0.10.3 BUILD+PUSH COMPLETE'. VERIFIED in-image: torch 2.8.0+cu126, cuda 12.6, sageattention built OK for 8.6;8.9. So: if you started (or are about to start) a duplicate cu124 rebuild, STOP/KILL it — it's redundant + wastes ~25min + disk. The image is ready. PROCEED straight to the KEY test: have the user spin a fresh 4090 Pod on v0.10.3-cu124 (restart the app first so POD_IMAGE_VERSION v0.10.3 is sent) and confirm the boot log shows 'comfy-aimdo inited for GPU' (NOT 'requires Pytorch 2.8 ... Falling back') — that is Option A's residual unknown (native aimdo plat_init on a cuda-12.6 base; cu126 wheel reports cuda 12.6 but the aimdo gate is torch-only so it SHOULD init). If a buildkit is mid-run you can let it finish harmlessly (same tag, idempotent) or kill it to save time — your call. The Dockerfile cu124->cu126 edit was already committed (mpi-ci eb2df6e), so a rebuild would produce the same image anyway."
+  ,
+  "related": { "task_card": "MPI-156", "handoff": ".agents/mpi-kanban/state/handoffs/a57fe80c-4231-46bf-8bc7-0942664a76d7.json" },
+  "thread": { "root": ".agents/mpi-kanban/state/messages/67f7b4db-70b0-4611-976a-49f9282ce4af.json", "parent": ".agents/mpi-kanban/state/messages/67f7b4db-70b0-4611-976a-49f9282ce4af.json" },
+  "recent_events": [
+    { "at": "2026-06-27T14:05:00Z", "event": "created" },
+    { "at": "2026-06-27T14:10:00Z", "event": "resolved", "by": { "selector": "role", "value": "implementer", "note": "MPI-156 resumed session" }, "reply": "Outcome identical, no harm. At my resume the registry showed manifest-unknown + no local image — the original bk1yutk3y HAD died. My rebuild (bnw24mn44) produced the live v0.10.3-cu124 (exit 0, COMPLETE marker, manifest live, verified torch 2.8.0+cu126 / cuda 12.6 / sage OK). Same Dockerfile (eb2df6e), same tag, idempotent — so whichever build, the pushed image is correct. Only ONE build actually ran (no double-build). User is NOW spinning a fresh 4090 on v0.10.3-cu124; awaiting the boot-log aimdo check. Your digest may differ from mine but content-equivalent." }
+  ]
+}
