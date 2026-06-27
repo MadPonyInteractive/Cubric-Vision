@@ -269,11 +269,39 @@ never block on an engine that was just torn down. Confirm whether `refresh()` is
 awaited before the post-disconnect gen, and whether the delete path proactively
 pushes a `remote:connection {connected:false}` the renderer acts on.
 
-### SEPARATE but related (also folded here): remote progress SSE idle-abort
+### SEPARATE but related (also folded here): remote progress SSE idle-abort — FIXED + LIVE-VERIFIED 2026-06-27
 While a Pod IS connected, the progress relay (`remoteProxy.js /comfy/events/stream`,
 a dumb `nodeStream.pipe(res)` with NO heartbeat) idle-aborts at a ~128s cadence
 (`[runpod] remote SSE stream aborted: terminated`) during quiet sampling/load
-stretches → live progress bar freezes; the gen still completes server-side. Fix:
-emit a `:ping` keepalive every ~15-30s in the relay so the idle socket isn't reaped.
-This is the "UI hangs on Generating while connected" half, distinct from the
-local-after-disconnect wedge above.
+stretches → live progress bar freezes; the gen still completes server-side.
+
+**ROOT CAUSE (refined during the live fix):** the `terminated` is on the UPSTREAM
+leg — the `Readable.fromWeb(upstream.body)` (relay→Pod fetch body), NOT the
+relay→client leg. The Pod's `wrapper.py /wrapper/events/stream` generator blocked
+on a bare `await q.get()`, so during a model load / long sampling stretch it
+emitted NOTHING and RunPod's edge proxy reaped the idle upstream connection. An
+app-side downstream `:ping` (relay→client) therefore CANNOT fix it — only a
+source-side heartbeat keeps the upstream alive.
+
+**FIX (two layers):**
+- (a) **wrapper.py** (mpi-ci `8a32037`, the real cure): `events_stream` gen()
+  now `asyncio.wait_for(q.get(), timeout=15)` → on `TimeoutError` yields `: ping`
+  and loops. Source keeps emitting → proxy never sees idle. Wrapper 0.2.19→**0.2.20**.
+  R2-externalized: `publish-runtime.sh stable` pushed it (manifest wrapper_sha
+  `c57e12b4…`, 3-way match local==R2==manifest), fresh Pod bootstrap-fetches it,
+  no rebuild.
+- (b) **remoteProxy.js** (app `21b8fdf`): downstream `:ping` every 20s, cleared on
+  every teardown path (stream error, res error, res close, req close) — kept as
+  defense-in-depth for the relay→client leg.
+
+**LIVE PROOF (4090, Pod `ln1pe8w67lejn5`, wrapper 0.2.20 fetched from R2 stable):**
+boot log `[cubric-bootstrap] installed fetched wrapper.py` + `manifest wrapper 0.2.20`
++ `comfy-aimdo inited for GPU: RTX 4090`. A **4:34 LTX t2v gen ran past the 128s
+window with ZERO `SSE stream aborted` lines** (last abort was 18:29 on the prior
+A4500/0.2.19 Pod; earlier gens aborted every ~128s: 16:55/16:57/17:00/17:01/17:15/
+17:17/18:29) and the **progress bar stayed live the entire gen** (user-confirmed).
+SSE idle-abort = DONE.
+
+This was the "UI hangs on Generating while connected" half, distinct from the
+local-after-disconnect wedge above (still open — code committed `21b8fdf`, not yet
+live-verified; needs the disconnect+DELETE+local-gen repro with DevTools open).
