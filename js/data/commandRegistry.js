@@ -179,6 +179,11 @@ export const commands = {
         // audioMode is capability-gated (only models with capabilities.audio mount
         // it — MpiPromptBox skips it for WAN). Ordered first in the op slot.
         components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'ratio', 'previewStage'],
+        // Two-stage (preview→stage-2) op. Drives the preview/latent-staging path
+        // in commandExecutor. Replaces the old `operation.endsWith('_ms')` magic
+        // (MPI-128). Whether a given MODEL exposes it is still gated by
+        // capabilities.multiStage.
+        isMultiStage: true,
         // Preview cards from this op show a Continue button (branch stage-2 to
         // a NEW card) in addition to Finish (replace preview with final).
         // WAN supports branching because its low-stage LoRAs vary the stage-2
@@ -201,6 +206,8 @@ export const commands = {
         promptRequired: false,
         // audioMode capability-gated (see t2v_ms note); ordered first.
         components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        // Two-stage op (see t2v_ms note). MPI-128.
+        isMultiStage: true,
         allowsBranchingContinue: true,
     },
     extend: {
@@ -459,6 +466,18 @@ export function getCommandDefault(key, controlId) {
  * @param {string} key
  * @returns {boolean}
  */
+/**
+ * Whether an operation is a two-stage (preview → stage-2) command. Replaces the
+ * legacy `String(operation).endsWith('_ms')` suffix magic (MPI-128). Note this
+ * is op-level; whether a given MODEL exposes the multi-stage UI is separately
+ * gated by `model.capabilities.multiStage`.
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function commandIsMultiStage(key) {
+    return commands[key]?.isMultiStage === true;
+}
+
 export function commandAllowsBranchingContinue(key, model = null) {
     if (commands[key]?.allowsBranchingContinue !== true) return false;
     // The op-level flag is the ceiling (this op CAN branch). On a SHARED _ms op

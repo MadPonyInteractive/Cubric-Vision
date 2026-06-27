@@ -22,7 +22,7 @@
 import { ComfyUIController, getEngine } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
 import { resolveDeps } from '../data/modelConstants/resolveModelDeps.js';
-import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel } from '../data/commandRegistry.js';
+import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, commandIsMultiStage } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
@@ -87,7 +87,7 @@ function _collectComfyLatents(nodeOutput, target, role = 'video') {
 }
 
 async function _prepareWorkflowInputs(payload) {
-    if (!String(payload.operation || '').endsWith('_ms')) return;
+    if (!commandIsMultiStage(payload.operation)) return;
     const res = await fetch('/comfy/prepare-workflow-inputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -476,7 +476,7 @@ function _buildParams(payload) {
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);
 
-    if (String(payload.operation || '').endsWith('_ms')) {
+    if (commandIsMultiStage(payload.operation)) {
         // Preview_Only only applies to the stage-1 workflow. Stage-2 workflows
         // (resolved via _stage2 filename swap) have no Preview_Only node, and
         // comfyController defensively strips this param when the node is absent.
@@ -959,7 +959,7 @@ export function runCommand(payload) {
         // multi-stage runs still capture the "Preview" node — or "Output_Preview"
         // for tier-2 workflows (Input_*/Output_* naming, e.g. LTX-2.3, MPI-127),
         // which title their preview SaveVideo "Output_Preview" not bare "Preview".
-        const _captureTitle = workingPayload.previewOnly === true && String(workingPayload.operation || '').endsWith('_ms')
+        const _captureTitle = workingPayload.previewOnly === true && commandIsMultiStage(workingPayload.operation)
             ? 'preview'
             : 'output';
         const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';

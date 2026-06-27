@@ -16,7 +16,8 @@ import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
-import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
+import { getCommand, getCommandMediaInputs, commandIsMultiStage } from '../data/commandRegistry.js';
+import { RATIO_MODES } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -581,7 +582,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // instead of a stage1 preview. Could not repro in-session. Gated OFF by
         // default — enable with localStorage.setItem('MPI_DEBUG_BUGB','1') when
         // hunting it. REMOVE once caught + fixed.)
-        if (_BUGB_DEBUG && operation && String(operation).endsWith('_ms')) {
+        if (_BUGB_DEBUG && operation && commandIsMultiStage(operation)) {
             // clientLogger.warn is (category, message) only — a 3rd arg is dropped,
             // so inline the state into the message string.
             clientLogger.warn('generationService',
@@ -645,6 +646,24 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         if (state.currentProject && model.id) {
             const _ms = getModelSettings(state.currentProject, model.id);
             const _shared = _clonePlain(getSharedSettings(state.currentProject, model.mediaType));
+            // Reconcile the snapshot's ratio with THIS run's injectionParams.
+            // `settings:shared:update` debounces 300ms (projectService), so a
+            // change-ratio-then-generate inside that window leaves _shared stale
+            // (read from project state). injectionParams.Ratio_Label/Width/Height
+            // are synchronous and authoritative — what the render actually used.
+            // Without this the sidecar is internally inconsistent and Reuse Prompt
+            // replays the stale ratio. Only touch an existing ratioSelector on a
+            // ratio-bearing op (Width+Height present); orientation derives from
+            // dims for orientation models, stays null for quality models.
+            if (_shared.ratioSelector && width && height) {
+                _shared.ratioSelector = {
+                    ..._shared.ratioSelector,
+                    selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
+                    orientation: RATIO_MODES[model.type] === 'quality'
+                        ? null
+                        : (width > height ? 'landscape' : 'portrait'),
+                };
+            }
             const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
             const _model = {};
             if ('loras' in _ms) _model.loras = _clonePlain(_ms.loras);
