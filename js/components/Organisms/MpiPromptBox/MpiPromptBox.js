@@ -919,13 +919,17 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (componentId === 'previewStage' && _context.historyMode === true) continue;
 
                 // Preview toggle is capability-gated: only multi-stage models
-                // (WAN) show it. Single-stage models (LTX this release) hide it —
-                // preview→continue needs dual-latent staging carded to MPI-128.
+                // (WAN + LTX) show it. A model with multiStage:false hides it.
                 if (componentId === 'previewStage' && model?.capabilities?.multiStage !== true) continue;
 
                 // audioMode radio + useAudio toggle are capability-gated: only
                 // models with audio (LTX) show them. WAN never mounts them.
                 if ((componentId === 'audioMode' || componentId === 'useAudio') && model?.capabilities?.audio !== true) continue;
+
+                // Motion intensity is capability-gated: only models whose workflow
+                // has an Input_Motion_Intensity node (WAN) show it. LTX has no such
+                // node, so the control would be dead UI — hide it.
+                if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
 
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';

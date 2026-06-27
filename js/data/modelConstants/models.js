@@ -148,7 +148,10 @@ export const MODELS = [
         // previews expose Continue (branch a new card) + Finish. LTX omits it
         // (no per-stage LoRA variance → Finish-only). See commandRegistry
         // commandAllowsBranchingContinue.
-        capabilities: { multiStage: true, audio: false, branchingContinue: true },
+        // motion: WAN's i2v workflow has an Input_Motion_Intensity node, so the
+        // motion control is live. LTX has no such node → omits motion → the
+        // MpiPromptBox motionIntensity control is hidden for it.
+        capabilities: { multiStage: true, audio: false, branchingContinue: true, motion: true },
         video: 'wan22_preview.mp4',
         type: 'wan',
         // Which LoRA strength knobs the settings UI shows for this model. Wan
