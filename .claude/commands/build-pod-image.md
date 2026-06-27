@@ -101,6 +101,17 @@ git -C c:/AI/Mpi/mpi-ci push
 Verify `start.sh` committed as LF:
 `git -C c:/AI/Mpi/mpi-ci show HEAD:cubric-vision-pod/start.sh | tr -cd '\r' | wc -c` → want `0`.
 
+> **MPI-156 — most start.sh/wrapper.py edits DON'T need a rebuild.** `bootstrap.sh`
+> (the image `CMD`) fetches `start.sh` + `wrapper.py` from R2 (`cubric-pod-runtime`,
+> `https://pod.cubric.studio/vision/<channel>/`) at boot, with the baked copies as fallback.
+> So after committing a shell/wrapper edit, PUBLISH instead of rebuilding:
+> `bash cubric-vision-pod/publish-runtime.sh stable` (rclone push + public-URL verify),
+> then on a running Pod `POST /wrapper/restart-comfy` (or recreate the Pod). A full
+> image rebuild is needed ONLY for torch/sage/node/base changes — or the one-time
+> rebuild that ships `bootstrap.sh` itself. Keep the published `stable` copy in sync
+> with the committed files (publish after the commit so the baked fallback and the R2
+> copy match).
+
 ### 4. Build cpu (CI) + cu124 AND cu128 (both LOCAL) IN PARALLEL
 Independent legs — start all three, converge only at the public gate (step 5).
 **cpu builds on CI; BOTH GPU profiles build local** (cu124 overflows CI since the
