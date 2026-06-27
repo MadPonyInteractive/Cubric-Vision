@@ -39,11 +39,17 @@
 > NOT the fault-hook path. The earlier "1 GB/s volume" explanation in this doc is
 > SUPERSEDED by this measurement.
 >
-> **FIX — only TWO real levers (bandwidth/RAM/disk/PCIe all PROVEN not the cause):**
-> 1. **Don't fault at all — model resident in VRAM (48GB card):** if the 40GB model
->    fits VRAM, aimdo's page-fault path never runs → BOTH 100s+ inits vanish. The
->    surest fix; sidesteps the fault mechanism entirely. (Won't fit 24/32GB → fault
->    stays; needs ~48GB for the 40GB model + working set.)
+> **FIX — Fix #1 (bigger VRAM) is now DEAD-TESTED. ONLY Fix #2 (torch stack) remains:**
+> 1. ~~**Don't fault at all — model resident in VRAM (48GB card)**~~ **— DISPROVEN
+>    LIVE 2026-06-27 on an RTX PRO 6000 Blackwell (96GB VRAM, 283GB RAM, torch
+>    2.8+cu128, sm_120).** With the 40GB model fitting VRAM 2× over and RAM caching
+>    it 7× over, the stage-1 fault-in was **`Model Initialization complete! 119.34
+>    s/it`** — IDENTICAL to (slightly WORSE than) the 24GB 4090's 108s. Total
+>    `Prompt executed in 195.51 seconds`. Throwing unlimited VRAM+RAM at it changed
+>    NOTHING → the fault-in is NOT memory-bound, NOT VRAM-fit. It is the aimdo
+>    per-page fault-handler MECHANISM on torch 2.8, full stop. This eliminates the
+>    LAST memory variable (VRAM size) by brute force. **Do NOT spin a big card to
+>    fix this — proven not to work.**
 > 2. **Match local's stack on the Pod (torch 2.12 / cu130 / py3.13):** the fault-in
 >    is the aimdo page-fault MECHANISM, which is stack-version-sensitive. A Pod image
 >    on torch 2.12+cu130 may fault as fast as local (34s vs 108s). This is the
@@ -66,8 +72,46 @@
 > cu130 *fault-hook* path was NEVER tested, that's fix #2); host throttle (165
 > TFLOPS/P0); aimdo-disable (OOM, twice); fp8 (identical already); torch-broad-
 > compute (SDXL on the Pod is FAST, 2s vs local 12s); Triton/PatchTritonVAE (not in
-> the workflow); transfer/disk/PCIe bandwidth (25.7 GB/s, Gen4 x16 — NOT the cause).
-> Deep-research (108-agent) + live-tested 2026-06-27.
+> the workflow); transfer/disk/PCIe bandwidth (25.7 GB/s, Gen4 x16 — NOT the cause);
+> **VRAM size / model-resident (DISPROVEN 2026-06-27 on a 96GB RTX PRO 6000 — fault-in
+> still 119s, see below).** Deep-research (108-agent) + live-tested 2026-06-27.
+
+## FIX #1 DISPROVEN — 96GB RTX PRO 6000 test (2026-06-27)
+
+The "bigger VRAM so the model is resident and aimdo never faults" fix was tested
+live on the biggest card available and **failed**.
+
+| | RTX PRO 6000 Blackwell | 24GB 4090 (baseline) |
+|---|---|---|
+| VRAM | **97887 MiB (~96GB)** | 24GB |
+| System RAM | **283GB (2148GB reported free)** | ~57GB |
+| driver / torch / CUDA | 580.159.04 / **2.8.0+cu128** / 12.8, sm_120 | r580 / 2.8.0+cu126 / 12.6 |
+| Stage-1 fault-in | **119.34 s** | 108.19 s |
+| Total gen | **195.51 s** (`Prompt executed`) | 250.34 s |
+
+The 40GB model fits VRAM **2× over** and RAM caches it **7× over** — yet the
+stage-1 fault-in was **119s, identical-to-slightly-WORSE than the 24GB card's
+108s.** Live status bar confirmed it: VRAM climbed **slowly** (35.9 → 40 → 44GB
+over 2+ minutes) instead of slamming resident in ~1.6s (which 96GB + 25.7 GB/s
+PCIe could trivially do). That slow climb IS the per-page fault-in — visible to
+the eye, memory-headroom-independent.
+
+**Conclusion: the fault-in is NOT memory-bound on any axis.** VRAM size was the
+last untested memory variable; 96GB killed it. The cost is purely aimdo's
+per-page fault-handler / UVM bookkeeping on **torch 2.8** (this Pod was torch
+2.8+cu128 — same 2.8 as the slow cu124/cu126 image, just a different CUDA
+toolkit + Blackwell arch). The CUDA toolkit + arch differences (cu126→cu128,
+Ada→Blackwell) did NOT speed the fault — consistent with the cause being the
+**torch 2.8 → 2.12** framework jump (the allocator / UVM-fault path), NOT the
+CUDA toolkit version. **Fix #2 is now the only remaining lever, proven by full
+elimination.**
+
+> NOTE this Pod was the **cu128** image profile (Blackwell), our first live run of
+> it — distinct from the cu124/cu126 profile we'd been testing. Both are torch
+> **2.8**; the only profile diffs are the torch CUDA wheel (cu126 vs cu128) + the
+> sage build arch. Sage ran ON for sm_120 (intended, MPI-145). None of that
+> touches the fault-in path — the 119s confirms the fault cost is torch-2.8-bound,
+> toolkit/arch-independent.
 
 ## The observation
 
