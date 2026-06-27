@@ -18,35 +18,56 @@
 > Pod's RAM is too small to fully cache it (live: 23GB used of 46GB RAM, VRAM pinned
 > 23.1/24) → fault pages partly stream from the **1.0 GB/s network volume**
 > (measured by `dd`, 42GB in 42s) instead of from RAM. 40GB / 1 GB/s ≈ 40s floor,
-> stacked with VRAM-ceiling evict-thrash → 108s.
+ stacked with VRAM-ceiling evict-thrash → 108s.
 >
 > **LOCAL SPEC (verified, do not re-ask): 64GB DDR5 @ 4000 MT/s, ~20GB baseline →
-> ~43GB available; model on an NVMe SSD (C:, PCIe).** Pod free RAM (~46GB) is
-> ~EQUAL to local's ~43GB — so RAM SIZE is NOT the local advantage. The local
-> fault-in is 3× faster because of the **NVMe page-cache + local PCIe path**: local
-> reads the 40GB from a multi-GB/s NVMe (warm in page cache after gen 1), the Pod
-> reads from a 1.0 GB/s network volume that won't fully cache. Same RAM, faster
-> media + bus = the whole 3× fault-in gap.
+> ~43GB available; model on an NVMe SSD (C:, PCIe). Python 3.13.12 / torch 2.12.0 /
+> CUDA 13.0.** Pod free RAM (~43-46GB) ≈ local's ~43GB — RAM size is NOT it.
 >
-> **FIX (no rebuild, no torch change, no aimdo-disable), ranked — note RAM size is
-> NOT the lever (local & Pod both ~43-46GB free); the slow 1 GB/s network volume is):**
-> 1. **Bigger-VRAM card (48GB):** 40GB fits resident → aimdo never faults per stage
->    → BOTH fault-ins vanish. Sidesteps the slow volume entirely. Best fix.
-> 2. **Faster Pod disk / pre-warm the model off the network volume:** the 1.0 GB/s
->    network volume is the read bottleneck. Copy the 40GB model to fast LOCAL
->    container disk (NVMe, often multi-GB/s) at boot and point the workflow there, OR
->    pre-read it into page cache before the first gen (`cat model > /dev/null`) so the
->    fault-in is cache→VRAM not volume→VRAM. Test the container-disk read speed first
->    (`dd` on `/` vs the volume mount).
-> 3. **Avoid the stage-2 RE-fault:** keep LTXAV resident across stage-1→stage-2
->    (cache retention) so the 59s second fault never happens.
-> (Dropped: "more RAM" — local proves equal RAM still wins, so capacity isn't it.)
+> **CORRECTION — it is NOT transfer/disk/bus bandwidth either (measured 2026-06-27):**
+> On a Pod 4090 the host→VRAM copy is FULL SPEED: **pinned 25.7 GB/s, pageable 19.5
+> GB/s, PCIe Gen4 x16.** 40GB at 25.7 GB/s = **~1.6 seconds.** The fault-in took
+> **108 seconds — 65× longer than the raw transfer.** So the 108s is NOT memcpy, NOT
+> the 1.0 GB/s volume (the model is already "Staged" to RAM before init prints), NOT
+> PCIe. It is **aimdo's page-fault-in MECHANISM overhead** — aimdo hooks CUDA
+> (`cuda-detour.c`) and faults weights page-by-page on first access; the cost is the
+> per-page fault-handler / UVM bookkeeping, not the bytes. **This is stack-version-
+> sensitive:** the CUDA driver's UVM/fault path + torch's allocator changed cu126→
+> cu130 / torch 2.8→2.12, so local (torch 2.12 / cu130 / py3.13) faults far faster
+> than the Pod (torch 2.8 / cu126 / py3.11). This is the ONE axis the cu130 deep-
+> research never covered — it cleared cuBLAS GEMM *compute* gains (Blackwell-only),
+> NOT the fault-hook path. The earlier "1 GB/s volume" explanation in this doc is
+> SUPERSEDED by this measurement.
 >
-> SIX dead ends ruled out (do NOT re-try): cu130 cuBLAS GEMM (Blackwell-only); host
-> throttle (165 TFLOPS/P0); aimdo-disable (OOM, twice); fp8 (identical already);
-> torch 2.8-vs-2.12 broadly (SDXL on the Pod is FAST — 2s vs local 12s — so the
-> stack isn't slow; the gap is LTX 40GB fault-in only); Triton/PatchTritonVAE (not
-> in the shipped workflow). Deep-research (108-agent) + live-tested 2026-06-27.
+> **FIX — only TWO real levers (bandwidth/RAM/disk/PCIe all PROVEN not the cause):**
+> 1. **Don't fault at all — model resident in VRAM (48GB card):** if the 40GB model
+>    fits VRAM, aimdo's page-fault path never runs → BOTH 100s+ inits vanish. The
+>    surest fix; sidesteps the fault mechanism entirely. (Won't fit 24/32GB → fault
+>    stays; needs ~48GB for the 40GB model + working set.)
+> 2. **Match local's stack on the Pod (torch 2.12 / cu130 / py3.13):** the fault-in
+>    is the aimdo page-fault MECHANISM, which is stack-version-sensitive. A Pod image
+>    on torch 2.12+cu130 may fault as fast as local (34s vs 108s). This is the
+>    JUSTIFIED torch-bump test — by ELIMINATION (bus/disk/RAM/compute all cleared),
+>    NOT the cuBLAS-GEMM angle the deep-research killed. COST: cu130 needs the r580
+>    driver floor → narrows host coverage (the whole Option-A tradeoff). Measure the
+>    gain FIRST on a throwaway torch-2.12 venv + a fault-in micro-benchmark before
+>    committing an image rebuild.
+> (Dropped: "more RAM" — equal RAM still wins. Dropped: "faster disk / pre-warm
+>  volume" — the host→VRAM copy is 25.7 GB/s, the volume read is not the bottleneck;
+>  the 108s is fault-handler overhead, not bytes moved.)
+>
+> The mechanism is aimdo's PAGE-FAULT-IN overhead (per-page fault-handler / UVM
+> bookkeeping), NOT bytes moved — proven by: host→VRAM = 25.7 GB/s pinned / PCIe
+> Gen4 x16 → 40GB would copy in ~1.6s, but the fault-in took 108s (65×). It is
+> stack-version-sensitive (CUDA UVM + torch allocator changed cu126→cu130 / torch
+> 2.8→2.12), which is why local (torch 2.12/cu130) faults 3× faster.
+>
+> RULED OUT (do NOT re-try): cu130 cuBLAS GEMM *compute* (Blackwell-only — but the
+> cu130 *fault-hook* path was NEVER tested, that's fix #2); host throttle (165
+> TFLOPS/P0); aimdo-disable (OOM, twice); fp8 (identical already); torch-broad-
+> compute (SDXL on the Pod is FAST, 2s vs local 12s); Triton/PatchTritonVAE (not in
+> the workflow); transfer/disk/PCIe bandwidth (25.7 GB/s, Gen4 x16 — NOT the cause).
+> Deep-research (108-agent) + live-tested 2026-06-27.
 
 ## The observation
 
