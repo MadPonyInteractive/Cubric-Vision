@@ -1,14 +1,18 @@
 # Pod vs Local Perf — why the cloud 4090 isn't faster than a local 4060 Ti
 
-> THREE dead ends ruled out (do NOT re-try any): (1) torch/cu130 bump
-> (deep-research, Ada gets no cuBLAS gain + loses driver coverage); (2) host
-> throttle (live-cleared — 4090 hits 165 TFLOPS / P0 / full clocks); (3)
-> disabling aimdo (`--disable-dynamic-vram`/`--highvram` — live OOM-killed the
-> Pod, TWICE counting MPI-146). REMAINING LEAD: the model **format** — fp8 native
-> weights load faster WITH aimdo on (a model-asset change, not a flag/torch
-> change). Deep-research-backed (108-agent harness) + live-tested 2026-06-27 on a
-> 4090. Read this BEFORE proposing a torch bump, a VRAM flag, or re-researching
-> the version gap.
+> FOUR dead ends ruled out (do NOT re-try any): (1) cu130 *cuBLAS GEMM* gains
+> (deep-research, Blackwell-only — Ada gets nothing); (2) host throttle
+> (live-cleared — 4090 hits 165 TFLOPS / P0 / full clocks, GPU STARVES at 1%
+> util); (3) disabling aimdo (`--disable-dynamic-vram`/`--highvram` — live
+> OOM-killed the Pod, TWICE counting MPI-146 — aimdo is load-bearing); (4) fp8
+> (both engines ALREADY run the identical model set — BF16 22B transformer + fp8
+> gemma encoder; nothing to switch). REMAINING AXIS: **torch 2.8 (Pod) vs 2.12
+> (local)** — the framework jump, NOT the cu toolkit, which the cu130 research did
+> not actually clear. Both engines are otherwise byte-identical (same files, aimdo
+> 0.4.10, DynamicVRAM ON, SDPA, CPU-offload). The 16GB local card offloads MORE
+> and still beats the 24GB Pod (1:31 vs 2:09). NEXT = per-step profile to localize
+> the cost, then a torch-only bump test. Deep-research (108-agent harness) +
+> live-tested 2026-06-27. Read this BEFORE proposing ANY of the four dead ends.
 
 ## The observation
 
@@ -85,25 +89,58 @@ or worse OOM. Do not try them either. **`--disable-dynamic-vram` is reverted;
 start.sh default is back to `VRAM_MODE=""` (aimdo manages). Never disable aimdo to
 chase perf again — it's now failed live TWICE (MPI-146 + this).**
 
-## CONCLUSION — the gap is the model FORMAT, not a VRAM flag or torch version
-Both the version bump (cu130, deep-research dead end) and the VRAM flag (aimdo-off,
-OOM) are dead ends. The remaining lever — flagged by BOTH ComfyUI's own
-`--disable-dynamic-vram` deprecation warning AND aimdo's guidance — is the model
-**format**: *"fp8 native ComfyUI formats will be faster even if they are larger
-than your memory"* WITH dynamic vram ON. A bf16 LTX transformer streamed through
-aimdo is the slow path; an **fp8 transformer (~20GB) + fp8 encoder (~7GB)** is
-smaller, loads faster, and keeps aimdo's OOM safety. This also likely explains the
-local-vs-Pod gap directly: confirm what FORMAT each engine actually loads (local
-4060Ti in 16GB almost certainly runs a quantized/fp8 set; the Pod may be running
-bf16). 
+## fp8 lead = KILLED. Both engines run the IDENTICAL model set (BF16 transformer).
+Verified 2026-06-27 from the live local workflow graph + local app.log. The
+local 4060Ti loads the EXACT same files the Pod does:
+- transformer `ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors` (**BF16**, 22B), weight_dtype `default`
+- CLIP1 `gemma-3-12b-it-heretic-fp8-comfy.safetensors` (already fp8), CLIP2 `ltx-2.3_text_projection_bf16`
+- VAE `LTX23_video_vae_bf16` + `LTX23_audio_vae_bf16` (bf16)
 
-### NEXT (open) — fp8 format investigation
-1. Confirm the dtype/format the LOCAL engine loads for LTX-2.3 (check its model
-   files + load log `model weight dtype`) vs what the Pod loads (boot log showed
-   `model weight dtype torch.bfloat16` on the Pod).
-2. If they differ, that IS the gap — align the Pod to the fp8 set (model registry
-   / download, NOT a start.sh flag). Keep aimdo ON.
-3. Re-time warm gen. Target: 4090 warm < local 1:31.
+So format is NOT the gap — the heavy transformer is BF16 on BOTH sides; the
+encoder is ALREADY fp8 on both. There is no fp8 transformer to switch to in this
+workflow. **Do not chase fp8.** (An fp8 transformer build, if one exists upstream,
+is a SPECULATIVE future optimization for BOTH engines, not an explanation of the
+local-vs-Pod gap.)
 
-This is a model-asset change, not a VRAM/torch/flag change — different workstream.
-Do NOT reopen the cu130 bump or any aimdo-disable flag.
+Worse for every offload/VRAM theory: local app.log confirms the 4060Ti runs
+`comfy-aimdo inited ... (VRAM: 16379 MB)` + `DynamicVRAM support detected and
+enabled` + `offload device: cpu` — i.e. the **16GB local card offloads MORE** of
+the 22B BF16 transformer than the 24GB Pod does, **and still wins (1:31 vs 2:09).**
+The card doing the MOST offloading is the FASTEST. That definitively kills suspect
+A (aimdo/offload overhead) from a second direction.
+
+## CONCLUSION — every cheap lever is exhausted; the only remaining axis is torch
+After live testing, the two engines are byte-identical on every measurable axis:
+same model files, same ComfyUI 0.26, same aimdo 0.4.10 + DynamicVRAM ON, same SDPA
+(sage gated off on Ada both sides), same BF16 transformer, same CPU-offload. RULED
+OUT live: host throttle (165 TFLOPS/P0), aimdo-off (OOM), fp8 (identical already).
+RULED OUT by deep-research: cu130 cuBLAS GEMM gains (Blackwell-only).
+
+**The ONE remaining difference is the torch/CUDA stack: Pod torch 2.8.0+cu126 vs
+local torch 2.12.0+cu130.** The deep-research dead-end verdict was specifically
+about cu130's *cuBLAS GEMM* gains being Blackwell-only — it did NOT clear the
+**torch 2.8 → 2.12** jump itself (4 minor PyTorch releases: SDPA kernel selection,
+inductor/compile, CUDA-graph capture, the caching allocator all changed across
+2.8→2.9→2.10→2.11→2.12, independent of the CUDA toolkit version). The earlier
+research conflated "cu126→cu130" (toolkit, Ada-neutral) with "torch 2.8→2.12"
+(framework, possibly NOT neutral). That axis is the live re-open.
+
+### NEXT (open) — isolate the torch version, do NOT bump cu blindly
+The clean experiment is to raise ONLY torch on the Pod and re-time, WITHOUT taking
+cu130's driver-floor cost. Options, in order of cheapness:
+1. **Measure first, don't rebuild:** on a Pod, `pip install torch==2.12 ...` into a
+   throwaway venv ISN'T trivial (cu/driver floor), so instead profile WHERE the
+   Pod's 2:09 goes vs local's 1:31 — per-stage step timing from the stdout tqdm
+   (we already parse it, MPI-147). If the Pod is slower PER STEP uniformly → it's
+   the kernel/framework (torch). If it's slower only at stage boundaries →
+   load/offload/PCIe. This localizes the cost for free before any image work.
+2. Can a torch 2.9–2.12 wheel install on the cu126 base WITHOUT moving to cu130's
+   r580 floor? torch 2.12+cu126 wheels may exist (cu126 is still supported in
+   newer torch). If so → bump torch only, keep the wide driver coverage, re-time.
+3. Only if 1+2 point hard at torch AND a cu126-compatible 2.12 wheel doesn't
+   exist, reconsider the cu128/cu130 base trade (coverage loss vs the measured
+   gain) — with NUMBERS this time, not the assumption that cu130 = no gain.
+
+Do NOT reopen: aimdo-disable (OOM, twice), fp8 (identical), or a blind cu130 bump
+(coverage cost). The next move is a per-step profile to localize the cost, THEN a
+torch-only bump test if step-time is the culprit.
