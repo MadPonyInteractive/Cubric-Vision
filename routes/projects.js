@@ -306,13 +306,19 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
         : [];
 
     const latentDir = path.join(mediaDir, '.latents');
-    const latentInfo = previewAssets.latent;
-    if (latentInfo?.filename) {
+    await fs.ensureDir(latentDir);
+
+    // Pull one SaveLatent output into the project's .latents/ folder. `filename` is
+    // the project-side basename (also the engineInputName re-staged on Continue/Finish);
+    // it must be unique per role so the video + audio latents (LTX dual-latent, MPI-128)
+    // don't collide on disk.
+    async function _materializeLatent(latentInfo, filename) {
+        if (!latentInfo?.filename) {
+            return { status: 'missing', error: 'SaveLatent output was not reported by ComfyUI' };
+        }
         const sourcePath = resolveComfyOutputFile(latentInfo);
-        const filename = `${itemId}.latent`;
         const targetPath = path.join(latentDir, filename);
         try {
-            await fs.ensureDir(latentDir);
             const hasLocal = sourcePath && (await fs.pathExists(sourcePath));
             if (hasLocal) {
                 // Local engine: the SaveLatent output is on disk — move it in.
@@ -327,7 +333,7 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
                 }
                 await streamDownload(latentUrl, targetPath);
             }
-            result.latent = {
+            return {
                 filename,
                 relativePath: relativeProjectPath(projectRoot, targetPath),
                 filePath: projectFileUrl(targetPath),
@@ -337,19 +343,16 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
             };
         } catch (err) {
             logger.warn('project', 'preview latent materialization failed', err.message);
-            result.latent = {
-                engineInputName: filename,
-                source: latentInfo,
-                status: 'missing',
-                error: err.message,
-            };
+            return { engineInputName: filename, source: latentInfo, status: 'missing', error: err.message };
         }
-    } else {
-        result.latent = {
-            status: 'missing',
-            error: 'SaveLatent output was not reported by ComfyUI',
-        };
     }
+
+    result.latent = await _materializeLatent(previewAssets.latent, `${itemId}.latent`);
+    // Audio latent (LTX dual-latent). Only present when the workflow saved a
+    // second, audio-role latent; WAN previews have none → audioLatent stays null.
+    result.audioLatent = previewAssets.audioLatent
+        ? await _materializeLatent(previewAssets.audioLatent, `${itemId}.audio.latent`)
+        : null;
 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
@@ -854,10 +857,13 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             // Support-asset cleanup: drop any saved stage-1 latent and durable
             // start/end-frame snapshots owned by this item. Preview and final
             // I2V cards can both own `.preview-assets/<itemId>/` folders.
-            const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
-            if (hasSupportAssets && await fs.pathExists(latentPath)) {
-                try { await fs.remove(latentPath); }
-                catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+            // Both the video latent and the LTX audio latent (MPI-128, may be absent).
+            for (const latentName of [`${itemId}.latent`, `${itemId}.audio.latent`]) {
+                const latentPath = path.join(mediaDir, '.latents', latentName);
+                if (hasSupportAssets && await fs.pathExists(latentPath)) {
+                    try { await fs.remove(latentPath); }
+                    catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+                }
             }
             const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
             if (await fs.pathExists(snapshotDir)) {
@@ -921,11 +927,11 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
         const frozenParams  = sidecar.frozenParams || null;
         const missing       = [];
 
-        // Latent
-        let latentStatus = 'missing';
-        let latentDiskPath = null;
-        const latentInfo = previewAssets.latent;
-        if (latentInfo?.engineInputName || latentInfo?.filename || latentInfo?.filePath || latentInfo?.relativePath) {
+        // Stat one latent sidecar entry against disk. Returns {status, diskPath}.
+        async function _statLatent(latentInfo, defaultFilename) {
+            if (!(latentInfo?.engineInputName || latentInfo?.filename || latentInfo?.filePath || latentInfo?.relativePath)) {
+                return { status: 'missing', diskPath: null };
+            }
             const candidates = [];
             if (latentInfo.filePath) {
                 const decoded = decodeProjectFilePath(latentInfo.filePath);
@@ -934,18 +940,28 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             if (latentInfo.relativePath) {
                 candidates.push(path.join(folderPath, latentInfo.relativePath));
             }
-            const filename = latentInfo.filename || latentInfo.engineInputName || `${itemId}.latent`;
+            const filename = latentInfo.filename || latentInfo.engineInputName || defaultFilename;
             candidates.push(path.join(mediaDir, '.latents', filename));
-
             for (const candidate of candidates) {
-                if (await fs.pathExists(candidate)) {
-                    latentStatus  = 'available';
-                    latentDiskPath = candidate;
-                    break;
-                }
+                if (await fs.pathExists(candidate)) return { status: 'available', diskPath: candidate };
             }
+            return { status: 'missing', diskPath: null };
         }
+
+        // Video latent (always required for the fast path).
+        const latentInfo = previewAssets.latent;
+        const _videoStat = await _statLatent(latentInfo, `${itemId}.latent`);
+        const latentStatus = _videoStat.status;
+        const latentDiskPath = _videoStat.diskPath;
         if (latentStatus !== 'available') missing.push({ kind: 'latent' });
+
+        // Audio latent (LTX dual-latent, MPI-128). Only gates the fast path when the
+        // sidecar declares one — WAN previews carry none. A declared-but-missing audio
+        // latent blocks the fast path (stage-2 would fail validation on its LoadLatent).
+        const audioLatentInfo = previewAssets.audioLatent;
+        const hasAudioLatent = !!(audioLatentInfo?.engineInputName || audioLatentInfo?.filename || audioLatentInfo?.filePath || audioLatentInfo?.relativePath);
+        const _audioStat = hasAudioLatent ? await _statLatent(audioLatentInfo, `${itemId}.audio.latent`) : { status: 'n/a', diskPath: null };
+        if (hasAudioLatent && _audioStat.status !== 'available') missing.push({ kind: 'audio-latent' });
 
         // Snapshots (I2V only — T2V sidecars carry empty/no snapshots array)
         const snapshotResults = [];
@@ -989,7 +1005,7 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             && typeof frozenParams.dims.w === 'number'
             && typeof frozenParams.dims.h === 'number');
 
-        const canFastPath = latentStatus === 'available';
+        const canFastPath = latentStatus === 'available' && (!hasAudioLatent || _audioStat.status === 'available');
         // Cold fallback requires frozenParams + all declared snapshots present.
         // For T2V, snapshotRequests is empty, so snapshots condition is trivially true.
         const allSnapshotsPresent = snapshotResults.every(s => s.status === 'available');
@@ -1003,6 +1019,9 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             canColdFallback,
             blocked,
             latent: { status: latentStatus, filePath: latentDiskPath ? projectFileUrl(latentDiskPath) : null, engineInputName: latentInfo?.engineInputName || `${itemId}.latent` },
+            audioLatent: hasAudioLatent
+                ? { status: _audioStat.status, filePath: _audioStat.diskPath ? projectFileUrl(_audioStat.diskPath) : null, engineInputName: audioLatentInfo?.engineInputName || `${itemId}.audio.latent` }
+                : null,
             snapshots: snapshotResults,
             frozenComplete,
             missing,

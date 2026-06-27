@@ -421,7 +421,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // Continue button — only Finish + Discard remain.
             const _sel0 = group?.history?.[group.selectedIndex];
             const _allowBranch = _sel0?.operation
-                ? commandAllowsBranchingContinue(_sel0.operation)
+                ? commandAllowsBranchingContinue(_sel0.operation, getModelById(_sel0.modelId))
                 : false;
             continueWrap.style.display = _allowBranch ? '' : 'none';
 

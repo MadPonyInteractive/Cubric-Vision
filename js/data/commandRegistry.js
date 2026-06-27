@@ -459,8 +459,16 @@ export function getCommandDefault(key, controlId) {
  * @param {string} key
  * @returns {boolean}
  */
-export function commandAllowsBranchingContinue(key) {
-    return commands[key]?.allowsBranchingContinue === true;
+export function commandAllowsBranchingContinue(key, model = null) {
+    if (commands[key]?.allowsBranchingContinue !== true) return false;
+    // The op-level flag is the ceiling (this op CAN branch). On a SHARED _ms op
+    // (WAN + LTX both use t2v_ms/i2v_ms), branching is additionally gated per
+    // model: only models whose stage-2 result varies (per-stage LoRAs) expose
+    // Continue. WAN declares capabilities.branchingContinue; LTX omits it →
+    // Finish-only. When no model is supplied, fall back to the op flag (callers
+    // that don't have a model in scope, e.g. WAN-era single-model checks).
+    if (model && model.capabilities) return model.capabilities.branchingContinue === true;
+    return true;
 }
 
 /**

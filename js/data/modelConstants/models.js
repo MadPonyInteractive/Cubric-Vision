@@ -144,7 +144,11 @@ export const MODELS = [
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         tier: 2,
-        capabilities: { multiStage: true, audio: false },
+        // branchingContinue: per-stage LoRAs vary the stage-2 result, so WAN
+        // previews expose Continue (branch a new card) + Finish. LTX omits it
+        // (no per-stage LoRA variance → Finish-only). See commandRegistry
+        // commandAllowsBranchingContinue.
+        capabilities: { multiStage: true, audio: false, branchingContinue: true },
         video: 'wan22_preview.mp4',
         type: 'wan',
         // Which LoRA strength knobs the settings UI shows for this model. Wan
@@ -188,10 +192,14 @@ export const MODELS = [
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         tier: 2,
-        // Single-stage this release: multiStage:false hides the previewStage toggle
-        // on the shared _ms ops (preview→continue is carded to MPI-128). audio:true
-        // surfaces the audio media slot + (Phase 5) the Reference|Original mode UI.
-        capabilities: { multiStage: false, audio: true },
+        // MPI-128: dual-latent (video+audio) stage-2 staging wired, so the
+        // previewStage toggle + preview→Finish are unlocked. multiStage:true shows
+        // the toggle on the shared _ms ops. NO branchingContinue → Finish-only
+        // (Continue button hidden): the refined LTX workflow locks stage-2 to
+        // stage-1 and the prompt has no effect on the continuation, so a re-prompted
+        // branch is meaningless. audio:true surfaces the audio media slot + the
+        // Reference|Original mode UI.
+        capabilities: { multiStage: true, audio: true },
         // No preview clip yet — must NOT reuse wan22_preview.mp4 (that's WAN
         // footage; showing it on the LTX card misrepresents the model). Leave the
         // media slot empty until a real LTX-2.3 clip exists, then add `video:`.

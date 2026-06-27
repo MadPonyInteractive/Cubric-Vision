@@ -528,6 +528,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         isStage2: config.isStage2 === true,
         loadLatentName: config.loadLatentName,
         previewLatentFilePath: config.previewLatentFilePath,
+        loadAudioLatentName: config.loadAudioLatentName,
+        audioLatentFilePath: config.audioLatentFilePath,
         forceLocal: opts.forceLocal === true, // MPI-74: per-gen local override → runCommand reads payload.forceLocal
     });
 
@@ -690,8 +692,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 injectionParams: frozenInjection,
                 mediaItems: _frozenMediaItems,
             };
+            const _latents = Array.isArray(outputInfo.latents) ? outputInfo.latents : [];
+            // Dual-latent (LTX, MPI-128): the video latent is the primary one
+            // (back-compat field name); the optional audio latent rides alongside.
+            // WAN saves only a video latent → audioLatent stays null.
+            const _videoLatent = _latents.find(l => l?.role === 'video') || _latents.find(l => l?.role !== 'audio') || _latents[0] || null;
+            const _audioLatent = _latents.find(l => l?.role === 'audio') || null;
             _previewAssets = {
-                latent: Array.isArray(outputInfo.latents) ? outputInfo.latents[0] || null : null,
+                latent: _videoLatent,
+                audioLatent: _audioLatent,
                 snapshots: _frozenMediaItems
                     .filter(item =>
                         item.mediaType === 'image' &&

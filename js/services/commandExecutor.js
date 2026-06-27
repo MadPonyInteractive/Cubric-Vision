@@ -70,10 +70,19 @@ function _collectComfyAudioUrl(nodeOutput, forceLocal = false) {
     return null;
 }
 
-function _collectComfyLatents(nodeOutput, target) {
+// Tags each collected latent with its role from the SaveLatent node title:
+// Output_Video_Latent -> 'video', Output_Audio_Latent -> 'audio' (LTX dual-latent,
+// MPI-128). Untitled / legacy bare "SaveLatent" -> 'video' (WAN is single video).
+function _latentRoleFromTitle(title) {
+    const t = String(title || '').toLowerCase();
+    if (t.includes('audio')) return 'audio';
+    return 'video';
+}
+
+function _collectComfyLatents(nodeOutput, target, role = 'video') {
     if (!Array.isArray(nodeOutput?.latents)) return;
     nodeOutput.latents.forEach(latent => {
-        if (latent?.filename) target.push({ ...latent });
+        if (latent?.filename) target.push({ ...latent, role });
     });
 }
 
@@ -109,14 +118,12 @@ function _decodeProjectFileUrl(value) {
     return value;
 }
 
-async function _stagePreviewLatent(payload) {
-    if (!payload?.loadLatentName || !payload?.previewLatentFilePath) return;
-    const engineInputName = payload.loadLatentName;
-    const sourcePath = _decodeProjectFileUrl(payload.previewLatentFilePath);
+async function _stageOneLatent(engineInputName, previewLatentFilePath, forceLocal) {
+    const sourcePath = _decodeProjectFileUrl(previewLatentFilePath);
     const res = await fetch('/comfy/stage-preview-latent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourcePath, engineInputName, forceLocal: payload.forceLocal === true }),
+        body: JSON.stringify({ sourcePath, engineInputName, forceLocal: forceLocal === true }),
     });
     if (!res.ok) {
         let message = `stage-preview-latent returned ${res.status}`;
@@ -125,6 +132,18 @@ async function _stagePreviewLatent(payload) {
             if (data?.error) message = data.error;
         } catch (_) { /* keep status message */ }
         throw new Error(message);
+    }
+}
+
+async function _stagePreviewLatent(payload) {
+    if (payload?.loadLatentName && payload?.previewLatentFilePath) {
+        await _stageOneLatent(payload.loadLatentName, payload.previewLatentFilePath, payload.forceLocal);
+    }
+    // Dual-latent (LTX, MPI-128): stage the per-preview audio latent under its own
+    // engine input name so the stage-2 Input_Audio_Latent LoadLatent node validates
+    // and loads it. WAN previews carry no audio latent → second stage is skipped.
+    if (payload?.loadAudioLatentName && payload?.audioLatentFilePath) {
+        await _stageOneLatent(payload.loadAudioLatentName, payload.audioLatentFilePath, payload.forceLocal);
     }
 }
 
@@ -477,11 +496,12 @@ function _buildParams(payload) {
         // prefix), so emit it explicitly. WAN + LTX stage-1 both load the single
         // engine-input latent here; stage-2 swaps in the staged preview latent.
         params['Input_Video_Latent'] = _latentName;
-        // NOTE: LTX also has an Input_Audio_Latent node (it saves TWO latents).
-        // Dual-latent stage-2 staging is NOT wired yet — the stage-preview-latent
-        // route stages a single file. Tracked as its own task (see plan Phase 4a).
-        // Stage-1 doesn't need it (audio latent is generated live); a previewed
-        // LTX clip cannot be "continued" correctly until dual staging lands.
+        // Dual-latent stage-2 (LTX, MPI-128). LTX saves TWO latents (video + audio)
+        // and stage-2 loads BOTH via Input_Video_Latent + Input_Audio_Latent. When a
+        // per-preview audio latent was staged, point its LoadLatent node at it; stage-1
+        // and single-latent models (WAN) supply no audio name and fall back to the
+        // baked engine default (validated, never read on those runs).
+        params['Input_Audio_Latent'] = payload.loadAudioLatentName || 'ltx_audio_latent_00001_.latent';
     }
 
     // Map media to operation-declared Comfy input slots. Slots are role-first:
@@ -1169,7 +1189,7 @@ export function runCommand(payload) {
                 const nodeId = msg.data?.node;
                 const nodeOutput = msg.data?.output;
                 if (saveLatentNodeIds.has(nodeId)) {
-                    _collectComfyLatents(nodeOutput, latentOutputs);
+                    _collectComfyLatents(nodeOutput, latentOutputs, _latentRoleFromTitle(workflow[nodeId]?._meta?.title));
                 }
                 if (outputNodeIds.has(nodeId)) {
                     _collectComfyOutputUrls(nodeOutput, outputUrls, workingPayload.forceLocal === true);

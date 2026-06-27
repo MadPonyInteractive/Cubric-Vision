@@ -268,7 +268,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Video_Latent"
     }
   },
   "49": {
@@ -366,7 +366,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Audio_Latent"
     }
   },
   "55": {
@@ -1281,7 +1281,6 @@
       "filename_prefix": "LTX",
       "format": "auto",
       "codec": "auto",
-      "video-preview": "",
       "video": [
         "189",
         0
@@ -1367,7 +1366,7 @@
   "197": {
     "inputs": {
       "audio": "ltx_silence.wav",
-      "audioUI": "ltx_silence.wav"
+      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.9848402774227129"
     },
     "class_type": "LoadAudio",
     "_meta": {

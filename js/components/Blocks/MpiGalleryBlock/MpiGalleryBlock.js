@@ -481,6 +481,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const latentInfo = item.previewAssets?.latent;
+            const audioLatentInfo = item.previewAssets?.audioLatent;
             const isColdFallback = !report.canFastPath && report.canColdFallback;
 
             // Sync PB to the preview's model + op so the user sees Cue progress
@@ -517,7 +518,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // Build a placeholder + dispatcher for the stage-2 branch job.
             // Used either directly (fast path) or as a follow-up after the
             // stage-1 rerun completes (cold fallback).
-            const _bumpAndDispatchStage2 = (latentName, latentFilePath) => {
+            const _bumpAndDispatchStage2 = (latentName, latentFilePath, audioLatentName, audioLatentFilePath) => {
                 const _tempId = crypto.randomUUID();
                 const _previewThumbUrl = item.thumbPath
                     ? resolveMediaUrl(item.thumbPath)
@@ -555,6 +556,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     isStage2:              true,
                     loadLatentName:        latentName,
                     previewLatentFilePath: latentFilePath,
+                    // Dual-latent (LTX, MPI-128) — undefined for WAN (single latent).
+                    loadAudioLatentName:   audioLatentName,
+                    audioLatentFilePath:   audioLatentFilePath,
                 };
                 if (_BUGB_DEBUG) clientLogger.warn('MpiGalleryBlock', `TEMP-DEBUG B createFrom-dispatch previewItemId=${item.id} previewGroupId=${g.id} newTempId=${_tempId}`);
                 enqueueGeneration(stage2Config, {}, {
@@ -568,7 +572,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             if (!isColdFallback) {
                 // Fast path: latent is on disk, jump straight to stage-2.
-                _bumpAndDispatchStage2(latentInfo.engineInputName, latentInfo.filePath);
+                _bumpAndDispatchStage2(
+                    latentInfo.engineInputName, latentInfo.filePath,
+                    audioLatentInfo?.engineInputName, audioLatentInfo?.filePath,
+                );
                 return;
             }
 
@@ -597,6 +604,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (groupId !== g.id || _chainSettled) return;
                 const refreshedItem = updatedGroup?.history?.find(h => h.id === item.id);
                 const newLatent = refreshedItem?.previewAssets?.latent;
+                const newAudioLatent = refreshedItem?.previewAssets?.audioLatent;
                 if (!newLatent || newLatent.status !== 'available' || !newLatent.engineInputName || !newLatent.filePath) {
                     StatusBar.notify('Stage 1 rerun finished but did not rebuild the preview latent. Continue cannot resume this preview.', 'warning');
                     _settle();
@@ -605,7 +613,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 }
                 _settle();
                 _chainUnsub();
-                _bumpAndDispatchStage2(newLatent.engineInputName, newLatent.filePath);
+                _bumpAndDispatchStage2(
+                    newLatent.engineInputName, newLatent.filePath,
+                    newAudioLatent?.engineInputName, newAudioLatent?.filePath,
+                );
             });
 
             enqueueGeneration(stage1Config, {
@@ -655,6 +666,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const latentInfo = item.previewAssets?.latent;
+            const audioLatentInfo = item.previewAssets?.audioLatent;
             const isColdFallback = !report.canFastPath && report.canColdFallback;
 
             const modelMismatch = activeModelId !== model.id;
@@ -707,6 +719,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 isStage2:              true,
                 loadLatentName:        latentInfo.engineInputName,
                 previewLatentFilePath: latentInfo.filePath,
+                // Dual-latent (LTX, MPI-128) — undefined for WAN (single latent).
+                loadAudioLatentName:   audioLatentInfo?.engineInputName,
+                audioLatentFilePath:   audioLatentInfo?.filePath,
                 replaceItemId:    item.id,
             };
 
