@@ -1,18 +1,40 @@
-# Pod vs Local Perf — why the cloud 4090 isn't faster than a local 4060 Ti
+# Pod vs Local Perf — SOLVED: the gap is 40GB MODEL FAULT-IN, not compute
 
-> FOUR dead ends ruled out (do NOT re-try any): (1) cu130 *cuBLAS GEMM* gains
-> (deep-research, Blackwell-only — Ada gets nothing); (2) host throttle
-> (live-cleared — 4090 hits 165 TFLOPS / P0 / full clocks, GPU STARVES at 1%
-> util); (3) disabling aimdo (`--disable-dynamic-vram`/`--highvram` — live
-> OOM-killed the Pod, TWICE counting MPI-146 — aimdo is load-bearing); (4) fp8
-> (both engines ALREADY run the identical model set — BF16 22B transformer + fp8
-> gemma encoder; nothing to switch). REMAINING AXIS: **torch 2.8 (Pod) vs 2.12
-> (local)** — the framework jump, NOT the cu toolkit, which the cu130 research did
-> not actually clear. Both engines are otherwise byte-identical (same files, aimdo
-> 0.4.10, DynamicVRAM ON, SDPA, CPU-offload). The 16GB local card offloads MORE
-> and still beats the 24GB Pod (1:31 vs 2:09). NEXT = per-step profile to localize
-> the cost, then a torch-only bump test. Deep-research (108-agent harness) +
-> live-tested 2026-06-27. Read this BEFORE proposing ANY of the four dead ends.
+> **ROOT CAUSE (live-proven 2026-06-27):** the cloud 4090 loses to the local
+> 4060Ti on LTX-2.3 ENTIRELY because of the per-stage **aimdo dynamic-VRAM
+> fault-in of the 40GB LTXAV transformer**, NOT compute. Live per-phase split on a
+> cold Pod LTX gen (`Prompt executed in 250.34s`):
+>
+> | Phase | Pod 4090 | Local 4060Ti | who wins |
+> |---|---|---|---|
+> | Stage-1 fault-in (40GB → VRAM) | **108.19 s** | 34 s | local 3.2× |
+> | Stage-1 sampler (7 steps) | 1.45 s/it (~10s) | 4.6 s/it (~32s) | **Pod 3×** |
+> | Stage-2 fault-in (40GB → VRAM) | **58.66 s** | 28 s | local 2× |
+> | Stage-2 sampler (3 steps) | 1.3 it/s (~6s) | 2 s/it (~6s) | Pod |
+>
+> The two fault-ins = **167s of the 250s gen (~67%)**. The Pod SAMPLER is FASTER
+> than local — compute was never the problem. WHY the fault-in is slow: the 40GB
+> model does NOT fit resident in 24GB VRAM → aimdo faults it in per stage; and the
+> Pod's RAM is too small to fully cache it (live: 23GB used of 46GB RAM, VRAM pinned
+> 23.1/24) → fault pages partly stream from the **1.0 GB/s network volume**
+> (measured by `dd`, 42GB in 42s) instead of from RAM. 40GB / 1 GB/s ≈ 40s floor,
+> stacked with VRAM-ceiling evict-thrash → 108s. Local's faster NVMe page-cache +
+> RAM make its fault-in 3× quicker.
+>
+> **FIX (no rebuild, no torch change, no aimdo-disable), ranked:**
+> 1. **Bigger-VRAM card (32GB 5090 / 48GB):** 40GB still doesn't fit 32GB but is
+>    much closer → far less evict-thrash; on 48GB it fits resident → BOTH fault-ins
+>    vanish. Best fix.
+> 2. **More-RAM Pod (64-128GB):** fully cache the 55GB model set in RAM → fault-in
+>    becomes fast RAM→VRAM (PCIe) instead of 1 GB/s volume→VRAM. Cheap, high-leverage.
+> 3. **Avoid the stage-2 RE-fault:** keep LTXAV resident across stage-1→stage-2
+>    (cache retention) so the 59s second fault never happens.
+>
+> SIX dead ends ruled out (do NOT re-try): cu130 cuBLAS GEMM (Blackwell-only); host
+> throttle (165 TFLOPS/P0); aimdo-disable (OOM, twice); fp8 (identical already);
+> torch 2.8-vs-2.12 broadly (SDXL on the Pod is FAST — 2s vs local 12s — so the
+> stack isn't slow; the gap is LTX 40GB fault-in only); Triton/PatchTritonVAE (not
+> in the shipped workflow). Deep-research (108-agent) + live-tested 2026-06-27.
 
 ## The observation
 
